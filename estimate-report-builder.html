@@ -2252,39 +2252,28 @@
         button.textContent = '📤 מייצא...';
         button.disabled = true;
         
-        // Extract car details from helper
-        const carDetails = {
-          plateNumber: helper.estimate?.vehicle?.plateNumber || helper.vehicle?.plate_number || '',
-          manufacturer: helper.estimate?.vehicle?.manufacturer || helper.vehicle?.manufacturer || '',
-          model: helper.estimate?.vehicle?.model || helper.vehicle?.model || '',
-          year: helper.estimate?.vehicle?.year || helper.vehicle?.year || '',
-          engineVolume: helper.estimate?.vehicle?.engineVolume || helper.vehicle?.engine_volume || '',
-          color: helper.estimate?.vehicle?.color || helper.vehicle?.color || '',
-          clientName: helper.estimate?.client?.name || helper.client?.name || '',
-          clientPhone: helper.estimate?.client?.phone || helper.client?.phone || '',
-          clientEmail: helper.estimate?.client?.email || helper.client?.email || '',
-          incidentDate: helper.estimate?.incident?.date || helper.incident?.date || '',
-          inspectionDate: helper.estimate?.inspection?.date || helper.inspection?.date || ''
-        };
+        // Get the generated HTML content for PDF generation (same as SUBMIT_FINAL_REPORT)
+        const estimateContainer = document.getElementById('estimate-output');
+        let cleanHTML = estimateContainer ? estimateContainer.innerHTML : '';
         
-        // Extract estimate summary data instead of full HTML
-        const estimateData = {
-          totalDamage: helper.estimate?.calculations?.total_damage_cost || 0,
-          marketValue: helper.estimate?.gross_market_value || 0,
-          depreciationAmount: helper.estimate?.depreciation?.global_amount || 0,
-          damagePercentage: helper.estimate?.calculations?.gross_damage_percentage || 0,
-          summary: {
-            legalText: helper.estimate?.summary?.legal_text || '',
-            attachments: helper.estimate?.summary?.attachments?.[0] || ''
-          }
-        };
+        // Clean HTML the same way as final report
+        cleanHTML = cleanHTML
+          .replace(/<div class="control-buttons no-print">[\s\S]*?<\/div>/g, '')
+          .replace(/<div[^>]*style="[^"]*טיוטה בלבד[^"]*"[^>]*>[\s\S]*?<\/div>/g, '')
+          .replace(/<div[^>]*style="[^"]*position:fixed[^"]*טיוטה בלבד[^"]*"[^>]*>[\s\S]*?<\/div>/g, '')
+          .replace(/טיוטה בלבד/g, '')
+          .replace(/<button[\s\S]*?<\/button>/g, '')
+          .replace(/<div[^>]*class="[^"]*no-print[^"]*"[^>]*>[\s\S]*?<\/div>/g, '');
         
-        // Create payload with car details and estimate data (no HTML)
+        // Use the same format as SUBMIT_FINAL_REPORT for consistency with Make.com
         const payload = {
-          carDetails: carDetails,
-          estimateData: estimateData,
-          timestamp: new Date().toISOString(),
-          type: 'estimate_export'
+          html: cleanHTML,
+          meta: {
+            ...helper.meta || {},
+            plate: helper.estimate?.vehicle?.plateNumber || helper.vehicle?.plate_number || helper.car_details?.plate || helper.meta?.plate?.replace(/-/g, '') || ''
+          },
+          report_type: 'estimate',
+          date: new Date().toISOString()
         };
         
         // Send to webhook with correct parameter order: (id, payload)
