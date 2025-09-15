@@ -3456,6 +3456,27 @@
         "אחר"
       ];
       
+      // 🔥 FIX: Restore תקנה 389 field value from existing data
+      try {
+        const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+        const existingTakana389 = helper.current_damage_center?.Works?.takana389;
+        
+        if (existingTakana389) {
+          setTimeout(() => {
+            const takanaSelect = document.getElementById('takana389Work');
+            if (takanaSelect) {
+              takanaSelect.value = existingTakana389;
+              console.log('✅ Restored תקנה 389 field value:', existingTakana389);
+              
+              // Update module data to reflect restored value
+              moduleData.takana389 = existingTakana389;
+            }
+          }, 100);
+        }
+      } catch (error) {
+        console.error('❌ Failed to restore תקנה 389 field:', error);
+      }
+      
       // Pre-load existing work data if any
       if (moduleData.works && moduleData.works.length > 0) {
         moduleData.works.forEach(work => {
@@ -3615,6 +3636,24 @@
       // Update module data
       moduleData.works = works;
       moduleData.takana389 = document.getElementById('takana389Work')?.value || '';
+      
+      // 🔥 FIX: Immediately save תקנה 389 to helper to prevent data loss
+      try {
+        const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+        if (helper.current_damage_center && helper.current_damage_center.Works) {
+          helper.current_damage_center.Works.takana389 = moduleData.takana389;
+          sessionStorage.setItem('helper', JSON.stringify(helper));
+          
+          // Also sync to window.helper
+          if (typeof window !== 'undefined') {
+            window.helper = helper;
+          }
+          
+          console.log('✅ תקנה 389 saved immediately to helper:', moduleData.takana389);
+        }
+      } catch (error) {
+        console.error('❌ Failed to save תקנה 389 to helper:', error);
+      }
       
       // ✅ FIXED: Update both internal display and wizard subtotal consistently
       const totalDisplay = document.getElementById('workTotalDisplay');

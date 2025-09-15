@@ -1,3 +1,43 @@
+# תקנה 389 Field Implementation Analysis & Fix Plan
+**Date: 2025-09-15**
+
+## Problem Analysis Summary
+
+After analyzing the damage centers wizard files, I found the following issues with the "תקנה 389" field implementation:
+
+### Current Implementation Found:
+
+1. **HTML Input Field**: 
+   - In `damage-centers-wizard.html`: `<select id="takana389Work">` with options "כן", "לא", "לא רלוונטי"
+   - In `work.html`: `<select id="takana389">` with same options
+
+2. **JavaScript Handling**:
+   - Field value is captured: `document.getElementById('takana389Work')?.value`
+   - Stored in `moduleData.takana389` in wizard
+   - Should be saved to `helper.current_damage_center.Works.takana389`
+
+3. **Data Storage Path**:
+   - The field is supposed to be stored in: `helper.centers[item].Works.takana389`
+   - Current code attempts to save to: `helper.current_damage_center.Works.takana389`
+
+### Issues Identified:
+
+1. **Missing Field Restoration**: No code to restore the field value when revisiting damage centers
+2. **Inconsistent Data Structure**: Field is stored but not properly retrieved on page reload
+3. **No Field Pre-population**: When editing existing damage centers, the field doesn't show previously saved values
+4. **Event Handling Gaps**: The `updateWorkData()` function doesn't properly trigger on field changes
+
+### Key Findings:
+
+The "תקנה 389" field is implemented in multiple files but has persistence issues:
+- **Field exists** in both wizard (`takana389Work`) and standalone (`takana389`) work modules
+- **Saving mechanism exists** but only triggers during specific wizard step transitions
+- **Real-time updates are missing** - field changes don't immediately save to helper
+- **Restoration logic is absent** - no code to populate field when editing existing damage centers
+- **Event listeners are incomplete** - onchange events exist but don't trigger consistent saving
+
+---
+
 # OWNERSHIP TYPE PERCENT DISPLAY FIX - REVIEW
 **Date: 2025-09-12**
 
