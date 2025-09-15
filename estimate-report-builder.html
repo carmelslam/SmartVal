@@ -1803,7 +1803,14 @@
     }
     
     function generateLegalText(helper) {
-      // Get legal text from builder first, then fallback to vault
+      // Get legal text from estimate.summary.legal_text (primary source)
+      const summaryLegalText = helper.estimate?.summary?.legal_text || '';
+      
+      if (summaryLegalText) {
+        return summaryLegalText;
+      }
+      
+      // Fallback to builder text
       const builderLegalText = helper.estimate_legal_text || '';
       
       // If builder has text, use it
@@ -1831,8 +1838,13 @@
     function getAttachmentsList() {
       const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
       
-      // Get attachments from helper (saved from builder)
-      let attachmentsText = helper.estimate_attachments || '**לוטה**\nתצלומי הרכב הניזוק\nחשבוניות תיקון\nערך רכב ממוחשב\nצילום רישיון הרכב\nחשכ"ט';
+      // Get attachments from estimate.summary.attachments[0] (primary source)
+      let attachmentsText = helper.estimate?.summary?.attachments?.[0] || '';
+      
+      // Fallback to helper attachments (saved from builder)
+      if (!attachmentsText) {
+        attachmentsText = helper.estimate_attachments || '**לוטה**\nתצלומי הרכב הניזוק\nחשבוניות תיקון\nערך רכב ממוחשב\nצילום רישיון הרכב\nחשכ"ט';
+      }
       
       // Convert plain text to HTML for display
       attachmentsText = attachmentsText
