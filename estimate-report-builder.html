@@ -1281,7 +1281,7 @@
             <div class="car-details">
               <div class="car-details-title">ערך הרכב לנזק גולמי</div>
               <table class="car-details-table" style="width: 100%; max-width: 600px; margin: 0 auto;">
-                <tr><th style="width: 50%;">מרכיב</th><th style="width: 25%;">תוספת \ פחתה</th><th style="width: 25%;">ערך</th></tr>
+                <tr><th style="width: 40%;">מרכיב</th><th style="width: 20%;">תוספת\הפחתה</th><th style="width: 20%;">אחוז</th><th style="width: 20%;">ערך</th></tr>
                 ${generateMarketValueTable()}
               </table>
             </div>
@@ -1849,58 +1849,60 @@
     function generateMarketValueTable() {
       const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
       
-      // Get market value adjustments from helper
-      const marketAdjustments = helper.custom_adjustments?.full_market_adjustments || [];
-      
-      // Get base market value
-      const basePrice = helper.levi_report?.base_price || 
-                       helper.expertise?.levi_report?.base_price || 
-                       helper.levisummary?.base_price || 
-                       helper.car_details?.base_price || 
+      // Get base price
+      const basePrice = helper.estimate?.vehicle?.basePrice || 
                        helper.vehicle?.base_price || 
-                       helper.calculations?.base_price || 0;
-      
-      // Get final market value
-      const finalPrice = helper.calculations?.market_value || 
-                        helper.expertise?.calculations?.market_value || 
-                        helper.calculations?.full_market_value || 
-                        helper.expertise?.levi_report?.final_price || 
-                        helper.levisummary?.final_price || 0;
+                       helper.car_details?.base_price || 0;
       
       let rows = [];
+      let cumulativeValue = basePrice;
       
       // Add base price row
       rows.push(`
         <tr>
           <td style="padding: 8px;">ערך הרכב ע"פ מחירון כולל מע"מ</td>
           <td style="padding: 8px; text-align: center;">-</td>
+          <td style="padding: 8px; text-align: center;">-</td>
           <td style="padding: 8px; text-align: center;">${formatCurrency(basePrice)}</td>
         </tr>
       `);
       
-      // Add adjustment rows
-      marketAdjustments.forEach(adj => {
-        if (adj.description && (adj.percentage || adj.value)) {
-          const percentSign = adj.type === 'plus' ? '+' : '-';
-          const percentText = adj.percentage ? `${percentSign}${adj.percentage}%` : '-';
-          const value = adj.type === 'minus' ? -Math.abs(adj.value || 0) : Math.abs(adj.value || 0);
+      // Process adjustments in specific order: features first, then registration
+      const adjustmentCategories = ['features', 'registration'];
+      
+      adjustmentCategories.forEach(category => {
+        const adjustments = helper.estimate?.adjustments?.[category] || [];
+        
+        adjustments.forEach(adjustment => {
+          const typeDisplay = adjustment.type === 'plus' ? 'תוספת' : 'הפחתה';
+          const percentDisplay = adjustment.percent ? `${adjustment.percent}%` : '-';
+          const amount = adjustment.amount || 0;
+          
+          // Update cumulative value
+          if (adjustment.type === 'plus') {
+            cumulativeValue += amount;
+          } else {
+            cumulativeValue -= amount;
+          }
           
           rows.push(`
             <tr>
-              <td style="padding: 8px;">${adj.description}</td>
-              <td style="padding: 8px; text-align: center;">${percentText}</td>
-              <td style="padding: 8px; text-align: center;">${formatCurrency(value)}</td>
+              <td style="padding: 8px;">${adjustment.value}</td>
+              <td style="padding: 8px; text-align: center;">${typeDisplay}</td>
+              <td style="padding: 8px; text-align: center;">${percentDisplay}</td>
+              <td style="padding: 8px; text-align: center;">${formatCurrency(amount)}</td>
             </tr>
           `);
-        }
+        });
       });
       
-      // Add final sum row
+      // Add final cumulative value row
       rows.push(`
         <tr>
           <td style="padding: 8px;"><strong>ערך הרכב לנזק גולמי כולל מע"מ</strong></td>
           <td style="padding: 8px; text-align: center;"><strong>-</strong></td>
-          <td style="padding: 8px; text-align: center;"><strong>${formatCurrency(finalPrice)}</strong></td>
+          <td style="padding: 8px; text-align: center;"><strong>-</strong></td>
+          <td style="padding: 8px; text-align: center;"><strong>${formatCurrency(cumulativeValue)}</strong></td>
         </tr>
       `);
       
@@ -1908,123 +1910,59 @@
     }
     
     function generateLeviAdjustments(helper) {
-      const leviData = helper.expertise?.levi_report || helper.levisummary || {};
+      // Get base price
+      const basePrice = helper.estimate?.vehicle?.basePrice || 
+                       helper.vehicle?.base_price || 
+                       helper.car_details?.base_price || 0;
       
-      // Try to get values from custom adjustments first, then fallback to legacy
-      const customAdjustments = helper.custom_adjustments?.full_market_adjustments || [];
-      const hasCustomData = customAdjustments.length > 0;
-      
-      const basePrice = hasCustomData ? 
-        (helper.calculations?.base_market_value || helper.custom_adjustments?.base_market_value || 0) : 
-        (leviData.base_price || leviData['מחיר בסיס'] || 0);
-        
-      const finalPrice = hasCustomData ? 
-        (helper.calculations?.full_market_value || helper.custom_adjustments?.full_market_value || 0) : 
-        (leviData.final_price || leviData['מחיר סופי'] || 0);
-      
-      if (!basePrice && !finalPrice) {
+      if (!basePrice) {
         return `
           <div class="section">
             <div class="car-details">
               <div class="car-details-title">חישוב ערך השוק של הרכב</div>
-              <p style="text-align: center; padding: 20px;">לא נמצאו נתוני הערכת לוי</p>
+              <p style="text-align: center; padding: 20px;">לא נמצאו נתוני מחיר בסיס</p>
             </div>
           </div>
         `;
       }
       
-      const adjustments = [];
+      let cumulativeValue = basePrice;
+      const adjustmentRows = [];
       
-      // Get custom market value adjustments from helper
-      const marketAdjustments = helper.custom_adjustments?.full_market_adjustments || [];
+      // Process adjustments in specific order: features, registration, mileage, ownership_type, ownership_history
+      const categoryOrder = ['features', 'registration', 'mileage', 'ownership_type', 'ownership_history'];
+      const categoryLabels = {
+        'features': 'מאפיינים',
+        'registration': 'עליה לכביש',
+        'mileage': 'מס ק״מ',
+        'ownership_type': 'בעלות',
+        'ownership_history': 'מספר בעלים'
+      };
       
-      // Process custom adjustments
-      marketAdjustments.forEach(adj => {
-        if (adj.description && (adj.percentage || adj.value)) {
-          const percentSign = adj.type === 'plus' ? '+' : '-';
-          adjustments.push({
-            label: adj.description,
-            percent: adj.percentage ? `${percentSign}${adj.percentage}` : '',
-            amount: adj.type === 'minus' ? -Math.abs(adj.value) : Math.abs(adj.value)
-          });
-        }
+      categoryOrder.forEach(category => {
+        const adjustments = helper.estimate?.adjustments?.[category] || [];
+        
+        adjustments.forEach(adjustment => {
+          const percentDisplay = adjustment.percent ? `${adjustment.percent}%` : '-';
+          const amount = adjustment.amount || 0;
+          const label = categoryLabels[category] || adjustment.value || category;
+          
+          // Update cumulative value
+          if (adjustment.type === 'plus') {
+            cumulativeValue += amount;
+          } else {
+            cumulativeValue -= amount;
+          }
+          
+          adjustmentRows.push(`
+            <tr>
+              <td style="padding: 8px;">${label}</td>
+              <td style="padding: 8px; text-align: center;">${percentDisplay}</td>
+              <td style="padding: 8px; text-align: center;">${formatCurrency(amount)}</td>
+            </tr>
+          `);
+        });
       });
-      
-      // Fallback to legacy Levi data structure if no custom adjustments
-      if (adjustments.length === 0) {
-        // Registration adjustment
-        if (leviData['עליה לכביש %'] || leviData['ערך ש״ח עליה לכביש']) {
-          adjustments.push({
-            label: 'עליה לכביש',
-            percent: leviData['עליה לכביש %'] || '',
-            amount: leviData['ערך ש״ח עליה לכביש'] || 0
-          });
-        }
-        
-        // Ownership adjustment
-        if (leviData['בעלות %'] || leviData['ערך ש״ח בעלות']) {
-          adjustments.push({
-            label: 'בעלות',
-            percent: leviData['בעלות %'] || '',
-            amount: leviData['ערך ש״ח בעלות'] || 0
-          });
-        }
-        
-        // Mileage adjustment
-        if (leviData['מס ק״מ %'] || leviData['ערך ש״ח מס ק״מ']) {
-          adjustments.push({
-            label: 'מס ק״מ',
-            percent: leviData['מס ק״מ %'] || '',
-            amount: leviData['ערך ש״ח מס ק״מ'] || 0
-          });
-        }
-        
-        // Owner count adjustment
-        if (leviData['מספר בעלים %'] || leviData['ערך ש״ח מספר בעלים']) {
-          adjustments.push({
-            label: 'מספר בעלים',
-            percent: leviData['מספר בעלים %'] || '',
-            amount: leviData['ערך ש״ח מספר בעלים'] || 0
-          });
-        }
-        
-        // Features adjustment
-        if (leviData['מאפיינים %'] || leviData['ערך ש״ח מאפיינים']) {
-          adjustments.push({
-            label: 'מאפיינים',
-            percent: leviData['מאפיינים %'] || '',
-            amount: leviData['ערך ש״ח מאפיינים'] || 0
-          });
-        }
-        
-        // Alternative English structure
-        if (leviData.adjustments) {
-          Object.entries(leviData.adjustments).forEach(([key, adj]) => {
-            if (adj.percent || adj.value) {
-              const labelMap = {
-                'registration': 'עליה לכביש',
-                'ownership': 'בעלות',
-                'km': 'מס ק״מ',
-                'owner_count': 'מספר בעלים',
-                'features': 'מאפיינים'
-              };
-              adjustments.push({
-                label: labelMap[key] || key,
-                percent: adj.percent || '',
-                amount: adj.value || 0
-              });
-            }
-          });
-        }
-      }
-      
-      const adjustmentRows = adjustments.map(adj => `
-        <tr>
-          <td style="padding: 8px;">${adj.label}</td>
-          <td style="padding: 8px; text-align: center;">${adj.percent}%</td>
-          <td style="padding: 8px; text-align: center;">${formatCurrency(adj.amount)}</td>
-        </tr>
-      `).join('');
       
       return `
         <div class="section adjustment-group">
@@ -2033,8 +1971,8 @@
             <table class="car-details-table" style="width: 100%; max-width: 700px; margin: 0 auto;">
               <tr><th style="width: 50%;">תיאור</th><th style="width: 20%;">אחוז</th><th style="width: 30%;">ערך</th></tr>
               <tr><td style="padding: 8px;">ערך הרכב ע"פ מחירון כולל מע"מ</td><td style="padding: 8px; text-align: center;">-</td><td style="padding: 8px; text-align: center;">${formatCurrency(basePrice)}</td></tr>
-              ${adjustmentRows}
-              <tr><td style="padding: 8px;"><strong>ערך השוק של הרכב כולל מע"מ</strong></td><td style="padding: 8px; text-align: center;">-</td><td style="padding: 8px; text-align: center;"><strong>${formatCurrency(finalPrice)}</strong></td></tr>
+              ${adjustmentRows.join('')}
+              <tr><td style="padding: 8px;"><strong>ערך השוק של הרכב כולל מע"מ</strong></td><td style="padding: 8px; text-align: center;">-</td><td style="padding: 8px; text-align: center;"><strong>${formatCurrency(cumulativeValue)}</strong></td></tr>
             </table>
           </div>
         </div>
