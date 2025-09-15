@@ -618,6 +618,37 @@
       background-image: none !important;
     }
   </style>
+  
+  <!-- CRITICAL: Define functions immediately to prevent reference errors -->
+  <script>
+    window.updateHelperFromContactField = function(element) {
+      try {
+        console.log('📞 Contact field changed:', element.id, element.value);
+        
+        // Create synthetic event for updateHelperFromField
+        const event = { target: element };
+        
+        // Call updateHelperFromField if it exists, otherwise defer
+        if (typeof updateHelperFromField === 'function') {
+          updateHelperFromField(event);
+        } else {
+          console.warn('updateHelperFromField not yet available, storing for later');
+          
+          // Store update for later execution
+          setTimeout(() => {
+            if (typeof updateHelperFromField === 'function') {
+              console.log('📞 Executing deferred contact field update:', element.id);
+              updateHelperFromField(event);
+            } else {
+              console.error('❌ updateHelperFromField still not available after delay');
+            }
+          }, 1000);
+        }
+      } catch (error) {
+        console.error('❌ Error in updateHelperFromContactField:', error);
+      }
+    };
+  </script>
 </head>
 <body>
   <!-- Floating Toggles -->
@@ -1389,34 +1420,7 @@
   </script>
   
   <script>
-    // DEFINE CRITICAL FUNCTIONS EARLY TO PREVENT REFERENCE ERRORS
-    window.updateHelperFromContactField = function(element) {
-      try {
-        console.log('📞 Contact field changed:', element.id, element.value);
-        
-        // Create synthetic event for updateHelperFromField
-        const event = { target: element };
-        
-        // Call updateHelperFromField if it exists, otherwise defer
-        if (typeof updateHelperFromField === 'function') {
-          updateHelperFromField(event);
-        } else {
-          console.warn('updateHelperFromField not yet available, storing for later');
-          
-          // Store update for later execution
-          setTimeout(() => {
-            if (typeof updateHelperFromField === 'function') {
-              console.log('📞 Executing deferred contact field update:', element.id);
-              updateHelperFromField(event);
-            } else {
-              console.error('❌ updateHelperFromField still not available after delay');
-            }
-          }, 500);
-        }
-      } catch (error) {
-        console.error('❌ Error in updateHelperFromContactField:', error);
-      }
-    };
+    // CRITICAL FUNCTIONS MOVED TO HEAD SECTION TO PREVENT REFERENCE ERRORS
     
     // CRITICAL: Define getHelperVatRate function - used by ALL calculations
     window.getHelperVatRate = function() {
@@ -2758,7 +2762,6 @@
           
           // Collect repairs - PRESERVE EXISTING DATA
           const repairs = [];
-          const existingCenter = window.helper.centers ? window.helper.centers[index] : null;
           const existingRepairs = existingCenter?.Repairs?.repairs || [];
           
           card.querySelectorAll('.repair-row').forEach((row, repairIndex) => {
