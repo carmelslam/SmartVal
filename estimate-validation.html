@@ -3120,18 +3120,17 @@
       }
       
       const totalWithVat = helper?.estimate?.totals?.damage_centers?.total_with_vat?.formatted || 'לא זמין';
-      const salvageValue = helper?.estimate?.summary?.salvage_value ? 
-                          (helper.estimate.summary.salvage_value.toString().includes('₪') ? 
-                           helper.estimate.summary.salvage_value : 
-                           `₪${helper.estimate.summary.salvage_value}`) : '₪0';
-      const compensation = helper?.estimate?.summary?.depreciation_compensation ? 
-                          (helper.estimate.summary.depreciation_compensation.toString().includes('₪') ? 
-                           helper.estimate.summary.depreciation_compensation : 
-                           `₪${helper.estimate.summary.depreciation_compensation}`) : '₪0';
-      const finalTotal = helper?.estimate?.summary?.final_total ? 
-                        (helper.estimate.summary.final_total.toString().includes('₪') ? 
-                         helper.estimate.summary.final_total : 
-                         `₪${helper.estimate.summary.final_total}`) : 'לא זמין';
+      // Helper function to format currency with thousands separators
+      const formatCurrency = (value) => {
+        if (!value && value !== 0) return 'לא זמין';
+        const numValue = typeof value === 'string' ? parseFloat(value.replace(/[₪,]/g, '')) : value;
+        if (isNaN(numValue)) return 'לא זמין';
+        return `₪${numValue.toLocaleString()}`;
+      };
+      
+      const salvageValue = formatCurrency(helper?.estimate?.summary?.salvage_value) || '₪0';
+      const compensation = formatCurrency(helper?.estimate?.summary?.depreciation_compensation) || '₪0';  
+      const finalTotal = formatCurrency(helper?.estimate?.summary?.final_total);
 
       // Direct field mapping in the correct order as requested
       const estimateHTML = 
