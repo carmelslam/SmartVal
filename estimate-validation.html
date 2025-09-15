@@ -805,23 +805,6 @@
         <div class="section-status status-pending">ממתין</div>
       </div>
       <div class="section-content">
-        <div class="validation-item">
-          <span class="validation-label">סוג אומדן מוגדר</span>
-          <span class="validation-status" id="estimate-type-status">⏳</span>
-        </div>
-        <div class="validation-item">
-          <span class="validation-label">טקסט משפטי מתאים</span>
-          <span class="validation-status" id="estimate-legal-text">⏳</span>
-        </div>
-        <div class="validation-item">
-          <span class="validation-label">חישוב מע"מ ותביעה</span>
-          <span class="validation-status" id="estimate-calculations">⏳</span>
-        </div>
-        <div class="validation-item">
-          <span class="validation-label">בדיקת עקביות נתונים</span>
-          <span class="validation-status" id="estimate-consistency">⏳</span>
-        </div>
-        
         <!-- Estimate Validation Items -->
         <div id="estimate-validation-items">
           <!-- Will be populated by populateEstimateValidationItems() -->
@@ -3142,8 +3125,15 @@
       // Calculate values with proper currency formatting
       const totalBeforeVat = helper?.estimate?.totals?.damage_centers?.total_before_vat?.formatted || 'לא זמין';
       const vatRate = '18%';
-      const vatAmount = helper?.estimate?.totals?.damage_centers?.vat_amount?.formatted || 
-                      helper?.estimate?.totals?.damage_centers?.total_before_vat?.formatted || 'לא זמין';
+      
+      // Calculate VAT amount from total before VAT (18% = 0.18)
+      let vatAmount = 'לא זמין';
+      const beforeVatValue = helper?.estimate?.totals?.damage_centers?.total_before_vat?.value;
+      if (beforeVatValue && beforeVatValue > 0) {
+        const calculatedVat = Math.round(beforeVatValue * 0.18);
+        vatAmount = `₪${calculatedVat.toLocaleString()}`;
+      }
+      
       const totalWithVat = helper?.estimate?.totals?.damage_centers?.total_with_vat?.formatted || 'לא זמין';
       const salvageValue = helper?.estimate?.summary?.salvage_value ? 
                           (helper.estimate.summary.salvage_value.toString().includes('₪') ? 
