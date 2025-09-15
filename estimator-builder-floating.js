@@ -306,7 +306,7 @@ function refreshValidationDisplay() {
       'populateLeviValidationItems', 
       'populateDamageValidationItems',
       'populateDepreciationValidationItems',
-      'populateEstimateValidationItems'
+      'populateCalculationsValidationItems'
     ];
     
     populateFunctions.forEach(funcName => {

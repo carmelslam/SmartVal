@@ -2725,7 +2725,7 @@
       }
       
       // Save validation progress to sessionStorage
-      sessionStorage.setItem('validationProgress', JSON.stringify(validationProgress));
+      sessionStorage.setItem('estimateValidationProgress', JSON.stringify(estimateValidationProgress));
       
       // Always enable final approval - validation is optional quality check
       const finalBtn = document.getElementById('final-approve-btn');
@@ -3442,8 +3442,11 @@
         const completedSections = Object.keys(estimateValidationProgress).filter(k => estimateValidationProgress[k]);
         const totalSections = Object.keys(estimateValidationProgress).length;
         
-        // Update estimate-specific validation data (personalized workflow)
-        helper.estimate_validation = {
+        // Ensure estimate object exists
+        if (!helper.estimate) helper.estimate = {};
+        
+        // Update validation data nested inside helper.estimate (workflow-specific)
+        helper.estimate.validation = {
           completed_sections: completedSections,
           legal_text: document.getElementById('legal-text-content')?.value || '',
           validated_at: new Date().toISOString(),
@@ -3764,7 +3767,7 @@
     });
     
     // Test section validation buttons
-    const sections = ['vehicle', 'levi', 'damage', 'depreciation', 'estimate', 'legal_text'];
+    const sections = ['vehicle', 'levi', 'damage', 'depreciation', 'calculations', 'legal_text'];
     sections.forEach(section => {
       const validateBtn = document.querySelector(`[onclick="validateSection('${section}')"]`);
       const editBtn = document.querySelector(`[onclick="editSection('${section}')"]`);
