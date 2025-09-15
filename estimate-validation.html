@@ -3417,8 +3417,116 @@
     };
 
     window.requestManualReview = function() {
-      showAlert('בקשה לסקירה ידנית נרשמה במערכת', 'warning');
-      // Could send to webhook for manual review request
+      const reviewBtn = document.querySelector(`[onclick*="requestManualReview"]`);
+      
+      try {
+        // Show loading state
+        if (reviewBtn) {
+          reviewBtn.disabled = true;
+          reviewBtn.style.opacity = '0.7';
+          const originalText = reviewBtn.textContent;
+          reviewBtn.textContent = '📤 שולח בקשה...';
+          reviewBtn.dataset.originalText = originalText;
+        }
+        
+        const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+        
+        // Ensure estimate object exists
+        if (!helper.estimate) helper.estimate = {};
+        
+        // Create manual review request with current validation state
+        const reviewRequest = {
+          request_id: 'review_' + Date.now(),
+          requested_at: new Date().toISOString(),
+          requested_by: 'estimate_user',
+          workflow_type: 'estimate',
+          current_validation_state: {
+            completed_sections: Object.keys(estimateValidationProgress).filter(k => estimateValidationProgress[k]),
+            validation_progress: estimateValidationProgress,
+            total_progress: Math.round((Object.values(estimateValidationProgress).filter(v => v).length / Object.keys(estimateValidationProgress).length) * 100)
+          },
+          estimate_data: {
+            estimate_type: helper?.estimate?.type || 'לא מוגדר',
+            total_before_vat: helper?.estimate?.totals?.damage_centers?.total_before_vat?.value || 0,
+            total_with_vat: helper?.estimate?.totals?.damage_centers?.total_with_vat?.value || 0,
+            damage_centers_count: (helper?.expertise?.damage_blocks || []).length,
+            vehicle_info: {
+              license_plate: helper?.car_details?.license_plate || 'לא זמין',
+              manufacturer: helper?.car_details?.manufacturer || 'לא זמין',
+              model: helper?.car_details?.model || 'לא זמין'
+            }
+          },
+          review_reason: 'User requested additional manual review during estimate validation',
+          status: 'pending_review',
+          priority: 'normal'
+        };
+        
+        // Save review request in helper structure
+        if (!helper.estimate.manual_reviews) helper.estimate.manual_reviews = [];
+        helper.estimate.manual_reviews.push(reviewRequest);
+        
+        // Also save current validation state for reviewer context
+        if (!helper.estimate.validation) helper.estimate.validation = {};
+        helper.estimate.validation.manual_review_requested = {
+          requested_at: new Date().toISOString(),
+          request_id: reviewRequest.request_id,
+          validation_state_at_request: estimateValidationProgress
+        };
+        
+        sessionStorage.setItem('helper', JSON.stringify(helper));
+        
+        // Log for debugging and potential webhook integration
+        console.log('📋 Manual review request created:', reviewRequest);
+        
+        // Success feedback
+        setTimeout(() => {
+          showAlert(`✅ בקשה לסקירה ידנית נרשמה במערכת
+          
+🔍 מספר בקשה: ${reviewRequest.request_id.slice(-8)}
+📊 התקדמות נוכחית: ${reviewRequest.current_validation_state.total_progress}%
+⏰ זמן הבקשה: ${new Date().toLocaleString('he-IL')}
+          
+הבקשה תתבצע ותקבל מענה בהקדם.`, 'success');
+          
+          // Restore button
+          if (reviewBtn) {
+            reviewBtn.disabled = false;
+            reviewBtn.style.opacity = '1';
+            reviewBtn.style.backgroundColor = '#16a34a';
+            reviewBtn.style.color = 'white';
+            reviewBtn.textContent = '✅ בקשה נשלחה';
+            
+            // Return to original state after 3 seconds
+            setTimeout(() => {
+              reviewBtn.style.backgroundColor = '';
+              reviewBtn.style.color = '';
+              reviewBtn.textContent = reviewBtn.dataset.originalText || 'דרוש סקירה נוספת';
+            }, 3000);
+          }
+        }, 800);
+        
+        // Future: Could send to webhook for external review system
+        // fetch('/api/manual-review', { method: 'POST', body: JSON.stringify(reviewRequest) });
+        
+      } catch (error) {
+        console.error('❌ Error creating manual review request:', error);
+        showAlert('❌ שגיאה ביצירת בקשת סקירה ידנית: ' + error.message, 'error');
+        
+        // Restore button on error
+        if (reviewBtn) {
+          reviewBtn.disabled = false;
+          reviewBtn.style.opacity = '1';
+          reviewBtn.style.backgroundColor = '#dc2626';
+          reviewBtn.style.color = 'white';
+          reviewBtn.textContent = '❌ שגיאה';
+          
+          setTimeout(() => {
+            reviewBtn.style.backgroundColor = '';
+            reviewBtn.style.color = '';
+            reviewBtn.textContent = reviewBtn.dataset.originalText || 'דרוש סקירה נוספת';
+          }, 3000);
+        }
+      }
     };
 
     window.saveValidationData = function() {
