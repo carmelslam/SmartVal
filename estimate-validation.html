@@ -805,23 +805,23 @@
       </div>
     </div>
 
-    <!-- Estimate Type and Calculations -->
-    <div class="validation-section" id="section-estimate">
+    <!-- Estimate Calculations and Totals -->
+    <div class="validation-section" id="section-calculations">
       <div class="section-header">
-        <div class="section-title">סוג אומדן וחישובים</div>
+        <div class="section-title">חישובי אומדן וסיכומים</div>
         <div class="section-status status-pending">ממתין</div>
       </div>
       <div class="section-content">
-        <!-- Estimate Validation Items -->
-        <div id="estimate-validation-items">
-          <!-- Will be populated by populateEstimateValidationItems() -->
+        <!-- Estimate Calculations Validation Items -->
+        <div id="calculations-validation-items">
+          <!-- Will be populated by populateCalculationsValidationItems() -->
         </div>
         
       </div>
       <div class="validation-buttons">
-        <button class="btn btn-validate" onclick="validateSection('estimate')">בדוק אוטומטית</button>
-        <button class="btn btn-edit" onclick="editSection('estimate')">עריכה ידנית</button>
-        <button class="btn btn-success" onclick="approveSection('estimate')" disabled>אימות חישובים</button>
+        <button class="btn btn-validate" onclick="validateSection('calculations')">בדוק אוטומטית</button>
+        <button class="btn btn-edit" onclick="editSection('calculations')">עריכה ידנית</button>
+        <button class="btn btn-success" onclick="approveSection('calculations')" disabled>אימות חישובים</button>
       </div>
     </div>
 
@@ -926,12 +926,13 @@
       event.preventDefault();
     });
     
-    let validationProgress = {
+    // Estimate-specific validation progress (personalized for estimate workflow)
+    let estimateValidationProgress = {
       vehicle: false,
       levi: false,
       damage: false,
       depreciation: false,
-      estimate: false,
+      calculations: false,
       legal_text: false
     };
     
@@ -1566,8 +1567,8 @@
     }
 
     function startInitialValidation() {
-      // Auto-validate all sections on page load
-      const sections = ['vehicle', 'levi', 'damage', 'depreciation', 'estimate', 'legal_text'];
+      // Auto-validate all sections on page load (Estimate workflow)
+      const sections = ['vehicle', 'levi', 'damage', 'depreciation', 'calculations', 'legal_text'];
       
       sections.forEach((sectionName, index) => {
         setTimeout(() => {
@@ -1576,14 +1577,14 @@
       });
     }
 
-    // Helper function to get section display names in Hebrew
+    // Helper function to get section display names in Hebrew (Estimate-specific)
     function getSectionDisplayName(sectionName) {
       const sectionNames = {
         vehicle: 'נתוני רכב',
         levi: 'דו״ח לוי יצחק',
         damage: 'מוקדי נזק ואקספרטיזה', 
         depreciation: 'חישוב ירידת ערך לפי מוקדי נזק',
-        estimate: 'אומדן ושווי רכב',
+        calculations: 'חישובי אומדן וסיכומים',
         legal_text: 'טקסט משפטי'
       };
       return sectionNames[sectionName] || sectionName;
@@ -1591,7 +1592,7 @@
 
     // Function to update section accessibility based on sequential validation
     function updateSectionAccessibility() {
-      const sections = ['vehicle', 'levi', 'damage', 'depreciation', 'estimate', 'legal_text'];
+      const sections = ['vehicle', 'levi', 'damage', 'depreciation', 'calculations', 'legal_text'];
       
       sections.forEach((sectionName, index) => {
         const section = document.getElementById(`section-${sectionName}`);
@@ -1608,7 +1609,7 @@
           // Check if all previous sections are completed
           let canAccess = true;
           for (let i = 0; i < index; i++) {
-            if (!validationProgress[sections[i]]) {
+            if (!estimateValidationProgress[sections[i]]) {
               canAccess = false;
               break;
             }
@@ -1639,14 +1640,14 @@
       const status = section.querySelector('.section-status');
       
       // Check if previous sections are completed (sequential validation)
-      const sections = ['vehicle', 'levi', 'damage', 'depreciation', 'estimate', 'legal_text'];
+      const sections = ['vehicle', 'levi', 'damage', 'depreciation', 'calculations', 'legal_text'];
       const currentIndex = sections.indexOf(sectionName);
       
       if (currentIndex > 0) {
         // Check if all previous sections are completed
         for (let i = 0; i < currentIndex; i++) {
           const previousSection = sections[i];
-          if (!validationProgress[previousSection]) {
+          if (!estimateValidationProgress[previousSection]) {
             showAlert(`יש לאמת את הסעיף "${getSectionDisplayName(previousSection)}" לפני אימות הסעיף הנוכחי`, 'error');
             return;
           }
@@ -1675,8 +1676,8 @@
           case 'damage':
             validationResult = await validateDamageSection();
             break;
-          case 'estimate':
-            validationResult = await validateEstimateSection();
+          case 'calculations':
+            validationResult = await validateCalculationsSection();
             break;
           case 'legal_text':
             validationResult = await validateLegalTextSection();
@@ -2212,15 +2213,15 @@
       };
     }
 
-    async function validateEstimateSection() {
+    async function validateCalculationsSection() {
       const issues = [];
       const validItems = [];
       
-      // Populate estimate validation items BEFORE validating (to ensure fresh data)
-      console.log('🔄 Refreshing estimate display with latest data...');
+      // Populate calculations validation items BEFORE validating (to ensure fresh data)
+      console.log('🔄 Refreshing calculations display with latest data...');
       try {
-        populateEstimateValidationItems();
-        console.log('✅ Estimate display refresh completed successfully');
+        populateCalculationsValidationItems();
+        console.log('✅ Calculations display refresh completed successfully');
       } catch (error) {
         console.error('❌ Error refreshing estimate display:', error);
       }
@@ -2611,7 +2612,7 @@
         buttons[2].disabled = false;
         
         // Keep as incomplete until user approves
-        validationProgress[sectionName] = false;
+        estimateValidationProgress[sectionName] = false;
         
       } else {
         section.classList.remove('current', 'completed', 'warning');
@@ -2622,7 +2623,7 @@
         // Keep approve button disabled
         buttons[2].disabled = true;
         
-        validationProgress[sectionName] = false;
+        estimateValidationProgress[sectionName] = false;
       }
       
       // Always enable edit button after validation
@@ -2648,21 +2649,21 @@
 
     function loadSavedValidationProgress() {
       try {
-        const saved = sessionStorage.getItem('validationProgress');
+        const saved = sessionStorage.getItem('estimateValidationProgress');
         if (saved) {
           const savedProgress = JSON.parse(saved);
-          console.log('📁 Loading saved validation progress:', savedProgress);
+          console.log('📁 Loading saved estimate validation progress:', savedProgress);
           
           // Merge saved progress with current progress
           Object.keys(savedProgress).forEach(key => {
-            if (validationProgress.hasOwnProperty(key)) {
-              validationProgress[key] = savedProgress[key];
+            if (estimateValidationProgress.hasOwnProperty(key)) {
+              estimateValidationProgress[key] = savedProgress[key];
             }
           });
           
           // Update UI for completed sections
-          Object.keys(validationProgress).forEach(sectionName => {
-            if (validationProgress[sectionName]) {
+          Object.keys(estimateValidationProgress).forEach(sectionName => {
+            if (estimateValidationProgress[sectionName]) {
               const section = document.getElementById(`section-${sectionName}`);
               const status = section?.querySelector('.section-status');
               const button = section?.querySelector('.btn-success');
@@ -2688,8 +2689,8 @@
     }
 
     function updateValidationProgress() {
-      const completedSections = Object.values(validationProgress).filter(v => v).length;
-      const totalSections = Object.keys(validationProgress).length;
+      const completedSections = Object.values(estimateValidationProgress).filter(v => v).length;
+      const totalSections = Object.keys(estimateValidationProgress).length;
       const progressPercent = Math.round((completedSections / totalSections) * 100);
       
       const progressFill = document.getElementById('progress-fill');
@@ -2761,15 +2762,15 @@
 
     // Function to clear validation progress when needed
     function clearValidationProgress() {
-      validationProgress = {
+      estimateValidationProgress = {
         vehicle: false,
         levi: false,
         damage: false,
         depreciation: false,
-        estimate: false,
+        calculations: false,
         legal_text: false
       };
-      sessionStorage.removeItem('validationProgress');
+      sessionStorage.removeItem('estimateValidationProgress');
       updateValidationProgress();
       updateSectionAccessibility();
     }
@@ -2779,14 +2780,14 @@
       console.log('📝 Editing section:', sectionName);
       
       // Check if section is accessible for editing (sequential validation)
-      const sections = ['vehicle', 'levi', 'damage', 'depreciation', 'estimate', 'legal_text'];
+      const sections = ['vehicle', 'levi', 'damage', 'depreciation', 'calculations', 'legal_text'];
       const currentIndex = sections.indexOf(sectionName);
       
       if (currentIndex > 0) {
         // Check if all previous sections are completed
         for (let i = 0; i < currentIndex; i++) {
           const previousSection = sections[i];
-          if (!validationProgress[previousSection]) {
+          if (!estimateValidationProgress[previousSection]) {
             showAlert(`יש לאמת את הסעיף "${getSectionDisplayName(previousSection)}" לפני עריכת הסעיף הנוכחי`, 'error');
             return;
           }
@@ -2794,7 +2795,7 @@
       }
       
       // Reset validation status for the section being edited
-      validationProgress[sectionName] = false;
+      estimateValidationProgress[sectionName] = false;
       
       // Update UI to show section as pending validation
       const section = document.getElementById(`section-${sectionName}`);
@@ -2810,8 +2811,8 @@
         button.textContent = 'אימות נדרש';
       }
       
-      // Save updated validation progress
-      sessionStorage.setItem('validationProgress', JSON.stringify(validationProgress));
+      // Save updated validation progress  
+      sessionStorage.setItem('estimateValidationProgress', JSON.stringify(estimateValidationProgress));
       updateValidationProgress();
       
       // Open estimator-builder.html in PiP mode with correct section anchor
@@ -2837,7 +2838,7 @@
           case 'depreciation':
             window.location.href = 'estimator-builder.html#depreciationSection';
             break;
-          case 'estimate':
+          case 'calculations':
             window.location.href = 'estimator-builder.html#estimate-type';
             break;
           case 'legal_text':
@@ -2863,14 +2864,14 @@
       button.disabled = true;
       button.textContent = '✓ אושר';
       
-      validationProgress[sectionName] = true;
+      estimateValidationProgress[sectionName] = true;
       
       // Save validation progress to sessionStorage
-      sessionStorage.setItem('validationProgress', JSON.stringify(validationProgress));
+      sessionStorage.setItem('estimateValidationProgress', JSON.stringify(estimateValidationProgress));
       sessionStorage.setItem('hasUserApprovedSections', 'true');
       
       // Enable and move to next section
-      const sections = ['vehicle', 'levi', 'damage', 'depreciation', 'estimate', 'legal_text'];
+      const sections = ['vehicle', 'levi', 'damage', 'depreciation', 'calculations', 'legal_text'];
       const currentIndex = sections.indexOf(sectionName);
       
       if (currentIndex < sections.length - 1) {
@@ -2896,8 +2897,8 @@
           populateDamageValidationItems();
         } else if (nextSectionName === 'depreciation') {
           populateDepreciationValidationItems();
-        } else if (nextSectionName === 'estimate') {
-          populateEstimateValidationItems();
+        } else if (nextSectionName === 'calculations') {
+          populateCalculationsValidationItems();
         }
         
         // Auto-validate next section
@@ -2920,7 +2921,7 @@
         'levi': 'דו"ח לוי יצחק',
         'depreciation': 'ירידת ערך',
         'damage': 'מוקדי נזק',
-        'estimate': 'חישובי אומדן',
+        'calculations': 'חישובי אומדן',
         'legal_text': 'טקסט משפטי'
       };
       return titles[sectionName] || sectionName;
@@ -3297,11 +3298,11 @@
       }
     };
 
-    function populateEstimateValidationItems() {
-      console.log('📊 populateEstimateValidationItems called');
-      const container = document.getElementById('estimate-validation-items');
+    function populateCalculationsValidationItems() {
+      console.log('📊 populateCalculationsValidationItems called');
+      const container = document.getElementById('calculations-validation-items');
       if (!container) {
-        console.log('⚠️ Estimate container not found');
+        console.log('⚠️ Calculations container not found');
         return;
       }
       
@@ -3438,16 +3439,25 @@
         const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
         
         // Count completed sections for better feedback
-        const completedSections = Object.keys(validationProgress).filter(k => validationProgress[k]);
-        const totalSections = Object.keys(validationProgress).length;
+        const completedSections = Object.keys(estimateValidationProgress).filter(k => estimateValidationProgress[k]);
+        const totalSections = Object.keys(estimateValidationProgress).length;
         
-        // Update validation data
-        helper.validation = {
+        // Update estimate-specific validation data (personalized workflow)
+        helper.estimate_validation = {
           completed_sections: completedSections,
           legal_text: document.getElementById('legal-text-content')?.value || '',
           validated_at: new Date().toISOString(),
-          validated_by: 'user',
-          validation_progress: validationProgress
+          validated_by: 'estimate_user',
+          workflow_type: 'estimate',
+          validation_progress: estimateValidationProgress,
+          specific_validations: {
+            estimate_type: helper?.estimate?.type || 'לא מוגדר',
+            total_before_vat: helper?.estimate?.totals?.damage_centers?.total_before_vat?.value || 0,
+            total_with_vat: helper?.estimate?.totals?.damage_centers?.total_with_vat?.value || 0,
+            legal_text_included: !!(helper?.estimate?.summary?.legal_text),
+            damage_centers_count: (helper?.expertise?.damage_blocks || []).length,
+            calculations_verified: true
+          }
         };
 
         sessionStorage.setItem('helper', JSON.stringify(helper));
@@ -3680,13 +3690,13 @@
     // Force refresh validation to apply new logic
     console.log('🔧 Forcing validation refresh to apply new logic...');
     
-    // Clear all cached validation states
-    validationProgress = {
+    // Clear all cached validation states (Estimate workflow)
+    estimateValidationProgress = {
       vehicle: false,
       levi: false,
       damage: false,
       depreciation: false,
-      estimate: false,
+      calculations: false,
       legal_text: false
     };
     
