@@ -2252,8 +2252,35 @@
         button.textContent = '📤 מייצא...';
         button.disabled = true;
         
+        // Get the generated HTML content
+        const estimateContainer = document.getElementById('estimate-output');
+        const estimateHTML = estimateContainer ? estimateContainer.innerHTML : '';
+        
+        // Extract car details from helper
+        const carDetails = {
+          plateNumber: helper.estimate?.vehicle?.plateNumber || helper.vehicle?.plate_number || '',
+          manufacturer: helper.estimate?.vehicle?.manufacturer || helper.vehicle?.manufacturer || '',
+          model: helper.estimate?.vehicle?.model || helper.vehicle?.model || '',
+          year: helper.estimate?.vehicle?.year || helper.vehicle?.year || '',
+          engineVolume: helper.estimate?.vehicle?.engineVolume || helper.vehicle?.engine_volume || '',
+          color: helper.estimate?.vehicle?.color || helper.vehicle?.color || '',
+          clientName: helper.estimate?.client?.name || helper.client?.name || '',
+          clientPhone: helper.estimate?.client?.phone || helper.client?.phone || '',
+          clientEmail: helper.estimate?.client?.email || helper.client?.email || '',
+          incidentDate: helper.estimate?.incident?.date || helper.incident?.date || '',
+          inspectionDate: helper.estimate?.inspection?.date || helper.inspection?.date || ''
+        };
+        
+        // Create payload with car details and HTML
+        const payload = {
+          carDetails: carDetails,
+          estimateHTML: estimateHTML,
+          timestamp: new Date().toISOString(),
+          type: 'estimate_export'
+        };
+        
         // Send to webhook with correct parameter order: (id, payload)
-        const result = await sendToWebhook('SUBMIT_ESTIMATE', helper);
+        const result = await sendToWebhook('SUBMIT_ESTIMATE', payload);
         
         if (result.success) {
           alert('✅ האומדן יוצא בהצלחה');
