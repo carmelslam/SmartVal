@@ -215,6 +215,57 @@ function setupDataSync() {
         } catch (error) {
           console.error('❌ Error processing helper data update:', error);
         }
+      } else if (event.data.type === 'GET_VAT_RATE') {
+        // Handle VAT rate request from iframe
+        try {
+          let vatRate = 18; // Default VAT rate
+          
+          // Try to get VAT rate from helper data structure
+          const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+          
+          // Priority 1: calculations.vat_rate
+          if (helper.calculations && helper.calculations.vat_rate) {
+            vatRate = parseFloat(helper.calculations.vat_rate);
+            console.log(`📊 Using VAT rate from calculations.vat_rate: ${vatRate}%`);
+          }
+          // Priority 2: estimate.summary.vat_rate.current
+          else if (helper.estimate && helper.estimate.summary && 
+                   helper.estimate.summary.vat_rate && 
+                   helper.estimate.summary.vat_rate.current !== undefined) {
+            vatRate = parseFloat(helper.estimate.summary.vat_rate.current);
+            console.log(`📊 Using VAT rate from estimate.summary.vat_rate.current: ${vatRate}%`);
+          }
+          // Priority 3: estimate.summary.vat_rate (direct)
+          else if (helper.estimate && helper.estimate.summary && helper.estimate.summary.vat_rate) {
+            vatRate = parseFloat(helper.estimate.summary.vat_rate);
+            console.log(`📊 Using VAT rate from estimate.summary.vat_rate: ${vatRate}%`);
+          }
+          // Fallback: sessionStorage
+          else {
+            const storedVat = sessionStorage.getItem('globalVAT');
+            if (storedVat) {
+              vatRate = parseFloat(storedVat);
+              console.log(`📊 Using stored VAT rate: ${vatRate}%`);
+            } else {
+              console.log(`📊 Using default VAT rate: ${vatRate}%`);
+            }
+          }
+          
+          // Send VAT rate back to iframe
+          estimatorBuilderFrame.contentWindow.postMessage({
+            type: 'VAT_RATE_RESPONSE',
+            vatRate: vatRate
+          }, '*');
+          
+          console.log(`📤 Sent VAT rate ${vatRate}% to iframe`);
+        } catch (error) {
+          console.error('❌ Error handling VAT rate request:', error);
+          // Send default rate on error
+          estimatorBuilderFrame.contentWindow.postMessage({
+            type: 'VAT_RATE_RESPONSE',
+            vatRate: 18
+          }, '*');
+        }
       }
     }
   });

@@ -202,10 +202,46 @@ export const MathEngine = {
 
   // Load VAT rate from admin hub
   loadAdminHubVatRate() {
+    // First, try to get VAT rate from helper data structure
+    try {
+      const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+      
+      // Priority 1: calculations.vat_rate
+      if (helper.calculations && helper.calculations.vat_rate) {
+        const vatRate = parseFloat(helper.calculations.vat_rate);
+        console.log('📊 Using VAT rate from calculations.vat_rate:', vatRate);
+        return vatRate;
+      }
+      
+      // Priority 2: estimate.summary.vat_rate.current
+      if (helper.estimate && helper.estimate.summary && 
+          helper.estimate.summary.vat_rate && 
+          helper.estimate.summary.vat_rate.current !== undefined) {
+        const vatRate = parseFloat(helper.estimate.summary.vat_rate.current);
+        console.log('📊 Using VAT rate from estimate.summary.vat_rate.current:', vatRate);
+        return vatRate;
+      }
+      
+      // Priority 3: estimate.summary.vat_rate (direct)
+      if (helper.estimate && helper.estimate.summary && helper.estimate.summary.vat_rate) {
+        const vatRate = parseFloat(helper.estimate.summary.vat_rate);
+        console.log('📊 Using VAT rate from estimate.summary.vat_rate:', vatRate);
+        return vatRate;
+      }
+    } catch (e) {
+      console.warn('Could not get VAT rate from helper data:', e);
+    }
+    
     // Check for admin hub communication methods
     if (window.parent && window.parent !== window) {
       // We're in an iframe, try to communicate with parent (admin hub)
       try {
+        // Check if we have a stored VAT rate to avoid the timeout
+        const storedVat = sessionStorage.getItem('globalVAT');
+        if (storedVat) {
+          console.log('📊 Using stored VAT rate instead of parent communication:', storedVat);
+          return parseFloat(storedVat);
+        }
         return MathEngine.getVatRateFromParent();
       } catch (e) {
         console.warn('Could not get VAT rate from parent frame:', e);
