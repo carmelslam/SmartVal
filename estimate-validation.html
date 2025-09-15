@@ -827,28 +827,6 @@
           <!-- Will be populated by populateEstimateValidationItems() -->
         </div>
         
-        <!-- Estimate Calculations Summary -->
-        <div class="cost-summary">
-          <div class="cost-summary-title">חישובי אומדן סופיים</div>
-          <div class="cost-grid">
-            <div class="cost-item">
-              <span class="cost-label">סה"כ נזקים:</span>
-              <span class="cost-value" id="estimate-base-damage">₪0</span>
-            </div>
-            <div class="cost-item">
-              <span class="cost-label">שיעור מע"מ:</span>
-              <span class="cost-value" id="estimate-vat-rate">18%</span>
-            </div>
-            <div class="cost-item">
-              <span class="cost-label">סכום מע"מ:</span>
-              <span class="cost-value" id="estimate-vat-amount">₪0</span>
-            </div>
-            <div class="cost-item" style="grid-column: 1 / -1; border-top: 2px solid #16a34a; padding-top: 10px; margin-top: 10px;">
-              <span class="cost-label" style="font-weight: bold; font-size: 18px;">סה"כ תביעה כולל מע"מ:</span>
-              <span class="cost-value" style="font-size: 20px; color: #16a34a;" id="estimate-total-claim">₪0</span>
-            </div>
-          </div>
-        </div>
       </div>
       <div class="validation-buttons">
         <button class="btn btn-validate" onclick="validateSection('estimate')">בדוק אוטומטית</button>
@@ -3161,7 +3139,26 @@
       const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
       console.log('🔍 Helper loaded for estimate:', !!helper, 'estimate:', !!helper.estimate);
       
-      // Direct field mapping based on screenshot annotations
+      // Calculate values with proper currency formatting
+      const totalBeforeVat = helper?.estimate?.totals?.damage_centers?.total_before_vat?.formatted || 'לא זמין';
+      const vatRate = '18%';
+      const vatAmount = helper?.estimate?.totals?.damage_centers?.vat_amount?.formatted || 
+                      helper?.estimate?.totals?.damage_centers?.total_before_vat?.formatted || 'לא זמין';
+      const totalWithVat = helper?.estimate?.totals?.damage_centers?.total_with_vat?.formatted || 'לא זמין';
+      const salvageValue = helper?.estimate?.summary?.salvage_value ? 
+                          (helper.estimate.summary.salvage_value.toString().includes('₪') ? 
+                           helper.estimate.summary.salvage_value : 
+                           `₪${helper.estimate.summary.salvage_value}`) : '₪0';
+      const compensation = helper?.estimate?.summary?.depreciation_compensation ? 
+                          (helper.estimate.summary.depreciation_compensation.toString().includes('₪') ? 
+                           helper.estimate.summary.depreciation_compensation : 
+                           `₪${helper.estimate.summary.depreciation_compensation}`) : '₪0';
+      const finalTotal = helper?.estimate?.summary?.final_total ? 
+                        (helper.estimate.summary.final_total.toString().includes('₪') ? 
+                         helper.estimate.summary.final_total : 
+                         `₪${helper.estimate.summary.final_total}`) : 'לא זמין';
+
+      // Direct field mapping in the correct order as requested
       const estimateHTML = 
         createEnhancedValidationItem(
           'סוג אומדן מוגדר',
@@ -3171,13 +3168,13 @@
         ) +
         createEnhancedValidationItem(
           'טקסט משפטי מתאים',
-          'כן', // This will be validated separately 
+          'כן',
           'כן',
           'legal_text_suitable'
         ) +
         createEnhancedValidationItem(
           'חישוב מע"מ ותביעה',
-          'כן', // This will be validated separately
+          'כן',
           'כן', 
           'vat_calculation'
         ) +
@@ -3188,34 +3185,46 @@
           'data_consistency'
         ) +
         createEnhancedValidationItem(
-          'חישובי אומדן סופיים',
-          helper?.estimate?.totals?.damage_centers?.total_with_vat?.formatted || 'לא זמין',
-          helper?.estimate?.totals?.damage_centers?.total_with_vat?.formatted || 'לא זמין',
-          'final_calculations'
+          'סה"כ נזקים ללא מע"מ',
+          totalBeforeVat,
+          totalBeforeVat,
+          'total_damages_no_vat'
         ) +
         createEnhancedValidationItem(
           'שיעור מע"מ',
-          '18%', // Standard VAT rate
-          '18%',
+          vatRate,
+          vatRate,
           'vat_rate'
         ) +
         createEnhancedValidationItem(
-          'סה"כ נזקים',
-          helper?.estimate?.totals?.damage_centers?.total_before_vat?.formatted || 'לא זמין',
-          helper?.estimate?.totals?.damage_centers?.total_before_vat?.formatted || 'לא זמין',
-          'total_damages'
+          'סכום מע"מ',
+          vatAmount,
+          vatAmount,
+          'vat_amount'
         ) +
         createEnhancedValidationItem(
-          'פיצוי',
-          helper?.estimate?.summary?.depreciation_compensation || '₪0',
-          helper?.estimate?.summary?.depreciation_compensation || '₪0',
-          'compensation'
+          'סה"כ נזקים כולל מע"מ',
+          totalWithVat,
+          totalWithVat,
+          'total_damages_with_vat'
+        ) +
+        createEnhancedValidationItem(
+          'פיצוי ירידת ערך',
+          compensation,
+          compensation,
+          'depreciation_compensation'
+        ) +
+        createEnhancedValidationItem(
+          'ערך גרוט',
+          salvageValue,
+          salvageValue,
+          'salvage_value'
         ) +
         createEnhancedValidationItem(
           'סה"כ תביעה כולל מע"מ',
-          helper?.estimate?.summary?.final_total || 'לא זמין',
-          helper?.estimate?.summary?.final_total || 'לא זמין',
-          'final_total'
+          finalTotal,
+          finalTotal,
+          'final_total_claim'
         );
       
       container.innerHTML = estimateHTML;
