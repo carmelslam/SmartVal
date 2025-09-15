@@ -916,7 +916,8 @@
       helper.estimate_details_title = helper.estimate_details_title || 'פרטי הרכב הנבדק';
       
       // Ensure estimate calculations are up to date
-      if (!helper.estimate?.totals?.damage_centers?.total_with_vat?.value) {
+      if (!helper.estimate?.totals?.damage_centers?.total_with_vat?.value || 
+          !helper.estimate?.calculations?.total_damage_cost) {
         calculateEstimateTotals(helper);
       }
       
@@ -941,18 +942,31 @@
     }
 
     function calculateEstimateTotals(helper) {
-      // Get base damage from helper.estimate structure
+      // Get base damage from multiple sources, prioritizing estimate structure
       const baseDamage = helper.estimate?.calculations?.total_damage_cost || 
-                        helper.estimate?.totals?.damage_centers?.total_before_vat?.value || 0;
+                        helper.estimate?.totals?.damage_centers?.total_before_vat?.value ||
+                        helper.calculations?.base_damage ||
+                        helper.calculations?.total_damage ||
+                        helper.calculations?.total_before_depreciation ||
+                        helper.levi_report?.total_damage ||
+                        helper.damage_calculation?.total ||
+                        0;
 
-      // Get VAT rate from helper.estimate structure  
+      // Get VAT rate from multiple sources, prioritizing estimate structure
       const vatRate = helper.estimate?.summary?.vat_rate?.current || 
-                     helper.estimate?.totals?.damage_centers?.vat_rate || 18;
+                     helper.estimate?.totals?.damage_centers?.vat_rate ||
+                     helper.calculations?.vat_rate ||
+                     parseFloat(sessionStorage.getItem('globalVAT')) ||
+                     18;
       const vatAmount = helper.estimate?.totals?.damage_centers?.vat_amount || 
                        Math.round(baseDamage * vatRate / 100);
       const totalEstimate = helper.estimate?.totals?.damage_centers?.total_with_vat?.value || 
                            (baseDamage + vatAmount);
 
+      // Store calculations in estimate structure
+      if (!helper.estimate.calculations) helper.estimate.calculations = {};
+      helper.estimate.calculations.total_damage_cost = baseDamage;
+      
       // Update helper with calculations (maintain backward compatibility)
       helper.calculations = helper.calculations || {};
       helper.calculations.base_damage = baseDamage;
@@ -961,6 +975,7 @@
       if (!helper.estimate.summary.vat_rate) helper.estimate.summary.vat_rate = {};
       helper.estimate.summary.vat_rate.current = vatRate;
       helper.calculations.vat_amount = vatAmount;
+      helper.calculations.total_estimate = totalEstimate;
       // Store total estimate in estimate structure
       if (!helper.estimate.totals) helper.estimate.totals = {};
       if (!helper.estimate.totals.damage_centers) helper.estimate.totals.damage_centers = {};
