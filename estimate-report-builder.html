@@ -1080,10 +1080,19 @@
         const vehicle = helper.vehicle || helper.car_details || {};
         const manufacturer = vehicle.manufacturer || vehicle.make || helper.meta?.manufacturer || '';
         const model = vehicle.model || helper.meta?.model || '';
+        const modelCode = vehicle.model_code || helper.levi_report?.model_code || helper.meta?.model_code || '';
         const year = vehicle.year || vehicle.manufacture_year || helper.meta?.year || '';
         const chassis = vehicle.chassis || vehicle.vin || vehicle.frame_number || helper.meta?.chassis || '';
         const km = vehicle.km || vehicle.odo || vehicle.odometer || vehicle.mileage || helper.meta?.km || '';
         const ownershipType = vehicle.ownership_type || vehicle.type || vehicle.category || helper.meta?.ownership_type || '';
+        
+        // Enhanced mileage display with breakdown
+        const baseMileage = helper.levi_report?.adjustments?.find(adj => adj.subject === 'ק"מ')?.value || '';
+        const mileageAdjustment = helper.levi_report?.adjustments?.find(adj => adj.subject === 'ק"מ')?.adjusted_value || '';
+        const totalMileage = km || baseMileage || '';
+        const mileageDisplay = baseMileage && mileageAdjustment ? 
+          `ק"מ ${totalMileage} (ק"מ + ${Math.abs(mileageAdjustment)}) (טון ק"מ: ${((Math.abs(mileageAdjustment) / baseMileage) * 100).toFixed(1)})` : 
+          `ק"מ ${totalMileage}`;
         
         // Calculations - Use helper.estimate structure
         const baseDamage = helper.estimate?.calculations?.total_damage_cost || 
@@ -1188,27 +1197,27 @@
               <tbody>
                 <tr>
                   <td style="width: 50%; padding: 4px;"><strong>בעל הרכב:</strong> ${clientName}</td>
-                  <td style="width: 50%; padding: 4px;"><strong>דגם:</strong> ${model}</td>
+                  <td style="width: 50%; padding: 4px;"><strong>יצרן:</strong> ${manufacturer}</td>
                 </tr>
                 <tr>
-                  <td style="padding: 4px;"><strong>מספר טלפון:</strong> ${clientPhone}</td>
-                  <td style="padding: 4px;"><strong>מספר שלדה:</strong> ${chassis}</td>
-                </tr>
-                <tr>
-                  <td style="padding: 4px;"><strong>תאריך הבדיקה:</strong> ${inspectionDate}</td>
-                  <td style="padding: 4px;"><strong>שנת יצור:</strong> ${year}</td>
-                </tr>
-                <tr>
-                  <td style="padding: 4px;"><strong>מקום הבדיקה:</strong> ${location}</td>
-                  <td style="padding: 4px;"><strong>מד ק"מ:</strong> ${km}</td>
+                  <td style="padding: 4px;"><strong>מספר טלפון בעל הרכב:</strong> ${clientPhone}</td>
+                  <td style="padding: 4px;"><strong>דגם:</strong> ${model}</td>
                 </tr>
                 <tr>
                   <td style="padding: 4px;"><strong>מספר רישוי:</strong> ${plate}</td>
-                  <td style="padding: 4px;"><strong>סוג הרכב:</strong> ${ownershipType}</td>
+                  <td style="padding: 4px;"><strong>קוד דגם:</strong> ${modelCode}</td>
                 </tr>
                 <tr>
-                  <td style="padding: 4px;"><strong>יצרן:</strong> ${manufacturer}</td>
-                  <td style="padding: 4px;"><strong>סוג הנזק:</strong> ${damageType}</td>
+                  <td style="padding: 4px;"><strong>תאריך הבדיקה:</strong> ${inspectionDate}</td>
+                  <td style="padding: 4px;"><strong>מקום הבדיקה:</strong> ${location}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 4px;"><strong>שנת יצור הרכב:</strong> ${year}</td>
+                  <td style="padding: 4px;"><strong>מד אוויר:</strong> ${mileageDisplay}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 4px;"><strong>מספר שלדה:</strong> ${chassis}</td>
+                  <td style="padding: 4px;"><strong>סוג הרכב:</strong> ${ownershipType}</td>
                 </tr>
               </tbody>
             </table>
