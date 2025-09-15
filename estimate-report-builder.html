@@ -1954,13 +1954,18 @@
         adjustments.forEach(adjustment => {
           const percentDisplay = adjustment.percent ? `${adjustment.percent}%` : '-';
           const amount = adjustment.amount || 0;
-          const label = categoryLabels[category] || adjustment.value || category;
+          const categoryLabel = categoryLabels[category] || category;
+          const specificValue = adjustment.value || '';
+          const combinedLabel = specificValue ? `${categoryLabel} - ${specificValue}` : categoryLabel;
           
           // No need to calculate cumulative value - use estimate.gross_market_value
           
+          const typeDisplay = adjustment.type === 'plus' ? 'תוספת' : 'הפחתה';
+          
           adjustmentRows.push(`
             <tr>
-              <td style="padding: 8px;">${label}</td>
+              <td style="padding: 8px;">${combinedLabel}</td>
+              <td style="padding: 8px; text-align: center;">${typeDisplay}</td>
               <td style="padding: 8px; text-align: center;">${percentDisplay}</td>
               <td style="padding: 8px; text-align: center;">${formatCurrency(amount)}</td>
             </tr>
@@ -1973,10 +1978,10 @@
           <div class="car-details">
             <div class="car-details-title">חישוב ערך השוק של הרכב</div>
             <table class="car-details-table" style="width: 100%; max-width: 700px; margin: 0 auto;">
-              <tr><th style="width: 50%;">תיאור</th><th style="width: 20%;">אחוז</th><th style="width: 30%;">ערך</th></tr>
-              <tr><td style="padding: 8px;">ערך הרכב ע"פ מחירון כולל מע"מ</td><td style="padding: 8px; text-align: center;">-</td><td style="padding: 8px; text-align: center;">${formatCurrency(basePrice)}</td></tr>
+              <tr><th style="width: 40%;">תיאור</th><th style="width: 20%;">תוספת/הפחתה</th><th style="width: 20%;">אחוז</th><th style="width: 20%;">ערך</th></tr>
+              <tr><td style="padding: 8px;">ערך הרכב ע"פ מחירון כולל מע"מ</td><td style="padding: 8px; text-align: center;">-</td><td style="padding: 8px; text-align: center;">-</td><td style="padding: 8px; text-align: center;">${formatCurrency(basePrice)}</td></tr>
               ${adjustmentRows.join('')}
-              <tr><td style="padding: 8px;"><strong>ערך השוק של הרכב כולל מע"מ</strong></td><td style="padding: 8px; text-align: center;">-</td><td style="padding: 8px; text-align: center;"><strong>${formatCurrency(totalValue)}</strong></td></tr>
+              <tr><td style="padding: 8px;"><strong>ערך השוק של הרכב כולל מע"מ</strong></td><td style="padding: 8px; text-align: center;">-</td><td style="padding: 8px; text-align: center;">-</td><td style="padding: 8px; text-align: center;"><strong>${formatCurrency(totalValue)}</strong></td></tr>
             </table>
           </div>
         </div>
