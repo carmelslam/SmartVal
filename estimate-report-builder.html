@@ -2252,10 +2252,6 @@
         button.textContent = '📤 מייצא...';
         button.disabled = true;
         
-        // Get the generated HTML content
-        const estimateContainer = document.getElementById('estimate-output');
-        const estimateHTML = estimateContainer ? estimateContainer.innerHTML : '';
-        
         // Extract car details from helper
         const carDetails = {
           plateNumber: helper.estimate?.vehicle?.plateNumber || helper.vehicle?.plate_number || '',
@@ -2271,10 +2267,22 @@
           inspectionDate: helper.estimate?.inspection?.date || helper.inspection?.date || ''
         };
         
-        // Create payload with car details and HTML
+        // Extract estimate summary data instead of full HTML
+        const estimateData = {
+          totalDamage: helper.estimate?.calculations?.total_damage_cost || 0,
+          marketValue: helper.estimate?.gross_market_value || 0,
+          depreciationAmount: helper.estimate?.depreciation?.global_amount || 0,
+          damagePercentage: helper.estimate?.calculations?.gross_damage_percentage || 0,
+          summary: {
+            legalText: helper.estimate?.summary?.legal_text || '',
+            attachments: helper.estimate?.summary?.attachments?.[0] || ''
+          }
+        };
+        
+        // Create payload with car details and estimate data (no HTML)
         const payload = {
           carDetails: carDetails,
-          estimateHTML: estimateHTML,
+          estimateData: estimateData,
           timestamp: new Date().toISOString(),
           type: 'estimate_export'
         };
