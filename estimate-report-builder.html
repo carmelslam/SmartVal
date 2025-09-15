@@ -2242,7 +2242,7 @@
       }
     };
 
-    window.exportToMake = async function() {
+    window.exportToMake = async function(event) {
       const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
       
       try {
@@ -2252,19 +2252,20 @@
         button.textContent = '📤 מייצא...';
         button.disabled = true;
         
-        // Send to Make.com via webhook with SUBMIT_ESTIMATE action
-        const result = await sendToWebhook(helper, 'SUBMIT_ESTIMATE');
+        // Send to webhook with correct parameter order: (id, payload)
+        const result = await sendToWebhook('SUBMIT_ESTIMATE', helper);
         
         if (result.success) {
-          alert('✅ האומדן יוצא בהצלחה ל-Make.com');
+          alert('✅ האומדן יוצא בהצלחה');
         } else {
           alert('❌ שגיאה ביצוא האומדן: ' + (result.error || 'שגיאה לא ידועה'));
         }
       } catch (error) {
-        console.error('Error exporting to Make.com:', error);
+        console.error('Error exporting estimate:', error);
         alert('❌ שגיאה ביצוא האומדן: ' + error.message);
       } finally {
         // Restore button
+        const button = event.target;
         button.textContent = originalText;
         button.disabled = false;
       }
@@ -2539,7 +2540,7 @@
     <button class="btn-secondary" onclick="editEstimate()">✏️ ערוך אומדן</button>
     <button class="btn-primary" onclick="previewEstimate()">👁️ תצוגה מקדימה</button>
     <button class="btn-success" onclick="generateEstimateReport()">📄 הפק דו"ח אומדן</button>
-    <button class="btn-info" onclick="exportToMake()">📤 יצוא ל-Make.com</button>
+    <button class="btn-info" onclick="exportToMake(event)">📤 יצוא אומדן</button>
     <button class="btn-secondary" onclick="goHome()">🏠 חזור לדף הבית</button>
   </div>
   
