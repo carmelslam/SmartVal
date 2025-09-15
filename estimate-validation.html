@@ -94,6 +94,12 @@
       border-color: #f59e0b;
       background: #fefbf2;
     }
+    .validation-section.disabled {
+      border-color: #d1d5db;
+      background: #f9fafb;
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
     .section-header {
       display: flex;
       justify-content: space-between;
@@ -1053,6 +1059,13 @@
           console.warn('⚠️ Error updating validation progress:', progressError);
         }
         
+        // Initialize section accessibility based on validation progress
+        try {
+          updateSectionAccessibility();
+        } catch (accessError) {
+          console.warn('⚠️ Error updating section accessibility:', accessError);
+        }
+        
         // Start initial validation
         try {
           startInitialValidation();
@@ -1069,6 +1082,7 @@
         // Try to at least show basic UI
         try {
           updateValidationProgress();
+          updateSectionAccessibility();
         } catch (fallbackError) {
           console.error('❌ Even fallback progress update failed:', fallbackError);
         }
@@ -1562,10 +1576,82 @@
       });
     }
 
+    // Helper function to get section display names in Hebrew
+    function getSectionDisplayName(sectionName) {
+      const sectionNames = {
+        vehicle: 'נתוני רכב',
+        levi: 'דו״ח לוי יצחק',
+        damage: 'מוקדי נזק ואקספרטיזה', 
+        depreciation: 'חישוב ירידת ערך לפי מוקדי נזק',
+        estimate: 'אומדן ושווי רכב',
+        legal_text: 'טקסט משפטי'
+      };
+      return sectionNames[sectionName] || sectionName;
+    }
+
+    // Function to update section accessibility based on sequential validation
+    function updateSectionAccessibility() {
+      const sections = ['vehicle', 'levi', 'damage', 'depreciation', 'estimate', 'legal_text'];
+      
+      sections.forEach((sectionName, index) => {
+        const section = document.getElementById(`section-${sectionName}`);
+        const buttons = section.querySelectorAll('button');
+        const validateButton = buttons[0]; // אמת button
+        const editButton = buttons[1]; // עריכה ידנית button
+        
+        if (index === 0) {
+          // First section is always accessible
+          section.classList.remove('disabled');
+          if (validateButton) validateButton.disabled = false;
+          if (editButton) editButton.disabled = false;
+        } else {
+          // Check if all previous sections are completed
+          let canAccess = true;
+          for (let i = 0; i < index; i++) {
+            if (!validationProgress[sections[i]]) {
+              canAccess = false;
+              break;
+            }
+          }
+          
+          if (canAccess) {
+            section.classList.remove('disabled');
+            if (validateButton) validateButton.disabled = false;
+            if (editButton) editButton.disabled = false;
+          } else {
+            section.classList.add('disabled');
+            if (validateButton) {
+              validateButton.disabled = true;
+              validateButton.title = `יש לאמת את כל הסעיפים הקודמים לפני אימות סעיף זה`;
+            }
+            if (editButton) {
+              editButton.disabled = true;
+              editButton.title = `יש לאמת את כל הסעיפים הקודמים לפני עריכת סעיף זה`;
+            }
+          }
+        }
+      });
+    }
+
     // Validation Functions
     window.validateSection = async function(sectionName) {
       const section = document.getElementById(`section-${sectionName}`);
       const status = section.querySelector('.section-status');
+      
+      // Check if previous sections are completed (sequential validation)
+      const sections = ['vehicle', 'levi', 'damage', 'depreciation', 'estimate', 'legal_text'];
+      const currentIndex = sections.indexOf(sectionName);
+      
+      if (currentIndex > 0) {
+        // Check if all previous sections are completed
+        for (let i = 0; i < currentIndex; i++) {
+          const previousSection = sections[i];
+          if (!validationProgress[previousSection]) {
+            showAlert(`יש לאמת את הסעיף "${getSectionDisplayName(previousSection)}" לפני אימות הסעיף הנוכחי`, 'error');
+            return;
+          }
+        }
+      }
       
       // Set to validating state
       section.classList.remove('completed', 'error', 'warning');
@@ -2613,6 +2699,9 @@
       progressFill.style.width = progressPercent + '%';
       document.getElementById('progress-text').textContent = progressPercent + '% הושלם';
       
+      // Update section accessibility based on sequential validation
+      updateSectionAccessibility();
+      
       // Remove all progress classes
       progressFill.classList.remove('progress-0', 'progress-17', 'progress-33', 'progress-50', 'progress-67', 'progress-83', 'progress-100');
       
@@ -2682,11 +2771,27 @@
       };
       sessionStorage.removeItem('validationProgress');
       updateValidationProgress();
+      updateSectionAccessibility();
     }
 
     // Section Actions
     window.editSection = function(sectionName) {
       console.log('📝 Editing section:', sectionName);
+      
+      // Check if section is accessible for editing (sequential validation)
+      const sections = ['vehicle', 'levi', 'damage', 'depreciation', 'estimate', 'legal_text'];
+      const currentIndex = sections.indexOf(sectionName);
+      
+      if (currentIndex > 0) {
+        // Check if all previous sections are completed
+        for (let i = 0; i < currentIndex; i++) {
+          const previousSection = sections[i];
+          if (!validationProgress[previousSection]) {
+            showAlert(`יש לאמת את הסעיף "${getSectionDisplayName(previousSection)}" לפני עריכת הסעיף הנוכחי`, 'error');
+            return;
+          }
+        }
+      }
       
       // Reset validation status for the section being edited
       validationProgress[sectionName] = false;
