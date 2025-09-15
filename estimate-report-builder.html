@@ -1849,10 +1849,14 @@
     function generateMarketValueTable() {
       const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
       
-      // Get base price
+      // Get base price - check multiple possible locations
       const basePrice = helper.estimate?.vehicle?.basePrice || 
                        helper.vehicle?.base_price || 
-                       helper.car_details?.base_price || 0;
+                       helper.car_details?.base_price ||
+                       helper.levi_report?.base_price ||
+                       helper.expertise?.levi_report?.base_price ||
+                       helper.levisummary?.base_price ||
+                       helper.calculations?.base_price || 0;
       
       let rows = [];
       let cumulativeValue = basePrice;
@@ -1898,11 +1902,9 @@
       
       // Add final cumulative value row
       rows.push(`
-        <tr>
-          <td style="padding: 8px;"><strong>ערך הרכב לנזק גולמי כולל מע"מ</strong></td>
-          <td style="padding: 8px; text-align: center;"><strong>-</strong></td>
-          <td style="padding: 8px; text-align: center;"><strong>-</strong></td>
-          <td style="padding: 8px; text-align: center;"><strong>${formatCurrency(cumulativeValue)}</strong></td>
+        <tr style="background: #e8f4f8; font-weight: bold;">
+          <td colspan="3" style="padding: 8px; text-align: center; font-weight: bold;"><strong>ערך הרכב לנזק גולמי כולל מע"מ</strong></td>
+          <td style="padding: 8px; text-align: center; font-weight: bold;"><strong>${formatCurrency(cumulativeValue)}</strong></td>
         </tr>
       `);
       
