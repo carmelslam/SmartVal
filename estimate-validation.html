@@ -2809,24 +2809,37 @@
       // Get helper data directly
       const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
       
-      // Simple direct field mapping
+      // Format monetary values with thousands separators and currency symbols
+      const formatMonetaryValue = (value) => {
+        if (!value || value === 'לא זמין' || value === 'undefined') return 'לא זמין';
+        const numValue = parseFloat(String(value).replace(/[₪,]/g, ''));
+        if (isNaN(numValue)) return 'לא זמין';
+        return MathEngine.formatCurrency(numValue);
+      };
+      
+      // Get the raw values and format them
+      const basePrice = formatMonetaryValue(helper?.estimate?.vehicle?.basePrice);
+      const adjustmentsValue = formatMonetaryValue(helper?.valuation?.adjustments_value);
+      const finalMarketValue = formatMonetaryValue(helper?.estimate?.calculations?.full_market_value);
+      
+      // Simple direct field mapping with formatted currency values
       const leviHTML = 
         createEnhancedValidationItem(
           'מחיר בסיס', 
-          helper?.estimate?.vehicle?.basePrice || 'לא זמין',
-          helper?.estimate?.vehicle?.basePrice || 'לא זמין', 
+          basePrice,
+          basePrice, 
           'levi_base_price'
         ) +
         createEnhancedValidationItem(
           'סה"כ התאמות', 
-          helper?.valuation?.adjustments_value || 'לא זמין',
-          helper?.valuation?.adjustments_value || 'לא זמין', 
+          adjustmentsValue,
+          adjustmentsValue, 
           'levi_adjustments'
         ) +
         createEnhancedValidationItem(
           'שווי שוק סופי', 
-          helper?.estimate?.calculations?.full_market_value || 'לא זמין',
-          helper?.estimate?.calculations?.full_market_value || 'לא זמין', 
+          finalMarketValue,
+          finalMarketValue, 
           'levi_final_value'
         );
       
