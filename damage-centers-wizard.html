@@ -3163,6 +3163,25 @@
             helper.current_damage_center.Description = description;
             helper.current_damage_center.RepairNature = repairNature;
             
+            // Also save to damage_centers array
+            const centerId = helper.current_damage_center.Id;
+            if (helper.damage_centers && Array.isArray(helper.damage_centers)) {
+              const existingCenter = helper.damage_centers.find(c => c.Id === centerId);
+              if (existingCenter) {
+                existingCenter.RepairNature = repairNature;
+                console.log('✅ RepairNature saved to damage_centers array:', repairNature);
+              }
+            }
+            
+            // Also save to damage_assessment.damage_centers
+            if (helper.damage_assessment && helper.damage_assessment.damage_centers && Array.isArray(helper.damage_assessment.damage_centers)) {
+              const assessmentCenter = helper.damage_assessment.damage_centers.find(c => c.Id === centerId || c.center_id === centerId);
+              if (assessmentCenter) {
+                assessmentCenter.repair_nature = repairNature;
+                console.log('✅ repair_nature saved to damage_assessment.damage_centers:', repairNature);
+              }
+            }
+            
             // Update tracking variables
             damageCenterData.description = description;
             damageCenterData.repairNature = repairNature;
@@ -3689,17 +3708,34 @@
       if (!repairNatureElement) return;
       
       const repairNatureValue = repairNatureElement.value.trim();
+      const centerId = helper.current_damage_center?.Id;
       
       // Save to current_damage_center
       if (helper.current_damage_center) {
         helper.current_damage_center.RepairNature = repairNatureValue;
-        
-        // Save to sessionStorage
-        sessionStorage.setItem('helper', JSON.stringify(helper));
-        window.helper = helper;
-        
-        console.log('💾 Repair nature saved to current_damage_center:', repairNatureValue);
       }
+      
+      // Also save to damage_centers array
+      if (helper.damage_centers && Array.isArray(helper.damage_centers) && centerId) {
+        const existingCenter = helper.damage_centers.find(c => c.Id === centerId);
+        if (existingCenter) {
+          existingCenter.RepairNature = repairNatureValue;
+        }
+      }
+      
+      // Also save to damage_assessment.damage_centers
+      if (helper.damage_assessment && helper.damage_assessment.damage_centers && centerId) {
+        const assessmentCenter = helper.damage_assessment.damage_centers.find(c => c.Id === centerId);
+        if (assessmentCenter) {
+          assessmentCenter.repair_nature = repairNatureValue;
+        }
+      }
+      
+      // Save to sessionStorage
+      sessionStorage.setItem('helper', JSON.stringify(helper));
+      window.helper = helper;
+      
+      console.log('💾 Repair nature saved to multiple locations:', repairNatureValue);
     };
     
     function loadPartsModule() {
