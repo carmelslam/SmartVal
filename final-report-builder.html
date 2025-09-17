@@ -2081,6 +2081,19 @@
         if (!helper.final_report) helper.final_report = {};
         helper.final_report.depreciation = helper.depreciation;
         
+        // Initialize adjustments structure mirroring estimate.adjustments
+        if (!helper.final_report.adjustments) {
+          helper.final_report.adjustments = {
+            features: [],
+            registration: [],
+            mileage: [],
+            ownership_type: [],
+            ownership_history: [],
+            usage: [],
+            additional: []
+          };
+        }
+        
         // ✅ REMOVED: No longer saving to manual_depreciation - everything is in helper.depreciation
         
         // ✅ CRITICAL FIX: Update BOTH sessionStorage AND in-memory window.helper to prevent populateAllForms overwrite
@@ -2228,57 +2241,98 @@
         }
       });
       
-      // Collect adjustment data (תוספות והורדות)
+      // Collect adjustment data and save to helper.final_report.adjustments
+      const helper = window.helper || JSON.parse(sessionStorage.getItem('helper') || '{}');
+      
+      // Initialize final_report.adjustments if not exists
+      if (!helper.final_report) helper.final_report = {};
+      if (!helper.final_report.adjustments) {
+        helper.final_report.adjustments = {
+          features: [],
+          registration: [],
+          mileage: [],
+          ownership_type: [],
+          ownership_history: [],
+          usage: [],
+          additional: []
+        };
+      }
+
+      // Define adjustment mapping for all categories
+      const adjustmentMappings = [
+        { category: 'features', containerId: 'featuresAdjustmentsList' },
+        { category: 'registration', containerId: 'registrationAdjustmentsList' },
+        { category: 'features', containerId: 'fullFeaturesAdjustmentsList' }, // Full market features
+        { category: 'registration', containerId: 'fullRegistrationAdjustmentsList' }, // Full market registration
+        { category: 'mileage', containerId: 'mileageAdjustmentsList' },
+        { category: 'ownership_type', containerId: 'ownershipAdjustmentsList' },
+        { category: 'ownership_history', containerId: 'ownersAdjustmentsList' },
+        { category: 'usage', containerId: 'usageAdjustmentsList' },
+        { category: 'additional', containerId: 'allAdjustments' }
+      ];
+
+      // Clear all categories in final_report.adjustments
+      Object.keys(helper.final_report.adjustments).forEach(key => {
+        helper.final_report.adjustments[key] = [];
+      });
+
+      // Collect adjustments from all containers
+      adjustmentMappings.forEach(({ category, containerId }) => {
+        const container = document.getElementById(containerId);
+        if (container) {
+          const rows = container.querySelectorAll('div.adjustment-row, div > input[type="text"]:first-child');
+          rows.forEach(row => {
+            let inputs;
+            if (row.classList && row.classList.contains('adjustment-row')) {
+              inputs = row.querySelectorAll('input, select');
+            } else {
+              // Handle different row structures
+              inputs = row.parentElement?.querySelectorAll('input, select') || [];
+            }
+            
+            if (inputs.length >= 4) {
+              const adjustmentItem = {
+                value: inputs[0].value || '', // Field mapping: תיאור → value
+                type: inputs[1].value || 'plus', // Field mapping: סוג → type
+                percent: parseFloat(inputs[2].value) || 0, // Field mapping: אחוז → percent
+                percentage: parseFloat(inputs[2].value) || 0, // Backward compatibility
+                amount: parseFloat((inputs[3].value || '').replace(/[₪,]/g, '')) || 0,
+                amount_display: inputs[3].value || '',
+                source: 'final_report',
+                timestamp: new Date().toISOString()
+              };
+
+              // Apply proper sign based on type
+              if (adjustmentItem.type === 'minus') {
+                adjustmentItem.percent = -Math.abs(adjustmentItem.percent);
+                adjustmentItem.percentage = -Math.abs(adjustmentItem.percentage);
+                adjustmentItem.amount = -Math.abs(adjustmentItem.amount);
+              }
+
+              helper.final_report.adjustments[category].push(adjustmentItem);
+            }
+          });
+        }
+      });
+
+      // Update valuation.adjustments with original items only (first item of each category)
+      if (!helper.valuation) helper.valuation = {};
+      if (!helper.valuation.adjustments) helper.valuation.adjustments = {};
+      
+      Object.keys(helper.final_report.adjustments).forEach(category => {
+        const items = helper.final_report.adjustments[category];
+        if (items.length > 0 && items[0].source !== 'final_report') {
+          // Only update valuation if the first item is from original estimate data
+          helper.valuation.adjustments[category] = items[0];
+        }
+      });
+
+      // Legacy format for compatibility
       const adjustmentsData = {
-        features: [],
-        registration: [],
-        final_report: [],
-        full_market: []
+        features: helper.final_report.adjustments.features,
+        registration: helper.final_report.adjustments.registration,
+        full_market: helper.final_report.adjustments.additional
       };
-      
-      // Collect feature adjustments (תוספות מאפיינים)
-      const featureRows = document.querySelectorAll('#featuresAdjustmentsList > div');
-      featureRows.forEach(row => {
-        const inputs = row.querySelectorAll('input, select');
-        if (inputs.length >= 4) {
-          adjustmentsData.features.push({
-            description: inputs[0].value,
-            type: inputs[1].value,
-            percentage: parseFloat(inputs[2].value) || 0,
-            value: parseFloat(inputs[3].value.replace(/[₪,]/g, '')) || 0
-          });
-        }
-      });
-      
-      // Collect registration adjustments (עליה לכביש)
-      const registrationRows = document.querySelectorAll('#registrationAdjustmentsList > div');
-      registrationRows.forEach(row => {
-        const inputs = row.querySelectorAll('input, select');
-        if (inputs.length >= 4) {
-          adjustmentsData.registration.push({
-            description: inputs[0].value,
-            type: inputs[1].value,
-            percentage: parseFloat(inputs[2].value) || 0,
-            value: parseFloat(inputs[3].value.replace(/[₪,]/g, '')) || 0
-          });
-        }
-      });
-      
-      
-      // Collect full market adjustments (כל ההתאמות)
-      const fullMarketRows = document.querySelectorAll('#allAdjustments > div');
-      fullMarketRows.forEach(row => {
-        const inputs = row.querySelectorAll('input');
-        const select = row.querySelector('select');
-        if (inputs.length >= 3) {
-          adjustmentsData.full_market.push({
-            description: inputs[0].value,
-            type: select?.value || 'plus',
-            percentage: parseFloat(inputs[1].value) || 0,
-            value: parseFloat(inputs[2].value.replace(/[₪,]/g, '')) || 0
-          });
-        }
-      });
       
       // Collect legal text
       const legalText = document.getElementById('legal-text-content')?.value || '';
@@ -2294,13 +2348,16 @@
         legal_text: legalText
       };
       
+      // Save the helper object with updated adjustments
+      sessionStorage.setItem('helper', JSON.stringify(helper));
+      if (window.helper) {
+        window.helper = helper;
+      }
+
       if (typeof updateHelper === 'function') {
         updateHelper('final_report', finalReportData, 'final_report_builder_save');
       } else {
-        // Fallback for compatibility
-        // 🔧 PHASE 2.4: Get helper data from single source (window.helper)
-        const helper = window.helper || {};
-        helper.final_report = helper.final_report || {};
+        // Fallback for compatibility - already updated helper above
         Object.assign(helper.final_report, finalReportData);
         sessionStorage.setItem('helper', JSON.stringify(helper));
       }
@@ -5323,7 +5380,7 @@
       }
     }
 
-    // LOAD GROSS ADJUSTMENTS FROM helper.valuation.adjustments
+    // LOAD GROSS ADJUSTMENTS FROM helper.estimate.adjustments
     function loadGrossAdjustments(helper) {
       try {
         const featuresContainer = document.getElementById('featuresAdjustmentsList');
@@ -5332,25 +5389,19 @@
         if (featuresContainer) featuresContainer.innerHTML = '';
         if (registrationContainer) registrationContainer.innerHTML = '';
 
-        const leviData = helper.valuation?.adjustments || {};
-        const featuresData = leviData.features || {};
-        const registrationData = leviData.registration || {};
+        // Read from estimate.adjustments instead of valuation.adjustments
+        const estimateData = helper.estimate?.adjustments || {};
+        const featuresData = estimateData.features || [];
+        const registrationData = estimateData.registration || [];
 
         // ===== Features Adjustments =====
 
+        // Handle array data from estimate.adjustments.features
         let featureItems = [];
-        if (Array.isArray(featuresData.feature_list) && featuresData.feature_list.length > 0) {
-          featureItems = featuresData.feature_list;
-        } else if (featuresData.amount || featuresData.percent || featuresData.description || featuresData.reason) {
-          featureItems = [{
-            description: featuresData.description || featuresData.reason || '',
-            amount: featuresData.amount,
-            percent: featuresData.percent
-          }];
-        }
-
-        // Always show at least one row if any data exists
-        if (featureItems.length === 0) {
+        if (Array.isArray(featuresData) && featuresData.length > 0) {
+          featureItems = featuresData;
+        } else {
+          // Show empty row for adding new adjustments
           featureItems = [{}];
         }
 
@@ -5361,26 +5412,25 @@
             if (row) {
               const inputs = row.querySelectorAll('input, select');
               const amount = parseFloat(item.amount) || 0;
-              const percent = parseFloat(item.percent) || 0;
+              const percent = parseFloat(item.percent || item.percentage) || 0;
               
-              console.log('🔍 Loading feature adjustment:', {
+              console.log('🔍 Loading feature adjustment from estimate:', {
                 item: item,
                 amount: amount,
                 percent: percent,
-                isNegative: (amount < 0 || percent < 0)
+                type: item.type
               });
               
               if (inputs.length >= 4) {
-                // Use the real property value for the description if available
-                const desc = item.description || item.desc || item.feature || featuresData.description || featuresData.reason || '';
-                inputs[0].value = desc;
+                // Field mapping: value → תיאור
+                inputs[0].value = item.value || '';
                 
-                // Determine type based on negative values in helper data
-                const isNegative = (amount < 0 || percent < 0);
-                inputs[1].value = isNegative ? 'minus' : 'plus';
-                console.log(`📝 Set type to: ${isNegative ? 'minus (הפחתה)' : 'plus (תוספת)'}`);
+                // Field mapping: type → סוג 
+                inputs[1].value = item.type || 'plus';
+                console.log(`📝 Set type to: ${item.type || 'plus'}`);
               
-                inputs[2].value = percent ? Math.abs(percent) : '';
+                // Field mapping: percent → אחוז
+                inputs[2].value = Math.abs(percent) || '';
                 
                 // If amount exists in helper, use it; otherwise calculate from percentage
                 if (amount) {
@@ -5395,32 +5445,41 @@
         });
 
         // ===== Registration Adjustment =====
-        if (registrationData.amount || registrationData.percent || registrationData.date) {
+        // Handle array data from estimate.adjustments.registration
+        let registrationItems = [];
+        if (Array.isArray(registrationData) && registrationData.length > 0) {
+          registrationItems = registrationData;
+        } else {
+          // Show empty row for adding new adjustments
+          registrationItems = [{}];
+        }
+
+        registrationItems.forEach(item => {
           if (typeof addRegistrationAdjustment === 'function') {
             addRegistrationAdjustment();
             const row = document.querySelector('#registrationAdjustmentsList > div:last-child');
             if (row) {
               const inputs = row.querySelectorAll('input, select');
-              const amount = parseFloat(registrationData.amount) || 0;
-              const percent = parseFloat(registrationData.percent) || 0;
+              const amount = parseFloat(item.amount) || 0;
+              const percent = parseFloat(item.percent || item.percentage) || 0;
               
-              console.log('🔍 Loading registration adjustment:', {
-                registrationData: registrationData,
+              console.log('🔍 Loading registration adjustment from estimate:', {
+                item: item,
                 amount: amount,
                 percent: percent,
-                isNegative: (amount < 0 || percent < 0)
+                type: item.type
               });
               
               if (inputs.length >= 4) {
-                const desc = registrationData.date || registrationData.description || registrationData.reason || helper.vehicle?.registration_date || 'עליה לכביש';
-                inputs[0].value = desc;
+                // Field mapping: value → תיאור
+                inputs[0].value = item.value || helper.vehicle?.registration_date || 'עליה לכביש';
                 
-                // Determine type based on negative values in helper data
-                const isNegative = (amount < 0 || percent < 0);
-                inputs[1].value = isNegative ? 'minus' : 'plus';
-                console.log(`📝 Set registration type to: ${isNegative ? 'minus (הפחתה)' : 'plus (תוספת)'}`);
+                // Field mapping: type → סוג
+                inputs[1].value = item.type || 'plus';
+                console.log(`📝 Set registration type to: ${item.type || 'plus'}`);
               
-                inputs[2].value = percent ? Math.abs(percent) : '';
+                // Field mapping: percent → אחוז
+                inputs[2].value = Math.abs(percent) || '';
                 
                 // If amount exists in helper, use it; otherwise calculate from percentage
                 if (amount) {
@@ -5432,7 +5491,7 @@
               }
             }
           }
-        }
+        });
 
         updateGrossMarketValueCalculation();
       } catch (error) {
@@ -5633,9 +5692,9 @@
      */
     function autoPopulateMarketAdjustments() {
       const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
-      const adjustments = helper.valuation?.adjustments || {};
+      const adjustments = helper.estimate?.adjustments || {};
       
-      console.log('🏪 Auto-populating market adjustments from helper.valuation.adjustments');
+      console.log('🏪 Auto-populating market adjustments from helper.estimate.adjustments');
       console.log('🔍 Available adjustments:', adjustments);
       
       // Get base price for calculations
@@ -5676,70 +5735,59 @@
       ];
       
       adjustmentMapping.forEach(({ key, label, containerId, addFunction }) => {
-        const adjData = adjustments[key];
+        const adjData = adjustments[key] || [];
         console.log(`🔍 Processing ${key}:`, adjData);
         
-        if (adjData && (adjData.percent || adjData.percentage || adjData.amount)) {
-          // Extract percentage - handle "9%" string format and negative values
-          let percent = 0;
-          if (adjData.percent) {
-            const percentStr = String(adjData.percent).replace(/[%\s]/g, '');
-            percent = parseFloat(percentStr) || 0;
-          } else if (adjData.percentage) {
-            const percentStr = String(adjData.percentage).replace(/[%\s]/g, '');
-            percent = parseFloat(percentStr) || 0;
-          }
-          
-          // Extract amount - handle "ש 29,588" format
-          let amount = 0;
-          if (adjData.amount) {
-            const amountStr = String(adjData.amount).replace(/[₪,\sש]/g, '');
-            amount = parseFloat(amountStr) || 0;
-          }
-          
-          // Use VALUE field for description as per user requirements
-          const description = adjData.value || adjData.description || label;
-          
-          // Determine if this is a reduction (negative percent or amount)
-          const isReduction = percent < 0 || amount < 0;
-          
-          console.log(`📝 Importing ${key}:`, {
-            description,
-            percent,
-            amount,
-            isReduction
-          });
-          
-          // Add the adjustment row
-          addFunction();
-          
-          const container = document.getElementById(containerId);
-          const rows = container.querySelectorAll('div.adjustment-row');
-          const lastRow = rows[rows.length - 1];
-          
-          if (lastRow) {
-            const inputs = lastRow.querySelectorAll('input, select');
-            if (inputs.length >= 4) {
-              // Set description from .value field
-              inputs[0].value = description;
-              
-              // Set type based on sign
-              inputs[1].value = isReduction ? 'minus' : 'plus';
-              
-              // Set percentage with proper sign
-              if (percent !== 0) {
-                inputs[2].value = percent.toString(); // Keep original sign
-              }
-              
-              // Set amount with proper sign and currency
-              if (amount !== 0) {
-                inputs[3].value = amount < 0 ? `-₪${Math.abs(amount).toLocaleString()}` : `₪${amount.toLocaleString()}`;
-              } else if (percent !== 0 && basePrice > 0) {
-                // Calculate amount from percentage
-                const calculatedAmount = (basePrice * Math.abs(percent)) / 100;
-                const sign = percent < 0 ? '-' : '';
-                inputs[3].value = `${sign}₪${Math.round(calculatedAmount).toLocaleString()}`;
-              }
+        // Handle array data from estimate.adjustments
+        const items = Array.isArray(adjData) ? adjData : (adjData && (adjData.percent || adjData.percentage || adjData.amount) ? [adjData] : []);
+        
+        items.forEach(item => {
+          if (item && (item.percent || item.percentage || item.amount)) {
+            // Extract percentage - handle negative values
+            let percent = parseFloat(item.percent || item.percentage) || 0;
+            
+            // Extract amount
+            let amount = parseFloat(item.amount) || 0;
+            
+            // Field mapping: value → תיאור
+            const description = item.value || item.description || label;
+            
+            console.log(`📝 Importing ${key} item:`, {
+              description,
+              percent,
+              amount,
+              type: item.type
+            });
+            
+            // Add the adjustment row
+            addFunction();
+            
+            const container = document.getElementById(containerId);
+            const rows = container.querySelectorAll('div.adjustment-row');
+            const lastRow = rows[rows.length - 1];
+            
+            if (lastRow) {
+              const inputs = lastRow.querySelectorAll('input, select');
+              if (inputs.length >= 4) {
+                // Field mapping: value → תיאור
+                inputs[0].value = description;
+                
+                // Field mapping: type → סוג
+                inputs[1].value = item.type || 'plus';
+                
+                // Field mapping: percent → אחוז (use absolute value for display)
+                if (percent !== 0) {
+                  inputs[2].value = Math.abs(percent).toString();
+                }
+                
+                // Set amount with currency formatting
+                if (amount !== 0) {
+                  inputs[3].value = `₪${Math.abs(amount).toLocaleString()}`;
+                } else if (percent !== 0 && basePrice > 0) {
+                  // Calculate amount from percentage
+                  const calculatedAmount = (basePrice * Math.abs(percent)) / 100;
+                  inputs[3].value = `₪${Math.round(calculatedAmount).toLocaleString()}`;
+                }
               
               // Trigger onchange events to ensure handlers are active
               inputs[1].dispatchEvent(new Event('change', { bubbles: true }));
@@ -5759,7 +5807,8 @@
               });
             }
           }
-        } else {
+        });
+        if (items.length === 0) {
           console.log(`⚠️ No valid data for ${key}:`, adjData);
         }
       });

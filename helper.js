@@ -1419,6 +1419,15 @@ window.fixHelperStructure = function() {
         report_title: '',
         generated: false,
         generated_date: '',
+        adjustments: {
+          features: [],
+          registration: [],
+          mileage: [],
+          ownership_type: [],
+          ownership_history: [],
+          usage: [],
+          additional: []
+        },
         report_sections: {
           vehicle_details: {},
           damage_assessment: {},
@@ -1431,6 +1440,19 @@ window.fixHelperStructure = function() {
     
     // Merge any existing data
     Object.assign(window.helper.final_report, window.helper.expertise.final_report);
+    
+    // Ensure adjustments structure exists after merge
+    if (!window.helper.final_report.adjustments) {
+      window.helper.final_report.adjustments = {
+        features: [],
+        registration: [],
+        mileage: [],
+        ownership_type: [],
+        ownership_history: [],
+        usage: [],
+        additional: []
+      };
+    }
     
     // Remove misplaced section
     delete window.helper.expertise.final_report;
@@ -1492,6 +1514,15 @@ window.fixHelperStructure = function() {
           generated_date: '',
           in_agreement: false,  // סטטוס הסדר
           report_for_company: false,  // דו"ח לחברה
+          adjustments: {
+            features: [],
+            registration: [],
+            mileage: [],
+            ownership_type: [],
+            ownership_history: [],
+            usage: [],
+            additional: []
+          },
           report_sections: {
             vehicle_details: {},
             damage_assessment: {},
@@ -1521,6 +1552,21 @@ window.fixHelperStructure = function() {
       fixedCount++;
     }
   });
+  
+  // Final safeguard: Ensure final_report.adjustments structure always exists
+  if (window.helper.final_report && !window.helper.final_report.adjustments) {
+    console.log('🔧 Adding missing adjustments structure to final_report');
+    window.helper.final_report.adjustments = {
+      features: [],
+      registration: [],
+      mileage: [],
+      ownership_type: [],
+      ownership_history: [],
+      usage: [],
+      additional: []
+    };
+    fixedCount++;
+  }
   
   if (fixedCount > 0) {
     saveHelperToAllStorageLocations();
