@@ -13170,7 +13170,7 @@
       damageCenters.forEach((center, index) => {
         const centerNumber = center['Damage center Number'] || (index + 1);
         const centerLocation = center.Location || `מוקד ${centerNumber}`;
-        const isSelected = data.damage_center_id === centerNumber ? 'selected' : '';
+        const isSelected = data.damage_center === centerNumber ? 'selected' : '';
         damageCenterOptions += `<option value="${centerNumber}" ${isSelected}>מוקד ${centerNumber} - ${centerLocation}</option>`;
       });
 
@@ -13276,12 +13276,14 @@
       // Add auto-save to text inputs with delay to ensure data is captured
       setTimeout(() => {
         const partField = div.querySelector('.diff-part');
+        const damageCenterDropdown = div.querySelector('.diff-damage-center');
         const natureDropdown = div.querySelector('.diff-nature-dropdown');
         const natureOtherField = div.querySelector('.diff-nature-other');
         const reasonField = div.querySelector('.diff-reason');
         
         console.log('🔗 ATTACHING EVENT LISTENERS:', {
           partField: !!partField,
+          damageCenterDropdown: !!damageCenterDropdown,
           natureDropdown: !!natureDropdown,
           natureOtherField: !!natureOtherField,
           reasonField: !!reasonField
@@ -13290,6 +13292,13 @@
         if (partField) {
           partField.addEventListener('input', (e) => {
             console.log('🔥 PART INPUT EVENT:', e.target.value);
+            setTimeout(saveDifferentialsToHelper, 100);
+          });
+        }
+        
+        if (damageCenterDropdown) {
+          damageCenterDropdown.addEventListener('change', (e) => {
+            console.log('🔥 DAMAGE CENTER DROPDOWN EVENT:', e.target.value);
             setTimeout(saveDifferentialsToHelper, 100);
           });
         }
@@ -13414,12 +13423,14 @@
       
       rows.forEach((row, index) => {
         const partField = row.querySelector('.diff-part');
+        const damageCenterDropdown = row.querySelector('.diff-damage-center');
         const natureDropdown = row.querySelector('.diff-nature-dropdown');
         const natureOtherField = row.querySelector('.diff-nature-other');
         const reasonField = row.querySelector('.diff-reason');
         
         console.log(`🔗 Row ${index} - Reattaching to:`, {
           partField: !!partField,
+          damageCenterDropdown: !!damageCenterDropdown,
           natureDropdown: !!natureDropdown,
           natureOtherField: !!natureOtherField,
           reasonField: !!reasonField
@@ -13431,6 +13442,15 @@
           const newPartField = row.querySelector('.diff-part');
           newPartField.addEventListener('input', (e) => {
             console.log('🔥 PART INPUT (REATTACHED):', e.target.value);
+            setTimeout(saveDifferentialsToHelper, 100);
+          });
+        }
+        
+        if (damageCenterDropdown) {
+          damageCenterDropdown.replaceWith(damageCenterDropdown.cloneNode(true));
+          const newDamageCenterDropdown = row.querySelector('.diff-damage-center');
+          newDamageCenterDropdown.addEventListener('change', (e) => {
+            console.log('🔥 DAMAGE CENTER DROPDOWN (REATTACHED):', e.target.value);
             setTimeout(saveDifferentialsToHelper, 100);
           });
         }
@@ -13482,6 +13502,7 @@
         console.log(`🔍 DEBUG: Processing row ${index}:`, row);
         
         const partField = row.querySelector('.diff-part');
+        const damageCenterField = row.querySelector('.diff-damage-center');
         const natureField = row.querySelector('.diff-nature');
         const reasonField = row.querySelector('.diff-reason');
         const amountField = row.querySelector('.diff-amount');
@@ -13490,6 +13511,7 @@
         
         console.log(`🔍 DEBUG: Row ${index} fields found:`, {
           partField: !!partField,
+          damageCenterField: !!damageCenterField,
           natureField: !!natureField,
           reasonField: !!reasonField,
           amountField: !!amountField,
@@ -13498,15 +13520,17 @@
         });
         
         const part = partField?.value || '';
+        const damage_center = damageCenterField?.value || '';
         const nature = natureField?.value || '';
         const reason = reasonField?.value || '';
         const amount = parseFloat(amountField?.value) || 0;
         const vat = parseFloat(vatField?.value) || 0;
         const total = parseFloat(totalField?.value) || 0;
         
-        console.log(`🔍 DEBUG: Row ${index} values:`, {part, nature, reason, amount, vat, total});
+        console.log(`🔍 DEBUG: Row ${index} values:`, {part, damage_center, nature, reason, amount, vat, total});
         console.log(`🔍 DEBUG: Row ${index} raw field values:`, {
           partRaw: partField?.value,
+          damageCenterRaw: damageCenterField?.value,
           natureRaw: natureField?.value,
           reasonRaw: reasonField?.value,
           amountRaw: amountField?.value,
@@ -13517,6 +13541,7 @@
         differentialsData.push({
           id: index + 1,
           part: part,
+          damage_center: damage_center,
           nature: nature,
           reason: reason,
           amount_without_vat: amount,
@@ -13707,6 +13732,7 @@
         differentialsData.push({
           id: index + 1,
           part: part,
+          damage_center: damage_center,
           nature: nature,
           reason: reason,
           amount_without_vat: amount,
