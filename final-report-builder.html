@@ -8689,29 +8689,6 @@
             repairs_cost: repairsCost
           });
           
-          // Update existing entry in damage_centers array (don't create duplicates)
-          if (helper.damage_centers && Array.isArray(helper.damage_centers)) {
-            const existingCenter = helper.damage_centers.find(c => c.Id === centerObject.Id);
-            if (existingCenter) {
-              existingCenter.RepairNature = centerRepairNature;
-            }
-          }
-          
-          // Update existing entry in damage_assessment.damage_centers array (don't create duplicates)
-          if (helper.damage_assessment && helper.damage_assessment.damage_centers) {
-            const assessmentCenter = helper.damage_assessment.damage_centers.find(c => c.Id === centerObject.Id);
-            if (assessmentCenter) {
-              assessmentCenter.repair_nature = centerRepairNature;
-            }
-          }
-          
-          // Update existing entry in damage_assessment.comprehensive.centers array
-          if (helper.damage_assessment && helper.damage_assessment.comprehensive && helper.damage_assessment.comprehensive.centers) {
-            const comprehensiveCenter = helper.damage_assessment.comprehensive.centers.find(c => c.Id === centerObject.Id);
-            if (comprehensiveCenter) {
-              comprehensiveCenter.repair_nature = centerRepairNature;
-            }
-          }
           
           // Store damage center data for depreciation section (complete object)
           if (centerLocation.trim()) {
@@ -8726,6 +8703,41 @@
           // Update cost display for this card
           updateCostDisplay(card, partsCost, workCost, repairsCost);
         });
+        
+        // 🆕 Update ONLY RepairNature field in existing entries (don't recreate entire structures)
+        
+        // Update RepairNature in damage_centers array
+        if (helper.damage_centers && Array.isArray(helper.damage_centers)) {
+          helper.centers.forEach(center => {
+            const existingCenter = helper.damage_centers.find(c => c.Id === center.Id);
+            if (existingCenter) {
+              existingCenter.RepairNature = center.RepairNature || '';
+              console.log('✅ Updated RepairNature in damage_centers for center:', center.Id);
+            }
+          });
+        }
+        
+        // Update repair_nature in damage_assessment.damage_centers array
+        if (helper.damage_assessment && helper.damage_assessment.damage_centers) {
+          helper.centers.forEach(center => {
+            const assessmentCenter = helper.damage_assessment.damage_centers.find(c => c.Id === center.Id);
+            if (assessmentCenter) {
+              assessmentCenter.repair_nature = center.RepairNature || '';
+              console.log('✅ Updated repair_nature in damage_assessment.damage_centers for center:', center.Id);
+            }
+          });
+        }
+        
+        // Update repair_nature in damage_assessment.comprehensive.centers array
+        if (helper.damage_assessment && helper.damage_assessment.comprehensive && helper.damage_assessment.comprehensive.centers) {
+          helper.centers.forEach(center => {
+            const comprehensiveCenter = helper.damage_assessment.comprehensive.centers.find(c => c.Id === center.Id);
+            if (comprehensiveCenter) {
+              comprehensiveCenter.repair_nature = center.RepairNature || '';
+              console.log('✅ Updated repair_nature in damage_assessment.comprehensive.centers for center:', center.Id);
+            }
+          });
+        }
         
         // Save updated helper
         sessionStorage.setItem('helper', JSON.stringify(helper));
