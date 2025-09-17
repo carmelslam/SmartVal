@@ -8689,20 +8689,29 @@
             repairs_cost: repairsCost
           });
           
-          // Also save to damage_centers array for compatibility
-          if (!helper.damage_centers) helper.damage_centers = [];
-          helper.damage_centers.push({
-            Id: centerObject.Id,
-            RepairNature: centerRepairNature
-          });
+          // Update existing entry in damage_centers array (don't create duplicates)
+          if (helper.damage_centers && Array.isArray(helper.damage_centers)) {
+            const existingCenter = helper.damage_centers.find(c => c.Id === centerObject.Id);
+            if (existingCenter) {
+              existingCenter.RepairNature = centerRepairNature;
+            }
+          }
           
-          // Also save to damage_assessment.damage_centers array for compatibility
-          if (!helper.damage_assessment) helper.damage_assessment = {};
-          if (!helper.damage_assessment.damage_centers) helper.damage_assessment.damage_centers = [];
-          helper.damage_assessment.damage_centers.push({
-            Id: centerObject.Id,
-            repair_nature: centerRepairNature
-          });
+          // Update existing entry in damage_assessment.damage_centers array (don't create duplicates)
+          if (helper.damage_assessment && helper.damage_assessment.damage_centers) {
+            const assessmentCenter = helper.damage_assessment.damage_centers.find(c => c.Id === centerObject.Id);
+            if (assessmentCenter) {
+              assessmentCenter.repair_nature = centerRepairNature;
+            }
+          }
+          
+          // Update existing entry in damage_assessment.comprehensive.centers array
+          if (helper.damage_assessment && helper.damage_assessment.comprehensive && helper.damage_assessment.comprehensive.centers) {
+            const comprehensiveCenter = helper.damage_assessment.comprehensive.centers.find(c => c.Id === centerObject.Id);
+            if (comprehensiveCenter) {
+              comprehensiveCenter.repair_nature = centerRepairNature;
+            }
+          }
           
           // Store damage center data for depreciation section (complete object)
           if (centerLocation.trim()) {

@@ -2929,14 +2929,27 @@
         }));
         console.log('✅ Updated helper.damage_centers from estimator data (helper.centers is king)');
         
-        // 🆕 Also update damage_assessment.damage_centers for compatibility
-        if (!window.helper.damage_assessment) window.helper.damage_assessment = {};
-        if (!window.helper.damage_assessment.damage_centers) window.helper.damage_assessment.damage_centers = [];
-        window.helper.damage_assessment.damage_centers = collectedCenters.map((center, index) => ({
-          Id: center.Id || `dc_${Date.now()}_${index + 1}`,
-          repair_nature: center.RepairNature || ''
-        }));
-        console.log('✅ Updated helper.damage_assessment.damage_centers with RepairNature data');
+        // 🆕 Also update damage_assessment.damage_centers for compatibility (update existing, don't recreate)
+        if (window.helper.damage_assessment && window.helper.damage_assessment.damage_centers) {
+          collectedCenters.forEach(center => {
+            const assessmentCenter = window.helper.damage_assessment.damage_centers.find(c => c.Id === center.Id);
+            if (assessmentCenter) {
+              assessmentCenter.repair_nature = center.RepairNature || '';
+            }
+          });
+          console.log('✅ Updated existing entries in helper.damage_assessment.damage_centers with RepairNature data');
+        }
+        
+        // 🆕 Also update damage_assessment.comprehensive.centers for compatibility
+        if (window.helper.damage_assessment && window.helper.damage_assessment.comprehensive && window.helper.damage_assessment.comprehensive.centers) {
+          collectedCenters.forEach(center => {
+            const comprehensiveCenter = window.helper.damage_assessment.comprehensive.centers.find(c => c.Id === center.Id);
+            if (comprehensiveCenter) {
+              comprehensiveCenter.repair_nature = center.RepairNature || '';
+            }
+          });
+          console.log('✅ Updated existing entries in helper.damage_assessment.comprehensive.centers with RepairNature data');
+        }
         
         // 🆕 ESTIMATE WORKFLOW: Calculate estimate totals and save to calculations
         const totalEstimateCost = collectedEstimateCenters.reduce((sum, center) => sum + center.costs.total_cost, 0);
