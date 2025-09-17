@@ -5735,59 +5735,70 @@
       ];
       
       adjustmentMapping.forEach(({ key, label, containerId, addFunction }) => {
-        const adjData = adjustments[key] || [];
+        const adjData = adjustments[key];
         console.log(`🔍 Processing ${key}:`, adjData);
         
-        // Handle array data from estimate.adjustments
-        const items = Array.isArray(adjData) ? adjData : (adjData && (adjData.percent || adjData.percentage || adjData.amount) ? [adjData] : []);
-        
-        items.forEach(item => {
-          if (item && (item.percent || item.percentage || item.amount)) {
-            // Extract percentage - handle negative values
-            let percent = parseFloat(item.percent || item.percentage) || 0;
-            
-            // Extract amount
-            let amount = parseFloat(item.amount) || 0;
-            
-            // Field mapping: value → תיאור
-            const description = item.value || item.description || label;
-            
-            console.log(`📝 Importing ${key} item:`, {
-              description,
-              percent,
-              amount,
-              type: item.type
-            });
-            
-            // Add the adjustment row
-            addFunction();
-            
-            const container = document.getElementById(containerId);
-            const rows = container.querySelectorAll('div.adjustment-row');
-            const lastRow = rows[rows.length - 1];
-            
-            if (lastRow) {
-              const inputs = lastRow.querySelectorAll('input, select');
-              if (inputs.length >= 4) {
-                // Field mapping: value → תיאור
-                inputs[0].value = description;
-                
-                // Field mapping: type → סוג
-                inputs[1].value = item.type || 'plus';
-                
-                // Field mapping: percent → אחוז (use absolute value for display)
-                if (percent !== 0) {
-                  inputs[2].value = Math.abs(percent).toString();
-                }
-                
-                // Set amount with currency formatting
-                if (amount !== 0) {
-                  inputs[3].value = `₪${Math.abs(amount).toLocaleString()}`;
-                } else if (percent !== 0 && basePrice > 0) {
-                  // Calculate amount from percentage
-                  const calculatedAmount = (basePrice * Math.abs(percent)) / 100;
-                  inputs[3].value = `₪${Math.round(calculatedAmount).toLocaleString()}`;
-                }
+        if (adjData && (adjData.percent || adjData.percentage || adjData.amount)) {
+          // Extract percentage - handle "9%" string format and negative values
+          let percent = 0;
+          if (adjData.percent) {
+            const percentStr = String(adjData.percent).replace(/[%\s]/g, '');
+            percent = parseFloat(percentStr) || 0;
+          } else if (adjData.percentage) {
+            const percentStr = String(adjData.percentage).replace(/[%\s]/g, '');
+            percent = parseFloat(percentStr) || 0;
+          }
+          
+          // Extract amount - handle "ש 29,588" format
+          let amount = 0;
+          if (adjData.amount) {
+            const amountStr = String(adjData.amount).replace(/[₪,\sש]/g, '');
+            amount = parseFloat(amountStr) || 0;
+          }
+          
+          // Use VALUE field for description as per user requirements
+          const description = adjData.value || adjData.description || label;
+          
+          // Determine if this is a reduction (negative percent or amount)
+          const isReduction = percent < 0 || amount < 0;
+          
+          console.log(`📝 Importing ${key}:`, {
+            description,
+            percent,
+            amount,
+            isReduction
+          });
+          
+          // Add the adjustment row
+          addFunction();
+          
+          const container = document.getElementById(containerId);
+          const rows = container.querySelectorAll('div.adjustment-row');
+          const lastRow = rows[rows.length - 1];
+          
+          if (lastRow) {
+            const inputs = lastRow.querySelectorAll('input, select');
+            if (inputs.length >= 4) {
+              // Set description from .value field
+              inputs[0].value = description;
+              
+              // Set type based on sign
+              inputs[1].value = isReduction ? 'minus' : 'plus';
+              
+              // Set percentage with proper sign
+              if (percent !== 0) {
+                inputs[2].value = percent.toString(); // Keep original sign
+              }
+              
+              // Set amount with proper sign and currency
+              if (amount !== 0) {
+                inputs[3].value = amount < 0 ? `-₪${Math.abs(amount).toLocaleString()}` : `₪${amount.toLocaleString()}`;
+              } else if (percent !== 0 && basePrice > 0) {
+                // Calculate amount from percentage
+                const calculatedAmount = (basePrice * Math.abs(percent)) / 100;
+                const sign = percent < 0 ? '-' : '';
+                inputs[3].value = `${sign}₪${Math.round(calculatedAmount).toLocaleString()}`;
+              }
               
               // Trigger onchange events to ensure handlers are active
               inputs[1].dispatchEvent(new Event('change', { bubbles: true }));
@@ -5807,8 +5818,7 @@
               });
             }
           }
-        });
-        if (items.length === 0) {
+        } else {
           console.log(`⚠️ No valid data for ${key}:`, adjData);
         }
       });
