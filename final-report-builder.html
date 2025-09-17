@@ -8731,31 +8731,27 @@
         }));
         console.log('✅ Updated damage_centers from final_report with source tracking');
         
-        // 2. Update damage_assessment.damage_centers with id + repair_nature only
-        if (helper.damage_assessment && helper.damage_assessment.damage_centers) {
-          helper.centers.forEach(center => {
-            const assessmentCenter = helper.damage_assessment.damage_centers.find(c => c.Id === center.Id);
-            if (assessmentCenter) {
-              assessmentCenter.repair_nature = center.RepairNature || '';
-              console.log('✅ Updated repair_nature in damage_assessment.damage_centers for center:', center.Id);
-            }
-          });
-        }
+        // 2. Recreate damage_assessment.damage_centers with id + repair_nature + source
+        if (!helper.damage_assessment) helper.damage_assessment = {};
+        helper.damage_assessment.damage_centers = helper.centers.map(center => ({
+          Id: center.Id || `dc_${Date.now()}_${Math.random()}`,
+          repair_nature: center.RepairNature || '',
+          source: 'final_report',
+          last_updated: new Date().toISOString()
+        }));
+        console.log('✅ Recreated damage_assessment.damage_centers from final_report');
         
-        // 3. Update damage_assessment.comprehensive.centers with descriptions only
-        if (helper.damage_assessment && helper.damage_assessment.comprehensive && helper.damage_assessment.comprehensive.centers) {
-          helper.centers.forEach(center => {
-            const comprehensiveCenter = helper.damage_assessment.comprehensive.centers.find(c => c.Id === center.Id);
-            if (comprehensiveCenter) {
-              // Update description fields only
-              comprehensiveCenter.RepairNature = center.RepairNature || '';
-              comprehensiveCenter.repair_nature = center.RepairNature || ''; // Duplicate field
-              comprehensiveCenter.description = center.Description || '';
-              comprehensiveCenter.location = center.Location || '';
-              console.log('✅ Updated descriptions in damage_assessment.comprehensive.centers for center:', center.Id);
-            }
-          });
-        }
+        // 3. Recreate damage_assessment.comprehensive.centers with descriptions only + source
+        if (!helper.damage_assessment.comprehensive) helper.damage_assessment.comprehensive = {};
+        helper.damage_assessment.comprehensive.centers = helper.centers.map(center => ({
+          location: center.Location || '',
+          description: center.Description || '',
+          RepairNature: center.RepairNature || '',
+          repair_nature: center.RepairNature || '', // Duplicate field for compatibility
+          source: 'final_report',
+          last_updated: new Date().toISOString()
+        }));
+        console.log('✅ Recreated damage_assessment.comprehensive.centers from final_report');
         
         // Save updated helper
         sessionStorage.setItem('helper', JSON.stringify(helper));

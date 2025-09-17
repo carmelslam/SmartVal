@@ -2099,23 +2099,27 @@
               }
             }
             
-            // Update damage_assessment.damage_centers array  
-            if (helper.damage_assessment && helper.damage_assessment.damage_centers) {
-              const assessmentCenter = helper.damage_assessment.damage_centers.find(c => c.Id === centerId);
-              if (assessmentCenter) {
-                assessmentCenter.repair_nature = repairNatureValue;
-                console.log('✅ Updated repair_nature in damage_assessment.damage_centers for center:', centerId);
-              }
-            }
+            // Recreate damage_assessment.damage_centers with id + repair_nature + source
+            if (!helper.damage_assessment) helper.damage_assessment = {};
+            helper.damage_assessment.damage_centers = helper.centers.map(center => ({
+              Id: center.Id || `dc_${Date.now()}_${Math.random()}`,
+              repair_nature: center.RepairNature || '',
+              source: 'damage_centers_wizard',
+              last_updated: new Date().toISOString()
+            }));
+            console.log('✅ Recreated damage_assessment.damage_centers from damage_centers_wizard');
             
-            // Update damage_assessment.comprehensive.centers array
-            if (helper.damage_assessment && helper.damage_assessment.comprehensive && helper.damage_assessment.comprehensive.centers) {
-              const comprehensiveCenter = helper.damage_assessment.comprehensive.centers.find(c => c.Id === centerId);
-              if (comprehensiveCenter) {
-                comprehensiveCenter.repair_nature = repairNatureValue;
-                console.log('✅ Updated repair_nature in damage_assessment.comprehensive.centers for center:', centerId);
-              }
-            }
+            // Recreate damage_assessment.comprehensive.centers with descriptions only + source
+            if (!helper.damage_assessment.comprehensive) helper.damage_assessment.comprehensive = {};
+            helper.damage_assessment.comprehensive.centers = helper.centers.map(center => ({
+              location: center.Location || '',
+              description: center.Description || '',
+              RepairNature: center.RepairNature || '',
+              repair_nature: center.RepairNature || '', // Duplicate field for compatibility
+              source: 'damage_centers_wizard',
+              last_updated: new Date().toISOString()
+            }));
+            console.log('✅ Recreated damage_assessment.comprehensive.centers from damage_centers_wizard');
             
             // Clear current damage center for next one
             helper.current_damage_center = {};
@@ -3416,23 +3420,27 @@
               }
             }
             
-            // Update damage_assessment.damage_centers array  
-            if (helper.damage_assessment && helper.damage_assessment.damage_centers) {
-              const assessmentCenter = helper.damage_assessment.damage_centers.find(c => c.Id === centerId);
-              if (assessmentCenter) {
-                assessmentCenter.repair_nature = repairNatureValue;
-                console.log('✅ Updated repair_nature in damage_assessment.damage_centers for center:', centerId);
-              }
-            }
+            // Recreate damage_assessment.damage_centers with id + repair_nature + source
+            if (!helper.damage_assessment) helper.damage_assessment = {};
+            helper.damage_assessment.damage_centers = helper.centers.map(center => ({
+              Id: center.Id || `dc_${Date.now()}_${Math.random()}`,
+              repair_nature: center.RepairNature || '',
+              source: 'damage_centers_wizard',
+              last_updated: new Date().toISOString()
+            }));
+            console.log('✅ Recreated damage_assessment.damage_centers from damage_centers_wizard');
             
-            // Update damage_assessment.comprehensive.centers array
-            if (helper.damage_assessment && helper.damage_assessment.comprehensive && helper.damage_assessment.comprehensive.centers) {
-              const comprehensiveCenter = helper.damage_assessment.comprehensive.centers.find(c => c.Id === centerId);
-              if (comprehensiveCenter) {
-                comprehensiveCenter.repair_nature = repairNatureValue;
-                console.log('✅ Updated repair_nature in damage_assessment.comprehensive.centers for center:', centerId);
-              }
-            }
+            // Recreate damage_assessment.comprehensive.centers with descriptions only + source
+            if (!helper.damage_assessment.comprehensive) helper.damage_assessment.comprehensive = {};
+            helper.damage_assessment.comprehensive.centers = helper.centers.map(center => ({
+              location: center.Location || '',
+              description: center.Description || '',
+              RepairNature: center.RepairNature || '',
+              repair_nature: center.RepairNature || '', // Duplicate field for compatibility
+              source: 'damage_centers_wizard',
+              last_updated: new Date().toISOString()
+            }));
+            console.log('✅ Recreated damage_assessment.comprehensive.centers from damage_centers_wizard');
             
             // ✅ NEW: Update damage assessment with proper structure per documentation
             updateDamageAssessment(helper);
@@ -3845,21 +3853,25 @@
         }
       }
       
-      // Also save to damage_assessment.damage_centers
-      if (helper.damage_assessment && helper.damage_assessment.damage_centers && centerId) {
-        const assessmentCenter = helper.damage_assessment.damage_centers.find(c => c.Id === centerId);
-        if (assessmentCenter) {
-          assessmentCenter.repair_nature = repairNatureValue;
-        }
-      }
+      // Recreate damage_assessment.damage_centers with all centers data + source
+      if (!helper.damage_assessment) helper.damage_assessment = {};
+      helper.damage_assessment.damage_centers = helper.centers.map(center => ({
+        Id: center.Id || `dc_${Date.now()}_${Math.random()}`,
+        repair_nature: center.RepairNature || '',
+        source: 'damage_centers_wizard',
+        last_updated: new Date().toISOString()
+      }));
       
-      // Also save to damage_assessment.comprehensive.centers
-      if (helper.damage_assessment && helper.damage_assessment.comprehensive && helper.damage_assessment.comprehensive.centers && centerId) {
-        const comprehensiveCenter = helper.damage_assessment.comprehensive.centers.find(c => c.Id === centerId);
-        if (comprehensiveCenter) {
-          comprehensiveCenter.repair_nature = repairNatureValue;
-        }
-      }
+      // Recreate damage_assessment.comprehensive.centers with descriptions + source
+      if (!helper.damage_assessment.comprehensive) helper.damage_assessment.comprehensive = {};
+      helper.damage_assessment.comprehensive.centers = helper.centers.map(center => ({
+        location: center.Location || '',
+        description: center.Description || '',
+        RepairNature: center.RepairNature || '',
+        repair_nature: center.RepairNature || '', // Duplicate field for compatibility
+        source: 'damage_centers_wizard',
+        last_updated: new Date().toISOString()
+      }));
       
       // Save to sessionStorage
       sessionStorage.setItem('helper', JSON.stringify(helper));
