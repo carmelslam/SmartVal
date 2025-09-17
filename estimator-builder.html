@@ -2929,6 +2929,15 @@
         }));
         console.log('✅ Updated helper.damage_centers from estimator data (helper.centers is king)');
         
+        // 🆕 Also update damage_assessment.damage_centers for compatibility
+        if (!window.helper.damage_assessment) window.helper.damage_assessment = {};
+        if (!window.helper.damage_assessment.damage_centers) window.helper.damage_assessment.damage_centers = [];
+        window.helper.damage_assessment.damage_centers = collectedCenters.map((center, index) => ({
+          Id: center.Id || `dc_${Date.now()}_${index + 1}`,
+          repair_nature: center.RepairNature || ''
+        }));
+        console.log('✅ Updated helper.damage_assessment.damage_centers with RepairNature data');
+        
         // 🆕 ESTIMATE WORKFLOW: Calculate estimate totals and save to calculations
         const totalEstimateCost = collectedEstimateCenters.reduce((sum, center) => sum + center.costs.total_cost, 0);
         const totalEstimateWithVAT = collectedEstimateCenters.reduce((sum, center) => sum + center.costs.total_with_vat, 0);
