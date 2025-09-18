@@ -5396,8 +5396,8 @@
         const featuresData = [];
         
         // Always add estimate features first (original Levi data)
-        estimateFeatures.forEach(item => {
-          featuresData.push({...item, _source: 'estimate'});
+        estimateFeatures.forEach((item, index) => {
+          featuresData.push({...item, _source: 'estimate', _estimate_index: index});
         });
         
         // Only add final_report features that are genuinely manual additions (not duplicates from Total section)
@@ -5422,8 +5422,8 @@
         const registrationData = [];
         
         // Always add estimate registration first (original Levi data)
-        estimateRegistration.forEach(item => {
-          registrationData.push({...item, _source: 'estimate'});
+        estimateRegistration.forEach((item, index) => {
+          registrationData.push({...item, _source: 'estimate', _estimate_index: index});
         });
         
         // Only add final_report registration that are genuinely manual additions (not duplicates from Total section)
@@ -5463,6 +5463,9 @@
               // Set data source for tracking
               const isFromEstimate = item._source === 'estimate';
               row.setAttribute('data-source', isFromEstimate ? 'levi' : 'manual');
+              if (isFromEstimate && typeof item._estimate_index !== 'undefined') {
+                row.setAttribute('data-estimate-index', item._estimate_index);
+              }
               
               const inputs = row.querySelectorAll('input, select');
               // Keep original values to preserve signs
@@ -5506,6 +5509,9 @@
               // Set data source for tracking
               const isFromEstimate = item._source === 'estimate';
               row.setAttribute('data-source', isFromEstimate ? 'levi' : 'manual');
+              if (isFromEstimate && typeof item._estimate_index !== 'undefined') {
+                row.setAttribute('data-estimate-index', item._estimate_index);
+              }
               
               const inputs = row.querySelectorAll('input, select');
               // Keep original values to preserve signs
@@ -6469,8 +6475,20 @@
         if (dataSource === 'levi' && helper.estimate?.adjustments?.[category]) {
           console.log(`🔄 Updating Levi data in estimate.adjustments.${category}`);
           
-          // Find and update the original Levi entry in estimate.adjustments
-          if (Array.isArray(helper.estimate.adjustments[category])) {
+          // Find and update the original Levi entry in estimate.adjustments using estimate index
+          const estimateIndex = row.getAttribute('data-estimate-index');
+          
+          if (Array.isArray(helper.estimate.adjustments[category]) && estimateIndex !== null) {
+            const indexNum = parseInt(estimateIndex);
+            if (indexNum >= 0 && indexNum < helper.estimate.adjustments[category].length) {
+              helper.estimate.adjustments[category][indexNum] = adjustmentData;
+              console.log(`✅ Updated original Levi entry at estimate index ${indexNum}`);
+            } else {
+              console.log(`❌ Invalid estimate index ${indexNum}, adding as new entry`);
+              helper.estimate.adjustments[category].push(adjustmentData);
+            }
+          } else if (Array.isArray(helper.estimate.adjustments[category])) {
+            // Fallback to description matching if no estimate index
             const originalIndex = helper.estimate.adjustments[category].findIndex(
               item => item.value === adjustmentData.value || 
                      (item.value && item.value.includes('adventure')) // Match original Levi description
@@ -6478,7 +6496,7 @@
             
             if (originalIndex >= 0) {
               helper.estimate.adjustments[category][originalIndex] = adjustmentData;
-              console.log(`✅ Updated original Levi entry at index ${originalIndex}`);
+              console.log(`✅ Updated original Levi entry at fallback index ${originalIndex}`);
             } else {
               helper.estimate.adjustments[category].push(adjustmentData);
               console.log(`✅ Added new entry to estimate.adjustments.${category}`);
