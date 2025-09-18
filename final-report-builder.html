@@ -5392,24 +5392,24 @@
         const estimateFeatures = Array.isArray(estimateData.features) ? estimateData.features : [];
         const finalReportFeatures = Array.isArray(finalReportData.features) ? finalReportData.features : [];
         
-        // Deduplicate features: use Set to track unique combinations
-        const seenFeatures = new Set();
+        // Smart deduplication: only add manual final_report items that aren't duplicates of estimate data
         const featuresData = [];
         
-        // Add estimate features first (Levi data)
+        // Always add estimate features first (original Levi data)
         estimateFeatures.forEach(item => {
-          const key = `${item.value || ''}-${item.type || ''}-${item.percentage || item.percent || ''}-${item.amount || ''}`;
-          if (!seenFeatures.has(key)) {
-            seenFeatures.add(key);
-            featuresData.push({...item, _source: 'estimate'});
-          }
+          featuresData.push({...item, _source: 'estimate'});
         });
         
-        // Add final_report features (manual additions) if not already seen
+        // Only add final_report features that are genuinely manual additions (not duplicates from Total section)
         finalReportFeatures.forEach(item => {
-          const key = `${item.value || ''}-${item.type || ''}-${item.percentage || item.percent || ''}-${item.amount || ''}`;
-          if (!seenFeatures.has(key)) {
-            seenFeatures.add(key);
+          const isEstimateDuplicate = estimateFeatures.some(estimateItem => 
+            estimateItem.value === item.value &&
+            estimateItem.type === item.type &&
+            Math.abs((estimateItem.percentage || estimateItem.percent || 0) - (item.percentage || item.percent || 0)) < 0.01 &&
+            Math.abs((estimateItem.amount || 0) - (item.amount || 0)) < 0.01
+          );
+          
+          if (!isEstimateDuplicate) {
             featuresData.push({...item, _source: 'final_report'});
           }
         });
@@ -5418,24 +5418,24 @@
         const estimateRegistration = Array.isArray(estimateData.registration) ? estimateData.registration : [];
         const finalReportRegistration = Array.isArray(finalReportData.registration) ? finalReportData.registration : [];
         
-        // Deduplicate registration: use Set to track unique combinations
-        const seenRegistration = new Set();
+        // Smart deduplication for registration: only add manual final_report items that aren't duplicates of estimate data
         const registrationData = [];
         
-        // Add estimate registration first (Levi data)
+        // Always add estimate registration first (original Levi data)
         estimateRegistration.forEach(item => {
-          const key = `${item.value || ''}-${item.type || ''}-${item.percentage || item.percent || ''}-${item.amount || ''}`;
-          if (!seenRegistration.has(key)) {
-            seenRegistration.add(key);
-            registrationData.push({...item, _source: 'estimate'});
-          }
+          registrationData.push({...item, _source: 'estimate'});
         });
         
-        // Add final_report registration (manual additions) if not already seen
+        // Only add final_report registration that are genuinely manual additions (not duplicates from Total section)
         finalReportRegistration.forEach(item => {
-          const key = `${item.value || ''}-${item.type || ''}-${item.percentage || item.percent || ''}-${item.amount || ''}`;
-          if (!seenRegistration.has(key)) {
-            seenRegistration.add(key);
+          const isEstimateDuplicate = estimateRegistration.some(estimateItem => 
+            estimateItem.value === item.value &&
+            estimateItem.type === item.type &&
+            Math.abs((estimateItem.percentage || estimateItem.percent || 0) - (item.percentage || item.percent || 0)) < 0.01 &&
+            Math.abs((estimateItem.amount || 0) - (item.amount || 0)) < 0.01
+          );
+          
+          if (!isEstimateDuplicate) {
             registrationData.push({...item, _source: 'final_report'});
           }
         });
@@ -5789,10 +5789,10 @@
         if (featuresContainer) featuresContainer.innerHTML = '';
         if (registrationContainer) registrationContainer.innerHTML = '';
         
-        // PRIMARY: Load user changes from final_report.adjustments first, FALLBACK: original data
-        const adjustments = helper.final_report?.adjustments || helper.estimate?.adjustments || helper.valuation?.adjustments || {};
+        // FORCE reload from estimate.adjustments (button overrides user changes)
+        const adjustments = helper.estimate?.adjustments || helper.valuation?.adjustments || {};
         
-        console.log('📍 Loading priority: final_report.adjustments → estimate.adjustments → valuation.adjustments');
+        console.log('📍 Force loading from: estimate.adjustments → valuation.adjustments (button override)');
         console.log('🔍 Available adjustments data:', adjustments);
         
         // Load features and registration only (for gross section)
