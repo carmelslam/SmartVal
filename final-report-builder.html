@@ -6855,32 +6855,46 @@
         featuresRows.forEach(row => {
           const inputs = row.querySelectorAll('input, select');
           if (inputs.length >= 4) {
-            const adjustmentData = {
-              value: inputs[0].value || '',
-              type: inputs[1].value || 'plus',
-              percent: parseFloat(inputs[2].value) || 0,
-              percentage: parseFloat(inputs[2].value) || 0,
-              amount_display: inputs[3].value || '',
-              amount: parseFloat((inputs[3].value || '').replace(/[₪,-]/g, '')) || 0,
-              source: row.getAttribute('data-source') || 'manual'
-            };
+            const dataSource = row.getAttribute('data-source') || 'manual';
             
-            // Apply sign based on type
-            if (inputs[1].value === 'minus') {
-              adjustmentData.amount = -Math.abs(adjustmentData.amount);
-              adjustmentData.percent = -Math.abs(adjustmentData.percent);
-              adjustmentData.percentage = -Math.abs(adjustmentData.percentage);
+            // CRITICAL FIX: Only save manual additions to final_report.adjustments
+            // Levi data should stay in estimate.adjustments and be handled by syncAdjustmentToHelper()
+            if (dataSource === 'manual') {
+              const adjustmentData = {
+                value: inputs[0].value || '',
+                type: inputs[1].value || 'plus',
+                percent: parseFloat(inputs[2].value) || 0,
+                percentage: parseFloat(inputs[2].value) || 0,
+                amount_display: inputs[3].value || '',
+                amount: parseFloat((inputs[3].value || '').replace(/[₪,-]/g, '')) || 0,
+                source: dataSource
+              };
+              
+              // Apply sign based on type
+              if (inputs[1].value === 'minus') {
+                adjustmentData.amount = -Math.abs(adjustmentData.amount);
+                adjustmentData.percent = -Math.abs(adjustmentData.percent);
+                adjustmentData.percentage = -Math.abs(adjustmentData.percentage);
+              }
+              
+              helper.final_report.adjustments.features.push(adjustmentData);
+              console.log('💾 Saved manual feature adjustment to final_report:', adjustmentData.value);
+            } else {
+              console.log('⏭️ Skipped Levi feature (stays in estimate.adjustments):', inputs[0].value);
             }
-            
-            helper.final_report.adjustments.features.push(adjustmentData);
           }
         });
         
-        // Update valuation.adjustments with FIRST item (EXACT estimator pattern)
-        if (helper.final_report.adjustments.features.length > 0) {
+        // Update valuation.adjustments with FIRST Levi item from estimate.adjustments (EXACT estimator pattern)
+        if (helper.estimate?.adjustments?.features && Array.isArray(helper.estimate.adjustments.features) && helper.estimate.adjustments.features.length > 0) {
+          helper.valuation.adjustments.features = helper.estimate.adjustments.features[0];
+          console.log('💾 Updated valuation.adjustments.features from estimate (Levi data)');
+        } else if (helper.final_report.adjustments.features.length > 0) {
           helper.valuation.adjustments.features = helper.final_report.adjustments.features[0];
+          console.log('💾 Updated valuation.adjustments.features from final_report (manual data)');
         } else {
           delete helper.valuation.adjustments.features;
+          console.log('🗑️ Cleared valuation.adjustments.features (no data)');
         }
         
         // 2. REGISTRATION - Copy EXACT estimator pattern
@@ -6890,32 +6904,46 @@
         registrationRows.forEach(row => {
           const inputs = row.querySelectorAll('input, select');
           if (inputs.length >= 4) {
-            const adjustmentData = {
-              value: inputs[0].value || '',
-              type: inputs[1].value || 'plus',
-              percent: parseFloat(inputs[2].value) || 0,
-              percentage: parseFloat(inputs[2].value) || 0,
-              amount_display: inputs[3].value || '',
-              amount: parseFloat((inputs[3].value || '').replace(/[₪,-]/g, '')) || 0,
-              source: row.getAttribute('data-source') || 'manual'
-            };
+            const dataSource = row.getAttribute('data-source') || 'manual';
             
-            // Apply sign based on type
-            if (inputs[1].value === 'minus') {
-              adjustmentData.amount = -Math.abs(adjustmentData.amount);
-              adjustmentData.percent = -Math.abs(adjustmentData.percent);
-              adjustmentData.percentage = -Math.abs(adjustmentData.percentage);
+            // CRITICAL FIX: Only save manual additions to final_report.adjustments
+            // Levi data should stay in estimate.adjustments and be handled by syncAdjustmentToHelper()
+            if (dataSource === 'manual') {
+              const adjustmentData = {
+                value: inputs[0].value || '',
+                type: inputs[1].value || 'plus',
+                percent: parseFloat(inputs[2].value) || 0,
+                percentage: parseFloat(inputs[2].value) || 0,
+                amount_display: inputs[3].value || '',
+                amount: parseFloat((inputs[3].value || '').replace(/[₪,-]/g, '')) || 0,
+                source: dataSource
+              };
+              
+              // Apply sign based on type
+              if (inputs[1].value === 'minus') {
+                adjustmentData.amount = -Math.abs(adjustmentData.amount);
+                adjustmentData.percent = -Math.abs(adjustmentData.percent);
+                adjustmentData.percentage = -Math.abs(adjustmentData.percentage);
+              }
+              
+              helper.final_report.adjustments.registration.push(adjustmentData);
+              console.log('💾 Saved manual registration adjustment to final_report:', adjustmentData.value);
+            } else {
+              console.log('⏭️ Skipped Levi registration (stays in estimate.adjustments):', inputs[0].value);
             }
-            
-            helper.final_report.adjustments.registration.push(adjustmentData);
           }
         });
         
-        // Update valuation.adjustments with FIRST item (EXACT estimator pattern)
-        if (helper.final_report.adjustments.registration.length > 0) {
+        // Update valuation.adjustments with FIRST Levi item from estimate.adjustments (EXACT estimator pattern)
+        if (helper.estimate?.adjustments?.registration && Array.isArray(helper.estimate.adjustments.registration) && helper.estimate.adjustments.registration.length > 0) {
+          helper.valuation.adjustments.registration = helper.estimate.adjustments.registration[0];
+          console.log('💾 Updated valuation.adjustments.registration from estimate (Levi data)');
+        } else if (helper.final_report.adjustments.registration.length > 0) {
           helper.valuation.adjustments.registration = helper.final_report.adjustments.registration[0];
+          console.log('💾 Updated valuation.adjustments.registration from final_report (manual data)');
         } else {
           delete helper.valuation.adjustments.registration;
+          console.log('🗑️ Cleared valuation.adjustments.registration (no data)');
         }
         
         console.log('✅ Updated gross value adjustments to BOTH final_report.adjustments AND valuation.adjustments');
