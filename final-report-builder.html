@@ -5633,6 +5633,52 @@
           }
         });
         
+        // LOAD MANUAL ENTRIES from final_report.adjustments (preserves order: Levi first, manual after)
+        if (helper.final_report?.adjustments) {
+          const finalReportAdjustments = helper.final_report.adjustments;
+          
+          categories.forEach(({ key, addFunction, container }) => {
+            const manualEntries = finalReportAdjustments[key];
+            if (manualEntries && Array.isArray(manualEntries) && container) {
+              // Filter for manual entries only (not Levi data)
+              const manualOnly = manualEntries.filter(item => item.source === 'manual');
+              
+              if (manualOnly.length > 0) {
+                console.log(`📝 Loading ${manualOnly.length} manual ${key} adjustments`);
+                
+                manualOnly.forEach((item, index) => {
+                  // Add new row
+                  addFunction();
+                  
+                  // Fill the data
+                  const rows = container.querySelectorAll('div[id*="Adj_"]');
+                  const lastRow = rows[rows.length - 1];
+                  
+                  if (lastRow) {
+                    const inputs = lastRow.querySelectorAll('input, select');
+                    if (inputs.length >= 4) {
+                      inputs[0].value = item.value || '';
+                      inputs[1].value = item.type || 'plus';
+                      inputs[2].value = item.percentage || item.percent || '';
+                      inputs[3].value = item.amount_display || (item.amount ? `₪${Math.abs(item.amount).toLocaleString()}` : '');
+                      
+                      // Keep as manual source
+                      lastRow.setAttribute('data-source', 'manual');
+                      
+                      console.log(`✅ Loaded manual ${key} item ${index}:`, {
+                        description: inputs[0].value,
+                        type: inputs[1].value,
+                        percent: inputs[2].value,
+                        amount: inputs[3].value
+                      });
+                    }
+                  }
+                });
+              }
+            }
+          });
+        }
+        
         // Trigger calculation after reloading
         updateGrossMarketValueCalculation();
         updateHelperFromAdjustments();
@@ -6174,11 +6220,15 @@
         }
         
         // ALSO save to valuation.adjustments for backward compatibility (original destination)
-        // PHASE 5: Don't write additional entries to valuation.adjustments
-        if (category !== 'additional') {
+        // PHASE 5: Only write to valuation.adjustments if it's from Levi data (original), not manual additions
+        const isOriginalData = adjustmentData.source === 'levi';
+        if (category !== 'additional' && isOriginalData) {
           if (!helper.valuation) helper.valuation = {};
           if (!helper.valuation.adjustments) helper.valuation.adjustments = {};
           helper.valuation.adjustments[category] = adjustmentData;
+          console.log(`📝 Saved ${category} to valuation.adjustments (Levi data only)`);
+        } else if (category !== 'additional') {
+          console.log(`🚫 Skipped saving ${category} to valuation.adjustments (manual addition)`);
         }
         
         // Save to storage
