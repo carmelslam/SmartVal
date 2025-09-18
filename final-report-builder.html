@@ -6430,6 +6430,7 @@
         const rawPercent = parseFloat(inputs[2].value.replace(/[-₪,]/g, '')) || 0;
         const rawAmount = parseFloat(inputs[3].value.replace(/[-₪,]/g, '')) || 0;
         
+        const dataSource = row.getAttribute('data-source') || 'manual';
         const adjustmentData = {
           value: inputs[0].value || '',  // תיאור → value (description field)
           type: inputs[1].value || 'plus',  // סוג → type
@@ -6438,9 +6439,44 @@
           amount: rawAmount,  // ערך → amount (clean number)
           amount_display: inputs[3].value || '',  // ערך → amount_display
           category: category,
-          source: row.getAttribute('data-source') || 'manual',
+          source: dataSource,
           timestamp: new Date().toISOString()
         };
+        
+        // If this is a Levi row being edited, update the estimate.adjustments instead
+        if (dataSource === 'levi' && helper.estimate?.adjustments?.[category]) {
+          console.log(`🔄 Updating Levi data in estimate.adjustments.${category}`);
+          
+          // Find and update the original Levi entry in estimate.adjustments
+          if (Array.isArray(helper.estimate.adjustments[category])) {
+            const originalIndex = helper.estimate.adjustments[category].findIndex(
+              item => item.value === adjustmentData.value || 
+                     (item.value && item.value.includes('adventure')) // Match original Levi description
+            );
+            
+            if (originalIndex >= 0) {
+              helper.estimate.adjustments[category][originalIndex] = adjustmentData;
+              console.log(`✅ Updated original Levi entry at index ${originalIndex}`);
+            } else {
+              helper.estimate.adjustments[category].push(adjustmentData);
+              console.log(`✅ Added new entry to estimate.adjustments.${category}`);
+            }
+          } else {
+            helper.estimate.adjustments[category] = adjustmentData;
+            console.log(`✅ Set single entry in estimate.adjustments.${category}`);
+          }
+          
+          // Save to storage and return early (don't save to final_report)
+          sessionStorage.setItem('helper', JSON.stringify(helper));
+          
+          // Apply unified formatting for consistent display
+          if (category === 'features' || category === 'registration') {
+            console.log(`🎨 Applying unified formatting for ${category} adjustment`);
+            formatAdjustmentDisplay(row, adjustmentData.type, adjustmentData.percent, adjustmentData.amount);
+          }
+          
+          return; // Don't save to final_report for Levi edits
+        }
         
         // Save adjustments to NEW destinations (primary requirement)
         if (!helper.final_report) helper.final_report = {};
