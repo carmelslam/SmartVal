@@ -2774,6 +2774,9 @@
         // Load all adjustments (Levi + custom) using unified system
         loadAllAdjustments(helper);
         
+        // Load Total Value section adjustments from final_report.adjustments
+        loadTotalValueSectionAdjustments(helper);
+        
         // Note: addFieldChangeListeners() is called in DOMContentLoaded event
         
       } catch (error) {
@@ -5482,6 +5485,100 @@
       }
     }
     
+    // LOAD TOTAL VALUE SECTION ADJUSTMENTS FROM FINAL_REPORT.ADJUSTMENTS
+    function loadTotalValueSectionAdjustments(helper) {
+      try {
+        console.log('🔄 Loading Total Value section adjustments from final_report.adjustments');
+        
+        if (!helper.final_report?.adjustments) {
+          console.log('📝 No final_report.adjustments found, skipping Total Value section load');
+          return;
+        }
+        
+        const adjustments = helper.final_report.adjustments;
+        console.log('🔍 Available final_report adjustments:', adjustments);
+        
+        // Define category mapping for Total Value section
+        const categoryMapping = [
+          { key: 'features', containerId: 'fullFeaturesAdjustmentsList', addFunction: 'addFullMarketFeatureAdjustment' },
+          { key: 'registration', containerId: 'fullRegistrationAdjustmentsList', addFunction: 'addFullMarketRegistrationAdjustment' },
+          { key: 'mileage', containerId: 'mileageAdjustmentsList', addFunction: 'addMileageAdjustment' },
+          { key: 'ownership_type', containerId: 'ownershipAdjustmentsList', addFunction: 'addOwnershipAdjustment' },
+          { key: 'ownership_history', containerId: 'ownersAdjustmentsList', addFunction: 'addOwnersAdjustment' },
+          { key: 'additional', containerId: 'allAdjustmentsList', addFunction: 'addFullMarketAdjustment' }
+        ];
+        
+        categoryMapping.forEach(({ key, containerId, addFunction }) => {
+          const categoryData = adjustments[key];
+          if (categoryData && Array.isArray(categoryData) && categoryData.length > 0) {
+            console.log(`📝 Loading ${key} adjustments (${categoryData.length} items):`, categoryData);
+            
+            const container = document.getElementById(containerId);
+            if (container) {
+              // Clear existing rows
+              container.innerHTML = '';
+              
+              // Add each saved adjustment
+              categoryData.forEach((item, index) => {
+                if (item && (item.percent || item.percentage || item.amount || item.value)) {
+                  console.log(`➕ Adding ${key} adjustment ${index}:`, item);
+                  
+                  // Call the appropriate add function
+                  if (addFunction === 'addFullMarketFeatureAdjustment') {
+                    addFullMarketFeatureAdjustment();
+                  } else if (addFunction === 'addFullMarketRegistrationAdjustment') {
+                    addFullMarketRegistrationAdjustment();
+                  } else if (addFunction === 'addMileageAdjustment') {
+                    addMileageAdjustment();
+                  } else if (addFunction === 'addOwnershipAdjustment') {
+                    addOwnershipAdjustment();
+                  } else if (addFunction === 'addOwnersAdjustment') {
+                    addOwnersAdjustment();
+                  } else if (addFunction === 'addFullMarketAdjustment') {
+                    addFullMarketAdjustment();
+                  }
+                  
+                  // Populate the newly added row
+                  const lastRow = container.lastElementChild;
+                  if (lastRow) {
+                    const inputs = lastRow.querySelectorAll('input, select');
+                    if (inputs.length >= 4) {
+                      inputs[0].value = item.value || '';
+                      inputs[1].value = item.type || 'plus';
+                      
+                      // Display minus sign for negative values
+                      const itemPercent = item.percentage || item.percent;
+                      const displayPercent = (item.type === 'minus' || item.type === 'הפחתה') && itemPercent > 0 ? 
+                        `-${Math.abs(itemPercent)}` : Math.abs(itemPercent || 0);
+                      const displayAmount = (item.type === 'minus' || item.type === 'הפחתה') && item.amount > 0 ? 
+                        `-${Math.abs(item.amount)}` : Math.abs(item.amount || 0);
+                      
+                      inputs[2].value = itemPercent ? displayPercent : '';
+                      inputs[3].value = item.amount_display || (item.amount ? `₪${displayAmount.toLocaleString()}` : '');
+                      
+                      // Mark as loaded from final_report
+                      lastRow.setAttribute('data-source', 'final_report');
+                      lastRow.style.background = '#f0f8ff';
+                      lastRow.style.border = '1px solid #2563eb';
+                    }
+                  }
+                }
+              });
+              
+              console.log(`✅ Loaded ${categoryData.length} ${key} adjustments to Total Value section`);
+            } else {
+              console.warn(`⚠️ Container ${containerId} not found for ${key} adjustments`);
+            }
+          }
+        });
+        
+        console.log('✅ Total Value section adjustments loading completed');
+        
+      } catch (error) {
+        console.error('❌ Error loading Total Value section adjustments:', error);
+      }
+    }
+    
     // RELOAD GROSS ADJUSTMENTS - triggered by reload button
     function reloadGrossAdjustments() {
       try {
@@ -6065,7 +6162,7 @@
         // 🔧 PHASE 2.4: Get helper data from single source (window.helper)
         const helper = window.helper || {};
         
-        const row = element.closest('div[id^="featureAdj_"], div[id^="regAdj_"]');
+        const row = element.closest('div[id*="Adj_"]');
         if (!row) return;
         
         const inputs = row.querySelectorAll('input, select');
@@ -6117,12 +6214,35 @@
         }
         
         // ALSO save to valuation.adjustments for backward compatibility (original destination)
-        if (!helper.valuation) helper.valuation = {};
-        if (!helper.valuation.adjustments) helper.valuation.adjustments = {};
-        helper.valuation.adjustments[category] = adjustmentData;
+        // EXCEPT for additional adjustments which should only exist in final_report.adjustments
+        if (category !== 'additional') {
+          if (!helper.valuation) helper.valuation = {};
+          if (!helper.valuation.adjustments) helper.valuation.adjustments = {};
+          helper.valuation.adjustments[category] = adjustmentData;
+        }
         
         // Save to storage
         sessionStorage.setItem('helper', JSON.stringify(helper));
+        
+        // Bidirectional sync for features and registration between sections
+        if (category === 'features' || category === 'registration') {
+          // Determine which section this update came from
+          const isFromGrossSection = element.closest('#featuresAdjustmentsList, #registrationAdjustmentsList');
+          const isFromFullSection = element.closest('#fullFeaturesAdjustmentsList, #fullRegistrationAdjustmentsList');
+          
+          // Sync to the other section
+          if (isFromGrossSection) {
+            // Update from gross section -> sync to full market section
+            setTimeout(() => {
+              syncFullMarketFromGross(category, helper.final_report.adjustments[category]);
+            }, 50);
+          } else if (isFromFullSection) {
+            // Update from full market section -> sync to gross section  
+            setTimeout(() => {
+              syncGrossFromFullMarket(category, helper.final_report.adjustments[category]);
+            }, 50);
+          }
+        }
         
         // Trigger UI updates
         if (window.forcePopulateFields) {
@@ -6131,6 +6251,68 @@
         
       } catch (error) {
         console.error('❌ Error syncing adjustment to helper:', error);
+      }
+    }
+    
+    // Sync full market section from gross section updates
+    function syncFullMarketFromGross(category, adjustmentArray) {
+      const targetContainerId = category === 'features' ? 'fullFeaturesAdjustmentsList' : 'fullRegistrationAdjustmentsList';
+      const container = document.getElementById(targetContainerId);
+      if (!container) return;
+      
+      // Clear existing rows and rebuild from adjustment array
+      container.innerHTML = '';
+      
+      if (adjustmentArray && adjustmentArray.length > 0) {
+        adjustmentArray.forEach(adjustment => {
+          if (category === 'features') {
+            addFullMarketFeatureAdjustment();
+          } else {
+            addFullMarketRegistrationAdjustment();
+          }
+          
+          const lastRow = container.lastElementChild;
+          if (lastRow) {
+            const inputs = lastRow.querySelectorAll('input, select');
+            if (inputs.length >= 4) {
+              inputs[0].value = adjustment.value || '';
+              inputs[1].value = adjustment.type || 'plus';
+              inputs[2].value = adjustment.percent ? Math.abs(adjustment.percent) : '';
+              inputs[3].value = adjustment.amount_display || (adjustment.amount ? `₪${Math.abs(adjustment.amount).toLocaleString()}` : '');
+            }
+          }
+        });
+      }
+    }
+    
+    // Sync gross section from full market section updates
+    function syncGrossFromFullMarket(category, adjustmentArray) {
+      const targetContainerId = category === 'features' ? 'featuresAdjustmentsList' : 'registrationAdjustmentsList';
+      const container = document.getElementById(targetContainerId);
+      if (!container) return;
+      
+      // Clear existing rows and rebuild from adjustment array
+      container.innerHTML = '';
+      
+      if (adjustmentArray && adjustmentArray.length > 0) {
+        adjustmentArray.forEach(adjustment => {
+          if (category === 'features') {
+            addFeatureAdjustment();
+          } else {
+            addRegistrationAdjustment();
+          }
+          
+          const lastRow = container.lastElementChild;
+          if (lastRow) {
+            const inputs = lastRow.querySelectorAll('input, select');
+            if (inputs.length >= 4) {
+              inputs[0].value = adjustment.value || '';
+              inputs[1].value = adjustment.type || 'plus';
+              inputs[2].value = adjustment.percent ? Math.abs(adjustment.percent) : '';
+              inputs[3].value = adjustment.amount_display || (adjustment.amount ? `₪${Math.abs(adjustment.amount).toLocaleString()}` : '');
+            }
+          }
+        });
       }
     }
     
@@ -7612,13 +7794,13 @@
       
       const newRow = `
         <div id="${rowId}" class="adjustment-row" style="display:grid; grid-template-columns:2fr 1fr 1fr 1fr 80px; gap:10px; margin-bottom:8px;">
-          <div><input type="text" placeholder="תיאור סוג בעלות" title="" onchange="updateFullMarketValueCalculation(); syncAdjustmentToHelper(this, 'ownership'); this.title = this.value;" oninput="this.title = this.value;" /></div>
-          <div><select onchange="updateFullMarketValueCalculation(); syncAdjustmentToHelper(this, 'ownership');" title="">
+          <div><input type="text" placeholder="תיאור סוג בעלות" title="" onchange="updateFullMarketValueCalculation(); syncAdjustmentToHelper(this, 'ownership_type'); this.title = this.value;" oninput="this.title = this.value;" /></div>
+          <div><select onchange="updateFullMarketValueCalculation(); syncAdjustmentToHelper(this, 'ownership_type');" title="">
             <option value="plus">תוספת (+)</option>
             <option value="minus">הפחתה (-)</option>
           </select></div>
-          <div><input type="text" placeholder="אחוז" title="" oninput="calculateAdjustmentValueSimple(this); this.title = this.value;" onchange="updateFullMarketValueCalculation(); syncAdjustmentToHelper(this, 'ownership'); this.title = this.value;" /></div>
-          <div><input type="text" placeholder="₪" title="" onchange="updateFullMarketValueCalculation(); syncAdjustmentToHelper(this, 'ownership'); this.title = this.value;" oninput="this.title = this.value;" /></div>
+          <div><input type="text" placeholder="אחוז" title="" oninput="calculateAdjustmentValueSimple(this); this.title = this.value;" onchange="updateFullMarketValueCalculation(); syncAdjustmentToHelper(this, 'ownership_type'); this.title = this.value;" /></div>
+          <div><input type="text" placeholder="₪" title="" onchange="updateFullMarketValueCalculation(); syncAdjustmentToHelper(this, 'ownership_type'); this.title = this.value;" oninput="this.title = this.value;" /></div>
           <div><button class="btn remove" onclick="removeAdjustmentRow('${rowId}')">מחק</button></div>
         </div>
       `;
@@ -7634,13 +7816,13 @@
       
       const newRow = `
         <div id="${rowId}" class="adjustment-row" style="display:grid; grid-template-columns:2fr 1fr 1fr 1fr 80px; gap:10px; margin-bottom:8px;">
-          <div><input type="text" placeholder="תיאור מספר בעלים" title="" onchange="updateFullMarketValueCalculation(); syncAdjustmentToHelper(this, 'owners'); this.title = this.value;" oninput="this.title = this.value;" /></div>
-          <div><select onchange="updateFullMarketValueCalculation(); syncAdjustmentToHelper(this, 'owners');" title="">
+          <div><input type="text" placeholder="תיאור מספר בעלים" title="" onchange="updateFullMarketValueCalculation(); syncAdjustmentToHelper(this, 'ownership_history'); this.title = this.value;" oninput="this.title = this.value;" /></div>
+          <div><select onchange="updateFullMarketValueCalculation(); syncAdjustmentToHelper(this, 'ownership_history');" title="">
             <option value="plus">תוספת (+)</option>
             <option value="minus">הפחתה (-)</option>
           </select></div>
-          <div><input type="text" placeholder="אחוז" title="" oninput="calculateAdjustmentValueSimple(this); this.title = this.value;" onchange="updateFullMarketValueCalculation(); syncAdjustmentToHelper(this, 'owners'); this.title = this.value;" /></div>
-          <div><input type="text" placeholder="₪" title="" onchange="updateFullMarketValueCalculation(); syncAdjustmentToHelper(this, 'owners'); this.title = this.value;" oninput="this.title = this.value;" /></div>
+          <div><input type="text" placeholder="אחוז" title="" oninput="calculateAdjustmentValueSimple(this); this.title = this.value;" onchange="updateFullMarketValueCalculation(); syncAdjustmentToHelper(this, 'ownership_history'); this.title = this.value;" /></div>
+          <div><input type="text" placeholder="₪" title="" onchange="updateFullMarketValueCalculation(); syncAdjustmentToHelper(this, 'ownership_history'); this.title = this.value;" oninput="this.title = this.value;" /></div>
           <div><button class="btn remove" onclick="removeAdjustmentRow('${rowId}')">מחק</button></div>
         </div>
       `;
