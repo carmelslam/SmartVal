@@ -5388,15 +5388,57 @@
         const estimateData = helper.estimate?.adjustments || {};
         const finalReportData = helper.final_report?.adjustments || {};
         
-        // Combine features from both sources
+        // Combine features from both sources with deduplication
         const estimateFeatures = Array.isArray(estimateData.features) ? estimateData.features : [];
         const finalReportFeatures = Array.isArray(finalReportData.features) ? finalReportData.features : [];
-        const featuresData = [...estimateFeatures, ...finalReportFeatures];
         
-        // Combine registration from both sources  
+        // Deduplicate features: use Set to track unique combinations
+        const seenFeatures = new Set();
+        const featuresData = [];
+        
+        // Add estimate features first (Levi data)
+        estimateFeatures.forEach(item => {
+          const key = `${item.value || ''}-${item.type || ''}-${item.percentage || item.percent || ''}-${item.amount || ''}`;
+          if (!seenFeatures.has(key)) {
+            seenFeatures.add(key);
+            featuresData.push({...item, _source: 'estimate'});
+          }
+        });
+        
+        // Add final_report features (manual additions) if not already seen
+        finalReportFeatures.forEach(item => {
+          const key = `${item.value || ''}-${item.type || ''}-${item.percentage || item.percent || ''}-${item.amount || ''}`;
+          if (!seenFeatures.has(key)) {
+            seenFeatures.add(key);
+            featuresData.push({...item, _source: 'final_report'});
+          }
+        });
+        
+        // Combine registration from both sources with deduplication
         const estimateRegistration = Array.isArray(estimateData.registration) ? estimateData.registration : [];
         const finalReportRegistration = Array.isArray(finalReportData.registration) ? finalReportData.registration : [];
-        const registrationData = [...estimateRegistration, ...finalReportRegistration];
+        
+        // Deduplicate registration: use Set to track unique combinations
+        const seenRegistration = new Set();
+        const registrationData = [];
+        
+        // Add estimate registration first (Levi data)
+        estimateRegistration.forEach(item => {
+          const key = `${item.value || ''}-${item.type || ''}-${item.percentage || item.percent || ''}-${item.amount || ''}`;
+          if (!seenRegistration.has(key)) {
+            seenRegistration.add(key);
+            registrationData.push({...item, _source: 'estimate'});
+          }
+        });
+        
+        // Add final_report registration (manual additions) if not already seen
+        finalReportRegistration.forEach(item => {
+          const key = `${item.value || ''}-${item.type || ''}-${item.percentage || item.percent || ''}-${item.amount || ''}`;
+          if (!seenRegistration.has(key)) {
+            seenRegistration.add(key);
+            registrationData.push({...item, _source: 'final_report'});
+          }
+        });
         
         console.log(`🔄 Combined features: ${estimateFeatures.length} from estimate + ${finalReportFeatures.length} from final_report = ${featuresData.length} total`);
         console.log(`🔄 Combined registration: ${estimateRegistration.length} from estimate + ${finalReportRegistration.length} from final_report = ${registrationData.length} total`);
@@ -5419,7 +5461,7 @@
             const row = document.querySelector('#featuresAdjustmentsList > div:last-child');
             if (row) {
               // Set data source for tracking
-              const isFromEstimate = index < estimateFeatures.length;
+              const isFromEstimate = item._source === 'estimate';
               row.setAttribute('data-source', isFromEstimate ? 'levi' : 'manual');
               
               const inputs = row.querySelectorAll('input, select');
@@ -5462,7 +5504,7 @@
             const row = document.querySelector('#registrationAdjustmentsList > div:last-child');
             if (row) {
               // Set data source for tracking
-              const isFromEstimate = index < estimateRegistration.length;
+              const isFromEstimate = item._source === 'estimate';
               row.setAttribute('data-source', isFromEstimate ? 'levi' : 'manual');
               
               const inputs = row.querySelectorAll('input, select');
