@@ -6264,125 +6264,73 @@
           };
         }
         
-        // 1. FEATURES - Write to both destinations
+        // 1. FEATURES - Copy EXACT estimator pattern
         const featuresRows = document.querySelectorAll('#featuresAdjustmentsList > div');
-        if (featuresRows.length > 0) {
-          // For VALUATION: Only update FIRST row (original data), ignore additional manual rows  
-          const originalRow = featuresRows[0]; // First row is always original
-          
-          if (originalRow) {
-            const inputs = originalRow.querySelectorAll('input, select');
-            if (inputs.length >= 4) {
-              const adjustmentData = {
-                value: inputs[0].value || '', // תיאור goes in value field
-                type: inputs[1].value || 'plus',
-                percent: parseFloat(inputs[2].value) || 0,
-                percentage: parseFloat(inputs[2].value) || 0, // compatibility
-                amount_display: inputs[3].value || '',
-                amount: parseFloat((inputs[3].value || '').replace(/[₪,-]/g, '')) || 0
-              };
-              
-              // Apply sign based on type - CRITICAL FOR MINUS VALUES
-              if (inputs[1].value === 'minus') {
-                adjustmentData.amount = -Math.abs(adjustmentData.amount);
-                adjustmentData.percent = -Math.abs(adjustmentData.percent);
-                adjustmentData.percentage = -Math.abs(adjustmentData.percentage);
-              }
-              
-              // Write to VALUATION only for ORIGINAL adjustments
-              helper.valuation.adjustments.features = adjustmentData;
+        helper.final_report.adjustments.features = [];
+        
+        featuresRows.forEach(row => {
+          const inputs = row.querySelectorAll('input, select');
+          if (inputs.length >= 4) {
+            const adjustmentData = {
+              value: inputs[0].value || '',
+              type: inputs[1].value || 'plus',
+              percent: parseFloat(inputs[2].value) || 0,
+              percentage: parseFloat(inputs[2].value) || 0,
+              amount_display: inputs[3].value || '',
+              amount: parseFloat((inputs[3].value || '').replace(/[₪,-]/g, '')) || 0,
+              source: row.getAttribute('data-source') || 'manual'
+            };
+            
+            // Apply sign based on type
+            if (inputs[1].value === 'minus') {
+              adjustmentData.amount = -Math.abs(adjustmentData.amount);
+              adjustmentData.percent = -Math.abs(adjustmentData.percent);
+              adjustmentData.percentage = -Math.abs(adjustmentData.percentage);
             }
+            
+            helper.final_report.adjustments.features.push(adjustmentData);
           }
-          
-          // For FINAL_REPORT: Store ALL rows (arrays in final_report)  
-          helper.final_report.adjustments.features = [];
-          featuresRows.forEach(row => {
-            const inputs = row.querySelectorAll('input, select');
-            if (inputs.length >= 4) {
-              const adjustmentData = {
-                value: inputs[0].value || '', // תיאור goes in value field
-                type: inputs[1].value || 'plus',
-                percent: parseFloat(inputs[2].value) || 0,
-                percentage: parseFloat(inputs[2].value) || 0, // compatibility
-                amount_display: inputs[3].value || '',
-                amount: parseFloat((inputs[3].value || '').replace(/[₪,-]/g, '')) || 0,
-                source: row.getAttribute('data-source') || 'manual'
-              };
-              
-              // Apply sign based on type - CRITICAL FOR MINUS VALUES
-              if (inputs[1].value === 'minus') {
-                adjustmentData.amount = -Math.abs(adjustmentData.amount);
-                adjustmentData.percent = -Math.abs(adjustmentData.percent);
-                adjustmentData.percentage = -Math.abs(adjustmentData.percentage);
-              }
-              
-              helper.final_report.adjustments.features.push(adjustmentData);
-            }
-          });
+        });
+        
+        // Update valuation.adjustments with FIRST item (EXACT estimator pattern)
+        if (helper.final_report.adjustments.features.length > 0) {
+          helper.valuation.adjustments.features = helper.final_report.adjustments.features[0];
         } else {
-          // Clear if no rows exist
-          helper.final_report.adjustments.features = [];
           delete helper.valuation.adjustments.features;
         }
         
-        // 2. REGISTRATION - Write to both destinations
+        // 2. REGISTRATION - Copy EXACT estimator pattern
         const registrationRows = document.querySelectorAll('#registrationAdjustmentsList > div');
-        if (registrationRows.length > 0) {
-          // For VALUATION: Only update FIRST row (original data), ignore additional manual rows
-          const originalRow = registrationRows[0]; // First row is always original
-          
-          if (originalRow) {
-            const inputs = originalRow.querySelectorAll('input, select');
-            if (inputs.length >= 4) {
-              const adjustmentData = {
-                value: inputs[0].value || '',
-                type: inputs[1].value || 'plus',
-                percent: parseFloat(inputs[2].value) || 0,
-                percentage: parseFloat(inputs[2].value) || 0,
-                amount_display: inputs[3].value || '',
-                amount: parseFloat((inputs[3].value || '').replace(/[₪,-]/g, '')) || 0
-              };
-              
-              // Apply sign based on type - CRITICAL FOR MINUS VALUES
-              if (inputs[1].value === 'minus') {
-                adjustmentData.amount = -Math.abs(adjustmentData.amount);
-                adjustmentData.percent = -Math.abs(adjustmentData.percent);
-                adjustmentData.percentage = -Math.abs(adjustmentData.percentage);
-              }
-              
-              // Write to VALUATION only for ORIGINAL adjustments
-              helper.valuation.adjustments.registration = adjustmentData;
+        helper.final_report.adjustments.registration = [];
+        
+        registrationRows.forEach(row => {
+          const inputs = row.querySelectorAll('input, select');
+          if (inputs.length >= 4) {
+            const adjustmentData = {
+              value: inputs[0].value || '',
+              type: inputs[1].value || 'plus',
+              percent: parseFloat(inputs[2].value) || 0,
+              percentage: parseFloat(inputs[2].value) || 0,
+              amount_display: inputs[3].value || '',
+              amount: parseFloat((inputs[3].value || '').replace(/[₪,-]/g, '')) || 0,
+              source: row.getAttribute('data-source') || 'manual'
+            };
+            
+            // Apply sign based on type
+            if (inputs[1].value === 'minus') {
+              adjustmentData.amount = -Math.abs(adjustmentData.amount);
+              adjustmentData.percent = -Math.abs(adjustmentData.percent);
+              adjustmentData.percentage = -Math.abs(adjustmentData.percentage);
             }
+            
+            helper.final_report.adjustments.registration.push(adjustmentData);
           }
-          
-          // For FINAL_REPORT: Store ALL rows
-          helper.final_report.adjustments.registration = [];
-          registrationRows.forEach(row => {
-            const inputs = row.querySelectorAll('input, select');
-            if (inputs.length >= 4) {
-              const adjustmentData = {
-                value: inputs[0].value || '',
-                type: inputs[1].value || 'plus',
-                percent: parseFloat(inputs[2].value) || 0,
-                percentage: parseFloat(inputs[2].value) || 0,
-                amount_display: inputs[3].value || '',
-                amount: parseFloat((inputs[3].value || '').replace(/[₪,-]/g, '')) || 0,
-                source: row.getAttribute('data-source') || 'manual'
-              };
-              
-              // Apply sign based on type - CRITICAL FOR MINUS VALUES
-              if (inputs[1].value === 'minus') {
-                adjustmentData.amount = -Math.abs(adjustmentData.amount);
-                adjustmentData.percent = -Math.abs(adjustmentData.percent);
-                adjustmentData.percentage = -Math.abs(adjustmentData.percentage);
-              }
-              
-              helper.final_report.adjustments.registration.push(adjustmentData);
-            }
-          });
+        });
+        
+        // Update valuation.adjustments with FIRST item (EXACT estimator pattern)
+        if (helper.final_report.adjustments.registration.length > 0) {
+          helper.valuation.adjustments.registration = helper.final_report.adjustments.registration[0];
         } else {
-          // Clear if no rows exist
-          helper.final_report.adjustments.registration = [];
           delete helper.valuation.adjustments.registration;
         }
         
