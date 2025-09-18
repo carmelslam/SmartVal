@@ -6358,3 +6358,66 @@ All gross vehicle value functionality now works correctly:
 **Key Implementation Pattern**: Synthetic event triggering + immediate cumulative updates ensures seamless user experience from page load to real-time calculations.
 
 ============================================================================================
+
+# Adjustments Data Flow Implementation Report - September 18, 2025
+
+## Task: Fix Adjustments Data Flow in Final Report Builder
+
+### Issues Fixed:
+
+1. **syncAdjustmentToHelper Scope** (Phase 1)
+   - Changed selector from `div[id^="featureAdj_"], div[id^="regAdj_"]` to `div[id*="Adj_"]`
+   - Now works for ALL adjustment types in both sections
+
+2. **Category Key Verification** (Phase 2 - Skipped)
+   - Verified keys are correct: 'ownership' and 'owners' (not 'ownership_type' and 'ownership_history')
+
+3. **Additional Entries Loading** (Phase 3)
+   - Created `loadTotalValueSectionAdjustments` function
+   - Loads additional adjustments from `final_report.adjustments`
+   - Preserves user-created additional rows on page refresh
+
+4. **Bidirectional Sync** (Phase 4)
+   - Added `syncUISection` function for UI synchronization
+   - Features and registration sync between Gross and Full Market sections
+   - Works on both edit and delete operations
+
+5. **Separate Valuation Writes** (Phase 5)
+   - Additional adjustments no longer write to `valuation.adjustments`
+   - Only standard categories write to valuation for backward compatibility
+
+6. **Totals Structure** (Phase 6)
+   - Added `final_report.adjustments.totals` with:
+     - Features total (value, percent, count)
+     - Registration total (value, percent, count)
+     - Gross total (combined totals + final value)
+
+### Technical Changes:
+
+```javascript
+// 1. Fixed syncAdjustmentToHelper scope (line 6068)
+const row = element.closest('div[id*="Adj_"]');
+
+// 2. Added loadTotalValueSectionAdjustments function
+// 3. Added syncUISection function for bidirectional sync
+// 4. Modified syncAdjustmentToHelper to trigger bidirectional sync
+// 5. Modified removeAdjustmentRow to trigger bidirectional sync
+// 6. Added condition to skip valuation writes for additional entries
+// 7. Added totals calculation in updateGrossMarketValueCalculation
+```
+
+### Data Flow:
+- READ: `estimate.adjustments` → `valuation.adjustments` (fallback)
+- WRITE: `final_report.adjustments` (array) + `valuation.adjustments` (single, except additional)
+- SYNC: Features/Registration bidirectional between sections
+- LOAD: Additional entries from `final_report.adjustments.additional`
+
+### Testing Required:
+1. Add features/registration in Gross section → verify sync to Full Market
+2. Edit features/registration in Full Market → verify sync to Gross
+3. Add additional adjustment → verify saves to final_report only
+4. Refresh page → verify additional adjustments persist
+5. Delete rows → verify bidirectional sync
+6. Check totals in final_report.adjustments.totals
+
+============================================================================================

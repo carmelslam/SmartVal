@@ -2774,6 +2774,9 @@
         // Load all adjustments (Levi + custom) using unified system
         loadAllAdjustments(helper);
         
+        // Load Total Value Section adjustments from final_report.adjustments
+        loadTotalValueSectionAdjustments(helper);
+        
         // Note: addFieldChangeListeners() is called in DOMContentLoaded event
         
       } catch (error) {
@@ -5482,6 +5485,60 @@
       }
     }
     
+    // LOAD TOTAL VALUE SECTION ADJUSTMENTS FROM final_report.adjustments
+    function loadTotalValueSectionAdjustments(helper) {
+      try {
+        console.log('🔄 Loading Total Value Section adjustments from final_report.adjustments');
+        
+        if (!helper.final_report?.adjustments) {
+          console.log('⚠️ No final_report.adjustments found');
+          return;
+        }
+        
+        const adjustments = helper.final_report.adjustments;
+        
+        // Load additional adjustments (custom entries)
+        if (adjustments.additional && adjustments.additional.length > 0) {
+          console.log(`📦 Loading ${adjustments.additional.length} additional adjustments`);
+          const container = document.getElementById('allAdjustmentsList');
+          if (container) {
+            // Clear existing rows
+            container.innerHTML = '';
+            
+            adjustments.additional.forEach((adj, index) => {
+              const rowId = 'fullAdj_loaded_' + index + '_' + Date.now();
+              const isPercent = adj.type === '%';
+              
+              const newRow = `
+                <div id="${rowId}" class="adjustment-row" style="display:grid; grid-template-columns:2fr 1fr 1fr 1fr 80px; gap:10px; margin-bottom:8px;">
+                  <div><input type="text" placeholder="תיאור התאמה נוספת" value="${adj.value || ''}" onchange="updateFullMarketValueCalculation(); updateHelperFromAdjustments(); syncAdjustmentToHelper(this, 'additional');" /></div>
+                  <div>
+                    <select onchange="updateFullMarketValueCalculation(); updateHelperFromAdjustments(); syncAdjustmentToHelper(this, 'additional');">
+                      <option value="%" ${isPercent ? 'selected' : ''}>%</option>
+                      <option value="₪" ${!isPercent ? 'selected' : ''}>₪</option>
+                    </select>
+                  </div>
+                  <div><input type="text" placeholder="אחוז" value="${adj.percentage || ''}" ${!isPercent ? 'readonly' : ''} style="direction: ltr; text-align: right;${!isPercent ? ' background: #f0f0f0;' : ''}" onchange="updateFullMarketValueCalculation(); updateHelperFromAdjustments(); syncAdjustmentToHelper(this, 'additional');" /></div>
+                  <div><input type="text" placeholder="ערך" value="${adj.amount || ''}" ${isPercent ? 'readonly' : ''} style="direction: ltr; text-align: right;${isPercent ? ' background: #f0f0f0;' : ''}" onchange="updateFullMarketValueCalculation(); updateHelperFromAdjustments(); syncAdjustmentToHelper(this, 'additional');" /></div>
+                  <div><button class="btn remove" type="button" onclick="removeAdjustmentRow('${rowId}')">הסר</button></div>
+                </div>
+              `;
+              
+              container.insertAdjacentHTML('beforeend', newRow);
+            });
+            
+            console.log('✅ Loaded additional adjustments to Total Value Section');
+          }
+        }
+        
+        // Note: We don't load features, registration, etc. here as they come from estimate.adjustments
+        // and are handled by loadAllAdjustments
+        
+      } catch (error) {
+        console.error('Error loading Total Value Section adjustments:', error);
+      }
+    }
+    
     // RELOAD GROSS ADJUSTMENTS - triggered by reload button
     function reloadGrossAdjustments() {
       try {
@@ -6065,7 +6122,7 @@
         // 🔧 PHASE 2.4: Get helper data from single source (window.helper)
         const helper = window.helper || {};
         
-        const row = element.closest('div[id^="featureAdj_"], div[id^="regAdj_"]');
+        const row = element.closest('div[id*="Adj_"]');
         if (!row) return;
         
         const inputs = row.querySelectorAll('input, select');
@@ -6117,13 +6174,34 @@
         }
         
         // ALSO save to valuation.adjustments for backward compatibility (original destination)
-        if (!helper.valuation) helper.valuation = {};
-        if (!helper.valuation.adjustments) helper.valuation.adjustments = {};
-        helper.valuation.adjustments[category] = adjustmentData;
+        // PHASE 5: Don't write additional entries to valuation.adjustments
+        if (category !== 'additional') {
+          if (!helper.valuation) helper.valuation = {};
+          if (!helper.valuation.adjustments) helper.valuation.adjustments = {};
+          helper.valuation.adjustments[category] = adjustmentData;
+        }
         
         // Save to storage
         sessionStorage.setItem('helper', JSON.stringify(helper));
         
+        // 🔧 PHASE 4: Bidirectional sync for features and registration
+        if ((category === 'features' || category === 'registration') && containerId) {
+          // Determine which section was updated and sync to the opposite section
+          const isFromGrossSection = (category === 'features' && containerId === 'featuresAdjustmentsList') ||
+                                   (category === 'registration' && containerId === 'registrationAdjustmentsList');
+          
+          if (isFromGrossSection) {
+            // Update was from gross section -> sync to full market section
+            const targetContainerId = category === 'features' ? 'fullFeaturesAdjustmentsList' : 'fullRegistrationAdjustmentsList';
+            console.log(`🔄 Syncing from Gross to Full Market: ${containerId} → ${targetContainerId}`);
+            syncUISection(targetContainerId, adjustmentsArray);
+          } else {
+            // Update was from full market section -> sync to gross section
+            const targetContainerId = category === 'features' ? 'featuresAdjustmentsList' : 'registrationAdjustmentsList';
+            console.log(`🔄 Syncing from Full Market to Gross: ${containerId} → ${targetContainerId}`);
+            syncUISection(targetContainerId, adjustmentsArray);
+          }
+        }
         
         // Trigger UI updates
         if (window.forcePopulateFields) {
@@ -6132,6 +6210,97 @@
         
       } catch (error) {
         console.error('❌ Error syncing adjustment to helper:', error);
+      }
+    }
+    
+    // Sync UI section with data array (for bidirectional sync)
+    function syncUISection(containerId, dataArray) {
+      try {
+        const container = document.getElementById(containerId);
+        if (!container) {
+          console.log(`Container ${containerId} not found`);
+          return;
+        }
+        
+        console.log(`🔄 Syncing ${dataArray.length} items to ${containerId}`);
+        
+        // Get existing rows
+        const existingRows = container.querySelectorAll('div[id^="featureAdj_"], div[id^="regAdj_"], div[id^="fullFeatureAdj_"], div[id^="fullRegAdj_"]');
+        
+        // Try to preserve existing rows where possible
+        dataArray.forEach((item, index) => {
+          if (index < existingRows.length) {
+            // Update existing row
+            const row = existingRows[index];
+            const inputs = row.querySelectorAll('input, select');
+            if (inputs.length >= 4) {
+              inputs[0].value = item.value || '';
+              inputs[1].value = item.type || '%';
+              inputs[2].value = item.percentage || '';
+              inputs[3].value = item.amount || '';
+              
+              // Update readonly states based on type
+              if (inputs[1].value === '%') {
+                inputs[2].removeAttribute('readonly');
+                inputs[2].style.background = '';
+                inputs[3].setAttribute('readonly', 'readonly');
+                inputs[3].style.background = '#f0f0f0';
+              } else {
+                inputs[2].setAttribute('readonly', 'readonly');
+                inputs[2].style.background = '#f0f0f0';
+                inputs[3].removeAttribute('readonly');
+                inputs[3].style.background = '';
+              }
+            }
+          } else {
+            // Add new row
+            if (containerId === 'featuresAdjustmentsList') {
+              addFeatureAdjustment();
+            } else if (containerId === 'registrationAdjustmentsList') {
+              addRegistrationAdjustment();
+            } else if (containerId === 'fullFeaturesAdjustmentsList') {
+              addFullFeaturesAdjustment();
+            } else if (containerId === 'fullRegistrationAdjustmentsList') {
+              addFullRegistrationAdjustment();
+            }
+            
+            // Get the newly added row and populate it
+            const newRows = container.querySelectorAll('div[id^="featureAdj_"], div[id^="regAdj_"], div[id^="fullFeatureAdj_"], div[id^="fullRegAdj_"]');
+            const newRow = newRows[newRows.length - 1];
+            if (newRow) {
+              const inputs = newRow.querySelectorAll('input, select');
+              if (inputs.length >= 4) {
+                inputs[0].value = item.value || '';
+                inputs[1].value = item.type || '%';
+                inputs[2].value = item.percentage || '';
+                inputs[3].value = item.amount || '';
+                
+                // Update readonly states
+                if (inputs[1].value === '%') {
+                  inputs[2].removeAttribute('readonly');
+                  inputs[2].style.background = '';
+                  inputs[3].setAttribute('readonly', 'readonly');
+                  inputs[3].style.background = '#f0f0f0';
+                } else {
+                  inputs[2].setAttribute('readonly', 'readonly');
+                  inputs[2].style.background = '#f0f0f0';
+                  inputs[3].removeAttribute('readonly');
+                  inputs[3].style.background = '';
+                }
+              }
+            }
+          }
+        });
+        
+        // Remove extra rows
+        for (let i = dataArray.length; i < existingRows.length; i++) {
+          existingRows[i].remove();
+        }
+        
+        console.log(`✅ Synced ${containerId}`);
+        
+      } catch (error) {
+        console.error(`Error syncing UI section ${containerId}:`, error);
       }
     }
     
@@ -6157,6 +6326,28 @@
         }
         
         updateHelperFromAdjustments();
+        
+        // Bidirectional sync for features and registration deletions
+        if (isGrossFeatures || isGrossRegistration) {
+          // Deletion was from gross section, need to sync to full market section
+          const helper = window.helper || {};
+          if (isGrossFeatures) {
+            syncUISection('fullFeaturesAdjustmentsList', helper.final_report?.adjustments?.features || []);
+          } else if (isGrossRegistration) {
+            syncUISection('fullRegistrationAdjustmentsList', helper.final_report?.adjustments?.registration || []);
+          }
+        } else if (isFullSection) {
+          // Check if it's features or registration in full section
+          const isFullFeatures = row.closest('#fullFeaturesAdjustmentsList');
+          const isFullRegistration = row.closest('#fullRegistrationAdjustmentsList');
+          const helper = window.helper || {};
+          
+          if (isFullFeatures) {
+            syncUISection('featuresAdjustmentsList', helper.final_report?.adjustments?.features || []);
+          } else if (isFullRegistration) {
+            syncUISection('registrationAdjustmentsList', helper.final_report?.adjustments?.registration || []);
+          }
+        }
       }
     }
     
@@ -6727,31 +6918,6 @@
       console.log('📡 Levi data listener setup completed');
     }
     
-    // Remove adjustment row
-    function removeAdjustmentRow(rowId) {
-      const row = document.getElementById(rowId);
-      if (row) {
-        // Determine which section this row belongs to
-        const isGrossFeatures = row.closest('#featuresAdjustmentsList');
-        const isGrossRegistration = row.closest('#registrationAdjustmentsList');
-        const isFullSection = row.closest('#fullFeaturesAdjustmentsList, #fullRegistrationAdjustmentsList, #mileageAdjustmentsList, #ownershipAdjustmentsList, #ownersAdjustmentsList, #allAdjustmentsList');
-        
-        row.remove();
-        
-        // Call appropriate calculation function based on section
-        if (isGrossFeatures || isGrossRegistration) {
-          console.log('🔄 Updating GROSS calculation after row removal');
-          updateGrossMarketValueCalculation();
-        }
-        if (isFullSection) {
-          console.log('🔄 Updating FULL calculation after row removal');
-          updateFullMarketValueCalculation();
-        }
-        
-        updateHelperFromAdjustments();
-      }
-    }
-    
     // Calculate adjustment value from percentage - ENHANCED
     function calculateAdjustmentValue(percentInput) {
       const row = percentInput.closest('div[id^="featureAdj_"], div[id^="regAdj_"]');
@@ -7080,10 +7246,57 @@
         if (!helper.calculations) helper.calculations = {};
         helper.calculations.vehicle_value_gross = grossPrice;
         
+        // PHASE 6: Add totals structure to final_report.adjustments
+        if (!helper.final_report) helper.final_report = {};
+        if (!helper.final_report.adjustments) helper.final_report.adjustments = {};
+        if (!helper.final_report.adjustments.totals) {
+          helper.final_report.adjustments.totals = {};
+        }
+        
+        // Calculate and save features total
+        let featuresTotalValue = 0;
+        let featuresTotalPercent = 0;
+        featuresAdjustments.forEach(adj => {
+          featuresTotalValue += adj.value;
+          if (adj.percent) {
+            featuresTotalPercent += (adj.type === 'minus' ? -adj.percent : adj.percent);
+          }
+        });
+        
+        // Calculate and save registration total
+        let registrationTotalValue = 0;
+        let registrationTotalPercent = 0;
+        registrationAdjustments.forEach(adj => {
+          registrationTotalValue += adj.value;
+          if (adj.percent) {
+            registrationTotalPercent += (adj.type === 'minus' ? -adj.percent : adj.percent);
+          }
+        });
+        
+        // Save totals
+        helper.final_report.adjustments.totals.features = {
+          value: featuresTotalValue,
+          percent: featuresTotalPercent,
+          count: featuresAdjustments.length
+        };
+        
+        helper.final_report.adjustments.totals.registration = {
+          value: registrationTotalValue,
+          percent: registrationTotalPercent,
+          count: registrationAdjustments.length
+        };
+        
+        helper.final_report.adjustments.totals.gross_total = {
+          value: featuresTotalValue + registrationTotalValue,
+          percent: featuresTotalPercent + registrationTotalPercent,
+          final_value: grossPrice
+        };
+        
         // Update helper in window and session storage
         window.helper = helper;
         if (typeof updateHelper === 'function') {
           updateHelper('calculations', helper.calculations);
+          updateHelper('final_report', helper.final_report);
         }
         // Calculate and restore adjustments_value
         if (typeof window.calculateValuationAdjustments === 'function') {
@@ -9638,6 +9851,8 @@
     window.addRegistrationAdjustment = addRegistrationAdjustment;
     window.removeAdjustmentRow = removeAdjustmentRow;
     window.loadGrossAdjustments = loadGrossAdjustments;
+    window.loadTotalValueSectionAdjustments = loadTotalValueSectionAdjustments;
+    window.syncUISection = syncUISection;
     window.updateGrossMarketValueCalculation = updateGrossMarketValueCalculation;
     window.loadGrossCalculationData = loadGrossCalculationData;
     
