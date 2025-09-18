@@ -1211,7 +1211,7 @@
       <div id="grossCalc" style="display:none;">
         <div class="form-grid">
           <div><label>ערך הרכב ע"פ מחירון כולל מע"מ:</label><input type="text" id="basicPrice" placeholder="₪" onchange="updateHelperFromField(event); updateGrossMarketValueCalculation(); updateHelperFromAdjustments();" /></div>
-          <div></div>
+          <div><button type="button" onclick="reloadGrossAdjustments()" style="background: #28a745; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 600; height: 40px; min-width: 120px;">טען התאמות מהערכה</button></div>
         </div>
         
         <!-- Features Adjustments -->
@@ -1306,7 +1306,7 @@
       <div id="fullMarketValue" style="display:none;">
         <div class="form-grid">
           <div><label>ערך הרכב ע"פ מחירון כולל מע"מ:</label><input type="text" id="fullBasicPrice" placeholder="₪" readonly style="background: #f8f9fa;" /></div>
-          <div></div>
+          <div><button type="button" onclick="reloadFullMarketAdjustments()" style="background: #28a745; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 600; height: 40px; min-width: 120px;">טען התאמות מהערכה</button></div>
         </div>
         
         <!-- Features Adjustments (תוספות מאפיינים) -->
@@ -5508,6 +5508,97 @@
       }
     }
     
+    // RELOAD GROSS ADJUSTMENTS - triggered by reload button
+    function reloadGrossAdjustments() {
+      try {
+        console.log('🔄 Reloading gross adjustments from estimate.adjustments with fallback to valuation.adjustments');
+        
+        const helper = window.helper || JSON.parse(sessionStorage.getItem('helper') || '{}');
+        
+        // Clear existing rows
+        const featuresContainer = document.getElementById('featuresAdjustmentsList');
+        const registrationContainer = document.getElementById('registrationAdjustmentsList');
+        
+        if (featuresContainer) featuresContainer.innerHTML = '';
+        if (registrationContainer) registrationContainer.innerHTML = '';
+        
+        // Primary source: estimate.adjustments, fallback: valuation.adjustments
+        const adjustments = helper.estimate?.adjustments || helper.valuation?.adjustments || {};
+        
+        console.log('🔍 Available adjustments data:', adjustments);
+        
+        // Load features and registration only (for gross section)
+        const categories = [
+          { key: 'features', addFunction: addFeatureAdjustment, container: featuresContainer },
+          { key: 'registration', addFunction: addRegistrationAdjustment, container: registrationContainer }
+        ];
+        
+        categories.forEach(({ key, addFunction, container }) => {
+          const categoryData = adjustments[key];
+          if (categoryData && container) {
+            console.log(`📝 Loading ${key} adjustments:`, categoryData);
+            
+            // Handle both array and single object data
+            const items = Array.isArray(categoryData) ? categoryData : (categoryData && (categoryData.percent || categoryData.percentage || categoryData.amount) ? [categoryData] : []);
+            
+            items.forEach((item, index) => {
+              if (item && (item.percent || item.percentage || item.amount)) {
+                // Add new row
+                addFunction();
+                
+                // Fill the data
+                const rows = container.querySelectorAll('div[id*="Adj_"]');
+                const lastRow = rows[rows.length - 1];
+                
+                if (lastRow) {
+                  const inputs = lastRow.querySelectorAll('input, select');
+                  if (inputs.length >= 4) {
+                    // Field mapping: value → תיאור (description)
+                    inputs[0].value = item.value || '';
+                    
+                    // Type dropdown - use dynamic sign logic
+                    const itemPercent = item.percentage || item.percent;
+                    const itemAmount = item.amount;
+                    inputs[1].value = getDropdownTypeFromValues(itemPercent, itemAmount, item.type || 'plus');
+                    
+                    // Percent and amount - show absolute values
+                    inputs[2].value = itemPercent ? Math.abs(itemPercent) : '';
+                    inputs[3].value = item.amount_display || (item.amount ? `₪${Math.abs(item.amount).toLocaleString()}` : '');
+                    
+                    // Trigger change events
+                    inputs[1].dispatchEvent(new Event('change', { bubbles: true }));
+                    if (inputs[2].value) inputs[2].dispatchEvent(new Event('change', { bubbles: true }));
+                    if (inputs[3].value) inputs[3].dispatchEvent(new Event('change', { bubbles: true }));
+                    
+                    // Mark as loaded data
+                    lastRow.setAttribute('data-source', 'estimate');
+                    lastRow.style.background = '#e8f5e8';
+                    lastRow.style.border = '1px solid #28a745';
+                    
+                    console.log(`✅ Reloaded ${key} item ${index}:`, {
+                      description: inputs[0].value,
+                      type: inputs[1].value,
+                      percent: inputs[2].value,
+                      amount: inputs[3].value
+                    });
+                  }
+                }
+              }
+            });
+          }
+        });
+        
+        // Trigger calculation after reloading
+        updateGrossMarketValueCalculation();
+        updateHelperFromAdjustments();
+        
+        console.log('✅ Gross adjustments reload completed');
+        
+      } catch (error) {
+        console.error('❌ Error reloading gross adjustments:', error);
+      }
+    }
+    
     // GROSS DAMAGE PERCENTAGE CALCULATION FUNCTIONS
     
     // Add feature adjustment row
@@ -5822,6 +5913,121 @@
       }
       
       console.log('✅ Market adjustments auto-population completed from helper.valuation.adjustments');
+    }
+    
+    // RELOAD FULL MARKET ADJUSTMENTS - triggered by reload button
+    function reloadFullMarketAdjustments() {
+      try {
+        console.log('🔄 Reloading full market adjustments from estimate.adjustments with fallback to valuation.adjustments');
+        
+        const helper = window.helper || JSON.parse(sessionStorage.getItem('helper') || '{}');
+        
+        // Primary source: estimate.adjustments, fallback: valuation.adjustments
+        const adjustments = helper.estimate?.adjustments || helper.valuation?.adjustments || {};
+        
+        console.log('🔍 Available adjustments data:', adjustments);
+        
+        // Clear existing rows from ALL full market containers
+        const containers = [
+          'fullFeaturesAdjustmentsList',
+          'fullRegistrationAdjustmentsList', 
+          'mileageAdjustmentsList',
+          'ownershipAdjustmentsList',
+          'ownersAdjustmentsList',
+          'allAdjustmentsList'
+        ];
+        
+        containers.forEach(containerId => {
+          const container = document.getElementById(containerId);
+          if (container) {
+            container.innerHTML = '';
+            console.log(`🧹 Cleared container: ${containerId}`);
+          }
+        });
+        
+        // Load all categories for full market section
+        const adjustmentMapping = [
+          { key: 'features', label: 'תוספות מאפיינים', containerId: 'fullFeaturesAdjustmentsList', addFunction: addFullFeaturesAdjustment },
+          { key: 'registration', label: 'עליה לכביש', containerId: 'fullRegistrationAdjustmentsList', addFunction: addFullRegistrationAdjustment },
+          { key: 'mileage', label: 'מס ק"מ', containerId: 'mileageAdjustmentsList', addFunction: addMileageAdjustment },
+          { key: 'ownership_type', label: 'סוג בעלות', containerId: 'ownershipAdjustmentsList', addFunction: addOwnershipAdjustment },
+          { key: 'ownership_history', label: 'מספר בעלים', containerId: 'ownersAdjustmentsList', addFunction: addOwnersAdjustment },
+          { key: 'additional', label: 'התאמות נוספות', containerId: 'allAdjustmentsList', addFunction: addFullMarketAdjustment }
+        ];
+        
+        adjustmentMapping.forEach(({ key, label, containerId, addFunction }) => {
+          const categoryData = adjustments[key];
+          if (categoryData) {
+            console.log(`📝 Loading ${key} adjustments:`, categoryData);
+            
+            const container = document.getElementById(containerId);
+            if (container) {
+              // Handle both array and single object data
+              const items = Array.isArray(categoryData) ? categoryData : (categoryData && (categoryData.percent || categoryData.percentage || categoryData.amount) ? [categoryData] : []);
+              
+              items.forEach((item, index) => {
+                if (item && (item.percent || item.percentage || item.amount)) {
+                  // Add new row
+                  addFunction();
+                  
+                  // Fill the data
+                  const rows = container.querySelectorAll('div[id*="Adj_"]');
+                  const lastRow = rows[rows.length - 1];
+                  
+                  if (lastRow) {
+                    const inputs = lastRow.querySelectorAll('input, select');
+                    if (inputs.length >= 4) {
+                      // Field mapping: value → תיאור (description)
+                      inputs[0].value = item.value || '';
+                      
+                      // Type dropdown - use dynamic sign logic
+                      const itemPercent = item.percentage || item.percent;
+                      const itemAmount = item.amount;
+                      inputs[1].value = getDropdownTypeFromValues(itemPercent, itemAmount, item.type || 'plus');
+                      
+                      // Percent and amount - show absolute values
+                      inputs[2].value = itemPercent ? Math.abs(itemPercent) : '';
+                      inputs[3].value = item.amount_display || (item.amount ? `₪${Math.abs(item.amount).toLocaleString()}` : '');
+                      
+                      // Trigger change events
+                      inputs[1].dispatchEvent(new Event('change', { bubbles: true }));
+                      if (inputs[2].value) inputs[2].dispatchEvent(new Event('change', { bubbles: true }));
+                      if (inputs[3].value) inputs[3].dispatchEvent(new Event('change', { bubbles: true }));
+                      
+                      // Mark as loaded data
+                      lastRow.setAttribute('data-source', 'estimate');
+                      lastRow.style.background = '#e8f5e8';
+                      lastRow.style.border = '1px solid #28a745';
+                      
+                      console.log(`✅ Reloaded ${key} item ${index}:`, {
+                        description: inputs[0].value,
+                        type: inputs[1].value,
+                        percent: inputs[2].value,
+                        amount: inputs[3].value
+                      });
+                    }
+                  }
+                }
+              });
+            }
+          }
+        });
+        
+        // Trigger calculation after reloading
+        if (typeof updateFullMarketValueCalculation === 'function') {
+          setTimeout(() => {
+            updateFullMarketValueCalculation();
+            console.log('✅ Full market value calculation triggered after reload');
+          }, 100);
+        }
+        
+        updateHelperFromAdjustments();
+        
+        console.log('✅ Full market adjustments reload completed');
+        
+      } catch (error) {
+        console.error('❌ Error reloading full market adjustments:', error);
+      }
     }
     
     /**
