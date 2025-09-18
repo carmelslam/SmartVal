@@ -5951,52 +5951,19 @@
     
     // Calculate adjustment value for simple percentage input
     function calculateAdjustmentValueSimple(percentInput) {
-      const row = percentInput.closest('div');
+      const row = percentInput.closest('div[id*="Adj_"]');
       if (!row) return;
       
       const inputs = row.querySelectorAll('input, select');
       if (inputs.length < 4) return;
       
       const percent = parseFloat(percentInput.value) || 0;
+      if (percent === 0) return;
       
-      // Get base price from multiple sources to find the correct ₪118,000 value
-      let basicPrice = 0;
-      
-      // Try basicPrice field first
-      const basicPriceField = document.getElementById('basicPrice');
-      if (basicPriceField?.value) {
-        basicPrice = parseFloat(basicPriceField.value.replace(/[₪,]/g, '')) || 0;
-        console.log('🔍 basicPrice field value:', basicPrice);
-      }
-      
-      // If basicPrice is 0 or wrong, try other sources
-      if (basicPrice === 0 || basicPrice < 100000) {
-        // Try to find any field with ₪118,000 
-        const allInputs = document.querySelectorAll('input[type="text"]');
-        for (let input of allInputs) {
-          const value = parseFloat(input.value.replace(/[₪,]/g, '')) || 0;
-          if (value >= 118000 && value <= 120000) { // Looking for ₪118,000 range
-            basicPrice = value;
-            console.log('🔍 Found correct base price in field:', input.id || 'unknown', 'value:', basicPrice);
-            break;
-          }
-        }
-      }
-      
-      // Fallback to helper data
-      if (basicPrice === 0) {
-        const helper = window.helper || {};
-        basicPrice = helper.levi_report?.base_price || helper.levisummary?.base_price || helper.valuation?.base_price || 118000;
-        console.log('🔍 FALLBACK: Using helper base price:', basicPrice);
-      }
-      
-      console.log('🧮 Calculation:', basicPrice, '×', percent, '% =', (basicPrice * percent) / 100);
-      
-      if (basicPrice > 0 && percent > 0) {
-        const calculatedValue = (basicPrice * percent) / 100;
-        inputs[3].value = calculatedValue ? `₪${Math.abs(calculatedValue).toLocaleString()}` : '';
-        console.log('✅ Set amount field to:', inputs[3].value);
-      }
+      // Use 118000 as base price
+      const basicPrice = 118000;
+      const calculatedValue = (basicPrice * percent) / 100;
+      inputs[3].value = `₪${Math.round(calculatedValue).toLocaleString()}`;
     }
     
     // ============================================================================
@@ -6299,52 +6266,19 @@
     
     // SIMPLE ADJUSTMENT CALCULATION - COPIED FROM WORKING DEPRECIATION
     function calculateAdjustmentValueSimple(percentInput) {
-      const row = percentInput.closest('div');
+      const row = percentInput.closest('div[id*="Adj_"]');
       if (!row) return;
       
       const inputs = row.querySelectorAll('input, select');
       if (inputs.length < 4) return;
       
       const percent = parseFloat(percentInput.value) || 0;
+      if (percent === 0) return;
       
-      // Get base price from multiple sources to find the correct ₪118,000 value
-      let basicPrice = 0;
-      
-      // Try basicPrice field first
-      const basicPriceField = document.getElementById('basicPrice');
-      if (basicPriceField?.value) {
-        basicPrice = parseFloat(basicPriceField.value.replace(/[₪,]/g, '')) || 0;
-        console.log('🔍 basicPrice field value:', basicPrice);
-      }
-      
-      // If basicPrice is 0 or wrong, try other sources
-      if (basicPrice === 0 || basicPrice < 100000) {
-        // Try to find any field with ₪118,000 
-        const allInputs = document.querySelectorAll('input[type="text"]');
-        for (let input of allInputs) {
-          const value = parseFloat(input.value.replace(/[₪,]/g, '')) || 0;
-          if (value >= 118000 && value <= 120000) { // Looking for ₪118,000 range
-            basicPrice = value;
-            console.log('🔍 Found correct base price in field:', input.id || 'unknown', 'value:', basicPrice);
-            break;
-          }
-        }
-      }
-      
-      // Fallback to helper data
-      if (basicPrice === 0) {
-        const helper = window.helper || {};
-        basicPrice = helper.levi_report?.base_price || helper.levisummary?.base_price || helper.valuation?.base_price || 118000;
-        console.log('🔍 FALLBACK: Using helper base price:', basicPrice);
-      }
-      
-      console.log('🧮 Calculation:', basicPrice, '×', percent, '% =', (basicPrice * percent) / 100);
-      
-      if (basicPrice > 0 && percent > 0) {
-        const calculatedValue = (basicPrice * percent) / 100;
-        inputs[3].value = calculatedValue ? `₪${Math.abs(calculatedValue).toLocaleString()}` : '';
-        console.log('✅ Set amount field to:', inputs[3].value);
-      }
+      // Use 118000 as base price
+      const basicPrice = 118000;
+      const calculatedValue = (basicPrice * percent) / 100;
+      inputs[3].value = `₪${Math.round(calculatedValue).toLocaleString()}`;
     }
 
     // SIMPLE FINAL REPORTADJUSTMENT CALCULATION - COPIED FROM WORKING DEPRECIATION
