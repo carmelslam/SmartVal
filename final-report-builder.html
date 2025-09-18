@@ -5388,30 +5388,6 @@
         console.log('🔄 loadGrossAdjustments - helper.final_report?.adjustments:', helper.final_report?.adjustments);
         console.log('🔄 loadGrossAdjustments - helper.estimate?.adjustments:', helper.estimate?.adjustments);
         const adjustments = helper.final_report?.adjustments || helper.estimate?.adjustments || {};
-        
-        // Clean up any existing duplicates in the stored data
-        if (helper.final_report?.adjustments) {
-          ['features', 'registration'].forEach(category => {
-            if (Array.isArray(helper.final_report.adjustments[category])) {
-              const originalLength = helper.final_report.adjustments[category].length;
-              const seen = new Set();
-              helper.final_report.adjustments[category] = helper.final_report.adjustments[category].filter(item => {
-                const key = `${item.value || ''}-${item.type || ''}-${item.percentage || ''}-${item.amount || ''}`;
-                if (seen.has(key)) {
-                  console.log(`🧹 Removed duplicate from stored ${category}: ${key}`);
-                  return false;
-                }
-                seen.add(key);
-                return true;
-              });
-              if (originalLength !== helper.final_report.adjustments[category].length) {
-                console.log(`🧹 Cleaned ${category}: ${originalLength} → ${helper.final_report.adjustments[category].length} items`);
-                sessionStorage.setItem('helper', JSON.stringify(helper));
-              }
-            }
-          });
-        }
-        
         const featuresData = adjustments.features || [];
         const registrationData = adjustments.registration || [];
         console.log('🔄 loadGrossAdjustments - using adjustments:', adjustments);
@@ -5423,21 +5399,7 @@
         // Handle array data from estimate.adjustments.features
         let featureItems = [];
         if (Array.isArray(featuresData) && featuresData.length > 0) {
-          console.log(`🔍 Raw featuresData (${featuresData.length} items):`, featuresData);
-          
-          // Deduplicate based on description (value) and type to prevent duplicates
-          const seen = new Set();
-          featureItems = featuresData.filter(item => {
-            const key = `${item.value || ''}-${item.type || ''}-${item.percentage || ''}-${item.amount || ''}`;
-            if (seen.has(key)) {
-              console.log(`🚫 Skipping duplicate feature: ${key}`);
-              return false;
-            }
-            seen.add(key);
-            return true;
-          });
-          
-          console.log(`✅ Deduplicated featuresData (${featureItems.length} items):`, featureItems);
+          featureItems = featuresData;
         } else {
           // Show empty row for adding new adjustments
           featureItems = [{}];
@@ -5476,21 +5438,7 @@
         // Handle array data from estimate.adjustments.registration
         let registrationItems = [];
         if (Array.isArray(registrationData) && registrationData.length > 0) {
-          console.log(`🔍 Raw registrationData (${registrationData.length} items):`, registrationData);
-          
-          // Deduplicate based on description (value) and type to prevent duplicates
-          const seen = new Set();
-          registrationItems = registrationData.filter(item => {
-            const key = `${item.value || ''}-${item.type || ''}-${item.percentage || ''}-${item.amount || ''}`;
-            if (seen.has(key)) {
-              console.log(`🚫 Skipping duplicate registration: ${key}`);
-              return false;
-            }
-            seen.add(key);
-            return true;
-          });
-          
-          console.log(`✅ Deduplicated registrationData (${registrationItems.length} items):`, registrationItems);
+          registrationItems = registrationData;
         } else {
           // Show empty row for adding new adjustments
           registrationItems = [{}];
@@ -6456,12 +6404,9 @@
         }
         
         // Find existing item by content to prevent duplicates
-        // Use value (description), type, percentage, and amount as a composite key
+        // Use value (description) and type as a composite key
         const existingIndex = helper.final_report.adjustments[category].findIndex(
-          item => item.value === adjustmentData.value && 
-                  item.type === adjustmentData.type &&
-                  item.percentage === adjustmentData.percentage &&
-                  item.amount === adjustmentData.amount
+          item => item.value === adjustmentData.value && item.type === adjustmentData.type
         );
         
         if (existingIndex >= 0) {
