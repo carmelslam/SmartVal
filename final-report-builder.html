@@ -6238,32 +6238,33 @@
         // Save to storage
         sessionStorage.setItem('helper', JSON.stringify(helper));
         
-        // 🔧 PHASE 4: Bidirectional sync for features and registration
-        if ((category === 'features' || category === 'registration') && containerId) {
-          // Get the current adjustments array for this category
-          const adjustmentsArray = helper.final_report?.adjustments?.[category] || [];
-          
-          // Determine which section was updated and sync to the opposite section
-          const isFromGrossSection = (category === 'features' && containerId === 'featuresAdjustmentsList') ||
-                                   (category === 'registration' && containerId === 'registrationAdjustmentsList');
-          
-          if (isFromGrossSection) {
-            // Update was from gross section -> sync to full market section
-            const targetContainerId = category === 'features' ? 'fullFeaturesAdjustmentsList' : 'fullRegistrationAdjustmentsList';
-            console.log(`🔄 Syncing from Gross to Full Market: ${containerId} → ${targetContainerId}`);
-            syncUISection(targetContainerId, adjustmentsArray);
-          } else {
-            // Update was from full market section -> sync to gross section
-            const targetContainerId = category === 'features' ? 'featuresAdjustmentsList' : 'registrationAdjustmentsList';
-            console.log(`🔄 Syncing from Full Market to Gross: ${containerId} → ${targetContainerId}`);
-            syncUISection(targetContainerId, adjustmentsArray);
-          }
-        }
+        // 🔧 PHASE 4: Bidirectional sync for features and registration - TEMPORARILY DISABLED
+        // This might be causing original rows to reload during edits
+        // if ((category === 'features' || category === 'registration') && containerId) {
+        //   // Get the current adjustments array for this category
+        //   const adjustmentsArray = helper.final_report?.adjustments?.[category] || [];
+        //   
+        //   // Determine which section was updated and sync to the opposite section
+        //   const isFromGrossSection = (category === 'features' && containerId === 'featuresAdjustmentsList') ||
+        //                            (category === 'registration' && containerId === 'registrationAdjustmentsList');
+        //   
+        //   if (isFromGrossSection) {
+        //     // Update was from gross section -> sync to full market section
+        //     const targetContainerId = category === 'features' ? 'fullFeaturesAdjustmentsList' : 'fullRegistrationAdjustmentsList';
+        //     console.log(`🔄 Syncing from Gross to Full Market: ${containerId} → ${targetContainerId}`);
+        //     syncUISection(targetContainerId, adjustmentsArray);
+        //   } else {
+        //     // Update was from full market section -> sync to gross section
+        //     const targetContainerId = category === 'features' ? 'featuresAdjustmentsList' : 'registrationAdjustmentsList';
+        //     console.log(`🔄 Syncing from Full Market to Gross: ${containerId} → ${targetContainerId}`);
+        //     syncUISection(targetContainerId, adjustmentsArray);
+        //   }
+        // }
         
-        // Trigger UI updates
-        if (window.forcePopulateFields) {
-          window.forcePopulateFields();
-        }
+        // Skip forcePopulateFields to prevent reloading original data during edits
+        // if (window.forcePopulateFields) {
+        //   window.forcePopulateFields();
+        // }
         
       } catch (error) {
         console.error('❌ Error syncing adjustment to helper:', error);
@@ -6296,15 +6297,24 @@
               inputs[2].value = item.percentage || '';
               inputs[3].value = item.amount || '';
               
-              // Update readonly states based on type
-              if (inputs[1].value === '%') {
+              // Update readonly states based on type - ONLY for Full Market sections with %/₪ dropdowns
+              if (containerId.includes('full') || containerId.includes('all')) {
+                // Full Market sections use %/₪ type dropdowns
+                if (inputs[1].value === '%') {
+                  inputs[2].removeAttribute('readonly');
+                  inputs[2].style.background = '';
+                  inputs[3].setAttribute('readonly', 'readonly');
+                  inputs[3].style.background = '#f0f0f0';
+                } else {
+                  inputs[2].setAttribute('readonly', 'readonly');
+                  inputs[2].style.background = '#f0f0f0';
+                  inputs[3].removeAttribute('readonly');
+                  inputs[3].style.background = '';
+                }
+              } else {
+                // Gross sections use plus/minus dropdowns - both percent and amount should be editable
                 inputs[2].removeAttribute('readonly');
                 inputs[2].style.background = '';
-                inputs[3].setAttribute('readonly', 'readonly');
-                inputs[3].style.background = '#f0f0f0';
-              } else {
-                inputs[2].setAttribute('readonly', 'readonly');
-                inputs[2].style.background = '#f0f0f0';
                 inputs[3].removeAttribute('readonly');
                 inputs[3].style.background = '';
               }
@@ -6332,15 +6342,24 @@
                 inputs[2].value = item.percentage || '';
                 inputs[3].value = item.amount || '';
                 
-                // Update readonly states
-                if (inputs[1].value === '%') {
+                // Update readonly states - ONLY for Full Market sections with %/₪ dropdowns
+                if (containerId.includes('full') || containerId.includes('all')) {
+                  // Full Market sections use %/₪ type dropdowns
+                  if (inputs[1].value === '%') {
+                    inputs[2].removeAttribute('readonly');
+                    inputs[2].style.background = '';
+                    inputs[3].setAttribute('readonly', 'readonly');
+                    inputs[3].style.background = '#f0f0f0';
+                  } else {
+                    inputs[2].setAttribute('readonly', 'readonly');
+                    inputs[2].style.background = '#f0f0f0';
+                    inputs[3].removeAttribute('readonly');
+                    inputs[3].style.background = '';
+                  }
+                } else {
+                  // Gross sections use plus/minus dropdowns - both percent and amount should be editable
                   inputs[2].removeAttribute('readonly');
                   inputs[2].style.background = '';
-                  inputs[3].setAttribute('readonly', 'readonly');
-                  inputs[3].style.background = '#f0f0f0';
-                } else {
-                  inputs[2].setAttribute('readonly', 'readonly');
-                  inputs[2].style.background = '#f0f0f0';
                   inputs[3].removeAttribute('readonly');
                   inputs[3].style.background = '';
                 }
