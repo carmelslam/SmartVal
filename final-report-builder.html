@@ -2713,7 +2713,7 @@
         setTimeout(() => {
           updateAllCostDisplays();
           updateSummaryTotalsFromDamageCenters();
-          loadGrossCalculationData(); // Load gross calculation data from helper
+          // loadGrossCalculationData(); // DISABLED - causes duplicate Levi data, loadGrossAdjustments() already handles this
         }, 200);
         
         // Load contact data using standardized helper structure - Populate ALL fields from standardized helper structure paths (with legacy fallback)
@@ -7414,17 +7414,11 @@
           }
         }
         
-        // Clear containers first to prevent duplication
-        const featuresContainer = document.getElementById('featuresAdjustmentsList');
-        const registrationContainer = document.getElementById('registrationAdjustmentsList');
-        if (featuresContainer) featuresContainer.innerHTML = '';
-        if (registrationContainer) registrationContainer.innerHTML = '';
+        // DON'T clear containers or load Levi data here - loadGrossAdjustments() already handles that
+        // This function now only handles manual entries to avoid duplication
         
-        // COPY EXACT MAPPING FROM WORKING FULL MARKET VALUE SECTION
-        const adjustments = helper.valuation?.adjustments || {};
-        
-        // Load features adjustments using EXACT working logic
-        const featuresData = adjustments['features'];
+        // Skip Levi data loading - already handled by loadGrossAdjustments()
+        // Jump directly to manual entries
         if (featuresData && (featuresData.percent || featuresData.percentage || featuresData.amount)) {
           let percent = 0;
           if (featuresData.percent) {
@@ -11196,7 +11190,7 @@
       
       // Initialize gross calculation data
       setTimeout(() => {
-        loadGrossCalculationData();
+        // loadGrossCalculationData(); // DISABLED - causes duplicate Levi data
         console.log('✅ Bulk 1 & 2 initialized');
         
         // REMOVED: Auto-call updateHelperFromAdjustments on page load to prevent duplication
