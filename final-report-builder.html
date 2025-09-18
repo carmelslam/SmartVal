@@ -5384,10 +5384,22 @@
         if (featuresContainer) featuresContainer.innerHTML = '';
         if (registrationContainer) registrationContainer.innerHTML = '';
 
-        // Read from estimate.adjustments instead of valuation.adjustments
+        // Load from BOTH sources: estimate.adjustments (Levi data) + final_report.adjustments (manual additions)
         const estimateData = helper.estimate?.adjustments || {};
-        const featuresData = estimateData.features || [];
-        const registrationData = estimateData.registration || [];
+        const finalReportData = helper.final_report?.adjustments || {};
+        
+        // Combine features from both sources
+        const estimateFeatures = Array.isArray(estimateData.features) ? estimateData.features : [];
+        const finalReportFeatures = Array.isArray(finalReportData.features) ? finalReportData.features : [];
+        const featuresData = [...estimateFeatures, ...finalReportFeatures];
+        
+        // Combine registration from both sources  
+        const estimateRegistration = Array.isArray(estimateData.registration) ? estimateData.registration : [];
+        const finalReportRegistration = Array.isArray(finalReportData.registration) ? finalReportData.registration : [];
+        const registrationData = [...estimateRegistration, ...finalReportRegistration];
+        
+        console.log(`🔄 Combined features: ${estimateFeatures.length} from estimate + ${finalReportFeatures.length} from final_report = ${featuresData.length} total`);
+        console.log(`🔄 Combined registration: ${estimateRegistration.length} from estimate + ${finalReportRegistration.length} from final_report = ${registrationData.length} total`);
         
 
         // ===== Features Adjustments =====
@@ -5401,11 +5413,15 @@
           featureItems = [{}];
         }
 
-        featureItems.forEach(item => {
+        featureItems.forEach((item, index) => {
           if (typeof addFeatureAdjustment === 'function') {
             addFeatureAdjustment();
             const row = document.querySelector('#featuresAdjustmentsList > div:last-child');
             if (row) {
+              // Set data source for tracking
+              const isFromEstimate = index < estimateFeatures.length;
+              row.setAttribute('data-source', isFromEstimate ? 'levi' : 'manual');
+              
               const inputs = row.querySelectorAll('input, select');
               // Keep original values to preserve signs
               const originalAmount = item.amount || 0;
@@ -5440,11 +5456,15 @@
           registrationItems = [{}];
         }
 
-        registrationItems.forEach(item => {
+        registrationItems.forEach((item, index) => {
           if (typeof addRegistrationAdjustment === 'function') {
             addRegistrationAdjustment();
             const row = document.querySelector('#registrationAdjustmentsList > div:last-child');
             if (row) {
+              // Set data source for tracking
+              const isFromEstimate = index < estimateRegistration.length;
+              row.setAttribute('data-source', isFromEstimate ? 'levi' : 'manual');
+              
               const inputs = row.querySelectorAll('input, select');
               // Keep original values to preserve signs
               const originalAmount = item.amount || 0;
