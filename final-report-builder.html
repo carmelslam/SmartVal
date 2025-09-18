@@ -6589,6 +6589,48 @@
     }
     
     /**
+     * Sync Full Market Value Registration with Gross Value Section
+     * CRITICAL for Issue 5: Data Sync Between Sections
+     */
+    function syncFullMarketRegistrationWithGross(grossRegistrations) {
+      try {
+        const container = document.getElementById('fullRegistrationAdjustmentsList');
+        if (!container || !grossRegistrations || grossRegistrations.length === 0) return;
+        
+        // Clear existing Full Market registration
+        container.innerHTML = '';
+        
+        // Add each gross registration to Full Market section
+        grossRegistrations.forEach(registration => {
+          addFullMarketRegistrationAdjustment();
+          const lastRow = container.querySelector('div:last-child');
+          if (lastRow) {
+            const inputs = lastRow.querySelectorAll('input, select');
+            if (inputs.length >= 4) {
+              inputs[0].value = registration.value || '';
+              inputs[1].value = registration.type || 'plus';
+              
+              // CRITICAL FIX: Display minus sign for negative values
+              const displayPercent = (registration.type === 'minus' || registration.type === 'הפחתה') && registration.percent > 0 ? 
+                `-${Math.abs(registration.percent)}` : Math.abs(registration.percent || 0);
+              const displayAmount = (registration.type === 'minus' || registration.type === 'הפחתה') && registration.amount > 0 ? 
+                `-${Math.abs(registration.amount)}` : Math.abs(registration.amount || 0);
+              
+              inputs[2].value = displayPercent || '';
+              inputs[3].value = registration.amount_display || (registration.amount ? `₪${displayAmount.toLocaleString()}` : '');
+              lastRow.setAttribute('data-source', registration.source || 'gross_sync');
+            }
+          }
+        });
+        
+        console.log('✅ Synced Full Market Registration with Gross Value section');
+        
+      } catch (error) {
+        console.error('❌ Error syncing Full Market Registration with Gross Value:', error);
+      }
+    }
+
+    /**
      * Sync Full Market Value Features with Gross Value Section
      * CRITICAL for Issue 5: Data Sync Between Sections
      */
