@@ -1333,7 +1333,7 @@
             <div id="featuresCumulative" style="margin-top: 10px; padding: 8px; background: #f8f9fa; border-radius: 4px; font-weight: bold; text-align: center;">
               ערך לאחר תוספות מאפיינים: <span style="color: #28a745;">₪118,000</span>
             </div>
-            <button class="btn add" type="button" onclick="addFullFeaturesAdjustment()">הוסף תוספת מאפיין</button>
+            <button class="btn add" type="button" onclick="addFullMarketFeatureAdjustment()">הוסף תוספת מאפיין</button>
           </div>
         </div>
         
@@ -1355,7 +1355,7 @@
             <div id="registrationCumulative" style="margin-top: 10px; padding: 8px; background: #f8f9fa; border-radius: 4px; font-weight: bold; text-align: center;">
               ערך לאחר עליה לכביש: <span style="color: #28a745;">₪118,000</span>
             </div>
-            <button class="btn add" type="button" onclick="addFullRegistrationAdjustment()">הוסף תוספת עליה לכביש</button>
+            <button class="btn add" type="button" onclick="addFullMarketRegistrationAdjustment()">הוסף תוספת עליה לכביש</button>
           </div>
         </div>
         
@@ -6267,11 +6267,8 @@
         // 1. FEATURES - Write to both destinations
         const featuresRows = document.querySelectorAll('#featuresAdjustmentsList > div');
         if (featuresRows.length > 0) {
-          // For VALUATION: Only update if this is an ORIGINAL adjustment (has source from estimate)
-          const originalRow = Array.from(featuresRows).find(row => {
-            const source = row.getAttribute('data-source');
-            return source === 'estimate' || source === 'levi' || !source; // Original data
-          });
+          // For VALUATION: Only update FIRST row (original data), ignore additional manual rows  
+          const originalRow = featuresRows[0]; // First row is always original
           
           if (originalRow) {
             const inputs = originalRow.querySelectorAll('input, select');
@@ -6331,8 +6328,8 @@
         // 2. REGISTRATION - Write to both destinations
         const registrationRows = document.querySelectorAll('#registrationAdjustmentsList > div');
         if (registrationRows.length > 0) {
-          // For VALUATION: Only update FIRST row (original data) - ignore manual additions
-          const originalRow = registrationRows[0]; // Take only the FIRST row as original
+          // For VALUATION: Only update FIRST row (original data), ignore additional manual rows
+          const originalRow = registrationRows[0]; // First row is always original
           
           if (originalRow) {
             const inputs = originalRow.querySelectorAll('input, select');
@@ -6390,6 +6387,14 @@
         }
         
         console.log('✅ Updated gross value adjustments to BOTH final_report.adjustments AND valuation.adjustments');
+        
+        // CRITICAL: Auto-populate Total Value section with Gross Value data
+        if (helper.final_report.adjustments.features) {
+          syncFullMarketFeaturesWithGross(helper.final_report.adjustments.features);
+        }
+        if (helper.final_report.adjustments.registration) {
+          syncFullMarketRegistrationWithGross(helper.final_report.adjustments.registration);
+        }
         
       } catch (error) {
         console.error('❌ Error updating gross value to final_report and valuation adjustments:', error);
