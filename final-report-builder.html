@@ -5506,18 +5506,47 @@
         // Helper function to create adjustment row
         function createTotalValueRow(adj, category, source) {
           const rowId = `totalValue_${category}_${Date.now()}_${Math.random()}`;
-          const isPercent = adj.type === '%' || adj.type === 'percentage';
+          
+          // Determine the type based on adjustment data
+          let selectedType = '%'; // default
+          if (adj.type) {
+            if (adj.type === '₪' || adj.type === 'amount' || adj.type === 'שח') {
+              selectedType = '₪';
+            } else if (adj.type === '%' || adj.type === 'percent' || adj.type === 'percentage') {
+              selectedType = '%';
+            } else if (adj.type === 'plus' || adj.type === 'תוספת' || adj.type === 'הוספה') {
+              selectedType = 'תוספת (+)';
+            } else if (adj.type === 'minus' || adj.type === 'הפחתה' || adj.type === 'הורדה') {
+              selectedType = 'הפחתה (-)';
+            }
+          }
+          
+          // If no explicit type but we have percentage data, use %
+          if (!adj.type && (adj.percentage || adj.percent)) {
+            selectedType = '%';
+          }
+          // If no explicit type but we have amount data, use ₪
+          else if (!adj.type && adj.amount) {
+            selectedType = '₪';
+          }
+          
+          console.log(`🔍 createTotalValueRow for ${category}: adj.type="${adj.type}", selectedType="${selectedType}"`);
+          
           const description = adj.value || adj.description || '';
           const percentage = adj.percentage || adj.percent || '';
           const amount = adj.amount || '';
+          const isPercent = selectedType === '%';
+          const isAmount = selectedType === '₪';
           
           return `
             <div id="${rowId}" class="adjustment-row" data-source="${source}" style="display:grid; grid-template-columns:2fr 1fr 1fr 1fr 80px; gap:10px; margin-bottom:8px;">
               <div><input type="text" placeholder="תיאור התאמה" value="${description}" onchange="updateFullMarketValueCalculation(); updateHelperFromAdjustments(); syncAdjustmentToHelper(this, '${category}');" /></div>
               <div>
                 <select onchange="updateFullMarketValueCalculation(); updateHelperFromAdjustments(); syncAdjustmentToHelper(this, '${category}');">
-                  <option value="%" ${isPercent ? 'selected' : ''}>%</option>
-                  <option value="₪" ${!isPercent ? 'selected' : ''}>₪</option>
+                  <option value="%" ${selectedType === '%' ? 'selected' : ''}>%</option>
+                  <option value="₪" ${selectedType === '₪' ? 'selected' : ''}>₪</option>
+                  <option value="תוספת (+)" ${selectedType === 'תוספת (+)' ? 'selected' : ''}>תוספת (+)</option>
+                  <option value="הפחתה (-)" ${selectedType === 'הפחתה (-)' ? 'selected' : ''}>הפחתה (-)</option>
                 </select>
               </div>
               <div><input type="text" placeholder="אחוז" value="${percentage}" ${!isPercent ? 'readonly' : ''} style="direction: ltr; text-align: right;${!isPercent ? ' background: #f0f0f0;' : ''}" onchange="updateFullMarketValueCalculation(); updateHelperFromAdjustments(); syncAdjustmentToHelper(this, '${category}');" /></div>
