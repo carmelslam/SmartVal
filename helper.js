@@ -1420,14 +1420,14 @@ window.fixHelperStructure = function() {
         generated: false,
         generated_date: '',
         adjustments: {
-          features: [],
-          registration: [],
-          mileage: [],
-          ownership_type: [],
-          ownership_history: [],
-          usage: [],
-          additional: []
-        },
+      features: [],
+      registration: [],
+      mileage: [],
+      ownership_type: [],
+      ownership_history: [],
+      usage: [],
+      additional: []
+    },
         report_sections: {
           vehicle_details: {},
           damage_assessment: {},
