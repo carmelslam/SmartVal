@@ -5435,12 +5435,22 @@
                 inputs[1].value = item.type || 'plus';
                 console.log(`📝 Set type to: ${item.type || 'plus'}`);
               
-                // Field mapping: percent → אחוז
-                inputs[2].value = Math.abs(percent) || '';
+                // Field mapping: percent → אחוז (show negative sign for minus type)
+                if (percent !== 0) {
+                  if (item.type === 'minus') {
+                    inputs[2].value = `-${Math.abs(percent)}`;
+                  } else {
+                    inputs[2].value = Math.abs(percent).toString();
+                  }
+                }
                 
-                // If amount exists in helper, use it; otherwise calculate from percentage
+                // Set amount with currency formatting (show negative sign for minus type)
                 if (amount) {
-                  inputs[3].value = `₪${Math.abs(amount).toLocaleString()}`;
+                  if (item.type === 'minus') {
+                    inputs[3].value = `-₪${Math.abs(amount).toLocaleString()}`;
+                  } else {
+                    inputs[3].value = `₪${Math.abs(amount).toLocaleString()}`;
+                  }
                 } else if (percent && typeof calculateAdjustmentValueSimple === 'function') {
                   // Trigger calculation from percentage × base price
                   setTimeout(() => calculateAdjustmentValueSimple(inputs[2]), 100);
@@ -5484,12 +5494,22 @@
                 inputs[1].value = item.type || 'plus';
                 console.log(`📝 Set registration type to: ${item.type || 'plus'}`);
               
-                // Field mapping: percent → אחוז
-                inputs[2].value = Math.abs(percent) || '';
+                // Field mapping: percent → אחוז (show negative sign for minus type)
+                if (percent !== 0) {
+                  if (item.type === 'minus') {
+                    inputs[2].value = `-${Math.abs(percent)}`;
+                  } else {
+                    inputs[2].value = Math.abs(percent).toString();
+                  }
+                }
                 
-                // If amount exists in helper, use it; otherwise calculate from percentage
+                // Set amount with currency formatting (show negative sign for minus type)
                 if (amount) {
-                  inputs[3].value = `₪${Math.abs(amount).toLocaleString()}`;
+                  if (item.type === 'minus') {
+                    inputs[3].value = `-₪${Math.abs(amount).toLocaleString()}`;
+                  } else {
+                    inputs[3].value = `₪${Math.abs(amount).toLocaleString()}`;
+                  }
                 } else if (percent && typeof calculateAdjustmentValueSimple === 'function') {
                   // Trigger calculation from percentage × base price
                   setTimeout(() => calculateAdjustmentValueSimple(inputs[2]), 100);
@@ -5782,18 +5802,30 @@
                 // Field mapping: type → סוג
                 inputs[1].value = item.type || 'plus';
                 
-                // Field mapping: percent → אחוז (use absolute value for display)
+                // Field mapping: percent → אחוז (show negative sign for minus type)
                 if (percent !== 0) {
-                  inputs[2].value = Math.abs(percent).toString();
+                  if (item.type === 'minus') {
+                    inputs[2].value = `-${Math.abs(percent)}`;
+                  } else {
+                    inputs[2].value = Math.abs(percent).toString();
+                  }
                 }
                 
-                // Set amount with currency formatting
+                // Set amount with currency formatting (show negative sign for minus type)
                 if (amount !== 0) {
-                  inputs[3].value = `₪${Math.abs(amount).toLocaleString()}`;
+                  if (item.type === 'minus') {
+                    inputs[3].value = `-₪${Math.abs(amount).toLocaleString()}`;
+                  } else {
+                    inputs[3].value = `₪${Math.abs(amount).toLocaleString()}`;
+                  }
                 } else if (percent !== 0 && basePrice > 0) {
                   // Calculate amount from percentage
                   const calculatedAmount = (basePrice * Math.abs(percent)) / 100;
-                  inputs[3].value = `₪${Math.round(calculatedAmount).toLocaleString()}`;
+                  if (item.type === 'minus') {
+                    inputs[3].value = `-₪${Math.round(calculatedAmount).toLocaleString()}`;
+                  } else {
+                    inputs[3].value = `₪${Math.round(calculatedAmount).toLocaleString()}`;
+                  }
                 }
               
               // Trigger onchange events to ensure handlers are active
