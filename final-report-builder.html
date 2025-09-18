@@ -5417,17 +5417,22 @@
             const row = document.querySelector('#featuresAdjustmentsList > div:last-child');
             if (row) {
               const inputs = row.querySelectorAll('input, select');
-              const amount = parseFloat(item.amount) || 0;
-              const percent = parseFloat(item.percent || item.percentage) || 0;
+              // Keep original values to preserve signs
+              const originalAmount = item.amount || 0;
+              const originalPercent = item.percent || item.percentage || 0;
+              const amount = Math.abs(parseFloat(originalAmount));
+              const percent = Math.abs(parseFloat(originalPercent));
               
               console.log('🔍 Loading feature adjustment from estimate:', {
                 item: item,
+                originalAmount: originalAmount,
+                originalPercent: originalPercent,
                 amount: amount,
                 percent: percent,
                 type: item.type
               });
               
-              if (inputs.length >= 4) {
+              if (inputs.length >= 4 && (item.value || item.type || percent > 0 || amount > 0)) {
                 // Field mapping: value → תיאור
                 inputs[0].value = item.value || '';
                 
@@ -5436,22 +5441,22 @@
                 console.log(`📝 Set type to: ${item.type || 'plus'}`);
               
                 // Field mapping: percent → אחוז (show negative sign for minus type)
-                if (percent !== 0) {
+                if (percent > 0) {
                   if (item.type === 'minus') {
-                    inputs[2].value = `-${Math.abs(percent)}`;
+                    inputs[2].value = `-${percent}`;
                   } else {
-                    inputs[2].value = Math.abs(percent).toString();
+                    inputs[2].value = percent.toString();
                   }
                 }
                 
                 // Set amount with currency formatting (show negative sign for minus type)
-                if (amount) {
+                if (amount > 0) {
                   if (item.type === 'minus') {
-                    inputs[3].value = `-₪${Math.abs(amount).toLocaleString()}`;
+                    inputs[3].value = `-₪${amount.toLocaleString()}`;
                   } else {
-                    inputs[3].value = `₪${Math.abs(amount).toLocaleString()}`;
+                    inputs[3].value = `₪${amount.toLocaleString()}`;
                   }
-                } else if (percent) {
+                } else if (percent > 0) {
                   // Set initial value with correct sign, then trigger calculation
                   if (item.type === 'minus') {
                     inputs[3].value = `-₪0`;
@@ -5484,17 +5489,22 @@
             const row = document.querySelector('#registrationAdjustmentsList > div:last-child');
             if (row) {
               const inputs = row.querySelectorAll('input, select');
-              const amount = parseFloat(item.amount) || 0;
-              const percent = parseFloat(item.percent || item.percentage) || 0;
+              // Keep original values to preserve signs
+              const originalAmount = item.amount || 0;
+              const originalPercent = item.percent || item.percentage || 0;
+              const amount = Math.abs(parseFloat(originalAmount));
+              const percent = Math.abs(parseFloat(originalPercent));
               
               console.log('🔍 Loading registration adjustment from estimate:', {
                 item: item,
+                originalAmount: originalAmount,
+                originalPercent: originalPercent,
                 amount: amount,
                 percent: percent,
                 type: item.type
               });
               
-              if (inputs.length >= 4) {
+              if (inputs.length >= 4 && (item.value || item.type || percent > 0 || amount > 0)) {
                 // Field mapping: value → תיאור
                 inputs[0].value = item.value || helper.vehicle?.registration_date || 'עליה לכביש';
                 
@@ -5503,22 +5513,22 @@
                 console.log(`📝 Set registration type to: ${item.type || 'plus'}`);
               
                 // Field mapping: percent → אחוז (show negative sign for minus type)
-                if (percent !== 0) {
+                if (percent > 0) {
                   if (item.type === 'minus') {
-                    inputs[2].value = `-${Math.abs(percent)}`;
+                    inputs[2].value = `-${percent}`;
                   } else {
-                    inputs[2].value = Math.abs(percent).toString();
+                    inputs[2].value = percent.toString();
                   }
                 }
                 
                 // Set amount with currency formatting (show negative sign for minus type)
-                if (amount) {
+                if (amount > 0) {
                   if (item.type === 'minus') {
-                    inputs[3].value = `-₪${Math.abs(amount).toLocaleString()}`;
+                    inputs[3].value = `-₪${amount.toLocaleString()}`;
                   } else {
-                    inputs[3].value = `₪${Math.abs(amount).toLocaleString()}`;
+                    inputs[3].value = `₪${amount.toLocaleString()}`;
                   }
-                } else if (percent) {
+                } else if (percent > 0) {
                   // Set initial value with correct sign, then trigger calculation
                   if (item.type === 'minus') {
                     inputs[3].value = `-₪0`;
