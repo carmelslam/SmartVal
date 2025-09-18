@@ -5548,11 +5548,11 @@
     // LOAD TOTAL VALUE SECTION ADJUSTMENTS FROM final_report.adjustments
     function loadTotalValueSectionAdjustments(helper) {
       try {
-        console.log('🔄 Loading Total Value Section adjustments');
+        console.log('🔄 Auto-loading Total Value Section with mixed data sources');
         
-        // Data sources:
-        // - KM, ownership type, ownership history, additional: from estimate.adjustments
-        // - Features, registration: from final_report.adjustments
+        // Mixed data sources (same as reload button):
+        // - Features & Registration: from final_report.adjustments (sync with Gross section)  
+        // - Others (KM, Ownership, Owners, Additional): from estimate.adjustments (original Levi data)
         const estimateAdjustments = helper.estimate?.adjustments || {};
         const finalReportAdjustments = helper.final_report?.adjustments || {};
         
@@ -5641,7 +5641,7 @@
         if (featuresContainer) {
           featuresContainer.innerHTML = '';
           const features = finalReportAdjustments.features || [];
-          console.log('🔍 Features data:', features);
+          console.log('📦 Loading features from final_report.adjustments:', features);
           if (Array.isArray(features)) {
             features.forEach((adj, index) => {
               console.log(`🔍 Processing features[${index}]:`, adj);
@@ -5662,7 +5662,7 @@
         if (registrationContainer) {
           registrationContainer.innerHTML = '';
           const registration = finalReportAdjustments.registration || [];
-          console.log('🔍 Registration data:', registration);
+          console.log('📦 Loading registration from final_report.adjustments:', registration);
           if (Array.isArray(registration)) {
             registration.forEach((adj, index) => {
               console.log(`🔍 Processing registration[${index}]:`, adj);
@@ -5683,6 +5683,7 @@
         if (mileageContainer) {
           mileageContainer.innerHTML = '';
           const mileage = estimateAdjustments.mileage || [];
+          console.log(`📦 Loading mileage from estimate.adjustments:`, mileage);
           if (Array.isArray(mileage)) {
             mileage.forEach(adj => {
               if (adj.value || adj.percentage || adj.amount) {
@@ -5693,11 +5694,12 @@
           console.log(`✅ Loaded ${mileage.length} mileage to Total Value Section`);
         }
         
-        // 4. Load ownership from estimate.adjustments into ownershipAdjustmentsList
+        // 4. Load ownership_type from estimate.adjustments into ownershipAdjustmentsList
         const ownershipContainer = document.getElementById('ownershipAdjustmentsList');
         if (ownershipContainer) {
           ownershipContainer.innerHTML = '';
-          const ownership = estimateAdjustments.ownership || [];
+          const ownership = estimateAdjustments.ownership_type || estimateAdjustments.ownership || [];
+          console.log(`📦 Loading ownership from estimate.adjustments:`, ownership);
           if (Array.isArray(ownership)) {
             ownership.forEach(adj => {
               if (adj.value || adj.percentage || adj.amount) {
@@ -5708,11 +5710,12 @@
           console.log(`✅ Loaded ${ownership.length} ownership to Total Value Section`);
         }
         
-        // 5. Load owners from estimate.adjustments into ownersAdjustmentsList
+        // 5. Load ownership_history from estimate.adjustments into ownersAdjustmentsList
         const ownersContainer = document.getElementById('ownersAdjustmentsList');
         if (ownersContainer) {
           ownersContainer.innerHTML = '';
-          const owners = estimateAdjustments.owners || [];
+          const owners = estimateAdjustments.ownership_history || estimateAdjustments.owners || [];
+          console.log(`📦 Loading owners from estimate.adjustments:`, owners);
           if (Array.isArray(owners)) {
             owners.forEach(adj => {
               if (adj.value || adj.percentage || adj.amount) {
