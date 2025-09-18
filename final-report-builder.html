@@ -4797,6 +4797,26 @@
       updateHelperFromField(event);
     }
 
+    // Copied from estimator-builder.html - dynamic sign handling
+    function getDropdownTypeFromValues(percentValue, amountValue, currentType) {
+      // Priority: Check percent first, then amount
+      let numericValue = null;
+      
+      if (percentValue !== null && percentValue !== undefined && percentValue !== '' && !isNaN(percentValue)) {
+        numericValue = parseFloat(percentValue);
+      } else if (amountValue !== null && amountValue !== undefined && amountValue !== '' && !isNaN(amountValue)) {
+        numericValue = parseFloat(amountValue);
+      }
+      
+      // If we have a numeric value, determine type based on sign
+      if (numericValue !== null && numericValue !== 0) {
+        return numericValue < 0 ? 'minus' : 'plus';
+      }
+      
+      // Fall back to current type or default to 'plus'
+      return currentType || 'plus';
+    }
+
     // ✅ STANDARDIZED CLAIMS DATA MAPPING - Load from helper to UI
     function loadClaimsDataToUI() {
       try {
@@ -5433,27 +5453,13 @@
               });
               
               if (inputs.length >= 4 && (item.value || item.type || percent > 0 || amount > 0)) {
-                // Field mapping: value → תיאור
+                // Exact copy of estimator-builder.html logic
                 inputs[0].value = item.value || '';
-                
-                // Field mapping: type → סוג 
-                inputs[1].value = item.type || 'plus';
-                console.log(`📝 Set type to: ${item.type || 'plus'}`);
-              
-                // Field mapping: percent → אחוז (always display absolute value)
-                if (percent > 0) {
-                  inputs[2].value = percent.toString();
-                }
-                
-                // Set amount with currency formatting (always display absolute value)
-                if (amount > 0) {
-                  inputs[3].value = `₪${amount.toLocaleString()}`;
-                } else if (percent > 0) {
-                  if (typeof calculateAdjustmentValueSimple === 'function') {
-                    // Trigger calculation from percentage × base price
-                    setTimeout(() => calculateAdjustmentValueSimple(inputs[2]), 100);
-                  }
-                }
+                const itemPercent = item.percentage || item.percent;
+                const itemAmount = item.amount;
+                inputs[1].value = getDropdownTypeFromValues(itemPercent, itemAmount, item.type || 'plus');
+                inputs[2].value = itemPercent ? Math.abs(itemPercent) : '';
+                inputs[3].value = item.amount_display || (item.amount ? `₪${Math.abs(item.amount).toLocaleString()}` : '');
               }
             }
           }
@@ -5491,27 +5497,13 @@
               });
               
               if (inputs.length >= 4 && (item.value || item.type || percent > 0 || amount > 0)) {
-                // Field mapping: value → תיאור
+                // Exact copy of estimator-builder.html logic
                 inputs[0].value = item.value || helper.vehicle?.registration_date || 'עליה לכביש';
-                
-                // Field mapping: type → סוג
-                inputs[1].value = item.type || 'plus';
-                console.log(`📝 Set registration type to: ${item.type || 'plus'}`);
-              
-                // Field mapping: percent → אחוז (always display absolute value)
-                if (percent > 0) {
-                  inputs[2].value = percent.toString();
-                }
-                
-                // Set amount with currency formatting (always display absolute value)
-                if (amount > 0) {
-                  inputs[3].value = `₪${amount.toLocaleString()}`;
-                } else if (percent > 0) {
-                  if (typeof calculateAdjustmentValueSimple === 'function') {
-                    // Trigger calculation from percentage × base price
-                    setTimeout(() => calculateAdjustmentValueSimple(inputs[2]), 100);
-                  }
-                }
+                const itemPercent = item.percentage || item.percent;
+                const itemAmount = item.amount;
+                inputs[1].value = getDropdownTypeFromValues(itemPercent, itemAmount, item.type || 'plus');
+                inputs[2].value = itemPercent ? Math.abs(itemPercent) : '';
+                inputs[3].value = item.amount_display || (item.amount ? `₪${Math.abs(item.amount).toLocaleString()}` : '');
               }
             }
           }
@@ -5794,25 +5786,13 @@
             if (lastRow) {
               const inputs = lastRow.querySelectorAll('input, select');
               if (inputs.length >= 4) {
-                // Field mapping: value → תיאור
-                inputs[0].value = description;
-                
-                // Field mapping: type → סוג
-                inputs[1].value = item.type || 'plus';
-                
-                // Field mapping: percent → אחוז (always display absolute value)
-                if (percent !== 0) {
-                  inputs[2].value = Math.abs(percent).toString();
-                }
-                
-                // Set amount with currency formatting (always display absolute value)
-                if (amount !== 0) {
-                  inputs[3].value = `₪${Math.abs(amount).toLocaleString()}`;
-                } else if (percent !== 0 && basePrice > 0) {
-                  // Calculate amount from percentage
-                  const calculatedAmount = (basePrice * Math.abs(percent)) / 100;
-                  inputs[3].value = `₪${Math.round(calculatedAmount).toLocaleString()}`;
-                }
+                // Use exact estimator builder logic for field assignment
+                inputs[0].value = item.value || '';
+                const itemPercent = item.percentage || item.percent;
+                const itemAmount = item.amount;
+                inputs[1].value = getDropdownTypeFromValues(itemPercent, itemAmount, item.type || 'plus');
+                inputs[2].value = itemPercent ? Math.abs(itemPercent) : '';
+                inputs[3].value = item.amount_display || (item.amount ? `₪${Math.abs(item.amount).toLocaleString()}` : '');
               
               // Trigger onchange events to ensure handlers are active
               inputs[1].dispatchEvent(new Event('change', { bubbles: true }));
