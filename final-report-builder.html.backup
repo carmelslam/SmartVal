@@ -6408,7 +6408,7 @@
           };
         }
         
-        // 1. FEATURES - Sync with Gross Value Section AND populate Full Market Value UI
+        // 1. FEATURES - Sync with Gross Value Section (read from final_report, write to valuation)
         if (helper.final_report.adjustments.features && helper.final_report.adjustments.features.length > 0) {
           const firstFeature = helper.final_report.adjustments.features[0];
           helper.valuation.adjustments.features = {
@@ -6419,12 +6419,9 @@
             amount_display: firstFeature.amount_display,
             amount: firstFeature.amount
           };
-          
-          // CRITICAL: Sync Full Market Value UI with Gross Value data
-          syncFullMarketFeaturesWithGross(helper.final_report.adjustments.features);
         }
         
-        // 2. REGISTRATION - Sync with Gross Value Section AND populate Full Market Value UI  
+        // 2. REGISTRATION - Sync with Gross Value Section (read from final_report, write to valuation)
         if (helper.final_report.adjustments.registration && helper.final_report.adjustments.registration.length > 0) {
           const firstRegistration = helper.final_report.adjustments.registration[0];
           helper.valuation.adjustments.registration = {
@@ -6435,9 +6432,6 @@
             amount_display: firstRegistration.amount_display,
             amount: firstRegistration.amount
           };
-          
-          // CRITICAL: Sync Full Market Value UI with Gross Value data
-          syncFullMarketRegistrationWithGross(helper.final_report.adjustments.registration);
         }
         
         // 3. MILEAGE (KM) - Only in Full Market Value
@@ -6574,136 +6568,6 @@
       }
     }
     
-    /**
-     * Sync Full Market Value Features with Gross Value Section
-     * CRITICAL for Issue 5: Data Sync Between Sections
-     */
-    function syncFullMarketFeaturesWithGross(grossFeatures) {
-      try {
-        const container = document.getElementById('fullFeaturesAdjustmentsList');
-        if (!container || !grossFeatures || grossFeatures.length === 0) return;
-        
-        // Clear existing Full Market features
-        container.innerHTML = '';
-        
-        // Add each gross feature to Full Market section
-        grossFeatures.forEach(feature => {
-          addFullMarketFeatureAdjustment();
-          const lastRow = container.querySelector('div:last-child');
-          if (lastRow) {
-            const inputs = lastRow.querySelectorAll('input, select');
-            if (inputs.length >= 4) {
-              inputs[0].value = feature.value || '';
-              inputs[1].value = feature.type || 'plus';
-              
-              // CRITICAL FIX: Display minus sign for negative values
-              const displayPercent = (feature.type === 'minus' || feature.type === 'הפחתה') && feature.percent > 0 ? 
-                `-${Math.abs(feature.percent)}` : Math.abs(feature.percent || 0);
-              const displayAmount = (feature.type === 'minus' || feature.type === 'הפחתה') && feature.amount > 0 ? 
-                `-${Math.abs(feature.amount)}` : Math.abs(feature.amount || 0);
-              
-              inputs[2].value = displayPercent || '';
-              inputs[3].value = feature.amount_display || (feature.amount ? `₪${displayAmount.toLocaleString()}` : '');
-              lastRow.setAttribute('data-source', feature.source || 'gross_sync');
-            }
-          }
-        });
-        
-        console.log('✅ Synced Full Market features with Gross Value section');
-        
-      } catch (error) {
-        console.error('❌ Error syncing Full Market features:', error);
-      }
-    }
-
-    /**
-     * Sync Full Market Value Registration with Gross Value Section
-     * CRITICAL for Issue 5: Data Sync Between Sections
-     */
-    function syncFullMarketRegistrationWithGross(grossRegistration) {
-      try {
-        const container = document.getElementById('fullRegistrationAdjustmentsList');
-        if (!container || !grossRegistration || grossRegistration.length === 0) return;
-        
-        // Clear existing Full Market registration
-        container.innerHTML = '';
-        
-        // Add each gross registration to Full Market section
-        grossRegistration.forEach(registration => {
-          addFullMarketRegistrationAdjustment();
-          const lastRow = container.querySelector('div:last-child');
-          if (lastRow) {
-            const inputs = lastRow.querySelectorAll('input, select');
-            if (inputs.length >= 4) {
-              inputs[0].value = registration.value || '';
-              inputs[1].value = registration.type || 'plus';
-              
-              // CRITICAL FIX: Display minus sign for negative values
-              const displayPercent = (registration.type === 'minus' || registration.type === 'הפחתה') && registration.percent > 0 ? 
-                `-${Math.abs(registration.percent)}` : Math.abs(registration.percent || 0);
-              const displayAmount = (registration.type === 'minus' || registration.type === 'הפחתה') && registration.amount > 0 ? 
-                `-${Math.abs(registration.amount)}` : Math.abs(registration.amount || 0);
-              
-              inputs[2].value = displayPercent || '';
-              inputs[3].value = registration.amount_display || (registration.amount ? `₪${displayAmount.toLocaleString()}` : '');
-              lastRow.setAttribute('data-source', registration.source || 'gross_sync');
-            }
-          }
-        });
-        
-        console.log('✅ Synced Full Market registration with Gross Value section');
-        
-      } catch (error) {
-        console.error('❌ Error syncing Full Market registration:', error);
-      }
-    }
-
-    /**
-     * Add Full Market Feature Adjustment (for sync with Gross Value)
-     */
-    function addFullMarketFeatureAdjustment() {
-      const container = document.getElementById('fullFeaturesAdjustmentsList');
-      const rowId = 'fullFeatureAdj_' + Date.now();
-      
-      const newRow = `
-        <div id="${rowId}" style="display:grid; grid-template-columns:2fr 1fr 1fr 1fr 80px; gap:10px; margin-bottom:8px;">
-          <div><input type="text" placeholder="תיאור המאפיין" onchange="updateHelperFromAdjustments(); syncAdjustmentToHelper(this, 'features');" /></div>
-          <div><select onchange="updateHelperFromAdjustments(); syncAdjustmentToHelper(this, 'features');">
-            <option value="plus">תוספת (+)</option>
-            <option value="minus">הפחתה (-)</option>
-          </select></div>
-          <div><input type="text" placeholder="אחוז" oninput="calculateAdjustmentValueSimple(this);" onchange="updateHelperFromAdjustments(); syncAdjustmentToHelper(this, 'features');" /></div>
-          <div><input type="text" placeholder="₪" onchange="updateHelperFromAdjustments(); syncAdjustmentToHelper(this, 'features');" /></div>
-          <div><button class="btn remove" onclick="removeAdjustmentRow('${rowId}')">מחק</button></div>
-        </div>
-      `;
-      
-      container.insertAdjacentHTML('beforeend', newRow);
-    }
-
-    /**
-     * Add Full Market Registration Adjustment (for sync with Gross Value)
-     */
-    function addFullMarketRegistrationAdjustment() {
-      const container = document.getElementById('fullRegistrationAdjustmentsList');
-      const rowId = 'fullRegAdj_' + Date.now();
-      
-      const newRow = `
-        <div id="${rowId}" style="display:grid; grid-template-columns:2fr 1fr 1fr 1fr 80px; gap:10px; margin-bottom:8px;">
-          <div><input type="text" placeholder="תיאור עליה לכביש" onchange="updateHelperFromAdjustments(); syncAdjustmentToHelper(this, 'registration');" /></div>
-          <div><select onchange="updateHelperFromAdjustments(); syncAdjustmentToHelper(this, 'registration');">
-            <option value="plus">תוספת (+)</option>
-            <option value="minus">הפחתה (-)</option>
-          </select></div>
-          <div><input type="text" placeholder="אחוז" oninput="calculateAdjustmentValueSimple(this);" onchange="updateHelperFromAdjustments(); syncAdjustmentToHelper(this, 'registration');" /></div>
-          <div><input type="text" placeholder="₪" onchange="updateHelperFromAdjustments(); syncAdjustmentToHelper(this, 'registration');" /></div>
-          <div><button class="btn remove" onclick="removeAdjustmentRow('${rowId}')">מחק</button></div>
-        </div>
-      `;
-      
-      container.insertAdjacentHTML('beforeend', newRow);
-    }
-
     // NOTE: Duplicate function removed - using the updated version with dedicated save functions
     
     /**
@@ -6933,6 +6797,252 @@
     // Expose reset function globally for testing
     window.resetAdjustmentData = resetAdjustmentData;
     
+    // Update helper from adjustments
+    function updateHelperFromAdjustments() {
+      try {
+        console.log('🔄 updateHelperFromAdjustments called');
+        
+        // CRITICAL FIX: Check if there are any user-created adjustments
+        // If not, don't process anything to prevent circular data creation
+        // Final report container removed - will return empty NodeList
+        const userCreatedRows = document.querySelectorAll('#allAdjustmentsRows-final-report div[data-user-created="true"]');
+        const featuresRows = document.querySelectorAll('#featuresAdjustmentsList > div');
+        const registrationRows = document.querySelectorAll('#registrationAdjustmentsList > div');
+        
+        const hasUserInput = userCreatedRows.length > 0 || featuresRows.length > 0 || registrationRows.length > 0;
+        
+        console.log('🔍 DEBUG: User input check:', {
+          userCreatedRows: userCreatedRows.length,
+          featuresRows: featuresRows.length,
+          registrationRows: registrationRows.length,
+          hasUserInput
+        });
+        
+        if (!hasUserInput) {
+          console.log('⚠️ No user input detected - skipping updateHelperFromAdjustments to prevent circular data creation');
+          return;
+        }
+        
+        // 🔧 PHASE 2.4: Get helper data from single source (window.helper)
+        const helper = window.helper || {};
+        console.log('📊 Current helper before update:', helper);
+        
+        // Debug: Check if DOM elements exist
+        console.log('🔍 DEBUG: DOM elements check:', {
+          featuresAdjustmentsList: !!document.getElementById('featuresAdjustmentsList'),
+          registrationAdjustmentsList: !!document.getElementById('registrationAdjustmentsList'),
+          allAdjustmentsRows: false // Container was removed
+        });
+        
+        // Initialize structures
+        helper.levi_report = helper.levi_report || {};
+        // CRITICAL FIX: Clear adjustments since we already verified user input exists
+        helper.levi_report.adjustments = [];
+        if (helper.levi) {
+          helper.levi.custom_adjustments = [];
+        }
+        console.log('🧹 Cleared existing adjustments - processing user input');
+        
+        helper.expertise = helper.expertise || {};
+        helper.expertise.levi_report = helper.expertise.levi_report || {};
+        
+        // First, preserve existing vehicle data from the main form
+        const basicPrice = parseFloat(document.getElementById('basicPrice')?.value.replace(/[₪,]/g, '')) || 
+                          parseFloat(document.getElementById('carBasePrice')?.value.replace(/[₪,]/g, '')) || 0;
+        const vehicleData = {
+          plate: document.getElementById('carPlate')?.value || helper.vehicle?.plate || '',
+          manufacturer: document.getElementById('carManufacturer')?.value || helper.vehicle?.manufacturer || '',
+          model: document.getElementById('carModel')?.value || helper.vehicle?.model || '',
+          year: document.getElementById('carYear')?.value || helper.vehicle?.year || '',
+          model_code: document.getElementById('carModelCode')?.value || helper.vehicle?.model_code || '',
+          base_price: basicPrice,
+          market_value: parseFloat(document.getElementById('carMarketValue')?.value.replace(/[₪,]/g, '')) || basicPrice,
+          final_price: basicPrice // Will be updated with adjustments
+        };
+        
+        console.log('🔍 DEBUG: Vehicle data from form:', vehicleData);
+        
+        // Initialize parameter data for aggregation
+        const parameterData = {
+          registration: { percent: 0, value: 0, total: 0 },
+          features: { percent: 0, value: 0, total: 0 },
+          ownership: { percent: 0, value: 0, total: 0 },
+          km: { percent: 0, value: 0, total: 0 },
+          owners: { percent: 0, value: 0, total: 0 }
+        };
+        
+        // Collect features adjustments
+        const featuresAdjustmentRows = document.querySelectorAll('#featuresAdjustmentsList > div');
+        console.log('🔍 DEBUG: Found features rows:', featuresAdjustmentRows.length);
+        featuresAdjustmentRows.forEach((row, index) => {
+          const description = row.querySelector('input[placeholder="תיאור המאפיין"]')?.value || '';
+          const type = row.querySelector('select')?.value || 'plus';
+          const percent = parseFloat(row.querySelector('input[placeholder="אחוז"]')?.value.replace('%', '')) || 0;
+          const value = parseFloat(row.querySelector('input[placeholder="₪"]')?.value.replace(/[₪,]/g, '')) || 0;
+          console.log(`🔍 DEBUG: Features row ${index}:`, { description, type, percent, value });
+          
+          if (description && value !== 0) {
+            const adjustmentValue = type === 'plus' ? value : -value;
+            helper.levi_report.adjustments.push({
+              description,
+              type: 'features',
+              percent,
+              value: adjustmentValue,
+              total: adjustmentValue
+            });
+            
+            // Aggregate features data
+            parameterData.features.percent += type === 'plus' ? percent : -percent;
+            parameterData.features.value += adjustmentValue;
+            parameterData.features.total += adjustmentValue;
+          }
+        });
+        
+        // Collect registration adjustments
+        // registrationRows already declared above
+        console.log('🔍 DEBUG: Found registration rows:', registrationRows.length);
+        registrationRows.forEach((row, index) => {
+          const description = row.querySelector('input[placeholder="תיאור עליה לכביש"]')?.value || '';
+          const type = row.querySelector('select')?.value || 'plus';
+          const percent = parseFloat(row.querySelector('input[placeholder="אחוז"]')?.value.replace('%', '')) || 0;
+          const value = parseFloat(row.querySelector('input[placeholder="₪"]')?.value.replace(/[₪,]/g, '')) || 0;
+          console.log(`🔍 DEBUG: Registration row ${index}:`, { description, type, percent, value });
+          
+          if (description && value !== 0) {
+            const adjustmentValue = type === 'plus' ? value : -value;
+            helper.levi_report.adjustments.push({
+              description,
+              type: 'registration',
+              percent,
+              value: adjustmentValue,
+              total: adjustmentValue
+            });
+            
+            // Aggregate registration data
+            parameterData.registration.percent += type === 'plus' ? percent : -percent;
+            parameterData.registration.value += adjustmentValue;
+            parameterData.registration.total += adjustmentValue;
+          }
+        });
+        
+        // Collect other adjustments from allAdjustmentsRows-final-report and map to parameters
+        // CRITICAL FIX: Only process manually added adjustments, not ones loaded from helper
+        // Final report container removed - will return empty NodeList
+        const allAdjustmentRows = document.querySelectorAll('#allAdjustmentsRows-final-report div[data-source="custom"][data-user-created="true"]');
+        console.log('🔍 DEBUG: Found user-created adjustment rows:', allAdjustmentRows.length);
+        allAdjustmentRows.forEach((row, index) => {
+          const inputs = row.querySelectorAll('input');
+          if (inputs.length >= 3) {
+            const description = inputs[0].value || '';
+            const type = row.querySelector('select')?.value || 'plus';
+            const percent = parseFloat(inputs[1].value) || 0;
+            const value = parseFloat(inputs[2].value.replace(/[₪,]/g, '')) || 0;
+            console.log(`🔍 DEBUG: All adjustment row ${index}:`, { description, type, percent, value });
+            
+            if (description && value !== 0) {
+              const adjustmentValue = type === 'plus' ? value : -value;
+              let parameterType = 'other';
+              
+              // Detect parameter type from description
+              const descLower = description.toLowerCase();
+              if (description.includes('בעלות') || descLower.includes('ownership')) {
+                parameterType = 'ownership';
+              } else if (description.includes('ק״מ') || descLower.includes('km') || description.includes('קילומטר')) {
+                parameterType = 'km';
+              } else if (description.includes('מספר בעלים') || descLower.includes('owners')) {
+                parameterType = 'owners';
+              }
+              
+              helper.levi_report.adjustments.push({
+                description,
+                type: parameterType,
+                percent,
+                value: adjustmentValue,
+                total: adjustmentValue
+              });
+              
+              // Aggregate parameter data if recognized
+              if (parameterData[parameterType]) {
+                parameterData[parameterType].percent += type === 'plus' ? percent : -percent;
+                parameterData[parameterType].value += adjustmentValue;
+                parameterData[parameterType].total += adjustmentValue;
+              }
+            }
+          }
+        });
+        
+        // Calculate final price with adjustments
+        const totalAdjustments = parameterData.registration.value + parameterData.features.value + 
+                                parameterData.ownership.value + parameterData.km.value + parameterData.owners.value;
+        vehicleData.final_price = vehicleData.base_price + totalAdjustments;
+        
+        // Update structured helper.expertise.levi_report with Hebrew keys for floating screen
+        Object.assign(helper.expertise.levi_report, {
+          // Basic vehicle info
+          'סוג רכב': 'רכב פרטי',
+          'יצרן': vehicleData.manufacturer,
+          'קוד דגם': vehicleData.model_code,
+          'קטגוריה': 'רכב פרטי',
+          'שנת יצור': vehicleData.year,
+          'שם דגם מלא': `${vehicleData.manufacturer} ${vehicleData.model}`,
+          'מחיר בסיס': vehicleData.base_price,
+          'מחיר סופי לרכב': vehicleData.final_price,
+          
+          // Registration
+          'עליה לכביש': parameterData.registration.percent > 0 ? `${parameterData.registration.percent}%` : '',
+          'עליה לכביש %': parameterData.registration.percent,
+          'ערך ש״ח עליה לכביש': parameterData.registration.value,
+          'שווי מצטבר עליה לכביש': parameterData.registration.total,
+          // Features
+          'מאפיינים': parameterData.features.percent > 0 ? `${parameterData.features.percent}%` : '',
+          'מאפיינים %': parameterData.features.percent,
+          'ערך ש״ח מאפיינים': parameterData.features.value,
+          'שווי מצטבר מאפיינים': parameterData.features.total,
+          // Ownership
+          'בעלות': parameterData.ownership.percent > 0 ? `${parameterData.ownership.percent}%` : '',
+          'בעלות %': parameterData.ownership.percent,
+          'ערך ש״ח בעלות': parameterData.ownership.value,
+          'שווי מצטבר בעלות': parameterData.ownership.total,
+          // KM
+          'מס ק״מ': parameterData.km.percent > 0 ? `${parameterData.km.percent}%` : '',
+          'מס ק״מ %': parameterData.km.percent,
+          'ערך ש״ח מס ק״מ': parameterData.km.value,
+          'שווי מצטבר מס ק״מ': parameterData.km.total,
+          // Owners
+          'מספר בעלים': parameterData.owners.percent > 0 ? `${parameterData.owners.percent}%` : '',
+          'מספר בעלים %': parameterData.owners.percent,
+          'ערך ש״ח מספר בעלים': parameterData.owners.value,
+          'שווי מצטבר מספר בעלים': parameterData.owners.total
+        });
+        
+        // Update helper
+        sessionStorage.setItem('helper', JSON.stringify(helper));
+        
+        // Trigger floating screen refresh
+        triggerFloatingScreenRefresh();
+        
+        console.log('✅ Helper updated from adjustments:', {
+          adjustments: helper.levi_report.adjustments,
+          parameters: parameterData,
+          structured: helper.expertise.levi_report
+        });
+        
+        // Additional debug: Check if the Hebrew keys are correctly set
+        console.log('🔍 DEBUG: Hebrew keys in helper.expertise.levi_report:', {
+          'עליה לכביש': helper.expertise.levi_report['עליה לכביש'],
+          'בעלות': helper.expertise.levi_report['בעלות'],
+          'מס ק״מ': helper.expertise.levi_report['מס ק״מ'],
+          'מספר בעלים': helper.expertise.levi_report['מספר בעלים'],
+          'מאפיינים': helper.expertise.levi_report['מאפיינים']
+        });
+        
+        // Debug: Final parameter data summary
+        console.log('🔍 DEBUG: Final parameter data summary:', parameterData);
+        
+      } catch (error) {
+        console.error('Error updating helper from adjustments:', error);
+      }
+    }
     
     // Calculate and update GROSS PRICE (car properties only: base + features + registration)
     function updateGrossMarketValueCalculation() {
