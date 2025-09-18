@@ -6267,28 +6267,34 @@
         // 1. FEATURES - Write to both destinations
         const featuresRows = document.querySelectorAll('#featuresAdjustmentsList > div');
         if (featuresRows.length > 0) {
-          // For VALUATION: Only store first row (no arrays in valuation)
-          const firstRow = featuresRows[0];
-          const inputs = firstRow.querySelectorAll('input, select');
-          if (inputs.length >= 4) {
-            const adjustmentData = {
-              value: inputs[0].value || '', // תיאור goes in value field
-              type: inputs[1].value || 'plus',
-              percent: parseFloat(inputs[2].value) || 0,
-              percentage: parseFloat(inputs[2].value) || 0, // compatibility
-              amount_display: inputs[3].value || '',
-              amount: parseFloat((inputs[3].value || '').replace(/[₪,-]/g, '')) || 0
-            };
-            
-            // Apply sign based on type - CRITICAL FOR MINUS VALUES
-            if (inputs[1].value === 'minus') {
-              adjustmentData.amount = -Math.abs(adjustmentData.amount);
-              adjustmentData.percent = -Math.abs(adjustmentData.percent);
-              adjustmentData.percentage = -Math.abs(adjustmentData.percentage);
+          // For VALUATION: Only update if this is an ORIGINAL adjustment (has source from estimate)
+          const originalRow = featuresRows.find(row => {
+            const source = row.getAttribute('data-source');
+            return source === 'estimate' || source === 'levi' || !source; // Original data
+          });
+          
+          if (originalRow) {
+            const inputs = originalRow.querySelectorAll('input, select');
+            if (inputs.length >= 4) {
+              const adjustmentData = {
+                value: inputs[0].value || '', // תיאור goes in value field
+                type: inputs[1].value || 'plus',
+                percent: parseFloat(inputs[2].value) || 0,
+                percentage: parseFloat(inputs[2].value) || 0, // compatibility
+                amount_display: inputs[3].value || '',
+                amount: parseFloat((inputs[3].value || '').replace(/[₪,-]/g, '')) || 0
+              };
+              
+              // Apply sign based on type - CRITICAL FOR MINUS VALUES
+              if (inputs[1].value === 'minus') {
+                adjustmentData.amount = -Math.abs(adjustmentData.amount);
+                adjustmentData.percent = -Math.abs(adjustmentData.percent);
+                adjustmentData.percentage = -Math.abs(adjustmentData.percentage);
+              }
+              
+              // Write to VALUATION only for ORIGINAL adjustments
+              helper.valuation.adjustments.features = adjustmentData;
             }
-            
-            // Write to VALUATION source (primary) - single object
-            helper.valuation.adjustments.features = adjustmentData;
           }
           
           // For FINAL_REPORT: Store ALL rows (arrays in final_report)  
@@ -6325,27 +6331,34 @@
         // 2. REGISTRATION - Write to both destinations
         const registrationRows = document.querySelectorAll('#registrationAdjustmentsList > div');
         if (registrationRows.length > 0) {
-          // For VALUATION: Only store first row
-          const firstRow = registrationRows[0];
-          const inputs = firstRow.querySelectorAll('input, select');
-          if (inputs.length >= 4) {
-            const adjustmentData = {
-              value: inputs[0].value || '',
-              type: inputs[1].value || 'plus',
-              percent: parseFloat(inputs[2].value) || 0,
-              percentage: parseFloat(inputs[2].value) || 0,
-              amount_display: inputs[3].value || '',
-              amount: parseFloat((inputs[3].value || '').replace(/[₪,-]/g, '')) || 0
-            };
-            
-            // Apply sign based on type - CRITICAL FOR MINUS VALUES
-            if (inputs[1].value === 'minus') {
-              adjustmentData.amount = -Math.abs(adjustmentData.amount);
-              adjustmentData.percent = -Math.abs(adjustmentData.percent);
-              adjustmentData.percentage = -Math.abs(adjustmentData.percentage);
+          // For VALUATION: Only update if this is an ORIGINAL adjustment (has source from estimate)
+          const originalRow = registrationRows.find(row => {
+            const source = row.getAttribute('data-source');
+            return source === 'estimate' || source === 'levi' || !source; // Original data
+          });
+          
+          if (originalRow) {
+            const inputs = originalRow.querySelectorAll('input, select');
+            if (inputs.length >= 4) {
+              const adjustmentData = {
+                value: inputs[0].value || '',
+                type: inputs[1].value || 'plus',
+                percent: parseFloat(inputs[2].value) || 0,
+                percentage: parseFloat(inputs[2].value) || 0,
+                amount_display: inputs[3].value || '',
+                amount: parseFloat((inputs[3].value || '').replace(/[₪,-]/g, '')) || 0
+              };
+              
+              // Apply sign based on type - CRITICAL FOR MINUS VALUES
+              if (inputs[1].value === 'minus') {
+                adjustmentData.amount = -Math.abs(adjustmentData.amount);
+                adjustmentData.percent = -Math.abs(adjustmentData.percent);
+                adjustmentData.percentage = -Math.abs(adjustmentData.percentage);
+              }
+              
+              // Write to VALUATION only for ORIGINAL adjustments
+              helper.valuation.adjustments.registration = adjustmentData;
             }
-            
-            helper.valuation.adjustments.registration = adjustmentData;
           }
           
           // For FINAL_REPORT: Store ALL rows
@@ -6462,12 +6475,13 @@
               adjustmentData.percentage = -Math.abs(adjustmentData.percentage);
             }
             
-            helper.valuation.adjustments.mileage = adjustmentData;
+            // CRITICAL: DO NOT write additional categories to valuation.adjustments
+            // Only write to final_report.adjustments
             helper.final_report.adjustments.mileage = [adjustmentData];
           }
         } else {
           helper.final_report.adjustments.mileage = [];
-          delete helper.valuation.adjustments.mileage;
+          // Don't touch valuation.adjustments for additional categories
         }
         
         // 4. OWNERSHIP TYPE - Only in Full Market Value
@@ -6492,12 +6506,13 @@
               adjustmentData.percentage = -Math.abs(adjustmentData.percentage);
             }
             
-            helper.valuation.adjustments.ownership_type = adjustmentData;
+            // CRITICAL: DO NOT write additional categories to valuation.adjustments
+            // Only write to final_report.adjustments
             helper.final_report.adjustments.ownership_type = [adjustmentData];
           }
         } else {
           helper.final_report.adjustments.ownership_type = [];
-          delete helper.valuation.adjustments.ownership_type;
+          // Don't touch valuation.adjustments for additional categories
         }
         
         // 5. OWNERSHIP HISTORY - Only in Full Market Value
@@ -6522,12 +6537,13 @@
               adjustmentData.percentage = -Math.abs(adjustmentData.percentage);
             }
             
-            helper.valuation.adjustments.ownership_history = adjustmentData;
+            // CRITICAL: DO NOT write additional categories to valuation.adjustments
+            // Only write to final_report.adjustments
             helper.final_report.adjustments.ownership_history = [adjustmentData];
           }
         } else {
           helper.final_report.adjustments.ownership_history = [];
-          delete helper.valuation.adjustments.ownership_history;
+          // Don't touch valuation.adjustments for additional categories
         }
         
         // 6. ADDITIONAL - Only in Full Market Value
@@ -6558,13 +6574,11 @@
             }
           });
           
-          // Store first additional adjustment in valuation for compatibility
-          if (helper.final_report.adjustments.additional.length > 0) {
-            helper.valuation.adjustments.additional = helper.final_report.adjustments.additional[0];
-          }
+          // CRITICAL: DO NOT write additional categories to valuation.adjustments
+          // Additional adjustments should ONLY exist in final_report.adjustments
         } else {
           helper.final_report.adjustments.additional = [];
-          delete helper.valuation.adjustments.additional;
+          // Don't touch valuation.adjustments for additional categories
         }
         
         console.log('✅ Updated full market value adjustments to BOTH final_report.adjustments AND valuation.adjustments');
