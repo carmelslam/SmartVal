@@ -5424,12 +5424,11 @@
                 const itemPercent = item.percentage || item.percent;
                 const itemAmount = item.amount;
                 inputs[1].value = getDropdownTypeFromValues(itemPercent, itemAmount, item.type || 'plus');
-                // CRITICAL FIX: Display minus sign for negative values
-                const displayPercent = (item.type === 'minus' || item.type === 'הפחתה') && itemPercent > 0 ? `-${Math.abs(itemPercent)}` : Math.abs(itemPercent || 0);
-                const displayAmount = (item.type === 'minus' || item.type === 'הפחתה') && item.amount > 0 ? `-${Math.abs(item.amount)}` : Math.abs(item.amount || 0);
                 
-                inputs[2].value = itemPercent ? displayPercent : '';
-                inputs[3].value = item.amount_display || (item.amount ? `₪${displayAmount.toLocaleString()}` : '');
+                // Apply unified formatting for features
+                setTimeout(() => {
+                  formatAdjustmentDisplay(row, inputs[1].value, itemPercent, itemAmount);
+                }, 10);
               }
             }
           }
@@ -5472,12 +5471,11 @@
                 const itemPercent = item.percentage || item.percent;
                 const itemAmount = item.amount;
                 inputs[1].value = getDropdownTypeFromValues(itemPercent, itemAmount, item.type || 'plus');
-                // CRITICAL FIX: Display minus sign for negative values
-                const displayPercent = (item.type === 'minus' || item.type === 'הפחתה') && itemPercent > 0 ? `-${Math.abs(itemPercent)}` : Math.abs(itemPercent || 0);
-                const displayAmount = (item.type === 'minus' || item.type === 'הפחתה') && item.amount > 0 ? `-${Math.abs(item.amount)}` : Math.abs(item.amount || 0);
                 
-                inputs[2].value = itemPercent ? displayPercent : '';
-                inputs[3].value = item.amount_display || (item.amount ? `₪${displayAmount.toLocaleString()}` : '');
+                // Apply unified formatting for registration
+                setTimeout(() => {
+                  formatAdjustmentDisplay(row, inputs[1].value, itemPercent, itemAmount);
+                }, 10);
               }
             }
           }
@@ -5533,12 +5531,13 @@
           console.log(`🔍 createTotalValueRow for ${category}: adj.type="${adj.type}", selectedType="${selectedType}"`);
           
           const description = adj.value || adj.description || '';
-          const percentage = adj.percentage || adj.percent || '';
-          const amount = adj.amount || '';
+          // Don't format values here - let formatAdjustmentDisplay handle it
+          const percentage = '';
+          const amount = '';
           const isPercent = selectedType === '%';
           const isAmount = selectedType === '₪';
           
-          return `
+          const html = `
             <div id="${rowId}" class="adjustment-row" data-source="${source}" style="display:grid; grid-template-columns:2fr 1fr 1fr 1fr 80px; gap:10px; margin-bottom:8px;">
               <div><input type="text" placeholder="תיאור התאמה" value="${description}" onchange="updateFullMarketValueCalculation(); updateHelperFromAdjustments(); syncAdjustmentToHelper(this, '${category}');" /></div>
               <div>
@@ -5554,6 +5553,16 @@
               <div><button class="btn remove" type="button" onclick="removeAdjustmentRow('${rowId}')">הסר</button></div>
             </div>
           `;
+          
+          // Apply formatting after row is created
+          setTimeout(() => {
+            const row = document.getElementById(rowId);
+            if (row) {
+              formatAdjustmentDisplay(row, selectedType, adj.percentage || adj.percent || 0, adj.amount || 0);
+            }
+          }, 50);
+          
+          return html;
         }
         
         // 1. Load features from final_report.adjustments into fullFeaturesAdjustmentsList
@@ -6276,6 +6285,62 @@
     /**
      * Enhanced two-way data binding: sync individual adjustment changes to helper
      */
+    // UNIFIED DISPLAY FORMATTING FOR FEATURES AND REGISTRATION
+    function formatAdjustmentDisplay(row, type, percent, amount) {
+      try {
+        const inputs = row.querySelectorAll('input, select');
+        if (inputs.length < 4) return;
+        
+        const percentInput = inputs[2];
+        const amountInput = inputs[3];
+        
+        // Determine if it's a reduction/subtraction
+        const isReduction = type === 'הפחתה (-)' || type === 'minus' || type === 'הפחתה' || type === 'הורדה';
+        
+        console.log(`🔧 formatAdjustmentDisplay: type="${type}", isReduction=${isReduction}, percent=${percent}, amount=${amount}`);
+        
+        // Format based on type
+        if (type === '%') {
+          // Percentage mode: show percent value, disable amount
+          percentInput.value = isReduction ? `-${Math.abs(percent)}` : Math.abs(percent);
+          percentInput.readOnly = false;
+          percentInput.style.background = '';
+          amountInput.value = '';
+          amountInput.readOnly = true;
+          amountInput.style.background = '#f0f0f0';
+        } else if (type === '₪') {
+          // Amount mode: show amount value, disable percent
+          amountInput.value = isReduction ? `-₪${Math.abs(amount)}` : `₪${Math.abs(amount)}`;
+          amountInput.readOnly = false;
+          amountInput.style.background = '';
+          percentInput.value = '';
+          percentInput.readOnly = true;
+          percentInput.style.background = '#f0f0f0';
+        } else if (type === 'תוספת (+)' || type === 'plus') {
+          // Addition mode: show positive values with currency
+          percentInput.value = Math.abs(percent || 0);
+          amountInput.value = `₪${Math.abs(amount || 0)}`;
+          percentInput.readOnly = false;
+          amountInput.readOnly = false;
+          percentInput.style.background = '';
+          amountInput.style.background = '';
+        } else if (type === 'הפחתה (-)' || type === 'minus') {
+          // Reduction mode: show negative values with currency
+          percentInput.value = percent ? `-${Math.abs(percent)}` : '';
+          amountInput.value = amount ? `-₪${Math.abs(amount)}` : '';
+          percentInput.readOnly = false;
+          amountInput.readOnly = false;
+          percentInput.style.background = '';
+          amountInput.style.background = '';
+        }
+        
+        console.log(`✅ Formatted display - percent: "${percentInput.value}", amount: "${amountInput.value}"`);
+        
+      } catch (error) {
+        console.error('Error in formatAdjustmentDisplay:', error);
+      }
+    }
+
     function syncAdjustmentToHelper(element, category) {
       try {
         // 🔧 PHASE 2.4: Get helper data from single source (window.helper)
@@ -6291,12 +6356,15 @@
         const inputs = row.querySelectorAll('input, select');
         if (inputs.length < 4) return;
         
+        const rawPercent = parseFloat(inputs[2].value.replace(/[-₪,]/g, '')) || 0;
+        const rawAmount = parseFloat(inputs[3].value.replace(/[-₪,]/g, '')) || 0;
+        
         const adjustmentData = {
           value: inputs[0].value || '',  // תיאור → value (description field)
           type: inputs[1].value || 'plus',  // סוג → type
-          percent: parseFloat(inputs[2].value) || 0,  // אחוז → percent
-          percentage: parseFloat(inputs[2].value) || 0,  // אחוז → percentage (compatibility)
-          amount: parseFloat(inputs[3].value.replace(/[₪,]/g, '')) || 0,  // ערך → amount
+          percent: rawPercent,  // אחוז → percent (clean number)
+          percentage: rawPercent,  // אחוז → percentage (compatibility)
+          amount: rawAmount,  // ערך → amount (clean number)
           amount_display: inputs[3].value || '',  // ערך → amount_display
           category: category,
           source: row.getAttribute('data-source') || 'manual',
@@ -6346,6 +6414,12 @@
           console.log(`📝 Saved ${category} to valuation.adjustments (Levi data only)`);
         } else if (category !== 'additional') {
           console.log(`🚫 Skipped saving ${category} to valuation.adjustments (manual addition)`);
+        }
+        
+        // Apply unified formatting for consistent display
+        if (category === 'features' || category === 'registration') {
+          console.log(`🎨 Applying unified formatting for ${category} adjustment`);
+          formatAdjustmentDisplay(row, adjustmentData.type, adjustmentData.percent, adjustmentData.amount);
         }
         
         // Save to storage
