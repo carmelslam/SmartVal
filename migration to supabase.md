@@ -566,3 +566,395 @@ events (
 * **Scalability**: Edge Functions handle rendering, ingestion, syncing without heavy Make automations.
 
 
+## Pragmatic Supabase Migration Plan - Starting with New Modules
+
+building new modules directly in Supabase while gradually migrating existing ones. Here's a tailored plan:
+
+### Phase 1: Parts Search & Invoices (New Modules) - Weeks 1-3
+
+Since these don't exist yet, we build them Supabase-native:
+
+```sql
+-- 01_parts_module.sql
+create table public.parts_search_sessions (
+  id uuid primary key default gen_random_uuid(),
+  case_id uuid references cases(id),
+  plate text not null,
+  search_context jsonb, -- damage centers, vehicle info
+  created_by text,
+  created_at timestamptz default now()
+);
+
+create table public.parts_search_results (
+  id uuid primary key default gen_random_uuid(),
+  session_id uuid references parts_search_sessions(id),
+  supplier text,
+  search_query jsonb,
+  results jsonb, -- array of parts
+  response_time_ms int,
+  created_at timestamptz default now()
+);
+
+create table public.parts_required (
+  id uuid primary key default gen_random_uuid(),
+  case_id uuid references cases(id),
+  damage_center_code text,
+  part_number text,
+  part_name text,
+  manufacturer text,
+  quantity int default 1,
+  unit_price numeric(10,2),
+  selected_supplier text,
+  status text default 'PENDING', -- PENDING, ORDERED, RECEIVED
+  metadata jsonb,
+  created_at timestamptz default now(),
+  updated_at timestamptz default now()
+);
+
+-- 02_invoices_module.sql
+create table public.invoices (
+  id uuid primary key default gen_random_uuid(),
+  case_id uuid references cases(id),
+  plate text not null,
+  invoice_number text unique,
+  invoice_type text, -- PARTS, LABOR, TOWING, OTHER
+  supplier_name text,
+  supplier_tax_id text,
+  issue_date date,
+  due_date date,
+  status text default 'DRAFT', -- DRAFT, SENT, PAID
+  total_before_tax numeric(10,2),
+  tax_amount numeric(10,2),
+  total_amount numeric(10,2),
+  metadata jsonb,
+  created_at timestamptz default now()
+);
+
+create table public.invoice_lines (
+  id uuid primary key default gen_random_uuid(),
+  invoice_id uuid references invoices(id) on delete cascade,
+  line_number int,
+  description text,
+  part_id uuid references parts_required(id), -- optional link
+  quantity numeric(10,2),
+  unit_price numeric(10,2),
+  discount_percent numeric(5,2),
+  line_total numeric(10,2),
+  metadata jsonb
+);
+
+-- Indexes for performance
+create index idx_parts_case on parts_required(case_id);
+create index idx_parts_status on parts_required(status);
+create index idx_invoice_case on invoices(case_id);
+create index idx_invoice_status on invoices(status);
+```
+
+### Phase 2: Helper Integration - Weeks 4-5
+
+Embed helper as shadow storage first:
+
+```sql
+-- 03_helper_storage.sql
+create table public.case_helper_mirror (
+  case_id uuid primary key,
+  plate text not null,
+  helper_json jsonb not null,
+  helper_size_bytes int,
+  last_synced_from text, -- 'MAKE' or 'UI'
+  last_synced_at timestamptz,
+  version int default 1,
+  created_at timestamptz default now(),
+  updated_at timestamptz default now()
+);
+
+-- Store helper in chunks for better performance
+create table public.case_helper_sections (
+  case_id uuid,
+  section_name text, -- 'vehicle', 'damage', 'valuation', etc.
+  section_data jsonb,
+  updated_at timestamptz default now(),
+  primary key (case_id, section_name)
+);
+
+-- Sync tracking
+create table public.helper_sync_log (
+  id uuid primary key default gen_random_uuid(),
+  case_id uuid,
+  sync_direction text, -- 'TO_SUPABASE', 'FROM_SUPABASE'
+  sync_status text, -- 'SUCCESS', 'FAILED', 'PARTIAL'
+  sections_synced text[],
+  error_details jsonb,
+  created_at timestamptz default now()
+);
+```
+
+### Phase 3: Tracking & Search Layer - Weeks 6-7
+
+Build on top of helper data:
+
+```sql
+-- 04_tracking_search.sql
+create table public.case_tracking (
+  id uuid primary key default gen_random_uuid(),
+  case_id uuid,
+  plate text not null,
+  event_type text, -- 'STATUS_CHANGE', 'PART_ORDERED', 'INVOICE_CREATED'
+  event_data jsonb,
+  actor text,
+  created_at timestamptz default now()
+);
+
+-- Materialized view for fast searching
+create materialized view case_search_index as
+select 
+  c.id as case_id,
+  c.plate,
+  c.owner_name,
+  h.helper_json->>'status' as case_status,
+  h.helper_json->'vehicle'->>'model' as vehicle_model,
+  h.helper_json->'vehicle'->>'year' as vehicle_year,
+  h.helper_json->'valuation'->>'total_loss' as total_loss,
+  count(distinct p.id) as parts_count,
+  count(distinct i.id) as invoice_count,
+  h.updated_at as last_activity
+from cases c
+left join case_helper_mirror h on h.case_id = c.id
+left join parts_required p on p.case_id = c.id
+left join invoices i on i.case_id = c.id
+group by c.id, c.plate, c.owner_name, h.helper_json, h.updated_at;
+
+-- Refresh function
+create or replace function refresh_search_index() returns void as $$
+begin
+  refresh materialized view concurrently case_search_index;
+end;
+$$ language plpgsql;
+```
+
+### Phase 4: Existing Modules (Levi, Vehicle Details) - Weeks 8-9
+
+These already exist in Make.com, so we dual-write:
+
+```sql
+-- 05_existing_modules.sql
+create table public.levi_reports (
+  id uuid primary key default gen_random_uuid(),
+  case_id uuid,
+  plate text not null,
+  report_id text unique, -- Levi's ID
+  raw_response jsonb,
+  parsed_data jsonb,
+  report_url text,
+  fetched_at timestamptz,
+  created_at timestamptz default now()
+);
+
+create table public.vehicle_details (
+  case_id uuid primary key,
+  plate text not null,
+  vin text,
+  manufacturer text,
+  model text,
+  year int,
+  engine_size int,
+  color text,
+  raw_data jsonb, -- Original from various sources
+  enriched_data jsonb, -- After processing
+  updated_at timestamptz default now()
+);
+```
+
+### Migration Strategy for Existing System
+
+#### Step 1: Make.com Dual-Write Pattern
+
+```javascript
+// In Make.com scenarios, add these modules:
+
+// After saving to OneDrive/current system:
+{
+  "module": "HTTP Request",
+  "name": "Mirror to Supabase",
+  "url": "{{SUPABASE_URL}}/rest/v1/rpc/sync_helper",
+  "method": "POST",
+  "headers": {
+    "Authorization": "Bearer {{SUPABASE_SERVICE_KEY}}",
+    "Content-Type": "application/json"
+  },
+  "body": {
+    "case_id": "{{case_id}}",
+    "helper_json": "{{helper}}",
+    "source": "MAKE"
+  },
+  "continueOnError": true // Don't break existing flow
+}
+```
+
+#### Step 2: Gradual UI Migration
+
+```javascript
+// Feature flags in your app
+const FEATURE_FLAGS = {
+  USE_SUPABASE_PARTS: true,      // New module
+  USE_SUPABASE_INVOICES: true,   // New module
+  USE_SUPABASE_HELPER: false,    // Start false, enable gradually
+  USE_SUPABASE_TRACKING: false,  // Enable after helper
+  USE_SUPABASE_LEVI: false       // Last to migrate
+};
+
+// Adapter pattern for gradual migration
+class DataService {
+  async getParts(caseId) {
+    if (FEATURE_FLAGS.USE_SUPABASE_PARTS) {
+      return await supabase
+        .from('parts_required')
+        .select('*')
+        .eq('case_id', caseId);
+    } else {
+      return await makeWebhook.getParts(caseId);
+    }
+  }
+  
+  async saveHelper(caseId, helper) {
+    // Always save to Make/OneDrive (current system)
+    await makeWebhook.saveHelper(caseId, helper);
+    
+    // Additionally save to Supabase if enabled
+    if (FEATURE_FLAGS.USE_SUPABASE_HELPER) {
+      await supabase.rpc('sync_helper', {
+        case_id: caseId,
+        helper_json: helper,
+        source: 'UI'
+      });
+    }
+  }
+}
+```
+
+### Admin & Dev Hubs Migration - Phase 5
+
+```sql
+-- 06_admin_dev_tools.sql
+create table public.system_logs (
+  id uuid primary key default gen_random_uuid(),
+  log_level text, -- ERROR, WARN, INFO, DEBUG
+  component text, -- MAKE_SYNC, UI, EDGE_FUNCTION
+  message text,
+  context jsonb,
+  created_at timestamptz default now()
+);
+
+create table public.dev_test_cases (
+  id uuid primary key default gen_random_uuid(),
+  test_name text,
+  test_data jsonb,
+  expected_result jsonb,
+  actual_result jsonb,
+  status text, -- PASS, FAIL, PENDING
+  created_at timestamptz default now()
+);
+
+-- Admin dashboard views
+create view admin_system_health as
+select 
+  date_trunc('hour', created_at) as hour,
+  count(*) filter (where log_level = 'ERROR') as errors,
+  count(*) filter (where log_level = 'WARN') as warnings,
+  count(*) as total_events
+from system_logs
+where created_at > now() - interval '24 hours'
+group by hour
+order by hour desc;
+```
+
+### OneDrive Sync Strategy
+
+Since the system relies heavily on OneDrive, maintain it as a mirror:
+
+```sql
+-- 07_onedrive_sync.sql
+create table public.onedrive_sync (
+  id uuid primary key default gen_random_uuid(),
+  case_id uuid,
+  file_type text, -- REPORT, INVOICE, IMAGE, DOCUMENT
+  supabase_path text,
+  onedrive_path text,
+  onedrive_item_id text,
+  sync_status text, -- PENDING, SYNCED, FAILED
+  last_synced_at timestamptz,
+  created_at timestamptz default now()
+);
+
+-- Function to queue OneDrive sync
+create or replace function queue_onedrive_sync(
+  p_case_id uuid,
+  p_file_type text,
+  p_supabase_path text
+) returns uuid as $$
+declare
+  v_sync_id uuid;
+begin
+  insert into onedrive_sync (
+    case_id, file_type, supabase_path, sync_status
+  ) values (
+    p_case_id, p_file_type, p_supabase_path, 'PENDING'
+  ) returning id into v_sync_id;
+  
+  -- Notify Make.com webhook
+  perform pg_notify('onedrive_sync', json_build_object(
+    'sync_id', v_sync_id,
+    'case_id', p_case_id
+  )::text);
+  
+  return v_sync_id;
+end;
+$$ language plpgsql;
+```
+
+### Cutover Checklist
+
+```markdown
+## Week 1-3: New Modules (Safe)
+- [x] Deploy parts search tables
+- [x] Deploy invoices tables
+- [x] Build UI for parts/invoices using Supabase
+- [x] Test with real cases
+- [ ] No risk - these are new
+
+## Week 4-5: Helper Shadow (Low Risk)
+- [ ] Deploy helper mirror tables
+- [ ] Add dual-write in Make.com
+- [ ] Monitor sync success rate
+- [ ] Compare helper versions
+- [ ] Rollback: Just disable sync
+
+## Week 6-7: Search & Tracking (Medium Risk)
+- [ ] Deploy tracking tables
+- [ ] Build search UI reading from Supabase
+- [ ] Test search performance
+- [ ] Rollback: Switch back to Make search
+
+## Week 8-9: Existing Modules (High Risk)
+- [ ] Dual-write Levi reports
+- [ ] Dual-write vehicle details
+- [ ] Test data consistency
+- [ ] Gradual UI switchover
+- [ ] Rollback: Feature flags
+
+## Week 10: Full Migration
+- [ ] Enable all Supabase features
+- [ ] Monitor for 1 week
+- [ ] Disable Make.com writes
+- [ ] Keep Make for external integrations only
+```
+
+### Key Success Factors
+
+1. **Start with new modules** - No migration risk
+2. **Keep Make.com running** - It's your safety net
+3. **Use feature flags** - Roll back instantly if needed
+4. **Monitor everything** - Sync status, errors, performance
+5. **OneDrive stays** - Users don't notice the backend change
+
+This approach minimizes risk by starting with new functionality, maintaining the existing system as backup, and providing multiple rollback points throughout the migration.
