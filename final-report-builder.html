@@ -5537,20 +5537,33 @@
           const isPercent = selectedType === '%';
           const isAmount = selectedType === '₪';
           
+          // Make features and registration read-only in Total Market Value section
+          const isReadOnlyCategory = (category === 'features' || category === 'registration');
+          const readOnlyAttr = isReadOnlyCategory ? 'readonly' : '';
+          const readOnlyStyle = isReadOnlyCategory ? ' background: #f8f9fa; color: #6c757d;' : '';
+          const disabledAttr = isReadOnlyCategory ? 'disabled' : '';
+          
+          console.log(`🔒 Making ${category} read-only in Total Market Value: ${isReadOnlyCategory}`);
+          
           const html = `
             <div id="${rowId}" class="adjustment-row" data-source="${source}" style="display:grid; grid-template-columns:2fr 1fr 1fr 1fr 80px; gap:10px; margin-bottom:8px;">
-              <div><input type="text" placeholder="תיאור התאמה" value="${description}" onchange="updateFullMarketValueCalculation(); updateHelperFromAdjustments(); syncAdjustmentToHelper(this, '${category}');" /></div>
+              <div><input type="text" placeholder="תיאור התאמה" value="${description}" ${readOnlyAttr} style="${readOnlyStyle}" ${isReadOnlyCategory ? '' : `onchange="updateFullMarketValueCalculation(); updateHelperFromAdjustments(); syncAdjustmentToHelper(this, '${category}');"`} /></div>
               <div>
-                <select onchange="updateFullMarketValueCalculation(); updateHelperFromAdjustments(); syncAdjustmentToHelper(this, '${category}');">
+                <select ${disabledAttr} style="${readOnlyStyle}" ${isReadOnlyCategory ? '' : `onchange="updateFullMarketValueCalculation(); updateHelperFromAdjustments(); syncAdjustmentToHelper(this, '${category}');"`}>
                   <option value="%" ${selectedType === '%' ? 'selected' : ''}>%</option>
                   <option value="₪" ${selectedType === '₪' ? 'selected' : ''}>₪</option>
                   <option value="תוספת (+)" ${selectedType === 'תוספת (+)' ? 'selected' : ''}>תוספת (+)</option>
                   <option value="הפחתה (-)" ${selectedType === 'הפחתה (-)' ? 'selected' : ''}>הפחתה (-)</option>
                 </select>
               </div>
-              <div><input type="text" placeholder="אחוז" value="${percentage}" ${!isPercent ? 'readonly' : ''} style="direction: ltr; text-align: right;${!isPercent ? ' background: #f0f0f0;' : ''}" onchange="updateFullMarketValueCalculation(); updateHelperFromAdjustments(); syncAdjustmentToHelper(this, '${category}');" /></div>
-              <div><input type="text" placeholder="ערך" value="${amount}" ${isPercent ? 'readonly' : ''} style="direction: ltr; text-align: right;${isPercent ? ' background: #f0f0f0;' : ''}" onchange="updateFullMarketValueCalculation(); updateHelperFromAdjustments(); syncAdjustmentToHelper(this, '${category}');" /></div>
-              <div><button class="btn remove" type="button" onclick="removeAdjustmentRow('${rowId}')">הסר</button></div>
+              <div><input type="text" placeholder="אחוז" value="${percentage}" ${readOnlyAttr || (!isPercent ? 'readonly' : '')} style="direction: ltr; text-align: right;${readOnlyStyle}${!isPercent ? ' background: #f0f0f0;' : ''}" ${isReadOnlyCategory ? '' : `onchange="updateFullMarketValueCalculation(); updateHelperFromAdjustments(); syncAdjustmentToHelper(this, '${category}');"`} /></div>
+              <div><input type="text" placeholder="ערך" value="${amount}" ${readOnlyAttr || (isPercent ? 'readonly' : '')} style="direction: ltr; text-align: right;${readOnlyStyle}${isPercent ? ' background: #f0f0f0;' : ''}" ${isReadOnlyCategory ? '' : `onchange="updateFullMarketValueCalculation(); updateHelperFromAdjustments(); syncAdjustmentToHelper(this, '${category}');"`} /></div>
+              <div>
+                ${isReadOnlyCategory ? 
+                  '<span style="color: #6c757d; font-size: 12px;">קריאה בלבד</span>' : 
+                  `<button class="btn remove" type="button" onclick="removeAdjustmentRow('${rowId}')">הסר</button>`
+                }
+              </div>
             </div>
           `;
           
