@@ -3793,37 +3793,51 @@
         if (registrationContainer) registrationContainer.innerHTML = '';
         // Note: Final report adjustments section was removed
         
-        // Load feature adjustments (תוספות מאפיינים)
+        // Load feature adjustments (תוספות מאפיינים) - PRESERVE ORDER: first = original
         if (helper.final_report.adjustments.features) {
-          helper.final_report.adjustments.features.forEach(adj => {
+          helper.final_report.adjustments.features.forEach((adj, index) => {
             addFeatureAdjustment();
             const rows = document.querySelectorAll('#featuresAdjustmentsList > div');
             const lastRow = rows[rows.length - 1];
             if (lastRow) {
+              // Mark first item as original data
+              if (index === 0) {
+                lastRow.setAttribute('data-source', 'estimate');
+              } else {
+                lastRow.setAttribute('data-source', 'manual');
+              }
+              
               const inputs = lastRow.querySelectorAll('input, select');
               if (inputs.length >= 4) {
-                inputs[0].value = adj.description || '';
+                inputs[0].value = adj.value || adj.description || '';
                 inputs[1].value = adj.type || 'plus';
-                inputs[2].value = adj.percentage || '';
-                inputs[3].value = adj.value ? `₪${adj.value.toLocaleString()}` : '';
+                inputs[2].value = adj.percentage || adj.percent || '';
+                inputs[3].value = adj.amount_display || (adj.amount ? `₪${Math.abs(adj.amount).toLocaleString()}` : '');
               }
             }
           });
         }
         
-        // Load registration adjustments (עליה לכביש)
+        // Load registration adjustments (עליה לכביש) - PRESERVE ORDER: first = original
         if (helper.final_report.adjustments.registration) {
-          helper.final_report.adjustments.registration.forEach(adj => {
+          helper.final_report.adjustments.registration.forEach((adj, index) => {
             addRegistrationAdjustment();
             const rows = document.querySelectorAll('#registrationAdjustmentsList > div');
             const lastRow = rows[rows.length - 1];
             if (lastRow) {
+              // Mark first item as original data
+              if (index === 0) {
+                lastRow.setAttribute('data-source', 'estimate');
+              } else {
+                lastRow.setAttribute('data-source', 'manual');
+              }
+              
               const inputs = lastRow.querySelectorAll('input, select');
               if (inputs.length >= 4) {
-                inputs[0].value = adj.description || '';
+                inputs[0].value = adj.value || adj.description || '';
                 inputs[1].value = adj.type || 'plus';
-                inputs[2].value = adj.percentage || '';
-                inputs[3].value = adj.value ? `₪${adj.value.toLocaleString()}` : '';
+                inputs[2].value = adj.percentage || adj.percent || '';
+                inputs[3].value = adj.amount_display || (adj.amount ? `₪${Math.abs(adj.amount).toLocaleString()}` : '');
               }
             }
           });
