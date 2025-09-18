@@ -6491,9 +6491,23 @@
           // Save to storage and return early (don't save to final_report)
           sessionStorage.setItem('helper', JSON.stringify(helper));
           
-          // Apply unified formatting for consistent display (all categories)
-          console.log(`🎨 Applying unified formatting for ${category} adjustment`);
-          formatAdjustmentDisplay(row, adjustmentData.type, adjustmentData.percent, adjustmentData.amount);
+          // Apply unified formatting - only for Total Value section (not Gross section)
+          const containerId = container ? container.id : null;
+          const isTotalValueSection = containerId && (
+            containerId.includes('fullFeatures') || 
+            containerId.includes('fullRegistration') ||
+            containerId.includes('mileage') ||
+            containerId.includes('ownership') ||
+            containerId.includes('owners') ||
+            containerId === 'allAdjustmentsList'
+          );
+          
+          if (isTotalValueSection) {
+            console.log(`🎨 Applying unified formatting for Total Value ${category} adjustment`);
+            formatAdjustmentDisplay(row, adjustmentData.type, adjustmentData.percent, adjustmentData.amount);
+          } else {
+            console.log(`⏭️ Skipping formatting for Gross section ${category} adjustment`);
+          }
           
           return; // Don't save to final_report for Levi edits
         }
@@ -6543,9 +6557,23 @@
           console.log(`🚫 Skipped saving ${category} to valuation.adjustments (manual addition)`);
         }
         
-        // Apply unified formatting for consistent display (all categories)
-        console.log(`🎨 Applying unified formatting for ${category} adjustment`);
-        formatAdjustmentDisplay(row, adjustmentData.type, adjustmentData.percent, adjustmentData.amount);
+        // Apply unified formatting - only for Total Value section (not Gross section)
+        const containerId = container ? container.id : null;
+        const isTotalValueSection = containerId && (
+          containerId.includes('fullFeatures') || 
+          containerId.includes('fullRegistration') ||
+          containerId.includes('mileage') ||
+          containerId.includes('ownership') ||
+          containerId.includes('owners') ||
+          containerId === 'allAdjustmentsList'
+        );
+        
+        if (isTotalValueSection) {
+          console.log(`🎨 Applying unified formatting for Total Value ${category} adjustment`);
+          formatAdjustmentDisplay(row, adjustmentData.type, adjustmentData.percent, adjustmentData.amount);
+        } else {
+          console.log(`⏭️ Skipping formatting for Gross section ${category} adjustment`);
+        }
         
         // Save to storage
         sessionStorage.setItem('helper', JSON.stringify(helper));
