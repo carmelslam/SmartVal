@@ -2774,9 +2774,6 @@
         // Load all adjustments (Levi + custom) using unified system
         loadAllAdjustments(helper);
         
-        // Load Total Value section adjustments from final_report.adjustments
-        loadTotalValueSectionAdjustments(helper);
-        
         // Note: addFieldChangeListeners() is called in DOMContentLoaded event
         
       } catch (error) {
@@ -5485,194 +5482,6 @@
       }
     }
     
-    // LOAD TOTAL VALUE SECTION ADJUSTMENTS FROM FINAL_REPORT.ADJUSTMENTS
-    function loadTotalValueSectionAdjustments(helper) {
-      try {
-        console.log('🔄 Loading Total Value section adjustments from final_report.adjustments');
-        
-        if (!helper.final_report?.adjustments) {
-          console.log('📝 No final_report.adjustments found, skipping Total Value section load');
-          return;
-        }
-        
-        const adjustments = helper.final_report.adjustments;
-        console.log('🔍 Available final_report adjustments:', adjustments);
-        
-        // Define category mapping for Total Value section ONLY (not Gross section)
-        const categoryMapping = [
-          { key: 'mileage', containerId: 'mileageAdjustmentsList', addFunction: 'addMileageAdjustment' },
-          { key: 'ownership_type', containerId: 'ownershipAdjustmentsList', addFunction: 'addOwnershipAdjustment' },
-          { key: 'ownership_history', containerId: 'ownersAdjustmentsList', addFunction: 'addOwnersAdjustment' },
-          { key: 'additional', containerId: 'allAdjustmentsList', addFunction: 'addFullMarketAdjustment' }
-        ];
-        
-        // For features and registration, we need special handling to preserve order
-        // Load additional entries ONLY (not the original from estimate.adjustments)
-        const grossCategoryMapping = [
-          { key: 'features', grossContainerId: 'featuresAdjustmentsList', fullContainerId: 'fullFeaturesAdjustmentsList', addGrossFunction: 'addFeatureAdjustment', addFullFunction: 'addFullMarketFeatureAdjustment' },
-          { key: 'registration', grossContainerId: 'registrationAdjustmentsList', fullContainerId: 'fullRegistrationAdjustmentsList', addGrossFunction: 'addRegistrationAdjustment', addFullFunction: 'addFullMarketRegistrationAdjustment' }
-        ];
-        
-        categoryMapping.forEach(({ key, containerId, addFunction }) => {
-          const categoryData = adjustments[key];
-          if (categoryData && Array.isArray(categoryData) && categoryData.length > 0) {
-            console.log(`📝 Loading ${key} adjustments (${categoryData.length} items):`, categoryData);
-            
-            const container = document.getElementById(containerId);
-            if (container) {
-              // Clear existing rows
-              container.innerHTML = '';
-              
-              // Add each saved adjustment
-              categoryData.forEach((item, index) => {
-                if (item && (item.percent || item.percentage || item.amount || item.value)) {
-                  console.log(`➕ Adding ${key} adjustment ${index}:`, item);
-                  
-                  // Call the appropriate add function
-                  if (addFunction === 'addFullMarketFeatureAdjustment') {
-                    addFullMarketFeatureAdjustment();
-                  } else if (addFunction === 'addFullMarketRegistrationAdjustment') {
-                    addFullMarketRegistrationAdjustment();
-                  } else if (addFunction === 'addMileageAdjustment') {
-                    addMileageAdjustment();
-                  } else if (addFunction === 'addOwnershipAdjustment') {
-                    addOwnershipAdjustment();
-                  } else if (addFunction === 'addOwnersAdjustment') {
-                    addOwnersAdjustment();
-                  } else if (addFunction === 'addFullMarketAdjustment') {
-                    addFullMarketAdjustment();
-                  }
-                  
-                  // Populate the newly added row
-                  const lastRow = container.lastElementChild;
-                  if (lastRow) {
-                    const inputs = lastRow.querySelectorAll('input, select');
-                    if (inputs.length >= 4) {
-                      inputs[0].value = item.value || '';
-                      inputs[1].value = item.type || 'plus';
-                      
-                      // Display minus sign for negative values
-                      const itemPercent = item.percentage || item.percent;
-                      const displayPercent = (item.type === 'minus' || item.type === 'הפחתה') && itemPercent > 0 ? 
-                        `-${Math.abs(itemPercent)}` : Math.abs(itemPercent || 0);
-                      const displayAmount = (item.type === 'minus' || item.type === 'הפחתה') && item.amount > 0 ? 
-                        `-${Math.abs(item.amount)}` : Math.abs(item.amount || 0);
-                      
-                      inputs[2].value = itemPercent ? displayPercent : '';
-                      inputs[3].value = item.amount_display || (item.amount ? `₪${displayAmount.toLocaleString()}` : '');
-                      
-                      // Mark as loaded from final_report
-                      lastRow.setAttribute('data-source', 'final_report');
-                      lastRow.style.background = '#f0f8ff';
-                      lastRow.style.border = '1px solid #2563eb';
-                    }
-                  }
-                }
-              });
-              
-              console.log(`✅ Loaded ${categoryData.length} ${key} adjustments to Total Value section`);
-            } else {
-              console.warn(`⚠️ Container ${containerId} not found for ${key} adjustments`);
-            }
-          }
-        });
-        
-        // Handle features and registration special case
-        // Only load ADDITIONAL entries that are NOT from estimate.adjustments
-        grossCategoryMapping.forEach(({ key, grossContainerId, fullContainerId, addGrossFunction, addFullFunction }) => {
-          const finalReportData = adjustments[key] || [];
-          const estimateData = helper.estimate?.adjustments?.[key] || [];
-          
-          console.log(`📝 Processing ${key} - final_report: ${finalReportData.length}, estimate: ${estimateData.length}`);
-          
-          if (finalReportData.length > 0) {
-            // Find additional entries that are NOT in estimate.adjustments
-            const additionalEntries = finalReportData.filter(finalItem => {
-              // Check if this item exists in estimate.adjustments
-              const existsInEstimate = estimateData.some(estimateItem => 
-                estimateItem.value === finalItem.value && 
-                estimateItem.type === finalItem.type &&
-                Math.abs((estimateItem.percent || estimateItem.percentage || 0) - (finalItem.percent || finalItem.percentage || 0)) < 0.01
-              );
-              return !existsInEstimate;
-            });
-            
-            console.log(`➕ Found ${additionalEntries.length} additional ${key} entries to load`);
-            
-            // Add additional entries to both Gross and Full sections
-            additionalEntries.forEach(item => {
-              // Add to Gross section
-              const grossContainer = document.getElementById(grossContainerId);
-              if (grossContainer && addGrossFunction) {
-                if (addGrossFunction === 'addFeatureAdjustment') {
-                  addFeatureAdjustment();
-                } else if (addGrossFunction === 'addRegistrationAdjustment') {
-                  addRegistrationAdjustment();
-                }
-                
-                const grossLastRow = grossContainer.lastElementChild;
-                if (grossLastRow) {
-                  const inputs = grossLastRow.querySelectorAll('input, select');
-                  if (inputs.length >= 4) {
-                    inputs[0].value = item.value || '';
-                    inputs[1].value = item.type || 'plus';
-                    
-                    const displayPercent = (item.type === 'minus' || item.type === 'הפחתה') && item.percent > 0 ? 
-                      `-${Math.abs(item.percent)}` : Math.abs(item.percent || 0);
-                    const displayAmount = (item.type === 'minus' || item.type === 'הפחתה') && item.amount > 0 ? 
-                      `-${Math.abs(item.amount)}` : Math.abs(item.amount || 0);
-                    
-                    inputs[2].value = item.percent ? displayPercent : '';
-                    inputs[3].value = item.amount_display || (item.amount ? `₪${displayAmount.toLocaleString()}` : '');
-                    
-                    grossLastRow.setAttribute('data-source', 'additional');
-                    grossLastRow.style.background = '#fff3cd';
-                    grossLastRow.style.border = '1px solid #ffc107';
-                  }
-                }
-              }
-              
-              // Add to Full section  
-              const fullContainer = document.getElementById(fullContainerId);
-              if (fullContainer && addFullFunction) {
-                if (addFullFunction === 'addFullMarketFeatureAdjustment') {
-                  addFullMarketFeatureAdjustment();
-                } else if (addFullFunction === 'addFullMarketRegistrationAdjustment') {
-                  addFullMarketRegistrationAdjustment();
-                }
-                
-                const fullLastRow = fullContainer.lastElementChild;
-                if (fullLastRow) {
-                  const inputs = fullLastRow.querySelectorAll('input, select');
-                  if (inputs.length >= 4) {
-                    inputs[0].value = item.value || '';
-                    inputs[1].value = item.type || 'plus';
-                    
-                    const displayPercent = (item.type === 'minus' || item.type === 'הפחתה') && item.percent > 0 ? 
-                      `-${Math.abs(item.percent)}` : Math.abs(item.percent || 0);
-                    const displayAmount = (item.type === 'minus' || item.type === 'הפחתה') && item.amount > 0 ? 
-                      `-${Math.abs(item.amount)}` : Math.abs(item.amount || 0);
-                    
-                    inputs[2].value = item.percent ? displayPercent : '';
-                    inputs[3].value = item.amount_display || (item.amount ? `₪${displayAmount.toLocaleString()}` : '');
-                    
-                    fullLastRow.setAttribute('data-source', 'additional');
-                    fullLastRow.style.background = '#fff3cd';
-                    fullLastRow.style.border = '1px solid #ffc107';
-                  }
-                }
-              }
-            });
-          }
-        });
-        
-        console.log('✅ Total Value section adjustments loading completed');
-        
-      } catch (error) {
-        console.error('❌ Error loading Total Value section adjustments:', error);
-      }
-    }
-    
     // RELOAD GROSS ADJUSTMENTS - triggered by reload button
     function reloadGrossAdjustments() {
       try {
@@ -6256,7 +6065,7 @@
         // 🔧 PHASE 2.4: Get helper data from single source (window.helper)
         const helper = window.helper || {};
         
-        const row = element.closest('div[id*="Adj_"]');
+        const row = element.closest('div[id^="featureAdj_"], div[id^="regAdj_"]');
         if (!row) return;
         
         const inputs = row.querySelectorAll('input, select');
@@ -6308,44 +6117,13 @@
         }
         
         // ALSO save to valuation.adjustments for backward compatibility (original destination)
-        // EXCEPT for additional adjustments which should only exist in final_report.adjustments
-        if (category !== 'additional') {
-          if (!helper.valuation) helper.valuation = {};
-          if (!helper.valuation.adjustments) helper.valuation.adjustments = {};
-          helper.valuation.adjustments[category] = adjustmentData;
-        }
+        if (!helper.valuation) helper.valuation = {};
+        if (!helper.valuation.adjustments) helper.valuation.adjustments = {};
+        helper.valuation.adjustments[category] = adjustmentData;
         
         // Save to storage
         sessionStorage.setItem('helper', JSON.stringify(helper));
         
-        // Bidirectional sync for features and registration between sections
-        if (category === 'features' || category === 'registration') {
-          // Determine which section this update came from
-          const isFromGrossSection = element.closest('#featuresAdjustmentsList, #registrationAdjustmentsList');
-          const isFromFullSection = element.closest('#fullFeaturesAdjustmentsList, #fullRegistrationAdjustmentsList');
-          
-          console.log(`🔄 Bidirectional sync triggered for ${category}:`, {
-            isFromGrossSection: !!isFromGrossSection,
-            isFromFullSection: !!isFromFullSection,
-            adjustmentData: adjustmentData,
-            currentArrayData: helper.final_report.adjustments[category]
-          });
-          
-          // Sync to the other section
-          if (isFromGrossSection) {
-            // Update from gross section -> sync to full market section
-            console.log(`📤 Syncing ${category} from Gross to Full Market`);
-            setTimeout(() => {
-              syncFullMarketFromGross(category, helper.final_report.adjustments[category]);
-            }, 50);
-          } else if (isFromFullSection) {
-            // Update from full market section -> sync to gross section  
-            console.log(`📤 Syncing ${category} from Full Market to Gross`);
-            setTimeout(() => {
-              syncGrossFromFullMarket(category, helper.final_report.adjustments[category]);
-            }, 50);
-          }
-        }
         
         // Trigger UI updates
         if (window.forcePopulateFields) {
@@ -6354,81 +6132,6 @@
         
       } catch (error) {
         console.error('❌ Error syncing adjustment to helper:', error);
-      }
-    }
-    
-    // Sync full market section from gross section updates
-    function syncFullMarketFromGross(category, adjustmentArray) {
-      console.log(`🔄 syncFullMarketFromGross called for ${category}:`, adjustmentArray);
-      const targetContainerId = category === 'features' ? 'fullFeaturesAdjustmentsList' : 'fullRegistrationAdjustmentsList';
-      const container = document.getElementById(targetContainerId);
-      if (!container) {
-        console.warn(`⚠️ Target container ${targetContainerId} not found`);
-        return;
-      }
-      
-      // Clear existing rows and rebuild from adjustment array
-      container.innerHTML = '';
-      console.log(`🧹 Cleared ${targetContainerId} container`);
-      
-      if (adjustmentArray && adjustmentArray.length > 0) {
-        console.log(`📝 Processing ${adjustmentArray.length} adjustments for ${category}`);
-        adjustmentArray.forEach(adjustment => {
-          console.log(`➕ Adding ${category} adjustment to Full Market:`, adjustment);
-          if (category === 'features') {
-            addFullMarketFeatureAdjustment();
-          } else {
-            addFullMarketRegistrationAdjustment();
-          }
-          
-          const lastRow = container.lastElementChild;
-          if (lastRow) {
-            const inputs = lastRow.querySelectorAll('input, select');
-            if (inputs.length >= 4) {
-              console.log(`🔧 Populating row with data:`, adjustment);
-              inputs[0].value = adjustment.value || '';
-              inputs[1].value = adjustment.type || 'plus';
-              inputs[2].value = adjustment.percent ? Math.abs(adjustment.percent) : '';
-              inputs[3].value = adjustment.amount_display || (adjustment.amount ? `₪${Math.abs(adjustment.amount).toLocaleString()}` : '');
-              console.log(`✅ Row populated: value="${inputs[0].value}", type="${inputs[1].value}", percent="${inputs[2].value}", amount="${inputs[3].value}"`);
-            } else {
-              console.warn(`⚠️ Row has insufficient inputs: ${inputs.length}`);
-            }
-          } else {
-            console.warn(`⚠️ No lastRow found after adding ${category} adjustment`);
-          }
-        });
-      }
-    }
-    
-    // Sync gross section from full market section updates
-    function syncGrossFromFullMarket(category, adjustmentArray) {
-      const targetContainerId = category === 'features' ? 'featuresAdjustmentsList' : 'registrationAdjustmentsList';
-      const container = document.getElementById(targetContainerId);
-      if (!container) return;
-      
-      // Clear existing rows and rebuild from adjustment array
-      container.innerHTML = '';
-      
-      if (adjustmentArray && adjustmentArray.length > 0) {
-        adjustmentArray.forEach(adjustment => {
-          if (category === 'features') {
-            addFeatureAdjustment();
-          } else {
-            addRegistrationAdjustment();
-          }
-          
-          const lastRow = container.lastElementChild;
-          if (lastRow) {
-            const inputs = lastRow.querySelectorAll('input, select');
-            if (inputs.length >= 4) {
-              inputs[0].value = adjustment.value || '';
-              inputs[1].value = adjustment.type || 'plus';
-              inputs[2].value = adjustment.percent ? Math.abs(adjustment.percent) : '';
-              inputs[3].value = adjustment.amount_display || (adjustment.amount ? `₪${Math.abs(adjustment.amount).toLocaleString()}` : '');
-            }
-          }
-        });
       }
     }
     
@@ -7910,13 +7613,13 @@
       
       const newRow = `
         <div id="${rowId}" class="adjustment-row" style="display:grid; grid-template-columns:2fr 1fr 1fr 1fr 80px; gap:10px; margin-bottom:8px;">
-          <div><input type="text" placeholder="תיאור סוג בעלות" title="" onchange="updateFullMarketValueCalculation(); syncAdjustmentToHelper(this, 'ownership_type'); this.title = this.value;" oninput="this.title = this.value;" /></div>
-          <div><select onchange="updateFullMarketValueCalculation(); syncAdjustmentToHelper(this, 'ownership_type');" title="">
+          <div><input type="text" placeholder="תיאור סוג בעלות" title="" onchange="updateFullMarketValueCalculation(); syncAdjustmentToHelper(this, 'ownership'); this.title = this.value;" oninput="this.title = this.value;" /></div>
+          <div><select onchange="updateFullMarketValueCalculation(); syncAdjustmentToHelper(this, 'ownership');" title="">
             <option value="plus">תוספת (+)</option>
             <option value="minus">הפחתה (-)</option>
           </select></div>
-          <div><input type="text" placeholder="אחוז" title="" oninput="calculateAdjustmentValueSimple(this); this.title = this.value;" onchange="updateFullMarketValueCalculation(); syncAdjustmentToHelper(this, 'ownership_type'); this.title = this.value;" /></div>
-          <div><input type="text" placeholder="₪" title="" onchange="updateFullMarketValueCalculation(); syncAdjustmentToHelper(this, 'ownership_type'); this.title = this.value;" oninput="this.title = this.value;" /></div>
+          <div><input type="text" placeholder="אחוז" title="" oninput="calculateAdjustmentValueSimple(this); this.title = this.value;" onchange="updateFullMarketValueCalculation(); syncAdjustmentToHelper(this, 'ownership'); this.title = this.value;" /></div>
+          <div><input type="text" placeholder="₪" title="" onchange="updateFullMarketValueCalculation(); syncAdjustmentToHelper(this, 'ownership'); this.title = this.value;" oninput="this.title = this.value;" /></div>
           <div><button class="btn remove" onclick="removeAdjustmentRow('${rowId}')">מחק</button></div>
         </div>
       `;
@@ -7932,13 +7635,13 @@
       
       const newRow = `
         <div id="${rowId}" class="adjustment-row" style="display:grid; grid-template-columns:2fr 1fr 1fr 1fr 80px; gap:10px; margin-bottom:8px;">
-          <div><input type="text" placeholder="תיאור מספר בעלים" title="" onchange="updateFullMarketValueCalculation(); syncAdjustmentToHelper(this, 'ownership_history'); this.title = this.value;" oninput="this.title = this.value;" /></div>
-          <div><select onchange="updateFullMarketValueCalculation(); syncAdjustmentToHelper(this, 'ownership_history');" title="">
+          <div><input type="text" placeholder="תיאור מספר בעלים" title="" onchange="updateFullMarketValueCalculation(); syncAdjustmentToHelper(this, 'owners'); this.title = this.value;" oninput="this.title = this.value;" /></div>
+          <div><select onchange="updateFullMarketValueCalculation(); syncAdjustmentToHelper(this, 'owners');" title="">
             <option value="plus">תוספת (+)</option>
             <option value="minus">הפחתה (-)</option>
           </select></div>
-          <div><input type="text" placeholder="אחוז" title="" oninput="calculateAdjustmentValueSimple(this); this.title = this.value;" onchange="updateFullMarketValueCalculation(); syncAdjustmentToHelper(this, 'ownership_history'); this.title = this.value;" /></div>
-          <div><input type="text" placeholder="₪" title="" onchange="updateFullMarketValueCalculation(); syncAdjustmentToHelper(this, 'ownership_history'); this.title = this.value;" oninput="this.title = this.value;" /></div>
+          <div><input type="text" placeholder="אחוז" title="" oninput="calculateAdjustmentValueSimple(this); this.title = this.value;" onchange="updateFullMarketValueCalculation(); syncAdjustmentToHelper(this, 'owners'); this.title = this.value;" /></div>
+          <div><input type="text" placeholder="₪" title="" onchange="updateFullMarketValueCalculation(); syncAdjustmentToHelper(this, 'owners'); this.title = this.value;" oninput="this.title = this.value;" /></div>
           <div><button class="btn remove" onclick="removeAdjustmentRow('${rowId}')">מחק</button></div>
         </div>
       `;
