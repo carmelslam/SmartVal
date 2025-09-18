@@ -6219,14 +6219,18 @@
     // RELOAD FULL MARKET ADJUSTMENTS - triggered by reload button
     function reloadFullMarketAdjustments() {
       try {
-        console.log('🔄 Reloading full market adjustments from estimate.adjustments with fallback to valuation.adjustments');
+        console.log('🔄 Reloading Total Value adjustments with mixed sources: Features/Registration from final_report, Others from estimate');
         
         const helper = window.helper || JSON.parse(sessionStorage.getItem('helper') || '{}');
         
-        // FORCE reload from estimate.adjustments (button forces original Levi data)
-        const adjustments = helper.estimate?.adjustments || helper.valuation?.adjustments || {};
+        // Mixed data sources for Total Value section reload:
+        // - Features & Registration: from final_report.adjustments (sync with Gross section)
+        // - Others (KM, Ownership, Owners, Additional): from estimate.adjustments (original Levi data)
+        const estimateAdjustments = helper.estimate?.adjustments || helper.valuation?.adjustments || {};
+        const finalReportAdjustments = helper.final_report?.adjustments || {};
         
-        console.log('🔍 Available adjustments data:', adjustments);
+        console.log('🔍 estimate.adjustments:', estimateAdjustments);
+        console.log('🔍 final_report.adjustments:', finalReportAdjustments);
         
         // Clear existing rows from ALL full market containers
         const containers = [
@@ -6257,7 +6261,17 @@
         ];
         
         adjustmentMapping.forEach(({ key, label, containerId, addFunction }) => {
-          const categoryData = adjustments[key];
+          // Choose data source based on category
+          let categoryData;
+          if (key === 'features' || key === 'registration') {
+            // Features & Registration: from final_report.adjustments (sync with Gross)
+            categoryData = finalReportAdjustments[key];
+            console.log(`📦 Loading ${key} from final_report.adjustments:`, categoryData);
+          } else {
+            // Others (mileage, ownership_type, ownership_history, additional): from estimate.adjustments  
+            categoryData = estimateAdjustments[key];
+            console.log(`📦 Loading ${key} from estimate.adjustments:`, categoryData);
+          }
           if (categoryData) {
             console.log(`📝 Loading ${key} adjustments:`, categoryData);
             
