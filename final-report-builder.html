@@ -6459,12 +6459,18 @@
         const rawAmount = parseFloat(inputs[3].value.replace(/[-₪,]/g, '')) || 0;
         
         const dataSource = row.getAttribute('data-source') || 'manual';
+        const type = inputs[1].value || 'plus';
+        
+        // Apply sign based on type before saving
+        const signedPercent = type === 'minus' ? -Math.abs(rawPercent) : Math.abs(rawPercent);
+        const signedAmount = type === 'minus' ? -Math.abs(rawAmount) : Math.abs(rawAmount);
+        
         const adjustmentData = {
           value: inputs[0].value || '',  // תיאור → value (description field)
-          type: inputs[1].value || 'plus',  // סוג → type
-          percent: rawPercent,  // אחוז → percent (clean number)
-          percentage: rawPercent,  // אחוז → percentage (compatibility)
-          amount: rawAmount,  // ערך → amount (clean number)
+          type: type,  // סוג → type
+          percent: signedPercent,  // אחוז → percent (with sign)
+          percentage: signedPercent,  // אחוז → percentage (with sign)
+          amount: signedAmount,  // ערך → amount (with sign)
           amount_display: inputs[3].value || '',  // ערך → amount_display
           category: category,
           source: dataSource,
@@ -6521,7 +6527,7 @@
           
           // Apply formatting to ALL sections (both Gross and Total Value)
           console.log(`🎨 Applying unified formatting for ${isTotalValueSection ? 'Total Value' : 'Gross'} ${category} adjustment`);
-          formatAdjustmentDisplay(row, adjustmentData.type, adjustmentData.percent, adjustmentData.amount);
+          formatAdjustmentDisplay(row, type, signedPercent, signedAmount);
           
           return; // Don't save to final_report for Levi edits
         }
@@ -6583,7 +6589,7 @@
         
         // Apply formatting to ALL sections (both Gross and Total Value)
         console.log(`🎨 Applying unified formatting for ${isTotalValueSection ? 'Total Value' : 'Gross'} ${category} adjustment`);
-        formatAdjustmentDisplay(row, adjustmentData.type, adjustmentData.percent, adjustmentData.amount);
+        formatAdjustmentDisplay(row, type, signedPercent, signedAmount);
         
         // Save to storage
         sessionStorage.setItem('helper', JSON.stringify(helper));
