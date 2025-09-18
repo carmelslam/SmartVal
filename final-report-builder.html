@@ -6723,17 +6723,38 @@
     /**
      * Listen for helper updates to trigger re-population when Levi data changes
      */
+    let lastLeviDataHash = null;
     function setupLeviDataListener() {
+      // Calculate initial Levi data hash to detect real changes
+      function getLeviDataHash(helperData) {
+        if (!helperData) return null;
+        const leviData = {
+          summary: helperData.levisummary,
+          report: helperData.levi_report
+        };
+        return JSON.stringify(leviData);
+      }
+      
+      // Set initial hash
+      lastLeviDataHash = getLeviDataHash(helper);
+      
       // Listen for storage events (when helper data changes)
       window.addEventListener('storage', (event) => {
         if (event.key === 'helper' && event.newValue) {
           try {
             const newHelper = JSON.parse(event.newValue);
-            if (newHelper.levisummary || newHelper.levi_report) {
+            const newLeviDataHash = getLeviDataHash(newHelper);
+            
+            // Only clear and re-populate if Levi data actually changed
+            if (newLeviDataHash !== lastLeviDataHash && (newHelper.levisummary || newHelper.levi_report)) {
               console.log('📡 Detected Levi data update, re-populating adjustments...');
+              lastLeviDataHash = newLeviDataHash;
               clearLeviAdjustments();
               helper = newHelper; // Update global helper
               autoPopulateFromLeviSummary();
+            } else {
+              // Just update the helper reference without clearing user input
+              helper = newHelper;
             }
           } catch (error) {
             console.error('❌ Error processing helper update:', error);
