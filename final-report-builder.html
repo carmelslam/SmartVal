@@ -7570,6 +7570,73 @@
           });
         }
         
+        // LOAD MANUAL ENTRIES from final_report.adjustments (after Levi data)
+        if (helper.final_report?.adjustments) {
+          const finalReportAdjustments = helper.final_report.adjustments;
+          
+          // Load manual features
+          const manualFeatures = finalReportAdjustments.features?.filter(item => item.source === 'manual') || [];
+          if (manualFeatures.length > 0) {
+            console.log(`📝 Loading ${manualFeatures.length} manual features adjustments`);
+            manualFeatures.forEach((item, index) => {
+              addFeatureAdjustment();
+              const rows = document.querySelectorAll('#featuresAdjustmentsList > div');
+              const lastRow = rows[rows.length - 1];
+              
+              if (lastRow) {
+                const inputs = lastRow.querySelectorAll('input, select');
+                if (inputs.length >= 4) {
+                  inputs[0].value = item.value || '';
+                  inputs[1].value = item.type || 'plus';
+                  inputs[2].value = item.percentage || item.percent || '';
+                  inputs[3].value = item.amount_display || (item.amount ? `₪${Math.abs(item.amount).toLocaleString()}` : '');
+                  
+                  // Keep as manual source
+                  lastRow.setAttribute('data-source', 'manual');
+                  
+                  console.log(`✅ Loaded manual features item ${index}:`, {
+                    description: inputs[0].value,
+                    type: inputs[1].value,
+                    percent: inputs[2].value,
+                    amount: inputs[3].value
+                  });
+                }
+              }
+            });
+          }
+          
+          // Load manual registration
+          const manualRegistration = finalReportAdjustments.registration?.filter(item => item.source === 'manual') || [];
+          if (manualRegistration.length > 0) {
+            console.log(`📝 Loading ${manualRegistration.length} manual registration adjustments`);
+            manualRegistration.forEach((item, index) => {
+              addRegistrationAdjustment();
+              const rows = document.querySelectorAll('#registrationAdjustmentsList > div');
+              const lastRow = rows[rows.length - 1];
+              
+              if (lastRow) {
+                const inputs = lastRow.querySelectorAll('input, select');
+                if (inputs.length >= 4) {
+                  inputs[0].value = item.value || '';
+                  inputs[1].value = item.type || 'plus';
+                  inputs[2].value = item.percentage || item.percent || '';
+                  inputs[3].value = item.amount_display || (item.amount ? `₪${Math.abs(item.amount).toLocaleString()}` : '');
+                  
+                  // Keep as manual source
+                  lastRow.setAttribute('data-source', 'manual');
+                  
+                  console.log(`✅ Loaded manual registration item ${index}:`, {
+                    description: inputs[0].value,
+                    type: inputs[1].value,
+                    percent: inputs[2].value,
+                    amount: inputs[3].value
+                  });
+                }
+              }
+            });
+          }
+        }
+        
         // Calculate initial gross market value
         updateGrossMarketValueCalculation();
         
