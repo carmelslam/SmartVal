@@ -5861,10 +5861,12 @@
         if (inputs.length < 4) return;
         
         const adjustmentData = {
-          description: inputs[0].value || '',
-          type: inputs[1].value || 'plus',
-          percentage: parseFloat(inputs[2].value) || 0,
-          value: parseFloat(inputs[3].value.replace(/[₪,]/g, '')) || 0,
+          value: inputs[0].value || '',  // תיאור → value (description field)
+          type: inputs[1].value || 'plus',  // סוג → type
+          percent: parseFloat(inputs[2].value) || 0,  // אחוז → percent
+          percentage: parseFloat(inputs[2].value) || 0,  // אחוז → percentage (compatibility)
+          amount: parseFloat(inputs[3].value.replace(/[₪,]/g, '')) || 0,  // ערך → amount
+          amount_display: inputs[3].value || '',  // ערך → amount_display
           category: category,
           source: row.getAttribute('data-source') || 'manual',
           timestamp: new Date().toISOString()
@@ -5889,10 +5891,14 @@
           helper.final_report.adjustments[category] = [];
         }
         
-        // Find and update existing item or add new one
+        // Find existing item by row ID to prevent duplicates
+        const rowId = row.id;
         const existingIndex = helper.final_report.adjustments[category].findIndex(
-          item => item.source === adjustmentData.source && item.timestamp === adjustmentData.timestamp
+          item => item.row_id === rowId
         );
+        
+        // Add row_id to track which UI row this data belongs to
+        adjustmentData.row_id = rowId;
         
         if (existingIndex >= 0) {
           helper.final_report.adjustments[category][existingIndex] = adjustmentData;
@@ -6068,10 +6074,12 @@
         if (inputs.length < 4) return;
         
         const adjustmentData = {
-          description: inputs[0].value || '',
-          type: inputs[1].value || 'plus',
-          percentage: parseFloat(inputs[2].value) || 0,
-          value: parseFloat(inputs[3].value.replace(/[₪,]/g, '')) || 0,
+          value: inputs[0].value || '',  // תיאור → value (description field)
+          type: inputs[1].value || 'plus',  // סוג → type
+          percent: parseFloat(inputs[2].value) || 0,  // אחוז → percent
+          percentage: parseFloat(inputs[2].value) || 0,  // אחוז → percentage (compatibility)
+          amount: parseFloat(inputs[3].value.replace(/[₪,]/g, '')) || 0,  // ערך → amount
+          amount_display: inputs[3].value || '',  // ערך → amount_display
           category: category,
           source: row.getAttribute('data-source') || 'manual',
           timestamp: new Date().toISOString()
@@ -6096,10 +6104,14 @@
           helper.final_report.adjustments[category] = [];
         }
         
-        // Find and update existing item or add new one
+        // Find existing item by row ID to prevent duplicates
+        const rowId = row.id;
         const existingIndex = helper.final_report.adjustments[category].findIndex(
-          item => item.source === adjustmentData.source && item.timestamp === adjustmentData.timestamp
+          item => item.row_id === rowId
         );
+        
+        // Add row_id to track which UI row this data belongs to
+        adjustmentData.row_id = rowId;
         
         if (existingIndex >= 0) {
           helper.final_report.adjustments[category][existingIndex] = adjustmentData;
