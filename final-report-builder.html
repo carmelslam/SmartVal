@@ -5891,18 +5891,17 @@
           helper.final_report.adjustments[category] = [];
         }
         
-        // Find existing item by row ID to prevent duplicates
-        const rowId = row.id;
+        // Find existing item by content to prevent duplicates
+        // Use value (description) and type as a composite key
         const existingIndex = helper.final_report.adjustments[category].findIndex(
-          item => item.row_id === rowId
+          item => item.value === adjustmentData.value && item.type === adjustmentData.type
         );
         
-        // Add row_id to track which UI row this data belongs to
-        adjustmentData.row_id = rowId;
-        
         if (existingIndex >= 0) {
+          // Update existing entry
           helper.final_report.adjustments[category][existingIndex] = adjustmentData;
         } else {
+          // Add new entry
           helper.final_report.adjustments[category].push(adjustmentData);
         }
         
@@ -6039,8 +6038,18 @@
                   adjustmentData.amount = -Math.abs(adjustmentData.amount);
                 }
                 
-                // Save to NEW destination
-                helper.final_report.adjustments[category].push(adjustmentData);
+                // Find existing item by content to prevent duplicates
+                const existingIndex = helper.final_report.adjustments[category].findIndex(
+                  item => item.value === adjustmentData.value && item.type === adjustmentData.type
+                );
+                
+                if (existingIndex >= 0) {
+                  // Update existing entry
+                  helper.final_report.adjustments[category][existingIndex] = adjustmentData;
+                } else {
+                  // Add new entry
+                  helper.final_report.adjustments[category].push(adjustmentData);
+                }
                 
                 // ALSO save to ORIGINAL destination for backward compatibility
                 helper.valuation.adjustments[category] = adjustmentData;
@@ -6104,18 +6113,17 @@
           helper.final_report.adjustments[category] = [];
         }
         
-        // Find existing item by row ID to prevent duplicates
-        const rowId = row.id;
+        // Find existing item by content to prevent duplicates
+        // Use value (description) and type as a composite key
         const existingIndex = helper.final_report.adjustments[category].findIndex(
-          item => item.row_id === rowId
+          item => item.value === adjustmentData.value && item.type === adjustmentData.type
         );
         
-        // Add row_id to track which UI row this data belongs to
-        adjustmentData.row_id = rowId;
-        
         if (existingIndex >= 0) {
+          // Update existing entry
           helper.final_report.adjustments[category][existingIndex] = adjustmentData;
         } else {
+          // Add new entry
           helper.final_report.adjustments[category].push(adjustmentData);
         }
         
@@ -7328,13 +7336,13 @@
       
       const newRow = `
         <div id="${rowId}" class="adjustment-row" style="display:grid; grid-template-columns:2fr 1fr 1fr 1fr 80px; gap:10px; margin-bottom:8px;">
-          <div><input type="text" placeholder="תיאור התאמה נוספת" onchange="" /></div>
-          <div><select onchange="">
+          <div><input type="text" placeholder="תיאור התאמה נוספת" onchange="updateFullMarketValueCalculation(); updateHelperFromAdjustments(); syncAdjustmentToHelper(this, 'additional');" /></div>
+          <div><select onchange="updateFullMarketValueCalculation(); updateHelperFromAdjustments(); syncAdjustmentToHelper(this, 'additional');">
             <option value="plus">תוספת (+)</option>
             <option value="minus">הפחתה (-)</option>
           </select></div>
-          <div><input type="text" placeholder="אחוז" oninput="calculateAdjustmentValueSimple(this);" onchange="" /></div>
-          <div><input type="text" placeholder="₪" onchange="" /></div>
+          <div><input type="text" placeholder="אחוז" oninput="calculateAdjustmentValueSimple(this);" onchange="updateFullMarketValueCalculation(); updateHelperFromAdjustments(); syncAdjustmentToHelper(this, 'additional');" /></div>
+          <div><input type="text" placeholder="₪" onchange="updateFullMarketValueCalculation(); updateHelperFromAdjustments(); syncAdjustmentToHelper(this, 'additional');" /></div>
           <div><button class="btn remove" onclick="removeAdjustmentRow('${rowId}')">מחק</button></div>
         </div>
       `;
