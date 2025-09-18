@@ -5494,15 +5494,6 @@
       try {
         console.log('🔄 Loading Total Value Section adjustments');
         
-        const container = document.getElementById('allAdjustmentsList');
-        if (!container) {
-          console.log('⚠️ allAdjustmentsList container not found');
-          return;
-        }
-        
-        // Clear existing rows
-        container.innerHTML = '';
-        
         // Data sources:
         // - KM, ownership type, ownership history, additional: from estimate.adjustments
         // - Features, registration: from final_report.adjustments
@@ -5536,52 +5527,110 @@
           `;
         }
         
-        let rowsHtml = '';
-        
-        // 1. Load features from final_report.adjustments
-        const features = finalReportAdjustments.features || [];
-        if (Array.isArray(features)) {
-          features.forEach(adj => {
-            if (adj.value || adj.percentage || adj.amount) {
-              rowsHtml += createTotalValueRow(adj, 'features', 'final_report');
-            }
-          });
-        }
-        
-        // 2. Load registration from final_report.adjustments
-        const registration = finalReportAdjustments.registration || [];
-        if (Array.isArray(registration)) {
-          registration.forEach(adj => {
-            if (adj.value || adj.percentage || adj.amount) {
-              rowsHtml += createTotalValueRow(adj, 'registration', 'final_report');
-            }
-          });
-        }
-        
-        // 3. Load KM, ownership type, ownership history, additional from estimate.adjustments
-        ['mileage', 'ownership', 'owners', 'additional'].forEach(category => {
-          const adjustmentsArray = estimateAdjustments[category] || [];
-          if (Array.isArray(adjustmentsArray)) {
-            adjustmentsArray.forEach(adj => {
+        // 1. Load features from final_report.adjustments into fullFeaturesAdjustmentsList
+        const featuresContainer = document.getElementById('fullFeaturesAdjustmentsList');
+        if (featuresContainer) {
+          featuresContainer.innerHTML = '';
+          const features = finalReportAdjustments.features || [];
+          if (Array.isArray(features)) {
+            features.forEach(adj => {
               if (adj.value || adj.percentage || adj.amount) {
-                rowsHtml += createTotalValueRow(adj, category, 'estimate');
+                featuresContainer.insertAdjacentHTML('beforeend', createTotalValueRow(adj, 'features', 'final_report'));
               }
             });
           }
-        });
-        
-        // 4. Load additional from final_report.adjustments (user custom entries)
-        const additional = finalReportAdjustments.additional || [];
-        if (Array.isArray(additional)) {
-          additional.forEach(adj => {
-            if (adj.value || adj.percentage || adj.amount) {
-              rowsHtml += createTotalValueRow(adj, 'additional', 'final_report');
-            }
-          });
+          console.log(`✅ Loaded ${features.length} features to Total Value Section`);
         }
         
-        container.innerHTML = rowsHtml;
-        console.log('✅ Loaded Total Value Section adjustments');
+        // 2. Load registration from final_report.adjustments into fullRegistrationAdjustmentsList
+        const registrationContainer = document.getElementById('fullRegistrationAdjustmentsList');
+        if (registrationContainer) {
+          registrationContainer.innerHTML = '';
+          const registration = finalReportAdjustments.registration || [];
+          if (Array.isArray(registration)) {
+            registration.forEach(adj => {
+              if (adj.value || adj.percentage || adj.amount) {
+                registrationContainer.insertAdjacentHTML('beforeend', createTotalValueRow(adj, 'registration', 'final_report'));
+              }
+            });
+          }
+          console.log(`✅ Loaded ${registration.length} registration to Total Value Section`);
+        }
+        
+        // 3. Load KM from estimate.adjustments into mileageAdjustmentsList
+        const mileageContainer = document.getElementById('mileageAdjustmentsList');
+        if (mileageContainer) {
+          mileageContainer.innerHTML = '';
+          const mileage = estimateAdjustments.mileage || [];
+          if (Array.isArray(mileage)) {
+            mileage.forEach(adj => {
+              if (adj.value || adj.percentage || adj.amount) {
+                mileageContainer.insertAdjacentHTML('beforeend', createTotalValueRow(adj, 'mileage', 'estimate'));
+              }
+            });
+          }
+          console.log(`✅ Loaded ${mileage.length} mileage to Total Value Section`);
+        }
+        
+        // 4. Load ownership from estimate.adjustments into ownershipAdjustmentsList
+        const ownershipContainer = document.getElementById('ownershipAdjustmentsList');
+        if (ownershipContainer) {
+          ownershipContainer.innerHTML = '';
+          const ownership = estimateAdjustments.ownership || [];
+          if (Array.isArray(ownership)) {
+            ownership.forEach(adj => {
+              if (adj.value || adj.percentage || adj.amount) {
+                ownershipContainer.insertAdjacentHTML('beforeend', createTotalValueRow(adj, 'ownership', 'estimate'));
+              }
+            });
+          }
+          console.log(`✅ Loaded ${ownership.length} ownership to Total Value Section`);
+        }
+        
+        // 5. Load owners from estimate.adjustments into ownersAdjustmentsList
+        const ownersContainer = document.getElementById('ownersAdjustmentsList');
+        if (ownersContainer) {
+          ownersContainer.innerHTML = '';
+          const owners = estimateAdjustments.owners || [];
+          if (Array.isArray(owners)) {
+            owners.forEach(adj => {
+              if (adj.value || adj.percentage || adj.amount) {
+                ownersContainer.insertAdjacentHTML('beforeend', createTotalValueRow(adj, 'owners', 'estimate'));
+              }
+            });
+          }
+          console.log(`✅ Loaded ${owners.length} owners to Total Value Section`);
+        }
+        
+        // 6. Load additional from estimate.adjustments + final_report.adjustments into allAdjustmentsList
+        const additionalContainer = document.getElementById('allAdjustmentsList');
+        if (additionalContainer) {
+          additionalContainer.innerHTML = '';
+          
+          // Load from estimate.adjustments first
+          const estimateAdditional = estimateAdjustments.additional || [];
+          if (Array.isArray(estimateAdditional)) {
+            estimateAdditional.forEach(adj => {
+              if (adj.value || adj.percentage || adj.amount) {
+                additionalContainer.insertAdjacentHTML('beforeend', createTotalValueRow(adj, 'additional', 'estimate'));
+              }
+            });
+          }
+          
+          // Then load from final_report.adjustments (user custom entries)
+          const finalReportAdditional = finalReportAdjustments.additional || [];
+          if (Array.isArray(finalReportAdditional)) {
+            finalReportAdditional.forEach(adj => {
+              if (adj.value || adj.percentage || adj.amount) {
+                additionalContainer.insertAdjacentHTML('beforeend', createTotalValueRow(adj, 'additional', 'final_report'));
+              }
+            });
+          }
+          
+          console.log(`✅ Loaded ${estimateAdditional.length + finalReportAdditional.length} additional to Total Value Section`);
+        }
+        
+        console.log('✅ Completed loading Total Value Section adjustments');
         
       } catch (error) {
         console.error('Error loading Total Value Section adjustments:', error);
