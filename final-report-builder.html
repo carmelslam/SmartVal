@@ -2771,8 +2771,8 @@
         // Load features and registration adjustments for gross calculation
         loadGrossAdjustments(helper);
         
-        // Load all adjustments (Levi + custom) using unified system
-        loadAllAdjustments(helper);
+        // DISABLED: loadAllAdjustments - causes override of final_report data
+        // loadAllAdjustments(helper);
         
         // Load Total Value Section adjustments from final_report.adjustments
         loadTotalValueSectionAdjustments(helper);
@@ -5722,6 +5722,15 @@
         return;
       }
       
+      // NEW: Don't auto-populate if final_report.adjustments already has user data
+      const helper = window.helper || {};
+      if (helper.final_report?.adjustments?.features?.length > 0 || helper.final_report?.adjustments?.registration?.length > 0) {
+        console.log('⚠️ User data exists in final_report.adjustments, skipping auto-population');
+        autoPopulationCompleted = true;
+        sessionStorage.setItem('autoPopulationCompleted', 'true');
+        return;
+      }
+      
       autoPopulationInProgress = true;
       console.log('🚀 Starting auto-population from Levi summary...');
       
@@ -8326,10 +8335,10 @@
         // Calculate initial full market value
         // updateFullMarketValueCalculation() removed
         
-        // CRITICAL: Add market adjustments from helper.valuation.adjustments after loading existing data
-        setTimeout(() => {
-          autoPopulateMarketAdjustments();
-        }, 100);
+        // DISABLED: autoPopulateMarketAdjustments - causes override of final_report data
+        // setTimeout(() => {
+        //   autoPopulateMarketAdjustments();
+        // }, 100);
         
         // Remove loading flag
         if (container) {
