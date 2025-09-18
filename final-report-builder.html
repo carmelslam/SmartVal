@@ -5492,51 +5492,96 @@
     // LOAD TOTAL VALUE SECTION ADJUSTMENTS FROM final_report.adjustments
     function loadTotalValueSectionAdjustments(helper) {
       try {
-        console.log('🔄 Loading Total Value Section adjustments from final_report.adjustments');
+        console.log('🔄 Loading Total Value Section adjustments');
         
-        if (!helper.final_report?.adjustments) {
-          console.log('⚠️ No final_report.adjustments found');
+        const container = document.getElementById('allAdjustmentsList');
+        if (!container) {
+          console.log('⚠️ allAdjustmentsList container not found');
           return;
         }
         
-        const adjustments = helper.final_report.adjustments;
+        // Clear existing rows
+        container.innerHTML = '';
         
-        // Load additional adjustments (custom entries)
-        if (adjustments.additional && adjustments.additional.length > 0) {
-          console.log(`📦 Loading ${adjustments.additional.length} additional adjustments`);
-          const container = document.getElementById('allAdjustmentsList');
-          if (container) {
-            // Clear existing rows
-            container.innerHTML = '';
-            
-            adjustments.additional.forEach((adj, index) => {
-              const rowId = 'fullAdj_loaded_' + index + '_' + Date.now();
-              const isPercent = adj.type === '%';
-              
-              const newRow = `
-                <div id="${rowId}" class="adjustment-row" style="display:grid; grid-template-columns:2fr 1fr 1fr 1fr 80px; gap:10px; margin-bottom:8px;">
-                  <div><input type="text" placeholder="תיאור התאמה נוספת" value="${adj.value || ''}" onchange="updateFullMarketValueCalculation(); updateHelperFromAdjustments(); syncAdjustmentToHelper(this, 'additional');" /></div>
-                  <div>
-                    <select onchange="updateFullMarketValueCalculation(); updateHelperFromAdjustments(); syncAdjustmentToHelper(this, 'additional');">
-                      <option value="%" ${isPercent ? 'selected' : ''}>%</option>
-                      <option value="₪" ${!isPercent ? 'selected' : ''}>₪</option>
-                    </select>
-                  </div>
-                  <div><input type="text" placeholder="אחוז" value="${adj.percentage || ''}" ${!isPercent ? 'readonly' : ''} style="direction: ltr; text-align: right;${!isPercent ? ' background: #f0f0f0;' : ''}" onchange="updateFullMarketValueCalculation(); updateHelperFromAdjustments(); syncAdjustmentToHelper(this, 'additional');" /></div>
-                  <div><input type="text" placeholder="ערך" value="${adj.amount || ''}" ${isPercent ? 'readonly' : ''} style="direction: ltr; text-align: right;${isPercent ? ' background: #f0f0f0;' : ''}" onchange="updateFullMarketValueCalculation(); updateHelperFromAdjustments(); syncAdjustmentToHelper(this, 'additional');" /></div>
-                  <div><button class="btn remove" type="button" onclick="removeAdjustmentRow('${rowId}')">הסר</button></div>
-                </div>
-              `;
-              
-              container.insertAdjacentHTML('beforeend', newRow);
-            });
-            
-            console.log('✅ Loaded additional adjustments to Total Value Section');
-          }
+        // Data sources:
+        // - KM, ownership type, ownership history, additional: from estimate.adjustments
+        // - Features, registration: from final_report.adjustments
+        const estimateAdjustments = helper.estimate?.adjustments || {};
+        const finalReportAdjustments = helper.final_report?.adjustments || {};
+        
+        console.log('📦 estimate.adjustments:', estimateAdjustments);
+        console.log('📦 final_report.adjustments:', finalReportAdjustments);
+        
+        // Helper function to create adjustment row
+        function createTotalValueRow(adj, category, source) {
+          const rowId = `totalValue_${category}_${Date.now()}_${Math.random()}`;
+          const isPercent = adj.type === '%' || adj.type === 'percentage';
+          const description = adj.value || adj.description || '';
+          const percentage = adj.percentage || adj.percent || '';
+          const amount = adj.amount || '';
+          
+          return `
+            <div id="${rowId}" class="adjustment-row" data-source="${source}" style="display:grid; grid-template-columns:2fr 1fr 1fr 1fr 80px; gap:10px; margin-bottom:8px;">
+              <div><input type="text" placeholder="תיאור התאמה" value="${description}" onchange="updateFullMarketValueCalculation(); updateHelperFromAdjustments(); syncAdjustmentToHelper(this, '${category}');" /></div>
+              <div>
+                <select onchange="updateFullMarketValueCalculation(); updateHelperFromAdjustments(); syncAdjustmentToHelper(this, '${category}');">
+                  <option value="%" ${isPercent ? 'selected' : ''}>%</option>
+                  <option value="₪" ${!isPercent ? 'selected' : ''}>₪</option>
+                </select>
+              </div>
+              <div><input type="text" placeholder="אחוז" value="${percentage}" ${!isPercent ? 'readonly' : ''} style="direction: ltr; text-align: right;${!isPercent ? ' background: #f0f0f0;' : ''}" onchange="updateFullMarketValueCalculation(); updateHelperFromAdjustments(); syncAdjustmentToHelper(this, '${category}');" /></div>
+              <div><input type="text" placeholder="ערך" value="${amount}" ${isPercent ? 'readonly' : ''} style="direction: ltr; text-align: right;${isPercent ? ' background: #f0f0f0;' : ''}" onchange="updateFullMarketValueCalculation(); updateHelperFromAdjustments(); syncAdjustmentToHelper(this, '${category}');" /></div>
+              <div><button class="btn remove" type="button" onclick="removeAdjustmentRow('${rowId}')">הסר</button></div>
+            </div>
+          `;
         }
         
-        // Note: We don't load features, registration, etc. here as they come from estimate.adjustments
-        // and are handled by loadAllAdjustments
+        let rowsHtml = '';
+        
+        // 1. Load features from final_report.adjustments
+        const features = finalReportAdjustments.features || [];
+        if (Array.isArray(features)) {
+          features.forEach(adj => {
+            if (adj.value || adj.percentage || adj.amount) {
+              rowsHtml += createTotalValueRow(adj, 'features', 'final_report');
+            }
+          });
+        }
+        
+        // 2. Load registration from final_report.adjustments
+        const registration = finalReportAdjustments.registration || [];
+        if (Array.isArray(registration)) {
+          registration.forEach(adj => {
+            if (adj.value || adj.percentage || adj.amount) {
+              rowsHtml += createTotalValueRow(adj, 'registration', 'final_report');
+            }
+          });
+        }
+        
+        // 3. Load KM, ownership type, ownership history, additional from estimate.adjustments
+        ['mileage', 'ownership', 'owners', 'additional'].forEach(category => {
+          const adjustmentsArray = estimateAdjustments[category] || [];
+          if (Array.isArray(adjustmentsArray)) {
+            adjustmentsArray.forEach(adj => {
+              if (adj.value || adj.percentage || adj.amount) {
+                rowsHtml += createTotalValueRow(adj, category, 'estimate');
+              }
+            });
+          }
+        });
+        
+        // 4. Load additional from final_report.adjustments (user custom entries)
+        const additional = finalReportAdjustments.additional || [];
+        if (Array.isArray(additional)) {
+          additional.forEach(adj => {
+            if (adj.value || adj.percentage || adj.amount) {
+              rowsHtml += createTotalValueRow(adj, 'additional', 'final_report');
+            }
+          });
+        }
+        
+        container.innerHTML = rowsHtml;
+        console.log('✅ Loaded Total Value Section adjustments');
         
       } catch (error) {
         console.error('Error loading Total Value Section adjustments:', error);
