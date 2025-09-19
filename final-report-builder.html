@@ -5542,20 +5542,32 @@
           let percentage = '';
           let amount = '';
           
-          // Parse percentage handling % sign
+          // Don't use absolute values - let formatAdjustmentDisplay handle the signs
           if (itemPercent !== undefined && itemPercent !== null && itemPercent !== '') {
             let cleanPercent = itemPercent;
             if (typeof itemPercent === 'string') {
               cleanPercent = itemPercent.replace('%', '');
             }
             const parsedPercent = parseFloat(cleanPercent);
-            percentage = !isNaN(parsedPercent) ? Math.abs(parsedPercent) : '';
+            // PRESERVE SIGN - don't use Math.abs()
+            percentage = !isNaN(parsedPercent) ? parsedPercent : '';
           } else {
             percentage = '';
           }
           
-          // Use same amount parsing as reload button
-          amount = adj.amount_display || (adj.amount ? `₪${Math.abs(adj.amount).toLocaleString()}` : '');
+          // PRESERVE SIGN - don't use Math.abs() 
+          if (adj.amount_display) {
+            amount = adj.amount_display;
+          } else if (adj.amount) {
+            const amountValue = parseFloat(adj.amount);
+            if (amountValue < 0) {
+              amount = `-₪${Math.abs(amountValue).toLocaleString()}`;
+            } else {
+              amount = `₪${amountValue.toLocaleString()}`;
+            }
+          } else {
+            amount = '';
+          }
           const isPercent = selectedType === '%';
           const isAmount = selectedType === '₪';
           
@@ -5589,16 +5601,24 @@
             </div>
           `;
           
-          // Apply formatting after row is created - INCREASED TIMEOUT FOR CONSISTENCY
+          // Apply formatting after row is created AND trigger change events for consistency
           setTimeout(() => {
             const row = document.getElementById(rowId);
             if (row) {
-              // Use the same values that were used to determine selectedType
-              const itemPercent = adj.percentage || adj.percent;
-              const itemAmount = adj.amount;
-              formatAdjustmentDisplay(row, selectedType, itemPercent, itemAmount);
+              const inputs = row.querySelectorAll('input, select');
+              if (inputs.length >= 4) {
+                // Trigger change events to ensure proper formatting (CRITICAL)
+                inputs[1].dispatchEvent(new Event('change', { bubbles: true }));
+                if (inputs[2].value) inputs[2].dispatchEvent(new Event('change', { bubbles: true }));
+                if (inputs[3].value) inputs[3].dispatchEvent(new Event('change', { bubbles: true }));
+                
+                // Also call formatAdjustmentDisplay directly as backup
+                const itemPercent = adj.percentage || adj.percent;
+                const itemAmount = adj.amount;
+                formatAdjustmentDisplay(row, selectedType, itemPercent, itemAmount);
+              }
             }
-          }, 100);
+          }, 150);
           
           return html;
         }
