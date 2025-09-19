@@ -5384,15 +5384,17 @@
         if (featuresContainer) featuresContainer.innerHTML = '';
         if (registrationContainer) registrationContainer.innerHTML = '';
 
-        // Load from BOTH sources: estimate.adjustments (Levi data) + final_report.adjustments (manual additions)
+        // Load from THREE sources: estimate.adjustments (Levi data) + final_report.adjustments (manual additions) + valuation.adjustments (fallback)
         const estimateData = helper.estimate?.adjustments || {};
         const finalReportData = helper.final_report?.adjustments || {};
+        const valuationData = helper.valuation?.adjustments || {};
         
-        // Combine features from both sources with deduplication
+        // Combine features from three sources with priority: final_report > estimate > valuation
         const estimateFeatures = Array.isArray(estimateData.features) ? estimateData.features : [];
         const finalReportFeatures = Array.isArray(finalReportData.features) ? finalReportData.features : [];
+        const valuationFeatures = valuationData.features ? [valuationData.features] : []; // Convert single object to array
         
-        // Use final_report.adjustments as primary source, estimate.adjustments as fallback
+        // Use final_report.adjustments as primary source, estimate.adjustments as fallback, valuation.adjustments as final fallback
         const featuresData = [];
         
         if (finalReportFeatures.length > 0) {
@@ -5401,19 +5403,26 @@
             featuresData.push({...item, _source: 'final_report'});
           });
           console.log(`📋 Using final_report.adjustments.features (${finalReportFeatures.length} items)`);
-        } else {
+        } else if (estimateFeatures.length > 0) {
           // Fallback to estimate data (original Levi data)
           estimateFeatures.forEach((item, index) => {
             featuresData.push({...item, _source: 'estimate', _estimate_index: index});
           });
           console.log(`📋 Fallback to estimate.adjustments.features (${estimateFeatures.length} items)`);
+        } else if (valuationFeatures.length > 0) {
+          // Final fallback to valuation data
+          valuationFeatures.forEach((item, index) => {
+            featuresData.push({...item, _source: 'valuation'});
+          });
+          console.log(`📋 Final fallback to valuation.adjustments.features (${valuationFeatures.length} items)`);
         }
         
-        // Combine registration from both sources with deduplication
+        // Combine registration from three sources with priority: final_report > estimate > valuation
         const estimateRegistration = Array.isArray(estimateData.registration) ? estimateData.registration : [];
         const finalReportRegistration = Array.isArray(finalReportData.registration) ? finalReportData.registration : [];
+        const valuationRegistration = valuationData.registration ? [valuationData.registration] : []; // Convert single object to array
         
-        // Use final_report.adjustments as primary source, estimate.adjustments as fallback
+        // Use final_report.adjustments as primary source, estimate.adjustments as fallback, valuation.adjustments as final fallback
         const registrationData = [];
         
         if (finalReportRegistration.length > 0) {
@@ -5422,16 +5431,22 @@
             registrationData.push({...item, _source: 'final_report'});
           });
           console.log(`📋 Using final_report.adjustments.registration (${finalReportRegistration.length} items)`);
-        } else {
+        } else if (estimateRegistration.length > 0) {
           // Fallback to estimate data (original Levi data)
           estimateRegistration.forEach((item, index) => {
             registrationData.push({...item, _source: 'estimate', _estimate_index: index});
           });
           console.log(`📋 Fallback to estimate.adjustments.registration (${estimateRegistration.length} items)`);
+        } else if (valuationRegistration.length > 0) {
+          // Final fallback to valuation data
+          valuationRegistration.forEach((item, index) => {
+            registrationData.push({...item, _source: 'valuation'});
+          });
+          console.log(`📋 Final fallback to valuation.adjustments.registration (${valuationRegistration.length} items)`);
         }
         
-        console.log(`🔄 Combined features: ${estimateFeatures.length} from estimate + ${finalReportFeatures.length} from final_report = ${featuresData.length} total`);
-        console.log(`🔄 Combined registration: ${estimateRegistration.length} from estimate + ${finalReportRegistration.length} from final_report = ${registrationData.length} total`);
+        console.log(`🔄 Combined features: ${estimateFeatures.length} from estimate + ${finalReportFeatures.length} from final_report + ${valuationFeatures.length} from valuation = ${featuresData.length} total`);
+        console.log(`🔄 Combined registration: ${estimateRegistration.length} from estimate + ${finalReportRegistration.length} from final_report + ${valuationRegistration.length} from valuation = ${registrationData.length} total`);
         
 
         // ===== Features Adjustments =====
@@ -6887,11 +6902,24 @@
           helper.valuation.adjustments.features = helper.estimate.adjustments.features[0];
           console.log('💾 Updated valuation.adjustments.features from estimate (Levi data)');
         } else if (helper.final_report.adjustments.features.length > 0) {
-          helper.valuation.adjustments.features = helper.final_report.adjustments.features[0];
-          console.log('💾 Updated valuation.adjustments.features from final_report (manual data)');
+          const newData = helper.final_report.adjustments.features[0];
+          const existingData = helper.valuation.adjustments.features || {};
+          
+          // PRESERVE original data if UI shows empty/zero values (prevent zeroing out)
+          const hasActualChanges = newData.value || newData.percent > 0 || newData.amount > 0;
+          if (hasActualChanges) {
+            helper.valuation.adjustments.features = newData;
+            console.log('💾 Updated valuation.adjustments.features from final_report (manual data with changes)');
+          } else {
+            // Keep existing valuation data if UI shows no meaningful changes
+            console.log('🔒 Preserved existing valuation.adjustments.features (UI shows no changes)');
+          }
         } else {
-          delete helper.valuation.adjustments.features;
-          console.log('🗑️ Cleared valuation.adjustments.features (no data)');
+          // Only delete if we're certain there's no data anywhere
+          if (!helper.valuation?.adjustments?.features?.value && !helper.valuation?.adjustments?.features?.percent) {
+            delete helper.valuation.adjustments.features;
+            console.log('🗑️ Cleared valuation.adjustments.features (no data)');
+          }
         }
         
         // 2. REGISTRATION - Copy EXACT estimator pattern
@@ -6927,11 +6955,24 @@
           helper.valuation.adjustments.registration = helper.estimate.adjustments.registration[0];
           console.log('💾 Updated valuation.adjustments.registration from estimate (Levi data)');
         } else if (helper.final_report.adjustments.registration.length > 0) {
-          helper.valuation.adjustments.registration = helper.final_report.adjustments.registration[0];
-          console.log('💾 Updated valuation.adjustments.registration from final_report (manual data)');
+          const newData = helper.final_report.adjustments.registration[0];
+          const existingData = helper.valuation.adjustments.registration || {};
+          
+          // PRESERVE original data if UI shows empty/zero values (prevent zeroing out)
+          const hasActualChanges = newData.value || newData.percent > 0 || newData.amount > 0;
+          if (hasActualChanges) {
+            helper.valuation.adjustments.registration = newData;
+            console.log('💾 Updated valuation.adjustments.registration from final_report (manual data with changes)');
+          } else {
+            // Keep existing valuation data if UI shows no meaningful changes
+            console.log('🔒 Preserved existing valuation.adjustments.registration (UI shows no changes)');
+          }
         } else {
-          delete helper.valuation.adjustments.registration;
-          console.log('🗑️ Cleared valuation.adjustments.registration (no data)');
+          // Only delete if we're certain there's no data anywhere
+          if (!helper.valuation?.adjustments?.registration?.value && !helper.valuation?.adjustments?.registration?.percent) {
+            delete helper.valuation.adjustments.registration;
+            console.log('🗑️ Cleared valuation.adjustments.registration (no data)');
+          }
         }
         
         console.log('✅ Updated gross value adjustments to BOTH final_report.adjustments AND valuation.adjustments');
