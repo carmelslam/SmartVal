@@ -7027,13 +7027,26 @@
               adjustmentData.percentage = -Math.abs(adjustmentData.percentage);
             }
             
-            // CRITICAL: DO NOT write additional categories to valuation.adjustments
-            // Only write to final_report.adjustments
+            // Update BOTH final_report.adjustments AND valuation.adjustments for mileage
             helper.final_report.adjustments.mileage = [adjustmentData];
+            
+            // CRITICAL FIX: Also update valuation.adjustments.mileage for backward compatibility
+            helper.valuation.adjustments.mileage = {
+              value: adjustmentData.value,
+              type: adjustmentData.type,
+              percent: adjustmentData.percent,
+              percentage: adjustmentData.percentage,
+              amount_display: adjustmentData.amount_display,
+              amount: adjustmentData.amount
+            };
+            console.log('✅ Updated mileage to BOTH final_report.adjustments AND valuation.adjustments');
           }
         } else {
           helper.final_report.adjustments.mileage = [];
-          // Don't touch valuation.adjustments for additional categories
+          // Clear valuation.adjustments.mileage when no data
+          if (helper.valuation.adjustments.mileage) {
+            delete helper.valuation.adjustments.mileage;
+          }
         }
         
         // 4. OWNERSHIP TYPE - Only in Full Market Value
