@@ -5920,7 +5920,16 @@
         
         // Trigger calculation after reloading
         updateGrossMarketValueCalculation();
-        updateHelperFromAdjustments();
+        
+        // DELAY before updating helper to ensure UI is fully loaded
+        setTimeout(() => {
+          updateHelperFromAdjustments();
+          
+          // CRITICAL: Save current state to sessionStorage so refresh loads correct data
+          const updatedHelper = window.helper || {};
+          sessionStorage.setItem('helper', JSON.stringify(updatedHelper));
+          console.log('💾 Saved updated helper to sessionStorage after reload with delay');
+        }, 300);
         
         console.log('✅ Gross adjustments reload completed');
         
