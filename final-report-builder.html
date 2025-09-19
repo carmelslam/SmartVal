@@ -2777,6 +2777,12 @@
         // Load Total Value Section adjustments from final_report.adjustments
         loadTotalValueSectionAdjustments(helper);
         
+        // Trigger calculations after data is loaded
+        setTimeout(() => {
+          updateGrossMarketValueCalculation();
+          updateFullMarketValueCalculation();
+        }, 100);
+        
         // Note: addFieldChangeListeners() is called in DOMContentLoaded event
         
       } catch (error) {
@@ -5617,7 +5623,6 @@
             }
           }
           
-          console.log(`🔍 createTotalValueRow for ${category}: adj.type="${adj.type}", selectedType="${selectedType}"`);
           
           const description = adj.value || adj.description || '';
           // Populate percentage and amount from adjustment data (handle negative values properly)
@@ -5675,6 +5680,7 @@
           setTimeout(() => {
             const row = document.getElementById(rowId);
             if (row) {
+              console.log(`🔧 Calling formatAdjustmentDisplay with: selectedType="${selectedType}", percent=${adj.percentage || adj.percent || 0}, amount=${adj.amount || 0}`);
               formatAdjustmentDisplay(row, selectedType, adj.percentage || adj.percent || 0, adj.amount || 0);
             }
           }, 50);
@@ -7804,7 +7810,6 @@
         
         // Process registration section - Add fixed values to cumulative
         const grossRegistrationRows = document.querySelectorAll('#registrationAdjustmentsList > div');
-        console.log('🔍 Found', grossRegistrationRows.length, 'registration rows');
         grossRegistrationRows.forEach(row => {
           const type = row.querySelector('select')?.value;
           const valueInput = row.querySelectorAll('input[type="text"]')[2];
