@@ -5574,6 +5574,16 @@
         function createTotalValueRow(adj, category, source) {
           const rowId = `totalValue_${category}_${Date.now()}_${Math.random()}`;
           
+          // DEBUG: Log the actual adjustment data being processed
+          console.log(`🔍 DEBUG createTotalValueRow for ${category} from ${source}:`, {
+            fullAdjustment: adj,
+            type: adj.type,
+            percent: adj.percent,
+            percentage: adj.percentage,
+            amount: adj.amount,
+            value: adj.value
+          });
+          
           // Determine the type based on adjustment data
           let selectedType = '%'; // default
           
@@ -5722,11 +5732,15 @@
           
           if (!Array.isArray(mileage) || mileage.length === 0) {
             // Fallback to valuation.adjustments.mileage
+            console.log(`🔍 DEBUG: Checking valuation fallback for mileage`, helper.valuation?.adjustments);
             const valuationMileage = helper.valuation?.adjustments?.mileage;
             if (valuationMileage) {
               mileage = Array.isArray(valuationMileage) ? valuationMileage : [valuationMileage];
               source = 'valuation';
-              console.log(`📦 Fallback: Loading mileage from valuation.adjustments:`, mileage);
+              console.log(`📦 Fallback: Loading mileage from valuation.adjustments:`, {
+                originalData: valuationMileage,
+                processedArray: mileage
+              });
             } else {
               console.log(`📦 No mileage data in estimate or valuation adjustments`);
             }
@@ -5756,11 +5770,15 @@
           
           if (!Array.isArray(ownership) || ownership.length === 0) {
             // Fallback to valuation.adjustments.ownership_type
+            console.log(`🔍 DEBUG: Checking valuation fallback for ownership_type`, helper.valuation?.adjustments);
             const valuationOwnership = helper.valuation?.adjustments?.ownership_type;
             if (valuationOwnership) {
               ownership = Array.isArray(valuationOwnership) ? valuationOwnership : [valuationOwnership];
               source = 'valuation';
-              console.log(`📦 Fallback: Loading ownership from valuation.adjustments:`, ownership);
+              console.log(`📦 Fallback: Loading ownership from valuation.adjustments:`, {
+                originalData: valuationOwnership,
+                processedArray: ownership
+              });
             } else {
               console.log(`📦 No ownership data in estimate or valuation adjustments`);
             }
@@ -5790,11 +5808,15 @@
           
           if (!Array.isArray(owners) || owners.length === 0) {
             // Fallback to valuation.adjustments.ownership_history
+            console.log(`🔍 DEBUG: Checking valuation fallback for ownership_history`, helper.valuation?.adjustments);
             const valuationOwners = helper.valuation?.adjustments?.ownership_history;
             if (valuationOwners) {
               owners = Array.isArray(valuationOwners) ? valuationOwners : [valuationOwners];
               source = 'valuation';
-              console.log(`📦 Fallback: Loading owners from valuation.adjustments:`, owners);
+              console.log(`📦 Fallback: Loading owners from valuation.adjustments:`, {
+                originalData: valuationOwners,
+                processedArray: owners
+              });
             } else {
               console.log(`📦 No owners data in estimate or valuation adjustments`);
             }
