@@ -7783,21 +7783,17 @@
             const percentInput = inputs[2]; // אחוז field
             const valueInput = inputs[3];   // ערך field
             
-            console.log(`🔍 Reading features - percent: "${percentInput?.value}", value: "${valueInput?.value}", type: "${type}"`);
-            
-            if (percentInput && percentInput.value && parseFloat(percentInput.value.replace(/[%\s-]/g, '')) > 0) {
-              // Calculate percentage of BASE price
+            if (percentInput && percentInput.value) {
               const percent = parseFloat(percentInput.value.replace(/[%\s-]/g, '')) || 0;
-              const adjustment = basicPrice * (percent / 100);
-              const signedAdjustment = (type === 'הפחתה (-)' || type === 'minus') ? -adjustment : adjustment;
-              currentValue += signedAdjustment;
-              console.log(`✅ Added features %: ${signedAdjustment}, new total: ${currentValue}`);
+              if (percent > 0) {
+                const adjustment = basicPrice * (percent / 100);
+                const signedAdjustment = (type === 'הפחתה (-)' || type === 'minus') ? -adjustment : adjustment;
+                currentValue += signedAdjustment;
+              }
             } else if (valueInput && valueInput.value) {
-              // Fallback: use direct value
               const value = parseFloat(valueInput.value.replace(/[₪,\s-]/g, '')) || 0;
               const signedValue = (type === 'הפחתה (-)' || type === 'minus') ? -value : value;
               currentValue += signedValue;
-              console.log(`✅ Added features ₪: ${signedValue}, new total: ${currentValue}`);
             }
           }
         });
@@ -7820,11 +7816,9 @@
             const type = inputs[1]?.value || 'plus';
             const valueInput = inputs[3]; // ערך field
             if (valueInput && valueInput.value) {
-              console.log(`🔍 Reading registration value: "${valueInput.value}", type: "${type}", readonly: ${valueInput.readOnly}`);
               const value = parseFloat(valueInput.value.replace(/[₪,\s-]/g, '')) || 0;
               const signedValue = (type === 'הפחתה (-)' || type === 'minus') ? -value : value;
               currentValue += signedValue;
-              console.log(`✅ Added registration: ${signedValue}, new total: ${currentValue}`);
             }
           }
         });
