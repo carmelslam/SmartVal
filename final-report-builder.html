@@ -2783,10 +2783,6 @@
           updateFullMarketValueCalculation();
         }, 100);
         
-        // Force calculation again after a longer delay to ensure fields are populated
-        setTimeout(() => {
-          updateFullMarketValueCalculation();
-        }, 500);
         
         // Note: addFieldChangeListeners() is called in DOMContentLoaded event
         
@@ -6511,7 +6507,7 @@
         const isReduction = type === 'הפחתה (-)' || type === 'minus' || type === 'הפחתה' || type === 'הורדה';
         
         
-        // Determine display mode based on data, not type dropdown
+        // Determine field type based on data
         const hasPercent = (percent !== 0 && percent !== null && percent !== undefined);
         const hasAmount = (amount !== 0 && amount !== null && amount !== undefined);
         
@@ -6525,7 +6521,7 @@
           amountInput.style.background = '#f0f0f0';
         } else if (hasAmount) {
           // Amount mode: show amount value, disable percent
-          amountInput.value = isReduction ? `-₪${Math.abs(amount).toLocaleString()}` : `₪${Math.abs(amount).toLocaleString()}`;
+          amountInput.value = isReduction ? `-₪${Math.abs(amount)}` : `₪${Math.abs(amount)}`;
           amountInput.readOnly = false;
           amountInput.style.background = '';
           percentInput.value = '';
@@ -7785,22 +7781,9 @@
         grossFeaturesRows.forEach(row => {
           const inputs = row.querySelectorAll('input, select');
           if (inputs.length >= 4) {
-            const type = inputs[1]?.value || 'plus';
-            const percentInput = inputs[2]; // אחוז field
-            const valueInput = inputs[3];   // ערך field
-            
-            if (percentInput && percentInput.value) {
-              const percent = parseFloat(percentInput.value.replace(/[%\s-]/g, '')) || 0;
-              if (percent > 0) {
-                const adjustment = basicPrice * (percent / 100);
-                const signedAdjustment = (type === 'הפחתה (-)' || type === 'minus') ? -adjustment : adjustment;
-                currentValue += signedAdjustment;
-              }
-            } else if (valueInput && valueInput.value) {
-              const value = parseFloat(valueInput.value.replace(/[₪,\s-]/g, '')) || 0;
-              const signedValue = (type === 'הפחתה (-)' || type === 'minus') ? -value : value;
-              currentValue += signedValue;
-            }
+            const amount = parseFloat((inputs[3].value || '').replace(/[₪,]/g, '')) || 0;
+            const type = inputs[1].value;
+            currentValue += (type === 'minus' ? -amount : amount);
           }
         });
         
@@ -8611,26 +8594,12 @@
         
         // 1. Process Features Adjustments
         const fullFeaturesRows = document.querySelectorAll('#fullFeaturesAdjustmentsList > div');
-        fullFeaturesRows.forEach((row, index) => {
+        fullFeaturesRows.forEach(row => {
           const inputs = row.querySelectorAll('input, select');
           if (inputs.length >= 4) {
-            const type = inputs[1]?.value || 'plus';
-            const percentInput = inputs[2]; // אחוז field
-            const valueInput = inputs[3];   // ערך field
-          
-          if (percentInput && percentInput.value) {
-            const percent = parseFloat(percentInput.value) || 0;
-            if (percent !== 0) {
-              // Features: Use base price for percentage calculation
-              const adjustment = basicPrice * (Math.abs(percent) / 100);
-              const signedAdjustment = (type === 'הפחתה (-)' || type === 'minus') ? -adjustment : adjustment;
-              currentValue += signedAdjustment;
-            }
-          } else if (valueInput && valueInput.value) {
-            const value = parseFloat(valueInput.value.replace(/[₪,]/g, '')) || 0;
-            const signedValue = (type === 'הפחתה (-)' || type === 'minus') ? -value : value;
-            currentValue += signedValue;
-          }
+            const amount = parseFloat((inputs[3].value || '').replace(/[₪,]/g, '')) || 0;
+            const type = inputs[1].value;
+            currentValue += (type === 'minus' ? -amount : amount);
           }
         });
         
@@ -8640,24 +8609,12 @@
         
         // 2. Process Registration Adjustments
         const fullRegistrationRows = document.querySelectorAll('#fullRegistrationAdjustmentsList > div');
-        fullRegistrationRows.forEach((row, index) => {
+        fullRegistrationRows.forEach(row => {
           const inputs = row.querySelectorAll('input, select');
           if (inputs.length >= 4) {
-            const type = inputs[1]?.value || 'plus';
-            const percentInput = inputs[2]; // אחוז field
-            const valueInput = inputs[3];   // ערך field
-            
-            if (percentInput && percentInput.value && parseFloat(percentInput.value) !== 0) {
-              const percent = parseFloat(percentInput.value) || 0;
-              // Registration: Use base price for percentage calculation, then add to cumulative
-              const adjustment = basicPrice * (Math.abs(percent) / 100);
-              const signedAdjustment = (type === 'הפחתה (-)' || type === 'minus') ? -adjustment : adjustment;
-              currentValue += signedAdjustment;
-            } else if (valueInput && valueInput.value) {
-              const value = parseFloat(valueInput.value.replace(/[₪,\s-]/g, '')) || 0;
-              const signedValue = (type === 'הפחתה (-)' || type === 'minus') ? -value : value;
-              currentValue += signedValue;
-            }
+            const amount = parseFloat((inputs[3].value || '').replace(/[₪,]/g, '')) || 0;
+            const type = inputs[1].value;
+            currentValue += (type === 'minus' ? -amount : amount);
           }
         });
         
