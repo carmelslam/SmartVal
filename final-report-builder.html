@@ -5576,6 +5576,15 @@
           
           // Determine the type based on adjustment data
           let selectedType = '%'; // default
+          
+          // Get values for analysis
+          const percentValue = adj.percent || adj.percentage || 0;
+          const amountValue = adj.amount || 0;
+          
+          // First, determine if it's plus or minus based on values
+          const isNegative = percentValue < 0 || amountValue < 0;
+          
+          // Then determine the base type
           if (adj.type) {
             if (adj.type === '₪' || adj.type === 'amount' || adj.type === 'שח') {
               selectedType = '₪';
@@ -5586,23 +5595,38 @@
             } else if (adj.type === 'minus' || adj.type === 'הפחתה' || adj.type === 'הורדה') {
               selectedType = 'הפחתה (-)';
             }
+          } else {
+            // No explicit type, determine from data
+            if (adj.percentage || adj.percent) {
+              selectedType = '%';
+            } else if (adj.amount) {
+              selectedType = '₪';
+            }
           }
           
-          // If no explicit type but we have percentage data, use %
-          if (!adj.type && (adj.percentage || adj.percent)) {
-            selectedType = '%';
-          }
-          // If no explicit type but we have amount data, use ₪
-          else if (!adj.type && adj.amount) {
-            selectedType = '₪';
+          // Override with plus/minus if we have negative values (for valuation fallback)
+          if (isNegative) {
+            selectedType = 'הפחתה (-)';
+          } else if ((percentValue > 0 || amountValue > 0) && adj.type === 'plus') {
+            selectedType = 'תוספת (+)';
           }
           
           console.log(`🔍 createTotalValueRow for ${category}: adj.type="${adj.type}", selectedType="${selectedType}"`);
           
           const description = adj.value || adj.description || '';
-          // Populate percentage and amount from adjustment data
-          const percentage = adj.percent || adj.percentage ? Math.abs(adj.percent || adj.percentage) : '';
-          const amount = adj.amount ? Math.abs(adj.amount) : '';
+          // Populate percentage and amount from adjustment data (handle negative values properly)
+          let percentage = '';
+          let amount = '';
+          
+          if (adj.percent !== undefined && adj.percent !== null && !isNaN(adj.percent)) {
+            percentage = Math.abs(parseFloat(adj.percent));
+          } else if (adj.percentage !== undefined && adj.percentage !== null && !isNaN(adj.percentage)) {
+            percentage = Math.abs(parseFloat(adj.percentage));
+          }
+          
+          if (adj.amount !== undefined && adj.amount !== null && !isNaN(adj.amount)) {
+            amount = Math.abs(parseFloat(adj.amount));
+          }
           const isPercent = selectedType === '%';
           const isAmount = selectedType === '₪';
           
