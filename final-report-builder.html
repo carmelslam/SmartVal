@@ -5584,15 +5584,20 @@
           // First, determine if it's plus or minus based on values
           const isNegative = percentValue < 0 || amountValue < 0;
           
-          // Then determine the base type
-          if (adj.type) {
+          // Determine type - prioritize valuation.adjustments mapping
+          if (adj.type === 'minus') {
+            selectedType = 'הפחתה (-)';
+          } else if (adj.type === 'plus') {
+            selectedType = 'תוספת (+)';
+          } else if (adj.type) {
+            // Handle other explicit types
             if (adj.type === '₪' || adj.type === 'amount' || adj.type === 'שח') {
               selectedType = '₪';
             } else if (adj.type === '%' || adj.type === 'percent' || adj.type === 'percentage') {
               selectedType = '%';
-            } else if (adj.type === 'plus' || adj.type === 'תוספת' || adj.type === 'הוספה') {
+            } else if (adj.type === 'תוספת' || adj.type === 'הוספה') {
               selectedType = 'תוספת (+)';
-            } else if (adj.type === 'minus' || adj.type === 'הפחתה' || adj.type === 'הורדה') {
+            } else if (adj.type === 'הפחתה' || adj.type === 'הורדה') {
               selectedType = 'הפחתה (-)';
             }
           } else {
@@ -5602,13 +5607,6 @@
             } else if (adj.amount) {
               selectedType = '₪';
             }
-          }
-          
-          // Override with plus/minus if we have negative values (for valuation fallback)
-          if (isNegative) {
-            selectedType = 'הפחתה (-)';
-          } else if ((percentValue > 0 || amountValue > 0) && adj.type === 'plus') {
-            selectedType = 'תוספת (+)';
           }
           
           console.log(`🔍 createTotalValueRow for ${category}: adj.type="${adj.type}", selectedType="${selectedType}"`);
