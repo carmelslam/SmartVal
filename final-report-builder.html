@@ -5484,11 +5484,14 @@
       try {
         console.log('🔄 Auto-loading Total Value Section with mixed data sources');
         
-        // UNIFIED data sources (EXACT same as reload button):
-        // Use estimate.adjustments with valuation fallback (no final_report mixing for consistency)
+        // Mixed data sources (EXACT same as reload button):
+        // - Features & Registration: from final_report.adjustments (sync with Gross section)  
+        // - Others (KM, Ownership, Owners, Additional): from estimate.adjustments with valuation fallback
         const estimateAdjustments = helper.estimate?.adjustments || helper.valuation?.adjustments || {};
+        const finalReportAdjustments = helper.final_report?.adjustments || {};
         
         console.log('📦 estimate.adjustments:', estimateAdjustments);
+        console.log('📦 final_report.adjustments:', finalReportAdjustments);
         console.log('📦 helper.valuation.adjustments:', helper.valuation?.adjustments);
         console.log('📦 helper.valuation.adjustments keys:', Object.keys(helper.valuation?.adjustments || {}));
         
@@ -5631,18 +5634,18 @@
           return html;
         }
         
-        // 1. Load features from estimate.adjustments with fallback to valuation.adjustments
+        // 1. Load features from final_report.adjustments into fullFeaturesAdjustmentsList
         const featuresContainer = document.getElementById('fullFeaturesAdjustmentsList');
         if (featuresContainer) {
           featuresContainer.innerHTML = '';
-          const features = estimateAdjustments.features || [];
-          console.log('📦 Loading features from estimate.adjustments (unified source):', features);
+          const features = finalReportAdjustments.features || [];
+          console.log('📦 Loading features from final_report.adjustments:', features);
           if (Array.isArray(features)) {
             features.forEach((adj, index) => {
               console.log(`🔍 Processing features[${index}]:`, adj);
               // Load all non-empty items (check for any content)
               if (adj && (adj.value || adj.description || adj.percentage || adj.percent || adj.amount)) {
-                featuresContainer.insertAdjacentHTML('beforeend', createTotalValueRow(adj, 'features', 'estimate'));
+                featuresContainer.insertAdjacentHTML('beforeend', createTotalValueRow(adj, 'features', 'final_report'));
                 console.log(`✅ Added features[${index}] to Total Value Section`);
               } else {
                 console.log(`⚠️ Skipped features[${index}] - no content`);
@@ -5652,18 +5655,18 @@
           console.log(`✅ Loaded ${features.length} total features, filtered and added to Total Value Section`);
         }
         
-        // 2. Load registration from estimate.adjustments with fallback to valuation.adjustments
+        // 2. Load registration from final_report.adjustments into fullRegistrationAdjustmentsList
         const registrationContainer = document.getElementById('fullRegistrationAdjustmentsList');
         if (registrationContainer) {
           registrationContainer.innerHTML = '';
-          const registration = estimateAdjustments.registration || [];
-          console.log('📦 Loading registration from estimate.adjustments (unified source):', registration);
+          const registration = finalReportAdjustments.registration || [];
+          console.log('📦 Loading registration from final_report.adjustments:', registration);
           if (Array.isArray(registration)) {
             registration.forEach((adj, index) => {
               console.log(`🔍 Processing registration[${index}]:`, adj);
               // Load all non-empty items (check for any content)
               if (adj && (adj.value || adj.description || adj.percentage || adj.percent || adj.amount)) {
-                registrationContainer.insertAdjacentHTML('beforeend', createTotalValueRow(adj, 'registration', 'estimate'));
+                registrationContainer.insertAdjacentHTML('beforeend', createTotalValueRow(adj, 'registration', 'final_report'));
                 console.log(`✅ Added registration[${index}] to Total Value Section`);
               } else {
                 console.log(`⚠️ Skipped registration[${index}] - no content`);
