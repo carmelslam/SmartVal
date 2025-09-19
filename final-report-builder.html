@@ -6673,8 +6673,8 @@
           helper.final_report.adjustments[category].push(adjustmentData);
         }
         
-        // ONLY save to valuation.adjustments for ORIGINAL rows (not additional manual rows)
-        if (category !== 'additional' && (dataSource === 'original' || dataSource === 'levi' || dataSource === 'valuation')) {
+        // Use ESTIMATOR PATTERN: First row = original valuation data, additional rows = estimates only
+        if (category !== 'additional') {
           if (!helper.valuation) helper.valuation = {};
           if (!helper.valuation.adjustments) helper.valuation.adjustments = {};
           
@@ -6683,7 +6683,18 @@
           if (category === 'ownership') valuationCategory = 'ownership_type';
           if (category === 'owners') valuationCategory = 'ownership_history';
           
-          helper.valuation.adjustments[valuationCategory] = adjustmentData;
+          // Get all rows in this category to determine if this is the first row
+          const container = row.closest('[id$="AdjustmentsList"]');
+          if (container) {
+            const allRowsInCategory = container.querySelectorAll('div[id*="Adj_"]');
+            const isFirstRow = allRowsInCategory[0] === row;
+            
+            if (isFirstRow) {
+              // FIRST ROW = UPDATE VALUATION (original data)
+              helper.valuation.adjustments[valuationCategory] = adjustmentData;
+            }
+            // Additional rows automatically stay in final_report.adjustments only
+          }
         }
         
         // Apply unified formatting - only for Total Value section (not Gross section)
