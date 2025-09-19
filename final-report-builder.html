@@ -6249,17 +6249,15 @@
         console.log('🔍 estimate.adjustments:', estimateAdjustments);
         console.log('🔍 final_report.adjustments:', finalReportAdjustments);
         
-        // Clear existing rows from ALL full market containers
-        const containers = [
-          'fullFeaturesAdjustmentsList',
-          'fullRegistrationAdjustmentsList', 
+        // Clear existing rows from NON-SYNCED containers only (preserve features/registration)
+        const containersToReload = [
           'mileageAdjustmentsList',
-          'ownershipAdjustmentsList',
+          'ownershipAdjustmentsList', 
           'ownersAdjustmentsList',
           'allAdjustmentsList'
         ];
         
-        containers.forEach(containerId => {
+        containersToReload.forEach(containerId => {
           const container = document.getElementById(containerId);
           if (container) {
             container.innerHTML = '';
@@ -6267,10 +6265,11 @@
           }
         });
         
-        // Load all categories for full market section
+        console.log('⚠️ SKIPPING features/registration reload to preserve Total Value manual additions');
+        
+        // Load ONLY non-synced categories (skip features/registration to preserve manual additions)
         const adjustmentMapping = [
-          { key: 'features', label: 'תוספות מאפיינים', containerId: 'fullFeaturesAdjustmentsList', addFunction: addFullFeaturesAdjustment },
-          { key: 'registration', label: 'עליה לכביש', containerId: 'fullRegistrationAdjustmentsList', addFunction: addFullRegistrationAdjustment },
+          // SKIPPED: features and registration to preserve Total Value manual additions
           { key: 'mileage', label: 'מס ק"מ', containerId: 'mileageAdjustmentsList', addFunction: addMileageAdjustment },
           { key: 'ownership_type', label: 'סוג בעלות', containerId: 'ownershipAdjustmentsList', addFunction: addOwnershipAdjustment },
           { key: 'ownership_history', label: 'מספר בעלים', containerId: 'ownersAdjustmentsList', addFunction: addOwnersAdjustment },
@@ -6278,27 +6277,9 @@
         ];
         
         adjustmentMapping.forEach(({ key, label, containerId, addFunction }) => {
-          // Choose data source based on category
-          let categoryData;
-          let dataSource;
-          
-          if (key === 'features' || key === 'registration') {
-            // Features & Registration: ONLY from final_report.adjustments (sync with Gross)
-            categoryData = finalReportAdjustments[key];
-            dataSource = 'final_report';
-            console.log(`📦 Loading ${key} from final_report.adjustments ONLY:`, categoryData);
-            
-            // DO NOT fallback to estimate for features/registration - this would override Gross edits
-            if (!categoryData || !Array.isArray(categoryData) || categoryData.length === 0) {
-              console.log(`⚠️ No ${key} data in final_report.adjustments - skipping reload (preserves Gross edits)`);
-              categoryData = null; // Explicitly set to null to skip loading
-            }
-          } else {
-            // Others (mileage, ownership_type, ownership_history, additional): from estimate.adjustments  
-            categoryData = estimateAdjustments[key];
-            dataSource = 'estimate';
-            console.log(`📦 Loading ${key} from estimate.adjustments:`, categoryData);
-          }
+          // All categories now load from estimate.adjustments (no features/registration)
+          const categoryData = estimateAdjustments[key];
+          console.log(`📦 Loading ${key} from estimate.adjustments:`, categoryData);
           if (categoryData) {
             console.log(`📝 Loading ${key} adjustments:`, categoryData);
             
@@ -6948,13 +6929,13 @@
         
         console.log('✅ Updated gross value adjustments to BOTH final_report.adjustments AND valuation.adjustments');
         
-        // CRITICAL: Auto-populate Total Value section with Gross Value data
-        if (helper.final_report.adjustments.features) {
-          syncFullMarketFeaturesWithGross(helper.final_report.adjustments.features);
-        }
-        if (helper.final_report.adjustments.registration) {
-          syncFullMarketRegistrationWithGross(helper.final_report.adjustments.registration);
-        }
+        // DISABLED: Auto-populate that clears Total Value manual additions
+        // if (helper.final_report.adjustments.features) {
+        //   syncFullMarketFeaturesWithGross(helper.final_report.adjustments.features);
+        // }
+        // if (helper.final_report.adjustments.registration) {
+        //   syncFullMarketRegistrationWithGross(helper.final_report.adjustments.registration);
+        // }
         
       } catch (error) {
         console.error('❌ Error updating gross value to final_report and valuation adjustments:', error);
@@ -6995,8 +6976,8 @@
             amount: firstFeature.amount
           };
           
-          // CRITICAL: Sync Full Market Value UI with Gross Value data
-          syncFullMarketFeaturesWithGross(helper.final_report.adjustments.features);
+          // DISABLED: Aggressive sync that clears Total Value manual additions
+          // syncFullMarketFeaturesWithGross(helper.final_report.adjustments.features);
         }
         
         // 2. REGISTRATION - Sync with Gross Value Section AND populate Full Market Value UI  
@@ -7011,8 +6992,8 @@
             amount: firstRegistration.amount
           };
           
-          // CRITICAL: Sync Full Market Value UI with Gross Value data
-          syncFullMarketRegistrationWithGross(helper.final_report.adjustments.registration);
+          // DISABLED: Aggressive sync that clears Total Value manual additions
+          // syncFullMarketRegistrationWithGross(helper.final_report.adjustments.registration);
         }
         
         // 3. MILEAGE (KM) - Only in Full Market Value
@@ -7298,13 +7279,13 @@
       
       const newRow = `
         <div id="${rowId}" style="display:grid; grid-template-columns:2fr 1fr 1fr 1fr 80px; gap:10px; margin-bottom:8px;">
-          <div><input type="text" placeholder="תיאור המאפיין" onchange="updateFullMarketValueCalculation(); updateFullMarketValueToFinalReportAndValuation(helper); updateHelperFromAdjustments(); syncAdjustmentToHelper(this, 'features');" /></div>
-          <div><select onchange="updateFullMarketValueCalculation(); updateFullMarketValueToFinalReportAndValuation(helper); updateHelperFromAdjustments(); syncAdjustmentToHelper(this, 'features');">
+          <div><input type="text" placeholder="תיאור המאפיין" onchange="updateFullMarketValueCalculation(); syncAdjustmentToHelper(this, 'features');" /></div>
+          <div><select onchange="updateFullMarketValueCalculation(); syncAdjustmentToHelper(this, 'features');">
             <option value="plus">תוספת (+)</option>
             <option value="minus">הפחתה (-)</option>
           </select></div>
-          <div><input type="text" placeholder="אחוז" oninput="calculateAdjustmentValueSimple(this);" onchange="updateFullMarketValueCalculation(); updateFullMarketValueToFinalReportAndValuation(helper); updateHelperFromAdjustments(); syncAdjustmentToHelper(this, 'features');" /></div>
-          <div><input type="text" placeholder="₪" onchange="updateFullMarketValueCalculation(); updateFullMarketValueToFinalReportAndValuation(helper); updateHelperFromAdjustments(); syncAdjustmentToHelper(this, 'features');" /></div>
+          <div><input type="text" placeholder="אחוז" oninput="calculateAdjustmentValueSimple(this);" onchange="updateFullMarketValueCalculation(); syncAdjustmentToHelper(this, 'features');" /></div>
+          <div><input type="text" placeholder="₪" onchange="updateFullMarketValueCalculation(); syncAdjustmentToHelper(this, 'features');" /></div>
           <div><button class="btn remove" onclick="removeAdjustmentRow('${rowId}')">מחק</button></div>
         </div>
       `;
@@ -7321,13 +7302,13 @@
       
       const newRow = `
         <div id="${rowId}" style="display:grid; grid-template-columns:2fr 1fr 1fr 1fr 80px; gap:10px; margin-bottom:8px;">
-          <div><input type="text" placeholder="תיאור עליה לכביש" onchange="updateFullMarketValueCalculation(); updateFullMarketValueToFinalReportAndValuation(helper); updateHelperFromAdjustments(); syncAdjustmentToHelper(this, 'registration');" /></div>
-          <div><select onchange="updateFullMarketValueCalculation(); updateFullMarketValueToFinalReportAndValuation(helper); updateHelperFromAdjustments(); syncAdjustmentToHelper(this, 'registration');">
+          <div><input type="text" placeholder="תיאור עליה לכביש" onchange="updateFullMarketValueCalculation(); syncAdjustmentToHelper(this, 'registration');" /></div>
+          <div><select onchange="updateFullMarketValueCalculation(); syncAdjustmentToHelper(this, 'registration');">
             <option value="plus">תוספת (+)</option>
             <option value="minus">הפחתה (-)</option>
           </select></div>
-          <div><input type="text" placeholder="אחוז" oninput="calculateAdjustmentValueSimple(this);" onchange="updateFullMarketValueCalculation(); updateFullMarketValueToFinalReportAndValuation(helper); updateHelperFromAdjustments(); syncAdjustmentToHelper(this, 'registration');" /></div>
-          <div><input type="text" placeholder="₪" onchange="updateFullMarketValueCalculation(); updateFullMarketValueToFinalReportAndValuation(helper); updateHelperFromAdjustments(); syncAdjustmentToHelper(this, 'registration');" /></div>
+          <div><input type="text" placeholder="אחוז" oninput="calculateAdjustmentValueSimple(this);" onchange="updateFullMarketValueCalculation(); syncAdjustmentToHelper(this, 'registration');" /></div>
+          <div><input type="text" placeholder="₪" onchange="updateFullMarketValueCalculation(); syncAdjustmentToHelper(this, 'registration');" /></div>
           <div><button class="btn remove" onclick="removeAdjustmentRow('${rowId}')">מחק</button></div>
         </div>
       `;
