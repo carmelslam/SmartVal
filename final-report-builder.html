@@ -5624,8 +5624,17 @@
           let percentage = '';
           let amount = '';
           
-          // Use same parsing as reload button
-          percentage = itemPercent ? Math.abs(itemPercent) : '';
+          // Parse percentage handling % sign
+          if (itemPercent !== undefined && itemPercent !== null && itemPercent !== '') {
+            let cleanPercent = itemPercent;
+            if (typeof itemPercent === 'string') {
+              cleanPercent = itemPercent.replace('%', '');
+            }
+            const parsedPercent = parseFloat(cleanPercent);
+            percentage = !isNaN(parsedPercent) ? Math.abs(parsedPercent) : '';
+          } else {
+            percentage = '';
+          }
           
           // Use same amount parsing as reload button
           amount = adj.amount_display || (adj.amount ? `₪${Math.abs(adj.amount).toLocaleString()}` : '');
@@ -6660,16 +6669,17 @@
           helper.final_report.adjustments[category].push(adjustmentData);
         }
         
-        // ALSO save to valuation.adjustments for backward compatibility (original destination)
-        // PHASE 5: Only write to valuation.adjustments if it's from Levi data (original), not manual additions
-        const isOriginalData = adjustmentData.source === 'levi';
-        if (category !== 'additional' && isOriginalData) {
+        // ALWAYS save to valuation.adjustments for Total Market Value section compatibility
+        if (category !== 'additional') {
           if (!helper.valuation) helper.valuation = {};
           if (!helper.valuation.adjustments) helper.valuation.adjustments = {};
-          helper.valuation.adjustments[category] = adjustmentData;
-          console.log(`📝 Saved ${category} to valuation.adjustments (Levi data only)`);
-        } else if (category !== 'additional') {
-          console.log(`🚫 Skipped saving ${category} to valuation.adjustments (manual addition)`);
+          
+          // Map category names to valuation structure
+          let valuationCategory = category;
+          if (category === 'ownership') valuationCategory = 'ownership_type';
+          if (category === 'owners') valuationCategory = 'ownership_history';
+          
+          helper.valuation.adjustments[valuationCategory] = adjustmentData;
         }
         
         // Apply unified formatting - only for Total Value section (not Gross section)
