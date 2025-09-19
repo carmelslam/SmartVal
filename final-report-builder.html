@@ -5596,28 +5596,24 @@
           // First, determine if it's plus or minus based on values
           const isNegative = percentValue < 0 || amountValue < 0;
           
-          // Determine type - prioritize valuation.adjustments mapping
-          if (adj.type === 'minus') {
+          // Use same logic as reload button
+          const itemPercent = adj.percentage || adj.percent;
+          const itemAmount = adj.amount;
+          const dropdownType = getDropdownTypeFromValues(itemPercent, itemAmount, adj.type || 'plus');
+          
+          // Map to UI dropdown values (same as reload button)
+          if (dropdownType === 'minus') {
             selectedType = 'הפחתה (-)';
-          } else if (adj.type === 'plus') {
+          } else if (dropdownType === 'plus') {
             selectedType = 'תוספת (+)';
-          } else if (adj.type) {
-            // Handle other explicit types
-            if (adj.type === '₪' || adj.type === 'amount' || adj.type === 'שח') {
-              selectedType = '₪';
-            } else if (adj.type === '%' || adj.type === 'percent' || adj.type === 'percentage') {
-              selectedType = '%';
-            } else if (adj.type === 'תוספת' || adj.type === 'הוספה') {
-              selectedType = 'תוספת (+)';
-            } else if (adj.type === 'הפחתה' || adj.type === 'הורדה') {
-              selectedType = 'הפחתה (-)';
-            }
           } else {
-            // No explicit type, determine from data
-            if (adj.percentage || adj.percent) {
+            // Determine if it's percentage or amount based
+            if (itemPercent !== undefined && itemPercent !== null && itemPercent !== '') {
               selectedType = '%';
-            } else if (adj.amount) {
+            } else if (itemAmount !== undefined && itemAmount !== null && itemAmount !== '') {
               selectedType = '₪';
+            } else {
+              selectedType = '%'; // default
             }
           }
           
@@ -5628,24 +5624,11 @@
           let percentage = '';
           let amount = '';
           
-          if (adj.percent !== undefined && adj.percent !== null && adj.percent !== '') {
-            const parsedPercent = parseFloat(adj.percent);
-            if (!isNaN(parsedPercent)) {
-              percentage = Math.abs(parsedPercent);
-            }
-          } else if (adj.percentage !== undefined && adj.percentage !== null && adj.percentage !== '') {
-            const parsedPercentage = parseFloat(adj.percentage);
-            if (!isNaN(parsedPercentage)) {
-              percentage = Math.abs(parsedPercentage);
-            }
-          }
+          // Use same parsing as reload button
+          percentage = itemPercent ? Math.abs(itemPercent) : '';
           
-          if (adj.amount !== undefined && adj.amount !== null && adj.amount !== '') {
-            const parsedAmount = parseFloat(adj.amount);
-            if (!isNaN(parsedAmount)) {
-              amount = Math.abs(parsedAmount);
-            }
-          }
+          // Use same amount parsing as reload button
+          amount = adj.amount_display || (adj.amount ? `₪${Math.abs(adj.amount).toLocaleString()}` : '');
           const isPercent = selectedType === '%';
           const isAmount = selectedType === '₪';
           
