@@ -5429,12 +5429,17 @@
                     // Type dropdown - use dynamic sign logic
                     const itemPercent = item.percentage || item.percent;
                     const itemAmount = item.amount;
-                    inputs[1].value = getDropdownTypeFromValues(itemPercent, itemAmount, item.type || 'plus');
+                    const detectedType = getDropdownTypeFromValues(itemPercent, itemAmount, item.type || 'plus');
+                    inputs[1].value = detectedType;
                     
-                    // Apply formatAdjustmentDisplay for proper minus sign handling
-                    setTimeout(() => {
-                      formatAdjustmentDisplay(lastRow, inputs[1].value, itemPercent, itemAmount);
-                    }, 50);
+                    // Percent and amount - show absolute values (COPY FROM RELOAD BUTTON)
+                    inputs[2].value = itemPercent ? Math.abs(itemPercent) : '';
+                    inputs[3].value = item.amount_display || (item.amount ? `₪${Math.abs(item.amount).toLocaleString()}` : '');
+                    
+                    // Trigger change events (CRITICAL FOR MINUS SIGN DETECTION)
+                    inputs[1].dispatchEvent(new Event('change', { bubbles: true }));
+                    if (inputs[2].value) inputs[2].dispatchEvent(new Event('change', { bubbles: true }));
+                    if (inputs[3].value) inputs[3].dispatchEvent(new Event('change', { bubbles: true }));
                     
                     // Mark source as original for page refresh loads
                     lastRow.setAttribute('data-source', 'original');
