@@ -8606,23 +8606,25 @@
         // 1. Process Features Adjustments
         const fullFeaturesRows = document.querySelectorAll('#fullFeaturesAdjustmentsList > div');
         fullFeaturesRows.forEach((row, index) => {
-          const type = row.querySelector('select')?.value;
-          const inputs = row.querySelectorAll('input[type="text"]');
-          const percentInput = inputs[1]; // Percentage field
-          const valueInput = inputs[2];   // Value field
+          const inputs = row.querySelectorAll('input, select');
+          if (inputs.length >= 4) {
+            const type = inputs[1]?.value || 'plus';
+            const percentInput = inputs[2]; // אחוז field
+            const valueInput = inputs[3];   // ערך field
           
           if (percentInput && percentInput.value) {
             const percent = parseFloat(percentInput.value) || 0;
             if (percent !== 0) {
               // Features: Use base price for percentage calculation
               const adjustment = basicPrice * (Math.abs(percent) / 100);
-              const signedAdjustment = (type === 'minus') ? -adjustment : adjustment; // Only use dropdown, ignore sign in percent value
+              const signedAdjustment = (type === 'הפחתה (-)' || type === 'minus') ? -adjustment : adjustment;
               currentValue += signedAdjustment;
             }
           } else if (valueInput && valueInput.value) {
             const value = parseFloat(valueInput.value.replace(/[₪,]/g, '')) || 0;
-            const signedValue = (type === 'minus') ? -value : value;
+            const signedValue = (type === 'הפחתה (-)' || type === 'minus') ? -value : value;
             currentValue += signedValue;
+          }
           }
         });
         
@@ -8633,23 +8635,25 @@
         // 2. Process Registration Adjustments
         const fullRegistrationRows = document.querySelectorAll('#fullRegistrationAdjustmentsList > div');
         fullRegistrationRows.forEach((row, index) => {
-          const type = row.querySelector('select')?.value;
-          const inputs = row.querySelectorAll('input[type="text"]');
-          const percentInput = inputs[1]; // Percentage field
-          const valueInput = inputs[2];   // Value field
-          
-          if (percentInput && percentInput.value) {
-            const percent = parseFloat(percentInput.value) || 0;
-            if (percent !== 0) {
-              // Registration: Use base price for percentage calculation, then add to cumulative
-              const adjustment = basicPrice * (Math.abs(percent) / 100);
-              const signedAdjustment = (type === 'minus') ? -adjustment : adjustment;
-              currentValue += signedAdjustment;
+          const inputs = row.querySelectorAll('input, select');
+          if (inputs.length >= 4) {
+            const type = inputs[1]?.value || 'plus';
+            const percentInput = inputs[2]; // אחוז field
+            const valueInput = inputs[3];   // ערך field
+            
+            if (percentInput && percentInput.value) {
+              const percent = parseFloat(percentInput.value) || 0;
+              if (percent !== 0) {
+                // Registration: Use base price for percentage calculation, then add to cumulative
+                const adjustment = basicPrice * (Math.abs(percent) / 100);
+                const signedAdjustment = (type === 'הפחתה (-)' || type === 'minus') ? -adjustment : adjustment;
+                currentValue += signedAdjustment;
+              }
+            } else if (valueInput && valueInput.value) {
+              const value = parseFloat(valueInput.value.replace(/[₪,\s-]/g, '')) || 0;
+              const signedValue = (type === 'הפחתה (-)' || type === 'minus') ? -value : value;
+              currentValue += signedValue;
             }
-          } else if (valueInput && valueInput.value) {
-            const value = parseFloat(valueInput.value.replace(/[₪,]/g, '')) || 0;
-            const signedValue = (type === 'minus') ? -value : value;
-            currentValue += signedValue;
           }
         });
         
