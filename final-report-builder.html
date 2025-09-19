@@ -7777,24 +7777,28 @@
         // Process features section - CORRECTED CALCULATION LOGIC
         const grossFeaturesRows = document.querySelectorAll('#featuresAdjustmentsList > div');
         grossFeaturesRows.forEach(row => {
-          const type = row.querySelector('select')?.value;
-          const inputs = row.querySelectorAll('input[type="text"]');
-          const percentInput = inputs[1]; // Percentage field
-          const valueInput = inputs[2];   // Value field
-          
-          if (percentInput && percentInput.value) {
-            // Calculate percentage of BASE price (not cumulative)
-            const percent = parseFloat(percentInput.value) || 0;
-            if (percent > 0) {
-              const adjustment = basicPrice * (percent / 100); // ₪118,000 × 9% = ₪10,620
-              const signedAdjustment = (type === 'minus') ? -adjustment : adjustment;
-              currentValue += signedAdjustment; // Add to cumulative: ₪118,000 + ₪10,620 = ₪128,620
+          const inputs = row.querySelectorAll('input, select');
+          if (inputs.length >= 4) {
+            const type = inputs[1]?.value || 'plus';
+            const percentInput = inputs[2]; // אחוז field
+            const valueInput = inputs[3];   // ערך field
+            
+            console.log(`🔍 Reading features - percent: "${percentInput?.value}", value: "${valueInput?.value}", type: "${type}"`);
+            
+            if (percentInput && percentInput.value && parseFloat(percentInput.value.replace(/[%\s-]/g, '')) > 0) {
+              // Calculate percentage of BASE price
+              const percent = parseFloat(percentInput.value.replace(/[%\s-]/g, '')) || 0;
+              const adjustment = basicPrice * (percent / 100);
+              const signedAdjustment = (type === 'הפחתה (-)' || type === 'minus') ? -adjustment : adjustment;
+              currentValue += signedAdjustment;
+              console.log(`✅ Added features %: ${signedAdjustment}, new total: ${currentValue}`);
+            } else if (valueInput && valueInput.value) {
+              // Fallback: use direct value
+              const value = parseFloat(valueInput.value.replace(/[₪,\s-]/g, '')) || 0;
+              const signedValue = (type === 'הפחתה (-)' || type === 'minus') ? -value : value;
+              currentValue += signedValue;
+              console.log(`✅ Added features ₪: ${signedValue}, new total: ${currentValue}`);
             }
-          } else if (valueInput && valueInput.value) {
-            // Fallback: use direct value if percentage not available
-            const value = parseFloat(valueInput.value.replace(/[₪,]/g, '')) || 0;
-            const signedValue = (type === 'minus') ? -value : value;
-            currentValue += signedValue;
           }
         });
         
@@ -7811,12 +7815,17 @@
         // Process registration section - Add fixed values to cumulative
         const grossRegistrationRows = document.querySelectorAll('#registrationAdjustmentsList > div');
         grossRegistrationRows.forEach(row => {
-          const type = row.querySelector('select')?.value;
-          const valueInput = row.querySelectorAll('input[type="text"]')[2];
-          if (valueInput && valueInput.value) {
-            const value = parseFloat(valueInput.value.replace(/[₪,]/g, '')) || 0;
-            const signedValue = (type === 'minus') ? -value : value;
-            currentValue += signedValue; // Add to cumulative: ₪128,620 + ₪4,000 = ₪132,620
+          const inputs = row.querySelectorAll('input, select');
+          if (inputs.length >= 4) {
+            const type = inputs[1]?.value || 'plus';
+            const valueInput = inputs[3]; // ערך field
+            if (valueInput && valueInput.value) {
+              console.log(`🔍 Reading registration value: "${valueInput.value}", type: "${type}", readonly: ${valueInput.readOnly}`);
+              const value = parseFloat(valueInput.value.replace(/[₪,\s-]/g, '')) || 0;
+              const signedValue = (type === 'הפחתה (-)' || type === 'minus') ? -value : value;
+              currentValue += signedValue;
+              console.log(`✅ Added registration: ${signedValue}, new total: ${currentValue}`);
+            }
           }
         });
         
