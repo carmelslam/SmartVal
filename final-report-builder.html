@@ -5745,7 +5745,7 @@
             const valuationMileage = helper.valuation?.adjustments?.mileage;
             if (valuationMileage) {
               mileage = Array.isArray(valuationMileage) ? valuationMileage : [valuationMileage];
-              source = 'valuation';
+              source = 'original';
               console.log(`📦 Fallback: Loading mileage from valuation.adjustments:`, {
                 originalData: valuationMileage,
                 processedArray: mileage
@@ -5783,7 +5783,7 @@
             const valuationOwnership = helper.valuation?.adjustments?.ownership_type;
             if (valuationOwnership) {
               ownership = Array.isArray(valuationOwnership) ? valuationOwnership : [valuationOwnership];
-              source = 'valuation';
+              source = 'original';
               console.log(`📦 Fallback: Loading ownership from valuation.adjustments:`, {
                 originalData: valuationOwnership,
                 processedArray: ownership
@@ -5821,7 +5821,7 @@
             const valuationOwners = helper.valuation?.adjustments?.ownership_history;
             if (valuationOwners) {
               owners = Array.isArray(valuationOwners) ? valuationOwners : [valuationOwners];
-              source = 'valuation';
+              source = 'original';
               console.log(`📦 Fallback: Loading owners from valuation.adjustments:`, {
                 originalData: valuationOwners,
                 processedArray: owners
@@ -6673,8 +6673,8 @@
           helper.final_report.adjustments[category].push(adjustmentData);
         }
         
-        // ALWAYS save to valuation.adjustments for Total Market Value section compatibility
-        if (category !== 'additional') {
+        // ONLY save to valuation.adjustments for ORIGINAL rows (not additional manual rows)
+        if (category !== 'additional' && (dataSource === 'original' || dataSource === 'levi' || dataSource === 'valuation')) {
           if (!helper.valuation) helper.valuation = {};
           if (!helper.valuation.adjustments) helper.valuation.adjustments = {};
           
@@ -6985,28 +6985,46 @@
           }
         });
         
-        // Update valuation.adjustments with FIRST Levi item from estimate.adjustments (EXACT estimator pattern)
+        // Update valuation.adjustments ONLY with ORIGINAL rows (not additional manual rows)
         if (helper.estimate?.adjustments?.features && Array.isArray(helper.estimate.adjustments.features) && helper.estimate.adjustments.features.length > 0) {
           helper.valuation.adjustments.features = helper.estimate.adjustments.features[0];
           console.log('💾 Updated valuation.adjustments.features from estimate (Levi data)');
-        } else if (helper.final_report.adjustments.features.length > 0) {
-          const newData = helper.final_report.adjustments.features[0];
-          const existingData = helper.valuation.adjustments.features || {};
-          
-          // PRESERVE original data if UI shows empty/zero values (prevent zeroing out)
-          const hasActualChanges = newData.value || newData.percent > 0 || newData.amount > 0;
-          if (hasActualChanges) {
-            helper.valuation.adjustments.features = newData;
-            console.log('💾 Updated valuation.adjustments.features from final_report (manual data with changes)');
-          } else {
-            // Keep existing valuation data if UI shows no meaningful changes
-            console.log('🔒 Preserved existing valuation.adjustments.features (UI shows no changes)');
-          }
         } else {
-          // Only delete if we're certain there's no data anywhere
-          if (!helper.valuation?.adjustments?.features?.value && !helper.valuation?.adjustments?.features?.percent) {
-            delete helper.valuation.adjustments.features;
-            console.log('🗑️ Cleared valuation.adjustments.features (no data)');
+          // Look for ORIGINAL rows only (not manual additions)
+          const originalRow = [...featuresRows].find(row => {
+            const dataSource = row.getAttribute('data-source');
+            return dataSource === 'original' || dataSource === 'levi' || dataSource === 'valuation';
+          });
+          
+          if (originalRow) {
+            const inputs = originalRow.querySelectorAll('input, select');
+            if (inputs.length >= 4) {
+              const adjustmentData = {
+                value: inputs[0].value || '',
+                type: inputs[1].value || 'plus',
+                percent: parseFloat(inputs[2].value) || 0,
+                percentage: parseFloat(inputs[2].value) || 0,
+                amount_display: inputs[3].value || '',
+                amount: parseFloat((inputs[3].value || '').replace(/[₪,-]/g, '')) || 0,
+                source: originalRow.getAttribute('data-source') || 'original'
+              };
+              
+              // Apply sign based on type
+              if (inputs[1].value === 'minus') {
+                adjustmentData.amount = -Math.abs(adjustmentData.amount);
+                adjustmentData.percent = -Math.abs(adjustmentData.percent);
+                adjustmentData.percentage = -Math.abs(adjustmentData.percentage);
+              }
+              
+              helper.valuation.adjustments.features = adjustmentData;
+              console.log('💾 Updated valuation.adjustments.features from ORIGINAL row');
+            }
+          } else {
+            // Only delete if we're certain there's no original data
+            if (!helper.valuation?.adjustments?.features?.value && !helper.valuation?.adjustments?.features?.percent) {
+              delete helper.valuation.adjustments.features;
+              console.log('🗑️ Cleared valuation.adjustments.features (no original data)');
+            }
           }
         }
         
@@ -7038,28 +7056,46 @@
           }
         });
         
-        // Update valuation.adjustments with FIRST Levi item from estimate.adjustments (EXACT estimator pattern)
+        // Update valuation.adjustments ONLY with ORIGINAL rows (not additional manual rows)
         if (helper.estimate?.adjustments?.registration && Array.isArray(helper.estimate.adjustments.registration) && helper.estimate.adjustments.registration.length > 0) {
           helper.valuation.adjustments.registration = helper.estimate.adjustments.registration[0];
           console.log('💾 Updated valuation.adjustments.registration from estimate (Levi data)');
-        } else if (helper.final_report.adjustments.registration.length > 0) {
-          const newData = helper.final_report.adjustments.registration[0];
-          const existingData = helper.valuation.adjustments.registration || {};
-          
-          // PRESERVE original data if UI shows empty/zero values (prevent zeroing out)
-          const hasActualChanges = newData.value || newData.percent > 0 || newData.amount > 0;
-          if (hasActualChanges) {
-            helper.valuation.adjustments.registration = newData;
-            console.log('💾 Updated valuation.adjustments.registration from final_report (manual data with changes)');
-          } else {
-            // Keep existing valuation data if UI shows no meaningful changes
-            console.log('🔒 Preserved existing valuation.adjustments.registration (UI shows no changes)');
-          }
         } else {
-          // Only delete if we're certain there's no data anywhere
-          if (!helper.valuation?.adjustments?.registration?.value && !helper.valuation?.adjustments?.registration?.percent) {
-            delete helper.valuation.adjustments.registration;
-            console.log('🗑️ Cleared valuation.adjustments.registration (no data)');
+          // Look for ORIGINAL rows only (not manual additions)
+          const originalRow = [...registrationRows].find(row => {
+            const dataSource = row.getAttribute('data-source');
+            return dataSource === 'original' || dataSource === 'levi' || dataSource === 'valuation';
+          });
+          
+          if (originalRow) {
+            const inputs = originalRow.querySelectorAll('input, select');
+            if (inputs.length >= 4) {
+              const adjustmentData = {
+                value: inputs[0].value || '',
+                type: inputs[1].value || 'plus',
+                percent: parseFloat(inputs[2].value) || 0,
+                percentage: parseFloat(inputs[2].value) || 0,
+                amount_display: inputs[3].value || '',
+                amount: parseFloat((inputs[3].value || '').replace(/[₪,-]/g, '')) || 0,
+                source: originalRow.getAttribute('data-source') || 'original'
+              };
+              
+              // Apply sign based on type
+              if (inputs[1].value === 'minus') {
+                adjustmentData.amount = -Math.abs(adjustmentData.amount);
+                adjustmentData.percent = -Math.abs(adjustmentData.percent);
+                adjustmentData.percentage = -Math.abs(adjustmentData.percentage);
+              }
+              
+              helper.valuation.adjustments.registration = adjustmentData;
+              console.log('💾 Updated valuation.adjustments.registration from ORIGINAL row');
+            }
+          } else {
+            // Only delete if we're certain there's no original data
+            if (!helper.valuation?.adjustments?.registration?.value && !helper.valuation?.adjustments?.registration?.percent) {
+              delete helper.valuation.adjustments.registration;
+              console.log('🗑️ Cleared valuation.adjustments.registration (no original data)');
+            }
           }
         }
         
@@ -7100,43 +7136,87 @@
           };
         }
         
-        // 1. FEATURES - Sync with Gross Value Section AND populate Full Market Value UI
-        if (helper.final_report.adjustments.features && helper.final_report.adjustments.features.length > 0) {
-          const firstFeature = helper.final_report.adjustments.features[0];
-          helper.valuation.adjustments.features = {
-            value: firstFeature.value,
-            type: firstFeature.type,
-            percent: firstFeature.percent,
-            percentage: firstFeature.percentage || firstFeature.percent,
-            amount_display: firstFeature.amount_display,
-            amount: firstFeature.amount
-          };
-          
-          // DISABLED: Aggressive sync that clears Total Value manual additions
-          // syncFullMarketFeaturesWithGross(helper.final_report.adjustments.features);
+        // 1. FEATURES - Only sync ORIGINAL rows to valuation (not additional manual rows)
+        const fullFeaturesRows = document.querySelectorAll('#fullFeaturesAdjustmentsList > div');
+        const originalFeatureRow = [...fullFeaturesRows].find(row => {
+          const dataSource = row.getAttribute('data-source');
+          return dataSource === 'original' || dataSource === 'levi' || dataSource === 'valuation';
+        });
+        
+        if (originalFeatureRow) {
+          const inputs = originalFeatureRow.querySelectorAll('input, select');
+          if (inputs.length >= 4) {
+            helper.valuation.adjustments.features = {
+              value: inputs[0].value || '',
+              type: inputs[1].value || 'plus',
+              percent: parseFloat(inputs[2].value) || 0,
+              percentage: parseFloat(inputs[2].value) || 0,
+              amount_display: inputs[3].value || '',
+              amount: parseFloat((inputs[3].value || '').replace(/[₪,-]/g, '')) || 0
+            };
+            console.log('💾 Updated valuation.adjustments.features from ORIGINAL Total Market Value row');
+          }
         }
         
-        // 2. REGISTRATION - Sync with Gross Value Section AND populate Full Market Value UI  
-        if (helper.final_report.adjustments.registration && helper.final_report.adjustments.registration.length > 0) {
-          const firstRegistration = helper.final_report.adjustments.registration[0];
-          helper.valuation.adjustments.registration = {
-            value: firstRegistration.value,
-            type: firstRegistration.type,
-            percent: firstRegistration.percent,
-            percentage: firstRegistration.percentage || firstRegistration.percent,
-            amount_display: firstRegistration.amount_display,
-            amount: firstRegistration.amount
-          };
-          
-          // DISABLED: Aggressive sync that clears Total Value manual additions
-          // syncFullMarketRegistrationWithGross(helper.final_report.adjustments.registration);
+        // 2. REGISTRATION - Only sync ORIGINAL rows to valuation (not additional manual rows)
+        const fullRegistrationRows = document.querySelectorAll('#fullRegistrationAdjustmentsList > div');
+        const originalRegistrationRow = [...fullRegistrationRows].find(row => {
+          const dataSource = row.getAttribute('data-source');
+          return dataSource === 'original' || dataSource === 'levi' || dataSource === 'valuation';
+        });
+        
+        if (originalRegistrationRow) {
+          const inputs = originalRegistrationRow.querySelectorAll('input, select');
+          if (inputs.length >= 4) {
+            helper.valuation.adjustments.registration = {
+              value: inputs[0].value || '',
+              type: inputs[1].value || 'plus',
+              percent: parseFloat(inputs[2].value) || 0,
+              percentage: parseFloat(inputs[2].value) || 0,
+              amount_display: inputs[3].value || '',
+              amount: parseFloat((inputs[3].value || '').replace(/[₪,-]/g, '')) || 0
+            };
+            console.log('💾 Updated valuation.adjustments.registration from ORIGINAL Total Market Value row');
+          }
         }
         
-        // 3. MILEAGE (KM) - Only in Full Market Value
+        // 3. MILEAGE (KM) - Save ALL rows to final_report, ONLY ORIGINAL rows to valuation
         const mileageRows = document.querySelectorAll('#mileageAdjustmentsList > div');
-        if (mileageRows.length > 0) {
-          const firstRow = mileageRows[0];
-          const inputs = firstRow.querySelectorAll('input, select');
+        helper.final_report.adjustments.mileage = [];
+        
+        // Save ALL mileage rows to final_report.adjustments
+        mileageRows.forEach(row => {
+          const inputs = row.querySelectorAll('input, select');
+          if (inputs.length >= 4) {
+            const adjustmentData = {
+              value: inputs[0].value || '',
+              type: inputs[1].value || 'plus',
+              percent: parseFloat(inputs[2].value) || 0,
+              percentage: parseFloat(inputs[2].value) || 0,
+              amount_display: inputs[3].value || '',
+              amount: parseFloat((inputs[3].value || '').replace(/[₪,-]/g, '')) || 0,
+              source: row.getAttribute('data-source') || 'manual'
+            };
+            
+            // Apply sign based on type - CRITICAL FOR MINUS VALUES
+            if (inputs[1].value === 'minus') {
+              adjustmentData.amount = -Math.abs(adjustmentData.amount);
+              adjustmentData.percent = -Math.abs(adjustmentData.percent);
+              adjustmentData.percentage = -Math.abs(adjustmentData.percentage);
+            }
+            
+            helper.final_report.adjustments.mileage.push(adjustmentData);
+          }
+        });
+        
+        // Save ONLY ORIGINAL row to valuation.adjustments
+        const originalMileageRow = [...mileageRows].find(row => {
+          const dataSource = row.getAttribute('data-source');
+          return dataSource === 'original' || dataSource === 'levi' || dataSource === 'valuation';
+        });
+        
+        if (originalMileageRow) {
+          const inputs = originalMileageRow.querySelectorAll('input, select');
           if (inputs.length >= 4) {
             const adjustmentData = {
               value: inputs[0].value || '',
@@ -7147,49 +7227,55 @@
               amount: parseFloat((inputs[3].value || '').replace(/[₪,-]/g, '')) || 0
             };
             
-            // Apply sign based on type - CRITICAL FOR MINUS VALUES
+            // Apply sign based on type
             if (inputs[1].value === 'minus') {
               adjustmentData.amount = -Math.abs(adjustmentData.amount);
               adjustmentData.percent = -Math.abs(adjustmentData.percent);
               adjustmentData.percentage = -Math.abs(adjustmentData.percentage);
             }
             
-            // Update BOTH final_report.adjustments AND valuation.adjustments for mileage
-            helper.final_report.adjustments.mileage = [adjustmentData];
-            
-            // PRESERVE original data if UI shows empty/zero values (prevent zeroing out)
-            const hasActualChanges = adjustmentData.value || adjustmentData.percent > 0 || adjustmentData.amount > 0;
-            if (hasActualChanges) {
-              helper.valuation.adjustments.mileage = {
-                value: adjustmentData.value,
-                type: adjustmentData.type,
-                percent: adjustmentData.percent,
-                percentage: adjustmentData.percentage,
-                amount_display: adjustmentData.amount_display,
-                amount: adjustmentData.amount
-              };
-              console.log('✅ Updated mileage to BOTH final_report.adjustments AND valuation.adjustments (with changes)');
-            } else {
-              // Keep existing valuation data if UI shows no meaningful changes
-              console.log('🔒 Preserved existing valuation.adjustments.mileage (UI shows no changes)');
-            }
-          }
-        } else {
-          helper.final_report.adjustments.mileage = [];
-          // Only delete if we're certain there's no data anywhere (prevent corruption on page load)
-          if (!helper.valuation?.adjustments?.mileage?.value && !helper.valuation?.adjustments?.mileage?.percent) {
-            delete helper.valuation.adjustments.mileage;
-            console.log('🗑️ Cleared valuation.adjustments.mileage (no data anywhere)');
-          } else {
-            console.log('🔒 Preserved existing valuation.adjustments.mileage (no UI data but valuation exists)');
+            helper.valuation.adjustments.mileage = adjustmentData;
+            console.log('💾 Updated valuation.adjustments.mileage from ORIGINAL row');
           }
         }
         
-        // 4. OWNERSHIP TYPE - Only in Full Market Value
+        // 4. OWNERSHIP TYPE - Save ALL rows to final_report, ONLY ORIGINAL rows to valuation
         const ownershipRows = document.querySelectorAll('#ownershipAdjustmentsList > div');
-        if (ownershipRows.length > 0) {
-          const firstRow = ownershipRows[0];
-          const inputs = firstRow.querySelectorAll('input, select');
+        helper.final_report.adjustments.ownership_type = [];
+        
+        // Save ALL ownership rows to final_report.adjustments
+        ownershipRows.forEach(row => {
+          const inputs = row.querySelectorAll('input, select');
+          if (inputs.length >= 4) {
+            const adjustmentData = {
+              value: inputs[0].value || '',
+              type: inputs[1].value || 'plus',
+              percent: parseFloat(inputs[2].value) || 0,
+              percentage: parseFloat(inputs[2].value) || 0,
+              amount_display: inputs[3].value || '',
+              amount: parseFloat((inputs[3].value || '').replace(/[₪,-]/g, '')) || 0,
+              source: row.getAttribute('data-source') || 'manual'
+            };
+            
+            // Apply sign based on type
+            if (inputs[1].value === 'minus') {
+              adjustmentData.amount = -Math.abs(adjustmentData.amount);
+              adjustmentData.percent = -Math.abs(adjustmentData.percent);
+              adjustmentData.percentage = -Math.abs(adjustmentData.percentage);
+            }
+            
+            helper.final_report.adjustments.ownership_type.push(adjustmentData);
+          }
+        });
+        
+        // Save ONLY ORIGINAL row to valuation.adjustments
+        const originalOwnershipRow = [...ownershipRows].find(row => {
+          const dataSource = row.getAttribute('data-source');
+          return dataSource === 'original' || dataSource === 'levi' || dataSource === 'valuation';
+        });
+        
+        if (originalOwnershipRow) {
+          const inputs = originalOwnershipRow.querySelectorAll('input, select');
           if (inputs.length >= 4) {
             const adjustmentData = {
               value: inputs[0].value || '',
@@ -7200,27 +7286,55 @@
               amount: parseFloat((inputs[3].value || '').replace(/[₪,-]/g, '')) || 0
             };
             
-            // Apply sign based on type - CRITICAL FOR MINUS VALUES
+            // Apply sign based on type
             if (inputs[1].value === 'minus') {
               adjustmentData.amount = -Math.abs(adjustmentData.amount);
               adjustmentData.percent = -Math.abs(adjustmentData.percent);
               adjustmentData.percentage = -Math.abs(adjustmentData.percentage);
             }
             
-            // CRITICAL: DO NOT write additional categories to valuation.adjustments
-            // Only write to final_report.adjustments
-            helper.final_report.adjustments.ownership_type = [adjustmentData];
+            helper.valuation.adjustments.ownership_type = adjustmentData;
+            console.log('💾 Updated valuation.adjustments.ownership_type from ORIGINAL row');
           }
-        } else {
-          helper.final_report.adjustments.ownership_type = [];
-          // Don't touch valuation.adjustments for additional categories
         }
         
-        // 5. OWNERSHIP HISTORY - Only in Full Market Value
+        // 5. OWNERSHIP HISTORY - Save ALL rows to final_report, ONLY ORIGINAL rows to valuation
         const ownersRows = document.querySelectorAll('#ownersAdjustmentsList > div');
-        if (ownersRows.length > 0) {
-          const firstRow = ownersRows[0];
-          const inputs = firstRow.querySelectorAll('input, select');
+        helper.final_report.adjustments.ownership_history = [];
+        
+        // Save ALL ownership history rows to final_report.adjustments
+        ownersRows.forEach(row => {
+          const inputs = row.querySelectorAll('input, select');
+          if (inputs.length >= 4) {
+            const adjustmentData = {
+              value: inputs[0].value || '',
+              type: inputs[1].value || 'plus',
+              percent: parseFloat(inputs[2].value) || 0,
+              percentage: parseFloat(inputs[2].value) || 0,
+              amount_display: inputs[3].value || '',
+              amount: parseFloat((inputs[3].value || '').replace(/[₪,-]/g, '')) || 0,
+              source: row.getAttribute('data-source') || 'manual'
+            };
+            
+            // Apply sign based on type
+            if (inputs[1].value === 'minus') {
+              adjustmentData.amount = -Math.abs(adjustmentData.amount);
+              adjustmentData.percent = -Math.abs(adjustmentData.percent);
+              adjustmentData.percentage = -Math.abs(adjustmentData.percentage);
+            }
+            
+            helper.final_report.adjustments.ownership_history.push(adjustmentData);
+          }
+        });
+        
+        // Save ONLY ORIGINAL row to valuation.adjustments
+        const originalOwnersRow = [...ownersRows].find(row => {
+          const dataSource = row.getAttribute('data-source');
+          return dataSource === 'original' || dataSource === 'levi' || dataSource === 'valuation';
+        });
+        
+        if (originalOwnersRow) {
+          const inputs = originalOwnersRow.querySelectorAll('input, select');
           if (inputs.length >= 4) {
             const adjustmentData = {
               value: inputs[0].value || '',
@@ -7231,20 +7345,16 @@
               amount: parseFloat((inputs[3].value || '').replace(/[₪,-]/g, '')) || 0
             };
             
-            // Apply sign based on type - CRITICAL FOR MINUS VALUES
+            // Apply sign based on type
             if (inputs[1].value === 'minus') {
               adjustmentData.amount = -Math.abs(adjustmentData.amount);
               adjustmentData.percent = -Math.abs(adjustmentData.percent);
               adjustmentData.percentage = -Math.abs(adjustmentData.percentage);
             }
             
-            // CRITICAL: DO NOT write additional categories to valuation.adjustments
-            // Only write to final_report.adjustments
-            helper.final_report.adjustments.ownership_history = [adjustmentData];
+            helper.valuation.adjustments.ownership_history = adjustmentData;
+            console.log('💾 Updated valuation.adjustments.ownership_history from ORIGINAL row');
           }
-        } else {
-          helper.final_report.adjustments.ownership_history = [];
-          // Don't touch valuation.adjustments for additional categories
         }
         
         // 6. ADDITIONAL - Only in Full Market Value
@@ -8454,7 +8564,7 @@
       const rowId = 'mileageAdj_' + Date.now();
       
       const newRow = `
-        <div id="${rowId}" class="adjustment-row" style="display:grid; grid-template-columns:2fr 1fr 1fr 1fr 80px; gap:10px; margin-bottom:8px;">
+        <div id="${rowId}" class="adjustment-row" data-source="manual" style="display:grid; grid-template-columns:2fr 1fr 1fr 1fr 80px; gap:10px; margin-bottom:8px;">
           <div><input type="text" placeholder="תיאור מס ק"מ" title="" onchange="updateFullMarketValueCalculation(); syncAdjustmentToHelper(this, 'mileage'); this.title = this.value;" oninput="this.title = this.value;" /></div>
           <div><select onchange="updateFullMarketValueCalculation(); syncAdjustmentToHelper(this, 'mileage');" title="">
             <option value="plus">תוספת (+)</option>
@@ -8476,7 +8586,7 @@
       const rowId = 'ownershipAdj_' + Date.now();
       
       const newRow = `
-        <div id="${rowId}" class="adjustment-row" style="display:grid; grid-template-columns:2fr 1fr 1fr 1fr 80px; gap:10px; margin-bottom:8px;">
+        <div id="${rowId}" class="adjustment-row" data-source="manual" style="display:grid; grid-template-columns:2fr 1fr 1fr 1fr 80px; gap:10px; margin-bottom:8px;">
           <div><input type="text" placeholder="תיאור סוג בעלות" title="" onchange="updateFullMarketValueCalculation(); syncAdjustmentToHelper(this, 'ownership'); this.title = this.value;" oninput="this.title = this.value;" /></div>
           <div><select onchange="updateFullMarketValueCalculation(); syncAdjustmentToHelper(this, 'ownership');" title="">
             <option value="plus">תוספת (+)</option>
@@ -8498,7 +8608,7 @@
       const rowId = 'ownersAdj_' + Date.now();
       
       const newRow = `
-        <div id="${rowId}" class="adjustment-row" style="display:grid; grid-template-columns:2fr 1fr 1fr 1fr 80px; gap:10px; margin-bottom:8px;">
+        <div id="${rowId}" class="adjustment-row" data-source="manual" style="display:grid; grid-template-columns:2fr 1fr 1fr 1fr 80px; gap:10px; margin-bottom:8px;">
           <div><input type="text" placeholder="תיאור מספר בעלים" title="" onchange="updateFullMarketValueCalculation(); syncAdjustmentToHelper(this, 'owners'); this.title = this.value;" oninput="this.title = this.value;" /></div>
           <div><select onchange="updateFullMarketValueCalculation(); syncAdjustmentToHelper(this, 'owners');" title="">
             <option value="plus">תוספת (+)</option>
