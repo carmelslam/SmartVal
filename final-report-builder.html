@@ -5685,7 +5685,6 @@
           setTimeout(() => {
             const row = document.getElementById(rowId);
             if (row) {
-              console.log(`🔧 Calling formatAdjustmentDisplay with: selectedType="${selectedType}", percent=${adj.percentage || adj.percent || 0}, amount=${adj.amount || 0}`);
               formatAdjustmentDisplay(row, selectedType, adj.percentage || adj.percent || 0, adj.amount || 0);
             }
           }, 50);
@@ -6511,10 +6510,12 @@
         // Determine if it's a reduction/subtraction
         const isReduction = type === 'הפחתה (-)' || type === 'minus' || type === 'הפחתה' || type === 'הורדה';
         
-        console.log(`🔧 formatAdjustmentDisplay: type="${type}", isReduction=${isReduction}, percent=${percent}, amount=${amount}`);
         
-        // Format based on type - but handle minus signs properly
-        if (type === '%' || (percent !== 0 && percent !== null && percent !== undefined && (amount === 0 || amount === null || amount === undefined))) {
+        // Determine display mode based on data, not type dropdown
+        const hasPercent = (percent !== 0 && percent !== null && percent !== undefined);
+        const hasAmount = (amount !== 0 && amount !== null && amount !== undefined);
+        
+        if (hasPercent) {
           // Percentage mode: show percent value, disable amount
           percentInput.value = isReduction ? `-${Math.abs(percent)}` : Math.abs(percent);
           percentInput.readOnly = false;
@@ -6522,7 +6523,7 @@
           amountInput.value = '';
           amountInput.readOnly = true;
           amountInput.style.background = '#f0f0f0';
-        } else if (type === '₪' || (amount !== 0 && amount !== null && amount !== undefined)) {
+        } else if (hasAmount) {
           // Amount mode: show amount value, disable percent
           amountInput.value = isReduction ? `-₪${Math.abs(amount).toLocaleString()}` : `₪${Math.abs(amount).toLocaleString()}`;
           amountInput.readOnly = false;
