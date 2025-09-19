@@ -5391,175 +5391,75 @@
         if (featuresContainer) featuresContainer.innerHTML = '';
         if (registrationContainer) registrationContainer.innerHTML = '';
 
-        // Load from THREE sources: estimate.adjustments (Levi data) + final_report.adjustments (manual additions) + valuation.adjustments (fallback)
-        const estimateData = helper.estimate?.adjustments || {};
-        const finalReportData = helper.final_report?.adjustments || {};
-        const valuationData = helper.valuation?.adjustments || {};
+        // Use SINGLE CLEAN SOURCE like reloadGrossAdjustments: estimate.adjustments || valuation.adjustments
+        const adjustments = helper.estimate?.adjustments || helper.valuation?.adjustments || {};
         
-        // Combine features from three sources with priority: final_report > estimate > valuation
-        const estimateFeatures = Array.isArray(estimateData.features) ? estimateData.features : [];
-        const finalReportFeatures = Array.isArray(finalReportData.features) ? finalReportData.features : [];
-        const valuationFeatures = valuationData.features ? [valuationData.features] : []; // Convert single object to array
+        console.log('📍 Loading from: estimate.adjustments → valuation.adjustments (clean single source)');
+        console.log('🔍 Available adjustments data:', adjustments);
         
-        // Use final_report.adjustments as primary source, estimate.adjustments as fallback, valuation.adjustments as final fallback
-        const featuresData = [];
+        // Load features and registration only (matching reloadGrossAdjustments)
+        const categories = [
+          { key: 'features', addFunction: addFeatureAdjustment, container: featuresContainer },
+          { key: 'registration', addFunction: addRegistrationAdjustment, container: registrationContainer }
+        ];
         
-        if (finalReportFeatures.length > 0) {
-          // Use final_report data (includes both Levi edits and manual additions)
-          finalReportFeatures.forEach((item, index) => {
-            featuresData.push({...item, _source: 'final_report'});
-          });
-          console.log(`📋 Using final_report.adjustments.features (${finalReportFeatures.length} items)`);
-        } else if (estimateFeatures.length > 0) {
-          // Fallback to estimate data (original Levi data)
-          estimateFeatures.forEach((item, index) => {
-            featuresData.push({...item, _source: 'estimate', _estimate_index: index});
-          });
-          console.log(`📋 Fallback to estimate.adjustments.features (${estimateFeatures.length} items)`);
-        } else if (valuationFeatures.length > 0) {
-          // Final fallback to valuation data
-          valuationFeatures.forEach((item, index) => {
-            featuresData.push({...item, _source: 'valuation'});
-          });
-          console.log(`📋 Final fallback to valuation.adjustments.features (${valuationFeatures.length} items)`);
-        }
-        
-        // Combine registration from three sources with priority: final_report > estimate > valuation
-        const estimateRegistration = Array.isArray(estimateData.registration) ? estimateData.registration : [];
-        const finalReportRegistration = Array.isArray(finalReportData.registration) ? finalReportData.registration : [];
-        const valuationRegistration = valuationData.registration ? [valuationData.registration] : []; // Convert single object to array
-        
-        // Use final_report.adjustments as primary source, estimate.adjustments as fallback, valuation.adjustments as final fallback
-        const registrationData = [];
-        
-        if (finalReportRegistration.length > 0) {
-          // Use final_report data (includes both Levi edits and manual additions)
-          finalReportRegistration.forEach((item, index) => {
-            registrationData.push({...item, _source: 'final_report'});
-          });
-          console.log(`📋 Using final_report.adjustments.registration (${finalReportRegistration.length} items)`);
-        } else if (estimateRegistration.length > 0) {
-          // Fallback to estimate data (original Levi data)
-          estimateRegistration.forEach((item, index) => {
-            registrationData.push({...item, _source: 'estimate', _estimate_index: index});
-          });
-          console.log(`📋 Fallback to estimate.adjustments.registration (${estimateRegistration.length} items)`);
-        } else if (valuationRegistration.length > 0) {
-          // Final fallback to valuation data
-          valuationRegistration.forEach((item, index) => {
-            registrationData.push({...item, _source: 'valuation'});
-          });
-          console.log(`📋 Final fallback to valuation.adjustments.registration (${valuationRegistration.length} items)`);
-        }
-        
-        console.log(`🔄 Combined features: ${estimateFeatures.length} from estimate + ${finalReportFeatures.length} from final_report + ${valuationFeatures.length} from valuation = ${featuresData.length} total`);
-        console.log(`🔄 Combined registration: ${estimateRegistration.length} from estimate + ${finalReportRegistration.length} from final_report + ${valuationRegistration.length} from valuation = ${registrationData.length} total`);
-        
-
-        // ===== Features Adjustments =====
-
-        // Handle array data from estimate.adjustments.features
-        let featureItems = [];
-        if (Array.isArray(featuresData) && featuresData.length > 0) {
-          featureItems = featuresData;
-        } else {
-          // Show empty row for adding new adjustments
-          featureItems = [{}];
-        }
-
-        featureItems.forEach((item, index) => {
-          if (typeof addFeatureAdjustment === 'function') {
-            addFeatureAdjustment();
-            const row = document.querySelector('#featuresAdjustmentsList > div:last-child');
-            if (row) {
-              // Set data source for tracking
-              const isFromEstimate = item._source === 'estimate';
-              row.setAttribute('data-source', isFromEstimate ? 'levi' : 'manual');
-              if (isFromEstimate && typeof item._estimate_index !== 'undefined') {
-                row.setAttribute('data-estimate-index', item._estimate_index);
-              }
-              
-              const inputs = row.querySelectorAll('input, select');
-              // Keep original values to preserve signs
-              const originalAmount = item.amount || 0;
-              const originalPercent = item.percent || item.percentage || 0;
-              const amount = Math.abs(parseFloat(originalAmount));
-              const percent = Math.abs(parseFloat(originalPercent));
-              
-              
-              if (inputs.length >= 4 && (item.value || item.type || percent > 0 || amount > 0)) {
-                // Use exact same logic as autoPopulateMarketAdjustments
-                inputs[0].value = item.value || '';
-                const itemPercent = item.percentage || item.percent;
-                const itemAmount = item.amount;
-                inputs[1].value = getDropdownTypeFromValues(itemPercent, itemAmount, item.type || 'plus');
+        categories.forEach(({ key, addFunction, container }) => {
+          const categoryData = adjustments[key];
+          if (categoryData && container) {
+            console.log(`📝 Loading ${key} adjustments:`, categoryData);
+            
+            // Handle both array and single object data
+            const items = Array.isArray(categoryData) ? categoryData : (categoryData && (categoryData.percent || categoryData.percentage || categoryData.amount) ? [categoryData] : []);
+            
+            items.forEach((item, index) => {
+              if (item && (item.percent || item.percentage || item.amount)) {
+                // Add new row
+                addFunction();
                 
-                // Apply unified formatting for features
-                setTimeout(() => {
-                  formatAdjustmentDisplay(row, inputs[1].value, itemPercent, itemAmount);
-                }, 10);
+                // Fill the data
+                const rows = container.querySelectorAll('div[id*="Adj_"]');
+                const lastRow = rows[rows.length - 1];
+                
+                if (lastRow) {
+                  const inputs = lastRow.querySelectorAll('input, select');
+                  if (inputs.length >= 4) {
+                    // Field mapping: value → תיאור (description) - PRESERVE FULL TEXT
+                    inputs[0].value = item.value || '';
+                    
+                    // Type dropdown - use dynamic sign logic
+                    const itemPercent = item.percentage || item.percent;
+                    const itemAmount = item.amount;
+                    inputs[1].value = getDropdownTypeFromValues(itemPercent, itemAmount, item.type || 'plus');
+                    
+                    // Apply formatAdjustmentDisplay for proper minus sign handling
+                    setTimeout(() => {
+                      formatAdjustmentDisplay(lastRow, inputs[1].value, itemPercent, itemAmount);
+                    }, 50);
+                    
+                    // Mark source as original for page refresh loads
+                    lastRow.setAttribute('data-source', 'original');
+                    
+                    console.log(`✅ Loaded ${key} item ${index}:`, {
+                      description: inputs[0].value,
+                      type: inputs[1].value,
+                      percent: itemPercent,
+                      amount: itemAmount
+                    });
+                  }
+                }
               }
-            }
+            });
           }
         });
-
-        // ===== Registration Adjustment =====
-        // Handle array data from estimate.adjustments.registration
-        let registrationItems = [];
-        if (Array.isArray(registrationData) && registrationData.length > 0) {
-          registrationItems = registrationData;
-        } else {
-          // Show empty row for adding new adjustments
-          registrationItems = [{}];
-        }
-
-        registrationItems.forEach((item, index) => {
-          if (typeof addRegistrationAdjustment === 'function') {
-            addRegistrationAdjustment();
-            const row = document.querySelector('#registrationAdjustmentsList > div:last-child');
-            if (row) {
-              // Set data source for tracking
-              const isFromEstimate = item._source === 'estimate';
-              row.setAttribute('data-source', isFromEstimate ? 'levi' : 'manual');
-              if (isFromEstimate && typeof item._estimate_index !== 'undefined') {
-                row.setAttribute('data-estimate-index', item._estimate_index);
-              }
-              
-              const inputs = row.querySelectorAll('input, select');
-              // Keep original values to preserve signs
-              const originalAmount = item.amount || 0;
-              const originalPercent = item.percent || item.percentage || 0;
-              const amount = Math.abs(parseFloat(originalAmount));
-              const percent = Math.abs(parseFloat(originalPercent));
-              
-              console.log('🔍 Loading registration adjustment from estimate:', {
-                item: item,
-                originalAmount: originalAmount,
-                originalPercent: originalPercent,
-                amount: amount,
-                percent: percent,
-                type: item.type
-              });
-              
-              if (inputs.length >= 4 && (item.value || item.type || percent > 0 || amount > 0)) {
-                // Use exact same logic as autoPopulateMarketAdjustments
-                inputs[0].value = item.value || helper.vehicle?.registration_date || 'עליה לכביש';
-                const itemPercent = item.percentage || item.percent;
-                const itemAmount = item.amount;
-                inputs[1].value = getDropdownTypeFromValues(itemPercent, itemAmount, item.type || 'plus');
-                
-                // Apply unified formatting for registration
-                setTimeout(() => {
-                  formatAdjustmentDisplay(row, inputs[1].value, itemPercent, itemAmount);
-                }, 10);
-              }
-            }
-          }
-        });
-
-        updateGrossMarketValueCalculation();
+        
+        // Trigger calculations after loading
+        setTimeout(() => {
+          updateGrossMarketValueCalculation();
+          console.log('✅ Gross adjustments loaded from clean single source');
+        }, 100);
+        
       } catch (error) {
-        console.error('Error loading gross adjustments:', error);
+        console.error('❌ Error loading gross adjustments:', error);
       }
     }
     
@@ -5626,6 +5526,13 @@
           
           
           const description = adj.value || adj.description || '';
+          // Escape HTML entities to preserve special characters
+          const escapedDescription = description
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#039;');
           // Populate percentage and amount from adjustment data (handle negative values properly)
           let percentage = '';
           let amount = '';
@@ -5657,7 +5564,7 @@
           
           const html = `
             <div id="${rowId}" class="adjustment-row" data-source="${source}" style="display:grid; grid-template-columns:2fr 1fr 1fr 1fr 80px; gap:10px; margin-bottom:8px;">
-              <div><input type="text" placeholder="תיאור התאמה" value="${description}" ${readOnlyAttr} style="${readOnlyStyle}" ${isReadOnlyCategory ? '' : `onchange="updateFullMarketValueCalculation(); updateHelperFromAdjustments(); syncAdjustmentToHelper(this, '${category}');"`} /></div>
+              <div><input type="text" placeholder="תיאור התאמה" value="${escapedDescription}" ${readOnlyAttr} style="${readOnlyStyle}" ${isReadOnlyCategory ? '' : `onchange="updateFullMarketValueCalculation(); updateHelperFromAdjustments(); syncAdjustmentToHelper(this, '${category}');"`} /></div>
               <div>
                 <select ${disabledAttr} style="${readOnlyStyle}" ${isReadOnlyCategory ? '' : `onchange="updateFullMarketValueCalculation(); updateHelperFromAdjustments(); syncAdjustmentToHelper(this, '${category}');"`}>
                   <option value="%" ${selectedType === '%' ? 'selected' : ''}>%</option>
@@ -5677,13 +5584,16 @@
             </div>
           `;
           
-          // Apply formatting after row is created
+          // Apply formatting after row is created - INCREASED TIMEOUT FOR CONSISTENCY
           setTimeout(() => {
             const row = document.getElementById(rowId);
             if (row) {
-              formatAdjustmentDisplay(row, selectedType, adj.percentage || adj.percent || 0, adj.amount || 0);
+              // Use the same values that were used to determine selectedType
+              const itemPercent = adj.percentage || adj.percent;
+              const itemAmount = adj.amount;
+              formatAdjustmentDisplay(row, selectedType, itemPercent, itemAmount);
             }
-          }, 50);
+          }, 100);
           
           return html;
         }
