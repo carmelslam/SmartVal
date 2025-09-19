@@ -5674,20 +5674,38 @@
           console.log(`✅ Loaded ${registration.length} total registration, filtered and added to Total Value Section`);
         }
         
-        // 3. Load KM from estimate.adjustments into mileageAdjustmentsList
+        // 3. Load KM from estimate.adjustments with fallback to valuation.adjustments
         const mileageContainer = document.getElementById('mileageAdjustmentsList');
         if (mileageContainer) {
           mileageContainer.innerHTML = '';
-          const mileage = estimateAdjustments.mileage || [];
-          console.log(`📦 Loading mileage from estimate.adjustments:`, mileage);
+          
+          // PRIMARY: estimate.adjustments.mileage, FALLBACK: valuation.adjustments.mileage
+          let mileage = estimateAdjustments.mileage || [];
+          let source = 'estimate';
+          
+          if (!Array.isArray(mileage) || mileage.length === 0) {
+            // Fallback to valuation.adjustments.mileage
+            const valuationMileage = helper.valuation?.adjustments?.mileage;
+            if (valuationMileage) {
+              mileage = Array.isArray(valuationMileage) ? valuationMileage : [valuationMileage];
+              source = 'valuation';
+              console.log(`📦 Fallback: Loading mileage from valuation.adjustments:`, mileage);
+            } else {
+              console.log(`📦 No mileage data in estimate or valuation adjustments`);
+            }
+          } else {
+            console.log(`📦 Loading mileage from estimate.adjustments:`, mileage);
+          }
+          
           if (Array.isArray(mileage)) {
             mileage.forEach(adj => {
-              if (adj.value || adj.percentage || adj.amount) {
-                mileageContainer.insertAdjacentHTML('beforeend', createTotalValueRow(adj, 'mileage', 'estimate'));
+              if (adj && (adj.value || adj.percentage || adj.percent || adj.amount)) {
+                mileageContainer.insertAdjacentHTML('beforeend', createTotalValueRow(adj, 'mileage', source));
+                console.log(`✅ Added mileage adjustment from ${source}:`, adj.value || 'no description');
               }
             });
           }
-          console.log(`✅ Loaded ${mileage.length} mileage to Total Value Section`);
+          console.log(`✅ Loaded ${mileage.length} mileage adjustments to Total Value Section from ${source}`);
         }
         
         // 4. Load ownership_type from estimate.adjustments into ownershipAdjustmentsList
