@@ -5600,9 +5600,9 @@
           console.log(`🔍 createTotalValueRow for ${category}: adj.type="${adj.type}", selectedType="${selectedType}"`);
           
           const description = adj.value || adj.description || '';
-          // Don't format values here - let formatAdjustmentDisplay handle it
-          const percentage = '';
-          const amount = '';
+          // Populate percentage and amount from adjustment data
+          const percentage = adj.percent || adj.percentage ? Math.abs(adj.percent || adj.percentage) : '';
+          const amount = adj.amount ? Math.abs(adj.amount) : '';
           const isPercent = selectedType === '%';
           const isAmount = selectedType === '₪';
           
@@ -5723,36 +5723,72 @@
           console.log(`✅ Loaded ${mileage.length} mileage adjustments to Total Value Section from ${source}`);
         }
         
-        // 4. Load ownership_type from estimate.adjustments into ownershipAdjustmentsList
+        // 4. Load ownership_type from estimate.adjustments with fallback to valuation.adjustments
         const ownershipContainer = document.getElementById('ownershipAdjustmentsList');
         if (ownershipContainer) {
           ownershipContainer.innerHTML = '';
-          const ownership = estimateAdjustments.ownership_type || estimateAdjustments.ownership || [];
-          console.log(`📦 Loading ownership from estimate.adjustments:`, ownership);
+          
+          // PRIMARY: estimate.adjustments.ownership_type, FALLBACK: valuation.adjustments.ownership_type
+          let ownership = estimateAdjustments.ownership_type || estimateAdjustments.ownership || [];
+          let source = 'estimate';
+          
+          if (!Array.isArray(ownership) || ownership.length === 0) {
+            // Fallback to valuation.adjustments.ownership_type
+            const valuationOwnership = helper.valuation?.adjustments?.ownership_type;
+            if (valuationOwnership) {
+              ownership = Array.isArray(valuationOwnership) ? valuationOwnership : [valuationOwnership];
+              source = 'valuation';
+              console.log(`📦 Fallback: Loading ownership from valuation.adjustments:`, ownership);
+            } else {
+              console.log(`📦 No ownership data in estimate or valuation adjustments`);
+            }
+          } else {
+            console.log(`📦 Loading ownership from estimate.adjustments:`, ownership);
+          }
+          
           if (Array.isArray(ownership)) {
             ownership.forEach(adj => {
-              if (adj.value || adj.percentage || adj.amount) {
-                ownershipContainer.insertAdjacentHTML('beforeend', createTotalValueRow(adj, 'ownership', 'estimate'));
+              if (adj && (adj.value || adj.percentage || adj.percent || adj.amount)) {
+                ownershipContainer.insertAdjacentHTML('beforeend', createTotalValueRow(adj, 'ownership', source));
+                console.log(`✅ Added ownership adjustment from ${source}:`, adj.value || 'no description');
               }
             });
           }
-          console.log(`✅ Loaded ${ownership.length} ownership to Total Value Section`);
+          console.log(`✅ Loaded ${ownership.length} ownership adjustments to Total Value Section from ${source}`);
         }
         
-        // 5. Load ownership_history from estimate.adjustments into ownersAdjustmentsList
+        // 5. Load ownership_history from estimate.adjustments with fallback to valuation.adjustments
         const ownersContainer = document.getElementById('ownersAdjustmentsList');
         if (ownersContainer) {
           ownersContainer.innerHTML = '';
-          const owners = estimateAdjustments.ownership_history || estimateAdjustments.owners || [];
-          console.log(`📦 Loading owners from estimate.adjustments:`, owners);
+          
+          // PRIMARY: estimate.adjustments.ownership_history, FALLBACK: valuation.adjustments.ownership_history
+          let owners = estimateAdjustments.ownership_history || estimateAdjustments.owners || [];
+          let source = 'estimate';
+          
+          if (!Array.isArray(owners) || owners.length === 0) {
+            // Fallback to valuation.adjustments.ownership_history
+            const valuationOwners = helper.valuation?.adjustments?.ownership_history;
+            if (valuationOwners) {
+              owners = Array.isArray(valuationOwners) ? valuationOwners : [valuationOwners];
+              source = 'valuation';
+              console.log(`📦 Fallback: Loading owners from valuation.adjustments:`, owners);
+            } else {
+              console.log(`📦 No owners data in estimate or valuation adjustments`);
+            }
+          } else {
+            console.log(`📦 Loading owners from estimate.adjustments:`, owners);
+          }
+          
           if (Array.isArray(owners)) {
             owners.forEach(adj => {
-              if (adj.value || adj.percentage || adj.amount) {
-                ownersContainer.insertAdjacentHTML('beforeend', createTotalValueRow(adj, 'owners', 'estimate'));
+              if (adj && (adj.value || adj.percentage || adj.percent || adj.amount)) {
+                ownersContainer.insertAdjacentHTML('beforeend', createTotalValueRow(adj, 'owners', source));
+                console.log(`✅ Added owners adjustment from ${source}:`, adj.value || 'no description');
               }
             });
           }
-          console.log(`✅ Loaded ${owners.length} owners to Total Value Section`);
+          console.log(`✅ Loaded ${owners.length} owners adjustments to Total Value Section from ${source}`);
         }
         
         // 6. Load additional from estimate.adjustments + final_report.adjustments into allAdjustmentsList
@@ -7069,22 +7105,31 @@
             // Update BOTH final_report.adjustments AND valuation.adjustments for mileage
             helper.final_report.adjustments.mileage = [adjustmentData];
             
-            // CRITICAL FIX: Also update valuation.adjustments.mileage for backward compatibility
-            helper.valuation.adjustments.mileage = {
-              value: adjustmentData.value,
-              type: adjustmentData.type,
-              percent: adjustmentData.percent,
-              percentage: adjustmentData.percentage,
-              amount_display: adjustmentData.amount_display,
-              amount: adjustmentData.amount
-            };
-            console.log('✅ Updated mileage to BOTH final_report.adjustments AND valuation.adjustments');
+            // PRESERVE original data if UI shows empty/zero values (prevent zeroing out)
+            const hasActualChanges = adjustmentData.value || adjustmentData.percent > 0 || adjustmentData.amount > 0;
+            if (hasActualChanges) {
+              helper.valuation.adjustments.mileage = {
+                value: adjustmentData.value,
+                type: adjustmentData.type,
+                percent: adjustmentData.percent,
+                percentage: adjustmentData.percentage,
+                amount_display: adjustmentData.amount_display,
+                amount: adjustmentData.amount
+              };
+              console.log('✅ Updated mileage to BOTH final_report.adjustments AND valuation.adjustments (with changes)');
+            } else {
+              // Keep existing valuation data if UI shows no meaningful changes
+              console.log('🔒 Preserved existing valuation.adjustments.mileage (UI shows no changes)');
+            }
           }
         } else {
           helper.final_report.adjustments.mileage = [];
-          // Clear valuation.adjustments.mileage when no data
-          if (helper.valuation.adjustments.mileage) {
+          // Only delete if we're certain there's no data anywhere (prevent corruption on page load)
+          if (!helper.valuation?.adjustments?.mileage?.value && !helper.valuation?.adjustments?.mileage?.percent) {
             delete helper.valuation.adjustments.mileage;
+            console.log('🗑️ Cleared valuation.adjustments.mileage (no data anywhere)');
+          } else {
+            console.log('🔒 Preserved existing valuation.adjustments.mileage (no UI data but valuation exists)');
           }
         }
         
