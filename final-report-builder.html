@@ -6507,45 +6507,40 @@
         const isReduction = type === 'הפחתה (-)' || type === 'minus' || type === 'הפחתה' || type === 'הורדה';
         
         
-        // Determine field type based on data
-        const hasPercent = (percent !== 0 && percent !== null && percent !== undefined);
-        const hasAmount = (amount !== 0 && amount !== null && amount !== undefined);
+        // Determine field type based on category and data source
+        // Features, KM, Ownership are typically percentage-based
+        // Registration is typically amount-based
+        const row = percentInput.closest('div[id*="Adj_"]');
+        const containerId = row?.closest('[id$="AdjustmentsList"]')?.id || '';
         
-        if (hasPercent) {
+        // Determine if this should be percentage or amount mode
+        const isPercentageCategory = (
+          containerId.includes('features') || 
+          containerId.includes('mileage') || 
+          containerId.includes('ownership') || 
+          containerId.includes('owners')
+        );
+        
+        const isAmountCategory = containerId.includes('registration');
+        
+        if (isPercentageCategory || (!isAmountCategory && percent !== null && percent !== undefined)) {
           // Percentage mode: show percent value, disable amount
-          percentInput.value = isReduction ? `-${Math.abs(percent)}` : Math.abs(percent);
+          percentInput.value = isReduction ? `-${Math.abs(percent || 0)}` : Math.abs(percent || 0);
           percentInput.readOnly = false;
           percentInput.style.background = '';
           amountInput.value = '';
           amountInput.readOnly = true;
           amountInput.style.background = '#f0f0f0';
-        } else if (hasAmount) {
+        } else {
           // Amount mode: show amount value, disable percent
-          amountInput.value = isReduction ? `-₪${Math.abs(amount)}` : `₪${Math.abs(amount)}`;
+          amountInput.value = isReduction ? `-₪${Math.abs(amount || 0)}` : `₪${Math.abs(amount || 0)}`;
           amountInput.readOnly = false;
           amountInput.style.background = '';
           percentInput.value = '';
           percentInput.readOnly = true;
           percentInput.style.background = '#f0f0f0';
-        } else if (type === 'תוספת (+)' || type === 'plus') {
-          // Addition mode: show positive values with currency
-          percentInput.value = Math.abs(percent || 0);
-          amountInput.value = `₪${Math.abs(amount || 0)}`;
-          percentInput.readOnly = false;
-          amountInput.readOnly = false;
-          percentInput.style.background = '';
-          amountInput.style.background = '';
-        } else if (type === 'הפחתה (-)' || type === 'minus') {
-          // Reduction mode: show negative values with currency
-          percentInput.value = percent ? `-${Math.abs(percent)}` : '';
-          amountInput.value = amount ? `-₪${Math.abs(amount)}` : '';
-          percentInput.readOnly = false;
-          amountInput.readOnly = false;
-          percentInput.style.background = '';
-          amountInput.style.background = '';
         }
         
-        console.log(`✅ Formatted display - percent: "${percentInput.value}", amount: "${amountInput.value}"`);
         
       } catch (error) {
         console.error('Error in formatAdjustmentDisplay:', error);
@@ -7783,7 +7778,8 @@
           if (inputs.length >= 4) {
             const amount = parseFloat((inputs[3].value || '').replace(/[₪,]/g, '')) || 0;
             const type = inputs[1].value;
-            currentValue += (type === 'minus' ? -amount : amount);
+            const isNegative = (type === 'minus' || type === 'הפחתה (-)' || type === 'הפחתה');
+            currentValue += (isNegative ? -amount : amount);
           }
         });
         
@@ -8599,7 +8595,8 @@
           if (inputs.length >= 4) {
             const amount = parseFloat((inputs[3].value || '').replace(/[₪,]/g, '')) || 0;
             const type = inputs[1].value;
-            currentValue += (type === 'minus' ? -amount : amount);
+            const isNegative = (type === 'minus' || type === 'הפחתה (-)' || type === 'הפחתה');
+            currentValue += (isNegative ? -amount : amount);
           }
         });
         
@@ -8614,7 +8611,8 @@
           if (inputs.length >= 4) {
             const amount = parseFloat((inputs[3].value || '').replace(/[₪,]/g, '')) || 0;
             const type = inputs[1].value;
-            currentValue += (type === 'minus' ? -amount : amount);
+            const isNegative = (type === 'minus' || type === 'הפחתה (-)' || type === 'הפחתה');
+            currentValue += (isNegative ? -amount : amount);
           }
         });
         
