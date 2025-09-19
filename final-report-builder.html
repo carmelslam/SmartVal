@@ -6512,32 +6512,34 @@
         // Registration is typically amount-based
         const containerId = percentInput.closest('[id$="AdjustmentsList"]')?.id || '';
         
-        // Determine if this should be percentage or amount mode
-        const isPercentageCategory = (
-          containerId.includes('features') || 
-          containerId.includes('mileage') || 
-          containerId.includes('ownership') || 
-          containerId.includes('owners')
-        );
+        // Simple logic: if we have percent data, show percentage mode; if we have amount data, show amount mode
+        const hasPercent = (percent !== null && percent !== undefined && percent !== 0);
+        const hasAmount = (amount !== null && amount !== undefined && amount !== 0);
         
-        const isAmountCategory = containerId.includes('registration');
-        
-        if (isPercentageCategory || (!isAmountCategory && percent !== null && percent !== undefined)) {
-          // Percentage mode: show percent value, disable amount
-          percentInput.value = isReduction ? `-${Math.abs(percent || 0)}` : Math.abs(percent || 0);
+        if (hasPercent && !hasAmount) {
+          // Percentage mode: show percent value, make both editable
+          percentInput.value = isReduction ? `-${Math.abs(percent)}` : Math.abs(percent);
           percentInput.readOnly = false;
           percentInput.style.background = '';
           amountInput.value = '';
-          amountInput.readOnly = true;
-          amountInput.style.background = '#f0f0f0';
-        } else {
-          // Amount mode: show amount value, disable percent
-          amountInput.value = isReduction ? `-₪${Math.abs(amount || 0)}` : `₪${Math.abs(amount || 0)}`;
+          amountInput.readOnly = false;
+          amountInput.style.background = '';
+        } else if (hasAmount && !hasPercent) {
+          // Amount mode: show amount value, make both editable
+          amountInput.value = isReduction ? `-₪${Math.abs(amount)}` : `₪${Math.abs(amount)}`;
           amountInput.readOnly = false;
           amountInput.style.background = '';
           percentInput.value = '';
-          percentInput.readOnly = true;
-          percentInput.style.background = '#f0f0f0';
+          percentInput.readOnly = false;
+          percentInput.style.background = '';
+        } else {
+          // Default: make both fields editable
+          percentInput.value = isReduction && percent ? `-${Math.abs(percent)}` : Math.abs(percent || 0);
+          amountInput.value = isReduction && amount ? `-₪${Math.abs(amount)}` : `₪${Math.abs(amount || 0)}`;
+          percentInput.readOnly = false;
+          amountInput.readOnly = false;
+          percentInput.style.background = '';
+          amountInput.style.background = '';
         }
         
         
