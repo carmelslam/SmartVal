@@ -2782,11 +2782,16 @@
           updateGrossMarketValueCalculation();
           updateFullMarketValueCalculation();
           
-          // CRITICAL FIX: Save formatted state back to sessionStorage so refresh loads correct data
-          updateHelperFromAdjustments();
-          const updatedHelper = window.helper || {};
-          sessionStorage.setItem('helper', JSON.stringify(updatedHelper));
-          console.log('💾 Saved formatted helper state to sessionStorage after load');
+          // CRITICAL: Trigger all change events to ensure formatAdjustmentDisplay runs
+          triggerAllAdjustmentChangeEvents();
+          
+          // Save formatted state back to sessionStorage so refresh loads correct data  
+          setTimeout(() => {
+            updateHelperFromAdjustments();
+            const updatedHelper = window.helper || {};
+            sessionStorage.setItem('helper', JSON.stringify(updatedHelper));
+            console.log('💾 Saved formatted helper state to sessionStorage after load with change events');
+          }, 100);
         }, 150);
         
         
@@ -5479,14 +5484,11 @@
       try {
         console.log('🔄 Auto-loading Total Value Section with mixed data sources');
         
-        // Mixed data sources (EXACT same as reload button):
-        // - Features & Registration: from final_report.adjustments (sync with Gross section)  
-        // - Others (KM, Ownership, Owners, Additional): from estimate.adjustments with valuation fallback
+        // UNIFIED data sources (EXACT same as reload button):
+        // Use estimate.adjustments with valuation fallback (no final_report mixing for consistency)
         const estimateAdjustments = helper.estimate?.adjustments || helper.valuation?.adjustments || {};
-        const finalReportAdjustments = helper.final_report?.adjustments || {};
         
         console.log('📦 estimate.adjustments:', estimateAdjustments);
-        console.log('📦 final_report.adjustments:', finalReportAdjustments);
         console.log('📦 helper.valuation.adjustments:', helper.valuation?.adjustments);
         console.log('📦 helper.valuation.adjustments keys:', Object.keys(helper.valuation?.adjustments || {}));
         
@@ -5629,18 +5631,18 @@
           return html;
         }
         
-        // 1. Load features from final_report.adjustments into fullFeaturesAdjustmentsList
+        // 1. Load features from estimate.adjustments with fallback to valuation.adjustments
         const featuresContainer = document.getElementById('fullFeaturesAdjustmentsList');
         if (featuresContainer) {
           featuresContainer.innerHTML = '';
-          const features = finalReportAdjustments.features || [];
-          console.log('📦 Loading features from final_report.adjustments:', features);
+          const features = estimateAdjustments.features || [];
+          console.log('📦 Loading features from estimate.adjustments (unified source):', features);
           if (Array.isArray(features)) {
             features.forEach((adj, index) => {
               console.log(`🔍 Processing features[${index}]:`, adj);
               // Load all non-empty items (check for any content)
               if (adj && (adj.value || adj.description || adj.percentage || adj.percent || adj.amount)) {
-                featuresContainer.insertAdjacentHTML('beforeend', createTotalValueRow(adj, 'features', 'final_report'));
+                featuresContainer.insertAdjacentHTML('beforeend', createTotalValueRow(adj, 'features', 'estimate'));
                 console.log(`✅ Added features[${index}] to Total Value Section`);
               } else {
                 console.log(`⚠️ Skipped features[${index}] - no content`);
@@ -5650,18 +5652,18 @@
           console.log(`✅ Loaded ${features.length} total features, filtered and added to Total Value Section`);
         }
         
-        // 2. Load registration from final_report.adjustments into fullRegistrationAdjustmentsList
+        // 2. Load registration from estimate.adjustments with fallback to valuation.adjustments
         const registrationContainer = document.getElementById('fullRegistrationAdjustmentsList');
         if (registrationContainer) {
           registrationContainer.innerHTML = '';
-          const registration = finalReportAdjustments.registration || [];
-          console.log('📦 Loading registration from final_report.adjustments:', registration);
+          const registration = estimateAdjustments.registration || [];
+          console.log('📦 Loading registration from estimate.adjustments (unified source):', registration);
           if (Array.isArray(registration)) {
             registration.forEach((adj, index) => {
               console.log(`🔍 Processing registration[${index}]:`, adj);
               // Load all non-empty items (check for any content)
               if (adj && (adj.value || adj.description || adj.percentage || adj.percent || adj.amount)) {
-                registrationContainer.insertAdjacentHTML('beforeend', createTotalValueRow(adj, 'registration', 'final_report'));
+                registrationContainer.insertAdjacentHTML('beforeend', createTotalValueRow(adj, 'registration', 'estimate'));
                 console.log(`✅ Added registration[${index}] to Total Value Section`);
               } else {
                 console.log(`⚠️ Skipped registration[${index}] - no content`);
@@ -5785,32 +5787,39 @@
           console.log(`✅ Loaded ${owners.length} owners adjustments to Total Value Section from ${source}`);
         }
         
-        // 6. Load additional from estimate.adjustments + final_report.adjustments into allAdjustmentsList
+        // 6. Load additional from estimate.adjustments with fallback to valuation.adjustments
         const additionalContainer = document.getElementById('allAdjustmentsList');
         if (additionalContainer) {
           additionalContainer.innerHTML = '';
           
-          // Load from estimate.adjustments first
-          const estimateAdditional = estimateAdjustments.additional || [];
-          if (Array.isArray(estimateAdditional)) {
-            estimateAdditional.forEach(adj => {
-              if (adj.value || adj.percentage || adj.amount) {
-                additionalContainer.insertAdjacentHTML('beforeend', createTotalValueRow(adj, 'additional', 'estimate'));
+          // PRIMARY: estimate.adjustments.additional, FALLBACK: valuation.adjustments.additional
+          let additional = estimateAdjustments.additional || [];
+          let source = 'estimate';
+          
+          if (!Array.isArray(additional) || additional.length === 0) {
+            // Fallback to valuation.adjustments.additional
+            const valuationAdditional = helper.valuation?.adjustments?.additional;
+            if (valuationAdditional) {
+              additional = Array.isArray(valuationAdditional) ? valuationAdditional : [valuationAdditional];
+              source = 'original';
+              console.log(`📦 Fallback: Loading additional from valuation.adjustments:`, additional);
+            } else {
+              console.log(`📦 No additional data in estimate or valuation adjustments`);
+            }
+          } else {
+            console.log(`📦 Loading additional from estimate.adjustments:`, additional);
+          }
+          
+          if (Array.isArray(additional)) {
+            additional.forEach(adj => {
+              if (adj && (adj.value || adj.percentage || adj.percent || adj.amount)) {
+                additionalContainer.insertAdjacentHTML('beforeend', createTotalValueRow(adj, 'additional', source));
+                console.log(`✅ Added additional adjustment from ${source}:`, adj.value || 'no description');
               }
             });
           }
           
-          // Then load from final_report.adjustments (user custom entries)
-          const finalReportAdditional = finalReportAdjustments.additional || [];
-          if (Array.isArray(finalReportAdditional)) {
-            finalReportAdditional.forEach(adj => {
-              if (adj.value || adj.percentage || adj.amount) {
-                additionalContainer.insertAdjacentHTML('beforeend', createTotalValueRow(adj, 'additional', 'final_report'));
-              }
-            });
-          }
-          
-          console.log(`✅ Loaded ${estimateAdditional.length + finalReportAdditional.length} additional to Total Value Section`);
+          console.log(`✅ Loaded ${additional.length} additional adjustments to Total Value Section from ${source}`);
         }
         
         console.log('✅ Completed loading Total Value Section adjustments');
@@ -6624,10 +6633,29 @@
         }
         
         // Use ESTIMATOR PATTERN: First row = original valuation data, additional rows = estimates only
-        if (category !== 'additional') {
-          if (!helper.valuation) helper.valuation = {};
-          if (!helper.valuation.adjustments) helper.valuation.adjustments = {};
+        if (!helper.valuation) helper.valuation = {};
+        if (!helper.valuation.adjustments) helper.valuation.adjustments = {};
+        
+        if (category === 'additional') {
+          // FIXED: Create valuation.adjustments.additional for התאמות שוק נוספות
+          if (!helper.valuation.adjustments.additional) {
+            helper.valuation.adjustments.additional = [];
+          }
           
+          // Find existing item in valuation.adjustments.additional
+          const existingValuationIndex = helper.valuation.adjustments.additional.findIndex(
+            item => item.value === adjustmentData.value && item.type === adjustmentData.type
+          );
+          
+          if (existingValuationIndex >= 0) {
+            // Update existing entry in valuation
+            helper.valuation.adjustments.additional[existingValuationIndex] = adjustmentData;
+          } else {
+            // Add new entry to valuation
+            helper.valuation.adjustments.additional.push(adjustmentData);
+          }
+          
+        } else {
           // Map category names to valuation structure
           let valuationCategory = category;
           if (category === 'ownership') valuationCategory = 'ownership_type';
@@ -6893,6 +6921,50 @@
         
       } catch (error) {
         console.error('❌ Error in updateHelperFromAdjustments:', error);
+      }
+    }
+
+    /**
+     * Trigger change events on all adjustment fields to ensure formatAdjustmentDisplay runs
+     * Critical for minus sign detection on page refresh
+     */
+    function triggerAllAdjustmentChangeEvents() {
+      try {
+        console.log('🔄 Triggering all adjustment change events for proper formatting');
+        
+        // Find all adjustment containers
+        const containers = [
+          'grossFeaturesAdjustmentsList',
+          'grossRegistrationAdjustmentsList', 
+          'fullFeaturesAdjustmentsList',
+          'fullRegistrationAdjustmentsList',
+          'mileageAdjustmentsList',
+          'ownershipAdjustmentsList',
+          'ownersAdjustmentsList',
+          'allAdjustmentsList'
+        ];
+        
+        containers.forEach(containerId => {
+          const container = document.getElementById(containerId);
+          if (container) {
+            const rows = container.querySelectorAll('div[id*="Adj_"]');
+            rows.forEach(row => {
+              const inputs = row.querySelectorAll('input, select');
+              if (inputs.length >= 4) {
+                // Trigger change events in same order as reload button (lines 6370-6372)
+                if (inputs[1]) inputs[1].dispatchEvent(new Event('change', { bubbles: true }));
+                if (inputs[2] && inputs[2].value) inputs[2].dispatchEvent(new Event('change', { bubbles: true }));
+                if (inputs[3] && inputs[3].value) inputs[3].dispatchEvent(new Event('change', { bubbles: true }));
+              }
+            });
+            console.log(`✅ Triggered change events for ${rows.length} rows in ${containerId}`);
+          }
+        });
+        
+        console.log('✅ Completed triggering all adjustment change events');
+        
+      } catch (error) {
+        console.error('❌ Error triggering adjustment change events:', error);
       }
     }
 
@@ -8591,7 +8663,7 @@
       const rowId = 'fullAdj_' + Date.now();
       
       const newRow = `
-        <div id="${rowId}" class="adjustment-row" style="display:grid; grid-template-columns:2fr 1fr 1fr 1fr 80px; gap:10px; margin-bottom:8px;">
+        <div id="${rowId}" class="adjustment-row" data-source="manual" style="display:grid; grid-template-columns:2fr 1fr 1fr 1fr 80px; gap:10px; margin-bottom:8px;">
           <div><input type="text" placeholder="תיאור התאמה נוספת" onchange="updateFullMarketValueCalculation(); updateHelperFromAdjustments(); syncAdjustmentToHelper(this, 'additional');" /></div>
           <div><select onchange="updateFullMarketValueCalculation(); updateHelperFromAdjustments(); syncAdjustmentToHelper(this, 'additional');">
             <option value="plus">תוספת (+)</option>
