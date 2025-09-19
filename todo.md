@@ -1915,7 +1915,7 @@ After understanding all the issues and running a comprehensive audit combined wi
 - **On logout:** system sends the last helper to make.com and gives it a name: plate_helper_timestamp
 - **Single case handling:** The system doesn't handle more than one case at a time
 
-## Critical System Issues Found:
+## Critical System Issues Found:: 
 
 ### 1. ✅ Open new case - redirects to password page and logs out - FIXED
 
