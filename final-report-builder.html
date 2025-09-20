@@ -17931,11 +17931,17 @@
                 
                 console.log(`✅ Populated ${category} row: type=${adjustmentType}, percent=${percentValue}, amount=${amountDisplay}`);
                 
-                // If we have percentage but no amount, trigger calculation
-                if (percentValue && percentValue !== 0 && !amountDisplay) {
-                  console.log(`🔄 Auto-calculating missing amount for ${category}`);
+                // Always trigger calculation to ensure proper amount display and cumulative updates
+                if (percentValue && percentValue !== 0) {
+                  console.log(`🔄 Auto-calculating amount for ${category} (${percentValue}%)`);
                   setTimeout(() => {
                     newCalculateAdjustmentValueSimple(inputs[2]);
+                  }, 100);
+                } else if (amountDisplay) {
+                  // Even with amount, trigger calculation to ensure cumulative updates
+                  console.log(`🔄 Triggering calculation for amount-only ${category}`);
+                  setTimeout(() => {
+                    newUpdateFullMarketValueCalculation();
                   }, 100);
                 }
               }
@@ -17945,19 +17951,38 @@
         }
       });
       
-      // Final calculation and verification
-      console.log('🏁 Auto-populate completed, running final calculation...');
+      // Final calculation and verification - FORCE multiple calculation rounds
+      console.log('🏁 Auto-populate completed, running FORCED calculation sequence...');
+      
+      // Round 1: Immediate calculation
       newUpdateFullMarketValueCalculation();
       
-      // Debug: Check what we populated
+      // Round 2: Force recalculate all percentage fields after 200ms
       setTimeout(() => {
+        console.log('🔥 ROUND 2: Force recalculating all percentage fields...');
+        const allPercentInputs = document.querySelectorAll('#newMileageAdjustmentsList input[placeholder="אחוז"], #newOwnershipAdjustmentsList input[placeholder="אחוז"], #newOwnersAdjustmentsList input[placeholder="אחוז"], #newAllAdjustmentsList input[placeholder="אחוז"]');
+        allPercentInputs.forEach((input, index) => {
+          const percent = parseFloat(input.value) || 0;
+          if (percent !== 0) {
+            console.log(`🧮 Recalculating field ${index + 1} with ${percent}%`);
+            newCalculateAdjustmentValueSimple(input);
+          }
+        });
+      }, 200);
+      
+      // Round 3: Final comprehensive calculation after 500ms
+      setTimeout(() => {
+        console.log('🔥 ROUND 3: Final comprehensive calculation...');
+        newUpdateFullMarketValueCalculation();
+        
+        // Debug: Check what we populated
         containers.forEach(containerId => {
           const container = document.getElementById(containerId);
           if (container && container.children.length > 0) {
             console.log(`📊 ${containerId} has ${container.children.length} rows populated`);
           }
         });
-      }, 200);
+      }, 500);
     };
 
     // New Sync Adjustment to Helper - EXACT ESTIMATOR PATTERN
@@ -18451,15 +18476,23 @@
           console.log(`💰 Updated amount display: ${displayValue}`);
         }
         
-        // Recalculate if we have a percentage
+        // ALWAYS recalculate and update - be aggressive about updates
         if (currentPercent !== 0) {
           console.log('🧮 Recalculating amount from percentage...');
+          // Force immediate calculation
           newCalculateAdjustmentValueSimple(percentInput);
-        } else {
-          // Just trigger the calculation and sync
-          newUpdateFullMarketValueCalculation();
-          newSyncAdjustmentToHelper(selectElement, category);
+          // Also trigger a delayed calculation to ensure it sticks
+          setTimeout(() => newCalculateAdjustmentValueSimple(percentInput), 50);
         }
+        
+        // Always trigger full calculation and sync regardless
+        newUpdateFullMarketValueCalculation();
+        newSyncAdjustmentToHelper(selectElement, category);
+        
+        // Force another calculation round after sync
+        setTimeout(() => {
+          newUpdateFullMarketValueCalculation();
+        }, 100);
         
       } catch (error) {
         console.error('❌ Error in handleMarketTypeChange:', error);
