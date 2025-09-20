@@ -17861,15 +17861,27 @@
                   if (inputs.length >= 4) {
                     inputs[0].value = adjustment.value || '';
                     
-                    // Set type
+                    // Set type - CRITICAL: Detect type from data properly
                     const typeSelect = inputs[1];
+                    const percentValue = adjustment.percentage || adjustment.percent || 0;
+                    const amountValue = adjustment.amount || 0;
+                    
+                    // Determine type from the stored data (percentage or amount sign)
                     let adjustmentType = adjustment.type || 'plus';
+                    if (percentValue < 0 || amountValue < 0) {
+                      adjustmentType = 'minus';
+                    } else if (percentValue > 0 || amountValue > 0) {
+                      adjustmentType = 'plus';
+                    }
+                    
+                    // Set the type dropdown
                     if (typeSelect.querySelector(`option[value="${adjustmentType}"]`)) {
                       typeSelect.value = adjustmentType;
                     }
                     
-                    // Set percentage
-                    const percentValue = adjustment.percentage || adjustment.percent || 0;
+                    console.log(`🔧 Type detection for ${category}: stored_type=${adjustment.type}, percent=${percentValue}, amount=${amountValue} → final_type=${adjustmentType}`);
+                    
+                    // Set percentage - ALWAYS POSITIVE in UI, type controls the sign
                     inputs[2].value = Math.abs(percentValue);
                     
                     // ערך field starts empty - will calculate from percentage
