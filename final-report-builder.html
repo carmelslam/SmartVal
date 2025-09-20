@@ -17960,9 +17960,7 @@
         
         // Special logging for the problematic categories
         if (['mileage', 'ownership_type', 'ownership_history'].includes(category)) {
-          console.log(`🚨 PROBLEM CATEGORY: ${category} - will check ערך field extraction...`);
-          // Temporary alert to confirm this is actually being called
-          console.log(`🚨🚨🚨 ALERT: ${category} sync function actually triggered! 🚨🚨🚨`);
+          console.log(`🚨 PROBLEM CATEGORY: ${category} - checking ערך field extraction...`);
         }
         
         // Skip read-only categories (features and registration)
@@ -17973,11 +17971,9 @@
         
         const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
         
-        // Ensure structures exist
+        // Ensure structures exist - DO NOT TOUCH estimate.adjustments
         if (!helper.valuation) helper.valuation = {};
         if (!helper.valuation.adjustments) helper.valuation.adjustments = {};
-        if (!helper.estimate) helper.estimate = {};
-        if (!helper.estimate.adjustments) helper.estimate.adjustments = {};
         if (!helper.final_report) helper.final_report = {};
         if (!helper.final_report.adjustments) {
           helper.final_report.adjustments = {
@@ -18003,6 +17999,15 @@
         }
         
         console.log(`🔄 Rebuilding ${category} from all UI rows in ${containerId}`);
+        
+        // Special logging for problematic categories - check ערך fields NOW
+        if (['mileage', 'ownership_type', 'ownership_history'].includes(category)) {
+          const allAmountInputs = container.querySelectorAll('input[placeholder="₪"]');
+          console.log(`🔍 Found ${allAmountInputs.length} ערך fields in ${category}:`);
+          allAmountInputs.forEach((input, idx) => {
+            console.log(`  ${idx + 1}. ערך field value: "${input.value}"`);
+          });
+        }
         
         // FINAL REPORT PATTERN: Rebuild entire category array from ALL visible UI rows  
         // ⚠️ ONLY WRITE TO final_report.adjustments and valuation.adjustments - DO NOT TOUCH estimate.adjustments
