@@ -17704,17 +17704,44 @@
       }
       
       const rowId = `${category}ReadOnly_${Date.now()}`;
-      const displayValue = adjustmentData.amount_display || 
-                          (adjustmentData.amount ? `₪${Math.abs(adjustmentData.amount).toLocaleString()}` : '');
-      const typeDisplay = adjustmentData.type === 'minus' ? 'הפחתה (-)' : 'תוספת (+)';
+      
+      // Improved type detection - check multiple sources
+      let adjustmentType = 'plus';  // default
+      
+      // Priority 1: explicit type field
+      if (adjustmentData.type && (adjustmentData.type === 'minus' || adjustmentData.type === 'plus')) {
+        adjustmentType = adjustmentData.type;
+      }
+      // Priority 2: check if amount/percentage is negative
+      else if (adjustmentData.amount && adjustmentData.amount < 0) {
+        adjustmentType = 'minus';
+      }
+      else if ((adjustmentData.percentage || adjustmentData.percent) && (adjustmentData.percentage < 0 || adjustmentData.percent < 0)) {
+        adjustmentType = 'minus';
+      }
+      // Priority 3: check display value for minus sign
+      else if (adjustmentData.amount_display && adjustmentData.amount_display.includes('-')) {
+        adjustmentType = 'minus';
+      }
+      
+      console.log(`🔍 Type detection for ${category}: original=${adjustmentData.type}, detected=${adjustmentType}, amount=${adjustmentData.amount}, display=${adjustmentData.amount_display}`);
+      
+      // Create proper display value with correct sign
+      let displayValue = adjustmentData.amount_display || '';
+      if (!displayValue && adjustmentData.amount) {
+        const absAmount = Math.abs(adjustmentData.amount);
+        displayValue = adjustmentType === 'minus' ? `-₪${absAmount.toLocaleString()}` : `₪${absAmount.toLocaleString()}`;
+      }
+      
+      const typeDisplay = adjustmentType === 'minus' ? 'הפחתה (-)' : 'תוספת (+)';
       
       const newRow = `
         <div id="${rowId}" class="adjustment-row readonly" style="display:grid; grid-template-columns:2fr 1fr 1fr 1fr 80px; gap:10px; margin-bottom:8px; background: #f8f9fa; opacity: 0.8;">
           <div><input type="text" value="${adjustmentData.value || ''}" readonly style="background: #e9ecef; cursor: not-allowed;" /></div>
           <div><select disabled style="background: #e9ecef; cursor: not-allowed;">
-            <option value="${adjustmentData.type || 'plus'}" selected>${typeDisplay}</option>
+            <option value="${adjustmentType}" selected>${typeDisplay}</option>
           </select></div>
-          <div><input type="text" value="${adjustmentData.percentage || adjustmentData.percent || ''}" readonly style="background: #e9ecef; cursor: not-allowed;" /></div>
+          <div><input type="text" value="${Math.abs(adjustmentData.percentage || adjustmentData.percent || 0)}" readonly style="background: #e9ecef; cursor: not-allowed;" /></div>
           <div><input type="text" value="${displayValue}" readonly style="background: #e9ecef; cursor: not-allowed;" /></div>
           <div><span style="color: #666; font-size: 12px; padding: 8px;">קבוע</span></div>
         </div>
@@ -17728,11 +17755,11 @@
       console.log('🔄 Auto-populating market fields from helper data');
       
       const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+      const estimateAdjustments = helper.estimate?.adjustments || {};
       const valuationAdjustments = helper.valuation?.adjustments || {};
-      const finalReportAdjustments = helper.final_report?.adjustments || {};
       
-      console.log('Available valuation adjustments:', valuationAdjustments);
-      console.log('Available final_report adjustments:', finalReportAdjustments);
+      console.log('Available estimate adjustments (PRIMARY):', estimateAdjustments);
+      console.log('Available valuation adjustments (FALLBACK):', valuationAdjustments);
       
       // Clear existing rows first
       const containers = ['newFeaturesAdjustmentsList', 'newRegistrationAdjustmentsList', 'newMileageAdjustmentsList', 'newOwnershipAdjustmentsList', 'newOwnersAdjustmentsList', 'newAllAdjustmentsList'];
@@ -17743,31 +17770,57 @@
         }
       });
       
-      // Populate READ-ONLY categories from final_report (features and registration)
+      // Helper function to get data with correct priority: estimate.adjustments first, then valuation.adjustments
+      const getAdjustmentData = (category) => {
+        // For arrays (estimate.adjustments), use the array directly
+        if (estimateAdjustments[category] && Array.isArray(estimateAdjustments[category]) && estimateAdjustments[category].length > 0) {
+          console.log(`📊 Using estimate.adjustments.${category} (PRIMARY):`, estimateAdjustments[category]);
+          return { source: 'estimate', data: estimateAdjustments[category] };
+        }
+        
+        // For single objects, check estimate first
+        if (estimateAdjustments[category] && !Array.isArray(estimateAdjustments[category])) {
+          console.log(`📊 Using estimate.adjustments.${category} (PRIMARY):`, estimateAdjustments[category]);
+          return { source: 'estimate', data: [estimateAdjustments[category]] };
+        }
+        
+        // Fallback to valuation.adjustments
+        if (valuationAdjustments[category]) {
+          console.log(`📊 Using valuation.adjustments.${category} (FALLBACK):`, valuationAdjustments[category]);
+          // Convert single object to array for consistent handling
+          const data = Array.isArray(valuationAdjustments[category]) ? valuationAdjustments[category] : [valuationAdjustments[category]];
+          return { source: 'valuation', data: data };
+        }
+        
+        return { source: 'none', data: [] };
+      };
+      
+      // Populate READ-ONLY categories (features and registration) - mirror gross section
       ['features', 'registration'].forEach(category => {
-        const adjustmentsArray = finalReportAdjustments[category] || [];
+        const adjustmentInfo = getAdjustmentData(category);
+        const adjustmentsArray = adjustmentInfo.data;
         let containerId = category === 'features' ? 'newFeaturesAdjustmentsList' : 'newRegistrationAdjustmentsList';
         
-        console.log(`📖 Populating READ-ONLY ${category} from final_report:`, adjustmentsArray);
+        console.log(`📖 Populating READ-ONLY ${category} from ${adjustmentInfo.source}:`, adjustmentsArray);
         
         if (adjustmentsArray.length === 0) {
           // Show empty state
           const container = document.getElementById(containerId);
           if (container) {
-            container.innerHTML = '<div style="padding: 15px; text-align: center; color: #666; font-style: italic;">אין נתונים זמינים בדוח הסופי</div>';
+            container.innerHTML = '<div style="padding: 15px; text-align: center; color: #666; font-style: italic;">אין נתונים זמינים</div>';
           }
         } else {
-          // Add each adjustment as read-only
+          // Add each adjustment as read-only with proper type detection
           adjustmentsArray.forEach(adjustment => {
             addReadOnlyMarketAdjustmentRow(containerId, category, adjustment);
           });
         }
       });
       
-      // Populate EDITABLE categories from valuation (mileage, ownership, additional)
+      // Populate EDITABLE categories (mileage, ownership, additional) - estimate first, then valuation fallback
       ['mileage', 'ownership_type', 'ownership_history', 'additional'].forEach(category => {
-        const adjustment = valuationAdjustments[category];
-        if (!adjustment) return;
+        const adjustmentInfo = getAdjustmentData(category);
+        const adjustmentsArray = adjustmentInfo.data;
         
         let containerId = '';
         switch(category) {
@@ -17777,21 +17830,24 @@
           case 'additional': containerId = 'newAllAdjustmentsList'; break;
         }
         
-        console.log(`✏️ Populating EDITABLE ${category} from valuation:`, adjustment);
+        console.log(`✏️ Populating EDITABLE ${category} from ${adjustmentInfo.source}:`, adjustmentsArray);
         
-        if (containerId) {
-          addMarketAdjustmentRow(containerId, category);
-          const container = document.getElementById(containerId);
-          const lastRow = container.lastElementChild;
-          if (lastRow) {
-            const inputs = lastRow.querySelectorAll('input, select');
-            if (inputs.length >= 4) {
-              inputs[0].value = adjustment.value || '';
-              inputs[1].value = adjustment.type || 'plus';
-              inputs[2].value = adjustment.percentage || adjustment.percent || '';
-              inputs[3].value = adjustment.amount_display || (adjustment.amount ? `₪${Math.abs(adjustment.amount).toLocaleString()}` : '');
+        if (containerId && adjustmentsArray.length > 0) {
+          // Add each adjustment (handle multiple rows for categories that have arrays)
+          adjustmentsArray.forEach(adjustment => {
+            addMarketAdjustmentRow(containerId, category);
+            const container = document.getElementById(containerId);
+            const lastRow = container.lastElementChild;
+            if (lastRow) {
+              const inputs = lastRow.querySelectorAll('input, select');
+              if (inputs.length >= 4) {
+                inputs[0].value = adjustment.value || '';
+                inputs[1].value = adjustment.type || 'plus';
+                inputs[2].value = adjustment.percentage || adjustment.percent || '';
+                inputs[3].value = adjustment.amount_display || (adjustment.amount ? `₪${Math.abs(adjustment.amount).toLocaleString()}` : '');
+              }
             }
-          }
+          });
         }
       });
       
@@ -18098,10 +18154,16 @@
         try {
           const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
           
-          // Create fingerprint of relevant data
+          // Create fingerprint of relevant data according to correct READ flow
           const relevantData = {
-            finalReportFeatures: helper.final_report?.adjustments?.features || [],
-            finalReportRegistration: helper.final_report?.adjustments?.registration || [],
+            // PRIMARY: estimate.adjustments (read from here first)
+            estimateFeatures: helper.estimate?.adjustments?.features || [],
+            estimateRegistration: helper.estimate?.adjustments?.registration || [],
+            estimateMileage: helper.estimate?.adjustments?.mileage || null,
+            estimateOwnershipType: helper.estimate?.adjustments?.ownership_type || null,
+            estimateOwnershipHistory: helper.estimate?.adjustments?.ownership_history || null,
+            estimateAdditional: helper.estimate?.adjustments?.additional || null,
+            // FALLBACK: valuation.adjustments (fallback when estimate is empty)
             valuationMileage: helper.valuation?.adjustments?.mileage || null,
             valuationOwnershipType: helper.valuation?.adjustments?.ownership_type || null,
             valuationOwnershipHistory: helper.valuation?.adjustments?.ownership_history || null,
