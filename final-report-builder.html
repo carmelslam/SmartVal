@@ -5865,8 +5865,30 @@
           if (Array.isArray(additional)) {
             additional.forEach(adj => {
               if (adj && (adj.value || adj.percentage || adj.percent || adj.amount)) {
-                // Use createTotalValueRow to avoid duplicate saves during load
-                additionalContainer.insertAdjacentHTML('beforeend', createTotalValueRow(adj, 'additional', source));
+                // Create row with proper handlers for additional adjustments
+                const rowId = 'fullAdj_' + Date.now() + '_' + Math.random();
+                const newRow = `
+                  <div id="${rowId}" class="adjustment-row" data-source="${source}" style="display:grid; grid-template-columns:2fr 1fr 1fr 1fr 80px; gap:10px; margin-bottom:8px;">
+                    <div><input type="text" placeholder="תיאור התאמה נוספת" value="${adj.value || ''}" onchange="updateFullMarketValueCalculation(); updateHelperFromAdjustments(); syncAdjustmentToHelper(this, 'additional');" /></div>
+                    <div><select onchange="updateFullMarketValueCalculation(); updateHelperFromAdjustments(); syncAdjustmentToHelper(this, 'additional');">
+                      <option value="plus" ${adj.type === 'plus' ? 'selected' : ''}>תוספת (+)</option>
+                      <option value="minus" ${adj.type === 'minus' ? 'selected' : ''}>הפחתה (-)</option>
+                    </select></div>
+                    <div><input type="text" placeholder="אחוז" value="${adj.percentage || adj.percent || ''}" oninput="calculateAdjustmentValueSimple(this);" onchange="updateFullMarketValueCalculation(); updateHelperFromAdjustments(); syncAdjustmentToHelper(this, 'additional');" /></div>
+                    <div><input type="text" placeholder="₪" value="${adj.amount_display || (adj.amount ? (adj.amount < 0 ? '-₪' + Math.abs(adj.amount).toLocaleString() : '₪' + Math.abs(adj.amount).toLocaleString()) : '')}" onchange="updateFullMarketValueCalculation(); updateHelperFromAdjustments(); syncAdjustmentToHelper(this, 'additional');" /></div>
+                    <div><button class="btn remove" onclick="removeAdjustmentRow('${rowId}')">מחק</button></div>
+                  </div>
+                `;
+                additionalContainer.insertAdjacentHTML('beforeend', newRow);
+                
+                // Trigger formatAdjustmentDisplay for proper minus sign display
+                setTimeout(() => {
+                  const row = document.getElementById(rowId);
+                  if (row) {
+                    formatAdjustmentDisplay(row, adj.type, adj.percentage || adj.percent, adj.amount);
+                  }
+                }, 10);
+                
                 console.log(`✅ Added additional adjustment from ${source}:`, adj.value || 'no description');
               }
             });
@@ -7064,7 +7086,16 @@
             rows.forEach(row => {
               const inputs = row.querySelectorAll('input, select');
               if (inputs.length >= 4) {
-                // Trigger change events in same order as reload button (lines 6370-6372)
+                // Get current values for formatAdjustmentDisplay
+                const type = inputs[1].value;
+                const percent = parseFloat(inputs[2].value) || 0;
+                const amountText = inputs[3].value || '';
+                const amount = parseFloat(amountText.replace(/[₪,-]/g, '')) || 0;
+                
+                // Call formatAdjustmentDisplay directly to ensure proper formatting
+                formatAdjustmentDisplay(row, type, percent, amount);
+                
+                // Also trigger change events
                 if (inputs[1]) inputs[1].dispatchEvent(new Event('change', { bubbles: true }));
                 if (inputs[2] && inputs[2].value) inputs[2].dispatchEvent(new Event('change', { bubbles: true }));
                 if (inputs[3] && inputs[3].value) inputs[3].dispatchEvent(new Event('change', { bubbles: true }));
@@ -8791,13 +8822,13 @@
       
       const newRow = `
         <div id="${rowId}" class="adjustment-row" data-source="manual" style="display:grid; grid-template-columns:2fr 1fr 1fr 1fr 80px; gap:10px; margin-bottom:8px;">
-          <div><input type="text" placeholder="תיאור התאמה נוספת" onchange="updateFullMarketValueCalculation(); updateHelperFromAdjustments(); syncAdjustmentToHelper(this, 'additional');" /></div>
-          <div><select onchange="updateFullMarketValueCalculation(); updateHelperFromAdjustments(); syncAdjustmentToHelper(this, 'additional');">
+          <div><input type="text" placeholder="תיאור התאמה נוספת" onchange="updateFullMarketValueCalculation(); updateHelperFromAdjustments(); syncAdjustmentToHelper(this, 'additional'); const row = this.closest('.adjustment-row'); const inputs = row.querySelectorAll('input, select'); formatAdjustmentDisplay(row, inputs[1].value, parseFloat(inputs[2].value) || 0, parseFloat(inputs[3].value.replace(/[₪,-]/g, '')) || 0);" /></div>
+          <div><select onchange="updateFullMarketValueCalculation(); updateHelperFromAdjustments(); syncAdjustmentToHelper(this, 'additional'); const row = this.closest('.adjustment-row'); const inputs = row.querySelectorAll('input, select'); formatAdjustmentDisplay(row, this.value, parseFloat(inputs[2].value) || 0, parseFloat(inputs[3].value.replace(/[₪,-]/g, '')) || 0);">
             <option value="plus">תוספת (+)</option>
             <option value="minus">הפחתה (-)</option>
           </select></div>
-          <div><input type="text" placeholder="אחוז" oninput="calculateAdjustmentValueSimple(this);" onchange="updateFullMarketValueCalculation(); updateHelperFromAdjustments(); syncAdjustmentToHelper(this, 'additional');" /></div>
-          <div><input type="text" placeholder="₪" onchange="updateFullMarketValueCalculation(); updateHelperFromAdjustments(); syncAdjustmentToHelper(this, 'additional');" /></div>
+          <div><input type="text" placeholder="אחוז" oninput="calculateAdjustmentValueSimple(this);" onchange="updateFullMarketValueCalculation(); updateHelperFromAdjustments(); syncAdjustmentToHelper(this, 'additional'); const row = this.closest('.adjustment-row'); const inputs = row.querySelectorAll('input, select'); formatAdjustmentDisplay(row, inputs[1].value, parseFloat(this.value) || 0, parseFloat(inputs[3].value.replace(/[₪,-]/g, '')) || 0);" /></div>
+          <div><input type="text" placeholder="₪" onchange="updateFullMarketValueCalculation(); updateHelperFromAdjustments(); syncAdjustmentToHelper(this, 'additional'); const row = this.closest('.adjustment-row'); const inputs = row.querySelectorAll('input, select'); formatAdjustmentDisplay(row, inputs[1].value, parseFloat(inputs[2].value) || 0, parseFloat(this.value.replace(/[₪,-]/g, '')) || 0);" /></div>
           <div><button class="btn remove" onclick="removeAdjustmentRow('${rowId}')">מחק</button></div>
         </div>
       `;
