@@ -6787,7 +6787,7 @@
               percentage: parseFloat(inputs[2].value) || 0,
               percent: parseFloat(inputs[2].value) || 0, // Backward compatibility
               amount_display: inputs[3].value || '',
-              amount: parseFloat((inputs[3].value || '').replace(/[₪,-]/g, '')) || 0,
+              amount: parseFloat((inputs[3].value || '').replace(/[₪,\-]/g, '')) || 0,
               source: 'manual',
               timestamp: new Date().toISOString()
             };
@@ -7177,7 +7177,7 @@
               percent: parseFloat(inputs[2].value) || 0,
               percentage: parseFloat(inputs[2].value) || 0,
               amount_display: inputs[3].value || '',
-              amount: parseFloat((inputs[3].value || '').replace(/[₪,-]/g, '')) || 0,
+              amount: parseFloat((inputs[3].value || '').replace(/[₪,\-]/g, '')) || 0,
               source: row.getAttribute('data-source') || 'manual'
             };
             
@@ -7212,7 +7212,7 @@
                 percent: parseFloat(inputs[2].value) || 0,
                 percentage: parseFloat(inputs[2].value) || 0,
                 amount_display: inputs[3].value || '',
-                amount: parseFloat((inputs[3].value || '').replace(/[₪,-]/g, '')) || 0,
+                amount: parseFloat((inputs[3].value || '').replace(/[₪,\-]/g, '')) || 0,
                 source: originalRow.getAttribute('data-source') || 'original'
               };
               
@@ -7248,7 +7248,7 @@
               percent: parseFloat(inputs[2].value) || 0,
               percentage: parseFloat(inputs[2].value) || 0,
               amount_display: inputs[3].value || '',
-              amount: parseFloat((inputs[3].value || '').replace(/[₪,-]/g, '')) || 0,
+              amount: parseFloat((inputs[3].value || '').replace(/[₪,\-]/g, '')) || 0,
               source: row.getAttribute('data-source') || 'manual'
             };
             
@@ -7283,7 +7283,7 @@
                 percent: parseFloat(inputs[2].value) || 0,
                 percentage: parseFloat(inputs[2].value) || 0,
                 amount_display: inputs[3].value || '',
-                amount: parseFloat((inputs[3].value || '').replace(/[₪,-]/g, '')) || 0,
+                amount: parseFloat((inputs[3].value || '').replace(/[₪,\-]/g, '')) || 0,
                 source: originalRow.getAttribute('data-source') || 'original'
               };
               
@@ -7401,7 +7401,7 @@
               percent: parseFloat(inputs[2].value) || 0,
               percentage: parseFloat(inputs[2].value) || 0,
               amount_display: inputs[3].value || '',
-              amount: parseFloat((inputs[3].value || '').replace(/[₪,-]/g, '')) || 0,
+              amount: parseFloat((inputs[3].value || '').replace(/[₪,\-]/g, '')) || 0,
               source: row.getAttribute('data-source') || 'manual'
             };
             
@@ -7460,7 +7460,7 @@
               percent: parseFloat(inputs[2].value) || 0,
               percentage: parseFloat(inputs[2].value) || 0,
               amount_display: inputs[3].value || '',
-              amount: parseFloat((inputs[3].value || '').replace(/[₪,-]/g, '')) || 0,
+              amount: parseFloat((inputs[3].value || '').replace(/[₪,\-]/g, '')) || 0,
               source: row.getAttribute('data-source') || 'manual'
             };
             
@@ -7519,7 +7519,7 @@
               percent: parseFloat(inputs[2].value) || 0,
               percentage: parseFloat(inputs[2].value) || 0,
               amount_display: inputs[3].value || '',
-              amount: parseFloat((inputs[3].value || '').replace(/[₪,-]/g, '')) || 0,
+              amount: parseFloat((inputs[3].value || '').replace(/[₪,\-]/g, '')) || 0,
               source: row.getAttribute('data-source') || 'manual'
             };
             
@@ -7577,7 +7577,7 @@
                 percent: parseFloat(inputs[2].value) || 0,
                 percentage: parseFloat(inputs[2].value) || 0,
                 amount_display: inputs[3].value || '',
-                amount: parseFloat((inputs[3].value || '').replace(/[₪,-]/g, '')) || 0,
+                amount: parseFloat((inputs[3].value || '').replace(/[₪,\-]/g, '')) || 0,
                 source: row.getAttribute('data-source') || 'manual'
               };
               
@@ -18037,16 +18037,22 @@
         allRows.forEach((row, index) => {
           const inputs = row.querySelectorAll('input, select');
           if (inputs.length >= 4) {
+            const rawAmountValue = inputs[3].value || '';
+            const cleanedAmount = rawAmountValue.replace(/[₪,\-]/g, '');
+            const parsedAmount = parseFloat(cleanedAmount) || 0;
+            
             const adjustmentData = {
               value: inputs[0].value || '',
               type: inputs[1].value || 'plus',
               percentage: parseFloat(inputs[2].value) || 0,
               percent: parseFloat(inputs[2].value) || 0,
-              amount_display: inputs[3].value || '',
-              amount: parseFloat((inputs[3].value || '').replace(/[₪,-]/g, '')) || 0,
+              amount_display: rawAmountValue,
+              amount: parsedAmount,
               source: 'manual',
               timestamp: new Date().toISOString()
             };
+            
+            console.log(`💰 ${category} row ${index}: raw="${rawAmountValue}" → cleaned="${cleanedAmount}" → amount=${parsedAmount}`);
             
             // Apply sign based on type (CRITICAL FOR MINUS SIGNS)
             if (adjustmentData.type === 'minus') {
