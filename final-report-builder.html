@@ -1464,6 +1464,17 @@
       <button class="collapsible-btn" type="button" onclick="toggleSection('newFullMarketValueContent'); initializeNewMarketValueOnOpen();">ערך השוק המלא החדש - עותק מעורך השמאות (הצג/הסתר)</button>
       <div id="newFullMarketValueContent" style="display: none;">
         
+        <!-- Base Vehicle Value Field -->
+        <div style="margin-bottom: 20px; padding: 15px; background: #e3f2fd; border-radius: 8px; border: 2px solid #1976d2;">
+          <div class="form-grid">
+            <div><label><strong>ערך הרכב ע"פ מחירון כולל מע"מ:</strong></label><input type="text" id="newBasicPrice" style="background: #f8f9fa; font-weight: bold; color: #1976d2;" readonly /></div>
+            <div></div>
+          </div>
+          <div style="margin-top: 10px; font-size: 12px; color: #666;">
+            <strong>בסיס לחישוב:</strong> ערך זה משמש כבסיס לחישוב כל ההתאמות
+          </div>
+        </div>
+
         <!-- Manual refresh button (for emergencies only) -->
         <div style="margin-bottom: 15px;">
           <button type="button" class="btn btn-secondary" onclick="autoPopulateMarketFields()" style="font-size: 12px; padding: 6px 12px;">
@@ -17763,6 +17774,19 @@
       console.log('Available valuation adjustments (FALLBACK):', valuationAdjustments);
       console.log('Available final_report adjustments (FOR FEATURES/REGISTRATION):', finalReportAdjustments);
       
+      // CRITICAL: Copy base price from basicPrice field (dynamic value)
+      const newBasicPriceField = document.getElementById('newBasicPrice');
+      const basicPriceField = document.getElementById('basicPrice');
+      if (newBasicPriceField && basicPriceField && basicPriceField.value) {
+        newBasicPriceField.value = basicPriceField.value;
+        console.log(`💰 Copied base price from basicPrice: ${basicPriceField.value}`);
+      } else if (newBasicPriceField && helper.levi_report?.base_price) {
+        newBasicPriceField.value = `₪${parseFloat(helper.levi_report.base_price).toLocaleString()}`;
+        console.log(`💰 Copied base price from levi_report: ₪${parseFloat(helper.levi_report.base_price).toLocaleString()}`);
+      } else {
+        console.warn('⚠️ Could not find base price to copy');
+      }
+      
       // Clear existing rows first
       const containers = ['newFeaturesAdjustmentsList', 'newRegistrationAdjustmentsList', 'newMileageAdjustmentsList', 'newOwnershipAdjustmentsList', 'newOwnersAdjustmentsList', 'newAllAdjustmentsList'];
       containers.forEach(containerId => {
@@ -17843,16 +17867,53 @@
               const inputs = lastRow.querySelectorAll('input, select');
               if (inputs.length >= 4) {
                 inputs[0].value = adjustment.value || '';
-                inputs[1].value = adjustment.type || 'plus';
-                inputs[2].value = adjustment.percentage || adjustment.percent || '';
-                inputs[3].value = adjustment.amount_display || (adjustment.amount ? `₪${Math.abs(adjustment.amount).toLocaleString()}` : '');
+                
+                // Fix type selection - ensure it's set correctly
+                const typeSelect = inputs[1];
+                const adjustmentType = adjustment.type || 'plus';
+                console.log(`🔧 Setting type for ${category}: ${adjustmentType}`);
+                typeSelect.value = adjustmentType;
+                
+                // Fix percentage display
+                const percentValue = adjustment.percentage || adjustment.percent || 0;
+                inputs[2].value = Math.abs(percentValue); // Always show positive in UI
+                
+                // Fix amount display with proper formatting
+                let amountDisplay = adjustment.amount_display || '';
+                if (!amountDisplay && adjustment.amount) {
+                  const absAmount = Math.abs(adjustment.amount);
+                  amountDisplay = adjustmentType === 'minus' ? `-₪${absAmount.toLocaleString()}` : `₪${absAmount.toLocaleString()}`;
+                }
+                inputs[3].value = amountDisplay;
+                
+                console.log(`✅ Populated ${category} row: type=${adjustmentType}, percent=${percentValue}, amount=${amountDisplay}`);
+                
+                // If we have percentage but no amount, trigger calculation
+                if (percentValue && percentValue !== 0 && !amountDisplay) {
+                  console.log(`🔄 Auto-calculating missing amount for ${category}`);
+                  setTimeout(() => {
+                    newCalculateAdjustmentValueSimple(inputs[2]);
+                  }, 100);
+                }
               }
             }
           });
         }
       });
       
+      // Final calculation and verification
+      console.log('🏁 Auto-populate completed, running final calculation...');
       newUpdateFullMarketValueCalculation();
+      
+      // Debug: Check what we populated
+      setTimeout(() => {
+        containers.forEach(containerId => {
+          const container = document.getElementById(containerId);
+          if (container && container.children.length > 0) {
+            console.log(`📊 ${containerId} has ${container.children.length} rows populated`);
+          }
+        });
+      }, 200);
     };
 
     // New Sync Adjustment to Helper - EXACT ESTIMATOR PATTERN
@@ -17954,26 +18015,75 @@
 
     // Calculate Adjustment Value from Percentage
     window.newCalculateAdjustmentValueSimple = function(percentInput) {
-      const row = percentInput.closest('div').parentElement;
-      if (!row) return;
-      
-      const inputs = row.querySelectorAll('input, select');
-      if (inputs.length < 4) return;
-      
-      const percent = parseFloat(percentInput.value) || 0;
-      const type = inputs[1].value;
-      
-      // Get base price
-      let basePrice = 0;
-      const basicPriceField = document.getElementById('basicPrice');
-      if (basicPriceField?.value) {
-        basePrice = parseFloat(basicPriceField.value.replace(/[₪,]/g, '')) || 0;
-      }
-      
-      if (basePrice > 0 && percent !== 0) {
-        const amount = Math.round((basePrice * Math.abs(percent)) / 100);
-        const displayValue = type === 'minus' ? `-₪${amount.toLocaleString()}` : `₪${amount.toLocaleString()}`;
-        inputs[3].value = displayValue;
+      try {
+        console.log('🧮 Calculate adjustment called for:', percentInput);
+        
+        // Find the correct row - try multiple approaches
+        let row = percentInput.closest('div[id*="Adj_"]');
+        if (!row) {
+          row = percentInput.closest('.adjustment-row');
+        }
+        if (!row) {
+          // Try going up to find the grid container
+          let parent = percentInput.parentElement;
+          while (parent && !parent.style.display?.includes('grid')) {
+            parent = parent.parentElement;
+          }
+          row = parent;
+        }
+        
+        if (!row) {
+          console.error('❌ Could not find adjustment row');
+          return;
+        }
+        
+        console.log('🎯 Found row:', row);
+        
+        const inputs = row.querySelectorAll('input, select');
+        if (inputs.length < 4) {
+          console.error('❌ Not enough inputs in row:', inputs.length);
+          return;
+        }
+        
+        const percent = parseFloat(percentInput.value) || 0;
+        const typeSelect = inputs[1];
+        const type = typeSelect.value || 'plus';
+        const amountInput = inputs[3];
+        
+        console.log(`🔢 Calculation: ${percent}% type=${type}`);
+        
+        // Get base price from NEW section's base price field
+        let basePrice = 0;
+        const newBasicPriceField = document.getElementById('newBasicPrice');
+        if (newBasicPriceField?.value) {
+          basePrice = parseFloat(newBasicPriceField.value.replace(/[₪,]/g, '')) || 0;
+        }
+        
+        // Fallback to original basicPrice if new field is empty
+        if (basePrice === 0) {
+          const basicPriceField = document.getElementById('basicPrice');
+          if (basicPriceField?.value) {
+            basePrice = parseFloat(basicPriceField.value.replace(/[₪,]/g, '')) || 0;
+          }
+        }
+        
+        console.log(`💰 Base price for NEW section: ₪${basePrice}`);
+        
+        if (basePrice > 0 && percent !== 0) {
+          const amount = Math.round((basePrice * Math.abs(percent)) / 100);
+          const displayValue = type === 'minus' ? `-₪${amount.toLocaleString()}` : `₪${amount.toLocaleString()}`;
+          amountInput.value = displayValue;
+          
+          console.log(`✅ Calculated: ${percent}% of ₪${basePrice} = ${displayValue}`);
+          
+          // Trigger update calculation
+          newUpdateFullMarketValueCalculation();
+        } else {
+          console.warn(`⚠️ Cannot calculate: basePrice=${basePrice}, percent=${percent}`);
+        }
+        
+      } catch (error) {
+        console.error('❌ Error in newCalculateAdjustmentValueSimple:', error);
       }
     };
 
@@ -17982,14 +18092,22 @@
       try {
         console.log('🧮 Starting NEW full market value calculation...');
         
-        // Get base price
+        // Get base price from NEW section's base price field
         let basePrice = 0;
-        const basicPriceField = document.getElementById('basicPrice');
-        if (basicPriceField?.value) {
-          basePrice = parseFloat(basicPriceField.value.replace(/[₪,]/g, '')) || 0;
+        const newBasicPriceField = document.getElementById('newBasicPrice');
+        if (newBasicPriceField?.value) {
+          basePrice = parseFloat(newBasicPriceField.value.replace(/[₪,]/g, '')) || 0;
         }
         
-        console.log('📊 Base price:', basePrice);
+        // Fallback to original basicPrice if new field is empty
+        if (basePrice === 0) {
+          const basicPriceField = document.getElementById('basicPrice');
+          if (basicPriceField?.value) {
+            basePrice = parseFloat(basicPriceField.value.replace(/[₪,]/g, '')) || 0;
+          }
+        }
+        
+        console.log('📊 Base price for NEW section calculation:', basePrice);
         
         if (basePrice === 0) {
           console.warn('⚠️ No base price found for calculations');
