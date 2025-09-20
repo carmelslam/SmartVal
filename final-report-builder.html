@@ -17990,6 +17990,11 @@
       try {
         console.log(`🔥 NEW syncAdjustmentToHelper called for category: ${category}`);
         
+        // Special logging for the problematic categories
+        if (['mileage', 'ownership_type', 'ownership_history'].includes(category)) {
+          console.log(`🚨 PROBLEM CATEGORY: ${category} - will check ערך field extraction...`);
+        }
+        
         // Skip read-only categories (features and registration)
         if (category === 'features' || category === 'registration') {
           console.log(`⚠️ Skipping sync for read-only category: ${category}`);
@@ -18063,6 +18068,16 @@
             
             helper.final_report.adjustments[category].push(adjustmentData);
             console.log(`📝 Added row ${index} to ${category}:`, adjustmentData.value);
+            
+            // Special logging for problematic categories
+            if (['mileage', 'ownership_type', 'ownership_history'].includes(category)) {
+              console.log(`🔍 ${category} FINAL DATA:`, {
+                amount: adjustmentData.amount,
+                amount_display: adjustmentData.amount_display,
+                type: adjustmentData.type,
+                percentage: adjustmentData.percentage
+              });
+            }
           }
         });
         
@@ -18071,6 +18086,15 @@
         // Update valuation.adjustments with first item (for backward compatibility)
         if (helper.final_report.adjustments[category].length > 0) {
           helper.valuation.adjustments[category] = helper.final_report.adjustments[category][0];
+          
+          // Special logging for problematic categories
+          if (['mileage', 'ownership_type', 'ownership_history'].includes(category)) {
+            console.log(`🎯 ${category} WRITTEN TO VALUATION:`, {
+              amount: helper.valuation.adjustments[category].amount,
+              amount_display: helper.valuation.adjustments[category].amount_display,
+              type: helper.valuation.adjustments[category].type
+            });
+          }
         } else {
           // Clear valuation if no items remain
           if (helper.valuation.adjustments[category]) {
