@@ -5443,9 +5443,16 @@
                     const detectedType = getDropdownTypeFromValues(itemPercent, itemAmount, item.type || 'plus');
                     inputs[1].value = detectedType;
                     
-                    // Percent and amount - show absolute values (COPY FROM RELOAD BUTTON)
+                    // Percent and amount - preserve sign based on type
                     inputs[2].value = itemPercent ? Math.abs(itemPercent) : '';
-                    inputs[3].value = item.amount_display || (item.amount ? `₪${Math.abs(item.amount).toLocaleString()}` : '');
+                    // Check if it's a reduction type to preserve minus sign
+                    const isReduction = item.type === 'minus' || item.type === 'הפחתה' || 
+                                       item.type === 'הפחתה (-)' || item.type === 'הורדה';
+                    let displayAmount = Math.abs(item.amount || 0);
+                    if (isReduction && displayAmount > 0) {
+                      displayAmount = -displayAmount;
+                    }
+                    inputs[3].value = item.amount_display || (item.amount ? `₪${displayAmount.toLocaleString()}` : '');
                     
                     // Trigger change events (CRITICAL FOR MINUS SIGN DETECTION)
                     inputs[1].dispatchEvent(new Event('change', { bubbles: true }));
@@ -5497,7 +5504,7 @@
         
         // Helper function to create adjustment row
         function createTotalValueRow(adj, category, source) {
-          const rowId = `totalValue_${category}_${Date.now()}_${Math.random()}`;
+          const rowId = category === 'additional' ? `fullAdj_${Date.now()}` : `totalValue_${category}_${Date.now()}_${Math.random()}`;
           
           // DEBUG: Log the actual adjustment data being processed
           console.log(`🔍 DEBUG createTotalValueRow for ${category} from ${source}:`, {
@@ -5594,12 +5601,18 @@
             <div id="${rowId}" class="adjustment-row" data-source="${source}" style="display:grid; grid-template-columns:2fr 1fr 1fr 1fr 80px; gap:10px; margin-bottom:8px;">
               <div><input type="text" placeholder="תיאור התאמה" value="${escapedDescription}" ${readOnlyAttr} style="${readOnlyStyle}" ${isReadOnlyCategory ? '' : `onchange="updateFullMarketValueCalculation(); updateHelperFromAdjustments(); syncAdjustmentToHelper(this, '${category}');"`} /></div>
               <div>
-                <select ${disabledAttr} style="${readOnlyStyle}" ${isReadOnlyCategory ? '' : `onchange="updateFullMarketValueCalculation(); updateHelperFromAdjustments(); syncAdjustmentToHelper(this, '${category}');"`}>
-                  <option value="%" ${selectedType === '%' ? 'selected' : ''}>%</option>
-                  <option value="₪" ${selectedType === '₪' ? 'selected' : ''}>₪</option>
-                  <option value="תוספת (+)" ${selectedType === 'תוספת (+)' ? 'selected' : ''}>תוספת (+)</option>
-                  <option value="הפחתה (-)" ${selectedType === 'הפחתה (-)' ? 'selected' : ''}>הפחתה (-)</option>
-                </select>
+                ${category === 'additional' ? 
+                  `<select ${disabledAttr} style="${readOnlyStyle}" ${isReadOnlyCategory ? '' : `onchange="updateFullMarketValueCalculation(); updateHelperFromAdjustments(); syncAdjustmentToHelper(this, '${category}');"`}>
+                    <option value="plus" ${adj.type === 'plus' || selectedType === 'תוספת (+)' ? 'selected' : ''}>תוספת (+)</option>
+                    <option value="minus" ${adj.type === 'minus' || selectedType === 'הפחתה (-)' ? 'selected' : ''}>הפחתה (-)</option>
+                  </select>` :
+                  `<select ${disabledAttr} style="${readOnlyStyle}" ${isReadOnlyCategory ? '' : `onchange="updateFullMarketValueCalculation(); updateHelperFromAdjustments(); syncAdjustmentToHelper(this, '${category}');"`}>
+                    <option value="%" ${selectedType === '%' ? 'selected' : ''}>%</option>
+                    <option value="₪" ${selectedType === '₪' ? 'selected' : ''}>₪</option>
+                    <option value="תוספת (+)" ${selectedType === 'תוספת (+)' ? 'selected' : ''}>תוספת (+)</option>
+                    <option value="הפחתה (-)" ${selectedType === 'הפחתה (-)' ? 'selected' : ''}>הפחתה (-)</option>
+                  </select>`
+                }
               </div>
               <div><input type="text" placeholder="אחוז" value="${percentage}" ${readOnlyAttr || (!isPercent ? 'readonly' : '')} style="direction: ltr; text-align: right;${readOnlyStyle}${!isPercent ? ' background: #f0f0f0;' : ''}" ${isReadOnlyCategory ? '' : `onchange="updateFullMarketValueCalculation(); updateHelperFromAdjustments(); syncAdjustmentToHelper(this, '${category}');"`} /></div>
               <div><input type="text" placeholder="ערך" value="${amount}" ${readOnlyAttr || (isPercent ? 'readonly' : '')} style="direction: ltr; text-align: right;${readOnlyStyle}${isPercent ? ' background: #f0f0f0;' : ''}" ${isReadOnlyCategory ? '' : `onchange="updateFullMarketValueCalculation(); updateHelperFromAdjustments(); syncAdjustmentToHelper(this, '${category}');"`} /></div>
@@ -5676,31 +5689,40 @@
           console.log(`✅ Loaded ${registration.length} total registration, filtered and added to Total Value Section`);
         }
         
-        // 3. Load KM from estimate.adjustments with fallback to valuation.adjustments
+        // 3. Load KM from final_report.adjustments (priority) with fallback to estimate/valuation
         const mileageContainer = document.getElementById('mileageAdjustmentsList');
         if (mileageContainer) {
           mileageContainer.innerHTML = '';
           
-          // PRIMARY: estimate.adjustments.mileage, FALLBACK: valuation.adjustments.mileage
-          let mileage = estimateAdjustments.mileage || [];
-          let source = 'estimate';
+          // FIXED: Load from final_report.adjustments FIRST (preserves manual additions)
+          let mileage = finalReportAdjustments.mileage || [];
+          let source = 'final_report';
           
+          // Only fall back to estimate/valuation if final_report is empty
           if (!Array.isArray(mileage) || mileage.length === 0) {
-            // Fallback to valuation.adjustments.mileage
-            console.log(`🔍 DEBUG: Checking valuation fallback for mileage`, helper.valuation?.adjustments);
-            const valuationMileage = helper.valuation?.adjustments?.mileage;
-            if (valuationMileage) {
-              mileage = Array.isArray(valuationMileage) ? valuationMileage : [valuationMileage];
-              source = 'original';
-              console.log(`📦 Fallback: Loading mileage from valuation.adjustments:`, {
-                originalData: valuationMileage,
-                processedArray: mileage
-              });
+            // Fallback to estimate.adjustments.mileage
+            mileage = estimateAdjustments.mileage || [];
+            source = 'estimate';
+            
+            if (!Array.isArray(mileage) || mileage.length === 0) {
+              // Final fallback to valuation.adjustments.mileage
+              console.log(`🔍 DEBUG: Checking valuation fallback for mileage`, helper.valuation?.adjustments);
+              const valuationMileage = helper.valuation?.adjustments?.mileage;
+              if (valuationMileage) {
+                mileage = Array.isArray(valuationMileage) ? valuationMileage : [valuationMileage];
+                source = 'original';
+                console.log(`📦 Fallback: Loading mileage from valuation.adjustments:`, {
+                  originalData: valuationMileage,
+                  processedArray: mileage
+                });
+              } else {
+                console.log(`📦 No mileage data in any source`);
+              }
             } else {
-              console.log(`📦 No mileage data in estimate or valuation adjustments`);
+              console.log(`📦 Loading mileage from estimate.adjustments:`, mileage);
             }
           } else {
-            console.log(`📦 Loading mileage from estimate.adjustments:`, mileage);
+            console.log(`📦 Loading mileage from final_report.adjustments (preserving manual additions):`, mileage);
           }
           
           if (Array.isArray(mileage)) {
@@ -5714,37 +5736,46 @@
           console.log(`✅ Loaded ${mileage.length} mileage adjustments to Total Value Section from ${source}`);
         }
         
-        // 4. Load ownership_type from estimate.adjustments with fallback to valuation.adjustments
+        // 4. Load ownership_type from final_report.adjustments (priority) with fallback to estimate/valuation
         const ownershipContainer = document.getElementById('ownershipAdjustmentsList');
         if (ownershipContainer) {
           ownershipContainer.innerHTML = '';
           
-          // PRIMARY: estimate.adjustments.ownership_type, FALLBACK: valuation.adjustments.ownership_type
-          let ownership = estimateAdjustments.ownership_type || estimateAdjustments.ownership || [];
-          let source = 'estimate';
+          // FIXED: Load from final_report.adjustments FIRST (preserves manual additions)
+          let ownership = finalReportAdjustments.ownership_type || [];
+          let source = 'final_report';
           
+          // Only fall back to estimate/valuation if final_report is empty
           if (!Array.isArray(ownership) || ownership.length === 0) {
-            // Fallback to valuation.adjustments.ownership_type
-            console.log(`🔍 DEBUG: Checking valuation fallback for ownership_type`, helper.valuation?.adjustments);
-            const valuationOwnership = helper.valuation?.adjustments?.ownership_type;
-            if (valuationOwnership) {
-              ownership = Array.isArray(valuationOwnership) ? valuationOwnership : [valuationOwnership];
-              source = 'original';
-              console.log(`📦 Fallback: Loading ownership from valuation.adjustments:`, {
-                originalData: valuationOwnership,
-                processedArray: ownership
-              });
+            // Fallback to estimate.adjustments.ownership_type
+            ownership = estimateAdjustments.ownership_type || estimateAdjustments.ownership || [];
+            source = 'estimate';
+            
+            if (!Array.isArray(ownership) || ownership.length === 0) {
+              // Final fallback to valuation.adjustments.ownership_type
+              console.log(`🔍 DEBUG: Checking valuation fallback for ownership_type`, helper.valuation?.adjustments);
+              const valuationOwnership = helper.valuation?.adjustments?.ownership_type;
+              if (valuationOwnership) {
+                ownership = Array.isArray(valuationOwnership) ? valuationOwnership : [valuationOwnership];
+                source = 'original';
+                console.log(`📦 Fallback: Loading ownership from valuation.adjustments:`, {
+                  originalData: valuationOwnership,
+                  processedArray: ownership
+                });
+              } else {
+                console.log(`📦 No ownership data in any source`);
+              }
             } else {
-              console.log(`📦 No ownership data in estimate or valuation adjustments`);
+              console.log(`📦 Loading ownership from estimate.adjustments:`, ownership);
             }
           } else {
-            console.log(`📦 Loading ownership from estimate.adjustments:`, ownership);
+            console.log(`📦 Loading ownership from final_report.adjustments (preserving manual additions):`, ownership);
           }
           
           if (Array.isArray(ownership)) {
             ownership.forEach(adj => {
               if (adj && (adj.value || adj.percentage || adj.percent || adj.amount)) {
-                ownershipContainer.insertAdjacentHTML('beforeend', createTotalValueRow(adj, 'ownership', source));
+                ownershipContainer.insertAdjacentHTML('beforeend', createTotalValueRow(adj, 'ownership_type', source));
                 console.log(`✅ Added ownership adjustment from ${source}:`, adj.value || 'no description');
               }
             });
@@ -5752,37 +5783,46 @@
           console.log(`✅ Loaded ${ownership.length} ownership adjustments to Total Value Section from ${source}`);
         }
         
-        // 5. Load ownership_history from estimate.adjustments with fallback to valuation.adjustments
+        // 5. Load ownership_history from final_report.adjustments (priority) with fallback to estimate/valuation
         const ownersContainer = document.getElementById('ownersAdjustmentsList');
         if (ownersContainer) {
           ownersContainer.innerHTML = '';
           
-          // PRIMARY: estimate.adjustments.ownership_history, FALLBACK: valuation.adjustments.ownership_history
-          let owners = estimateAdjustments.ownership_history || estimateAdjustments.owners || [];
-          let source = 'estimate';
+          // FIXED: Load from final_report.adjustments FIRST (preserves manual additions)
+          let owners = finalReportAdjustments.ownership_history || [];
+          let source = 'final_report';
           
+          // Only fall back to estimate/valuation if final_report is empty
           if (!Array.isArray(owners) || owners.length === 0) {
-            // Fallback to valuation.adjustments.ownership_history
-            console.log(`🔍 DEBUG: Checking valuation fallback for ownership_history`, helper.valuation?.adjustments);
-            const valuationOwners = helper.valuation?.adjustments?.ownership_history;
-            if (valuationOwners) {
-              owners = Array.isArray(valuationOwners) ? valuationOwners : [valuationOwners];
-              source = 'original';
-              console.log(`📦 Fallback: Loading owners from valuation.adjustments:`, {
-                originalData: valuationOwners,
-                processedArray: owners
-              });
+            // Fallback to estimate.adjustments.ownership_history
+            owners = estimateAdjustments.ownership_history || estimateAdjustments.owners || [];
+            source = 'estimate';
+            
+            if (!Array.isArray(owners) || owners.length === 0) {
+              // Final fallback to valuation.adjustments.ownership_history
+              console.log(`🔍 DEBUG: Checking valuation fallback for ownership_history`, helper.valuation?.adjustments);
+              const valuationOwners = helper.valuation?.adjustments?.ownership_history;
+              if (valuationOwners) {
+                owners = Array.isArray(valuationOwners) ? valuationOwners : [valuationOwners];
+                source = 'original';
+                console.log(`📦 Fallback: Loading owners from valuation.adjustments:`, {
+                  originalData: valuationOwners,
+                  processedArray: owners
+                });
+              } else {
+                console.log(`📦 No owners data in any source`);
+              }
             } else {
-              console.log(`📦 No owners data in estimate or valuation adjustments`);
+              console.log(`📦 Loading owners from estimate.adjustments:`, owners);
             }
           } else {
-            console.log(`📦 Loading owners from estimate.adjustments:`, owners);
+            console.log(`📦 Loading owners from final_report.adjustments (preserving manual additions):`, owners);
           }
           
           if (Array.isArray(owners)) {
             owners.forEach(adj => {
               if (adj && (adj.value || adj.percentage || adj.percent || adj.amount)) {
-                ownersContainer.insertAdjacentHTML('beforeend', createTotalValueRow(adj, 'owners', source));
+                ownersContainer.insertAdjacentHTML('beforeend', createTotalValueRow(adj, 'ownership_history', source));
                 console.log(`✅ Added owners adjustment from ${source}:`, adj.value || 'no description');
               }
             });
@@ -5790,32 +5830,42 @@
           console.log(`✅ Loaded ${owners.length} owners adjustments to Total Value Section from ${source}`);
         }
         
-        // 6. Load additional from estimate.adjustments with fallback to valuation.adjustments
+        // 6. Load additional from final_report.adjustments (priority) with fallback to estimate/valuation
         const additionalContainer = document.getElementById('allAdjustmentsList');
         if (additionalContainer) {
           additionalContainer.innerHTML = '';
           
-          // PRIMARY: estimate.adjustments.additional, FALLBACK: valuation.adjustments.additional
-          let additional = estimateAdjustments.additional || [];
-          let source = 'estimate';
+          // FIXED: Load from final_report.adjustments FIRST (preserves manual additions)
+          let additional = finalReportAdjustments.additional || [];
+          let source = 'final_report';
           
+          // Only fall back to estimate/valuation if final_report is empty
           if (!Array.isArray(additional) || additional.length === 0) {
-            // Fallback to valuation.adjustments.additional
-            const valuationAdditional = helper.valuation?.adjustments?.additional;
-            if (valuationAdditional) {
-              additional = Array.isArray(valuationAdditional) ? valuationAdditional : [valuationAdditional];
-              source = 'original';
-              console.log(`📦 Fallback: Loading additional from valuation.adjustments:`, additional);
+            // Fallback to estimate.adjustments.additional
+            additional = estimateAdjustments.additional || [];
+            source = 'estimate';
+            
+            if (!Array.isArray(additional) || additional.length === 0) {
+              // Final fallback to valuation.adjustments.additional
+              const valuationAdditional = helper.valuation?.adjustments?.additional;
+              if (valuationAdditional) {
+                additional = Array.isArray(valuationAdditional) ? valuationAdditional : [valuationAdditional];
+                source = 'original';
+                console.log(`📦 Fallback: Loading additional from valuation.adjustments:`, additional);
+              } else {
+                console.log(`📦 No additional data in any source`);
+              }
             } else {
-              console.log(`📦 No additional data in estimate or valuation adjustments`);
+              console.log(`📦 Loading additional from estimate.adjustments:`, additional);
             }
           } else {
-            console.log(`📦 Loading additional from estimate.adjustments:`, additional);
+            console.log(`📦 Loading additional from final_report.adjustments (preserving manual additions):`, additional);
           }
           
           if (Array.isArray(additional)) {
             additional.forEach(adj => {
               if (adj && (adj.value || adj.percentage || adj.percent || adj.amount)) {
+                // Use createTotalValueRow to avoid duplicate saves during load
                 additionalContainer.insertAdjacentHTML('beforeend', createTotalValueRow(adj, 'additional', source));
                 console.log(`✅ Added additional adjustment from ${source}:`, adj.value || 'no description');
               }
@@ -5839,18 +5889,26 @@
         
         const helper = window.helper || JSON.parse(sessionStorage.getItem('helper') || '{}');
         
-        // Clear all final_report.adjustments data
+        // FIXED: Only clear Gross section data (features and registration), preserve Total section data
         if (helper.final_report && helper.final_report.adjustments) {
-          helper.final_report.adjustments = {
-            features: [],
-            registration: [],
-            mileage: [],
-            ownership_type: [],
-            ownership_history: [],
-            usage: [],
-            additional: []
+          // Preserve Total section data before clearing
+          const preservedData = {
+            mileage: helper.final_report.adjustments.mileage || [],
+            ownership_type: helper.final_report.adjustments.ownership_type || [],
+            ownership_history: helper.final_report.adjustments.ownership_history || [],
+            usage: helper.final_report.adjustments.usage || [],
+            additional: helper.final_report.adjustments.additional || []
           };
-          console.log('🧹 Cleared all final_report.adjustments data');
+          
+          // Clear only features and registration (Gross section data)
+          helper.final_report.adjustments.features = [];
+          helper.final_report.adjustments.registration = [];
+          
+          // Restore preserved Total section data
+          Object.assign(helper.final_report.adjustments, preservedData);
+          
+          console.log('🧹 Cleared only Gross section data (features & registration), preserved Total section data');
+          console.log('📦 Preserved Total section data:', preservedData);
         }
         
         // Clear existing rows
@@ -5900,9 +5958,16 @@
                     const itemAmount = item.amount;
                     inputs[1].value = getDropdownTypeFromValues(itemPercent, itemAmount, item.type || 'plus');
                     
-                    // Percent and amount - show absolute values
+                    // Percent and amount - preserve sign based on type
                     inputs[2].value = itemPercent ? Math.abs(itemPercent) : '';
-                    inputs[3].value = item.amount_display || (item.amount ? `₪${Math.abs(item.amount).toLocaleString()}` : '');
+                    // Check if it's a reduction type to preserve minus sign
+                    const isReduction = item.type === 'minus' || item.type === 'הפחתה' || 
+                                       item.type === 'הפחתה (-)' || item.type === 'הורדה';
+                    let displayAmount = Math.abs(item.amount || 0);
+                    if (isReduction && displayAmount > 0) {
+                      displayAmount = -displayAmount;
+                    }
+                    inputs[3].value = item.amount_display || (item.amount ? `₪${displayAmount.toLocaleString()}` : '');
                     
                     // Trigger change events
                     inputs[1].dispatchEvent(new Event('change', { bubbles: true }));
@@ -6338,8 +6403,8 @@
           // SKIPPED: features and registration to preserve Total Value manual additions
           { key: 'mileage', label: 'מס ק"מ', containerId: 'mileageAdjustmentsList', addFunction: addMileageAdjustment },
           { key: 'ownership_type', label: 'סוג בעלות', containerId: 'ownershipAdjustmentsList', addFunction: addOwnershipAdjustment },
-          { key: 'ownership_history', label: 'מספר בעלים', containerId: 'ownersAdjustmentsList', addFunction: addOwnersAdjustment },
-          { key: 'additional', label: 'התאמות נוספות', containerId: 'allAdjustmentsList', addFunction: addFullMarketAdjustment }
+          { key: 'ownership_history', label: 'מספר בעלים', containerId: 'ownersAdjustmentsList', addFunction: addOwnersAdjustment }
+          // REMOVED: additional - it's handled separately in loadFullMarketValueData to avoid duplicates
         ];
         
         adjustmentMapping.forEach(({ key, label, containerId, addFunction }) => {
@@ -6374,9 +6439,16 @@
                       const itemAmount = item.amount;
                       inputs[1].value = getDropdownTypeFromValues(itemPercent, itemAmount, item.type || 'plus');
                       
-                      // Percent and amount - show absolute values
+                      // Percent and amount - preserve sign based on type
                       inputs[2].value = itemPercent ? Math.abs(itemPercent) : '';
-                      inputs[3].value = item.amount_display || (item.amount ? `₪${Math.abs(item.amount).toLocaleString()}` : '');
+                      // Check if it's a reduction type to preserve minus sign
+                      const isReduction = item.type === 'minus' || item.type === 'הפחתה' || 
+                                         item.type === 'הפחתה (-)' || item.type === 'הורדה';
+                      let displayAmount = Math.abs(item.amount || 0);
+                      if (isReduction && displayAmount > 0) {
+                        displayAmount = -displayAmount;
+                      }
+                      inputs[3].value = item.amount_display || (item.amount ? `₪${displayAmount.toLocaleString()}` : '');
                       
                       // Trigger change events
                       inputs[1].dispatchEvent(new Event('change', { bubbles: true }));
@@ -6846,6 +6918,9 @@
         const isGrossRegistration = row.closest('#registrationAdjustmentsList');
         const isFullSection = row.closest('#fullFeaturesAdjustmentsList, #fullRegistrationAdjustmentsList, #mileageAdjustmentsList, #ownershipAdjustmentsList, #ownersAdjustmentsList, #allAdjustmentsList');
         
+        // Check if this is an additional adjustment row
+        const isAdditionalAdjustment = row.closest('#allAdjustmentsList');
+        
         row.remove();
         
         // Call appropriate calculation function based on section
@@ -6858,7 +6933,42 @@
           updateFullMarketValueCalculation();
         }
         
-        updateHelperFromAdjustments();
+        // For additional adjustments, we need to remove from helper arrays before updating
+        if (isAdditionalAdjustment) {
+          console.log('🗑️ Removing additional adjustment from helper arrays');
+          
+          // Get the description/value from the row to identify which item to remove
+          const inputs = row.querySelectorAll('input');
+          const description = inputs[0]?.value || '';
+          
+          const helper = window.helper || {};
+          
+          // Remove from final_report.adjustments.additional
+          if (helper.final_report?.adjustments?.additional) {
+            const initialFinalCount = helper.final_report.adjustments.additional.length;
+            helper.final_report.adjustments.additional = 
+              helper.final_report.adjustments.additional.filter(adj => adj.value !== description);
+            const removedFromFinal = initialFinalCount - helper.final_report.adjustments.additional.length;
+            console.log(`✅ Removed ${removedFromFinal} item(s) from final_report.adjustments.additional`);
+          }
+          
+          // Remove from valuation.adjustments.additional
+          if (helper.valuation?.adjustments?.additional) {
+            const initialValCount = helper.valuation.adjustments.additional.length;
+            helper.valuation.adjustments.additional = 
+              helper.valuation.adjustments.additional.filter(adj => adj.value !== description);
+            const removedFromVal = initialValCount - helper.valuation.adjustments.additional.length;
+            console.log(`✅ Removed ${removedFromVal} item(s) from valuation.adjustments.additional`);
+          }
+          
+          // Save the updated helper to sessionStorage
+          sessionStorage.setItem('helper', JSON.stringify(helper));
+          window.helper = helper;
+          
+          updateHelperFromAdjustments();
+        } else {
+          updateHelperFromAdjustments();
+        }
         
         // Bidirectional sync for features and registration deletions
         if (isGrossFeatures || isGrossRegistration) {
@@ -8262,7 +8372,14 @@
                   inputs[0].value = item.value || '';
                   inputs[1].value = item.type || 'plus';
                   inputs[2].value = item.percentage || item.percent || '';
-                  inputs[3].value = item.amount_display || (item.amount ? `₪${Math.abs(item.amount).toLocaleString()}` : '');
+                  // Check if it's a reduction type to preserve minus sign
+                  const isReduction = item.type === 'minus' || item.type === 'הפחתה' || 
+                                     item.type === 'הפחתה (-)' || item.type === 'הורדה';
+                  let displayAmount = Math.abs(item.amount || 0);
+                  if (isReduction && displayAmount > 0) {
+                    displayAmount = -displayAmount;
+                  }
+                  inputs[3].value = item.amount_display || (item.amount ? `₪${displayAmount.toLocaleString()}` : '');
                   
                   // Keep as manual source
                   lastRow.setAttribute('data-source', 'manual');
@@ -8293,7 +8410,14 @@
                   inputs[0].value = item.value || '';
                   inputs[1].value = item.type || 'plus';
                   inputs[2].value = item.percentage || item.percent || '';
-                  inputs[3].value = item.amount_display || (item.amount ? `₪${Math.abs(item.amount).toLocaleString()}` : '');
+                  // Check if it's a reduction type to preserve minus sign
+                  const isReduction = item.type === 'minus' || item.type === 'הפחתה' || 
+                                     item.type === 'הפחתה (-)' || item.type === 'הורדה';
+                  let displayAmount = Math.abs(item.amount || 0);
+                  if (isReduction && displayAmount > 0) {
+                    displayAmount = -displayAmount;
+                  }
+                  inputs[3].value = item.amount_display || (item.amount ? `₪${displayAmount.toLocaleString()}` : '');
                   
                   // Keep as manual source
                   lastRow.setAttribute('data-source', 'manual');
@@ -8623,13 +8747,13 @@
       
       const newRow = `
         <div id="${rowId}" class="adjustment-row" data-source="manual" style="display:grid; grid-template-columns:2fr 1fr 1fr 1fr 80px; gap:10px; margin-bottom:8px;">
-          <div><input type="text" placeholder="תיאור סוג בעלות" title="" onchange="updateFullMarketValueCalculation(); syncAdjustmentToHelper(this, 'ownership'); this.title = this.value;" oninput="this.title = this.value;" /></div>
-          <div><select onchange="updateFullMarketValueCalculation(); syncAdjustmentToHelper(this, 'ownership');" title="">
+          <div><input type="text" placeholder="תיאור סוג בעלות" title="" onchange="updateFullMarketValueCalculation(); syncAdjustmentToHelper(this, 'ownership_type'); this.title = this.value;" oninput="this.title = this.value;" /></div>
+          <div><select onchange="updateFullMarketValueCalculation(); syncAdjustmentToHelper(this, 'ownership_type');" title="">
             <option value="plus">תוספת (+)</option>
             <option value="minus">הפחתה (-)</option>
           </select></div>
-          <div><input type="text" placeholder="אחוז" title="" oninput="calculateAdjustmentValueSimple(this); this.title = this.value;" onchange="updateFullMarketValueCalculation(); syncAdjustmentToHelper(this, 'ownership'); this.title = this.value;" /></div>
-          <div><input type="text" placeholder="₪" title="" onchange="updateFullMarketValueCalculation(); syncAdjustmentToHelper(this, 'ownership'); this.title = this.value;" oninput="this.title = this.value;" /></div>
+          <div><input type="text" placeholder="אחוז" title="" oninput="calculateAdjustmentValueSimple(this); this.title = this.value;" onchange="updateFullMarketValueCalculation(); syncAdjustmentToHelper(this, 'ownership_type'); this.title = this.value;" /></div>
+          <div><input type="text" placeholder="₪" title="" onchange="updateFullMarketValueCalculation(); syncAdjustmentToHelper(this, 'ownership_type'); this.title = this.value;" oninput="this.title = this.value;" /></div>
           <div><button class="btn remove" onclick="removeAdjustmentRow('${rowId}')">מחק</button></div>
         </div>
       `;
@@ -8645,13 +8769,13 @@
       
       const newRow = `
         <div id="${rowId}" class="adjustment-row" data-source="manual" style="display:grid; grid-template-columns:2fr 1fr 1fr 1fr 80px; gap:10px; margin-bottom:8px;">
-          <div><input type="text" placeholder="תיאור מספר בעלים" title="" onchange="updateFullMarketValueCalculation(); syncAdjustmentToHelper(this, 'owners'); this.title = this.value;" oninput="this.title = this.value;" /></div>
-          <div><select onchange="updateFullMarketValueCalculation(); syncAdjustmentToHelper(this, 'owners');" title="">
+          <div><input type="text" placeholder="תיאור מספר בעלים" title="" onchange="updateFullMarketValueCalculation(); syncAdjustmentToHelper(this, 'ownership_history'); this.title = this.value;" oninput="this.title = this.value;" /></div>
+          <div><select onchange="updateFullMarketValueCalculation(); syncAdjustmentToHelper(this, 'ownership_history');" title="">
             <option value="plus">תוספת (+)</option>
             <option value="minus">הפחתה (-)</option>
           </select></div>
-          <div><input type="text" placeholder="אחוז" title="" oninput="calculateAdjustmentValueSimple(this); this.title = this.value;" onchange="updateFullMarketValueCalculation(); syncAdjustmentToHelper(this, 'owners'); this.title = this.value;" /></div>
-          <div><input type="text" placeholder="₪" title="" onchange="updateFullMarketValueCalculation(); syncAdjustmentToHelper(this, 'owners'); this.title = this.value;" oninput="this.title = this.value;" /></div>
+          <div><input type="text" placeholder="אחוז" title="" oninput="calculateAdjustmentValueSimple(this); this.title = this.value;" onchange="updateFullMarketValueCalculation(); syncAdjustmentToHelper(this, 'ownership_history'); this.title = this.value;" /></div>
+          <div><input type="text" placeholder="₪" title="" onchange="updateFullMarketValueCalculation(); syncAdjustmentToHelper(this, 'ownership_history'); this.title = this.value;" oninput="this.title = this.value;" /></div>
           <div><button class="btn remove" onclick="removeAdjustmentRow('${rowId}')">מחק</button></div>
         </div>
       `;

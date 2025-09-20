@@ -6421,3 +6421,90 @@ const row = element.closest('div[id*="Adj_"]');
 6. Check totals in final_report.adjustments.totals
 
 ============================================================================================
+
+
+# Investigation Plan: Data Source Conflict in Final Report Builder
+
+## Problem Description
+When clicking "טען התאמות לוי יצחק" button, the correct data loads, but on page refresh the data gets overridden with different values. This suggests a conflict between data sources.
+
+## Investigation Plan
+
+### 1. Understand Data Sources
+- [ ] Map out the data source hierarchy in helper object
+- [ ] Identify differences between estimate.adjustments vs valuation.adjustments vs final_report.adjustments
+- [ ] Trace which source is used by reload button vs page refresh
+
+### 2. Analyze Function Differences
+- [ ] Compare reloadFullMarketAdjustments() (reload button) logic
+- [ ] Compare loadTotalValueSectionAdjustments() (page refresh) logic
+- [ ] Identify why they use different data sources
+
+### 3. Check SessionStorage Updates
+- [ ] Verify if sessionStorage is properly updated after reload button click
+- [ ] Check if the correct data persists in helper object
+- [ ] Look for timing issues in save operations
+
+### 4. Investigate Mixed Data Sources
+- [ ] Understand why Features & Registration come from final_report.adjustments
+- [ ] Understand why KM/Ownership/Others come from estimate.adjustments
+- [ ] Check if this mixed approach causes the conflict
+
+### 5. Fix Implementation
+- [ ] Ensure both functions use the same data sources
+- [ ] Fix sessionStorage update timing
+- [ ] Test that data persists correctly on refresh
+
+## Key Findings So Far
+
+1. **reloadFullMarketAdjustments()** uses mixed sources:
+   - Features & Registration: from final_report.adjustments
+   - Others (KM, Ownership, etc): from estimate.adjustments
+
+2. **loadTotalValueSectionAdjustments()** claims to use the same mixed sources but may have different fallback logic
+
+3. Both functions have similar comments about "mixed data sources" but implementation may differ
+
+4. The reload button triggers formatAdjustmentDisplay() via change events which may affect the display
+
+5. SessionStorage updates happen after calculations with a delay, which might cause race conditions
+
+## Next Steps
+1. Deep dive into the actual data flow
+2. Compare exact implementation differences
+3. Fix the data source consistency issue
+
+
+## Additional Adjustments Issues Fixed (2025-09-20)
+
+### Problems Identified:
+1. **Duplicate Entries**: `addFullMarketAdjustment()` was called from two places during data loading
+2. **Delete Not Working**: `removeAdjustmentRow()` removed DOM but didn't update helper properly
+3. **UI Loss on Refresh**: Additional adjustments used wrong loading function
+4. **Ownership Field Issue**: Using 'ownership' instead of 'ownership_type'
+
+### Changes Made:
+
+1. **Fixed Duplicate Entries** (final-report-builder.html):
+   - Removed `additional` from `adjustmentMapping` array to prevent double loading
+   - Additional adjustments are now loaded only in `loadFullMarketValueData()`
+
+2. **Fixed Delete Function** (final-report-builder.html):
+   - Added check for additional adjustment rows in `removeAdjustmentRow()`
+   - Ensures `updateHelperFromAdjustments()` is called after deletion
+
+3. **Fixed UI Persistence** (final-report-builder.html):
+   - Changed loading from `createTotalValueRow()` to `addFullMarketAdjustment()`
+   - Now uses consistent row structure for all additional adjustments
+   - Added proper data attributes and event triggers
+
+4. **Fixed Ownership Field** (final-report-builder.html):
+   - Changed all `syncAdjustmentToHelper(this, 'ownership')` to `'ownership_type'`
+   - Mapping already existed in syncAdjustmentToHelper function
+
+### Review:
+All issues with additional adjustments have been resolved. The system now:
+- Prevents duplicate entries on load
+- Properly deletes adjustments from helper
+- Maintains UI state on page refresh
+- Uses correct field names for ownership adjustments
