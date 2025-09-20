@@ -1461,14 +1461,15 @@
 
     <!-- NEW TOTAL MARKET VALUE SECTION - EXACT ESTIMATOR COPY -->
     <div class="form-section" id="newFullMarketValue">
-      <button class="collapsible-btn" type="button" onclick="toggleSection('newFullMarketValueContent')">ערך השוק המלא החדש - עותק מעורך השמאות (הצג/הסתר)</button>
+      <button class="collapsible-btn" type="button" onclick="toggleSection('newFullMarketValueContent'); initializeNewMarketValueOnOpen();">ערך השוק המלא החדש - עותק מעורך השמאות (הצג/הסתר)</button>
       <div id="newFullMarketValueContent" style="display: none;">
         
-        <!-- Auto-populate button -->
+        <!-- Manual refresh button (for emergencies only) -->
         <div style="margin-bottom: 15px;">
-          <button type="button" class="btn btn-primary" onclick="autoPopulateMarketFields()">
-            🔄 מלא אוטומטית מנתוני הרכב והשמאה
+          <button type="button" class="btn btn-secondary" onclick="autoPopulateMarketFields()" style="font-size: 12px; padding: 6px 12px;">
+            🔄 רענן ידנית (רק במקרי חירום)
           </button>
+          <span style="color: #666; font-size: 12px; margin-right: 10px;">הנתונים מתעדכנים אוטומטית</span>
         </div>
 
         <!-- Features Adjustments - READ ONLY -->
@@ -18065,6 +18066,93 @@
         alert('שגיאה בשמירת ערך השוק החדש');
       }
     };
+
+    // Auto-Initialize New Market Value Section
+    window.initializeNewMarketValueSection = function() {
+      console.log('🚀 Auto-initializing New Market Value section...');
+      
+      // Wait a moment for the page to fully load
+      setTimeout(() => {
+        autoPopulateMarketFields();
+        console.log('✅ New Market Value section auto-initialized');
+      }, 500);
+    };
+
+    // Initialize when section is opened for the first time
+    window.initializeNewMarketValueOnOpen = function() {
+      // Check if section is being opened (display is not 'none')
+      setTimeout(() => {
+        const content = document.getElementById('newFullMarketValueContent');
+        if (content && content.style.display !== 'none') {
+          console.log('📂 New Market Value section opened, auto-populating...');
+          autoPopulateMarketFields();
+        }
+      }, 100);
+    };
+
+    // Real-time Data Watcher - monitors for changes in helper data
+    window.watchMarketValueData = function() {
+      let lastRelevantData = '';
+      
+      const getRelevantDataFingerprint = () => {
+        try {
+          const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+          
+          // Create fingerprint of relevant data
+          const relevantData = {
+            finalReportFeatures: helper.final_report?.adjustments?.features || [],
+            finalReportRegistration: helper.final_report?.adjustments?.registration || [],
+            valuationMileage: helper.valuation?.adjustments?.mileage || null,
+            valuationOwnershipType: helper.valuation?.adjustments?.ownership_type || null,
+            valuationOwnershipHistory: helper.valuation?.adjustments?.ownership_history || null,
+            valuationAdditional: helper.valuation?.adjustments?.additional || null
+          };
+          
+          return JSON.stringify(relevantData);
+        } catch (error) {
+          return '';
+        }
+      };
+      
+      const checkForChanges = () => {
+        try {
+          const currentFingerprint = getRelevantDataFingerprint();
+          
+          if (currentFingerprint !== lastRelevantData && currentFingerprint !== '') {
+            console.log('🔄 Relevant market value data changed, auto-refreshing section...');
+            autoPopulateMarketFields();
+            lastRelevantData = currentFingerprint;
+          }
+        } catch (error) {
+          console.error('Error in data watcher:', error);
+        }
+      };
+      
+      // Initialize fingerprint
+      lastRelevantData = getRelevantDataFingerprint();
+      
+      // Check every 3 seconds for changes
+      setInterval(checkForChanges, 3000);
+      
+      console.log('👁️ Smart data watcher started for market value section');
+    };
+
+    // Initialize on DOM content loaded
+    document.addEventListener('DOMContentLoaded', function() {
+      console.log('📄 DOM loaded, initializing new market value section...');
+      initializeNewMarketValueSection();
+      watchMarketValueData();
+    });
+
+    // Also initialize if DOM is already loaded
+    if (document.readyState === 'loading') {
+      // Still loading
+    } else {
+      // Already loaded
+      console.log('📄 DOM already loaded, initializing new market value section immediately...');
+      initializeNewMarketValueSection();
+      watchMarketValueData();
+    }
 
   </script>
 
