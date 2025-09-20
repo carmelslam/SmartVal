@@ -17757,9 +17757,11 @@
       const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
       const estimateAdjustments = helper.estimate?.adjustments || {};
       const valuationAdjustments = helper.valuation?.adjustments || {};
+      const finalReportAdjustments = helper.final_report?.adjustments || {};
       
       console.log('Available estimate adjustments (PRIMARY):', estimateAdjustments);
       console.log('Available valuation adjustments (FALLBACK):', valuationAdjustments);
+      console.log('Available final_report adjustments (FOR FEATURES/REGISTRATION):', finalReportAdjustments);
       
       // Clear existing rows first
       const containers = ['newFeaturesAdjustmentsList', 'newRegistrationAdjustmentsList', 'newMileageAdjustmentsList', 'newOwnershipAdjustmentsList', 'newOwnersAdjustmentsList', 'newAllAdjustmentsList'];
@@ -17770,8 +17772,8 @@
         }
       });
       
-      // Helper function to get data with correct priority: estimate.adjustments first, then valuation.adjustments
-      const getAdjustmentData = (category) => {
+      // Helper function to get data with correct priority for OTHER categories: estimate.adjustments first, then valuation.adjustments
+      const getAdjustmentDataForOthers = (category) => {
         // For arrays (estimate.adjustments), use the array directly
         if (estimateAdjustments[category] && Array.isArray(estimateAdjustments[category]) && estimateAdjustments[category].length > 0) {
           console.log(`📊 Using estimate.adjustments.${category} (PRIMARY):`, estimateAdjustments[category]);
@@ -17795,19 +17797,18 @@
         return { source: 'none', data: [] };
       };
       
-      // Populate READ-ONLY categories (features and registration) - mirror gross section
+      // Populate READ-ONLY categories (features and registration) - FROM FINAL_REPORT (gross section writes there)
       ['features', 'registration'].forEach(category => {
-        const adjustmentInfo = getAdjustmentData(category);
-        const adjustmentsArray = adjustmentInfo.data;
+        const adjustmentsArray = finalReportAdjustments[category] || [];
         let containerId = category === 'features' ? 'newFeaturesAdjustmentsList' : 'newRegistrationAdjustmentsList';
         
-        console.log(`📖 Populating READ-ONLY ${category} from ${adjustmentInfo.source}:`, adjustmentsArray);
+        console.log(`📖 Populating READ-ONLY ${category} from final_report.adjustments (gross section writes here):`, adjustmentsArray);
         
         if (adjustmentsArray.length === 0) {
           // Show empty state
           const container = document.getElementById(containerId);
           if (container) {
-            container.innerHTML = '<div style="padding: 15px; text-align: center; color: #666; font-style: italic;">אין נתונים זמינים</div>';
+            container.innerHTML = '<div style="padding: 15px; text-align: center; color: #666; font-style: italic;">אין נתונים זמינים מהמקטע הגולמי</div>';
           }
         } else {
           // Add each adjustment as read-only with proper type detection
@@ -17819,7 +17820,7 @@
       
       // Populate EDITABLE categories (mileage, ownership, additional) - estimate first, then valuation fallback
       ['mileage', 'ownership_type', 'ownership_history', 'additional'].forEach(category => {
-        const adjustmentInfo = getAdjustmentData(category);
+        const adjustmentInfo = getAdjustmentDataForOthers(category);
         const adjustmentsArray = adjustmentInfo.data;
         
         let containerId = '';
@@ -18000,7 +18001,7 @@
         // Calculate adjustments from both editable UI and read-only final_report data
         const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
         
-        // 1. Add read-only adjustments from final_report (features and registration)
+        // 1. Add read-only adjustments from final_report (features and registration - gross section writes here)
         ['features', 'registration'].forEach(category => {
           const adjustmentsArray = helper.final_report?.adjustments?.[category] || [];
           adjustmentsArray.forEach(adjustment => {
@@ -18010,7 +18011,7 @@
             } else {
               currentValue -= Math.abs(value);
             }
-            console.log(`📖 Added read-only ${category} adjustment: ${value}, cumulative: ${currentValue}`);
+            console.log(`📖 Added read-only ${category} from final_report: ${value}, cumulative: ${currentValue}`);
           });
         });
         
@@ -18154,11 +18155,12 @@
         try {
           const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
           
-          // Create fingerprint of relevant data according to correct READ flow
+          // Create fingerprint of relevant data according to CORRECT READ flow
           const relevantData = {
-            // PRIMARY: estimate.adjustments (read from here first)
-            estimateFeatures: helper.estimate?.adjustments?.features || [],
-            estimateRegistration: helper.estimate?.adjustments?.registration || [],
+            // FEATURES/REGISTRATION: final_report.adjustments (gross section writes here)
+            finalReportFeatures: helper.final_report?.adjustments?.features || [],
+            finalReportRegistration: helper.final_report?.adjustments?.registration || [],
+            // OTHER CATEGORIES: estimate.adjustments (primary), valuation.adjustments (fallback)
             estimateMileage: helper.estimate?.adjustments?.mileage || null,
             estimateOwnershipType: helper.estimate?.adjustments?.ownership_type || null,
             estimateOwnershipHistory: helper.estimate?.adjustments?.ownership_history || null,
