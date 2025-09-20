@@ -17859,20 +17859,45 @@
         
         if (containerId && adjustmentsArray.length > 0) {
           // Add each adjustment (handle multiple rows for categories that have arrays)
-          adjustmentsArray.forEach(adjustment => {
+          adjustmentsArray.forEach((adjustment, index) => {
             addMarketAdjustmentRow(containerId, category);
-            const container = document.getElementById(containerId);
-            const lastRow = container.lastElementChild;
-            if (lastRow) {
-              const inputs = lastRow.querySelectorAll('input, select');
+            
+            // Use setTimeout to ensure row is fully rendered before setting values
+            setTimeout(() => {
+              const container = document.getElementById(containerId);
+              const lastRow = container.lastElementChild;
+              if (lastRow) {
+                const inputs = lastRow.querySelectorAll('input, select');
               if (inputs.length >= 4) {
                 inputs[0].value = adjustment.value || '';
                 
                 // Fix type selection - ensure it's set correctly
                 const typeSelect = inputs[1];
-                const adjustmentType = adjustment.type || 'plus';
-                console.log(`🔧 Setting type for ${category}: ${adjustmentType}`);
-                typeSelect.value = adjustmentType;
+                let adjustmentType = adjustment.type || 'plus';
+                
+                // Normalize type values to match option values
+                if (adjustmentType !== 'plus' && adjustmentType !== 'minus') {
+                  // If type is not exactly 'plus' or 'minus', determine from amount/percentage
+                  if (adjustment.amount && adjustment.amount < 0) {
+                    adjustmentType = 'minus';
+                  } else if ((adjustment.percentage || adjustment.percent) && (adjustment.percentage < 0 || adjustment.percent < 0)) {
+                    adjustmentType = 'minus';
+                  } else {
+                    adjustmentType = 'plus'; // default
+                  }
+                }
+                
+                console.log(`🔧 Setting type for ${category}: ${adjustmentType} (original: ${adjustment.type})`);
+                
+                // Ensure the option exists before setting
+                const optionExists = Array.from(typeSelect.options).some(option => option.value === adjustmentType);
+                if (optionExists) {
+                  typeSelect.value = adjustmentType;
+                } else {
+                  console.warn(`⚠️ Option ${adjustmentType} not found in select, defaulting to plus`);
+                  typeSelect.value = 'plus';
+                  adjustmentType = 'plus';
+                }
                 
                 // Fix percentage display
                 const percentValue = adjustment.percentage || adjustment.percent || 0;
@@ -17896,7 +17921,7 @@
                   }, 100);
                 }
               }
-            }
+            }, index * 50); // Stagger the timeouts to avoid race conditions
           });
         }
       });
