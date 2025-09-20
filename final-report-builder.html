@@ -17792,6 +17792,112 @@
       loadMarketFieldsFromFinalReport(finalReportAdjustments);
     };
 
+    // Load Market Fields from final_report.adjustments (for page refresh)
+    window.loadMarketFieldsFromFinalReport = function(finalReportAdjustments) {
+      console.log('📄 Loading market fields from final_report.adjustments');
+      
+      // Copy base price from basicPrice field
+      const newBasicPriceField = document.getElementById('newBasicPrice');
+      const basicPriceField = document.getElementById('basicPrice');
+      const leviReportPrice = window.helper?.levi_report?.base_price;
+      
+      if (newBasicPriceField) {
+        const basePrice = basicPriceField?.value || leviReportPrice || '₪118,000';
+        newBasicPriceField.value = basePrice;
+        console.log('💰 Set base price:', basePrice);
+      }
+      
+      // READONLY CATEGORIES: Load features and registration
+      ['features', 'registration'].forEach(category => {
+        const adjustmentsArray = finalReportAdjustments[category] || [];
+        let containerId = '';
+        switch(category) {
+          case 'features': containerId = 'newFeaturesAdjustmentsList'; break;
+          case 'registration': containerId = 'newRegistrationAdjustmentsList'; break;
+        }
+        
+        if (containerId) {
+          const container = document.getElementById(containerId);
+          if (container) {
+            container.innerHTML = ''; // Clear existing
+            
+            if (adjustmentsArray.length === 0) {
+              container.innerHTML = '<div style="padding: 15px; text-align: center; color: #666; font-style: italic;">אין נתונים זמינים מהמקטע הגולמי</div>';
+            } else {
+              adjustmentsArray.forEach(adjustment => {
+                addReadOnlyMarketAdjustmentRow(containerId, category, adjustment);
+              });
+            }
+          }
+        }
+      });
+      
+      // EDITABLE CATEGORIES: Load mileage, ownership, additional
+      ['mileage', 'ownership_type', 'ownership_history', 'additional'].forEach(category => {
+        const adjustmentsArray = finalReportAdjustments[category] || [];
+        let containerId = '';
+        switch(category) {
+          case 'mileage': containerId = 'newMileageAdjustmentsList'; break;
+          case 'ownership_type': containerId = 'newOwnershipAdjustmentsList'; break;
+          case 'ownership_history': containerId = 'newOwnersAdjustmentsList'; break;
+          case 'additional': containerId = 'newAllAdjustmentsList'; break;
+        }
+        
+        console.log(`📝 Loading EDITABLE ${category} from final_report:`, adjustmentsArray);
+        
+        if (containerId && adjustmentsArray.length > 0) {
+          const container = document.getElementById(containerId);
+          if (container) {
+            container.innerHTML = ''; // Clear existing
+            
+            adjustmentsArray.forEach((adjustment, index) => {
+              addMarketAdjustmentRow(containerId, category);
+              
+              // Use setTimeout to ensure row is fully rendered
+              setTimeout(() => {
+                const lastRow = container.lastElementChild;
+                if (lastRow) {
+                  const inputs = lastRow.querySelectorAll('input, select');
+                  if (inputs.length >= 4) {
+                    inputs[0].value = adjustment.value || '';
+                    
+                    // Set type
+                    const typeSelect = inputs[1];
+                    let adjustmentType = adjustment.type || 'plus';
+                    if (typeSelect.querySelector(`option[value="${adjustmentType}"]`)) {
+                      typeSelect.value = adjustmentType;
+                    }
+                    
+                    // Set percentage
+                    const percentValue = adjustment.percentage || adjustment.percent || 0;
+                    inputs[2].value = Math.abs(percentValue);
+                    
+                    // ערך field starts empty - will calculate from percentage
+                    inputs[3].value = '';
+                    
+                    console.log(`✅ Populated ${category} row: type=${adjustmentType}, percent=${percentValue}`);
+                    
+                    // Calculate amount from percentage
+                    if (percentValue && percentValue !== 0) {
+                      setTimeout(() => {
+                        newCalculateAdjustmentValueSimple(inputs[2]);
+                      }, 50);
+                    }
+                  }
+                }
+              }, index * 50);
+            });
+          }
+        }
+      });
+      
+      // Final calculation
+      setTimeout(() => {
+        newUpdateFullMarketValueCalculation();
+        console.log('✅ Market fields loaded from final_report');
+      }, 1000);
+    };
+
     // Reload from estimate/valuation (MANUAL ONLY - reload button)
     window.reloadMarketFieldsFromEstimate = function() {
       console.log('🔄 FORCE RELOAD: Loading from estimate/valuation → final_report');
