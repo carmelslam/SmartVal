@@ -17975,6 +17975,31 @@
         console.log('🔥 ROUND 3: Final comprehensive calculation...');
         newUpdateFullMarketValueCalculation();
         
+        // Round 4: Force sync all rows in problematic categories
+        setTimeout(() => {
+          console.log('🔥 ROUND 4: Force sync problematic categories...');
+          ['mileage', 'ownership_type', 'ownership_history'].forEach(category => {
+            let containerId = '';
+            switch(category) {
+              case 'mileage': containerId = 'newMileageAdjustmentsList'; break;
+              case 'ownership_type': containerId = 'newOwnershipAdjustmentsList'; break;
+              case 'ownership_history': containerId = 'newOwnersAdjustmentsList'; break;
+            }
+            
+            const container = document.getElementById(containerId);
+            if (container && container.children.length > 0) {
+              console.log(`🔄 Force syncing ${category} (${container.children.length} rows)`);
+              // Find the first amount input and trigger sync
+              const firstRow = container.children[0];
+              const amountInput = firstRow.querySelector('input[placeholder="₪"]');
+              if (amountInput) {
+                console.log(`🎯 Triggering sync for ${category} amount field`);
+                newSyncAdjustmentToHelper(amountInput, category);
+              }
+            }
+          });
+        }, 200);
+        
         // Debug: Check what we populated
         containers.forEach(containerId => {
           const container = document.getElementById(containerId);
