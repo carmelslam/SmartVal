@@ -6606,97 +6606,14 @@
 
     function syncAdjustmentToHelper(element, category) {
       try {
-        // 🔧 PHASE 2.4: Get helper data from single source (window.helper)
-        const helper = window.helper || {};
+        console.log(`🔥 syncAdjustmentToHelper called for category: ${category}, element:`, element);
+        const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
         
-        const row = element.closest('div[id*="Adj_"]');
-        if (!row) return;
-        
-        // Determine the container ID for bidirectional sync
-        const container = row.closest('[id$="AdjustmentsList"]');
-        const containerId = container ? container.id : null;
-        
-        const inputs = row.querySelectorAll('input, select');
-        if (inputs.length < 4) return;
-        
-        const rawPercent = parseFloat(inputs[2].value.replace(/[-₪,]/g, '')) || 0;
-        const rawAmount = parseFloat(inputs[3].value.replace(/[-₪,]/g, '')) || 0;
-        
-        const dataSource = row.getAttribute('data-source') || 'manual';
-        const type = inputs[1].value || 'plus';
-        
-        // Apply sign based on type before saving
-        const signedPercent = type === 'minus' ? -Math.abs(rawPercent) : Math.abs(rawPercent);
-        const signedAmount = type === 'minus' ? -Math.abs(rawAmount) : Math.abs(rawAmount);
-        
-        const adjustmentData = {
-          value: inputs[0].value || '',  // תיאור → value (description field)
-          type: type,  // סוג → type
-          percent: signedPercent,  // אחוז → percent (with sign)
-          percentage: signedPercent,  // אחוז → percentage (with sign)
-          amount: signedAmount,  // ערך → amount (with sign)
-          amount_display: inputs[3].value || '',  // ערך → amount_display
-          category: category,
-          source: dataSource,
-          timestamp: new Date().toISOString()
-        };
-        
-        // If this is a Levi row being edited, update the estimate.adjustments instead
-        if (dataSource === 'levi' && helper.estimate?.adjustments?.[category]) {
-          console.log(`🔄 Updating Levi data in estimate.adjustments.${category}`);
-          
-          // Find and update the original Levi entry in estimate.adjustments using estimate index
-          const estimateIndex = row.getAttribute('data-estimate-index');
-          
-          if (Array.isArray(helper.estimate.adjustments[category]) && estimateIndex !== null) {
-            const indexNum = parseInt(estimateIndex);
-            if (indexNum >= 0 && indexNum < helper.estimate.adjustments[category].length) {
-              helper.estimate.adjustments[category][indexNum] = adjustmentData;
-              console.log(`✅ Updated original Levi entry at estimate index ${indexNum}`);
-            } else {
-              console.log(`❌ Invalid estimate index ${indexNum}, adding as new entry`);
-              helper.estimate.adjustments[category].push(adjustmentData);
-            }
-          } else if (Array.isArray(helper.estimate.adjustments[category])) {
-            // Fallback to description matching if no estimate index
-            const originalIndex = helper.estimate.adjustments[category].findIndex(
-              item => item.value === adjustmentData.value || 
-                     (item.value && item.value.includes('adventure')) // Match original Levi description
-            );
-            
-            if (originalIndex >= 0) {
-              helper.estimate.adjustments[category][originalIndex] = adjustmentData;
-              console.log(`✅ Updated original Levi entry at fallback index ${originalIndex}`);
-            } else {
-              helper.estimate.adjustments[category].push(adjustmentData);
-              console.log(`✅ Added new entry to estimate.adjustments.${category}`);
-            }
-          } else {
-            helper.estimate.adjustments[category] = adjustmentData;
-            console.log(`✅ Set single entry in estimate.adjustments.${category}`);
-          }
-          
-          // Save to storage and return early (don't save to final_report)
-          sessionStorage.setItem('helper', JSON.stringify(helper));
-          
-          // Apply unified formatting - only for Total Value section (not Gross section)
-          const isTotalValueSection = containerId && (
-            containerId.includes('fullFeatures') || 
-            containerId.includes('fullRegistration') ||
-            containerId.includes('mileage') ||
-            containerId.includes('ownership') ||
-            containerId.includes('owners') ||
-            containerId === 'allAdjustmentsList'
-          );
-          
-          // Apply formatting to ALL sections (both Gross and Total Value)
-          console.log(`🎨 Applying unified formatting for ${isTotalValueSection ? 'Total Value' : 'Gross'} ${category} adjustment`);
-          formatAdjustmentDisplay(row, type, signedPercent, signedAmount);
-          
-          return; // Don't save to final_report for Levi edits
-        }
-        
-        // Save adjustments to NEW destinations (primary requirement)
+        // Ensure structures exist
+        if (!helper.valuation) helper.valuation = {};
+        if (!helper.valuation.adjustments) helper.valuation.adjustments = {};
+        if (!helper.estimate) helper.estimate = {};
+        if (!helper.estimate.adjustments) helper.estimate.adjustments = {};
         if (!helper.final_report) helper.final_report = {};
         if (!helper.final_report.adjustments) {
           helper.final_report.adjustments = {
@@ -6710,115 +6627,114 @@
           };
         }
         
-        // Initialize the category array if it doesn't exist
-        if (!helper.final_report.adjustments[category]) {
-          helper.final_report.adjustments[category] = [];
-        }
-        
-        // Find existing item by content to prevent duplicates
-        // Use value (description) and type as a composite key
-        const existingIndex = helper.final_report.adjustments[category].findIndex(
-          item => item.value === adjustmentData.value && item.type === adjustmentData.type
-        );
-        
-        if (existingIndex >= 0) {
-          // Update existing entry
-          helper.final_report.adjustments[category][existingIndex] = adjustmentData;
-        } else {
-          // Add new entry
-          helper.final_report.adjustments[category].push(adjustmentData);
-        }
-        
-        // Use ESTIMATOR PATTERN: First row = original valuation data, additional rows = estimates only
-        if (!helper.valuation) helper.valuation = {};
-        if (!helper.valuation.adjustments) helper.valuation.adjustments = {};
-        
-        if (category === 'additional') {
-          // FIXED: Create valuation.adjustments.additional for התאמות שוק נוספות
-          if (!helper.valuation.adjustments.additional) {
-            helper.valuation.adjustments.additional = [];
-          }
+        // Map category to container ID - Check both full market and gross containers
+        let containerId = '';
+        if (category === 'features') {
+          // Check if element is from gross section or full market section
+          const row = element.closest('div');
+          const grossContainer = document.getElementById('featuresAdjustmentsList');
+          const fullContainer = document.getElementById('fullFeaturesAdjustmentsList');
           
-          // Find existing item in valuation.adjustments.additional
-          const existingValuationIndex = helper.valuation.adjustments.additional.findIndex(
-            item => item.value === adjustmentData.value && item.type === adjustmentData.type
-          );
-          
-          if (existingValuationIndex >= 0) {
-            // Update existing entry in valuation
-            helper.valuation.adjustments.additional[existingValuationIndex] = adjustmentData;
+          if (grossContainer && grossContainer.contains(row)) {
+            containerId = 'featuresAdjustmentsList'; // Gross section
+            console.log(`🎯 Detected GROSS features section for ${category}`);
           } else {
-            // Add new entry to valuation
-            helper.valuation.adjustments.additional.push(adjustmentData);
-          }
-          
-        } else {
-          // Map category names to valuation structure
-          let valuationCategory = category;
-          if (category === 'ownership') valuationCategory = 'ownership_type';
-          if (category === 'owners') valuationCategory = 'ownership_history';
-          
-          // Get all rows in this category to determine if this is the first row
-          const container = row.closest('[id$="AdjustmentsList"]');
-          if (container) {
-            const allRowsInCategory = container.querySelectorAll('div[id*="Adj_"]');
-            const isFirstRow = allRowsInCategory[0] === row;
-            
-            if (isFirstRow) {
-              // FIRST ROW = UPDATE VALUATION (original data)
-              helper.valuation.adjustments[valuationCategory] = adjustmentData;
-            }
-            // Additional rows automatically stay in final_report.adjustments only
+            containerId = 'fullFeaturesAdjustmentsList'; // Full market section
+            console.log(`🎯 Detected FULL MARKET features section for ${category}`);
           }
         }
+        else if (category === 'registration') {
+          // Check if element is from gross section or full market section  
+          const row = element.closest('div');
+          const grossContainer = document.getElementById('registrationAdjustmentsList');
+          const fullContainer = document.getElementById('fullRegistrationAdjustmentsList');
+          
+          if (grossContainer && grossContainer.contains(row)) {
+            containerId = 'registrationAdjustmentsList'; // Gross section
+            console.log(`🎯 Detected GROSS registration section for ${category}`);
+          } else {
+            containerId = 'fullRegistrationAdjustmentsList'; // Full market section
+            console.log(`🎯 Detected FULL MARKET registration section for ${category}`);
+          }
+        }
+        else if (category === 'mileage') containerId = 'mileageAdjustmentsList';
+        else if (category === 'ownership_type') containerId = 'ownershipAdjustmentsList';
+        else if (category === 'ownership_history') containerId = 'ownersAdjustmentsList';
+        else if (category === 'additional') containerId = 'allAdjustmentsList';
         
-        // Apply unified formatting - only for Total Value section (not Gross section)
-        const isTotalValueSection = containerId && (
-          containerId.includes('fullFeatures') || 
-          containerId.includes('fullRegistration') ||
-          containerId.includes('mileage') ||
-          containerId.includes('ownership') ||
-          containerId.includes('owners') ||
-          containerId === 'allAdjustmentsList'
-        );
+        if (!containerId) {
+          console.error('❌ Unknown category:', category);
+          return;
+        }
         
-        // Apply formatting to ALL sections (both Gross and Total Value)
-        console.log(`🎨 Applying unified formatting for ${isTotalValueSection ? 'Total Value' : 'Gross'} ${category} adjustment`);
-        formatAdjustmentDisplay(row, type, signedPercent, signedAmount);
+        const container = document.getElementById(containerId);
+        if (!container) {
+          console.error('❌ Container not found:', containerId);
+          return;
+        }
+        
+        console.log(`🔄 Rebuilding ${category} from all UI rows in ${containerId}`);
+        
+        // ESTIMATOR PATTERN: Rebuild entire category array from ALL visible UI rows
+        const allRows = Array.from(container.children);
+        helper.estimate.adjustments[category] = [];
+        helper.final_report.adjustments[category] = [];
+        
+        allRows.forEach((row, index) => {
+          const inputs = row.querySelectorAll('input, select');
+          if (inputs.length >= 4) {
+            const adjustmentData = {
+              value: inputs[0].value || '',
+              type: inputs[1].value || 'plus',
+              percentage: parseFloat(inputs[2].value) || 0,
+              percent: parseFloat(inputs[2].value) || 0, // Backward compatibility
+              amount_display: inputs[3].value || '',
+              amount: parseFloat((inputs[3].value || '').replace(/[₪,-]/g, '')) || 0,
+              source: 'manual',
+              timestamp: new Date().toISOString()
+            };
+            
+            // Apply sign based on type (CRITICAL FOR MINUS SIGNS)
+            if (adjustmentData.type === 'minus') {
+              adjustmentData.percentage = -Math.abs(adjustmentData.percentage);
+              adjustmentData.percent = -Math.abs(adjustmentData.percent);
+              adjustmentData.amount = -Math.abs(adjustmentData.amount);
+            }
+            
+            // Calculate amount from percentage if needed
+            if (adjustmentData.percentage && !adjustmentData.amount) {
+              const baseValue = parseFloat(helper.estimate?.market_value_base) || 0;
+              if (baseValue > 0) {
+                const amount = Math.round((baseValue * Math.abs(adjustmentData.percentage)) / 100);
+                adjustmentData.amount = adjustmentData.type === 'minus' ? -amount : amount;
+              }
+            }
+            
+            helper.estimate.adjustments[category].push(adjustmentData);
+            helper.final_report.adjustments[category].push(adjustmentData);
+            console.log(`📝 Added row ${index} to ${category}:`, adjustmentData.value);
+          }
+        });
+        
+        console.log(`✅ Rebuilt ${category}: ${helper.estimate.adjustments[category].length} items total`);
+        console.log(`📊 Final estimate.adjustments.${category}:`, helper.estimate.adjustments[category]);
+        
+        // ESTIMATOR PATTERN: Update valuation.adjustments with first item (for backward compatibility)
+        if (helper.estimate.adjustments[category].length > 0) {
+          helper.valuation.adjustments[category] = helper.estimate.adjustments[category][0];
+        } else {
+          // Clear valuation if no items remain
+          if (helper.valuation.adjustments[category]) {
+            delete helper.valuation.adjustments[category];
+          }
+        }
         
         // Save to storage
         sessionStorage.setItem('helper', JSON.stringify(helper));
-        
-        // 🔧 PHASE 4: Bidirectional sync for features and registration - TEMPORARILY DISABLED
-        // This might be causing original rows to reload during edits
-        // if ((category === 'features' || category === 'registration') && containerId) {
-        //   // Get the current adjustments array for this category
-        //   const adjustmentsArray = helper.final_report?.adjustments?.[category] || [];
-        //   
-        //   // Determine which section was updated and sync to the opposite section
-        //   const isFromGrossSection = (category === 'features' && containerId === 'featuresAdjustmentsList') ||
-        //                            (category === 'registration' && containerId === 'registrationAdjustmentsList');
-        //   
-        //   if (isFromGrossSection) {
-        //     // Update was from gross section -> sync to full market section
-        //     const targetContainerId = category === 'features' ? 'fullFeaturesAdjustmentsList' : 'fullRegistrationAdjustmentsList';
-        //     console.log(`🔄 Syncing from Gross to Full Market: ${containerId} → ${targetContainerId}`);
-        //     syncUISection(targetContainerId, adjustmentsArray);
-        //   } else {
-        //     // Update was from full market section -> sync to gross section
-        //     const targetContainerId = category === 'features' ? 'featuresAdjustmentsList' : 'registrationAdjustmentsList';
-        //     console.log(`🔄 Syncing from Full Market to Gross: ${containerId} → ${targetContainerId}`);
-        //     syncUISection(targetContainerId, adjustmentsArray);
-        //   }
-        // }
-        
-        // Skip forcePopulateFields to prevent reloading original data during edits
-        // if (window.forcePopulateFields) {
-        //   window.forcePopulateFields();
-        // }
+        window.helper = helper; // Update window.helper
         
       } catch (error) {
-        console.error('❌ Error syncing adjustment to helper:', error);
+        console.error('Error in syncAdjustmentToHelper:', error);
       }
     }
     
