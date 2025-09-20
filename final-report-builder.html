@@ -1477,7 +1477,7 @@
 
         <!-- Manual refresh button (for emergencies only) -->
         <div style="margin-bottom: 15px;">
-          <button type="button" class="btn btn-secondary" onclick="autoPopulateMarketFields(true)" style="font-size: 12px; padding: 6px 12px;">
+          <button type="button" class="btn btn-secondary" onclick="reloadMarketFieldsFromEstimate()" style="font-size: 12px; padding: 6px 12px;">
             🔄 רענן מנתוני שמאות (אתחול מחדש)
           </button>
           <span style="color: #666; font-size: 12px; margin-right: 10px;">טעינה חד פעמית מהשמאות - לאחר מכן עריכה חופשית</span>
@@ -17779,34 +17779,40 @@
       container.insertAdjacentHTML('beforeend', newRow);
     };
 
-    // Auto-populate Market Fields
-    window.autoPopulateMarketFields = function(forceReload = false) {
-      console.log('🔄 Auto-populating market fields from helper data');
+    // Auto-populate from final_report (ALWAYS - for page refresh)
+    window.autoPopulateMarketFields = function() {
+      console.log('🔄 Auto-populating from final_report (page refresh sync)');
+      
+      const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+      const finalReportAdjustments = helper.final_report?.adjustments || {};
+      
+      console.log('📊 Loading from final_report.adjustments:', finalReportAdjustments);
+      
+      // Load from final_report.adjustments - this is the persistent data source
+      loadMarketFieldsFromFinalReport(finalReportAdjustments);
+    };
+
+    // Reload from estimate/valuation (MANUAL ONLY - reload button)
+    window.reloadMarketFieldsFromEstimate = function() {
+      console.log('🔄 FORCE RELOAD: Loading from estimate/valuation → final_report');
       
       const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
       const estimateAdjustments = helper.estimate?.adjustments || {};
       const valuationAdjustments = helper.valuation?.adjustments || {};
-      const finalReportAdjustments = helper.final_report?.adjustments || {};
       
-      // STICKY TRANSFER LOGIC: Check if final_report already has data
-      const finalReportHasData = finalReportAdjustments && (
-        (finalReportAdjustments.mileage && finalReportAdjustments.mileage.length > 0) ||
-        (finalReportAdjustments.ownership_type && finalReportAdjustments.ownership_type.length > 0) ||
-        (finalReportAdjustments.ownership_history && finalReportAdjustments.ownership_history.length > 0) ||
-        (finalReportAdjustments.additional && finalReportAdjustments.additional.length > 0)
-      );
+      console.log('📊 Loading from estimate (primary):', estimateAdjustments);
+      console.log('📊 Loading from valuation (fallback):', valuationAdjustments);
       
-      if (finalReportHasData && !forceReload) {
-        console.log('✅ STICKY TRANSFER COMPLETE: final_report has data, estimate/valuation OUT OF LOOP');
-        console.log('📊 Use reload button to force restart from estimate/valuation');
-        return;
-      }
+      // FORCE: Clear final_report and reload from estimate/valuation
+      if (!helper.final_report) helper.final_report = {};
+      if (!helper.final_report.adjustments) helper.final_report.adjustments = {};
       
-      if (forceReload) {
-        console.log('🔄 FORCE RELOAD: Restarting transfer from estimate/valuation → final_report');
-      } else {
-        console.log('🔥 INITIAL TRANSFER: estimate/valuation → final_report (ONE TIME ONLY)');
-      }
+      // Clear existing final_report data for fresh start
+      ['mileage', 'ownership_type', 'ownership_history', 'additional'].forEach(category => {
+        helper.final_report.adjustments[category] = [];
+      });
+      
+      console.log('🧹 Cleared final_report data for fresh reload');
       
       console.log('Available estimate adjustments (PRIMARY):', estimateAdjustments);
       console.log('Available valuation adjustments (FALLBACK):', valuationAdjustments);
@@ -17941,15 +17947,10 @@
                 const percentValue = adjustment.percentage || adjustment.percent || 0;
                 inputs[2].value = Math.abs(percentValue); // Always show positive in UI
                 
-                // Fix amount display with proper formatting
-                let amountDisplay = adjustment.amount_display || '';
-                if (!amountDisplay && adjustment.amount) {
-                  const absAmount = Math.abs(adjustment.amount);
-                  amountDisplay = adjustmentType === 'minus' ? `-₪${absAmount.toLocaleString()}` : `₪${absAmount.toLocaleString()}`;
-                }
-                inputs[3].value = amountDisplay;
+                // ערך field is CALCULATION ONLY - don't populate from storage, let it calculate
+                inputs[3].value = ''; // Always start empty - will be calculated from percentage
                 
-                console.log(`✅ Populated ${category} row: type=${adjustmentType}, percent=${percentValue}, amount=${amountDisplay}`);
+                console.log(`✅ Populated ${category} row: type=${adjustmentType}, percent=${percentValue}, amount=WILL_CALCULATE`);
                 
                 // Calculate amount if we have percentage
                 if (percentValue && percentValue !== 0) {
@@ -18601,7 +18602,7 @@
       
       // Wait a moment for the page to fully load
       setTimeout(() => {
-        autoPopulateMarketFields(); // ONE TIME STICKY TRANSFER on initialization
+        autoPopulateMarketFields(); // Load from final_report on page refresh
         console.log('✅ New Market Value section auto-initialized');
       }, 500);
     };
@@ -18613,7 +18614,7 @@
         const content = document.getElementById('newFullMarketValueContent');
         if (content && content.style.display !== 'none') {
           console.log('📂 New Market Value section opened, auto-populating...');
-          // autoPopulateMarketFields(); // DISABLED - was overriding user edits
+          autoPopulateMarketFields(); // Load from final_report when section opens
         }
       }, 100);
     };
