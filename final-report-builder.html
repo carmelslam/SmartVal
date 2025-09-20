@@ -6929,7 +6929,69 @@
         // Check if this is an additional adjustment row
         const isAdditionalAdjustment = row.closest('#allAdjustmentsList');
         
+        // CRITICAL FIX: Get the description BEFORE removing the row
+        let description = '';
+        let category = '';
+        if (isAdditionalAdjustment) {
+          const inputs = row.querySelectorAll('input');
+          description = inputs[0]?.value || '';
+          category = 'additional';
+          console.log(`🗑️ Preparing to remove additional adjustment: "${description}"`);
+        } else {
+          // Determine category for other sections
+          if (row.closest('#featuresAdjustmentsList') || row.closest('#fullFeaturesAdjustmentsList')) category = 'features';
+          else if (row.closest('#registrationAdjustmentsList') || row.closest('#fullRegistrationAdjustmentsList')) category = 'registration';
+          else if (row.closest('#mileageAdjustmentsList')) category = 'mileage';
+          else if (row.closest('#ownershipAdjustmentsList')) category = 'ownership_type';
+          else if (row.closest('#ownersAdjustmentsList')) category = 'ownership_history';
+        }
+        
+        // Remove the row from UI
         row.remove();
+        
+        // For any category, trigger the sync function to rebuild arrays properly
+        if (category) {
+          console.log(`🔄 Triggering sync for category: ${category} after row deletion`);
+          
+          // Find the container and trigger sync with remaining rows
+          let containerId = '';
+          if (category === 'features') {
+            containerId = isGrossFeatures ? 'featuresAdjustmentsList' : 'fullFeaturesAdjustmentsList';
+          } else if (category === 'registration') {
+            containerId = isGrossRegistration ? 'registrationAdjustmentsList' : 'fullRegistrationAdjustmentsList';
+          } else if (category === 'mileage') containerId = 'mileageAdjustmentsList';
+          else if (category === 'ownership_type') containerId = 'ownershipAdjustmentsList';
+          else if (category === 'ownership_history') containerId = 'ownersAdjustmentsList';
+          else if (category === 'additional') containerId = 'allAdjustmentsList';
+          
+          const container = document.getElementById(containerId);
+          if (container && container.children.length > 0) {
+            // Use first remaining input to trigger sync
+            const firstInput = container.children[0].querySelector('input');
+            if (firstInput) {
+              syncAdjustmentToHelper(firstInput, category);
+            }
+          } else {
+            // No rows left, manually clear the category
+            const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+            
+            // Clear from all locations
+            if (helper.estimate?.adjustments?.[category]) {
+              helper.estimate.adjustments[category] = [];
+            }
+            if (helper.final_report?.adjustments?.[category]) {
+              helper.final_report.adjustments[category] = [];
+            }
+            if (helper.valuation?.adjustments?.[category]) {
+              delete helper.valuation.adjustments[category];
+            }
+            
+            sessionStorage.setItem('helper', JSON.stringify(helper));
+            window.helper = helper;
+            
+            console.log(`🧹 Cleared all data for category: ${category}`);
+          }
+        }
         
         // Call appropriate calculation function based on section
         if (isGrossFeatures || isGrossRegistration) {
@@ -6941,6 +7003,8 @@
           updateFullMarketValueCalculation();
         }
         
+        // OLD BROKEN CODE - KEEPING FOR REFERENCE BUT IT'S NOT NEEDED WITH SYNC PATTERN
+        /*
         // For additional adjustments, we need to remove from helper arrays before updating
         if (isAdditionalAdjustment) {
           console.log('🗑️ Removing additional adjustment from helper arrays');
@@ -6948,57 +7012,9 @@
           // Get the description/value from the row to identify which item to remove
           const inputs = row.querySelectorAll('input');
           const description = inputs[0]?.value || '';
-          
-          const helper = window.helper || {};
-          
-          // Remove from final_report.adjustments.additional
-          if (helper.final_report?.adjustments?.additional) {
-            const initialFinalCount = helper.final_report.adjustments.additional.length;
-            helper.final_report.adjustments.additional = 
-              helper.final_report.adjustments.additional.filter(adj => adj.value !== description);
-            const removedFromFinal = initialFinalCount - helper.final_report.adjustments.additional.length;
-            console.log(`✅ Removed ${removedFromFinal} item(s) from final_report.adjustments.additional`);
-          }
-          
-          // Remove from valuation.adjustments.additional
-          if (helper.valuation?.adjustments?.additional) {
-            const initialValCount = helper.valuation.adjustments.additional.length;
-            helper.valuation.adjustments.additional = 
-              helper.valuation.adjustments.additional.filter(adj => adj.value !== description);
-            const removedFromVal = initialValCount - helper.valuation.adjustments.additional.length;
-            console.log(`✅ Removed ${removedFromVal} item(s) from valuation.adjustments.additional`);
-          }
-          
-          // Save the updated helper to sessionStorage
-          sessionStorage.setItem('helper', JSON.stringify(helper));
-          window.helper = helper;
-          
-          updateHelperFromAdjustments();
-        } else {
-          updateHelperFromAdjustments();
-        }
+        */
         
-        // Bidirectional sync for features and registration deletions
-        if (isGrossFeatures || isGrossRegistration) {
-          // Deletion was from gross section, need to sync to full market section
-          const helper = window.helper || {};
-          if (isGrossFeatures) {
-            syncUISection('fullFeaturesAdjustmentsList', helper.final_report?.adjustments?.features || []);
-          } else if (isGrossRegistration) {
-            syncUISection('fullRegistrationAdjustmentsList', helper.final_report?.adjustments?.registration || []);
-          }
-        } else if (isFullSection) {
-          // Check if it's features or registration in full section
-          const isFullFeatures = row.closest('#fullFeaturesAdjustmentsList');
-          const isFullRegistration = row.closest('#fullRegistrationAdjustmentsList');
-          const helper = window.helper || {};
-          
-          if (isFullFeatures) {
-            syncUISection('featuresAdjustmentsList', helper.final_report?.adjustments?.features || []);
-          } else if (isFullRegistration) {
-            syncUISection('registrationAdjustmentsList', helper.final_report?.adjustments?.registration || []);
-          }
-        }
+        console.log(`✅ Successfully removed row and synced data using new estimator pattern`);
       }
     }
     
@@ -17673,7 +17689,7 @@
           </select></div>
           <div><input type="text" placeholder="אחוז" oninput="newCalculateAdjustmentValueSimple(this);" onchange="newUpdateFullMarketValueCalculation(); newSyncAdjustmentToHelper(this, '${category}');" /></div>
           <div><input type="text" placeholder="₪" onchange="newUpdateFullMarketValueCalculation(); newSyncAdjustmentToHelper(this, '${category}');" /></div>
-          <div><button class="btn remove" onclick="this.parentElement.parentElement.remove(); newUpdateFullMarketValueCalculation();">מחק</button></div>
+          <div><button class="btn remove" onclick="deleteMarketAdjustmentRow(this, '${category}');">מחק</button></div>
         </div>
       `;
       
@@ -17901,6 +17917,55 @@
         
       } catch (error) {
         console.error('❌ Error in newUpdateFullMarketValueCalculation:', error);
+      }
+    };
+
+    // Delete Market Adjustment Row with Proper Sync
+    window.deleteMarketAdjustmentRow = function(button, category) {
+      try {
+        console.log(`🗑️ Deleting row from category: ${category}`);
+        
+        // Remove the row from UI
+        const row = button.parentElement.parentElement;
+        row.remove();
+        
+        // Trigger sync to rebuild arrays and update storage
+        // This will automatically remove deleted items from valuation.adjustments
+        const remainingRows = row.parentElement?.children;
+        if (remainingRows && remainingRows.length > 0) {
+          // Use the first remaining input to trigger sync
+          const firstInput = remainingRows[0].querySelector('input');
+          if (firstInput) {
+            newSyncAdjustmentToHelper(firstInput, category);
+          }
+        } else {
+          // No rows left, manually clear the category
+          const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+          
+          // Clear from all locations
+          if (helper.estimate?.adjustments?.[category]) {
+            helper.estimate.adjustments[category] = [];
+          }
+          if (helper.final_report?.adjustments?.[category]) {
+            helper.final_report.adjustments[category] = [];
+          }
+          if (helper.valuation?.adjustments?.[category]) {
+            delete helper.valuation.adjustments[category];
+          }
+          
+          sessionStorage.setItem('helper', JSON.stringify(helper));
+          window.helper = helper;
+          
+          console.log(`🧹 Cleared all data for category: ${category}`);
+        }
+        
+        // Update calculations
+        newUpdateFullMarketValueCalculation();
+        
+        console.log(`✅ Successfully deleted row and synced data for: ${category}`);
+        
+      } catch (error) {
+        console.error('❌ Error deleting market adjustment row:', error);
       }
     };
 
