@@ -1487,12 +1487,18 @@
         <div class="form-section">
           <h4>תוספות מאפיינים: <span style="color: #666; font-size: 12px;">(קריאה בלבד - מתעדכן מנתוני הדוח הסופי)</span></h4>
           <div id="newFeaturesAdjustmentsList" style="background: #f8f9fa; padding: 10px; border-radius: 5px;"></div>
+          <div style="text-align: center; margin-top: 10px; padding: 8px; background: #e3f2fd; border-radius: 5px; font-weight: bold;">
+            ערך לאחר תוספות מאפיינים: <span id="newFeaturesCumulative">₪0</span>
+          </div>
         </div>
 
         <!-- Registration Adjustments - READ ONLY -->
         <div class="form-section">
           <h4>עליה לכביש: <span style="color: #666; font-size: 12px;">(קריאה בלבד - מתעדכן מנתוני הדוח הסופי)</span></h4>
           <div id="newRegistrationAdjustmentsList" style="background: #f8f9fa; padding: 10px; border-radius: 5px;"></div>
+          <div style="text-align: center; margin-top: 10px; padding: 8px; background: #e3f2fd; border-radius: 5px; font-weight: bold;">
+            ערך לאחר עליה לכביש: <span id="newRegistrationCumulative">₪0</span>
+          </div>
         </div>
 
         <!-- Mileage Adjustments -->
@@ -1500,6 +1506,9 @@
           <h4>מס ק"מ:</h4>
           <div id="newMileageAdjustmentsList"></div>
           <button type="button" class="btn btn-secondary" onclick="addMarketAdjustmentRow('newMileageAdjustmentsList', 'mileage')">הוסף התאמה</button>
+          <div style="text-align: center; margin-top: 10px; padding: 8px; background: #e8f5e8; border-radius: 5px; font-weight: bold;">
+            ערך לאחר מס ק"מ: <span id="newMileageCumulative">₪0</span>
+          </div>
         </div>
 
         <!-- Ownership Type Adjustments -->
@@ -1507,6 +1516,9 @@
           <h4>סוג בעלות:</h4>
           <div id="newOwnershipAdjustmentsList"></div>
           <button type="button" class="btn btn-secondary" onclick="addMarketAdjustmentRow('newOwnershipAdjustmentsList', 'ownership_type')">הוסף התאמה</button>
+          <div style="text-align: center; margin-top: 10px; padding: 8px; background: #e8f5e8; border-radius: 5px; font-weight: bold;">
+            ערך לאחר סוג בעלות: <span id="newOwnershipCumulative">₪0</span>
+          </div>
         </div>
 
         <!-- Number of Owners Adjustments -->
@@ -1514,6 +1526,9 @@
           <h4>מספר בעלים:</h4>
           <div id="newOwnersAdjustmentsList"></div>
           <button type="button" class="btn btn-secondary" onclick="addMarketAdjustmentRow('newOwnersAdjustmentsList', 'ownership_history')">הוסף התאמה</button>
+          <div style="text-align: center; margin-top: 10px; padding: 8px; background: #e8f5e8; border-radius: 5px; font-weight: bold;">
+            ערך לאחר מספר בעלים: <span id="newOwnersCumulative">₪0</span>
+          </div>
         </div>
 
         <!-- Additional Market Adjustments -->
@@ -1521,6 +1536,9 @@
           <h4>התאמות שוק נוספות:</h4>
           <div id="newAllAdjustmentsList"></div>
           <button type="button" class="btn btn-secondary" onclick="addMarketAdjustmentRow('newAllAdjustmentsList', 'additional')">הוסף התאמה</button>
+          <div style="text-align: center; margin-top: 10px; padding: 8px; background: #e8f5e8; border-radius: 5px; font-weight: bold;">
+            ערך לאחר התאמות נוספות: <span id="newAdditionalCumulative">₪0</span>
+          </div>
         </div>
 
         <!-- Result Display -->
@@ -18078,34 +18096,22 @@
         
         console.log(`🔢 Calculation: ${percent}% type=${type}`);
         
-        // Get base price from NEW section's base price field
-        let basePrice = 0;
-        const newBasicPriceField = document.getElementById('newBasicPrice');
-        if (newBasicPriceField?.value) {
-          basePrice = parseFloat(newBasicPriceField.value.replace(/[₪,]/g, '')) || 0;
-        }
+        // Get cumulative price for this category (base for percentage calculation)
+        const cumulativePrice = getCumulativePriceForCategory(row);
         
-        // Fallback to original basicPrice if new field is empty
-        if (basePrice === 0) {
-          const basicPriceField = document.getElementById('basicPrice');
-          if (basicPriceField?.value) {
-            basePrice = parseFloat(basicPriceField.value.replace(/[₪,]/g, '')) || 0;
-          }
-        }
+        console.log(`💰 Cumulative price for calculation: ₪${cumulativePrice}`);
         
-        console.log(`💰 Base price for NEW section: ₪${basePrice}`);
-        
-        if (basePrice > 0 && percent !== 0) {
-          const amount = Math.round((basePrice * Math.abs(percent)) / 100);
+        if (cumulativePrice > 0 && percent !== 0) {
+          const amount = Math.round((cumulativePrice * Math.abs(percent)) / 100);
           const displayValue = type === 'minus' ? `-₪${amount.toLocaleString()}` : `₪${amount.toLocaleString()}`;
           amountInput.value = displayValue;
           
-          console.log(`✅ Calculated: ${percent}% of ₪${basePrice} = ${displayValue}`);
+          console.log(`✅ Calculated: ${percent}% of ₪${cumulativePrice} = ${displayValue}`);
           
           // Trigger update calculation
           newUpdateFullMarketValueCalculation();
         } else {
-          console.warn(`⚠️ Cannot calculate: basePrice=${basePrice}, percent=${percent}`);
+          console.warn(`⚠️ Cannot calculate: cumulativePrice=${cumulativePrice}, percent=${percent}`);
         }
         
       } catch (error) {
@@ -18113,83 +18119,303 @@
       }
     };
 
-    // Update Full Market Value Calculation
+    // Get Cumulative Price for Category (determines what percentage calculates against)
+    window.getCumulativePriceForCategory = function(row) {
+      try {
+        // Determine which category this row belongs to
+        const container = row.closest('[id$="AdjustmentsList"]');
+        if (!container) return 0;
+        
+        const containerId = container.id;
+        
+        // Return the cumulative total from the PREVIOUS category
+        switch(containerId) {
+          case 'newFeaturesAdjustmentsList':
+            // Features calculates against base price
+            return getBasePrice();
+            
+          case 'newRegistrationAdjustmentsList':
+            // Registration calculates against base price (like features)
+            return getBasePrice();
+            
+          case 'newMileageAdjustmentsList':
+            // Mileage calculates against cumulative after registration
+            const regElement = document.getElementById('newRegistrationCumulative');
+            return regElement ? parseFloat(regElement.textContent.replace(/[₪,]/g, '')) || 0 : getBasePrice();
+            
+          case 'newOwnershipAdjustmentsList':
+            // Ownership calculates against cumulative after mileage
+            const mileageElement = document.getElementById('newMileageCumulative');
+            return mileageElement ? parseFloat(mileageElement.textContent.replace(/[₪,]/g, '')) || 0 : getBasePrice();
+            
+          case 'newOwnersAdjustmentsList':
+            // Owners calculates against cumulative after ownership
+            const ownershipElement = document.getElementById('newOwnershipCumulative');
+            return ownershipElement ? parseFloat(ownershipElement.textContent.replace(/[₪,]/g, '')) || 0 : getBasePrice();
+            
+          case 'newAllAdjustmentsList':
+            // Additional calculates against cumulative after owners
+            const ownersElement = document.getElementById('newOwnersCumulative');
+            return ownersElement ? parseFloat(ownersElement.textContent.replace(/[₪,]/g, '')) || 0 : getBasePrice();
+            
+          default:
+            return getBasePrice();
+        }
+      } catch (error) {
+        console.error('Error getting cumulative price:', error);
+        return getBasePrice();
+      }
+    };
+
+    // Helper function to get base price
+    window.getBasePrice = function() {
+      const newBasicPriceField = document.getElementById('newBasicPrice');
+      if (newBasicPriceField?.value) {
+        return parseFloat(newBasicPriceField.value.replace(/[₪,]/g, '')) || 0;
+      }
+      
+      // Fallback to original basicPrice
+      const basicPriceField = document.getElementById('basicPrice');
+      if (basicPriceField?.value) {
+        return parseFloat(basicPriceField.value.replace(/[₪,]/g, '')) || 0;
+      }
+      
+      return 0;
+    };
+
+    // Update Full Market Value Calculation with CUMULATIVE LOGIC
     window.newUpdateFullMarketValueCalculation = function() {
       try {
-        console.log('🧮 Starting NEW full market value calculation...');
+        console.log('🧮 Starting CUMULATIVE market value calculation...');
         
-        // Get base price from NEW section's base price field
-        let basePrice = 0;
-        const newBasicPriceField = document.getElementById('newBasicPrice');
-        if (newBasicPriceField?.value) {
-          basePrice = parseFloat(newBasicPriceField.value.replace(/[₪,]/g, '')) || 0;
-        }
+        // Step 1: Get base price - starting point
+        let currentValue = getBasePrice();
+        console.log(`🏠 Starting with base price: ₪${currentValue}`);
         
-        // Fallback to original basicPrice if new field is empty
-        if (basePrice === 0) {
-          const basicPriceField = document.getElementById('basicPrice');
-          if (basicPriceField?.value) {
-            basePrice = parseFloat(basicPriceField.value.replace(/[₪,]/g, '')) || 0;
-          }
-        }
-        
-        console.log('📊 Base price for NEW section calculation:', basePrice);
-        
-        if (basePrice === 0) {
+        if (currentValue === 0) {
           console.warn('⚠️ No base price found for calculations');
           return;
         }
         
-        let currentValue = basePrice;
-        
-        // Calculate adjustments from both editable UI and read-only final_report data
         const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
         
-        // 1. Add read-only adjustments from final_report (features and registration - gross section writes here)
-        ['features', 'registration'].forEach(category => {
-          const adjustmentsArray = helper.final_report?.adjustments?.[category] || [];
-          adjustmentsArray.forEach(adjustment => {
-            const value = adjustment.amount || 0;
-            if (adjustment.type === 'plus') {
-              currentValue += Math.abs(value);
-            } else {
-              currentValue -= Math.abs(value);
-            }
-            console.log(`📖 Added read-only ${category} from final_report: ${value}, cumulative: ${currentValue}`);
-          });
+        // Step 2: Calculate Features (read-only from final_report)
+        // Features calculates against base price: Base + Features = Features Cumulative
+        const featuresAdjustments = helper.final_report?.adjustments?.features || [];
+        featuresAdjustments.forEach(adjustment => {
+          const value = adjustment.amount || 0;
+          if (adjustment.type === 'plus') {
+            currentValue += Math.abs(value);
+          } else {
+            currentValue -= Math.abs(value);
+          }
+          console.log(`🎯 Features: ${value}, new cumulative: ₪${currentValue}`);
         });
         
-        // 2. Add editable adjustments from UI (mileage, ownership, additional)
-        const editableContainers = ['newMileageAdjustmentsList', 'newOwnershipAdjustmentsList', 'newOwnersAdjustmentsList', 'newAllAdjustmentsList'];
+        // Update Features cumulative display
+        const featuresCumElement = document.getElementById('newFeaturesCumulative');
+        if (featuresCumElement) {
+          featuresCumElement.textContent = `₪${Math.round(currentValue).toLocaleString()}`;
+        }
         
-        editableContainers.forEach(containerId => {
-          const container = document.getElementById(containerId);
-          if (!container) return;
-          
-          const rows = container.children;
-          Array.from(rows).forEach(row => {
+        // Step 3: Calculate Registration (read-only from final_report)
+        // Registration calculates against base price (not cumulative): Features Cumulative + Registration = Registration Cumulative
+        const registrationAdjustments = helper.final_report?.adjustments?.registration || [];
+        registrationAdjustments.forEach(adjustment => {
+          const value = adjustment.amount || 0;
+          if (adjustment.type === 'plus') {
+            currentValue += Math.abs(value);
+          } else {
+            currentValue -= Math.abs(value);
+          }
+          console.log(`🎯 Registration: ${value}, new cumulative: ₪${currentValue}`);
+        });
+        
+        // Update Registration cumulative display
+        const regCumElement = document.getElementById('newRegistrationCumulative');
+        if (regCumElement) {
+          regCumElement.textContent = `₪${Math.round(currentValue).toLocaleString()}`;
+        }
+        
+        // Step 4: Calculate Mileage (editable)
+        // Mileage calculates against Registration cumulative: Registration Cumulative * Mileage% = Mileage Cumulative
+        const mileageContainer = document.getElementById('newMileageAdjustmentsList');
+        if (mileageContainer) {
+          const rows = Array.from(mileageContainer.children);
+          rows.forEach(row => {
             const inputs = row.querySelectorAll('input, select');
             if (inputs.length >= 4) {
               const type = inputs[1].value;
-              let value = parseFloat(inputs[3].value.replace(/[₪,-]/g, '')) || 0;
+              const percentValue = parseFloat(inputs[2].value) || 0;
               
-              if (type === 'plus') {
-                currentValue += Math.abs(value);
+              // If we have percentage, calculate from current cumulative
+              if (percentValue !== 0) {
+                const amount = Math.round((currentValue * Math.abs(percentValue)) / 100);
+                const displayValue = type === 'minus' ? `-₪${amount.toLocaleString()}` : `₪${amount.toLocaleString()}`;
+                inputs[3].value = displayValue;
+                
+                if (type === 'plus') {
+                  currentValue += amount;
+                } else {
+                  currentValue -= amount;
+                }
+                console.log(`🎯 Mileage: ${percentValue}% of ₪${currentValue - (type === 'plus' ? amount : -amount)} = ${displayValue}, new cumulative: ₪${currentValue}`);
               } else {
-                currentValue -= Math.abs(value);
+                // Use direct amount value
+                let value = parseFloat(inputs[3].value.replace(/[₪,-]/g, '')) || 0;
+                if (type === 'plus') {
+                  currentValue += Math.abs(value);
+                } else {
+                  currentValue -= Math.abs(value);
+                }
+                console.log(`🎯 Mileage: ${type === 'minus' ? '-' : '+'}${Math.abs(value)}, new cumulative: ₪${currentValue}`);
               }
-              console.log(`✏️ Added editable adjustment: ${value}, cumulative: ${currentValue}`);
             }
           });
-        });
+        }
         
-        // Update final result
+        // Update Mileage cumulative display
+        const mileageCumElement = document.getElementById('newMileageCumulative');
+        if (mileageCumElement) {
+          mileageCumElement.textContent = `₪${Math.round(currentValue).toLocaleString()}`;
+        }
+        
+        // Step 5: Calculate Ownership (editable)
+        // Ownership calculates against Mileage cumulative: Mileage Cumulative * Ownership% = Ownership Cumulative
+        const ownershipContainer = document.getElementById('newOwnershipAdjustmentsList');
+        if (ownershipContainer) {
+          const rows = Array.from(ownershipContainer.children);
+          rows.forEach(row => {
+            const inputs = row.querySelectorAll('input, select');
+            if (inputs.length >= 4) {
+              const type = inputs[1].value;
+              const percentValue = parseFloat(inputs[2].value) || 0;
+              
+              // If we have percentage, calculate from current cumulative
+              if (percentValue !== 0) {
+                const amount = Math.round((currentValue * Math.abs(percentValue)) / 100);
+                const displayValue = type === 'minus' ? `-₪${amount.toLocaleString()}` : `₪${amount.toLocaleString()}`;
+                inputs[3].value = displayValue;
+                
+                if (type === 'plus') {
+                  currentValue += amount;
+                } else {
+                  currentValue -= amount;
+                }
+                console.log(`🎯 Ownership: ${percentValue}% of ₪${currentValue - (type === 'plus' ? amount : -amount)} = ${displayValue}, new cumulative: ₪${currentValue}`);
+              } else {
+                // Use direct amount value
+                let value = parseFloat(inputs[3].value.replace(/[₪,-]/g, '')) || 0;
+                if (type === 'plus') {
+                  currentValue += Math.abs(value);
+                } else {
+                  currentValue -= Math.abs(value);
+                }
+                console.log(`🎯 Ownership: ${type === 'minus' ? '-' : '+'}${Math.abs(value)}, new cumulative: ₪${currentValue}`);
+              }
+            }
+          });
+        }
+        
+        // Update Ownership cumulative display
+        const ownershipCumElement = document.getElementById('newOwnershipCumulative');
+        if (ownershipCumElement) {
+          ownershipCumElement.textContent = `₪${Math.round(currentValue).toLocaleString()}`;
+        }
+        
+        // Step 6: Calculate Owners (editable)
+        // Owners calculates against Ownership cumulative: Ownership Cumulative * Owners% = Owners Cumulative
+        const ownersContainer = document.getElementById('newOwnersAdjustmentsList');
+        if (ownersContainer) {
+          const rows = Array.from(ownersContainer.children);
+          rows.forEach(row => {
+            const inputs = row.querySelectorAll('input, select');
+            if (inputs.length >= 4) {
+              const type = inputs[1].value;
+              const percentValue = parseFloat(inputs[2].value) || 0;
+              
+              // If we have percentage, calculate from current cumulative
+              if (percentValue !== 0) {
+                const amount = Math.round((currentValue * Math.abs(percentValue)) / 100);
+                const displayValue = type === 'minus' ? `-₪${amount.toLocaleString()}` : `₪${amount.toLocaleString()}`;
+                inputs[3].value = displayValue;
+                
+                if (type === 'plus') {
+                  currentValue += amount;
+                } else {
+                  currentValue -= amount;
+                }
+                console.log(`🎯 Owners: ${percentValue}% of ₪${currentValue - (type === 'plus' ? amount : -amount)} = ${displayValue}, new cumulative: ₪${currentValue}`);
+              } else {
+                // Use direct amount value
+                let value = parseFloat(inputs[3].value.replace(/[₪,-]/g, '')) || 0;
+                if (type === 'plus') {
+                  currentValue += Math.abs(value);
+                } else {
+                  currentValue -= Math.abs(value);
+                }
+                console.log(`🎯 Owners: ${type === 'minus' ? '-' : '+'}${Math.abs(value)}, new cumulative: ₪${currentValue}`);
+              }
+            }
+          });
+        }
+        
+        // Update Owners cumulative display
+        const ownersCumElement = document.getElementById('newOwnersCumulative');
+        if (ownersCumElement) {
+          ownersCumElement.textContent = `₪${Math.round(currentValue).toLocaleString()}`;
+        }
+        
+        // Step 7: Calculate Additional (editable)
+        // Additional calculates against Owners cumulative: Owners Cumulative * Additional% = Final Cumulative
+        const additionalContainer = document.getElementById('newAllAdjustmentsList');
+        if (additionalContainer) {
+          const rows = Array.from(additionalContainer.children);
+          rows.forEach(row => {
+            const inputs = row.querySelectorAll('input, select');
+            if (inputs.length >= 4) {
+              const type = inputs[1].value;
+              const percentValue = parseFloat(inputs[2].value) || 0;
+              
+              // If we have percentage, calculate from current cumulative
+              if (percentValue !== 0) {
+                const amount = Math.round((currentValue * Math.abs(percentValue)) / 100);
+                const displayValue = type === 'minus' ? `-₪${amount.toLocaleString()}` : `₪${amount.toLocaleString()}`;
+                inputs[3].value = displayValue;
+                
+                if (type === 'plus') {
+                  currentValue += amount;
+                } else {
+                  currentValue -= amount;
+                }
+                console.log(`🎯 Additional: ${percentValue}% of ₪${currentValue - (type === 'plus' ? amount : -amount)} = ${displayValue}, new cumulative: ₪${currentValue}`);
+              } else {
+                // Use direct amount value
+                let value = parseFloat(inputs[3].value.replace(/[₪,-]/g, '')) || 0;
+                if (type === 'plus') {
+                  currentValue += Math.abs(value);
+                } else {
+                  currentValue -= Math.abs(value);
+                }
+                console.log(`🎯 Additional: ${type === 'minus' ? '-' : '+'}${Math.abs(value)}, new cumulative: ₪${currentValue}`);
+              }
+            }
+          });
+        }
+        
+        // Update Additional cumulative display
+        const additionalCumElement = document.getElementById('newAdditionalCumulative');
+        if (additionalCumElement) {
+          additionalCumElement.textContent = `₪${Math.round(currentValue).toLocaleString()}`;
+        }
+        
+        // Step 8: Update final result
         const resultField = document.getElementById('newFullMarketValueResult');
         if (resultField) {
           resultField.value = `₪${Math.round(currentValue).toLocaleString()}`;
         }
         
-        console.log('✅ NEW full market value calculation completed:', currentValue);
+        console.log('✅ CUMULATIVE calculation completed - Final value:', currentValue);
         
       } catch (error) {
         console.error('❌ Error in newUpdateFullMarketValueCalculation:', error);
