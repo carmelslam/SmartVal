@@ -5658,15 +5658,16 @@
           let percentage = '';
           let amount = '';
           
-          // Don't use absolute values - let formatAdjustmentDisplay handle the signs
+          // CRITICAL FIX: Percentage should always show positive in UI, type dropdown controls sign
           if (itemPercent !== undefined && itemPercent !== null && itemPercent !== '') {
             let cleanPercent = itemPercent;
             if (typeof itemPercent === 'string') {
               cleanPercent = itemPercent.replace('%', '');
             }
             const parsedPercent = parseFloat(cleanPercent);
-            // PRESERVE SIGN - don't use Math.abs()
-            percentage = !isNaN(parsedPercent) ? parsedPercent : '';
+            // ALWAYS show positive percentage - type dropdown controls the actual sign
+            percentage = !isNaN(parsedPercent) ? Math.abs(parsedPercent) : '';
+            console.log(`🔧 PERCENTAGE FIX: original=${parsedPercent}, displayed=${percentage}, type=${selectedType}`);
           } else {
             percentage = '';
           }
