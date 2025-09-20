@@ -18004,9 +18004,9 @@
         
         console.log(`🔄 Rebuilding ${category} from all UI rows in ${containerId}`);
         
-        // ESTIMATOR PATTERN: Rebuild entire category array from ALL visible UI rows
+        // FINAL REPORT PATTERN: Rebuild entire category array from ALL visible UI rows  
+        // ⚠️ ONLY WRITE TO final_report.adjustments and valuation.adjustments - DO NOT TOUCH estimate.adjustments
         const allRows = Array.from(container.children);
-        helper.estimate.adjustments[category] = [];
         helper.final_report.adjustments[category] = [];
         
         allRows.forEach((row, index) => {
@@ -18030,17 +18030,16 @@
               adjustmentData.amount = -Math.abs(adjustmentData.amount);
             }
             
-            helper.estimate.adjustments[category].push(adjustmentData);
             helper.final_report.adjustments[category].push(adjustmentData);
             console.log(`📝 Added row ${index} to ${category}:`, adjustmentData.value);
           }
         });
         
-        console.log(`✅ Rebuilt ${category}: ${helper.estimate.adjustments[category].length} items total`);
+        console.log(`✅ Rebuilt ${category}: ${helper.final_report.adjustments[category].length} items total`);
         
-        // ESTIMATOR PATTERN: Update valuation.adjustments with first item (for backward compatibility)
-        if (helper.estimate.adjustments[category].length > 0) {
-          helper.valuation.adjustments[category] = helper.estimate.adjustments[category][0];
+        // Update valuation.adjustments with first item (for backward compatibility)
+        if (helper.final_report.adjustments[category].length > 0) {
+          helper.valuation.adjustments[category] = helper.final_report.adjustments[category][0];
         } else {
           // Clear valuation if no items remain
           if (helper.valuation.adjustments[category]) {
