@@ -1471,18 +1471,16 @@
           </button>
         </div>
 
-        <!-- Features Adjustments -->
+        <!-- Features Adjustments - READ ONLY -->
         <div class="form-section">
-          <h4>תוספות מאפיינים:</h4>
-          <div id="newFeaturesAdjustmentsList"></div>
-          <button type="button" class="btn btn-secondary" onclick="addMarketAdjustmentRow('newFeaturesAdjustmentsList', 'features')">הוסף התאמה</button>
+          <h4>תוספות מאפיינים: <span style="color: #666; font-size: 12px;">(קריאה בלבד - מתעדכן מנתוני הדוח הסופי)</span></h4>
+          <div id="newFeaturesAdjustmentsList" style="background: #f8f9fa; padding: 10px; border-radius: 5px;"></div>
         </div>
 
-        <!-- Registration Adjustments -->
+        <!-- Registration Adjustments - READ ONLY -->
         <div class="form-section">
-          <h4>עליה לכביש:</h4>
-          <div id="newRegistrationAdjustmentsList"></div>
-          <button type="button" class="btn btn-secondary" onclick="addMarketAdjustmentRow('newRegistrationAdjustmentsList', 'registration')">הוסף התאמה</button>
+          <h4>עליה לכביש: <span style="color: #666; font-size: 12px;">(קריאה בלבד - מתעדכן מנתוני הדוח הסופי)</span></h4>
+          <div id="newRegistrationAdjustmentsList" style="background: #f8f9fa; padding: 10px; border-radius: 5px;"></div>
         </div>
 
         <!-- Mileage Adjustments -->
@@ -17696,14 +17694,44 @@
       container.insertAdjacentHTML('beforeend', newRow);
     };
 
+    // Add Read-Only Market Adjustment Row (for features and registration)
+    window.addReadOnlyMarketAdjustmentRow = function(containerId, category, adjustmentData) {
+      const container = document.getElementById(containerId);
+      if (!container) {
+        console.error('Container not found:', containerId);
+        return;
+      }
+      
+      const rowId = `${category}ReadOnly_${Date.now()}`;
+      const displayValue = adjustmentData.amount_display || 
+                          (adjustmentData.amount ? `₪${Math.abs(adjustmentData.amount).toLocaleString()}` : '');
+      const typeDisplay = adjustmentData.type === 'minus' ? 'הפחתה (-)' : 'תוספת (+)';
+      
+      const newRow = `
+        <div id="${rowId}" class="adjustment-row readonly" style="display:grid; grid-template-columns:2fr 1fr 1fr 1fr 80px; gap:10px; margin-bottom:8px; background: #f8f9fa; opacity: 0.8;">
+          <div><input type="text" value="${adjustmentData.value || ''}" readonly style="background: #e9ecef; cursor: not-allowed;" /></div>
+          <div><select disabled style="background: #e9ecef; cursor: not-allowed;">
+            <option value="${adjustmentData.type || 'plus'}" selected>${typeDisplay}</option>
+          </select></div>
+          <div><input type="text" value="${adjustmentData.percentage || adjustmentData.percent || ''}" readonly style="background: #e9ecef; cursor: not-allowed;" /></div>
+          <div><input type="text" value="${displayValue}" readonly style="background: #e9ecef; cursor: not-allowed;" /></div>
+          <div><span style="color: #666; font-size: 12px; padding: 8px;">קבוע</span></div>
+        </div>
+      `;
+      
+      container.insertAdjacentHTML('beforeend', newRow);
+    };
+
     // Auto-populate Market Fields
     window.autoPopulateMarketFields = function() {
       console.log('🔄 Auto-populating market fields from helper data');
       
       const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
-      const adjustments = helper.valuation?.adjustments || {};
+      const valuationAdjustments = helper.valuation?.adjustments || {};
+      const finalReportAdjustments = helper.final_report?.adjustments || {};
       
-      console.log('Available adjustments:', adjustments);
+      console.log('Available valuation adjustments:', valuationAdjustments);
+      console.log('Available final_report adjustments:', finalReportAdjustments);
       
       // Clear existing rows first
       const containers = ['newFeaturesAdjustmentsList', 'newRegistrationAdjustmentsList', 'newMileageAdjustmentsList', 'newOwnershipAdjustmentsList', 'newOwnersAdjustmentsList', 'newAllAdjustmentsList'];
@@ -17714,20 +17742,41 @@
         }
       });
       
-      // Populate each category
-      Object.keys(adjustments).forEach(category => {
-        const adjustment = adjustments[category];
+      // Populate READ-ONLY categories from final_report (features and registration)
+      ['features', 'registration'].forEach(category => {
+        const adjustmentsArray = finalReportAdjustments[category] || [];
+        let containerId = category === 'features' ? 'newFeaturesAdjustmentsList' : 'newRegistrationAdjustmentsList';
+        
+        console.log(`📖 Populating READ-ONLY ${category} from final_report:`, adjustmentsArray);
+        
+        if (adjustmentsArray.length === 0) {
+          // Show empty state
+          const container = document.getElementById(containerId);
+          if (container) {
+            container.innerHTML = '<div style="padding: 15px; text-align: center; color: #666; font-style: italic;">אין נתונים זמינים בדוח הסופי</div>';
+          }
+        } else {
+          // Add each adjustment as read-only
+          adjustmentsArray.forEach(adjustment => {
+            addReadOnlyMarketAdjustmentRow(containerId, category, adjustment);
+          });
+        }
+      });
+      
+      // Populate EDITABLE categories from valuation (mileage, ownership, additional)
+      ['mileage', 'ownership_type', 'ownership_history', 'additional'].forEach(category => {
+        const adjustment = valuationAdjustments[category];
         if (!adjustment) return;
         
         let containerId = '';
         switch(category) {
-          case 'features': containerId = 'newFeaturesAdjustmentsList'; break;
-          case 'registration': containerId = 'newRegistrationAdjustmentsList'; break;
           case 'mileage': containerId = 'newMileageAdjustmentsList'; break;
           case 'ownership_type': containerId = 'newOwnershipAdjustmentsList'; break;
           case 'ownership_history': containerId = 'newOwnersAdjustmentsList'; break;
           case 'additional': containerId = 'newAllAdjustmentsList'; break;
         }
+        
+        console.log(`✏️ Populating EDITABLE ${category} from valuation:`, adjustment);
         
         if (containerId) {
           addMarketAdjustmentRow(containerId, category);
@@ -17752,6 +17801,13 @@
     window.newSyncAdjustmentToHelper = function(element, category) {
       try {
         console.log(`🔥 NEW syncAdjustmentToHelper called for category: ${category}`);
+        
+        // Skip read-only categories (features and registration)
+        if (category === 'features' || category === 'registration') {
+          console.log(`⚠️ Skipping sync for read-only category: ${category}`);
+          return;
+        }
+        
         const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
         
         // Ensure structures exist
@@ -17884,10 +17940,27 @@
         
         let currentValue = basePrice;
         
-        // Calculate all adjustments
-        const containers = ['newFeaturesAdjustmentsList', 'newRegistrationAdjustmentsList', 'newMileageAdjustmentsList', 'newOwnershipAdjustmentsList', 'newOwnersAdjustmentsList', 'newAllAdjustmentsList'];
+        // Calculate adjustments from both editable UI and read-only final_report data
+        const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
         
-        containers.forEach(containerId => {
+        // 1. Add read-only adjustments from final_report (features and registration)
+        ['features', 'registration'].forEach(category => {
+          const adjustmentsArray = helper.final_report?.adjustments?.[category] || [];
+          adjustmentsArray.forEach(adjustment => {
+            const value = adjustment.amount || 0;
+            if (adjustment.type === 'plus') {
+              currentValue += Math.abs(value);
+            } else {
+              currentValue -= Math.abs(value);
+            }
+            console.log(`📖 Added read-only ${category} adjustment: ${value}, cumulative: ${currentValue}`);
+          });
+        });
+        
+        // 2. Add editable adjustments from UI (mileage, ownership, additional)
+        const editableContainers = ['newMileageAdjustmentsList', 'newOwnershipAdjustmentsList', 'newOwnersAdjustmentsList', 'newAllAdjustmentsList'];
+        
+        editableContainers.forEach(containerId => {
           const container = document.getElementById(containerId);
           if (!container) return;
           
@@ -17903,6 +17976,7 @@
               } else {
                 currentValue -= Math.abs(value);
               }
+              console.log(`✏️ Added editable adjustment: ${value}, cumulative: ${currentValue}`);
             }
           });
         });
