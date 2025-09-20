@@ -18013,8 +18013,10 @@
           const inputs = row.querySelectorAll('input, select');
           if (inputs.length >= 4) {
             const rawAmountValue = inputs[3].value || '';
-            const cleanedAmount = rawAmountValue.replace(/[₪,\-]/g, '');
+            const cleanedAmount = rawAmountValue.replace(/[₪,\-+]/g, '');
             const parsedAmount = parseFloat(cleanedAmount) || 0;
+            
+            console.log(`🔍 ${category} Amount extraction: raw="${rawAmountValue}" → cleaned="${cleanedAmount}" → parsed=${parsedAmount}`);
             
             const adjustmentData = {
               value: inputs[0].value || '',
@@ -18034,6 +18036,10 @@
               adjustmentData.percentage = -Math.abs(adjustmentData.percentage);
               adjustmentData.percent = -Math.abs(adjustmentData.percent);
               adjustmentData.amount = -Math.abs(adjustmentData.amount);
+              console.log(`➖ Applied minus sign to ${category}: amount = ${adjustmentData.amount}`);
+            } else {
+              adjustmentData.amount = Math.abs(adjustmentData.amount);
+              console.log(`➕ Applied plus sign to ${category}: amount = ${adjustmentData.amount}`);
             }
             
             helper.final_report.adjustments[category].push(adjustmentData);
