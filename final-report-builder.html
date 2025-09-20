@@ -1545,7 +1545,7 @@
         <div style="margin-top: 20px; padding: 15px; background: #e8f5e8; border-radius: 8px; border: 2px solid #28a745;">
           <div class="form-grid">
             <div><label><strong>ערך השוק המלא החדש של הרכב כולל מע"מ:</strong></label><input type="text" id="newFullMarketValueResult" style="background: #f8f9fa; font-weight: bold; color: #28a745;" readonly /></div>
-            <div></div>
+            <div style="display: none;"><input type="text" id="newCumulativeMarketValue" readonly /></div>
           </div>
           <div style="margin-top: 10px; font-size: 14px; color: #666;">
             <strong>חישוב חדש:</strong> (מחיר בסיס + התאמות רכב) + התאמות שימוש
@@ -1857,6 +1857,28 @@
   <script>
 
     // IMMEDIATE FUNCTION DEFINITIONS - MUST BE AVAILABLE BEFORE DOM LOADS
+    
+    // Helper function to safely parse amounts and prevent NaN
+    function safeParseAmount(value) {
+      if (!value || value === '') return 0;
+      
+      // Convert to string if not already
+      const strValue = String(value);
+      
+      // Remove currency symbols, commas, and spaces
+      const cleanedValue = strValue.replace(/[₪,\s]/g, '');
+      
+      // Parse the cleaned value
+      const parsed = parseFloat(cleanedValue);
+      
+      // Return 0 if parsing resulted in NaN
+      return isNaN(parsed) ? 0 : parsed;
+    }
+    
+    // Helper function to check if a type is a reduction/minus type
+    function isReductionType(type) {
+      return type === 'minus' || type === 'הפחתה' || type === 'הפחתה (-)' || type === 'הורדה';
+    }
     window.toggleFloatingScreen = function(screenType) {
       
       const screens = {
@@ -2400,7 +2422,7 @@
                 type: inputs[1].value || 'plus', // Field mapping: סוג → type
                 percent: parseFloat(inputs[2].value) || 0, // Field mapping: אחוז → percent
                 percentage: parseFloat(inputs[2].value) || 0, // Backward compatibility
-                amount: parseFloat((inputs[3].value || '').replace(/[₪,]/g, '')) || 0,
+                amount: safeParseAmount(inputs[3].value),
                 amount_display: inputs[3].value || '',
                 source: 'final_report',
                 timestamp: new Date().toISOString()
@@ -5544,8 +5566,7 @@
                     // Percent and amount - preserve sign based on type
                     inputs[2].value = itemPercent ? Math.abs(itemPercent) : '';
                     // Check if it's a reduction type to preserve minus sign
-                    const isReduction = item.type === 'minus' || item.type === 'הפחתה' || 
-                                       item.type === 'הפחתה (-)' || item.type === 'הורדה';
+                    const isReduction = isReductionType(item.type);
                     let displayAmount = Math.abs(item.amount || 0);
                     if (isReduction && displayAmount > 0) {
                       displayAmount = -displayAmount;
@@ -5708,8 +5729,8 @@
                   `<select ${disabledAttr} style="${readOnlyStyle}" ${isReadOnlyCategory ? '' : `onchange="updateFullMarketValueCalculation(); updateHelperFromAdjustments(); syncAdjustmentToHelper(this, '${category}');"`}>
                     <option value="%" ${selectedType === '%' ? 'selected' : ''}>%</option>
                     <option value="₪" ${selectedType === '₪' ? 'selected' : ''}>₪</option>
-                    <option value="תוספת (+)" ${selectedType === 'תוספת (+)' ? 'selected' : ''}>תוספת (+)</option>
-                    <option value="הפחתה (-)" ${selectedType === 'הפחתה (-)' ? 'selected' : ''}>הפחתה (-)</option>
+                    <option value="plus" ${selectedType === 'תוספת (+)' || adj.type === 'plus' ? 'selected' : ''}>תוספת (+)</option>
+                    <option value="minus" ${selectedType === 'הפחתה (-)' || adj.type === 'minus' ? 'selected' : ''}>הפחתה (-)</option>
                   </select>`
                 }
               </div>
@@ -6074,16 +6095,27 @@
                     // Field mapping: value → תיאור (description)
                     inputs[0].value = item.value || '';
                     
-                    // Type dropdown - use dynamic sign logic
+                    // Type dropdown - use stored type directly
                     const itemPercent = item.percentage || item.percent;
                     const itemAmount = item.amount;
-                    inputs[1].value = getDropdownTypeFromValues(itemPercent, itemAmount, item.type || 'plus');
+                    // FIX: Trust the stored type instead of detecting from values
+                    const storedType = item.type || 'plus';
+                    // Handle Hebrew type values
+                    if (storedType === 'הפחתה' || storedType === 'הפחתה (-)' || storedType === 'הורדה' || storedType === 'minus') {
+                      inputs[1].value = 'minus';
+                    } else if (storedType === 'תוספת' || storedType === 'תוספת (+)' || storedType === 'plus') {
+                      inputs[1].value = 'plus';
+                    } else if (storedType === '%' || storedType === '₪') {
+                      inputs[1].value = storedType;
+                    } else {
+                      // Only use detection as last resort
+                      inputs[1].value = getDropdownTypeFromValues(itemPercent, itemAmount, 'plus');
+                    }
                     
                     // Percent and amount - preserve sign based on type
                     inputs[2].value = itemPercent ? Math.abs(itemPercent) : '';
                     // Check if it's a reduction type to preserve minus sign
-                    const isReduction = item.type === 'minus' || item.type === 'הפחתה' || 
-                                       item.type === 'הפחתה (-)' || item.type === 'הורדה';
+                    const isReduction = isReductionType(item.type);
                     let displayAmount = Math.abs(item.amount || 0);
                     if (isReduction && displayAmount > 0) {
                       displayAmount = -displayAmount;
@@ -6440,10 +6472,18 @@
                 inputs[0].value = item.value || '';
                 const itemPercent = item.percentage || item.percent;
                 const itemAmount = item.amount;
-                inputs[1].value = getDropdownTypeFromValues(itemPercent, itemAmount, item.type || 'plus');
+                // FIX: Use stored type directly instead of detection
+                const storedType = item.type || 'plus';
+                if (storedType === 'הפחתה' || storedType === 'הפחתה (-)' || storedType === 'הורדה' || storedType === 'minus') {
+                  inputs[1].value = 'minus';
+                } else if (storedType === 'תוספת' || storedType === 'תוספת (+)' || storedType === 'plus') {
+                  inputs[1].value = 'plus';
+                } else {
+                  inputs[1].value = storedType; // Use as-is for %, ₪ etc
+                }
                 // CRITICAL FIX: Display minus sign for negative values
-                const displayPercent = (item.type === 'minus' || item.type === 'הפחתה') && itemPercent > 0 ? `-${Math.abs(itemPercent)}` : Math.abs(itemPercent || 0);
-                const displayAmount = (item.type === 'minus' || item.type === 'הפחתה') && item.amount > 0 ? `-${Math.abs(item.amount)}` : Math.abs(item.amount || 0);
+                const displayPercent = isReductionType(item.type) && itemPercent > 0 ? `-${Math.abs(itemPercent)}` : Math.abs(itemPercent || 0);
+                const displayAmount = isReductionType(item.type) && item.amount > 0 ? `-${Math.abs(item.amount)}` : Math.abs(item.amount || 0);
                 
                 inputs[2].value = itemPercent ? displayPercent : '';
                 inputs[3].value = item.amount_display || (item.amount ? `₪${displayAmount.toLocaleString()}` : '');
@@ -6563,8 +6603,7 @@
                       // Percent and amount - preserve sign based on type
                       inputs[2].value = itemPercent ? Math.abs(itemPercent) : '';
                       // Check if it's a reduction type to preserve minus sign
-                      const isReduction = item.type === 'minus' || item.type === 'הפחתה' || 
-                                         item.type === 'הפחתה (-)' || item.type === 'הורדה';
+                      const isReduction = isReductionType(item.type);
                       let displayAmount = Math.abs(item.amount || 0);
                       if (isReduction && displayAmount > 0) {
                         displayAmount = -displayAmount;
@@ -6659,7 +6698,7 @@
         const amountInput = inputs[3];
         
         // Determine if it's a reduction/subtraction
-        const isReduction = type === 'הפחתה (-)' || type === 'minus' || type === 'הפחתה' || type === 'הורדה';
+        const isReduction = isReductionType(type);
         
         
         // Determine field type based on category and data source
@@ -6681,7 +6720,8 @@
           amountInput.style.background = '';
         } else if (hasAmount && !hasPercent) {
           // Amount mode: show amount value, make both editable
-          amountInput.value = isReduction ? `-₪${Math.abs(amount)}` : `₪${Math.abs(amount)}`;
+          const validAmount = safeParseAmount(amount);
+          amountInput.value = validAmount === 0 ? '' : (isReduction ? `-₪${Math.abs(validAmount).toLocaleString()}` : `₪${Math.abs(validAmount).toLocaleString()}`);
           amountInput.readOnly = false;
           amountInput.style.background = '';
           percentInput.value = '';
@@ -6689,8 +6729,9 @@
           percentInput.style.background = '';
         } else {
           // Default: make both fields editable
+          const validAmount = safeParseAmount(amount);
           percentInput.value = isReduction && percent ? `-${Math.abs(percent)}` : Math.abs(percent || 0);
-          amountInput.value = isReduction && amount ? `-₪${Math.abs(amount)}` : `₪${Math.abs(amount || 0)}`;
+          amountInput.value = validAmount === 0 ? '' : (isReduction ? `-₪${Math.abs(validAmount).toLocaleString()}` : `₪${Math.abs(validAmount).toLocaleString()}`);
           percentInput.readOnly = false;
           amountInput.readOnly = false;
           percentInput.style.background = '';
@@ -6788,7 +6829,7 @@
               percentage: parseFloat(inputs[2].value) || 0,
               percent: parseFloat(inputs[2].value) || 0, // Backward compatibility
               amount_display: inputs[3].value || '',
-              amount: parseFloat((inputs[3].value || '').replace(/[₪,\-]/g, '')) || 0,
+              amount: safeParseAmount(inputs[3].value),
               source: 'manual',
               timestamp: new Date().toISOString()
             };
@@ -7178,7 +7219,7 @@
               percent: parseFloat(inputs[2].value) || 0,
               percentage: parseFloat(inputs[2].value) || 0,
               amount_display: inputs[3].value || '',
-              amount: parseFloat((inputs[3].value || '').replace(/[₪,\-]/g, '')) || 0,
+              amount: safeParseAmount(inputs[3].value),
               source: row.getAttribute('data-source') || 'manual'
             };
             
@@ -7213,7 +7254,7 @@
                 percent: parseFloat(inputs[2].value) || 0,
                 percentage: parseFloat(inputs[2].value) || 0,
                 amount_display: inputs[3].value || '',
-                amount: parseFloat((inputs[3].value || '').replace(/[₪,\-]/g, '')) || 0,
+                amount: safeParseAmount(inputs[3].value),
                 source: originalRow.getAttribute('data-source') || 'original'
               };
               
@@ -7249,7 +7290,7 @@
               percent: parseFloat(inputs[2].value) || 0,
               percentage: parseFloat(inputs[2].value) || 0,
               amount_display: inputs[3].value || '',
-              amount: parseFloat((inputs[3].value || '').replace(/[₪,\-]/g, '')) || 0,
+              amount: safeParseAmount(inputs[3].value),
               source: row.getAttribute('data-source') || 'manual'
             };
             
@@ -7284,7 +7325,7 @@
                 percent: parseFloat(inputs[2].value) || 0,
                 percentage: parseFloat(inputs[2].value) || 0,
                 amount_display: inputs[3].value || '',
-                amount: parseFloat((inputs[3].value || '').replace(/[₪,\-]/g, '')) || 0,
+                amount: safeParseAmount(inputs[3].value),
                 source: originalRow.getAttribute('data-source') || 'original'
               };
               
@@ -7360,7 +7401,7 @@
               percent: parseFloat(inputs[2].value) || 0,
               percentage: parseFloat(inputs[2].value) || 0,
               amount_display: inputs[3].value || '',
-              amount: parseFloat((inputs[3].value || '').replace(/[₪,-]/g, '')) || 0
+              amount: safeParseAmount(inputs[3].value)
             };
             console.log('💾 Updated valuation.adjustments.features from ORIGINAL Total Market Value row');
           }
@@ -7382,7 +7423,7 @@
               percent: parseFloat(inputs[2].value) || 0,
               percentage: parseFloat(inputs[2].value) || 0,
               amount_display: inputs[3].value || '',
-              amount: parseFloat((inputs[3].value || '').replace(/[₪,-]/g, '')) || 0
+              amount: safeParseAmount(inputs[3].value)
             };
             console.log('💾 Updated valuation.adjustments.registration from ORIGINAL Total Market Value row');
           }
@@ -7402,7 +7443,7 @@
               percent: parseFloat(inputs[2].value) || 0,
               percentage: parseFloat(inputs[2].value) || 0,
               amount_display: inputs[3].value || '',
-              amount: parseFloat((inputs[3].value || '').replace(/[₪,\-]/g, '')) || 0,
+              amount: safeParseAmount(inputs[3].value),
               source: row.getAttribute('data-source') || 'manual'
             };
             
@@ -7432,7 +7473,7 @@
               percent: parseFloat(inputs[2].value) || 0,
               percentage: parseFloat(inputs[2].value) || 0,
               amount_display: inputs[3].value || '',
-              amount: parseFloat((inputs[3].value || '').replace(/[₪,-]/g, '')) || 0
+              amount: safeParseAmount(inputs[3].value)
             };
             
             // Apply sign based on type
@@ -7461,7 +7502,7 @@
               percent: parseFloat(inputs[2].value) || 0,
               percentage: parseFloat(inputs[2].value) || 0,
               amount_display: inputs[3].value || '',
-              amount: parseFloat((inputs[3].value || '').replace(/[₪,\-]/g, '')) || 0,
+              amount: safeParseAmount(inputs[3].value),
               source: row.getAttribute('data-source') || 'manual'
             };
             
@@ -7491,7 +7532,7 @@
               percent: parseFloat(inputs[2].value) || 0,
               percentage: parseFloat(inputs[2].value) || 0,
               amount_display: inputs[3].value || '',
-              amount: parseFloat((inputs[3].value || '').replace(/[₪,-]/g, '')) || 0
+              amount: safeParseAmount(inputs[3].value)
             };
             
             // Apply sign based on type
@@ -7520,7 +7561,7 @@
               percent: parseFloat(inputs[2].value) || 0,
               percentage: parseFloat(inputs[2].value) || 0,
               amount_display: inputs[3].value || '',
-              amount: parseFloat((inputs[3].value || '').replace(/[₪,\-]/g, '')) || 0,
+              amount: safeParseAmount(inputs[3].value),
               source: row.getAttribute('data-source') || 'manual'
             };
             
@@ -7550,7 +7591,7 @@
               percent: parseFloat(inputs[2].value) || 0,
               percentage: parseFloat(inputs[2].value) || 0,
               amount_display: inputs[3].value || '',
-              amount: parseFloat((inputs[3].value || '').replace(/[₪,-]/g, '')) || 0
+              amount: safeParseAmount(inputs[3].value)
             };
             
             // Apply sign based on type
@@ -7578,7 +7619,7 @@
                 percent: parseFloat(inputs[2].value) || 0,
                 percentage: parseFloat(inputs[2].value) || 0,
                 amount_display: inputs[3].value || '',
-                amount: parseFloat((inputs[3].value || '').replace(/[₪,\-]/g, '')) || 0,
+                amount: safeParseAmount(inputs[3].value),
                 source: row.getAttribute('data-source') || 'manual'
               };
               
@@ -7630,9 +7671,9 @@
               inputs[1].value = registration.type || 'plus';
               
               // CRITICAL FIX: Display minus sign for negative values
-              const displayPercent = (registration.type === 'minus' || registration.type === 'הפחתה') && registration.percent > 0 ? 
+              const displayPercent = isReductionType(registration.type) && registration.percent > 0 ? 
                 `-${Math.abs(registration.percent)}` : Math.abs(registration.percent || 0);
-              const displayAmount = (registration.type === 'minus' || registration.type === 'הפחתה') && registration.amount > 0 ? 
+              const displayAmount = isReductionType(registration.type) && registration.amount > 0 ? 
                 `-${Math.abs(registration.amount)}` : Math.abs(registration.amount || 0);
               
               inputs[2].value = displayPercent || '';
@@ -7672,9 +7713,9 @@
               inputs[1].value = feature.type || 'plus';
               
               // CRITICAL FIX: Display minus sign for negative values
-              const displayPercent = (feature.type === 'minus' || feature.type === 'הפחתה') && feature.percent > 0 ? 
+              const displayPercent = isReductionType(feature.type) && feature.percent > 0 ? 
                 `-${Math.abs(feature.percent)}` : Math.abs(feature.percent || 0);
-              const displayAmount = (feature.type === 'minus' || feature.type === 'הפחתה') && feature.amount > 0 ? 
+              const displayAmount = isReductionType(feature.type) && feature.amount > 0 ? 
                 `-${Math.abs(feature.amount)}` : Math.abs(feature.amount || 0);
               
               inputs[2].value = displayPercent || '';
@@ -7714,9 +7755,9 @@
               inputs[1].value = registration.type || 'plus';
               
               // CRITICAL FIX: Display minus sign for negative values
-              const displayPercent = (registration.type === 'minus' || registration.type === 'הפחתה') && registration.percent > 0 ? 
+              const displayPercent = isReductionType(registration.type) && registration.percent > 0 ? 
                 `-${Math.abs(registration.percent)}` : Math.abs(registration.percent || 0);
-              const displayAmount = (registration.type === 'minus' || registration.type === 'הפחתה') && registration.amount > 0 ? 
+              const displayAmount = isReductionType(registration.type) && registration.amount > 0 ? 
                 `-${Math.abs(registration.amount)}` : Math.abs(registration.amount || 0);
               
               inputs[2].value = displayPercent || '';
@@ -8097,7 +8138,7 @@
           if (inputs.length >= 4) {
             const amount = parseFloat((inputs[3].value || '').replace(/[₪,]/g, '')) || 0;
             const type = inputs[1].value;
-            const isNegative = (type === 'minus' || type === 'הפחתה (-)' || type === 'הפחתה');
+            const isNegative = isReductionType(type);
             currentValue += (isNegative ? -amount : amount);
           }
         });
@@ -8121,7 +8162,7 @@
             const valueInput = inputs[3]; // ערך field
             if (valueInput && valueInput.value) {
               const value = parseFloat(valueInput.value.replace(/[₪,\s-]/g, '')) || 0;
-              const signedValue = (type === 'הפחתה (-)' || type === 'minus') ? -value : value;
+              const signedValue = isReductionType(type) ? -value : value;
               currentValue += signedValue;
             }
           }
@@ -8853,13 +8894,13 @@
       
       const newRow = `
         <div id="${rowId}" class="adjustment-row" data-source="manual" style="display:grid; grid-template-columns:2fr 1fr 1fr 1fr 80px; gap:10px; margin-bottom:8px;">
-          <div><input type="text" placeholder="תיאור התאמה נוספת" onchange="updateFullMarketValueCalculation(); updateHelperFromAdjustments(); syncAdjustmentToHelper(this, 'additional'); const row = this.closest('.adjustment-row'); const inputs = row.querySelectorAll('input, select'); formatAdjustmentDisplay(row, inputs[1].value, parseFloat(inputs[2].value) || 0, parseFloat(inputs[3].value.replace(/[₪,-]/g, '')) || 0);" /></div>
-          <div><select onchange="updateFullMarketValueCalculation(); updateHelperFromAdjustments(); syncAdjustmentToHelper(this, 'additional'); const row = this.closest('.adjustment-row'); const inputs = row.querySelectorAll('input, select'); formatAdjustmentDisplay(row, this.value, parseFloat(inputs[2].value) || 0, parseFloat(inputs[3].value.replace(/[₪,-]/g, '')) || 0);">
+          <div><input type="text" placeholder="תיאור התאמה נוספת" onchange="updateFullMarketValueCalculation(); updateHelperFromAdjustments(); syncAdjustmentToHelper(this, 'additional'); const row = this.closest('.adjustment-row'); const inputs = row.querySelectorAll('input, select'); formatAdjustmentDisplay(row, inputs[1].value, parseFloat(inputs[2].value) || 0, safeParseAmount(inputs[3].value));" /></div>
+          <div><select onchange="updateFullMarketValueCalculation(); updateHelperFromAdjustments(); syncAdjustmentToHelper(this, 'additional'); const row = this.closest('.adjustment-row'); const inputs = row.querySelectorAll('input, select'); formatAdjustmentDisplay(row, this.value, parseFloat(inputs[2].value) || 0, safeParseAmount(inputs[3].value));">
             <option value="plus">תוספת (+)</option>
             <option value="minus">הפחתה (-)</option>
           </select></div>
-          <div><input type="text" placeholder="אחוז" oninput="calculateAdjustmentValueSimple(this);" onchange="updateFullMarketValueCalculation(); updateHelperFromAdjustments(); syncAdjustmentToHelper(this, 'additional'); const row = this.closest('.adjustment-row'); const inputs = row.querySelectorAll('input, select'); formatAdjustmentDisplay(row, inputs[1].value, parseFloat(this.value) || 0, parseFloat(inputs[3].value.replace(/[₪,-]/g, '')) || 0);" /></div>
-          <div><input type="text" placeholder="₪" onchange="updateFullMarketValueCalculation(); updateHelperFromAdjustments(); syncAdjustmentToHelper(this, 'additional'); const row = this.closest('.adjustment-row'); const inputs = row.querySelectorAll('input, select'); formatAdjustmentDisplay(row, inputs[1].value, parseFloat(inputs[2].value) || 0, parseFloat(this.value.replace(/[₪,-]/g, '')) || 0);" /></div>
+          <div><input type="text" placeholder="אחוז" oninput="calculateAdjustmentValueSimple(this);" onchange="updateFullMarketValueCalculation(); updateHelperFromAdjustments(); syncAdjustmentToHelper(this, 'additional'); const row = this.closest('.adjustment-row'); const inputs = row.querySelectorAll('input, select'); formatAdjustmentDisplay(row, inputs[1].value, parseFloat(this.value) || 0, safeParseAmount(inputs[3].value));" /></div>
+          <div><input type="text" placeholder="₪" onchange="updateFullMarketValueCalculation(); updateHelperFromAdjustments(); syncAdjustmentToHelper(this, 'additional'); const row = this.closest('.adjustment-row'); const inputs = row.querySelectorAll('input, select'); formatAdjustmentDisplay(row, inputs[1].value, parseFloat(inputs[2].value) || 0, safeParseAmount(this.value));" /></div>
           <div><button class="btn remove" onclick="removeAdjustmentRow('${rowId}')">מחק</button></div>
         </div>
       `;
@@ -8928,7 +8969,7 @@
           if (inputs.length >= 4) {
             const amount = parseFloat((inputs[3].value || '').replace(/[₪,]/g, '')) || 0;
             const type = inputs[1].value;
-            const isNegative = (type === 'minus' || type === 'הפחתה (-)' || type === 'הפחתה');
+            const isNegative = isReductionType(type);
             currentValue += (isNegative ? -amount : amount);
           }
         });
@@ -8944,7 +8985,7 @@
           if (inputs.length >= 4) {
             const amount = parseFloat((inputs[3].value || '').replace(/[₪,]/g, '')) || 0;
             const type = inputs[1].value;
-            const isNegative = (type === 'minus' || type === 'הפחתה (-)' || type === 'הפחתה');
+            const isNegative = isReductionType(type);
             currentValue += (isNegative ? -amount : amount);
           }
         });
@@ -18591,6 +18632,12 @@
           resultField.value = `₪${Math.round(currentValue).toLocaleString()}`;
         }
         
+        // Also update the hidden cumulative field for storage
+        const cumulativeField = document.getElementById('newCumulativeMarketValue');
+        if (cumulativeField) {
+          cumulativeField.value = `₪${Math.round(currentValue).toLocaleString()}`;
+        }
+        
         console.log('✅ CUMULATIVE calculation completed - Final value:', currentValue);
         
       } catch (error) {
@@ -18699,15 +18746,44 @@
         
         const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
         
+        // Ensure structures exist
+        if (!helper.final_report) helper.final_report = {};
+        if (!helper.calculations) helper.calculations = {};
+        
         // Get final calculated value
         const resultField = document.getElementById('newFullMarketValueResult');
-        const finalValue = resultField?.value || '';
+        const finalValueText = resultField?.value || '';
+        const finalValue = safeParseAmount(finalValueText);
+        
+        // Get cumulative value if exists
+        const cumulativeField = document.getElementById('newCumulativeMarketValue');
+        const cumulativeValue = cumulativeField ? safeParseAmount(cumulativeField.value) : finalValue;
+        
+        // Save the final market value
+        helper.final_report.full_market_value = finalValue;
+        helper.final_report.full_market_value_display = finalValueText;
+        
+        // Also save to calculations for backward compatibility
+        helper.calculations.final_market_value_full = finalValue;
+        helper.calculations.full_market_value = finalValue;
+        
+        // Save the cumulative value separately
+        helper.final_report.cumulative_market_value = cumulativeValue;
+        
+        // Update helper in session storage
+        sessionStorage.setItem('helper', JSON.stringify(helper));
         
         console.log('💾 Saved new market value:', finalValue);
-        console.log('📊 Current estimate.adjustments:', helper.estimate?.adjustments);
-        console.log('📊 Current valuation.adjustments:', helper.valuation?.adjustments);
+        console.log('💾 Saved cumulative value:', cumulativeValue);
+        console.log('📊 Final Report adjustments:', helper.final_report?.adjustments);
+        console.log('📊 Valuation adjustments:', helper.valuation?.adjustments);
         
-        alert('ערך השוק החדש נשמר בהצלחה!\n\nבדקו את הנתונים בקונסול הדפדפן');
+        // Also trigger the main save function if it exists
+        if (window.saveDepreciationData) {
+          window.saveDepreciationData();
+        }
+        
+        alert('ערך השוק החדש נשמר בהצלחה!');
         
       } catch (error) {
         console.error('❌ Error saving new market value:', error);
