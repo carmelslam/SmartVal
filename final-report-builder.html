@@ -1477,10 +1477,10 @@
 
         <!-- Manual refresh button (for emergencies only) -->
         <div style="margin-bottom: 15px;">
-          <button type="button" class="btn btn-secondary" onclick="autoPopulateMarketFields()" style="font-size: 12px; padding: 6px 12px;">
-            🔄 רענן ידנית (רק במקרי חירום)
+          <button type="button" class="btn btn-secondary" onclick="autoPopulateMarketFields(true)" style="font-size: 12px; padding: 6px 12px;">
+            🔄 רענן מנתוני שמאות (אתחול מחדש)
           </button>
-          <span style="color: #666; font-size: 12px; margin-right: 10px;">הנתונים מתעדכנים אוטומטית</span>
+          <span style="color: #666; font-size: 12px; margin-right: 10px;">טעינה חד פעמית מהשמאות - לאחר מכן עריכה חופשית</span>
         </div>
 
         <!-- Features Adjustments - READ ONLY -->
@@ -17780,13 +17780,33 @@
     };
 
     // Auto-populate Market Fields
-    window.autoPopulateMarketFields = function() {
+    window.autoPopulateMarketFields = function(forceReload = false) {
       console.log('🔄 Auto-populating market fields from helper data');
       
       const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
       const estimateAdjustments = helper.estimate?.adjustments || {};
       const valuationAdjustments = helper.valuation?.adjustments || {};
       const finalReportAdjustments = helper.final_report?.adjustments || {};
+      
+      // STICKY TRANSFER LOGIC: Check if final_report already has data
+      const finalReportHasData = finalReportAdjustments && (
+        (finalReportAdjustments.mileage && finalReportAdjustments.mileage.length > 0) ||
+        (finalReportAdjustments.ownership_type && finalReportAdjustments.ownership_type.length > 0) ||
+        (finalReportAdjustments.ownership_history && finalReportAdjustments.ownership_history.length > 0) ||
+        (finalReportAdjustments.additional && finalReportAdjustments.additional.length > 0)
+      );
+      
+      if (finalReportHasData && !forceReload) {
+        console.log('✅ STICKY TRANSFER COMPLETE: final_report has data, estimate/valuation OUT OF LOOP');
+        console.log('📊 Use reload button to force restart from estimate/valuation');
+        return;
+      }
+      
+      if (forceReload) {
+        console.log('🔄 FORCE RELOAD: Restarting transfer from estimate/valuation → final_report');
+      } else {
+        console.log('🔥 INITIAL TRANSFER: estimate/valuation → final_report (ONE TIME ONLY)');
+      }
       
       console.log('Available estimate adjustments (PRIMARY):', estimateAdjustments);
       console.log('Available valuation adjustments (FALLBACK):', valuationAdjustments);
@@ -18581,7 +18601,7 @@
       
       // Wait a moment for the page to fully load
       setTimeout(() => {
-        autoPopulateMarketFields();
+        autoPopulateMarketFields(); // ONE TIME STICKY TRANSFER on initialization
         console.log('✅ New Market Value section auto-initialized');
       }, 500);
     };
@@ -18593,7 +18613,7 @@
         const content = document.getElementById('newFullMarketValueContent');
         if (content && content.style.display !== 'none') {
           console.log('📂 New Market Value section opened, auto-populating...');
-          autoPopulateMarketFields();
+          // autoPopulateMarketFields(); // DISABLED - was overriding user edits
         }
       }, 100);
     };
@@ -18635,7 +18655,7 @@
           
           if (currentFingerprint !== lastRelevantData && currentFingerprint !== '') {
             console.log('🔄 Relevant market value data changed, auto-refreshing section...');
-            autoPopulateMarketFields();
+            // autoPopulateMarketFields(); // DISABLED - was overriding user edits
             lastRelevantData = currentFingerprint;
           }
         } catch (error) {
