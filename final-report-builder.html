@@ -17711,7 +17711,7 @@
       const newRow = `
         <div id="${rowId}" class="adjustment-row" style="display:grid; grid-template-columns:2fr 1fr 1fr 1fr 80px; gap:10px; margin-bottom:8px;">
           <div><input type="text" placeholder="תיאור התאמה" onchange="newUpdateFullMarketValueCalculation(); newSyncAdjustmentToHelper(this, '${category}');" /></div>
-          <div><select onchange="newUpdateFullMarketValueCalculation(); newSyncAdjustmentToHelper(this, '${category}');">
+          <div><select onchange="handleMarketTypeChange(this, '${category}');">
             <option value="plus">תוספת (+)</option>
             <option value="minus">הפחתה (-)</option>
           </select></div>
@@ -18418,6 +18418,51 @@
         
       } catch (error) {
         console.error('❌ Error in newUpdateFullMarketValueCalculation:', error);
+      }
+    };
+
+    // Handle Type Change for Market Adjustments (Plus/Minus Display)
+    window.handleMarketTypeChange = function(selectElement, category) {
+      try {
+        const row = selectElement.closest('.adjustment-row');
+        if (!row) return;
+        
+        const inputs = row.querySelectorAll('input, select');
+        if (inputs.length < 4) return;
+        
+        const typeSelect = inputs[1];
+        const percentInput = inputs[2];
+        const amountInput = inputs[3];
+        const newType = typeSelect.value;
+        
+        console.log(`🔄 Type changed to: ${newType}`);
+        
+        // Update percent display - remove any existing minus signs and handle display
+        let currentPercent = parseFloat(percentInput.value.replace(/[-+]/g, '')) || 0;
+        if (currentPercent !== 0) {
+          percentInput.value = currentPercent; // Always show positive in UI
+        }
+        
+        // Update amount display - remove any existing signs and reformat
+        let currentAmount = parseFloat(amountInput.value.replace(/[₪,-+]/g, '')) || 0;
+        if (currentAmount !== 0) {
+          const displayValue = newType === 'minus' ? `-₪${currentAmount.toLocaleString()}` : `₪${currentAmount.toLocaleString()}`;
+          amountInput.value = displayValue;
+          console.log(`💰 Updated amount display: ${displayValue}`);
+        }
+        
+        // Recalculate if we have a percentage
+        if (currentPercent !== 0) {
+          console.log('🧮 Recalculating amount from percentage...');
+          newCalculateAdjustmentValueSimple(percentInput);
+        } else {
+          // Just trigger the calculation and sync
+          newUpdateFullMarketValueCalculation();
+          newSyncAdjustmentToHelper(selectElement, category);
+        }
+        
+      } catch (error) {
+        console.error('❌ Error in handleMarketTypeChange:', error);
       }
     };
 
