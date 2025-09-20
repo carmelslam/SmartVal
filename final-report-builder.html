@@ -6815,9 +6815,9 @@
         
         console.log(`🔄 Rebuilding ${category} from all UI rows in ${containerId}`);
         
-        // ESTIMATOR PATTERN: Rebuild entire category array from ALL visible UI rows
+        // FINAL REPORT PATTERN: Rebuild entire category array from ALL visible UI rows
+        // DO NOT WRITE TO estimate.adjustments - it should be READ-ONLY!
         const allRows = Array.from(container.children);
-        helper.estimate.adjustments[category] = [];
         helper.final_report.adjustments[category] = [];
         
         allRows.forEach((row, index) => {
@@ -6850,18 +6850,18 @@
               }
             }
             
-            helper.estimate.adjustments[category].push(adjustmentData);
+            // ONLY write to final_report - estimate should remain READ-ONLY
             helper.final_report.adjustments[category].push(adjustmentData);
-            console.log(`📝 Added row ${index} to ${category}:`, adjustmentData.value);
+            console.log(`📝 Added row ${index} to final_report.${category}:`, adjustmentData.value);
           }
         });
         
-        console.log(`✅ Rebuilt ${category}: ${helper.estimate.adjustments[category].length} items total`);
-        console.log(`📊 Final estimate.adjustments.${category}:`, helper.estimate.adjustments[category]);
+        console.log(`✅ Rebuilt ${category}: ${helper.final_report.adjustments[category].length} items total`);
+        console.log(`📊 Final final_report.adjustments.${category}:`, helper.final_report.adjustments[category]);
         
-        // ESTIMATOR PATTERN: Update valuation.adjustments with first item (for backward compatibility)
-        if (helper.estimate.adjustments[category].length > 0) {
-          helper.valuation.adjustments[category] = helper.estimate.adjustments[category][0];
+        // FINAL REPORT PATTERN: Update valuation.adjustments with first item (for backward compatibility)
+        if (helper.final_report.adjustments[category].length > 0) {
+          helper.valuation.adjustments[category] = helper.final_report.adjustments[category][0];
         } else {
           // Clear valuation if no items remain
           if (helper.valuation.adjustments[category]) {
