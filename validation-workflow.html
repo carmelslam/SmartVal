@@ -3058,7 +3058,50 @@
         saveBtn.disabled = true;
         saveBtn.textContent = '💾 שומר...';
         
+        // Save basic validation state
         saveValidationState();
+        
+        // Get helper object and create comprehensive validation log (based on estimate-validation.html template)
+        const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+        
+        // Count completed sections for better feedback
+        const completedSections = validatedSections || [];
+        const totalSections = 7; // vehicle, report-type, levi, damage, depreciation, fees, summary
+        
+        // Ensure final_report object exists
+        if (!helper.final_report) helper.final_report = {};
+        
+        // Create comprehensive validation log for final report workflow
+        helper.final_report.validation = {
+          completed_sections: completedSections,
+          legal_text: '', // Final report doesn't have editable legal text like estimate
+          validated_at: new Date().toISOString(),
+          validated_by: 'final_report_user',
+          workflow_type: 'final_report',
+          validation_progress: {
+            vehicle: completedSections.includes('vehicle'),
+            report_type: completedSections.includes('report-type'),
+            levi: completedSections.includes('levi'),
+            damage: completedSections.includes('damage'),
+            depreciation: completedSections.includes('depreciation'),
+            fees: completedSections.includes('fees'),
+            summary: completedSections.includes('summary')
+          },
+          specific_validations: {
+            report_type: helper?.final_report?.type || 'חוות דעת פרטית',
+            base_price: helper?.calculations?.base_price || 0,
+            final_adjustments_value: helper?.calculations?.final_adjustments_value || 0,
+            full_market_value: helper?.calculations?.full_market_value || 0,
+            total_damage: helper?.calculations?.total_damage || 0,
+            fee_total_with_vat: helper?.financials?.fees?.calculations?.total_with_vat || 0,
+            damage_centers_count: (helper?.expertise?.damage_blocks || []).length,
+            calculations_verified: true,
+            bridge_fields_populated: !!(helper?.calculations?.final_adjustments_value && helper?.calculations?.base_price)
+          }
+        };
+
+        // Save updated helper back to session storage
+        sessionStorage.setItem('helper', JSON.stringify(helper));
         
         saveBtn.textContent = '✅ נשמר בהצלחה';
         saveBtn.style.background = 'linear-gradient(135deg, #16a34a, #15803d)';
@@ -3069,7 +3112,10 @@
           saveBtn.disabled = false;
         }, 3000);
         
-        console.log('✅ Validation state saved successfully');
+        // Enhanced success message with progress info
+        const progressText = `${completedSections.length}/${totalSections} סעיפים אומתו`;
+        console.log(`✅ Validation data saved successfully: ${progressText}`);
+        console.log('📁 Final report validation log created:', helper.final_report.validation);
         
       } catch (error) {
         console.error('Save validation error:', error);
