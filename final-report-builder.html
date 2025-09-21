@@ -6873,6 +6873,35 @@
       }
     }
 
+    // Sync cumulative values for gross section categories after calculations
+    function syncGrossCumulativeValues() {
+      try {
+        console.log('🔄 Syncing gross section cumulative values...');
+        
+        // For features
+        const featuresContainer = document.getElementById('featuresAdjustmentsList');
+        if (featuresContainer && featuresContainer.children.length > 0) {
+          const firstInput = featuresContainer.children[0].querySelector('input');
+          if (firstInput) {
+            syncAdjustmentToHelper(firstInput, 'features');
+          }
+        }
+        
+        // For registration
+        const registrationContainer = document.getElementById('registrationAdjustmentsList');
+        if (registrationContainer && registrationContainer.children.length > 0) {
+          const firstInput = registrationContainer.children[0].querySelector('input');
+          if (firstInput) {
+            syncAdjustmentToHelper(firstInput, 'registration');
+          }
+        }
+        
+        console.log('✅ Gross cumulative values synced');
+      } catch (error) {
+        console.error('Error syncing gross cumulative values:', error);
+      }
+    }
+
     function syncAdjustmentToHelper(element, category) {
       try {
         console.log(`🔥 syncAdjustmentToHelper called for category: ${category}, element:`, element);
@@ -8449,6 +8478,11 @@
         setTimeout(() => {
           updateGrossPercentageFromGrossValue();
         }, 100);
+        
+        // Sync cumulative values to ensure they persist
+        setTimeout(() => {
+          syncGrossCumulativeValues();
+        }, 200);
         
       } catch (error) {
         console.error('Error calculating gross price:', error);
