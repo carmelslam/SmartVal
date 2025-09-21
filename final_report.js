@@ -870,6 +870,20 @@ function transformHelperDataForTemplate(rawHelper) {
       };
     })(),
     
+    // Add final_report data with adjustments
+    final_report: (() => {
+      const finalReportData = {
+        adjustments: rawHelper.final_report?.adjustments || {},
+        report_type: rawHelper.final_report?.report_type || '',
+        legal_text: rawHelper.final_report?.legal_text || '',
+        attachments: rawHelper.final_report?.attachments || '',
+        summary: rawHelper.final_report?.summary || {},
+        differential: rawHelper.final_report?.differential || {}
+      };
+      console.log('🔍 Final report adjustments being passed to template:', finalReportData.adjustments);
+      return finalReportData;
+    })(),
+    
     // Dynamic legal text and attachments
     final_report_legal_text: fieldMappings['helper.final_report_legal_text'],
     final_report_type: fieldMappings['helper.final_report_type'],  
