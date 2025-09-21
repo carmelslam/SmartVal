@@ -1493,8 +1493,8 @@
         },
         {
           label: 'התאמות מחיר',
-          current: valuation.adjustments_value ? `₪${Math.abs(parseInt(valuation.adjustments_value)).toLocaleString()}-` : '',
-          stored: valuation.adjustments_value ? `₪${Math.abs(parseInt(valuation.adjustments_value)).toLocaleString()}-` : '',
+          current: helper.calculations?.final_adjustments_value ? `₪${Math.abs(parseInt(helper.calculations.final_adjustments_value)).toLocaleString()}-` : '',
+          stored: helper.calculations?.final_adjustments_value ? `₪${Math.abs(parseInt(helper.calculations.final_adjustments_value)).toLocaleString()}-` : '',
           field: 'price_adjustments',
           validation: (val) => true
         },
@@ -2340,6 +2340,11 @@
       
       if (summaryAdjustments !== undefined && summaryAdjustments !== null) {
         return summaryAdjustments.toString().includes('₪') ? summaryAdjustments : `₪${summaryAdjustments}`;
+      }
+      
+      // Fallback: Use calculations.final_adjustments_value if summary is not populated
+      if (helper.calculations?.final_adjustments_value !== undefined && helper.calculations?.final_adjustments_value !== null) {
+        return `₪${helper.calculations.final_adjustments_value.toLocaleString()}`;
       }
       
       // Fallback: Calculate total adjustments from Levi and custom adjustments
