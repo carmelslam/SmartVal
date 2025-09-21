@@ -855,7 +855,8 @@
       <table class="car-details-table">
         <tr><th style="font-weight: bold;">מרכיב</th><th>פרטי ההתאמה</th><th>אחוז</th><th>ערך</th><th>מחיר מצטבר</th></tr>
         <tr><td><strong>ערך הרכב ע"פ מחירון כולל מע"מ</strong></td><td>-</td><td>-</td><td>{{helper.valuation.base_price}}</td><td>{{helper.valuation.base_price}}</td></tr>
-        {{{grossDamageAdjustments}}}
+        {{#each helper.final_report.adjustments.features}}<tr><td><strong>מאפיינים</strong></td><td>{{this.value}}</td><td>{{this.percent}}%</td><td>{{this.amount_display}}</td><td>₪{{this.cumulative}}</td></tr>{{/each}}
+        {{#each helper.final_report.adjustments.registration}}<tr><td><strong>עליה לכביש</strong></td><td>{{this.value}}</td><td>{{this.percent}}%</td><td>{{this.amount_display}}</td><td>₪{{this.cumulative}}</td></tr>{{/each}}
         <tr><td><strong>ערך הרכב לנזק גולמי כולל מע"מ</strong></td><td><strong>-</strong></td><td><strong>-</strong></td><td><strong>-</strong></td><td><strong>{{helper.calculations.vehicle_value_gross}} ₪</strong></td></tr>
       </table>
     </div>
@@ -881,7 +882,12 @@
       <table class="car-details-table">
         <tr><th style="font-weight: bold;">מרכיב</th><th>פרטי ההתאמה</th><th>התאמה</th><th>ערך</th><th>מחיר מצטבר</th></tr>
         <tr><td><strong>ערך הרכב ע"פ מחירון כולל מע"מ</strong></td><td>-</td><td>-</td><td>{{helper.valuation.base_price}}</td><td>{{helper.valuation.base_price}}</td></tr>
-        {{{marketValueAdjustments}}}
+        {{#each helper.final_report.adjustments.features}}<tr><td><strong>מאפיינים</strong></td><td>{{this.value}}</td><td>{{this.percent}}%</td><td>{{this.amount_display}}</td><td>₪{{this.cumulative}}</td></tr>{{/each}}
+        {{#each helper.final_report.adjustments.registration}}<tr><td><strong>עליה לכביש</strong></td><td>{{this.value}}</td><td>{{this.percent}}%</td><td>{{this.amount_display}}</td><td>₪{{this.cumulative}}</td></tr>{{/each}}
+        {{#each helper.final_report.adjustments.mileage}}<tr><td><strong>מס' ק"מ</strong></td><td>{{this.value}}</td><td>{{this.percent}}%</td><td>{{this.amount_display}}</td><td>₪{{this.cumulative}}</td></tr>{{/each}}
+        {{#each helper.final_report.adjustments.ownership_type}}<tr><td><strong>סוג בעלות</strong></td><td>{{this.value}}</td><td>{{this.percent}}%</td><td>{{this.amount_display}}</td><td>₪{{this.cumulative}}</td></tr>{{/each}}
+        {{#each helper.final_report.adjustments.ownership_history}}<tr><td><strong>מס' בעלים</strong></td><td>{{this.value}}</td><td>{{this.percent}}%</td><td>{{this.amount_display}}</td><td>₪{{this.cumulative}}</td></tr>{{/each}}
+        {{#each helper.final_report.adjustments.additional}}<tr><td><strong>התאמות נוספות</strong></td><td>{{this.value}}</td><td>{{this.percent}}%</td><td>{{this.amount_display}}</td><td>₪{{this.cumulative}}</td></tr>{{/each}}
         <tr><td><strong>ערך השוק של הרכב כולל מע"מ</strong></td><td><strong>-</strong></td><td><strong>-</strong></td><td><strong>-</strong></td><td><strong>{{helper.calculations.full_market_value}} ₪</strong></td></tr>
       </table>
     </div>
@@ -1217,6 +1223,9 @@
     
     // Generate Gross Damage table rows
     function generateGrossDamageAdjustments(helper) {
+      console.log('GrossDamage helper context:', helper);
+      console.log('GrossDamage adjustments:', helper?.final_report?.adjustments);
+      
       const adjustmentRows = [];
       const categoryOrder = ['features', 'registration'];
       const categoryLabels = {
@@ -1225,7 +1234,8 @@
       };
       
       categoryOrder.forEach(category => {
-        const adjustments = helper.final_report?.adjustments?.[category] || [];
+        const adjustments = helper?.final_report?.adjustments?.[category] || [];
+        console.log(`${category} adjustments:`, adjustments);
         
         adjustments.forEach(adjustment => {
           const percentDisplay = adjustment.percent ? `${adjustment.percent}%` : '-';
@@ -1246,6 +1256,7 @@
         });
       });
       
+      console.log('Generated rows:', adjustmentRows.length);
       return adjustmentRows.join('');
     }
     
