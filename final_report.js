@@ -886,6 +886,18 @@ function transformHelperDataForTemplate(rawHelper) {
       console.log('🔍 Mileage array:', finalReportData.adjustments.mileage);
       console.log('🔍 Is features an array?', Array.isArray(finalReportData.adjustments.features));
       console.log('🔍 Raw helper final_report:', rawHelper.final_report);
+      
+      // CRITICAL DEBUG: Check exact structure of adjustment items
+      if (finalReportData.adjustments.features && finalReportData.adjustments.features.length > 0) {
+        console.log('🚨 FEATURES ARRAY STRUCTURE:');
+        finalReportData.adjustments.features.forEach((item, index) => {
+          console.log(`  Item ${index}:`, item);
+          console.log(`    - value: "${item.value}" (type: ${typeof item.value})`);
+          console.log(`    - percent: "${item.percent}" (type: ${typeof item.percent})`);
+          console.log(`    - amount_display: "${item.amount_display}" (type: ${typeof item.amount_display})`);
+          console.log(`    - cumulative: "${item.cumulative}" (type: ${typeof item.cumulative})`);
+        });
+      }
       return finalReportData;
     })(),
     
@@ -1181,6 +1193,13 @@ function injectReportHTML() {
     console.log('💰 Market value being passed:', transformedHelper.calculations?.market_value);
     console.log('💰 Full market value being passed:', transformedHelper.calculations?.full_market_value);
     console.log('💰 All calculations:', transformedHelper.calculations);
+    
+    // CRITICAL DEBUG: Check if adjustments are in templateData
+    console.log('🚨 TEMPLATE ADJUSTMENTS CHECK:');
+    console.log('templateData.helper.final_report exists?', !!templateData.helper.final_report);
+    console.log('templateData.helper.final_report.adjustments exists?', !!templateData.helper.final_report?.adjustments);
+    console.log('templateData.helper.final_report.adjustments.features exists?', !!templateData.helper.final_report?.adjustments?.features);
+    console.log('templateData.helper.final_report.adjustments.features:', templateData.helper.final_report?.adjustments?.features);
     console.log('💵 Fees structure:', helper.fees);
     console.log('🔧 Raw helper market values:', {
       levi_final: helper.levisummary?.final_price,
