@@ -4380,6 +4380,9 @@
         helper.calculations.base_price = originalBasePrice;
         helper.calculations.final_adjustments_value = Math.round(fullMarketValue - originalBasePrice);
         
+        // Debug logging to verify correct calculation
+        console.log(`🔍 Bridge Field Debug: fullMarketValue=${fullMarketValue}, originalBasePrice=${originalBasePrice}, final_adjustments_value=${Math.round(fullMarketValue - originalBasePrice)}`);
+        
         // Update expertise calculations for compatibility
         helper.expertise.calculations.vehicle_value_gross = grossMarketValue;
         helper.expertise.calculations.market_value = fullMarketValue;
@@ -8484,13 +8487,13 @@
         
         console.log('✅ Saved gross value to helper.calculations.vehicle_value_gross:', grossPrice);
         
-        // Update bridge fields in helper.calculations for consistency
+        // Update bridge fields in helper.calculations for consistency (base_price only)
         const rawBasePrice = helper.valuation?.base_price || 
                              helper.car_details?.base_price || 
                              helper.levi_report?.base_price || 0;
         const originalBasePrice = parseFloat(String(rawBasePrice).replace(/[₪,]/g, '')) || 0;
         helper.calculations.base_price = originalBasePrice;
-        helper.calculations.final_adjustments_value = Math.round(grossPrice - originalBasePrice);
+        // Note: final_adjustments_value should only be updated by the final market value calculation
         
         // Update gross percentage calculation immediately
         setTimeout(() => {
@@ -9433,15 +9436,15 @@
           resultField.value = `₪${Math.round(currentValue).toLocaleString()}`;
         }
         
-        // Update bridge fields in helper.calculations for consistency
+        // Update bridge fields in helper.calculations for consistency (base_price only)
         if (helper.calculations) {
           const rawBasePrice = helper.valuation?.base_price || 
                                helper.car_details?.base_price || 
                                helper.levi_report?.base_price || 0;
           const originalBasePrice = parseFloat(String(rawBasePrice).replace(/[₪,]/g, '')) || 0;
           helper.calculations.base_price = originalBasePrice;
-          helper.calculations.final_adjustments_value = Math.round(currentValue - originalBasePrice);
           helper.calculations.full_market_value = Math.round(currentValue);
+          // Note: final_adjustments_value should only be updated by the main calculation function
         }
         
       } catch (error) {
