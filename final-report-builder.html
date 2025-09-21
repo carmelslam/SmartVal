@@ -4365,9 +4365,10 @@
         }
         
         // Get original base price from valuation (preserve webhook data)
-        const originalBasePrice = helper.valuation?.base_price || 
-                                  helper.car_details?.base_price || 
-                                  helper.levi_report?.base_price || 0;
+        const rawBasePrice = helper.valuation?.base_price || 
+                             helper.car_details?.base_price || 
+                             helper.levi_report?.base_price || 0;
+        const originalBasePrice = parseFloat(String(rawBasePrice).replace(/[₪,]/g, '')) || 0;
         
         helper.calculations.vehicle_value_gross = grossMarketValue;
         helper.calculations.market_value = fullMarketValue;
@@ -8484,9 +8485,10 @@
         console.log('✅ Saved gross value to helper.calculations.vehicle_value_gross:', grossPrice);
         
         // Update bridge fields in helper.calculations for consistency
-        const originalBasePrice = helper.valuation?.base_price || 
-                                  helper.car_details?.base_price || 
-                                  helper.levi_report?.base_price || 0;
+        const rawBasePrice = helper.valuation?.base_price || 
+                             helper.car_details?.base_price || 
+                             helper.levi_report?.base_price || 0;
+        const originalBasePrice = parseFloat(String(rawBasePrice).replace(/[₪,]/g, '')) || 0;
         helper.calculations.base_price = originalBasePrice;
         helper.calculations.final_adjustments_value = Math.round(grossPrice - originalBasePrice);
         
@@ -9433,9 +9435,10 @@
         
         // Update bridge fields in helper.calculations for consistency
         if (helper.calculations) {
-          const originalBasePrice = helper.valuation?.base_price || 
-                                    helper.car_details?.base_price || 
-                                    helper.levi_report?.base_price || 0;
+          const rawBasePrice = helper.valuation?.base_price || 
+                               helper.car_details?.base_price || 
+                               helper.levi_report?.base_price || 0;
+          const originalBasePrice = parseFloat(String(rawBasePrice).replace(/[₪,]/g, '')) || 0;
           helper.calculations.base_price = originalBasePrice;
           helper.calculations.final_adjustments_value = Math.round(currentValue - originalBasePrice);
           helper.calculations.full_market_value = Math.round(currentValue);
