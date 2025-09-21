@@ -6658,6 +6658,118 @@
       }
     }
 
+    // Save adjustment amount immediately without waiting for field change
+    function saveAdjustmentAmount(category, amount, cumulativeValue) {
+      try {
+        const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+        
+        // Ensure structures exist
+        if (!helper.valuation) helper.valuation = {};
+        if (!helper.valuation.adjustments) helper.valuation.adjustments = {};
+        if (!helper.final_report) helper.final_report = {};
+        if (!helper.final_report.adjustments) {
+          helper.final_report.adjustments = {
+            features: [],
+            registration: [],
+            mileage: [],
+            ownership_type: [],
+            ownership_history: [],
+            usage: [],
+            additional: []
+          };
+        }
+        
+        // Format amount display
+        const amountDisplay = amount !== 0 ? `₪${Math.abs(amount).toLocaleString()}` : '';
+        
+        // Update valuation.adjustments
+        if (!helper.valuation.adjustments[category]) {
+          helper.valuation.adjustments[category] = {};
+        }
+        helper.valuation.adjustments[category].amount = amount;
+        helper.valuation.adjustments[category].amount_display = amountDisplay;
+        if (cumulativeValue !== undefined) {
+          helper.valuation.adjustments[category].cumulative = cumulativeValue;
+        }
+        
+        // Update final_report.adjustments (ensure array exists and update first item)
+        if (!helper.final_report.adjustments[category]) {
+          helper.final_report.adjustments[category] = [];
+        }
+        if (helper.final_report.adjustments[category].length === 0) {
+          helper.final_report.adjustments[category].push({});
+        }
+        helper.final_report.adjustments[category][0].amount = amount;
+        helper.final_report.adjustments[category][0].amount_display = amountDisplay;
+        if (cumulativeValue !== undefined) {
+          helper.final_report.adjustments[category][0].cumulative = cumulativeValue;
+        }
+        
+        // Save to storage
+        sessionStorage.setItem('helper', JSON.stringify(helper));
+        window.helper = helper;
+        
+        console.log(`💾 Saved amount for ${category}: ${amount} (cumulative: ${cumulativeValue})`);
+      } catch (error) {
+        console.error('Error saving adjustment amount:', error);
+      }
+    }
+
+    // Restore adjustment amounts from helper data on page load
+    function restoreAdjustmentAmounts() {
+      try {
+        const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+        console.log('🔄 Restoring adjustment amounts from helper...');
+        
+        // Only restore amounts for our three categories
+        const categories = ['mileage', 'ownership_type', 'ownership_history'];
+        
+        categories.forEach(category => {
+          // Check both locations for amount data
+          const valuationAmount = helper.valuation?.adjustments?.[category]?.amount;
+          const finalReportAmount = helper.final_report?.adjustments?.[category]?.[0]?.amount;
+          
+          // Use valuation amount if available, otherwise final_report
+          const amount = valuationAmount !== undefined ? valuationAmount : finalReportAmount;
+          
+          if (amount !== undefined && amount !== 0) {
+            console.log(`📖 Found saved amount for ${category}: ${amount}`);
+            
+            // Find the corresponding container
+            let containerId = '';
+            if (category === 'mileage') containerId = 'mileageAdjustmentsList';
+            else if (category === 'ownership_type') containerId = 'ownershipAdjustmentsList';
+            else if (category === 'ownership_history') containerId = 'ownersAdjustmentsList';
+            
+            const container = document.getElementById(containerId);
+            if (container) {
+              const rows = container.querySelectorAll('div[id*="Adj_"]');
+              if (rows.length > 0) {
+                // Update the first row's amount field
+                const firstRow = rows[0];
+                const inputs = firstRow.querySelectorAll('input[type="text"]');
+                if (inputs.length >= 3) {
+                  const valueInput = inputs[2]; // Amount field
+                  if (valueInput) {
+                    valueInput.value = amount < 0 ? `-₪${Math.abs(amount).toLocaleString()}` : `₪${Math.abs(amount).toLocaleString()}`;
+                    console.log(`✅ Restored amount for ${category} in UI`);
+                  }
+                }
+              }
+            }
+          }
+        });
+        
+        // Trigger calculation update to refresh cumulative displays
+        setTimeout(() => {
+          updateFullMarketValueCalculation();
+        }, 100);
+        
+      } catch (error) {
+        console.error('Error restoring adjustment amounts:', error);
+      }
+    }
+
     function syncAdjustmentToHelper(element, category) {
       try {
         console.log(`🔥 syncAdjustmentToHelper called for category: ${category}, element:`, element);
@@ -6764,6 +6876,26 @@
               adjustmentData.amount = -Math.abs(adjustmentData.amount);
             }
             
+            // Add cumulative tracking for our three categories
+            if (category === 'mileage' || category === 'ownership_type' || category === 'ownership_history') {
+              // Find cumulative display element
+              let cumulativeId = '';
+              if (category === 'mileage') cumulativeId = 'mileageCumulative';
+              else if (category === 'ownership_type') cumulativeId = 'ownershipCumulative';
+              else if (category === 'ownership_history') cumulativeId = 'ownersCumulative';
+              
+              const cumulativeElement = document.getElementById(cumulativeId);
+              if (cumulativeElement) {
+                const cumulativeSpan = cumulativeElement.querySelector('span');
+                if (cumulativeSpan) {
+                  const cumulativeText = cumulativeSpan.textContent.replace(/[₪,]/g, '');
+                  const cumulativeValue = parseFloat(cumulativeText) || 0;
+                  adjustmentData.cumulative = cumulativeValue;
+                  console.log(`📊 Captured cumulative for ${category}: ${cumulativeValue}`);
+                }
+              }
+            }
+            
             // ONLY write to final_report - estimate should remain READ-ONLY
             helper.final_report.adjustments[category].push(adjustmentData);
             console.log(`📝 Added row ${index} to final_report.${category}:`, adjustmentData.value);
@@ -6776,6 +6908,12 @@
         // FINAL REPORT PATTERN: Update valuation.adjustments with first item (for backward compatibility)
         if (helper.final_report.adjustments[category].length > 0) {
           helper.valuation.adjustments[category] = helper.final_report.adjustments[category][0];
+          
+          // Ensure cumulative is also copied to valuation for our three categories
+          if ((category === 'mileage' || category === 'ownership_type' || category === 'ownership_history') && 
+              helper.final_report.adjustments[category][0].cumulative !== undefined) {
+            helper.valuation.adjustments[category].cumulative = helper.final_report.adjustments[category][0].cumulative;
+          }
         } else {
           // Clear valuation if no items remain
           if (helper.valuation.adjustments[category]) {
@@ -8947,6 +9085,20 @@
         updateCumulativeDisplay('מס ק"מ', currentValue);
         const afterMileage = currentValue; // Store value after mileage
         
+        // Auto-save mileage amounts if we have data
+        if (mileageRows.length > 0) {
+          let totalMileageAmount = 0;
+          mileageRows.forEach(row => {
+            const inputs = row.querySelectorAll('input[type="text"]');
+            const valueInput = inputs[2];
+            if (valueInput && valueInput.value) {
+              const amount = parseFloat(valueInput.value.replace(/[₪,]/g, '')) || 0;
+              totalMileageAmount += amount;
+            }
+          });
+          saveAdjustmentAmount('mileage', totalMileageAmount, currentValue);
+        }
+        
         // 4. Process Ownership Adjustments
         const ownershipRows = document.querySelectorAll('#ownershipAdjustmentsList > div');
         ownershipRows.forEach((row, index) => {
@@ -8989,6 +9141,20 @@
         updateCumulativeDisplay('סוג בעלות', currentValue);
         const afterOwnership = currentValue; // Store value after ownership
         
+        // Auto-save ownership type amounts if we have data
+        if (ownershipRows.length > 0) {
+          let totalOwnershipAmount = 0;
+          ownershipRows.forEach(row => {
+            const inputs = row.querySelectorAll('input[type="text"]');
+            const valueInput = inputs[2];
+            if (valueInput && valueInput.value) {
+              const amount = parseFloat(valueInput.value.replace(/[₪,]/g, '')) || 0;
+              totalOwnershipAmount += amount;
+            }
+          });
+          saveAdjustmentAmount('ownership_type', totalOwnershipAmount, currentValue);
+        }
+        
         // 5. Process Owners Adjustments
         const ownersRows = document.querySelectorAll('#ownersAdjustmentsList > div');
         ownersRows.forEach((row, index) => {
@@ -9029,6 +9195,20 @@
         
         // Update owners cumulative
         updateCumulativeDisplay('מספר בעלים', currentValue);
+        
+        // Auto-save ownership history amounts if we have data
+        if (ownersRows.length > 0) {
+          let totalOwnersAmount = 0;
+          ownersRows.forEach(row => {
+            const inputs = row.querySelectorAll('input[type="text"]');
+            const valueInput = inputs[2];
+            if (valueInput && valueInput.value) {
+              const amount = parseFloat(valueInput.value.replace(/[₪,]/g, '')) || 0;
+              totalOwnersAmount += amount;
+            }
+          });
+          saveAdjustmentAmount('ownership_history', totalOwnersAmount, currentValue);
+        }
         
         // 6. Process Additional Market Adjustments
         const additionalRows = document.querySelectorAll('#allAdjustmentsList > div');
@@ -12008,6 +12188,12 @@
         loadFullMarketValueData();
         console.log('✅ Bulk 3 initialized');
         console.log('✅ Complete 3-bulk system initialized');
+        
+        // Restore saved adjustment amounts after data is loaded
+        setTimeout(() => {
+          restoreAdjustmentAmounts();
+          console.log('✅ Adjustment amounts restored');
+        }, 200);
       }, 700);
       
       // Add event listeners for damage center changes
