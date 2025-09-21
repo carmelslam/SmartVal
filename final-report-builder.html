@@ -6826,6 +6826,53 @@
       }
     }
 
+    // Save only cumulative value for an adjustment category (without other fields)
+    function saveAdjustmentCumulativeOnly(category, cumulativeValue) {
+      try {
+        const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+        
+        // Ensure structures exist
+        if (!helper.valuation) helper.valuation = {};
+        if (!helper.valuation.adjustments) helper.valuation.adjustments = {};
+        if (!helper.final_report) helper.final_report = {};
+        if (!helper.final_report.adjustments) {
+          helper.final_report.adjustments = {
+            features: [],
+            registration: [],
+            mileage: [],
+            ownership_type: [],
+            ownership_history: [],
+            usage: [],
+            additional: []
+          };
+        }
+        
+        // Round cumulative value
+        const roundedCumulative = Math.round(cumulativeValue);
+        
+        // Update valuation.adjustments cumulative
+        if (!helper.valuation.adjustments[category]) {
+          helper.valuation.adjustments[category] = {};
+        }
+        helper.valuation.adjustments[category].cumulative = roundedCumulative;
+        
+        // Update final_report.adjustments cumulative for all items in array
+        if (helper.final_report.adjustments[category] && Array.isArray(helper.final_report.adjustments[category])) {
+          helper.final_report.adjustments[category].forEach(item => {
+            item.cumulative = roundedCumulative;
+          });
+        }
+        
+        // Save to storage
+        sessionStorage.setItem('helper', JSON.stringify(helper));
+        window.helper = helper;
+        
+        console.log(`💾 Saved cumulative for ${category}: ${roundedCumulative}`);
+      } catch (error) {
+        console.error('Error saving adjustment cumulative:', error);
+      }
+    }
+
     function syncAdjustmentToHelper(element, category) {
       try {
         console.log(`🔥 syncAdjustmentToHelper called for category: ${category}, element:`, element);
@@ -8265,6 +8312,10 @@
           }
         }
         
+        // Save features cumulative value
+        const featuresCumulativeValue = Math.round(currentValue);
+        saveAdjustmentCumulativeOnly('features', featuresCumulativeValue);
+        
         // Process registration section - Add fixed values to cumulative
         const grossRegistrationRows = document.querySelectorAll('#registrationAdjustmentsList > div');
         grossRegistrationRows.forEach(row => {
@@ -8289,6 +8340,10 @@
             span.style.color = currentValue >= basicPrice ? '#28a745' : '#dc3545';
           }
         }
+        
+        // Save registration cumulative value
+        const registrationCumulativeValue = Math.round(currentValue);
+        saveAdjustmentCumulativeOnly('registration', registrationCumulativeValue);
         
         // Update result field
         const resultField = document.getElementById('grossMarketValueResult');
