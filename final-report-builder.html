@@ -1774,8 +1774,8 @@
       // Parse the cleaned value
       const parsed = parseFloat(cleanedValue);
       
-      // Return 0 if parsing resulted in NaN
-      return isNaN(parsed) ? 0 : parsed;
+      // Return 0 if parsing resulted in NaN, otherwise round to whole number
+      return isNaN(parsed) ? 0 : Math.round(parsed);
     }
     
     // Helper function to check if a type is a reduction/minus type
@@ -6679,17 +6679,21 @@
           };
         }
         
-        // Format amount display
-        const amountDisplay = amount !== 0 ? `₪${Math.abs(amount).toLocaleString()}` : '';
+        // Round amount to whole number
+        const roundedAmount = Math.round(amount);
+        const roundedCumulative = cumulativeValue !== undefined ? Math.round(cumulativeValue) : undefined;
+        
+        // Format amount display with rounded value
+        const amountDisplay = roundedAmount !== 0 ? `₪${Math.abs(roundedAmount).toLocaleString()}` : '';
         
         // Update valuation.adjustments
         if (!helper.valuation.adjustments[category]) {
           helper.valuation.adjustments[category] = {};
         }
-        helper.valuation.adjustments[category].amount = amount;
+        helper.valuation.adjustments[category].amount = roundedAmount;
         helper.valuation.adjustments[category].amount_display = amountDisplay;
-        if (cumulativeValue !== undefined) {
-          helper.valuation.adjustments[category].cumulative = cumulativeValue;
+        if (roundedCumulative !== undefined) {
+          helper.valuation.adjustments[category].cumulative = roundedCumulative;
         }
         
         // Update final_report.adjustments (ensure array exists and update first item)
@@ -6699,17 +6703,17 @@
         if (helper.final_report.adjustments[category].length === 0) {
           helper.final_report.adjustments[category].push({});
         }
-        helper.final_report.adjustments[category][0].amount = amount;
+        helper.final_report.adjustments[category][0].amount = roundedAmount;
         helper.final_report.adjustments[category][0].amount_display = amountDisplay;
-        if (cumulativeValue !== undefined) {
-          helper.final_report.adjustments[category][0].cumulative = cumulativeValue;
+        if (roundedCumulative !== undefined) {
+          helper.final_report.adjustments[category][0].cumulative = roundedCumulative;
         }
         
         // Save to storage
         sessionStorage.setItem('helper', JSON.stringify(helper));
         window.helper = helper;
         
-        console.log(`💾 Saved amount for ${category}: ${amount} (cumulative: ${cumulativeValue})`);
+        console.log(`💾 Saved amount for ${category}: ${roundedAmount} (cumulative: ${roundedCumulative})`);
       } catch (error) {
         console.error('Error saving adjustment amount:', error);
       }
@@ -6733,7 +6737,9 @@
           const amount = valuationAmount !== undefined ? valuationAmount : finalReportAmount;
           
           if (amount !== undefined && amount !== 0) {
-            console.log(`📖 Found saved amount for ${category}: ${amount}`);
+            // Round the amount to ensure no fractions
+            const roundedAmount = Math.round(amount);
+            console.log(`📖 Found saved amount for ${category}: ${roundedAmount}`);
             
             // Find the corresponding container
             let containerId = '';
@@ -6751,7 +6757,7 @@
                 if (inputs.length >= 3) {
                   const valueInput = inputs[2]; // Amount field
                   if (valueInput) {
-                    valueInput.value = amount < 0 ? `-₪${Math.abs(amount).toLocaleString()}` : `₪${Math.abs(amount).toLocaleString()}`;
+                    valueInput.value = roundedAmount < 0 ? `-₪${Math.abs(roundedAmount).toLocaleString()}` : `₪${Math.abs(roundedAmount).toLocaleString()}`;
                     console.log(`✅ Restored amount for ${category} in UI`);
                   }
                 }
@@ -6869,6 +6875,9 @@
               }
             }
             
+            // Round the amount to ensure no fractions
+            adjustmentData.amount = Math.round(adjustmentData.amount);
+            
             // Apply sign based on type (CRITICAL FOR MINUS SIGNS) - AFTER amount calculation
             if (adjustmentData.type === 'minus') {
               adjustmentData.percentage = -Math.abs(adjustmentData.percentage);
@@ -6890,8 +6899,9 @@
                 if (cumulativeSpan) {
                   const cumulativeText = cumulativeSpan.textContent.replace(/[₪,]/g, '');
                   const cumulativeValue = parseFloat(cumulativeText) || 0;
-                  adjustmentData.cumulative = cumulativeValue;
-                  console.log(`📊 Captured cumulative for ${category}: ${cumulativeValue}`);
+                  // Round cumulative value to ensure no fractions
+                  adjustmentData.cumulative = Math.round(cumulativeValue);
+                  console.log(`📊 Captured cumulative for ${category}: ${adjustmentData.cumulative}`);
                 }
               }
             }
@@ -9071,7 +9081,8 @@
             
             // UPDATE THE UI: Set the correct specific value in the value field
             if (valueInput) {
-              const displayAmount = Math.round(specificResult).toLocaleString();
+              const roundedResult = Math.round(specificResult);
+              const displayAmount = roundedResult.toLocaleString();
               valueInput.value = (type === 'minus') ? `-₪${displayAmount}` : `₪${displayAmount}`;
             }
           } else if (valueInput && valueInput.value) {
@@ -9096,7 +9107,8 @@
               totalMileageAmount += amount;
             }
           });
-          saveAdjustmentAmount('mileage', totalMileageAmount, currentValue);
+          // Round the total amount before saving
+          saveAdjustmentAmount('mileage', Math.round(totalMileageAmount), Math.round(currentValue));
         }
         
         // 4. Process Ownership Adjustments
@@ -9124,7 +9136,8 @@
             
             // UPDATE THE UI: Set the correct specific value in the value field
             if (valueInput) {
-              const displayAmount = Math.round(specificResult).toLocaleString();
+              const roundedResult = Math.round(specificResult);
+              const displayAmount = roundedResult.toLocaleString();
               valueInput.value = (type === 'minus') ? `-₪${displayAmount}` : `₪${displayAmount}`;
             }
           } else if (valueInput && valueInput.value) {
@@ -9152,7 +9165,8 @@
               totalOwnershipAmount += amount;
             }
           });
-          saveAdjustmentAmount('ownership_type', totalOwnershipAmount, currentValue);
+          // Round the total amount before saving
+          saveAdjustmentAmount('ownership_type', Math.round(totalOwnershipAmount), Math.round(currentValue));
         }
         
         // 5. Process Owners Adjustments
@@ -9180,7 +9194,8 @@
             
             // UPDATE THE UI: Set the correct specific value in the value field
             if (valueInput) {
-              const displayAmount = Math.round(specificResult).toLocaleString();
+              const roundedResult = Math.round(specificResult);
+              const displayAmount = roundedResult.toLocaleString();
               valueInput.value = (type === 'minus') ? `-₪${displayAmount}` : `₪${displayAmount}`;
             }
           } else if (valueInput && valueInput.value) {
@@ -9207,7 +9222,8 @@
               totalOwnersAmount += amount;
             }
           });
-          saveAdjustmentAmount('ownership_history', totalOwnersAmount, currentValue);
+          // Round the total amount before saving
+          saveAdjustmentAmount('ownership_history', Math.round(totalOwnersAmount), Math.round(currentValue));
         }
         
         // 6. Process Additional Market Adjustments
