@@ -1200,6 +1200,12 @@ function injectReportHTML() {
     console.log('templateData.helper.final_report.adjustments exists?', !!templateData.helper.final_report?.adjustments);
     console.log('templateData.helper.final_report.adjustments.features exists?', !!templateData.helper.final_report?.adjustments?.features);
     console.log('templateData.helper.final_report.adjustments.features:', templateData.helper.final_report?.adjustments?.features);
+    
+    // CHECK RAW HELPER VS TEMPLATE DATA
+    console.log('🔴 RAW HELPER CHECK:');
+    console.log('helper.final_report.adjustments.features:', helper.final_report?.adjustments?.features);
+    console.log('🔵 TRANSFORMED HELPER CHECK:'); 
+    console.log('transformedHelper.final_report.adjustments.features:', transformedHelper.final_report?.adjustments?.features);
     console.log('💵 Fees structure:', helper.fees);
     console.log('🔧 Raw helper market values:', {
       levi_final: helper.levisummary?.final_price,

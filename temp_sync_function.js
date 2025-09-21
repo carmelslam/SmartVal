@@ -74,6 +74,10 @@
         helper.estimate.adjustments[category] = [];
         helper.final_report.adjustments[category] = [];
         
+        // Get base price for cumulative calculation
+        const basePrice = parseFloat(helper.valuation?.base_price) || parseFloat(helper.valuation?.market_value_base) || 118000;
+        let runningCumulative = basePrice;
+        
         allRows.forEach((row, index) => {
           const inputs = row.querySelectorAll('input, select');
           if (inputs.length >= 4) {
