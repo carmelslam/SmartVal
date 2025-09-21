@@ -5460,11 +5460,15 @@
                     // Field mapping: value → תיאור (description) - PRESERVE FULL TEXT
                     inputs[0].value = item.value || '';
                     
-                    // Type dropdown - use dynamic sign logic
-                    const itemPercent = item.percentage || item.percent;
-                    const itemAmount = item.amount;
-                    const detectedType = getDropdownTypeFromValues(itemPercent, itemAmount, item.type || 'plus');
-                    inputs[1].value = detectedType;
+                    // Type dropdown - use stored type directly
+                    const storedType = item.type || 'plus';
+                    if (storedType === 'minus' || storedType === 'הפחתה' || storedType === 'הפחתה (-)') {
+                      inputs[1].value = 'minus';
+                    } else if (storedType === 'plus' || storedType === 'תוספת' || storedType === 'תוספת (+)') {
+                      inputs[1].value = 'plus';
+                    } else {
+                      inputs[1].value = storedType; // For % or ₪ types
+                    }
                     
                     // Percent and amount - preserve sign based on type
                     inputs[2].value = itemPercent ? Math.abs(itemPercent) : '';
@@ -5548,15 +5552,13 @@
           // First, determine if it's plus or minus based on values
           const isNegative = percentValue < 0 || amountValue < 0;
           
-          // Use same logic as reload button
-          const itemPercent = adj.percentage || adj.percent;
-          const itemAmount = adj.amount;
-          const dropdownType = getDropdownTypeFromValues(itemPercent, itemAmount, adj.type || 'plus');
+          // FIX: Use stored type directly, don't detect from values
+          const storedType = adj.type || 'plus';
           
-          // Map to UI dropdown values (same as reload button)
-          if (dropdownType === 'minus') {
+          // Map stored type to dropdown value
+          if (storedType === 'minus' || storedType === 'הפחתה' || storedType === 'הפחתה (-)') {
             selectedType = 'הפחתה (-)';
-          } else if (dropdownType === 'plus') {
+          } else if (storedType === 'plus' || storedType === 'תוספת' || storedType === 'תוספת (+)') {
             selectedType = 'תוספת (+)';
           } else {
             // Determine if it's percentage or amount based
@@ -6011,8 +6013,8 @@
                     } else if (storedType === '%' || storedType === '₪') {
                       inputs[1].value = storedType;
                     } else {
-                      // Only use detection as last resort
-                      inputs[1].value = getDropdownTypeFromValues(itemPercent, itemAmount, 'plus');
+                      // Default to plus if type is unclear
+                      inputs[1].value = 'plus';
                     }
                     
                     // Percent and amount - preserve sign based on type
@@ -6498,10 +6500,15 @@
                       // Field mapping: value → תיאור (description)
                       inputs[0].value = item.value || '';
                       
-                      // Type dropdown - use dynamic sign logic
-                      const itemPercent = item.percentage || item.percent;
-                      const itemAmount = item.amount;
-                      inputs[1].value = getDropdownTypeFromValues(itemPercent, itemAmount, item.type || 'plus');
+                      // Type dropdown - use stored type directly  
+                      const storedType = item.type || 'plus';
+                      if (storedType === 'minus' || storedType === 'הפחתה' || storedType === 'הפחתה (-)') {
+                        inputs[1].value = 'minus';
+                      } else if (storedType === 'plus' || storedType === 'תוספת' || storedType === 'תוספת (+)') {
+                        inputs[1].value = 'plus';
+                      } else {
+                        inputs[1].value = storedType; // For % or ₪ types
+                      }
                       
                       // Percent and amount - preserve sign based on type
                       inputs[2].value = itemPercent ? Math.abs(itemPercent) : '';
@@ -8732,7 +8739,7 @@
       const newRow = `
         <div id="${rowId}" class="adjustment-row" data-source="manual" style="display:grid; grid-template-columns:2fr 1fr 1fr 1fr 80px; gap:10px; margin-bottom:8px;">
           <div><input type="text" placeholder="תיאור מס ק"מ" title="" onchange="updateFullMarketValueCalculation(); syncAdjustmentToHelper(this, 'mileage'); this.title = this.value;" oninput="this.title = this.value;" /></div>
-          <div><select onchange="updateFullMarketValueCalculation(); syncAdjustmentToHelper(this, 'mileage');" title="">
+          <div><select onchange="updateFullMarketValueCalculation(); syncAdjustmentToHelper(this, 'mileage'); const row = this.closest('.adjustment-row'); const inputs = row.querySelectorAll('input, select'); formatAdjustmentDisplay(row, this.value, Math.abs(parseFloat(inputs[2].value) || 0), safeParseAmount(inputs[3].value));" title="">
             <option value="plus">תוספת (+)</option>
             <option value="minus">הפחתה (-)</option>
           </select></div>
@@ -8754,7 +8761,7 @@
       const newRow = `
         <div id="${rowId}" class="adjustment-row" data-source="manual" style="display:grid; grid-template-columns:2fr 1fr 1fr 1fr 80px; gap:10px; margin-bottom:8px;">
           <div><input type="text" placeholder="תיאור סוג בעלות" title="" onchange="updateFullMarketValueCalculation(); syncAdjustmentToHelper(this, 'ownership_type'); this.title = this.value;" oninput="this.title = this.value;" /></div>
-          <div><select onchange="updateFullMarketValueCalculation(); syncAdjustmentToHelper(this, 'ownership_type');" title="">
+          <div><select onchange="updateFullMarketValueCalculation(); syncAdjustmentToHelper(this, 'ownership_type'); const row = this.closest('.adjustment-row'); const inputs = row.querySelectorAll('input, select'); formatAdjustmentDisplay(row, this.value, Math.abs(parseFloat(inputs[2].value) || 0), safeParseAmount(inputs[3].value));" title="">
             <option value="plus">תוספת (+)</option>
             <option value="minus">הפחתה (-)</option>
           </select></div>
@@ -8776,7 +8783,7 @@
       const newRow = `
         <div id="${rowId}" class="adjustment-row" data-source="manual" style="display:grid; grid-template-columns:2fr 1fr 1fr 1fr 80px; gap:10px; margin-bottom:8px;">
           <div><input type="text" placeholder="תיאור מספר בעלים" title="" onchange="updateFullMarketValueCalculation(); syncAdjustmentToHelper(this, 'ownership_history'); this.title = this.value;" oninput="this.title = this.value;" /></div>
-          <div><select onchange="updateFullMarketValueCalculation(); syncAdjustmentToHelper(this, 'ownership_history');" title="">
+          <div><select onchange="updateFullMarketValueCalculation(); syncAdjustmentToHelper(this, 'ownership_history'); const row = this.closest('.adjustment-row'); const inputs = row.querySelectorAll('input, select'); formatAdjustmentDisplay(row, this.value, Math.abs(parseFloat(inputs[2].value) || 0), safeParseAmount(inputs[3].value));" title="">
             <option value="plus">תוספת (+)</option>
             <option value="minus">הפחתה (-)</option>
           </select></div>
