@@ -6982,11 +6982,30 @@
               adjustmentData.amount = -Math.abs(adjustmentData.amount);
             }
             
-            // Add cumulative tracking for our three categories
-            if (category === 'mileage' || category === 'ownership_type' || category === 'ownership_history') {
+            // Add cumulative tracking for all adjustment categories
+            if (category === 'mileage' || category === 'ownership_type' || category === 'ownership_history' || 
+                category === 'features' || category === 'registration') {
               // Find cumulative display element
               let cumulativeId = '';
-              if (category === 'mileage') cumulativeId = 'mileageCumulative';
+              
+              // For features and registration, determine if it's gross or full market section
+              if (category === 'features') {
+                // Check if it's gross section or full market section based on container
+                if (containerId === 'featuresAdjustmentsList') {
+                  cumulativeId = 'grossFeaturesCumulative'; // Gross section
+                } else {
+                  cumulativeId = 'featuresCumulative'; // Full market section
+                }
+              }
+              else if (category === 'registration') {
+                // Check if it's gross section or full market section based on container
+                if (containerId === 'registrationAdjustmentsList') {
+                  cumulativeId = 'grossRegistrationCumulative'; // Gross section
+                } else {
+                  cumulativeId = 'registrationCumulative'; // Full market section
+                }
+              }
+              else if (category === 'mileage') cumulativeId = 'mileageCumulative';
               else if (category === 'ownership_type') cumulativeId = 'ownershipCumulative';
               else if (category === 'ownership_history') cumulativeId = 'ownersCumulative';
               
@@ -7016,8 +7035,9 @@
         if (helper.final_report.adjustments[category].length > 0) {
           helper.valuation.adjustments[category] = helper.final_report.adjustments[category][0];
           
-          // Ensure cumulative is also copied to valuation for our three categories
-          if ((category === 'mileage' || category === 'ownership_type' || category === 'ownership_history') && 
+          // Ensure cumulative is also copied to valuation for all categories with cumulative tracking
+          if ((category === 'mileage' || category === 'ownership_type' || category === 'ownership_history' || 
+               category === 'features' || category === 'registration') && 
               helper.final_report.adjustments[category][0].cumulative !== undefined) {
             helper.valuation.adjustments[category].cumulative = helper.final_report.adjustments[category][0].cumulative;
           }
