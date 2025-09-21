@@ -164,10 +164,10 @@ function calculateFees() {
     office_fee: officeFee
   };
 
-  // Use MathEngine for consistent calculations
-  const subtotal = MathEngine.calculateFeesSubtotal(fees);
-  const vatAmount = MathEngine.calculateVatAmount(subtotal, vatRate);
-  const total = MathEngine.round(subtotal + vatAmount);
+  // Use MathEngine for consistent calculations with rounding
+  const subtotal = Math.round(MathEngine.calculateFeesSubtotal(fees));
+  const vatAmount = Math.round(MathEngine.calculateVatAmount(subtotal, vatRate));
+  const total = Math.round(subtotal + vatAmount);
 
   // Ensure calculations subsection exists before setting properties
   if (!helper.financials.fees.calculations) {
