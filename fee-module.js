@@ -133,6 +133,10 @@ function init() {
   });
 
   $('saveBtn').addEventListener('click', saveFees);
+  
+  // Calculate fees on page load to populate VAT fields
+  calculateFees();
+  console.log('💰 Initial fee calculation completed on page load');
 }
 
 function calculateFees() {
