@@ -6750,20 +6750,20 @@
               timestamp: new Date().toISOString()
             };
             
-            // Apply sign based on type (CRITICAL FOR MINUS SIGNS)
-            if (adjustmentData.type === 'minus') {
-              adjustmentData.percentage = -Math.abs(adjustmentData.percentage);
-              adjustmentData.percent = -Math.abs(adjustmentData.percent);
-              adjustmentData.amount = -Math.abs(adjustmentData.amount);
-            }
-            
-            // Calculate amount from percentage if needed
+            // Calculate amount from percentage if needed (BEFORE applying signs)
             if (adjustmentData.percentage && !adjustmentData.amount) {
               const baseValue = parseFloat(helper.estimate?.market_value_base) || 0;
               if (baseValue > 0) {
                 const amount = Math.round((baseValue * Math.abs(adjustmentData.percentage)) / 100);
-                adjustmentData.amount = adjustmentData.type === 'minus' ? -amount : amount;
+                adjustmentData.amount = amount; // Set as positive first
               }
+            }
+            
+            // Apply sign based on type (CRITICAL FOR MINUS SIGNS) - AFTER amount calculation
+            if (adjustmentData.type === 'minus') {
+              adjustmentData.percentage = -Math.abs(adjustmentData.percentage);
+              adjustmentData.percent = -Math.abs(adjustmentData.percent);
+              adjustmentData.amount = -Math.abs(adjustmentData.amount);
             }
             
             // ONLY write to final_report - estimate should remain READ-ONLY
