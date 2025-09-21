@@ -881,6 +881,11 @@ function transformHelperDataForTemplate(rawHelper) {
         differential: rawHelper.final_report?.differential || {}
       };
       console.log('🔍 Final report adjustments being passed to template:', finalReportData.adjustments);
+      console.log('🔍 Features array:', finalReportData.adjustments.features);
+      console.log('🔍 Registration array:', finalReportData.adjustments.registration);
+      console.log('🔍 Mileage array:', finalReportData.adjustments.mileage);
+      console.log('🔍 Is features an array?', Array.isArray(finalReportData.adjustments.features));
+      console.log('🔍 Raw helper final_report:', rawHelper.final_report);
       return finalReportData;
     })(),
     
