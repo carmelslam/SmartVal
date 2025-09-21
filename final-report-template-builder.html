@@ -855,8 +855,7 @@
       <table class="car-details-table">
         <tr><th style="font-weight: bold;">מרכיב</th><th>פרטי ההתאמה</th><th>אחוז</th><th>ערך</th><th>מחיר מצטבר</th></tr>
         <tr><td><strong>ערך הרכב ע"פ מחירון כולל מע"מ</strong></td><td>-</td><td>-</td><td>{{helper.valuation.base_price}}</td><td>{{helper.valuation.base_price}}</td></tr>
-        {{#each helper.final_report.adjustments.features}}<tr><td><strong>מאפיינים</strong></td><td>{{this.value}}</td><td>{{this.percent}}</td><td>{{this.amount_display}}</td><td>{{money this.cumulative}}</td></tr>{{/each}}
-        {{#each helper.final_report.adjustments.registration}}<tr><td><strong>עליה לכביש</strong></td><td>{{this.value}}</td><td>{{this.percent}}</td><td>{{this.amount_display}}</td><td>{{money this.cumulative}}</td></tr>{{/each}}
+        {{{grossDamageAdjustments}}}
         <tr><td><strong>ערך הרכב לנזק גולמי כולל מע"מ</strong></td><td><strong>-</strong></td><td><strong>-</strong></td><td><strong>-</strong></td><td><strong>{{helper.calculations.vehicle_value_gross}} ₪</strong></td></tr>
       </table>
     </div>
@@ -882,12 +881,7 @@
       <table class="car-details-table">
         <tr><th style="font-weight: bold;">מרכיב</th><th>פרטי ההתאמה</th><th>התאמה</th><th>ערך</th><th>מחיר מצטבר</th></tr>
         <tr><td><strong>ערך הרכב ע"פ מחירון כולל מע"מ</strong></td><td>-</td><td>-</td><td>{{helper.valuation.base_price}}</td><td>{{helper.valuation.base_price}}</td></tr>
-        {{#each helper.final_report.adjustments.features}}<tr><td><strong>מאפיינים</strong></td><td>{{this.value}}</td><td>{{this.percent}}</td><td>{{this.amount_display}}</td><td>{{money this.cumulative}}</td></tr>{{/each}}
-        {{#each helper.final_report.adjustments.registration}}<tr><td><strong>עליה לכביש</strong></td><td>{{this.value}}</td><td>{{this.percent}}</td><td>{{this.amount_display}}</td><td>{{money this.cumulative}}</td></tr>{{/each}}
-        {{#each helper.final_report.adjustments.mileage}}<tr><td><strong>מס' ק"מ</strong></td><td>{{this.value}}</td><td>{{this.percent}}</td><td>{{this.amount_display}}</td><td>{{money this.cumulative}}</td></tr>{{/each}}
-        {{#each helper.final_report.adjustments.ownership_type}}<tr><td><strong>סוג בעלות</strong></td><td>{{this.value}}</td><td>{{this.percent}}</td><td>{{this.amount_display}}</td><td>{{money this.cumulative}}</td></tr>{{/each}}
-        {{#each helper.final_report.adjustments.ownership_history}}<tr><td><strong>מס' בעלים</strong></td><td>{{this.value}}</td><td>{{this.percent}}</td><td>{{this.amount_display}}</td><td>{{money this.cumulative}}</td></tr>{{/each}}
-        {{#each helper.final_report.adjustments.additional}}<tr><td><strong>התאמות נוספות</strong></td><td>{{this.value}}</td><td>{{this.percent}}</td><td>{{this.amount_display}}</td><td>{{money this.cumulative}}</td></tr>{{/each}}
+        {{{marketValueAdjustments}}}
         <tr><td><strong>ערך השוק של הרכב כולל מע"מ</strong></td><td><strong>-</strong></td><td><strong>-</strong></td><td><strong>-</strong></td><td><strong>{{helper.calculations.full_market_value}} ₪</strong></td></tr>
       </table>
     </div>
@@ -1212,6 +1206,95 @@
     if (typeof Handlebars !== 'undefined') {
       Handlebars.registerHelper('round', function(value) {
         return Math.round(parseFloat(value) || 0);
+      });
+    }
+    
+    // Helper function to format currency
+    function formatCurrency(amount) {
+      const num = parseFloat(amount) || 0;
+      return `₪${Math.abs(num).toLocaleString()}`;
+    }
+    
+    // Generate Gross Damage table rows
+    function generateGrossDamageAdjustments(helper) {
+      const adjustmentRows = [];
+      const categoryOrder = ['features', 'registration'];
+      const categoryLabels = {
+        'features': 'מאפיינים',
+        'registration': 'עליה לכביש'
+      };
+      
+      categoryOrder.forEach(category => {
+        const adjustments = helper.final_report?.adjustments?.[category] || [];
+        
+        adjustments.forEach(adjustment => {
+          const percentDisplay = adjustment.percent ? `${adjustment.percent}%` : '-';
+          const amountDisplay = adjustment.amount_display || '-';
+          const cumulativeDisplay = adjustment.cumulative ? formatCurrency(adjustment.cumulative) : '-';
+          const categoryLabel = categoryLabels[category] || category;
+          const specificValue = adjustment.value || '-';
+          
+          adjustmentRows.push(`
+            <tr>
+              <td><strong>${categoryLabel}</strong></td>
+              <td>${specificValue}</td>
+              <td>${percentDisplay}</td>
+              <td>${amountDisplay}</td>
+              <td>${cumulativeDisplay}</td>
+            </tr>
+          `);
+        });
+      });
+      
+      return adjustmentRows.join('');
+    }
+    
+    // Generate Market Value table rows  
+    function generateMarketValueAdjustments(helper) {
+      const adjustmentRows = [];
+      const categoryOrder = ['features', 'registration', 'mileage', 'ownership_type', 'ownership_history', 'additional'];
+      const categoryLabels = {
+        'features': 'מאפיינים',
+        'registration': 'עליה לכביש', 
+        'mileage': 'מס\' ק"מ',
+        'ownership_type': 'סוג בעלות',
+        'ownership_history': 'מס\' בעלים',
+        'additional': 'התאמות נוספות'
+      };
+      
+      categoryOrder.forEach(category => {
+        const adjustments = helper.final_report?.adjustments?.[category] || [];
+        
+        adjustments.forEach(adjustment => {
+          const percentDisplay = adjustment.percent ? `${adjustment.percent}%` : '-';
+          const amountDisplay = adjustment.amount_display || '-';
+          const cumulativeDisplay = adjustment.cumulative ? formatCurrency(adjustment.cumulative) : '-';
+          const categoryLabel = categoryLabels[category] || category;
+          const specificValue = adjustment.value || '-';
+          
+          adjustmentRows.push(`
+            <tr>
+              <td><strong>${categoryLabel}</strong></td>
+              <td>${specificValue}</td>
+              <td>${percentDisplay}</td>
+              <td>${amountDisplay}</td>
+              <td>${cumulativeDisplay}</td>
+            </tr>
+          `);
+        });
+      });
+      
+      return adjustmentRows.join('');
+    }
+    
+    // Register Handlebars helpers for dynamic table generation
+    if (typeof Handlebars !== 'undefined') {
+      Handlebars.registerHelper('grossDamageAdjustments', function() {
+        return new Handlebars.SafeString(generateGrossDamageAdjustments(this));
+      });
+      
+      Handlebars.registerHelper('marketValueAdjustments', function() {
+        return new Handlebars.SafeString(generateMarketValueAdjustments(this));
       });
     }
     
