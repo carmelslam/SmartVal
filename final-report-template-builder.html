@@ -1426,12 +1426,33 @@
         // After iframe content loads, populate the tables within the iframe
         setTimeout(() => {
           const iframeWindow = iframe.contentWindow;
-          if (iframeWindow && iframeWindow.populateNewAdjustmentsTable) {
-            iframeWindow.populateNewAdjustmentsTable();
-            iframeWindow.populateGrossDamageTable();
-            iframeWindow.formatDamagePercent();
-          }
-        }, 1000);
+          const iframeDocument = iframe.contentDocument;
+          
+          // Ensure sessionStorage data is available in iframe
+          const helperData = sessionStorage.getItem('helper');
+          const metaData = sessionStorage.getItem('meta');
+          if (helperData) iframeWindow.sessionStorage.setItem('helper', helperData);
+          if (metaData) iframeWindow.sessionStorage.setItem('meta', metaData);
+          
+          // Multiple retry attempts to ensure functions are loaded
+          let attempts = 0;
+          const populateTables = () => {
+            attempts++;
+            if (iframeWindow && iframeWindow.populateNewAdjustmentsTable) {
+              console.log('✅ Populating iframe tables...');
+              iframeWindow.populateNewAdjustmentsTable();
+              iframeWindow.populateGrossDamageTable();
+              iframeWindow.formatDamagePercent();
+            } else if (attempts < 10) {
+              console.log(`⏳ Waiting for iframe functions... attempt ${attempts}`);
+              setTimeout(populateTables, 500);
+            } else {
+              console.log('❌ Failed to find iframe functions after 10 attempts');
+            }
+          };
+          
+          populateTables();
+        }, 2000);
       };
       
       // Assemble overlay
