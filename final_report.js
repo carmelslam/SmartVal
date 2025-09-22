@@ -749,6 +749,9 @@ function transformHelperDataForTemplate(rawHelper) {
       centers: centersArray  // Replace empty centers with proper array
     },
     
+    // CRITICAL FIX: Include final_report at the top level for template access
+    final_report: rawHelper.final_report,
+    
     // Add transformed data as additional properties
     vehicle: {
       model: fieldMappings['helper.vehicle.model'],
