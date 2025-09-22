@@ -16689,67 +16689,51 @@
         // Show the modal
         previewModal.style.display = 'block';
         
-        // First, fetch and populate the template content with current data
-        console.log('📥 Fetching template content...');
-        fetch('final-report-template-builder.html')
-          .then(response => response.text())
-          .then(templateHtml => {
-            console.log('📄 Template fetched, creating temporary container...');
-            
-            // Create temporary container to populate tables
-            const tempContainer = document.createElement('div');
-            tempContainer.innerHTML = templateHtml;
-            tempContainer.style.position = 'absolute';
-            tempContainer.style.left = '-9999px';
-            tempContainer.style.visibility = 'hidden';
-            document.body.appendChild(tempContainer);
-            
-            // Wait for template to initialize then populate tables
-            setTimeout(() => {
-              try {
-                // Execute the template's JavaScript to populate tables
-                const scripts = tempContainer.querySelectorAll('script');
-                scripts.forEach(script => {
-                  if (script.innerHTML.includes('populateNewAdjustmentsTable') || 
-                      script.innerHTML.includes('populateGrossDamageTable') ||
-                      script.innerHTML.includes('formatDamagePercent')) {
-                    eval(script.innerHTML);
-                  }
-                });
-                
-                // Wait for population then get the populated HTML
-                setTimeout(() => {
-                  const populatedHtml = tempContainer.innerHTML
-                    .replace(/<script[\s\S]*?<\/script>/g, ''); // Remove scripts from iframe
-                  
-                  // Clean up temp container
-                  document.body.removeChild(tempContainer);
-                  
-                  // Load populated content into iframe
-                  const iframe = document.getElementById('reportPreviewFrame');
-                  iframe.onload = () => {
-                    iframe.contentDocument.open();
-                    iframe.contentDocument.write(populatedHtml);
-                    iframe.contentDocument.close();
-                    console.log('✅ Preview loaded with populated tables');
-                  };
-                  iframe.src = 'about:blank';
-                }, 2000);
-                
-              } catch (e) {
-                console.error('Error populating template:', e);
-                // Fallback to direct loading
-                const iframe = document.getElementById('reportPreviewFrame');
-                iframe.src = 'final-report-template-builder.html';
-              }
-            }, 1000);
-          })
-          .catch(error => {
-            console.error('Error fetching template:', error);
-            // Fallback to direct loading
-            const iframe = document.getElementById('reportPreviewFrame');
-            iframe.src = 'final-report-template-builder.html';
-          });
+        // Load the report template in the iframe and populate tables after load
+        const iframe = document.getElementById('reportPreviewFrame');
+        
+        // Use the exact same approach that works in template-builder
+        iframe.onload = function() {
+          console.log('📄 Template iframe loaded, waiting for initialization...');
+          
+          // Wait for the template to fully initialize
+          setTimeout(() => {
+            try {
+              const iframeWindow = iframe.contentWindow;
+              const iframeDocument = iframe.contentDocument;
+              
+              // Ensure sessionStorage data is available in iframe
+              const helperData = sessionStorage.getItem('helper');
+              const metaData = sessionStorage.getItem('meta');
+              if (helperData) iframeWindow.sessionStorage.setItem('helper', helperData);
+              if (metaData) iframeWindow.sessionStorage.setItem('meta', metaData);
+              
+              // Multiple retry attempts to ensure functions are loaded and execute
+              let attempts = 0;
+              const populateTables = () => {
+                attempts++;
+                if (iframeWindow && iframeWindow.populateNewAdjustmentsTable) {
+                  console.log('✅ Populating iframe tables...');
+                  iframeWindow.populateNewAdjustmentsTable();
+                  iframeWindow.populateGrossDamageTable();
+                  iframeWindow.formatDamagePercent();
+                  console.log('✅ Preview tables populated successfully');
+                } else if (attempts < 15) {
+                  console.log(`⏳ Waiting for iframe functions... attempt ${attempts}`);
+                  setTimeout(populateTables, 500);
+                } else {
+                  console.log('❌ Failed to find iframe functions after 15 attempts');
+                }
+              };
+              
+              populateTables();
+            } catch (e) {
+              console.error('Error populating preview tables:', e);
+            }
+          }, 3000); // Longer initial wait
+        };
+        
+        iframe.src = 'final-report-template-builder.html';
         
         // Remove preview flag after a short delay
         setTimeout(() => {
