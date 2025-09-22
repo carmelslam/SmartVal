@@ -1406,8 +1406,27 @@
       `;
       closeBtn.onclick = () => {
         document.body.removeChild(overlay);
-        // Refresh the template to show any changes made in the builder
-        location.reload();
+        // Refresh the tables to show any changes made in the builder without reloading
+        setTimeout(() => {
+          populateNewAdjustmentsTable();
+          populateGrossDamageTable();
+          formatDamagePercent();
+          
+          // Also refresh any Handlebars-rendered content that might have changed
+          try {
+            const helperData = JSON.parse(sessionStorage.getItem('helper') || '{}');
+            const metaData = JSON.parse(sessionStorage.getItem('meta') || '{}');
+            window.helper = helperData;
+            window.meta = metaData;
+            
+            // Re-render template with updated data
+            if (window.renderTemplate) {
+              window.renderTemplate();
+            }
+          } catch (e) {
+            console.log('Could not refresh template data:', e);
+          }
+        }, 100);
       };
       
       header.appendChild(title);
