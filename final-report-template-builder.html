@@ -1003,11 +1003,7 @@
         </tr>
         <tr>
           <td><strong>תוספות והורדות (מידע בלבד)</strong></td>
-          <td>{{money helper.final_report.adjustments_value}}</td>
-        </tr>
-        <tr>
-          <td><strong>סוג הרכב:</strong> {{helper.vehicle.ownership_type}}</td>
-          <td><strong>סוג הרכב:</strong> {{helper.vehicle.ownership_type}}</td>
+          <td id="adjustments-summary-cell">{{money helper.final_report.adjustments_value}}</td>
         </tr>
         <tr>
           <td><strong>סה״כ נכלל בחוות הדעת</strong></td>
@@ -1834,11 +1830,57 @@
         console.log('✅ Damage percent formatted to 2 decimals');
       }
     }
+
+    // Update adjustments summary with actual adjustment values
+    function updateAdjustmentsSummary() {
+      const cell = document.getElementById('adjustments-summary-cell');
+      if (!cell) return;
+
+      let adjustmentsList = [];
+      
+      // Get adjustments data
+      let adjustmentsData = null;
+      if (window.helper && window.helper.final_report && window.helper.final_report.adjustments) {
+        adjustmentsData = window.helper.final_report.adjustments;
+      } else {
+        try {
+          const helperData = JSON.parse(sessionStorage.getItem('helper') || '{}');
+          if (helperData.final_report && helperData.final_report.adjustments) {
+            adjustmentsData = helperData.final_report.adjustments;
+          }
+        } catch (e) {
+          console.error('Error parsing sessionStorage for adjustments summary:', e);
+        }
+      }
+
+      if (adjustmentsData) {
+        // Collect all adjustment values
+        ['features', 'registration', 'mileage', 'ownership_type', 'ownership_history', 'additional'].forEach(category => {
+          if (adjustmentsData[category] && Array.isArray(adjustmentsData[category])) {
+            adjustmentsData[category].forEach(item => {
+              if (item.value) {
+                adjustmentsList.push(item.value);
+              }
+            });
+          }
+        });
+      }
+
+      // Update cell content
+      if (adjustmentsList.length > 0) {
+        cell.textContent = adjustmentsList.join(', ');
+        console.log('✅ Adjustments summary updated:', adjustmentsList);
+      } else {
+        cell.textContent = 'אין תוספות או הורדות';
+        console.log('⚠️ No adjustments found for summary');
+      }
+    }
     
     // Run after tables are populated
     setTimeout(() => {
       formatAllNumbers();
       formatDamagePercent();
+      updateAdjustmentsSummary();
     }, 4000);
     
     // Also run when data is updated
@@ -1849,6 +1891,7 @@
         setTimeout(() => {
           formatAllNumbers();
           formatDamagePercent();
+          updateAdjustmentsSummary();
         }, 500);
       }
     };
