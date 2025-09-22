@@ -1604,14 +1604,47 @@
       console.log('✅ Table population completed');
     }
 
+    // Function to check if data is ready and populate tables
+    function checkAndPopulateTables() {
+      // Check if data exists
+      const hasWindowHelper = window.helper && window.helper.final_report && window.helper.final_report.adjustments;
+      const hasSessionHelper = sessionStorage.getItem('helper');
+      
+      if (hasWindowHelper || hasSessionHelper) {
+        console.log('✅ Data found, populating tables');
+        populateNewAdjustmentsTable();
+        return true;
+      }
+      return false;
+    }
+
+    // Try immediately
+    checkAndPopulateTables();
+
     // Run when page loads
     document.addEventListener('DOMContentLoaded', function() {
-      console.log('🚀 DOM loaded, populating new table...');
-      setTimeout(populateNewAdjustmentsTable, 1000); // Give time for data to load
+      console.log('🚀 DOM loaded, checking for data...');
+      if (!checkAndPopulateTables()) {
+        // If data not ready, keep trying
+        setTimeout(checkAndPopulateTables, 500);
+        setTimeout(checkAndPopulateTables, 1000);
+        setTimeout(checkAndPopulateTables, 2000);
+        setTimeout(checkAndPopulateTables, 3000);
+      }
     });
 
-    // Also run after a delay to catch late-loading data
-    setTimeout(populateNewAdjustmentsTable, 3000);
+    // Watch for data changes
+    const originalSetItem = sessionStorage.setItem;
+    sessionStorage.setItem = function(key, value) {
+      originalSetItem.apply(this, arguments);
+      if (key === 'helper') {
+        console.log('📊 Helper data updated, repopulating both tables');
+        setTimeout(() => {
+          checkAndPopulateTables();
+          checkAndPopulateGrossTable();
+        }, 100);
+      }
+    };
 
     function populateGrossDamageTable() {
       console.log('🔥 Starting gross damage table population');
@@ -1704,14 +1737,34 @@
       console.log('✅ Gross damage table population completed');
     }
 
+    // Function to check if data is ready and populate gross damage table
+    function checkAndPopulateGrossTable() {
+      // Check if data exists
+      const hasWindowHelper = window.helper && window.helper.final_report && window.helper.final_report.adjustments;
+      const hasSessionHelper = sessionStorage.getItem('helper');
+      
+      if (hasWindowHelper || hasSessionHelper) {
+        console.log('✅ Data found, populating gross damage table');
+        populateGrossDamageTable();
+        return true;
+      }
+      return false;
+    }
+
+    // Try immediately
+    checkAndPopulateGrossTable();
+
     // Run gross damage table when page loads
     document.addEventListener('DOMContentLoaded', function() {
-      console.log('🚀 DOM loaded, populating gross damage table...');
-      setTimeout(populateGrossDamageTable, 1000);
+      console.log('🚀 DOM loaded, checking for gross damage data...');
+      if (!checkAndPopulateGrossTable()) {
+        // If data not ready, keep trying
+        setTimeout(checkAndPopulateGrossTable, 500);
+        setTimeout(checkAndPopulateGrossTable, 1000);
+        setTimeout(checkAndPopulateGrossTable, 2000);
+        setTimeout(checkAndPopulateGrossTable, 3000);
+      }
     });
-
-    // Also run after a delay to catch late-loading data
-    setTimeout(populateGrossDamageTable, 3000);
   </script>
 
   </div>
