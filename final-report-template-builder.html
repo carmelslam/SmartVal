@@ -879,7 +879,7 @@
         <tr><th>תיאור</th><th>ערך</th></tr>
         <tr><td><strong>סה"כ הנזק כולל מע"מ</strong></td><td>{{helper.claims_data.total_claim}}</td></tr>
         <tr><td><strong>ערך הרכב לנזק גולמי כולל מע"מ</strong></td><td>{{money helper.calculations.vehicle_value_gross}}</td></tr>
-        <tr><td><strong>אחוז הנזק הגולמי</strong></td><td><strong>{{percent helper.calculations.damage_percent}}</strong></td></tr>
+        <tr><td><strong>אחוז הנזק הגולמי</strong></td><td><strong id="damage-percent-cell">{{percent helper.calculations.damage_percent}}</strong></td></tr>
       </table>
     </div>
   </div>
@@ -1825,15 +1825,31 @@
       console.log('✅ Number formatting completed');
     }
     
+    // Format damage percentage to 2 decimal places
+    function formatDamagePercent() {
+      const cell = document.getElementById('damage-percent-cell');
+      if (cell && window.helper?.calculations?.damage_percent) {
+        const percent = parseFloat(window.helper.calculations.damage_percent);
+        cell.textContent = percent.toFixed(2) + '%';
+        console.log('✅ Damage percent formatted to 2 decimals');
+      }
+    }
+    
     // Run after tables are populated
-    setTimeout(formatAllNumbers, 4000);
+    setTimeout(() => {
+      formatAllNumbers();
+      formatDamagePercent();
+    }, 4000);
     
     // Also run when data is updated
     const originalSessionSetter = sessionStorage.setItem;
     sessionStorage.setItem = function(key, value) {
       originalSessionSetter.apply(this, arguments);
       if (key === 'helper') {
-        setTimeout(formatAllNumbers, 500);
+        setTimeout(() => {
+          formatAllNumbers();
+          formatDamagePercent();
+        }, 500);
       }
     };
   </script>
