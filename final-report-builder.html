@@ -7075,18 +7075,24 @@
         // FINAL REPORT PATTERN: Rebuild entire category array from ALL visible UI rows
         // DO NOT WRITE TO estimate.adjustments - it should be READ-ONLY!
         const allRows = Array.from(container.children);
+        
+        // PRESERVE EXISTING DATA: Don't clear the entire array, preserve entries beyond UI rows
+        const existingAdjustments = helper.final_report.adjustments[category] || [];
         helper.final_report.adjustments[category] = [];
         
         allRows.forEach((row, index) => {
           const inputs = row.querySelectorAll('input, select');
           if (inputs.length >= 4) {
+            // Start with existing data if available
+            const existingData = existingAdjustments[index] || {};
+            
             const adjustmentData = {
               value: inputs[0].value || '',
               type: inputs[1].value || 'plus',
               percentage: parseFloat(inputs[2].value) || 0,
               percent: parseFloat(inputs[2].value) || 0, // Backward compatibility
               amount_display: inputs[3].value || '',
-              amount: safeParseAmount(inputs[3].value),
+              amount: safeParseAmount(inputs[3].value) || existingData.amount || 0, // PRESERVE existing amount if UI is empty
               source: 'manual',
               timestamp: new Date().toISOString()
             };
