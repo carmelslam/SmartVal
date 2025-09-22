@@ -1767,6 +1767,69 @@
     });
   </script>
 
+  <!-- CENTRALIZED NUMBER FORMATTING -->
+  <script>
+    function formatAllNumbers() {
+      console.log('🔢 Formatting all numbers with thousands separators');
+      
+      // Get all text nodes in the document
+      const walker = document.createTreeWalker(
+        document.body,
+        NodeFilter.SHOW_TEXT,
+        null,
+        false
+      );
+      
+      const textNodes = [];
+      let node;
+      while (node = walker.nextNode()) {
+        textNodes.push(node);
+      }
+      
+      textNodes.forEach(textNode => {
+        // Skip script and style elements
+        if (textNode.parentElement.tagName === 'SCRIPT' || 
+            textNode.parentElement.tagName === 'STYLE') {
+          return;
+        }
+        
+        let text = textNode.textContent;
+        
+        // Format numbers with ₪ symbol
+        text = text.replace(/₪\s*(\d{4,})/g, (match, number) => {
+          return `₪ ${parseInt(number).toLocaleString()}`;
+        });
+        
+        // Format standalone numbers (4+ digits)
+        text = text.replace(/\b(\d{4,})\b/g, (match, number) => {
+          // Don't format if it's already formatted or part of a percentage
+          if (match.includes(',') || textNode.textContent.includes(match + '%')) {
+            return match;
+          }
+          return parseInt(number).toLocaleString();
+        });
+        
+        if (text !== textNode.textContent) {
+          textNode.textContent = text;
+        }
+      });
+      
+      console.log('✅ Number formatting completed');
+    }
+    
+    // Run after tables are populated
+    setTimeout(formatAllNumbers, 4000);
+    
+    // Also run when data is updated
+    const originalSessionSetter = sessionStorage.setItem;
+    sessionStorage.setItem = function(key, value) {
+      originalSessionSetter.apply(this, arguments);
+      if (key === 'helper') {
+        setTimeout(formatAllNumbers, 500);
+      }
+    };
+  </script>
+
   </div>
 </body>
 </html>
