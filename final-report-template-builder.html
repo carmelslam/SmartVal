@@ -1347,7 +1347,95 @@
     function editFinalReport() {
       const caseId = window.helper?.meta?.case_id || new URLSearchParams(window.location.search).get('case_id');
       const builderUrl = `final-report-builder.html?case_id=${caseId}`;
-      window.open(builderUrl, '_blank');
+      
+      // Create PiP overlay for the builder
+      const overlay = document.createElement('div');
+      overlay.id = 'builder-overlay';
+      overlay.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0,0,0,0.8);
+        z-index: 10000;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      `;
+      
+      // Create iframe container
+      const iframeContainer = document.createElement('div');
+      iframeContainer.style.cssText = `
+        width: 95%;
+        height: 95%;
+        background: white;
+        border-radius: 10px;
+        position: relative;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        display: flex;
+        flex-direction: column;
+      `;
+      
+      // Create header with close button and save indicator
+      const header = document.createElement('div');
+      header.style.cssText = `
+        background: #6f42c1;
+        color: white;
+        padding: 10px 15px;
+        border-radius: 10px 10px 0 0;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-weight: bold;
+      `;
+      
+      const title = document.createElement('div');
+      title.textContent = '✏️ עריכת נתונים - Final Report Builder';
+      
+      const closeBtn = document.createElement('button');
+      closeBtn.innerHTML = '✕ סגור';
+      closeBtn.style.cssText = `
+        background: rgba(255,255,255,0.2);
+        color: white;
+        border: none;
+        border-radius: 5px;
+        padding: 5px 10px;
+        cursor: pointer;
+        font-weight: bold;
+      `;
+      closeBtn.onclick = () => {
+        document.body.removeChild(overlay);
+        // Refresh the template to show any changes made in the builder
+        location.reload();
+      };
+      
+      header.appendChild(title);
+      header.appendChild(closeBtn);
+      
+      // Create iframe for the builder
+      const iframe = document.createElement('iframe');
+      iframe.src = builderUrl;
+      iframe.style.cssText = `
+        width: 100%;
+        height: 100%;
+        border: none;
+        border-radius: 0 0 10px 10px;
+        flex: 1;
+      `;
+      
+      // Assemble overlay
+      iframeContainer.appendChild(header);
+      iframeContainer.appendChild(iframe);
+      overlay.appendChild(iframeContainer);
+      document.body.appendChild(overlay);
+      
+      // Close on overlay click (but not on iframe)
+      overlay.onclick = (e) => {
+        if (e.target === overlay) {
+          closeBtn.click();
+        }
+      };
     }
     
     function viewPreview() {
