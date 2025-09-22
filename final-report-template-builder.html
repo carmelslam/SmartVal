@@ -1766,18 +1766,40 @@
     // Format damage percentage to 2 decimal places
     function formatDamagePercent() {
       const cell = document.getElementById('damage-percent-cell');
-      if (cell && window.helper?.calculations?.damage_percent) {
-        const percent = parseFloat(window.helper.calculations.damage_percent);
-        cell.textContent = percent.toFixed(2) + '%';
-        console.log('✅ Damage percent formatted to 2 decimals');
+      if (cell) {
+        // Try to get percent from different sources
+        let percent = null;
+        if (window.helper?.calculations?.damage_percent) {
+          percent = parseFloat(window.helper.calculations.damage_percent);
+        } else {
+          try {
+            const helperData = JSON.parse(sessionStorage.getItem('helper') || '{}');
+            if (helperData.calculations?.damage_percent) {
+              percent = parseFloat(helperData.calculations.damage_percent);
+            }
+          } catch (e) {
+            console.error('Error parsing sessionStorage for damage percent:', e);
+          }
+        }
+        
+        if (percent !== null && !isNaN(percent)) {
+          cell.textContent = percent.toFixed(2) + '%';
+          console.log('✅ Damage percent formatted to 2 decimals:', percent.toFixed(2) + '%');
+        } else {
+          console.log('⚠️ Could not find damage percent value');
+        }
+      } else {
+        console.log('⚠️ Damage percent cell not found');
       }
     }
 
     
-    // Run after tables are populated
-    setTimeout(() => {
-      formatDamagePercent();
-    }, 4000);
+    // Run after tables are populated multiple times to catch the data
+    setTimeout(formatDamagePercent, 1000);
+    setTimeout(formatDamagePercent, 2000);
+    setTimeout(formatDamagePercent, 3000);
+    setTimeout(formatDamagePercent, 4000);
+    setTimeout(formatDamagePercent, 5000);
     
     // Also run when data is updated
     const originalSessionSetter = sessionStorage.setItem;
