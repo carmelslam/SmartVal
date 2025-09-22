@@ -1269,8 +1269,8 @@ function injectReportHTML() {
         
         // Ensure helper data is fully available to template
         const renderData = {
-          ...templateData,
-          helper: window.helper || sessionStorage.getItem('helper')
+          ...templateData
+          // DO NOT OVERRIDE helper - templateData already has the correctly transformed helper!
         };
         
         console.log('🔧 Rendering template with data:', renderData);
