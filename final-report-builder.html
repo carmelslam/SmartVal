@@ -2800,6 +2800,9 @@
         // Load Total Value Section adjustments from final_report.adjustments
         loadTotalValueSectionAdjustments(helper);
         
+        // Set flag to prevent sync during page load before calculations
+        window.pageLoadInProgress = true;
+        
         // Trigger calculations after data is loaded
         setTimeout(() => {
           updateGrossMarketValueCalculation();
@@ -9179,7 +9182,7 @@
             <option value="minus">הפחתה (-)</option>
           </select></div>
           <div><input type="text" placeholder="אחוז" title="" oninput="calculateAdjustmentValueSimple(this); this.title = this.value;" onchange="updateFullMarketValueCalculation(); syncAdjustmentToHelper(this, 'mileage'); this.title = this.value;" /></div>
-          <div><input type="text" placeholder="₪" title="" onchange="updateFullMarketValueCalculation(); syncAdjustmentToHelper(this, 'mileage'); this.title = this.value;" oninput="this.title = this.value;" /></div>
+          <div><input type="text" placeholder="₪" title="" onchange="updateFullMarketValueCalculation(); syncAdjustmentToHelper(this, 'mileage'); saveAdjustmentAmount('mileage', safeParseAmount(this.value), 0); this.title = this.value;" oninput="this.title = this.value;" /></div>
           <div><button class="btn remove" onclick="removeAdjustmentRow('${rowId}')">מחק</button></div>
         </div>
       `;
@@ -9201,7 +9204,7 @@
             <option value="minus">הפחתה (-)</option>
           </select></div>
           <div><input type="text" placeholder="אחוז" title="" oninput="calculateAdjustmentValueSimple(this); this.title = this.value;" onchange="updateFullMarketValueCalculation(); syncAdjustmentToHelper(this, 'ownership_type'); this.title = this.value;" /></div>
-          <div><input type="text" placeholder="₪" title="" onchange="updateFullMarketValueCalculation(); syncAdjustmentToHelper(this, 'ownership_type'); this.title = this.value;" oninput="this.title = this.value;" /></div>
+          <div><input type="text" placeholder="₪" title="" onchange="updateFullMarketValueCalculation(); syncAdjustmentToHelper(this, 'ownership_type'); saveAdjustmentAmount('ownership_type', safeParseAmount(this.value), 0); this.title = this.value;" oninput="this.title = this.value;" /></div>
           <div><button class="btn remove" onclick="removeAdjustmentRow('${rowId}')">מחק</button></div>
         </div>
       `;
@@ -12501,11 +12504,9 @@
         console.log('✅ Bulk 3 initialized');
         console.log('✅ Complete 3-bulk system initialized');
         
-        // Set flag to prevent sync during restoration
-        window.pageLoadInProgress = true;
-        
         // Restore saved adjustment amounts after data is loaded
         setTimeout(() => {
+          console.log('🎯 About to call restoreAdjustmentAmounts...');
           restoreAdjustmentAmounts();
           console.log('✅ Adjustment amounts restored');
           
