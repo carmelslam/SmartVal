@@ -749,9 +749,6 @@ function transformHelperDataForTemplate(rawHelper) {
       centers: centersArray  // Replace empty centers with proper array
     },
     
-    // CRITICAL FIX: Include final_report at the top level for template access
-    final_report: rawHelper.final_report,
-    
     // Add transformed data as additional properties
     vehicle: {
       model: fieldMappings['helper.vehicle.model'],
@@ -1269,8 +1266,8 @@ function injectReportHTML() {
         
         // Ensure helper data is fully available to template
         const renderData = {
-          ...templateData
-          // DO NOT OVERRIDE helper - templateData already has the correctly transformed helper!
+          ...templateData,
+          helper: window.helper || sessionStorage.getItem('helper')
         };
         
         console.log('🔧 Rendering template with data:', renderData);
