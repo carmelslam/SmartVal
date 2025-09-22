@@ -7004,6 +7004,12 @@
     function syncAdjustmentToHelper(element, category) {
       try {
         console.log(`🔥 syncAdjustmentToHelper called for category: ${category}, element:`, element);
+        
+        // Skip sync during page load to prevent clearing saved data
+        if (window.pageLoadInProgress) {
+          console.log('⏸️ Skipping sync during page load to preserve data');
+          return;
+        }
         const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
         
         // Ensure structures exist
@@ -12491,6 +12497,9 @@
         console.log('✅ Bulk 3 initialized');
         console.log('✅ Complete 3-bulk system initialized');
         
+        // Set flag to prevent sync during restoration
+        window.pageLoadInProgress = true;
+        
         // Restore saved adjustment amounts after data is loaded
         setTimeout(() => {
           restoreAdjustmentAmounts();
@@ -12499,6 +12508,12 @@
           // Load additional adjustments UI
           loadAdditionalAdjustments();
           console.log('✅ Additional adjustments loaded');
+          
+          // Clear flag after restoration is complete
+          setTimeout(() => {
+            window.pageLoadInProgress = false;
+            console.log('✅ Page load complete, sync enabled');
+          }, 500);
         }, 200);
       }, 700);
       
