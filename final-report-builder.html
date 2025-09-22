@@ -6803,10 +6803,76 @@
         // Trigger calculation update to refresh cumulative displays
         setTimeout(() => {
           updateFullMarketValueCalculation();
+          
+          // IMPORTANT: Restore added rows amounts AFTER calculation to prevent clearing
+          setTimeout(() => {
+            restoreAddedRowsAmounts();
+          }, 200);
         }, 100);
         
       } catch (error) {
         console.error('Error restoring adjustment amounts:', error);
+      }
+    }
+
+    // Separate function to restore added rows amounts after calculations
+    function restoreAddedRowsAmounts() {
+      try {
+        const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+        console.log('🔄 Restoring added rows amounts after calculations...');
+        
+        const categories = ['mileage', 'ownership_type', 'ownership_history', 'additional', 'features', 'registration'];
+        
+        categories.forEach(category => {
+          let containerId = '';
+          if (category === 'mileage') containerId = 'mileageAdjustmentsList';
+          else if (category === 'ownership_type') containerId = 'ownershipAdjustmentsList';
+          else if (category === 'ownership_history') containerId = 'ownersAdjustmentsList';
+          else if (category === 'additional') containerId = 'allAdjustmentsList';
+          else if (category === 'features') {
+            // Check both gross and full market sections
+            const grossContainer = document.getElementById('featuresAdjustmentsList');
+            const fullContainer = document.getElementById('fullFeaturesAdjustmentsList');
+            if (grossContainer && grossContainer.children.length > 0) containerId = 'featuresAdjustmentsList';
+            else if (fullContainer && fullContainer.children.length > 0) containerId = 'fullFeaturesAdjustmentsList';
+          }
+          else if (category === 'registration') {
+            // Check both gross and full market sections  
+            const grossContainer = document.getElementById('registrationAdjustmentsList');
+            const fullContainer = document.getElementById('fullRegistrationAdjustmentsList');
+            if (grossContainer && grossContainer.children.length > 0) containerId = 'registrationAdjustmentsList';
+            else if (fullContainer && fullContainer.children.length > 0) containerId = 'fullRegistrationAdjustmentsList';
+          }
+          
+          if (!containerId) return;
+          
+          const container = document.getElementById(containerId);
+          if (!container) return;
+          
+          const rows = container.querySelectorAll('div[id*="Adj_"]');
+          const finalReportAdjustments = helper.final_report?.adjustments?.[category];
+          
+          if (finalReportAdjustments && finalReportAdjustments.length > 1) {
+            for (let i = 1; i < finalReportAdjustments.length; i++) {
+              const savedAdjustment = finalReportAdjustments[i];
+              if (savedAdjustment && savedAdjustment.amount !== undefined && rows[i]) {
+                const addedRow = rows[i];
+                const addedInputs = addedRow.querySelectorAll('input[type="text"]');
+                if (addedInputs.length >= 3) {
+                  const addedValueInput = addedInputs[2]; // Amount field
+                  if (addedValueInput) {
+                    const savedAmount = Math.round(savedAdjustment.amount);
+                    addedValueInput.value = savedAmount < 0 ? `-₪${Math.abs(savedAmount).toLocaleString()}` : `₪${Math.abs(savedAmount).toLocaleString()}`;
+                    console.log(`✅ FINAL restore: ${category} added row ${i}: ${savedAmount}`);
+                  }
+                }
+              }
+            }
+          }
+        });
+        
+      } catch (error) {
+        console.error('Error in restoreAddedRowsAmounts:', error);
       }
     }
 
@@ -7024,6 +7090,7 @@
               source: 'manual',
               timestamp: new Date().toISOString()
             };
+            
             
             // Calculate amount from percentage if needed (BEFORE applying signs)
             if (adjustmentData.percentage && !adjustmentData.amount) {
