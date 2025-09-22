@@ -6765,14 +6765,34 @@
             if (container) {
               const rows = container.querySelectorAll('div[id*="Adj_"]');
               if (rows.length > 0) {
-                // Update the first row's amount field
+                // Update the first row's amount field (original working logic)
                 const firstRow = rows[0];
                 const inputs = firstRow.querySelectorAll('input[type="text"]');
                 if (inputs.length >= 3) {
                   const valueInput = inputs[2]; // Amount field
                   if (valueInput) {
                     valueInput.value = roundedAmount < 0 ? `-₪${Math.abs(roundedAmount).toLocaleString()}` : `₪${Math.abs(roundedAmount).toLocaleString()}`;
-                    console.log(`✅ Restored amount for ${category} in UI`);
+                    console.log(`✅ Restored amount for ${category} first row in UI`);
+                  }
+                }
+              }
+              
+              // EXTEND: Also restore added rows (index > 0) from final_report.adjustments
+              const finalReportAdjustments = helper.final_report?.adjustments?.[category];
+              if (finalReportAdjustments && finalReportAdjustments.length > 1) {
+                for (let i = 1; i < finalReportAdjustments.length; i++) {
+                  const savedAdjustment = finalReportAdjustments[i];
+                  if (savedAdjustment && savedAdjustment.amount !== undefined && rows[i]) {
+                    const addedRow = rows[i];
+                    const addedInputs = addedRow.querySelectorAll('input[type="text"]');
+                    if (addedInputs.length >= 3) {
+                      const addedValueInput = addedInputs[2]; // Amount field
+                      if (addedValueInput) {
+                        const savedAmount = Math.round(savedAdjustment.amount);
+                        addedValueInput.value = savedAmount < 0 ? `-₪${Math.abs(savedAmount).toLocaleString()}` : `₪${Math.abs(savedAmount).toLocaleString()}`;
+                        console.log(`✅ Restored amount for ${category} added row ${i}: ${savedAmount}`);
+                      }
+                    }
                   }
                 }
               }
