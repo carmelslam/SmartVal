@@ -16691,6 +16691,36 @@
         
         // Load the report template in the iframe
         const iframe = document.getElementById('reportPreviewFrame');
+        
+        // Add load listener to ensure tables are populated
+        iframe.onload = function() {
+          console.log('📄 Template iframe loaded, populating tables...');
+          setTimeout(() => {
+            try {
+              const iframeWindow = iframe.contentWindow;
+              if (iframeWindow && iframeWindow.populateNewAdjustmentsTable) {
+                console.log('🔄 Populating tables in preview iframe...');
+                iframeWindow.populateNewAdjustmentsTable();
+                iframeWindow.populateGrossDamageTable();
+                iframeWindow.formatDamagePercent();
+                console.log('✅ Preview tables populated successfully');
+              } else {
+                console.log('⚠️ Table functions not found in iframe, retrying...');
+                // Retry after more time
+                setTimeout(() => {
+                  if (iframeWindow && iframeWindow.populateNewAdjustmentsTable) {
+                    iframeWindow.populateNewAdjustmentsTable();
+                    iframeWindow.populateGrossDamageTable();
+                    iframeWindow.formatDamagePercent();
+                  }
+                }, 2000);
+              }
+            } catch (e) {
+              console.error('Error populating preview tables:', e);
+            }
+          }, 1000);
+        };
+        
         iframe.src = 'final-report-template-builder.html';
         
         // Remove preview flag after a short delay
