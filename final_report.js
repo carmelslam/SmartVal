@@ -1265,12 +1265,21 @@ function injectReportHTML() {
         console.log('✅ Template compiled successfully');
         
         // Ensure helper data is fully available to template
+        let helperData;
+        try {
+          helperData = window.helper || JSON.parse(sessionStorage.getItem('helper') || '{}');
+        } catch (e) {
+          console.error('Failed to parse helper data:', e);
+          helperData = {};
+        }
+        
         const renderData = {
           ...templateData,
-          helper: window.helper || JSON.parse(sessionStorage.getItem('helper') || '{}')
+          helper: helperData
         };
         
         console.log('🔧 Rendering template with data:', renderData);
+        console.log('🔧 Helper final_report.adjustments:', renderData.helper?.final_report?.adjustments);
         const rendered = template(renderData);
         console.log('✅ Template rendered successfully');
         container.innerHTML = applyDraftWatermark(rendered);
