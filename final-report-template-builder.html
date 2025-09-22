@@ -867,6 +867,27 @@
     </div>
   </div>
 
+  <!-- NEW TEST TABLE - Vehicle Value Adjustments -->
+  <div class="section">
+    <div class="car-details">
+      <div class="car-details-title">טבלת התאמות ערך רכב - חדש</div>
+      <table class="car-details-table" id="new-adjustments-table">
+        <thead>
+          <tr>
+            <th style="font-weight: bold;">מרכיב</th>
+            <th>פרטי ההתאמה</th>
+            <th>אחוז</th>
+            <th>ערך</th>
+            <th>מחיר מצטבר</th>
+          </tr>
+        </thead>
+        <tbody id="adjustments-tbody">
+          <!-- Will be populated by JavaScript -->
+        </tbody>
+      </table>
+    </div>
+  </div>
+
   <!-- Section 5 - Damage Percentage Calculation -->
   <div class="section">
     <div class="car-details">
@@ -1510,6 +1531,114 @@
     }
 
   </script>
+
+  <!-- NEW JAVASCRIPT FOR ADJUSTMENTS TABLE -->
+  <script>
+    function populateNewAdjustmentsTable() {
+      console.log('🔥 Starting fresh table population');
+      
+      // Get the table body
+      const tbody = document.getElementById('adjustments-tbody');
+      if (!tbody) {
+        console.error('❌ Table tbody not found');
+        return;
+      }
+
+      // Clear existing content
+      tbody.innerHTML = '';
+
+      // Get data from multiple sources
+      let adjustmentsData = null;
+      
+      // Try to get from window.helper first
+      if (window.helper && window.helper.final_report && window.helper.final_report.adjustments) {
+        adjustmentsData = window.helper.final_report.adjustments;
+        console.log('✅ Found adjustments in window.helper:', adjustmentsData);
+      }
+      
+      // Try sessionStorage as backup
+      if (!adjustmentsData) {
+        try {
+          const helperData = JSON.parse(sessionStorage.getItem('helper') || '{}');
+          if (helperData.final_report && helperData.final_report.adjustments) {
+            adjustmentsData = helperData.final_report.adjustments;
+            console.log('✅ Found adjustments in sessionStorage:', adjustmentsData);
+          }
+        } catch (e) {
+          console.error('❌ Error parsing sessionStorage:', e);
+        }
+      }
+
+      if (!adjustmentsData) {
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: red;">לא נמצאו נתוני התאמות</td></tr>';
+        console.error('❌ No adjustments data found');
+        return;
+      }
+
+      // Add base price row
+      const baseRow = document.createElement('tr');
+      baseRow.innerHTML = `
+        <td><strong>ערך הרכב ע"פ מחירון כולל מע"מ</strong></td>
+        <td>-</td>
+        <td>-</td>
+        <td>${window.helper?.valuation?.base_price || 'N/A'}</td>
+        <td>${window.helper?.valuation?.base_price || 'N/A'}</td>
+      `;
+      tbody.appendChild(baseRow);
+
+      // Process each adjustment category
+      const categories = [
+        { key: 'features', label: 'מאפיינים' },
+        { key: 'registration', label: 'עליה לכביש' },
+        { key: 'mileage', label: 'מס\' ק"מ' },
+        { key: 'ownership_type', label: 'סוג בעלות' },
+        { key: 'ownership_history', label: 'מס\' בעלים' },
+        { key: 'additional', label: 'התאמות נוספות' }
+      ];
+
+      categories.forEach(category => {
+        const categoryData = adjustmentsData[category.key];
+        if (categoryData && Array.isArray(categoryData) && categoryData.length > 0) {
+          console.log(`✅ Processing ${category.key}:`, categoryData);
+          
+          categoryData.forEach(item => {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+              <td><strong>${category.label}</strong></td>
+              <td>${item.value || '-'}</td>
+              <td>${item.percent ? item.percent + '%' : '-'}</td>
+              <td>${item.amount_display || '-'}</td>
+              <td>${item.cumulative ? '₪' + item.cumulative : '-'}</td>
+            `;
+            tbody.appendChild(row);
+          });
+        }
+      });
+
+      // Add total row
+      const totalRow = document.createElement('tr');
+      totalRow.innerHTML = `
+        <td><strong>ערך הרכב לנזק גולמי כולל מע"מ</strong></td>
+        <td><strong>-</strong></td>
+        <td><strong>-</strong></td>
+        <td><strong>-</strong></td>
+        <td><strong>₪ ${window.helper?.calculations?.vehicle_value_gross || 'N/A'}</strong></td>
+      `;
+      tbody.appendChild(totalRow);
+
+      console.log('✅ Table population completed');
+    }
+
+    // Run when page loads
+    document.addEventListener('DOMContentLoaded', function() {
+      console.log('🚀 DOM loaded, populating new table...');
+      setTimeout(populateNewAdjustmentsTable, 1000); // Give time for data to load
+    });
+
+    // Also run after a delay to catch late-loading data
+    setTimeout(populateNewAdjustmentsTable, 3000);
+  </script>
+
   </div>
 </body>
 </html>
