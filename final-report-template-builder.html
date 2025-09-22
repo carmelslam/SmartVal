@@ -1552,8 +1552,8 @@
         <td><strong>ערך הרכב ע"פ מחירון כולל מע"מ</strong></td>
         <td>-</td>
         <td>-</td>
-        <td>${window.helper?.valuation?.base_price || 'N/A'}</td>
-        <td>${window.helper?.valuation?.base_price || 'N/A'}</td>
+        <td>${window.helper?.valuation?.base_price ? '₪ ' + parseInt(window.helper.valuation.base_price).toLocaleString() : 'N/A'}</td>
+        <td>${window.helper?.valuation?.base_price ? '₪ ' + parseInt(window.helper.valuation.base_price).toLocaleString() : 'N/A'}</td>
       `;
       tbody.appendChild(baseRow);
 
@@ -1578,8 +1578,8 @@
               <td><strong>${category.label}</strong></td>
               <td>${item.value || '-'}</td>
               <td>${item.percent ? item.percent + '%' : '-'}</td>
-              <td>${item.amount_display || '-'}</td>
-              <td>${item.cumulative ? '₪' + item.cumulative : '-'}</td>
+              <td>${item.amount_display ? (item.amount_display.toString().includes('₪') ? item.amount_display : '₪ ' + parseInt(item.amount_display).toLocaleString()) : '-'}</td>
+              <td>${item.cumulative ? '₪ ' + parseInt(item.cumulative).toLocaleString() : '-'}</td>
             `;
             tbody.appendChild(row);
           });
@@ -1593,7 +1593,7 @@
         <td><strong>-</strong></td>
         <td><strong>-</strong></td>
         <td><strong>-</strong></td>
-        <td><strong>₪ ${window.helper?.calculations?.full_market_value || 'N/A'}</strong></td>
+        <td><strong>₪ ${window.helper?.calculations?.full_market_value ? parseInt(window.helper.calculations.full_market_value).toLocaleString() : 'N/A'}</strong></td>
       `;
       tbody.appendChild(totalRow);
 
@@ -1693,8 +1693,8 @@
         <td><strong>ערך הרכב ע"פ מחירון כולל מע"מ</strong></td>
         <td>-</td>
         <td>-</td>
-        <td>${window.helper?.valuation?.base_price || 'N/A'}</td>
-        <td>${window.helper?.valuation?.base_price || 'N/A'}</td>
+        <td>${window.helper?.valuation?.base_price ? '₪ ' + parseInt(window.helper.valuation.base_price).toLocaleString() : 'N/A'}</td>
+        <td>${window.helper?.valuation?.base_price ? '₪ ' + parseInt(window.helper.valuation.base_price).toLocaleString() : 'N/A'}</td>
       `;
       tbody.appendChild(baseRow);
 
@@ -1715,8 +1715,8 @@
               <td><strong>${category.label}</strong></td>
               <td>${item.value || '-'}</td>
               <td>${item.percent ? item.percent + '%' : '-'}</td>
-              <td>${item.amount_display || '-'}</td>
-              <td>${item.cumulative ? '₪' + item.cumulative : '-'}</td>
+              <td>${item.amount_display ? (item.amount_display.toString().includes('₪') ? item.amount_display : '₪ ' + parseInt(item.amount_display).toLocaleString()) : '-'}</td>
+              <td>${item.cumulative ? '₪ ' + parseInt(item.cumulative).toLocaleString() : '-'}</td>
             `;
             tbody.appendChild(row);
           });
@@ -1771,55 +1771,6 @@
     });
   </script>
 
-  <!-- CENTRALIZED NUMBER FORMATTING -->
-  <script>
-    function formatAllNumbers() {
-      console.log('🔢 Formatting all numbers with thousands separators');
-      
-      // Get all text nodes in the document
-      const walker = document.createTreeWalker(
-        document.body,
-        NodeFilter.SHOW_TEXT,
-        null,
-        false
-      );
-      
-      const textNodes = [];
-      let node;
-      while (node = walker.nextNode()) {
-        textNodes.push(node);
-      }
-      
-      textNodes.forEach(textNode => {
-        // Skip script and style elements
-        if (textNode.parentElement.tagName === 'SCRIPT' || 
-            textNode.parentElement.tagName === 'STYLE') {
-          return;
-        }
-        
-        let text = textNode.textContent;
-        
-        // Format numbers with ₪ symbol
-        text = text.replace(/₪\s*(\d{4,})/g, (match, number) => {
-          return `₪ ${parseInt(number).toLocaleString()}`;
-        });
-        
-        // Format standalone numbers (4+ digits)
-        text = text.replace(/\b(\d{4,})\b/g, (match, number) => {
-          // Don't format if it's already formatted or part of a percentage
-          if (match.includes(',') || textNode.textContent.includes(match + '%')) {
-            return match;
-          }
-          return parseInt(number).toLocaleString();
-        });
-        
-        if (text !== textNode.textContent) {
-          textNode.textContent = text;
-        }
-      });
-      
-      console.log('✅ Number formatting completed');
-    }
     
     // Format damage percentage to 2 decimal places
     function formatDamagePercent() {
@@ -1834,7 +1785,6 @@
     
     // Run after tables are populated
     setTimeout(() => {
-      formatAllNumbers();
       formatDamagePercent();
     }, 4000);
     
@@ -1844,7 +1794,6 @@
       originalSessionSetter.apply(this, arguments);
       if (key === 'helper') {
         setTimeout(() => {
-          formatAllNumbers();
           formatDamagePercent();
         }, 500);
       }
