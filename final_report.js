@@ -1267,7 +1267,7 @@ function injectReportHTML() {
         // Ensure helper data is fully available to template
         const renderData = {
           ...templateData,
-          helper: window.helper || sessionStorage.getItem('helper')
+          helper: window.helper || JSON.parse(sessionStorage.getItem('helper') || '{}')
         };
         
         console.log('🔧 Rendering template with data:', renderData);
