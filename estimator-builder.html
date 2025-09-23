@@ -5241,13 +5241,22 @@
         
         const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
         
-        // Get base price
+        // Get base price from multiple sources
         let basePrice = 0;
         const basicPriceField = document.getElementById('basicPrice');
         const fullBasicPriceField = document.getElementById('fullBasicPrice');
         
+        // Try gross section field first
         if (basicPriceField && basicPriceField.value) {
           basePrice = parseFloat(basicPriceField.value.replace(/[₪,]/g, '')) || 0;
+        }
+        
+        // If no base price from gross section, try helper data
+        if (basePrice === 0) {
+          const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+          if (helper.valuation?.base_price) {
+            basePrice = parseFloat(helper.valuation.base_price) || 0;
+          }
         }
         
         // Update full basic price field
@@ -8428,6 +8437,11 @@
             
             // Update cumulative displays after protection is cleared
             updateRowCumulativeDisplays();
+            
+            // Final call to update total section calculations and base price
+            if (typeof updateFullMarketValueCalculation === 'function') {
+              updateFullMarketValueCalculation();
+            }
           }, 200);
         }, 100);
         
