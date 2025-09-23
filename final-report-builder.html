@@ -2831,6 +2831,62 @@
       }
     }
 
+    // POPULATE MARKET VALUE FOR CURRENT VARIANT - TARGETED APPROACH
+    function populateMarketValueForCurrentVariant(helper, reportType) {
+      try {
+        // Handle different value formats (string, number, formatted)
+        let marketValue = helper.calculations?.full_market_value || 0;
+        
+        if (typeof marketValue === 'string') {
+          marketValue = parseFloat(marketValue.replace(/[₪,\s]/g, '')) || 0;
+        } else if (typeof marketValue === 'number') {
+          marketValue = marketValue || 0;
+        }
+        
+        console.log('🔍 Market value population - Type:', reportType, 'Value:', marketValue);
+        
+        if (marketValue <= 0) {
+          console.log('❌ No valid market value found');
+          return;
+        }
+        
+        // Target the correct field ID based on report type
+        let targetFieldId = '';
+        switch(reportType) {
+          case 'חוות דעת פרטית':
+            targetFieldId = 'sumMarketValuePrivate';
+            break;
+          case 'חוות דעת גלובלית':
+            targetFieldId = 'sumMarketValueGlobal';
+            break;
+          case 'חוות דעת טוטלוסט':
+            targetFieldId = 'sumMarketValueTotal';
+            break;
+          case 'חוות דעת מכירה מצבו הניזוק':
+            targetFieldId = 'sumMarketValueDamage';
+            break;
+          case 'חוות דעת אובדן להלכה':
+            targetFieldId = 'sumMarketValueLegal';
+            break;
+          default:
+            targetFieldId = 'sumMarketValueDefault';
+        }
+        
+        // Populate the target field
+        const targetField = document.getElementById(targetFieldId);
+        if (targetField) {
+          const formattedValue = `₪${marketValue.toLocaleString()}`;
+          targetField.value = formattedValue;
+          console.log(`✅ Set ${targetFieldId} = ${formattedValue}`);
+        } else {
+          console.log(`❌ Field ${targetFieldId} not found`);
+        }
+        
+      } catch (error) {
+        console.error('Error populating market value:', error);
+      }
+    }
+
     // LOAD SUMMARY FIELDS FROM HELPER - ENHANCED FOR ALL 5 REPORT VARIANTS
     function loadSummaryFieldsFromHelper(helper) {
       try {
@@ -14519,12 +14575,18 @@
         summaryTitle.textContent = `סיכום - ${reportType}`;
       }
       
-      // Always show the single summary section
+      // Always show the single summary section and update content
       const summarySection = document.getElementById('summaryPrivate');
       if (summarySection) {
         summarySection.style.display = 'block';
         // Update the summary content based on report type
         updateSummaryContent(reportType);
+        
+        // CRITICAL FIX: Populate market value after content is updated
+        setTimeout(() => {
+          const helper = window.helper || JSON.parse(sessionStorage.getItem('helper') || '{}');
+          populateMarketValueForCurrentVariant(helper, reportType);
+        }, 200);
       }
 
       // Control depreciation section visibility
@@ -14629,31 +14691,9 @@
       
       // Re-add event listeners for newly created fields and reload values
       setTimeout(() => {
-        // FORCE POPULATE MARKET VALUE FIELDS FOR ALL VARIANTS - HANDLE ALL FORMATS
-        let marketValue = helper.calculations?.full_market_value || 0;
-        
-        // Handle different value formats (string, number, formatted)
-        if (typeof marketValue === 'string') {
-          marketValue = parseFloat(marketValue.replace(/[₪,\s]/g, '')) || 0;
-        } else if (typeof marketValue === 'number') {
-          marketValue = marketValue || 0;
-        }
-        
-        console.log('🔍 Market value debug - helper.calculations.full_market_value:', helper.calculations?.full_market_value, 'parsed:', marketValue);
-        
-        if (marketValue > 0) {
-          const allMarketFields = ['sumMarketValue', 'sumMarketValueGlobal', 'sumMarketValueDamage', 'sumMarketValueTotal', 'sumMarketValueLegal', 'sumMarketValuePrivate', 'sumMarketValueDefault'];
-          allMarketFields.forEach(fieldId => {
-            const field = document.getElementById(fieldId);
-            if (field) {
-              const formattedValue = `₪${marketValue.toLocaleString()}`;
-              field.value = formattedValue;
-              console.log(`📊 Set ${fieldId} = ${formattedValue}`);
-            }
-          });
-        } else {
-          console.log('❌ No market value found in helper.calculations.full_market_value');
-        }
+        // ENHANCED: Use targeted market value population based on current report type
+        const currentReportType = document.getElementById('reportType')?.value || 'חוות דעת פרטית';
+        populateMarketValueForCurrentVariant(helper, currentReportType);
         
         const paymentMethodField = document.getElementById('paymentMethod');
         if (paymentMethodField) {
