@@ -17326,12 +17326,18 @@
       console.log('🔍 DIAGNOSTIC: sumMarketValue field exists?', !!originalField);
       console.log('🔍 DIAGNOSTIC: sumMarketValuePrivate field exists?', !!privateField);
       
-      console.log('🔍 DIAGNOSTIC: window.helper exists?', !!window.helper);
-      console.log('🔍 DIAGNOSTIC: helper.calculations exists?', !!(window.helper?.calculations));
-      console.log('🔍 DIAGNOSTIC: full_market_value exists?', !!(window.helper?.calculations?.full_market_value));
-      console.log('🔍 DIAGNOSTIC: full_market_value value:', window.helper?.calculations?.full_market_value);
+      // Check both window.helper and sessionStorage for helper data
+      const helperFromWindow = window.helper;
+      const helperFromSession = JSON.parse(sessionStorage.getItem('helper') || '{}');
+      const helper = helperFromWindow || helperFromSession;
       
-      if (window.helper && window.helper.calculations && window.helper.calculations.full_market_value) {
+      console.log('🔍 DIAGNOSTIC: window.helper exists?', !!helperFromWindow);
+      console.log('🔍 DIAGNOSTIC: sessionStorage helper exists?', !!helperFromSession && Object.keys(helperFromSession).length > 0);
+      console.log('🔍 DIAGNOSTIC: helper.calculations exists?', !!(helper?.calculations));
+      console.log('🔍 DIAGNOSTIC: full_market_value exists?', !!(helper?.calculations?.full_market_value));
+      console.log('🔍 DIAGNOSTIC: full_market_value value:', helper?.calculations?.full_market_value);
+      
+      if (helper && helper.calculations && helper.calculations.full_market_value) {
         console.log('🔄 Helper data is ready, initializing summary...');
         
         // Check field existence again before calling updateSummaryVisibility
