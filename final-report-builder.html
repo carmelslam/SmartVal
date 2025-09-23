@@ -15194,13 +15194,24 @@
         const helper = window.helper || JSON.parse(sessionStorage.getItem('helper') || '{}');
         
         // TASK 1: Fix market value auto-population
+        console.log('🔍 initializeSummaryFieldsFix - Market Value Sources:', {
+          'calculations.full_market_value': helper.calculations?.full_market_value,
+          'valuation.calculations.full_price.total': helper.valuation?.calculations?.full_price?.total,
+          'levi_report.final_price': helper.levi_report?.final_price,
+          'Full helper object': helper
+        });
+        
         const marketValue = helper.calculations?.full_market_value || 
                            helper.valuation?.calculations?.full_price?.total ||
                            helper.levi_report?.final_price || 
                            0;
         
         if (marketValue > 0) {
-          console.log(`💰 Found market value: ₪${marketValue.toLocaleString()}`);
+          console.log(`💰 Found market value: ₪${marketValue.toLocaleString()} (source: ${
+            helper.calculations?.full_market_value ? 'calculations.full_market_value' :
+            helper.valuation?.calculations?.full_price?.total ? 'valuation.calculations.full_price.total' :
+            'levi_report.final_price'
+          })`);
           
           // Populate ALL market value fields across variants
           const allMarketFields = [
