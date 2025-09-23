@@ -14770,6 +14770,20 @@
           field.value = `₪${privateTotal.toLocaleString()}`;
         }
       });
+
+      // TOTAL LOSS CALCULATION: Market Value - Salvage + Towing
+      const salvageField = document.getElementById('sumScrapValue');
+      const towingField = document.getElementById('sumTowingStorage');
+      const totalLossResultField = document.getElementById('sumTotalLossResult');
+      
+      if (salvageField && towingField && totalLossResultField && marketValue > 0) {
+        const salvageValue = parseFloat(salvageField.value.replace(/[₪,]/g, '')) || 0;
+        const towingValue = parseFloat(towingField.value.replace(/[₪,]/g, '')) || 0;
+        const totalLossResult = marketValue - salvageValue + towingValue;
+        
+        totalLossResultField.value = `₪${totalLossResult.toLocaleString()}`;
+        console.log(`🧮 Total Loss calculation: ${marketValue} - ${salvageValue} + ${towingValue} = ${totalLossResult}`);
+      }
     }
     
     // Dynamic summary content based on report type
@@ -17338,7 +17352,21 @@
       }
     }
     
-    // Start checking for helper readiness
+    // Add event listeners for Total Loss calculation
+    function setupTotalLossCalculation() {
+      const salvageField = document.getElementById('sumScrapValue');
+      const towingField = document.getElementById('sumTowingStorage');
+      
+      if (salvageField) {
+        salvageField.addEventListener('input', refreshSummary);
+      }
+      if (towingField) {
+        towingField.addEventListener('input', refreshSummary);
+      }
+    }
+    
+    // Setup Total Loss calculation and start checking for helper readiness
+    setupTotalLossCalculation();
     initializeSummaryWhenReady();
     window.addDepreciationRow = addDepreciationRow;
     window.addDifferentialRow = addDifferentialRow;
