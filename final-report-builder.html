@@ -14617,8 +14617,10 @@
     
     // Update summary visibility based on report type
     function updateSummaryVisibility() {
+      console.log('🔄 updateSummaryVisibility() STARTED');
       const reportTypeSelect = document.getElementById('reportType');
       const reportType = reportTypeSelect?.value || 'חוות דעת פרטית';
+      console.log('📋 Report type:', reportType);
       
       // Hide all summary sections first
       const summaryBlocks = document.querySelectorAll('.summary-block');
@@ -14648,11 +14650,17 @@
       
       // Show the selected summary section
       const selectedSummary = document.getElementById(summaryId);
+      console.log('🔍 Selected summary element:', summaryId, !!selectedSummary);
       if (selectedSummary) {
         selectedSummary.style.display = 'block';
+        console.log('✅ Summary section displayed:', summaryId);
         
         // Populate the fields with correct data mapping
+        console.log('🔄 About to call refreshSummary()');
         refreshSummary();
+        console.log('✅ refreshSummary() completed');
+      } else {
+        console.error('❌ Summary section not found:', summaryId);
       }
 
       // Control depreciation section visibility
@@ -14685,7 +14693,9 @@
     
     // Refresh summary with correct field mapping as specified
     function refreshSummary() {
+      console.log('🚀 refreshSummary() STARTED');
       const helper = window.helper || JSON.parse(sessionStorage.getItem('helper') || '{}');
+      console.log('📊 Helper data:', helper.calculations?.full_market_value);
       
       // Get values from YOUR specified sources - NO FALLBACKS
       const marketValue = helper.calculations?.full_market_value || 0;
@@ -17301,20 +17311,35 @@
       
       if (helper && helper.calculations && helper.calculations.full_market_value) {
         console.log('🔄 Helper data is ready, initializing summary...');
+        console.log('🔄 About to call updateSummaryVisibility()');
         updateSummaryVisibility();
+        console.log('✅ updateSummaryVisibility() called');
       } else {
         console.log('⏳ Helper data not ready yet, waiting 500ms...');
         setTimeout(initializeSummaryWhenReady, 500);
       }
     }
     
+    // DIRECT FIX: Force populate market value field immediately
+    function forcePopulateMarketValue() {
+      const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+      const marketValue = helper.calculations?.full_market_value;
+      const field = document.getElementById('sumMarketValue');
+      
+      if (field && marketValue) {
+        field.value = `₪${marketValue.toLocaleString()}`;
+        console.log('✅ FORCED market value:', field.value);
+      }
+    }
+    
+    // Call it immediately and repeatedly to ensure it sticks
+    forcePopulateMarketValue();
+    setTimeout(forcePopulateMarketValue, 100);
+    setTimeout(forcePopulateMarketValue, 500);
+    setTimeout(forcePopulateMarketValue, 1000);
+    
     // Start checking for helper readiness
     initializeSummaryWhenReady();
-    
-    // Test function availability
-    console.log('🔍 Testing function availability:');
-    console.log('updateHelperFromContactField:', typeof updateHelperFromContactField);
-    console.log('updateSummaryVisibility:', typeof updateSummaryVisibility);
     window.addDepreciationRow = addDepreciationRow;
     window.addDifferentialRow = addDifferentialRow;
     window.updateDifferentialsSummary = updateDifferentialsSummary;
