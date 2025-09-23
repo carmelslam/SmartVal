@@ -3301,6 +3301,12 @@
             sumMarketValueInput.value = `₪${helperMarketValue.toLocaleString()}`;
           }
           
+          // Also auto-fill global variant market value field if it exists
+          const sumMarketValueGlobal = document.getElementById('sumMarketValueGlobal');
+          if (helperMarketValue && helperMarketValue > 0 && sumMarketValueGlobal) {
+            sumMarketValueGlobal.value = `₪${helperMarketValue.toLocaleString()}`;
+          }
+          
           // AUTO-FILL SUMMARY CLAIM FROM CLAIMS SECTION
           const totalClaimValue = document.getElementById('totalClaim')?.value;
           if (totalClaimValue && sumClaimInput) {
@@ -14742,6 +14748,22 @@
       // Load data from helper for the new summary structure
       const helper = window.helper || JSON.parse(sessionStorage.getItem('helper') || '{}');
       loadSummaryFieldsFromHelper(helper);
+      
+      // CRITICAL: Auto-fill market value for global variant immediately
+      if (reportType === 'חוות דעת גלובלית') {
+        const marketValue = helper.calculations?.full_market_value || 0;
+        const sumMarketValueGlobal = document.getElementById('sumMarketValueGlobal');
+        if (sumMarketValueGlobal && marketValue) {
+          sumMarketValueGlobal.value = `₪${marketValue.toLocaleString()}`;
+          console.log('✅ Auto-filled global market value:', sumMarketValueGlobal.value);
+        }
+        
+        // Also trigger the calculation listeners for global variant
+        setTimeout(() => {
+          addSummaryCalculationListeners();
+          calculateSummaryTotals();
+        }, 150);
+      }
       
       // Re-add event listeners for newly created fields and reload values
       setTimeout(() => {
