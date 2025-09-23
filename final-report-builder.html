@@ -2897,21 +2897,16 @@
         
         // AUTO-POPULATED FIELDS (COMMON ACROSS VARIANTS)
         
-        // 1. Market Value - Direct mapping from helper.calculations.full_market_value
+        // SIMPLE DIRECT MAPPING - NO COMPLICATIONS
+        
+        // 1. Market Value - ONLY from calculations.full_market_value
         const marketValue = helper.calculations?.full_market_value || 0;
         
-        // Populate all market value fields across all variants
-        const marketValueFields = ['sumMarketValue', 'sumMarketValueGlobal', 'sumMarketValueDamage', 'sumMarketValueTotal', 'sumMarketValueLegal'];
-        marketValueFields.forEach(fieldId => {
+        // Set market value for ALL variant fields immediately
+        ['sumMarketValue', 'sumMarketValueGlobal', 'sumMarketValueDamage', 'sumMarketValueTotal', 'sumMarketValueLegal', 'sumMarketValuePrivate'].forEach(fieldId => {
           const field = document.getElementById(fieldId);
           if (field) {
-            const formattedValue = marketValue > 0 ? `₪${marketValue.toLocaleString()}` : '';
-            field.value = formattedValue;
-            // Update helper with standardized format
-            const mappingKey = getHelperMappingKey(fieldId);
-            if (mappingKey) {
-              helper.final_report.summary[mappingKey] = formattedValue;
-            }
+            field.value = marketValue > 0 ? `₪${marketValue.toLocaleString()}` : '';
           }
         });
         
@@ -14738,6 +14733,35 @@
       
       // Load data from helper for the new summary structure IMMEDIATELY
       const helper = window.helper || JSON.parse(sessionStorage.getItem('helper') || '{}');
+      
+      // For non-private variants, populate fields directly and immediately
+      if (reportType !== 'חוות דעת פרטית') {
+        // Market Value - direct from calculations.full_market_value
+        const marketValue = helper.calculations?.full_market_value || 0;
+        const marketValueField = document.getElementById(`sumMarketValue${reportType === 'חוות דעת גלובלית' ? 'Global' : reportType === 'חוות דעת טוטלוסט' ? 'Total' : reportType === 'חוות דעת מכירה מצבו הניזוק' ? 'Damage' : reportType === 'חוות דעת אובדן להלכה' ? 'Legal' : 'Default'}`);
+        if (marketValueField) {
+          marketValueField.value = marketValue > 0 ? `₪${marketValue.toLocaleString()}` : '';
+        }
+        
+        // Total Claim - direct from claims_data.total_claim
+        if (reportType === 'חוות דעת גלובלית') {
+          const totalClaim = helper.claims_data?.total_claim || 0;
+          const claimField = document.getElementById('sumClaimGlobal');
+          if (claimField) {
+            const claimValue = typeof totalClaim === 'string' ? parseFloat(totalClaim.replace(/[₪,]/g, '')) || 0 : totalClaim;
+            claimField.value = claimValue > 0 ? `₪${claimValue.toLocaleString()}` : '';
+          }
+          
+          // Depreciation - direct from depreciation.globalDepValue
+          const depValue = helper.depreciation?.globalDepValue || 0;
+          const depField = document.getElementById('sumDepreciation');
+          if (depField) {
+            const depAmount = typeof depValue === 'string' ? parseFloat(depValue.replace(/[₪,]/g, '')) || 0 : depValue;
+            depField.value = depAmount > 0 ? `₪${depAmount.toLocaleString()}` : '';
+          }
+        }
+      }
+      
       loadSummaryFieldsFromHelper(helper);
       
       // Add event listeners immediately
