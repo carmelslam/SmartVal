@@ -5522,6 +5522,9 @@
                     if (inputs[2].value) inputs[2].dispatchEvent(new Event('change', { bubbles: true }));
                     if (inputs[3].value) inputs[3].dispatchEvent(new Event('change', { bubbles: true }));
                     
+                    // Call formatAdjustmentDisplay to ensure proper sign display
+                    formatAdjustmentDisplay(lastRow, inputs[1].value, itemPercent, itemAmount);
+                    
                     // Mark source as original for page refresh loads
                     lastRow.setAttribute('data-source', 'original');
                     
@@ -6137,12 +6140,12 @@
         <div id="${rowId}" data-source="manual">
           <div style="display:grid; grid-template-columns:2fr 1fr 1fr 1fr 80px; gap:10px; margin-bottom:8px;">
             <div><input type="text" placeholder="תיאור המאפיין" onchange="updateGrossMarketValueCalculation(); syncAdjustmentToHelper(this, 'features');" /></div>
-            <div><select onchange="updateGrossMarketValueCalculation(); syncAdjustmentToHelper(this, 'features');">
+            <div><select onchange="updateGrossMarketValueCalculation(); syncAdjustmentToHelper(this, 'features'); const row = this.closest('div[data-source]'); const inputs = row.querySelectorAll('input, select'); formatAdjustmentDisplay(row, this.value, Math.abs(parseFloat(inputs[2].value) || 0), safeParseAmount(inputs[3].value));">
               <option value="plus">תוספת (+)</option>
               <option value="minus">הפחתה (-)</option>
             </select></div>
-            <div><input type="text" placeholder="אחוז" oninput="calculateAdjustmentValueSimple(this);" onchange="updateGrossMarketValueCalculation(); syncAdjustmentToHelper(this, 'features');" /></div>
-            <div><input type="text" placeholder="₪" onchange="updateGrossMarketValueCalculation(); syncAdjustmentToHelper(this, 'features');" /></div>
+            <div><input type="text" placeholder="אחוז" oninput="calculateAdjustmentValueSimple(this);" onchange="updateGrossMarketValueCalculation(); syncAdjustmentToHelper(this, 'features'); const row = this.closest('div[data-source]'); const inputs = row.querySelectorAll('input, select'); formatAdjustmentDisplay(row, inputs[1].value, Math.abs(parseFloat(this.value) || 0), safeParseAmount(inputs[3].value));" /></div>
+            <div><input type="text" placeholder="₪" onchange="updateGrossMarketValueCalculation(); syncAdjustmentToHelper(this, 'features'); const row = this.closest('div[data-source]'); const inputs = row.querySelectorAll('input, select'); formatAdjustmentDisplay(row, inputs[1].value, Math.abs(parseFloat(inputs[2].value) || 0), safeParseAmount(this.value));" /></div>
             <div><button class="btn remove" onclick="removeAdjustmentRow('${rowId}')">מחק</button></div>
           </div>
           <div style="text-align: right; font-size: 12px; color: #666; margin-top: 4px;">
@@ -6164,12 +6167,12 @@
         <div id="${rowId}" data-source="manual">
           <div style="display:grid; grid-template-columns:2fr 1fr 1fr 1fr 80px; gap:10px; margin-bottom:8px;">
             <div><input type="text" placeholder="תיאור עליה לכביש" onchange="updateGrossMarketValueCalculation(); syncAdjustmentToHelper(this, 'registration');" /></div>
-            <div><select onchange="updateGrossMarketValueCalculation(); syncAdjustmentToHelper(this, 'registration');">
+            <div><select onchange="updateGrossMarketValueCalculation(); syncAdjustmentToHelper(this, 'registration'); const row = this.closest('div[data-source]'); const inputs = row.querySelectorAll('input, select'); formatAdjustmentDisplay(row, this.value, Math.abs(parseFloat(inputs[2].value) || 0), safeParseAmount(inputs[3].value));">
               <option value="plus">תוספת (+)</option>
               <option value="minus">הפחתה (-)</option>
             </select></div>
-            <div><input type="text" placeholder="אחוז" oninput="calculateAdjustmentValueSimple(this);" onchange="updateGrossMarketValueCalculation(); syncAdjustmentToHelper(this, 'registration');" /></div>
-            <div><input type="text" placeholder="₪" onchange="updateGrossMarketValueCalculation(); syncAdjustmentToHelper(this, 'registration');" /></div>
+            <div><input type="text" placeholder="אחוז" oninput="calculateAdjustmentValueSimple(this);" onchange="updateGrossMarketValueCalculation(); syncAdjustmentToHelper(this, 'registration'); const row = this.closest('div[data-source]'); const inputs = row.querySelectorAll('input, select'); formatAdjustmentDisplay(row, inputs[1].value, Math.abs(parseFloat(this.value) || 0), safeParseAmount(inputs[3].value));" /></div>
+            <div><input type="text" placeholder="₪" onchange="updateGrossMarketValueCalculation(); syncAdjustmentToHelper(this, 'registration'); const row = this.closest('div[data-source]'); const inputs = row.querySelectorAll('input, select'); formatAdjustmentDisplay(row, inputs[1].value, Math.abs(parseFloat(inputs[2].value) || 0), safeParseAmount(this.value));" /></div>
             <div><button class="btn remove" onclick="removeAdjustmentRow('${rowId}')">מחק</button></div>
           </div>
           <div style="text-align: right; font-size: 12px; color: #666; margin-top: 4px;">
@@ -7484,10 +7487,28 @@
       const percent = parseFloat(percentInput.value) || 0;
       if (percent === 0) return;
       
-      // Use 118000 as base price
-      const basicPrice = 118000;
+      // Get actual base price from UI or use default
+      let basicPrice = 0;
+      const basicPriceField = document.getElementById('basicPrice');
+      if (basicPriceField?.value) {
+        basicPrice = parseFloat(basicPriceField.value.replace(/[₪,]/g, '')) || 0;
+      }
+      
+      // Fallback to helper data if needed
+      if (basicPrice === 0) {
+        const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+        basicPrice = helper.estimate?.market_value_base || helper.levisummary?.base_price || 118000;
+      }
+      
       const calculatedValue = (basicPrice * percent) / 100;
-      inputs[3].value = `₪${Math.round(calculatedValue).toLocaleString()}`;
+      const type = inputs[1].value;
+      
+      // Apply sign based on type
+      if (type === 'minus' || type === 'הפחתה' || type === 'הפחתה (-)') {
+        inputs[3].value = `-₪${Math.round(calculatedValue).toLocaleString()}`;
+      } else {
+        inputs[3].value = `₪${Math.round(calculatedValue).toLocaleString()}`;
+      }
     }
     
     // ============================================================================
@@ -8331,21 +8352,8 @@
     }
     
     // SIMPLE ADJUSTMENT CALCULATION - COPIED FROM WORKING DEPRECIATION
-    function calculateAdjustmentValueSimple(percentInput) {
-      const row = percentInput.closest('div[id*="Adj_"]');
-      if (!row) return;
-      
-      const inputs = row.querySelectorAll('input, select');
-      if (inputs.length < 4) return;
-      
-      const percent = parseFloat(percentInput.value) || 0;
-      if (percent === 0) return;
-      
-      // Use 118000 as base price
-      const basicPrice = 118000;
-      const calculatedValue = (basicPrice * percent) / 100;
-      inputs[3].value = `₪${Math.round(calculatedValue).toLocaleString()}`;
-    }
+    // Duplicate function - removing to avoid conflicts
+    // (Already defined above with proper implementation)
 
     // SIMPLE FINAL REPORTADJUSTMENT CALCULATION - COPIED FROM WORKING DEPRECIATION
     function calculateFinalReportAdjustmentValueSimple(percentInput) {
@@ -8521,9 +8529,14 @@
         grossFeaturesRows.forEach(row => {
           const inputs = row.querySelectorAll('input, select');
           if (inputs.length >= 4) {
-            const amount = parseFloat((inputs[3].value || '').replace(/[₪,]/g, '')) || 0;
+            // FIXED: Parse amount considering it might already have a minus sign
+            const amountText = (inputs[3].value || '').trim();
+            const hasMinusSign = amountText.includes('-');
+            const amount = Math.abs(parseFloat(amountText.replace(/[₪,\s-]/g, '')) || 0);
             const type = inputs[1].value;
             const isNegative = isReductionType(type);
+            
+            // Only apply negative if type is reduction, ignore UI minus sign as it's just display
             currentValue += (isNegative ? -amount : amount);
           }
           
