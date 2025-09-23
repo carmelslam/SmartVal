@@ -3210,14 +3210,8 @@
           helper.final_report.summary.adjustments_value = adjustmentsValue;
         }
         
-        // Load all summary fields using enhanced loader (this will handle the rest)
+        // Load all summary fields using enhanced loader IMMEDIATELY
         loadSummaryFieldsFromHelper(helper);
-        
-        // Retry loading after a delay to handle timing issues
-        setTimeout(() => {
-          const updatedHelper = window.helper || JSON.parse(sessionStorage.getItem('helper') || '{}');
-          loadSummaryFieldsFromHelper(updatedHelper);
-        }, 300);
         
         // Calculate VAT and totals if we have claim data
         if (totalClaim > 0) {
@@ -10574,19 +10568,19 @@
         loadLegalText().catch(console.error);
         updateGlobalDepreciationCalculation();
         
-        // Load additional notes field separately with extra delay
+        // Load additional notes field and summary fields IMMEDIATELY
+        loadAdditionalNotesField();
+        const helper = window.helper || JSON.parse(sessionStorage.getItem('helper') || '{}');
+        loadSummaryFieldsFromHelper(helper);
+        
+        // Initialize summary fields and manual inputs immediately
+        initializeSummaryFieldsFix();
+        initializeHelperDataSafeguards();
+        
+        // Calculate totals after fields are populated
         setTimeout(() => {
-          loadAdditionalNotesField();
-          // Also reload summary fields to ensure they're populated
-          const helper = window.helper || JSON.parse(sessionStorage.getItem('helper') || '{}');
-          loadSummaryFieldsFromHelper(helper);
-          
-          // 🚨 CRITICAL FIX: Initialize summary fields and manual inputs
-          setTimeout(() => {
-            initializeSummaryFieldsFix();
-            initializeHelperDataSafeguards();
-          }, 200);
-        }, 500);
+          calculateSummaryTotals();
+        }, 100);
         
         // DO NOT initialize admin hub communication here - wait for helper.js to load first
         console.log('ℹ️ Waiting for helper.js to load before initializing admin hub communication...');
@@ -14742,28 +14736,17 @@
           `;
       }
       
-      // Recalculate totals after content change
-      setTimeout(calculateSummaryTotals, 100);
-      
-      // Load data from helper for the new summary structure
+      // Load data from helper for the new summary structure IMMEDIATELY
       const helper = window.helper || JSON.parse(sessionStorage.getItem('helper') || '{}');
       loadSummaryFieldsFromHelper(helper);
       
-      // CRITICAL: Auto-fill market value for global variant immediately
-      if (reportType === 'חוות דעת גלובלית') {
-        const marketValue = helper.calculations?.full_market_value || 0;
-        const sumMarketValueGlobal = document.getElementById('sumMarketValueGlobal');
-        if (sumMarketValueGlobal && marketValue) {
-          sumMarketValueGlobal.value = `₪${marketValue.toLocaleString()}`;
-          console.log('✅ Auto-filled global market value:', sumMarketValueGlobal.value);
-        }
-        
-        // Also trigger the calculation listeners for global variant
-        setTimeout(() => {
-          addSummaryCalculationListeners();
-          calculateSummaryTotals();
-        }, 150);
-      }
+      // Add event listeners immediately
+      addSummaryCalculationListeners();
+      
+      // Calculate totals AFTER all fields are populated
+      setTimeout(() => {
+        calculateSummaryTotals();
+      }, 100);
       
       // Re-add event listeners for newly created fields and reload values
       setTimeout(() => {
