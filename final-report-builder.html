@@ -9581,8 +9581,8 @@
             }
             
             // UPDATE THE UI: Set the correct specific value in the value field
-            // FIXED: Only update if it's the first row or if we're actively calculating
-            if (valueInput && (index === 0 || !window.pageLoadInProgress)) {
+            // Skip updating during page load to preserve manual amounts
+            if (valueInput && !window.pageLoadInProgress) {
               const roundedResult = Math.round(specificResult);
               const displayAmount = roundedResult.toLocaleString();
               valueInput.value = (type === 'minus') ? `-₪${displayAmount}` : `₪${displayAmount}`;
@@ -9633,8 +9633,8 @@
             }
             
             // UPDATE THE UI: Set the correct specific value in the value field
-            // FIXED: Only update if it's the first row or if we're actively calculating
-            if (valueInput && (index === 0 || !window.pageLoadInProgress)) {
+            // Skip updating during page load to preserve manual amounts
+            if (valueInput && !window.pageLoadInProgress) {
               const roundedResult = Math.round(specificResult);
               const displayAmount = roundedResult.toLocaleString();
               valueInput.value = (type === 'minus') ? `-₪${displayAmount}` : `₪${displayAmount}`;
@@ -9688,8 +9688,8 @@
             }
             
             // UPDATE THE UI: Set the correct specific value in the value field
-            // FIXED: Only update if it's the first row or if we're actively calculating
-            if (valueInput && (index === 0 || !window.pageLoadInProgress)) {
+            // Skip updating during page load to preserve manual amounts
+            if (valueInput && !window.pageLoadInProgress) {
               const roundedResult = Math.round(specificResult);
               const displayAmount = roundedResult.toLocaleString();
               valueInput.value = (type === 'minus') ? `-₪${displayAmount}` : `₪${displayAmount}`;
@@ -12731,6 +12731,39 @@
           setTimeout(() => {
             window.pageLoadInProgress = false;
             console.log('✅ Page load complete, sync enabled');
+            
+            // Trigger final calculations to update cumulative values
+            console.log('🔄 Running final calculations to update cumulative values...');
+            updateGrossMarketValueCalculation();
+            updateFullMarketValueCalculation();
+            
+            // Sync all adjustments to ensure cumulative values are saved
+            setTimeout(() => {
+              console.log('🔄 Syncing all adjustment data to helper...');
+              const categories = ['features', 'registration', 'mileage', 'ownership_type', 'ownership_history', 'additional'];
+              categories.forEach(category => {
+                const containers = {
+                  'features': ['featuresAdjustmentsList', 'fullFeaturesAdjustmentsList'],
+                  'registration': ['registrationAdjustmentsList', 'fullRegistrationAdjustmentsList'],
+                  'mileage': ['mileageAdjustmentsList'],
+                  'ownership_type': ['ownershipAdjustmentsList'],
+                  'ownership_history': ['ownersAdjustmentsList'],
+                  'additional': ['allAdjustmentsList']
+                };
+                
+                const categoryContainers = containers[category] || [];
+                categoryContainers.forEach(containerId => {
+                  const container = document.getElementById(containerId);
+                  if (container) {
+                    const firstInput = container.querySelector('input');
+                    if (firstInput) {
+                      syncAdjustmentToHelper(firstInput, category);
+                    }
+                  }
+                });
+              });
+              console.log('✅ All adjustments synced with cumulative values');
+            }, 100);
           }, 500);
         }, 200);
       }, 700);
