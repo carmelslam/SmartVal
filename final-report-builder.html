@@ -5824,9 +5824,22 @@
           }
           
           if (Array.isArray(mileage)) {
-            mileage.forEach(adj => {
+            mileage.forEach((adj, index) => {
               if (adj && (adj.value || adj.percentage || adj.percent || adj.amount)) {
-                mileageContainer.insertAdjacentHTML('beforeend', createTotalValueRow(adj, 'mileage', source));
+                const rowHtml = createTotalValueRow(adj, 'mileage', source);
+                mileageContainer.insertAdjacentHTML('beforeend', rowHtml);
+                
+                // Update row cumulative if available from helper
+                if (adj.cumulative !== undefined) {
+                  setTimeout(() => {
+                    const rows = mileageContainer.querySelectorAll('.adjustment-row');
+                    const lastRow = rows[rows.length - 1];
+                    const cumulativeSpan = lastRow?.querySelector('.row-cumulative');
+                    if (cumulativeSpan) {
+                      cumulativeSpan.textContent = `₪${Math.round(adj.cumulative).toLocaleString()}`;
+                    }
+                  }, 10);
+                }
                 console.log(`✅ Added mileage adjustment from ${source}:`, adj.value || 'no description');
               }
             });
@@ -5871,9 +5884,22 @@
           }
           
           if (Array.isArray(ownership)) {
-            ownership.forEach(adj => {
+            ownership.forEach((adj, index) => {
               if (adj && (adj.value || adj.percentage || adj.percent || adj.amount)) {
-                ownershipContainer.insertAdjacentHTML('beforeend', createTotalValueRow(adj, 'ownership_type', source));
+                const rowHtml = createTotalValueRow(adj, 'ownership_type', source);
+                ownershipContainer.insertAdjacentHTML('beforeend', rowHtml);
+                
+                // Update row cumulative if available from helper
+                if (adj.cumulative !== undefined) {
+                  setTimeout(() => {
+                    const rows = ownershipContainer.querySelectorAll('.adjustment-row');
+                    const lastRow = rows[rows.length - 1];
+                    const cumulativeSpan = lastRow?.querySelector('.row-cumulative');
+                    if (cumulativeSpan) {
+                      cumulativeSpan.textContent = `₪${Math.round(adj.cumulative).toLocaleString()}`;
+                    }
+                  }, 10);
+                }
                 console.log(`✅ Added ownership adjustment from ${source}:`, adj.value || 'no description');
               }
             });
@@ -5918,9 +5944,22 @@
           }
           
           if (Array.isArray(owners)) {
-            owners.forEach(adj => {
+            owners.forEach((adj, index) => {
               if (adj && (adj.value || adj.percentage || adj.percent || adj.amount)) {
-                ownersContainer.insertAdjacentHTML('beforeend', createTotalValueRow(adj, 'ownership_history', source));
+                const rowHtml = createTotalValueRow(adj, 'ownership_history', source);
+                ownersContainer.insertAdjacentHTML('beforeend', rowHtml);
+                
+                // Update row cumulative if available from helper
+                if (adj.cumulative !== undefined) {
+                  setTimeout(() => {
+                    const rows = ownersContainer.querySelectorAll('.adjustment-row');
+                    const lastRow = rows[rows.length - 1];
+                    const cumulativeSpan = lastRow?.querySelector('.row-cumulative');
+                    if (cumulativeSpan) {
+                      cumulativeSpan.textContent = `₪${Math.round(adj.cumulative).toLocaleString()}`;
+                    }
+                  }, 10);
+                }
                 console.log(`✅ Added owners adjustment from ${source}:`, adj.value || 'no description');
               }
             });
@@ -5961,29 +6000,42 @@
           }
           
           if (Array.isArray(additional)) {
-            additional.forEach(adj => {
+            additional.forEach((adj, index) => {
               if (adj && (adj.value || adj.percentage || adj.percent || adj.amount)) {
                 // Create row with proper handlers for additional adjustments
                 const rowId = 'fullAdj_' + Date.now() + '_' + Math.random();
                 const newRow = `
-                  <div id="${rowId}" class="adjustment-row" data-source="${source}" style="display:grid; grid-template-columns:2fr 1fr 1fr 1fr 80px; gap:10px; margin-bottom:8px;">
-                    <div><input type="text" placeholder="תיאור התאמה נוספת" value="${adj.value || ''}" onchange="updateFullMarketValueCalculation(); updateHelperFromAdjustments(); syncAdjustmentToHelper(this, 'additional');" /></div>
-                    <div><select onchange="updateFullMarketValueCalculation(); updateHelperFromAdjustments(); syncAdjustmentToHelper(this, 'additional');">
-                      <option value="plus" ${adj.type === 'plus' ? 'selected' : ''}>תוספת (+)</option>
-                      <option value="minus" ${adj.type === 'minus' ? 'selected' : ''}>הפחתה (-)</option>
-                    </select></div>
-                    <div><input type="text" placeholder="אחוז" value="${adj.percentage || adj.percent || ''}" oninput="calculateAdjustmentValueSimple(this);" onchange="updateFullMarketValueCalculation(); updateHelperFromAdjustments(); syncAdjustmentToHelper(this, 'additional');" /></div>
-                    <div><input type="text" placeholder="₪" value="${adj.amount_display || (adj.amount ? (adj.amount < 0 ? '-₪' + Math.abs(adj.amount).toLocaleString() : '₪' + Math.abs(adj.amount).toLocaleString()) : '')}" onchange="updateFullMarketValueCalculation(); updateHelperFromAdjustments(); syncAdjustmentToHelper(this, 'additional');" /></div>
-                    <div><button class="btn remove" onclick="removeAdjustmentRow('${rowId}')">מחק</button></div>
+                  <div id="${rowId}" class="adjustment-row" data-source="${source}">
+                    <div style="display:grid; grid-template-columns:2fr 1fr 1fr 1fr 80px; gap:10px; margin-bottom:8px;">
+                      <div><input type="text" placeholder="תיאור התאמה נוספת" value="${adj.value || ''}" onchange="updateFullMarketValueCalculation(); updateHelperFromAdjustments(); syncAdjustmentToHelper(this, 'additional');" /></div>
+                      <div><select onchange="updateFullMarketValueCalculation(); updateHelperFromAdjustments(); syncAdjustmentToHelper(this, 'additional'); const row = this.closest('.adjustment-row'); const inputs = row.querySelectorAll('input, select'); formatAdjustmentDisplay(row, this.value, Math.abs(parseFloat(inputs[2].value) || 0), safeParseAmount(inputs[3].value));">
+                        <option value="plus" ${adj.type === 'plus' ? 'selected' : ''}>תוספת (+)</option>
+                        <option value="minus" ${adj.type === 'minus' ? 'selected' : ''}>הפחתה (-)</option>
+                      </select></div>
+                      <div><input type="text" placeholder="אחוז" value="${adj.percentage || adj.percent || ''}" oninput="calculateAdjustmentValueSimple(this);" onchange="updateFullMarketValueCalculation(); updateHelperFromAdjustments(); syncAdjustmentToHelper(this, 'additional'); const row = this.closest('.adjustment-row'); const inputs = row.querySelectorAll('input, select'); formatAdjustmentDisplay(row, inputs[1].value, Math.abs(parseFloat(this.value) || 0), safeParseAmount(inputs[3].value));" /></div>
+                      <div><input type="text" placeholder="₪" value="${adj.amount_display || (adj.amount ? (adj.amount < 0 ? '-₪' + Math.abs(adj.amount).toLocaleString() : '₪' + Math.abs(adj.amount).toLocaleString()) : '')}" onchange="updateFullMarketValueCalculation(); updateHelperFromAdjustments(); syncAdjustmentToHelper(this, 'additional'); const row = this.closest('.adjustment-row'); const inputs = row.querySelectorAll('input, select'); formatAdjustmentDisplay(row, inputs[1].value, Math.abs(parseFloat(inputs[2].value) || 0), safeParseAmount(this.value));" /></div>
+                      <div><button class="btn remove" onclick="removeAdjustmentRow('${rowId}')">מחק</button></div>
+                    </div>
+                    <div style="text-align: right; font-size: 12px; color: #666; margin-top: 4px;">
+                      ערך מצטבר: <span class="row-cumulative" style="font-weight: bold; color: #28a745;">₪0</span>
+                    </div>
                   </div>
                 `;
                 additionalContainer.insertAdjacentHTML('beforeend', newRow);
                 
-                // Trigger formatAdjustmentDisplay for proper minus sign display
+                // Trigger formatAdjustmentDisplay for proper minus sign display and update cumulative
                 setTimeout(() => {
                   const row = document.getElementById(rowId);
                   if (row) {
                     formatAdjustmentDisplay(row, adj.type, adj.percentage || adj.percent, adj.amount);
+                    
+                    // Update row cumulative if available from helper
+                    if (adj.cumulative !== undefined) {
+                      const cumulativeSpan = row.querySelector('.row-cumulative');
+                      if (cumulativeSpan) {
+                        cumulativeSpan.textContent = `₪${Math.round(adj.cumulative).toLocaleString()}`;
+                      }
+                    }
                   }
                 }, 10);
                 
@@ -9375,15 +9427,20 @@
       const rowId = 'fullAdj_' + Date.now();
       
       const newRow = `
-        <div id="${rowId}" class="adjustment-row" data-source="manual" style="display:grid; grid-template-columns:2fr 1fr 1fr 1fr 80px; gap:10px; margin-bottom:8px;">
-          <div><input type="text" placeholder="תיאור התאמה נוספת" onchange="updateFullMarketValueCalculation(); updateHelperFromAdjustments(); syncAdjustmentToHelper(this, 'additional'); const row = this.closest('.adjustment-row'); const inputs = row.querySelectorAll('input, select'); formatAdjustmentDisplay(row, inputs[1].value, parseFloat(inputs[2].value) || 0, safeParseAmount(inputs[3].value));" /></div>
-          <div><select onchange="updateFullMarketValueCalculation(); updateHelperFromAdjustments(); syncAdjustmentToHelper(this, 'additional'); const row = this.closest('.adjustment-row'); const inputs = row.querySelectorAll('input, select'); formatAdjustmentDisplay(row, this.value, parseFloat(inputs[2].value) || 0, safeParseAmount(inputs[3].value));">
-            <option value="plus">תוספת (+)</option>
-            <option value="minus">הפחתה (-)</option>
-          </select></div>
-          <div><input type="text" placeholder="אחוז" oninput="calculateAdjustmentValueSimple(this);" onchange="updateFullMarketValueCalculation(); updateHelperFromAdjustments(); syncAdjustmentToHelper(this, 'additional'); const row = this.closest('.adjustment-row'); const inputs = row.querySelectorAll('input, select'); formatAdjustmentDisplay(row, inputs[1].value, parseFloat(this.value) || 0, safeParseAmount(inputs[3].value));" /></div>
-          <div><input type="text" placeholder="₪" onchange="updateFullMarketValueCalculation(); updateHelperFromAdjustments(); syncAdjustmentToHelper(this, 'additional'); const row = this.closest('.adjustment-row'); const inputs = row.querySelectorAll('input, select'); formatAdjustmentDisplay(row, inputs[1].value, parseFloat(inputs[2].value) || 0, safeParseAmount(this.value));" /></div>
-          <div><button class="btn remove" onclick="removeAdjustmentRow('${rowId}')">מחק</button></div>
+        <div id="${rowId}" class="adjustment-row" data-source="manual">
+          <div style="display:grid; grid-template-columns:2fr 1fr 1fr 1fr 80px; gap:10px; margin-bottom:8px;">
+            <div><input type="text" placeholder="תיאור התאמה נוספת" onchange="updateFullMarketValueCalculation(); updateHelperFromAdjustments(); syncAdjustmentToHelper(this, 'additional'); const row = this.closest('.adjustment-row'); const inputs = row.querySelectorAll('input, select'); formatAdjustmentDisplay(row, inputs[1].value, parseFloat(inputs[2].value) || 0, safeParseAmount(inputs[3].value));" /></div>
+            <div><select onchange="updateFullMarketValueCalculation(); updateHelperFromAdjustments(); syncAdjustmentToHelper(this, 'additional'); const row = this.closest('.adjustment-row'); const inputs = row.querySelectorAll('input, select'); formatAdjustmentDisplay(row, this.value, parseFloat(inputs[2].value) || 0, safeParseAmount(inputs[3].value));">
+              <option value="plus">תוספת (+)</option>
+              <option value="minus">הפחתה (-)</option>
+            </select></div>
+            <div><input type="text" placeholder="אחוז" oninput="calculateAdjustmentValueSimple(this);" onchange="updateFullMarketValueCalculation(); updateHelperFromAdjustments(); syncAdjustmentToHelper(this, 'additional'); const row = this.closest('.adjustment-row'); const inputs = row.querySelectorAll('input, select'); formatAdjustmentDisplay(row, inputs[1].value, parseFloat(this.value) || 0, safeParseAmount(inputs[3].value));" /></div>
+            <div><input type="text" placeholder="₪" onchange="updateFullMarketValueCalculation(); updateHelperFromAdjustments(); syncAdjustmentToHelper(this, 'additional'); const row = this.closest('.adjustment-row'); const inputs = row.querySelectorAll('input, select'); formatAdjustmentDisplay(row, inputs[1].value, parseFloat(inputs[2].value) || 0, safeParseAmount(this.value));" /></div>
+            <div><button class="btn remove" onclick="removeAdjustmentRow('${rowId}')">מחק</button></div>
+          </div>
+          <div style="text-align: right; font-size: 12px; color: #666; margin-top: 4px;">
+            ערך מצטבר: <span class="row-cumulative" style="font-weight: bold; color: #28a745;">₪0</span>
+          </div>
         </div>
       `;
       
