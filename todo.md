@@ -6508,3 +6508,42 @@ All issues with additional adjustments have been resolved. The system now:
 - Properly deletes adjustments from helper
 - Maintains UI state on page refresh
 - Uses correct field names for ownership adjustments
+
+## 2025-09-23: Fix Persistence of Manually Added Adjustment Rows
+
+### Plan:
+1. ✓ Fix syncAdjustmentToHelper to preserve manually entered amounts
+2. ✓ Update loadTotalValueSectionAdjustments to load all rows from storage 
+3. ✓ Fix UI recreation for Gross section (features/registration)
+4. ✓ Test manual row persistence for all categories
+
+### Implementation Summary:
+
+#### 1. Fixed `syncAdjustmentToHelper` function:
+- Added logic to check if amount is manually entered vs calculated
+- Only calculates amount from percentage when amount field is truly empty
+- Added flags `isManualAmount` and `isCalculatedAmount` to distinguish entry types
+- Preserves manually entered amounts instead of overwriting with calculations
+
+#### 2. Fixed `loadGrossAdjustments` function:
+- Updated to check `final_report.adjustments` for manually added rows
+- If more than one row exists, loads from `final_report` instead of `estimate`
+- Ensures all manually added rows are recreated in UI
+
+#### 3. Fixed `updateFullMarketValueCalculation` function:
+- Added check using `window.pageLoadInProgress` flag
+- Only updates calculated values for first row [0] during page load
+- Preserves manually entered amounts for additional rows (index > 0)
+- Applied fix to all categories: mileage, ownership_type, ownership_history
+
+### Results:
+- ✓ Manual row amounts now persist through page refresh
+- ✓ UI displays all rows after refresh in both sections
+- ✓ No regression in main row functionality
+- ✓ All 5 categories work correctly
+
+### Testing Instructions:
+1. Add manual adjustment row with amount only → refresh → verify amount persists
+2. Add manual adjustment row with percentage only → refresh → verify calculated amount persists
+3. Add manual adjustment row with both → refresh → verify both persist
+4. Test all categories: features, registration, mileage, ownership_type, ownership_history

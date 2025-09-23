@@ -5457,7 +5457,20 @@
         ];
         
         categories.forEach(({ key, addFunction, container }) => {
-          const categoryData = adjustments[key];
+          // FIXED: First check final_report.adjustments for manually added rows
+          const finalReportData = helper.final_report?.adjustments?.[key] || [];
+          const estimateData = adjustments[key];
+          
+          // Use final_report data if it has manually added rows (length > 1)
+          let categoryData;
+          if (Array.isArray(finalReportData) && finalReportData.length > 1) {
+            console.log(`📝 Loading ${key} from final_report (has ${finalReportData.length} items including manual additions)`);
+            categoryData = finalReportData;
+          } else {
+            console.log(`📝 Loading ${key} from estimate.adjustments`);
+            categoryData = estimateData;
+          }
+          
           if (categoryData && container) {
             console.log(`📝 Loading ${key} adjustments:`, categoryData);
             
@@ -5465,7 +5478,7 @@
             const items = Array.isArray(categoryData) ? categoryData : (categoryData && (categoryData.percent || categoryData.percentage || categoryData.amount) ? [categoryData] : []);
             
             items.forEach((item, index) => {
-              if (item && (item.percent || item.percentage || item.amount)) {
+              if (item && (item.percent || item.percentage || item.amount || item.value)) {
                 // Add new row
                 addFunction();
                 
@@ -5493,13 +5506,16 @@
                     
                     // Percent and amount - preserve sign based on type
                     inputs[2].value = itemPercent ? Math.abs(itemPercent) : '';
-                    // Check if it's a reduction type to preserve minus sign
-                    const isReduction = isReductionType(item.type);
-                    let displayAmount = Math.abs(item.amount || 0);
-                    if (isReduction && displayAmount > 0) {
-                      displayAmount = -displayAmount;
+                    
+                    // FIXED: Preserve amount display properly
+                    if (item.amount_display) {
+                      inputs[3].value = item.amount_display;
+                    } else if (item.amount !== undefined && item.amount !== 0) {
+                      const absAmount = Math.abs(item.amount);
+                      inputs[3].value = `₪${absAmount.toLocaleString()}`;
+                    } else {
+                      inputs[3].value = '';
                     }
-                    inputs[3].value = item.amount_display || (item.amount ? `₪${displayAmount.toLocaleString()}` : '');
                     
                     // Trigger change events
                     inputs[1].dispatchEvent(new Event('change', { bubbles: true }));
@@ -6042,13 +6058,16 @@
                     
                     // Percent and amount - preserve sign based on type
                     inputs[2].value = itemPercent ? Math.abs(itemPercent) : '';
-                    // Check if it's a reduction type to preserve minus sign
-                    const isReduction = isReductionType(item.type);
-                    let displayAmount = Math.abs(item.amount || 0);
-                    if (isReduction && displayAmount > 0) {
-                      displayAmount = -displayAmount;
+                    
+                    // FIXED: Preserve amount display properly
+                    if (item.amount_display) {
+                      inputs[3].value = item.amount_display;
+                    } else if (item.amount !== undefined && item.amount !== 0) {
+                      const absAmount = Math.abs(item.amount);
+                      inputs[3].value = `₪${absAmount.toLocaleString()}`;
+                    } else {
+                      inputs[3].value = '';
                     }
-                    inputs[3].value = item.amount_display || (item.amount ? `₪${displayAmount.toLocaleString()}` : '');
                     
                     // Trigger change events
                     inputs[1].dispatchEvent(new Event('change', { bubbles: true }));
@@ -7116,12 +7135,22 @@
             
             
             // Calculate amount from percentage if needed (BEFORE applying signs)
-            if (adjustmentData.percentage && !adjustmentData.amount) {
+            // FIXED: Only calculate if BOTH conditions are met:
+            // 1. Percentage exists and is non-zero
+            // 2. Amount is truly empty (not manually entered)
+            const amountFromUI = safeParseAmount(inputs[3].value);
+            const hasManualAmount = amountFromUI !== 0 || inputs[3].value.trim() !== '';
+            
+            if (adjustmentData.percentage && !hasManualAmount) {
               const baseValue = parseFloat(helper.estimate?.market_value_base) || 0;
               if (baseValue > 0) {
                 const amount = Math.round((baseValue * Math.abs(adjustmentData.percentage)) / 100);
                 adjustmentData.amount = amount; // Set as positive first
+                adjustmentData.isCalculatedAmount = true; // Flag for calculated amounts
               }
+            } else if (hasManualAmount) {
+              adjustmentData.amount = amountFromUI;
+              adjustmentData.isManualAmount = true; // Flag for manual amounts
             }
             
             // Round the amount to ensure no fractions
@@ -9372,14 +9401,15 @@
             }
             
             // UPDATE THE UI: Set the correct specific value in the value field
-            if (valueInput) {
+            // FIXED: Only update if it's the first row or if we're actively calculating
+            if (valueInput && (index === 0 || !window.pageLoadInProgress)) {
               const roundedResult = Math.round(specificResult);
               const displayAmount = roundedResult.toLocaleString();
               valueInput.value = (type === 'minus') ? `-₪${displayAmount}` : `₪${displayAmount}`;
             }
           } else if (valueInput && valueInput.value) {
             const value = parseFloat(valueInput.value.replace(/[₪,]/g, '')) || 0;
-            const signedValue = (type === 'minus') ? -value : value;
+            const signedValue = (type === 'minus') ? -Math.abs(value) : Math.abs(value);
             currentValue += signedValue;
           }
         });
@@ -9427,7 +9457,8 @@
             }
             
             // UPDATE THE UI: Set the correct specific value in the value field
-            if (valueInput) {
+            // FIXED: Only update if it's the first row or if we're actively calculating
+            if (valueInput && (index === 0 || !window.pageLoadInProgress)) {
               const roundedResult = Math.round(specificResult);
               const displayAmount = roundedResult.toLocaleString();
               valueInput.value = (type === 'minus') ? `-₪${displayAmount}` : `₪${displayAmount}`;
@@ -9485,7 +9516,8 @@
             }
             
             // UPDATE THE UI: Set the correct specific value in the value field
-            if (valueInput) {
+            // FIXED: Only update if it's the first row or if we're actively calculating
+            if (valueInput && (index === 0 || !window.pageLoadInProgress)) {
               const roundedResult = Math.round(specificResult);
               const displayAmount = roundedResult.toLocaleString();
               valueInput.value = (type === 'minus') ? `-₪${displayAmount}` : `₪${displayAmount}`;
