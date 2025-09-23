@@ -5662,29 +5662,34 @@
           console.log(`🔒 Making ${category} read-only in Total Market Value: ${isReadOnlyCategory}`);
           
           const html = `
-            <div id="${rowId}" class="adjustment-row" data-source="${source}" style="display:grid; grid-template-columns:2fr 1fr 1fr 1fr 80px; gap:10px; margin-bottom:8px;">
-              <div><input type="text" placeholder="תיאור התאמה" value="${escapedDescription}" ${readOnlyAttr} style="${readOnlyStyle}" ${isReadOnlyCategory ? '' : `onchange="updateFullMarketValueCalculation(); syncAdjustmentToHelper(this, '${category}');"`} /></div>
-              <div>
-                ${category === 'additional' ? 
-                  `<select ${disabledAttr} style="${readOnlyStyle}" ${isReadOnlyCategory ? '' : `onchange="updateFullMarketValueCalculation(); syncAdjustmentToHelper(this, '${category}');"`}>
-                    <option value="plus" ${adj.type === 'plus' || selectedType === 'תוספת (+)' ? 'selected' : ''}>תוספת (+)</option>
-                    <option value="minus" ${adj.type === 'minus' || selectedType === 'הפחתה (-)' ? 'selected' : ''}>הפחתה (-)</option>
-                  </select>` :
-                  `<select ${disabledAttr} style="${readOnlyStyle}" ${isReadOnlyCategory ? '' : `onchange="updateFullMarketValueCalculation(); syncAdjustmentToHelper(this, '${category}');"`}>
-                    <option value="%" ${selectedType === '%' ? 'selected' : ''}>%</option>
-                    <option value="₪" ${selectedType === '₪' ? 'selected' : ''}>₪</option>
-                    <option value="plus" ${selectedType === 'תוספת (+)' || adj.type === 'plus' ? 'selected' : ''}>תוספת (+)</option>
-                    <option value="minus" ${selectedType === 'הפחתה (-)' || adj.type === 'minus' ? 'selected' : ''}>הפחתה (-)</option>
-                  </select>`
-                }
+            <div id="${rowId}" class="adjustment-row" data-source="${source}">
+              <div style="display:grid; grid-template-columns:2fr 1fr 1fr 1fr 80px; gap:10px; margin-bottom:8px;">
+                <div><input type="text" placeholder="תיאור התאמה" value="${escapedDescription}" ${readOnlyAttr} style="${readOnlyStyle}" ${isReadOnlyCategory ? '' : `onchange="updateFullMarketValueCalculation(); syncAdjustmentToHelper(this, '${category}');"`} /></div>
+                <div>
+                  ${category === 'additional' ? 
+                    `<select ${disabledAttr} style="${readOnlyStyle}" ${isReadOnlyCategory ? '' : `onchange="updateFullMarketValueCalculation(); syncAdjustmentToHelper(this, '${category}');"`}>
+                      <option value="plus" ${adj.type === 'plus' || selectedType === 'תוספת (+)' ? 'selected' : ''}>תוספת (+)</option>
+                      <option value="minus" ${adj.type === 'minus' || selectedType === 'הפחתה (-)' ? 'selected' : ''}>הפחתה (-)</option>
+                    </select>` :
+                    `<select ${disabledAttr} style="${readOnlyStyle}" ${isReadOnlyCategory ? '' : `onchange="updateFullMarketValueCalculation(); syncAdjustmentToHelper(this, '${category}');"`}>
+                      <option value="%" ${selectedType === '%' ? 'selected' : ''}>%</option>
+                      <option value="₪" ${selectedType === '₪' ? 'selected' : ''}>₪</option>
+                      <option value="plus" ${selectedType === 'תוספת (+)' || adj.type === 'plus' ? 'selected' : ''}>תוספת (+)</option>
+                      <option value="minus" ${selectedType === 'הפחתה (-)' || adj.type === 'minus' ? 'selected' : ''}>הפחתה (-)</option>
+                    </select>`
+                  }
+                </div>
+                <div><input type="text" placeholder="אחוז" value="${percentage}" ${readOnlyAttr || (!isPercent ? 'readonly' : '')} style="direction: ltr; text-align: right;${readOnlyStyle}${!isPercent ? ' background: #f0f0f0;' : ''}" ${isReadOnlyCategory ? '' : `onchange="updateFullMarketValueCalculation(); syncAdjustmentToHelper(this, '${category}');"`} /></div>
+                <div><input type="text" placeholder="ערך" value="${amount}" ${readOnlyAttr || (isPercent ? 'readonly' : '')} style="direction: ltr; text-align: right;${readOnlyStyle}${isPercent ? ' background: #f0f0f0;' : ''}" ${isReadOnlyCategory ? '' : `onchange="updateFullMarketValueCalculation(); syncAdjustmentToHelper(this, '${category}');"`} /></div>
+                <div>
+                  ${isReadOnlyCategory ? 
+                    '<span style="color: #6c757d; font-size: 12px;">קריאה בלבד</span>' : 
+                    `<button class="btn remove" type="button" onclick="removeAdjustmentRow('${rowId}')">הסר</button>`
+                  }
+                </div>
               </div>
-              <div><input type="text" placeholder="אחוז" value="${percentage}" ${readOnlyAttr || (!isPercent ? 'readonly' : '')} style="direction: ltr; text-align: right;${readOnlyStyle}${!isPercent ? ' background: #f0f0f0;' : ''}" ${isReadOnlyCategory ? '' : `onchange="updateFullMarketValueCalculation(); syncAdjustmentToHelper(this, '${category}');"`} /></div>
-              <div><input type="text" placeholder="ערך" value="${amount}" ${readOnlyAttr || (isPercent ? 'readonly' : '')} style="direction: ltr; text-align: right;${readOnlyStyle}${isPercent ? ' background: #f0f0f0;' : ''}" ${isReadOnlyCategory ? '' : `onchange="updateFullMarketValueCalculation(); syncAdjustmentToHelper(this, '${category}');"`} /></div>
-              <div>
-                ${isReadOnlyCategory ? 
-                  '<span style="color: #6c757d; font-size: 12px;">קריאה בלבד</span>' : 
-                  `<button class="btn remove" type="button" onclick="removeAdjustmentRow('${rowId}')">הסר</button>`
-                }
+              <div style="text-align: right; font-size: 12px; color: #666; margin-top: 4px;">
+                ערך מצטבר: <span class="row-cumulative" style="font-weight: bold; color: #28a745;">${adj.cumulative ? `₪${adj.cumulative.toLocaleString()}` : '₪0'}</span>
               </div>
             </div>
           `;
@@ -6129,15 +6134,20 @@
       const rowId = 'featureAdj_' + Date.now();
       
       const newRow = `
-        <div id="${rowId}" data-source="manual" style="display:grid; grid-template-columns:2fr 1fr 1fr 1fr 80px; gap:10px; margin-bottom:8px;">
-          <div><input type="text" placeholder="תיאור המאפיין" onchange="updateGrossMarketValueCalculation(); syncAdjustmentToHelper(this, 'features');" /></div>
-          <div><select onchange="updateGrossMarketValueCalculation(); syncAdjustmentToHelper(this, 'features');">
-            <option value="plus">תוספת (+)</option>
-            <option value="minus">הפחתה (-)</option>
-          </select></div>
-          <div><input type="text" placeholder="אחוז" oninput="calculateAdjustmentValueSimple(this);" onchange="updateGrossMarketValueCalculation(); syncAdjustmentToHelper(this, 'features');" /></div>
-          <div><input type="text" placeholder="₪" onchange="updateGrossMarketValueCalculation(); syncAdjustmentToHelper(this, 'features');" /></div>
-          <div><button class="btn remove" onclick="removeAdjustmentRow('${rowId}')">מחק</button></div>
+        <div id="${rowId}" data-source="manual">
+          <div style="display:grid; grid-template-columns:2fr 1fr 1fr 1fr 80px; gap:10px; margin-bottom:8px;">
+            <div><input type="text" placeholder="תיאור המאפיין" onchange="updateGrossMarketValueCalculation(); syncAdjustmentToHelper(this, 'features');" /></div>
+            <div><select onchange="updateGrossMarketValueCalculation(); syncAdjustmentToHelper(this, 'features');">
+              <option value="plus">תוספת (+)</option>
+              <option value="minus">הפחתה (-)</option>
+            </select></div>
+            <div><input type="text" placeholder="אחוז" oninput="calculateAdjustmentValueSimple(this);" onchange="updateGrossMarketValueCalculation(); syncAdjustmentToHelper(this, 'features');" /></div>
+            <div><input type="text" placeholder="₪" onchange="updateGrossMarketValueCalculation(); syncAdjustmentToHelper(this, 'features');" /></div>
+            <div><button class="btn remove" onclick="removeAdjustmentRow('${rowId}')">מחק</button></div>
+          </div>
+          <div style="text-align: right; font-size: 12px; color: #666; margin-top: 4px;">
+            ערך מצטבר: <span class="row-cumulative" style="font-weight: bold; color: #28a745;">₪0</span>
+          </div>
         </div>
       `;
       
@@ -6151,15 +6161,20 @@
       const rowId = 'regAdj_' + Date.now();
       
       const newRow = `
-        <div id="${rowId}" data-source="manual" style="display:grid; grid-template-columns:2fr 1fr 1fr 1fr 80px; gap:10px; margin-bottom:8px;">
-          <div><input type="text" placeholder="תיאור עליה לכביש" onchange="updateGrossMarketValueCalculation(); syncAdjustmentToHelper(this, 'registration');" /></div>
-          <div><select onchange="updateGrossMarketValueCalculation(); syncAdjustmentToHelper(this, 'registration');">
-            <option value="plus">תוספת (+)</option>
-            <option value="minus">הפחתה (-)</option>
-          </select></div>
-          <div><input type="text" placeholder="אחוז" oninput="calculateAdjustmentValueSimple(this);" onchange="updateGrossMarketValueCalculation(); syncAdjustmentToHelper(this, 'registration');" /></div>
-          <div><input type="text" placeholder="₪" onchange="updateGrossMarketValueCalculation(); syncAdjustmentToHelper(this, 'registration');" /></div>
-          <div><button class="btn remove" onclick="removeAdjustmentRow('${rowId}')">מחק</button></div>
+        <div id="${rowId}" data-source="manual">
+          <div style="display:grid; grid-template-columns:2fr 1fr 1fr 1fr 80px; gap:10px; margin-bottom:8px;">
+            <div><input type="text" placeholder="תיאור עליה לכביש" onchange="updateGrossMarketValueCalculation(); syncAdjustmentToHelper(this, 'registration');" /></div>
+            <div><select onchange="updateGrossMarketValueCalculation(); syncAdjustmentToHelper(this, 'registration');">
+              <option value="plus">תוספת (+)</option>
+              <option value="minus">הפחתה (-)</option>
+            </select></div>
+            <div><input type="text" placeholder="אחוז" oninput="calculateAdjustmentValueSimple(this);" onchange="updateGrossMarketValueCalculation(); syncAdjustmentToHelper(this, 'registration');" /></div>
+            <div><input type="text" placeholder="₪" onchange="updateGrossMarketValueCalculation(); syncAdjustmentToHelper(this, 'registration');" /></div>
+            <div><button class="btn remove" onclick="removeAdjustmentRow('${rowId}')">מחק</button></div>
+          </div>
+          <div style="text-align: right; font-size: 12px; color: #666; margin-top: 4px;">
+            ערך מצטבר: <span class="row-cumulative" style="font-weight: bold; color: #28a745;">₪0</span>
+          </div>
         </div>
       `;
       
@@ -7166,39 +7181,49 @@
             // Add cumulative tracking for all adjustment categories
             if (category === 'mileage' || category === 'ownership_type' || category === 'ownership_history' || 
                 category === 'features' || category === 'registration') {
-              // Find cumulative display element
-              let cumulativeId = '';
-              
-              // For features and registration, determine if it's gross or full market section
-              if (category === 'features') {
-                // Check if it's gross section or full market section based on container
-                if (containerId === 'featuresAdjustmentsList') {
-                  cumulativeId = 'grossFeaturesCumulative'; // Gross section
-                } else {
-                  cumulativeId = 'featuresCumulative'; // Full market section
+              // FIXED: Get cumulative from the row itself, not the category total
+              const rowCumulativeSpan = row.querySelector('.row-cumulative');
+              if (rowCumulativeSpan) {
+                const cumulativeText = rowCumulativeSpan.textContent.replace(/[₪,]/g, '');
+                const cumulativeValue = parseFloat(cumulativeText) || 0;
+                // Round cumulative value to ensure no fractions
+                adjustmentData.cumulative = Math.round(cumulativeValue);
+                console.log(`📊 Captured row cumulative for ${category}[${index}]: ${adjustmentData.cumulative}`);
+              } else {
+                // Fallback to category cumulative for backward compatibility
+                let cumulativeId = '';
+                
+                // For features and registration, determine if it's gross or full market section
+                if (category === 'features') {
+                  // Check if it's gross section or full market section based on container
+                  if (containerId === 'featuresAdjustmentsList') {
+                    cumulativeId = 'grossFeaturesCumulative'; // Gross section
+                  } else {
+                    cumulativeId = 'featuresCumulative'; // Full market section
+                  }
                 }
-              }
-              else if (category === 'registration') {
-                // Check if it's gross section or full market section based on container
-                if (containerId === 'registrationAdjustmentsList') {
-                  cumulativeId = 'grossRegistrationCumulative'; // Gross section
-                } else {
-                  cumulativeId = 'registrationCumulative'; // Full market section
+                else if (category === 'registration') {
+                  // Check if it's gross section or full market section based on container
+                  if (containerId === 'registrationAdjustmentsList') {
+                    cumulativeId = 'grossRegistrationCumulative'; // Gross section
+                  } else {
+                    cumulativeId = 'registrationCumulative'; // Full market section
+                  }
                 }
-              }
-              else if (category === 'mileage') cumulativeId = 'mileageCumulative';
-              else if (category === 'ownership_type') cumulativeId = 'ownershipCumulative';
-              else if (category === 'ownership_history') cumulativeId = 'ownersCumulative';
-              
-              const cumulativeElement = document.getElementById(cumulativeId);
-              if (cumulativeElement) {
-                const cumulativeSpan = cumulativeElement.querySelector('span');
-                if (cumulativeSpan) {
-                  const cumulativeText = cumulativeSpan.textContent.replace(/[₪,]/g, '');
-                  const cumulativeValue = parseFloat(cumulativeText) || 0;
-                  // Round cumulative value to ensure no fractions
-                  adjustmentData.cumulative = Math.round(cumulativeValue);
-                  console.log(`📊 Captured cumulative for ${category}: ${adjustmentData.cumulative}`);
+                else if (category === 'mileage') cumulativeId = 'mileageCumulative';
+                else if (category === 'ownership_type') cumulativeId = 'ownershipCumulative';
+                else if (category === 'ownership_history') cumulativeId = 'ownersCumulative';
+                
+                const cumulativeElement = document.getElementById(cumulativeId);
+                if (cumulativeElement) {
+                  const cumulativeSpan = cumulativeElement.querySelector('span');
+                  if (cumulativeSpan) {
+                    const cumulativeText = cumulativeSpan.textContent.replace(/[₪,]/g, '');
+                    const cumulativeValue = parseFloat(cumulativeText) || 0;
+                    // Round cumulative value to ensure no fractions
+                    adjustmentData.cumulative = Math.round(cumulativeValue);
+                    console.log(`📊 Captured category cumulative for ${category}: ${adjustmentData.cumulative}`);
+                  }
                 }
               }
             }
@@ -8501,6 +8526,12 @@
             const isNegative = isReductionType(type);
             currentValue += (isNegative ? -amount : amount);
           }
+          
+          // Update row's cumulative display
+          const rowCumulativeSpan = row.querySelector('.row-cumulative');
+          if (rowCumulativeSpan) {
+            rowCumulativeSpan.textContent = `₪${Math.round(currentValue).toLocaleString()}`;
+          }
         });
         
         // Update features cumulative
@@ -8529,6 +8560,12 @@
               const signedValue = isReductionType(type) ? -value : value;
               currentValue += signedValue;
             }
+          }
+          
+          // Update row's cumulative display
+          const rowCumulativeSpan = row.querySelector('.row-cumulative');
+          if (rowCumulativeSpan) {
+            rowCumulativeSpan.textContent = `₪${Math.round(currentValue).toLocaleString()}`;
           }
         });
         
@@ -9208,15 +9245,20 @@
       const rowId = 'mileageAdj_' + Date.now();
       
       const newRow = `
-        <div id="${rowId}" class="adjustment-row" data-source="manual" style="display:grid; grid-template-columns:2fr 1fr 1fr 1fr 80px; gap:10px; margin-bottom:8px;">
-          <div><input type="text" placeholder="תיאור מס ק"מ" title="" onchange="updateFullMarketValueCalculation(); syncAdjustmentToHelper(this, 'mileage'); this.title = this.value;" oninput="this.title = this.value;" /></div>
-          <div><select onchange="updateFullMarketValueCalculation(); syncAdjustmentToHelper(this, 'mileage'); const row = this.closest('.adjustment-row'); const inputs = row.querySelectorAll('input, select'); formatAdjustmentDisplay(row, this.value, Math.abs(parseFloat(inputs[2].value) || 0), safeParseAmount(inputs[3].value));" title="">
-            <option value="plus">תוספת (+)</option>
-            <option value="minus">הפחתה (-)</option>
-          </select></div>
-          <div><input type="text" placeholder="אחוז" title="" oninput="calculateAdjustmentValueSimple(this); this.title = this.value;" onchange="updateFullMarketValueCalculation(); syncAdjustmentToHelper(this, 'mileage'); this.title = this.value;" /></div>
-          <div><input type="text" placeholder="₪" title="" onchange="updateFullMarketValueCalculation(); syncAdjustmentToHelper(this, 'mileage'); saveAdjustmentAmount('mileage', safeParseAmount(this.value), 0); this.title = this.value;" oninput="this.title = this.value;" /></div>
-          <div><button class="btn remove" onclick="removeAdjustmentRow('${rowId}')">מחק</button></div>
+        <div id="${rowId}" class="adjustment-row" data-source="manual">
+          <div style="display:grid; grid-template-columns:2fr 1fr 1fr 1fr 80px; gap:10px; margin-bottom:8px;">
+            <div><input type="text" placeholder="תיאור מס ק"מ" title="" onchange="updateFullMarketValueCalculation(); syncAdjustmentToHelper(this, 'mileage'); this.title = this.value;" oninput="this.title = this.value;" /></div>
+            <div><select onchange="updateFullMarketValueCalculation(); syncAdjustmentToHelper(this, 'mileage'); const row = this.closest('.adjustment-row'); const inputs = row.querySelectorAll('input, select'); formatAdjustmentDisplay(row, this.value, Math.abs(parseFloat(inputs[2].value) || 0), safeParseAmount(inputs[3].value));" title="">
+              <option value="plus">תוספת (+)</option>
+              <option value="minus">הפחתה (-)</option>
+            </select></div>
+            <div><input type="text" placeholder="אחוז" title="" oninput="calculateAdjustmentValueSimple(this); this.title = this.value;" onchange="updateFullMarketValueCalculation(); syncAdjustmentToHelper(this, 'mileage'); this.title = this.value;" /></div>
+            <div><input type="text" placeholder="₪" title="" onchange="updateFullMarketValueCalculation(); syncAdjustmentToHelper(this, 'mileage'); saveAdjustmentAmount('mileage', safeParseAmount(this.value), 0); this.title = this.value;" oninput="this.title = this.value;" /></div>
+            <div><button class="btn remove" onclick="removeAdjustmentRow('${rowId}')">מחק</button></div>
+          </div>
+          <div style="text-align: right; font-size: 12px; color: #666; margin-top: 4px;">
+            ערך מצטבר: <span class="row-cumulative" style="font-weight: bold; color: #28a745;">₪0</span>
+          </div>
         </div>
       `;
       
@@ -9230,15 +9272,20 @@
       const rowId = 'ownershipAdj_' + Date.now();
       
       const newRow = `
-        <div id="${rowId}" class="adjustment-row" data-source="manual" style="display:grid; grid-template-columns:2fr 1fr 1fr 1fr 80px; gap:10px; margin-bottom:8px;">
-          <div><input type="text" placeholder="תיאור סוג בעלות" title="" onchange="updateFullMarketValueCalculation(); syncAdjustmentToHelper(this, 'ownership_type'); this.title = this.value;" oninput="this.title = this.value;" /></div>
+        <div id="${rowId}" class="adjustment-row" data-source="manual">
+          <div style="display:grid; grid-template-columns:2fr 1fr 1fr 1fr 80px; gap:10px; margin-bottom:8px;">
+            <div><input type="text" placeholder="תיאור סוג בעלות" title="" onchange="updateFullMarketValueCalculation(); syncAdjustmentToHelper(this, 'ownership_type'); this.title = this.value;" oninput="this.title = this.value;" /></div>
           <div><select onchange="updateFullMarketValueCalculation(); syncAdjustmentToHelper(this, 'ownership_type'); const row = this.closest('.adjustment-row'); const inputs = row.querySelectorAll('input, select'); formatAdjustmentDisplay(row, this.value, Math.abs(parseFloat(inputs[2].value) || 0), safeParseAmount(inputs[3].value));" title="">
             <option value="plus">תוספת (+)</option>
             <option value="minus">הפחתה (-)</option>
           </select></div>
-          <div><input type="text" placeholder="אחוז" title="" oninput="calculateAdjustmentValueSimple(this); this.title = this.value;" onchange="updateFullMarketValueCalculation(); syncAdjustmentToHelper(this, 'ownership_type'); this.title = this.value;" /></div>
-          <div><input type="text" placeholder="₪" title="" onchange="updateFullMarketValueCalculation(); syncAdjustmentToHelper(this, 'ownership_type'); saveAdjustmentAmount('ownership_type', safeParseAmount(this.value), 0); this.title = this.value;" oninput="this.title = this.value;" /></div>
-          <div><button class="btn remove" onclick="removeAdjustmentRow('${rowId}')">מחק</button></div>
+            <div><input type="text" placeholder="אחוז" title="" oninput="calculateAdjustmentValueSimple(this); this.title = this.value;" onchange="updateFullMarketValueCalculation(); syncAdjustmentToHelper(this, 'ownership_type'); this.title = this.value;" /></div>
+            <div><input type="text" placeholder="₪" title="" onchange="updateFullMarketValueCalculation(); syncAdjustmentToHelper(this, 'ownership_type'); saveAdjustmentAmount('ownership_type', safeParseAmount(this.value), 0); this.title = this.value;" oninput="this.title = this.value;" /></div>
+            <div><button class="btn remove" onclick="removeAdjustmentRow('${rowId}')">מחק</button></div>
+          </div>
+          <div style="text-align: right; font-size: 12px; color: #666; margin-top: 4px;">
+            ערך מצטבר: <span class="row-cumulative" style="font-weight: bold; color: #28a745;">₪0</span>
+          </div>
         </div>
       `;
       
@@ -9252,15 +9299,20 @@
       const rowId = 'ownersAdj_' + Date.now();
       
       const newRow = `
-        <div id="${rowId}" class="adjustment-row" data-source="manual" style="display:grid; grid-template-columns:2fr 1fr 1fr 1fr 80px; gap:10px; margin-bottom:8px;">
-          <div><input type="text" placeholder="תיאור מספר בעלים" title="" onchange="updateFullMarketValueCalculation(); syncAdjustmentToHelper(this, 'ownership_history'); this.title = this.value;" oninput="this.title = this.value;" /></div>
-          <div><select onchange="updateFullMarketValueCalculation(); syncAdjustmentToHelper(this, 'ownership_history'); const row = this.closest('.adjustment-row'); const inputs = row.querySelectorAll('input, select'); formatAdjustmentDisplay(row, this.value, Math.abs(parseFloat(inputs[2].value) || 0), safeParseAmount(inputs[3].value));" title="">
-            <option value="plus">תוספת (+)</option>
-            <option value="minus">הפחתה (-)</option>
-          </select></div>
-          <div><input type="text" placeholder="אחוז" title="" oninput="calculateAdjustmentValueSimple(this); this.title = this.value;" onchange="updateFullMarketValueCalculation(); syncAdjustmentToHelper(this, 'ownership_history'); this.title = this.value;" /></div>
-          <div><input type="text" placeholder="₪" title="" onchange="updateFullMarketValueCalculation(); syncAdjustmentToHelper(this, 'ownership_history'); this.title = this.value;" oninput="this.title = this.value;" /></div>
-          <div><button class="btn remove" onclick="removeAdjustmentRow('${rowId}')">מחק</button></div>
+        <div id="${rowId}" class="adjustment-row" data-source="manual">
+          <div style="display:grid; grid-template-columns:2fr 1fr 1fr 1fr 80px; gap:10px; margin-bottom:8px;">
+            <div><input type="text" placeholder="תיאור מספר בעלים" title="" onchange="updateFullMarketValueCalculation(); syncAdjustmentToHelper(this, 'ownership_history'); this.title = this.value;" oninput="this.title = this.value;" /></div>
+            <div><select onchange="updateFullMarketValueCalculation(); syncAdjustmentToHelper(this, 'ownership_history'); const row = this.closest('.adjustment-row'); const inputs = row.querySelectorAll('input, select'); formatAdjustmentDisplay(row, this.value, Math.abs(parseFloat(inputs[2].value) || 0), safeParseAmount(inputs[3].value));" title="">
+              <option value="plus">תוספת (+)</option>
+              <option value="minus">הפחתה (-)</option>
+            </select></div>
+            <div><input type="text" placeholder="אחוז" title="" oninput="calculateAdjustmentValueSimple(this); this.title = this.value;" onchange="updateFullMarketValueCalculation(); syncAdjustmentToHelper(this, 'ownership_history'); this.title = this.value;" /></div>
+            <div><input type="text" placeholder="₪" title="" onchange="updateFullMarketValueCalculation(); syncAdjustmentToHelper(this, 'ownership_history'); this.title = this.value;" oninput="this.title = this.value;" /></div>
+            <div><button class="btn remove" onclick="removeAdjustmentRow('${rowId}')">מחק</button></div>
+          </div>
+          <div style="text-align: right; font-size: 12px; color: #666; margin-top: 4px;">
+            ערך מצטבר: <span class="row-cumulative" style="font-weight: bold; color: #28a745;">₪0</span>
+          </div>
         </div>
       `;
       
@@ -9412,6 +9464,12 @@
             const signedValue = (type === 'minus') ? -Math.abs(value) : Math.abs(value);
             currentValue += signedValue;
           }
+          
+          // Update row's cumulative display
+          const rowCumulativeSpan = row.querySelector('.row-cumulative');
+          if (rowCumulativeSpan) {
+            rowCumulativeSpan.textContent = `₪${Math.round(currentValue).toLocaleString()}`;
+          }
         });
         
         // Update mileage cumulative - this shows currentValue after mileage
@@ -9422,11 +9480,15 @@
         if (mileageRows.length > 0) {
           let totalMileageAmount = 0;
           mileageRows.forEach(row => {
+            const select = row.querySelector('select');
+            const type = select?.value;
             const inputs = row.querySelectorAll('input[type="text"]');
             const valueInput = inputs[2];
             if (valueInput && valueInput.value) {
               const amount = parseFloat(valueInput.value.replace(/[₪,]/g, '')) || 0;
-              totalMileageAmount += amount;
+              // FIXED: Apply proper sign based on type
+              const signedAmount = (type === 'minus') ? -Math.abs(amount) : Math.abs(amount);
+              totalMileageAmount += signedAmount;
             }
           });
           // Round the total amount before saving
@@ -9471,6 +9533,12 @@
               currentValue = currentValue + value;
             }
           }
+          
+          // Update row's cumulative display
+          const rowCumulativeSpan = row.querySelector('.row-cumulative');
+          if (rowCumulativeSpan) {
+            rowCumulativeSpan.textContent = `₪${Math.round(currentValue).toLocaleString()}`;
+          }
         });
         
         // Update ownership cumulative - this shows currentValue after ownership
@@ -9481,11 +9549,15 @@
         if (ownershipRows.length > 0) {
           let totalOwnershipAmount = 0;
           ownershipRows.forEach(row => {
+            const select = row.querySelector('select');
+            const type = select?.value;
             const inputs = row.querySelectorAll('input[type="text"]');
             const valueInput = inputs[2];
             if (valueInput && valueInput.value) {
               const amount = parseFloat(valueInput.value.replace(/[₪,]/g, '')) || 0;
-              totalOwnershipAmount += amount;
+              // FIXED: Apply proper sign based on type
+              const signedAmount = (type === 'minus') ? -Math.abs(amount) : Math.abs(amount);
+              totalOwnershipAmount += signedAmount;
             }
           });
           // Round the total amount before saving
@@ -9530,6 +9602,12 @@
               currentValue = currentValue + value;
             }
           }
+          
+          // Update row's cumulative display
+          const rowCumulativeSpan = row.querySelector('.row-cumulative');
+          if (rowCumulativeSpan) {
+            rowCumulativeSpan.textContent = `₪${Math.round(currentValue).toLocaleString()}`;
+          }
         });
         
         // Update owners cumulative
@@ -9569,6 +9647,12 @@
             const value = parseFloat(valueInput.value.replace(/[₪,]/g, '')) || 0;
             const signedValue = (type === 'minus') ? -value : value;
             currentValue += signedValue;
+          }
+          
+          // Update row's cumulative display
+          const rowCumulativeSpan = row.querySelector('.row-cumulative');
+          if (rowCumulativeSpan) {
+            rowCumulativeSpan.textContent = `₪${Math.round(currentValue).toLocaleString()}`;
           }
         });
         

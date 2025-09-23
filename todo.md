@@ -6547,3 +6547,57 @@ All issues with additional adjustments have been resolved. The system now:
 2. Add manual adjustment row with percentage only → refresh → verify calculated amount persists
 3. Add manual adjustment row with both → refresh → verify both persist
 4. Test all categories: features, registration, mileage, ownership_type, ownership_history
+
+## 2025-09-23: Add Row-Level Cumulative Values
+
+### Plan:
+1. ✓ Study the cumulative calculation logic
+2. ✓ Fix cumulative calculations to include all rows
+3. ✓ Add cumulative display after each row
+4. ✓ Save cumulative values per row in helper
+
+### Implementation Summary:
+
+#### 1. Added Row-Level Cumulative Displays:
+- Added cumulative display element to all "add adjustment" functions
+- Shows running total after each row (e.g., "ערך מצטבר: ₪139,340")
+- Updates dynamically during calculations
+
+#### 2. Fixed Cumulative Calculation Logic:
+- Features & Registration: Calculate from base price for ALL rows
+- Mileage: Calculate from Registration's final cumulative
+- Ownership Type: Calculate from Mileage's final cumulative
+- Ownership History: Calculate from Ownership Type's final cumulative
+- Handles both percentage and amount-only entries correctly
+
+#### 3. Updated Helper Storage:
+- Each row now stores its cumulative value in `adjustmentData.cumulative`
+- Captures row-level cumulative instead of category total
+- Template builder can now iterate and show progressive impact
+
+#### 4. Fixed Total Amount Calculations:
+- Updated to consider signs properly (plus/minus)
+- Total amount calculation now includes all rows with correct signs
+
+### Results:
+- ✓ Each row shows its cumulative value in UI
+- ✓ Helper stores cumulative for each array item
+- ✓ Values persist on refresh
+- ✓ Template can iterate and show progressive totals
+- ✓ Calculations follow exact category-specific base rules
+
+### Example Helper Structure:
+```javascript
+final_report.adjustments.mileage[0] = {
+  value: "ק״מ גבוה",
+  type: "plus",
+  amount: 2000,
+  cumulative: 139340  // Row cumulative
+}
+final_report.adjustments.mileage[1] = {
+  value: "תיקון ק״מ", 
+  type: "minus",
+  amount: -1500,
+  cumulative: 137840  // Row cumulative
+}
+```
