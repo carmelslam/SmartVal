@@ -1,3 +1,39 @@
+# Todo: Add "additional" Category to Market Value Adjustments Processing
+**Date: 2025-09-23**
+
+## Problem Analysis
+Found the exact section in estimate-report-builder.html that processes market value adjustments in the "חישוב ערך השוק של הרכב" section. The code currently processes 5 categories from estimate.adjustments but is missing the "additional" category.
+
+## Current Implementation (Line 1957-1965)
+- Location: `generateLeviAdjustments()` function in estimate-report-builder.html
+- Current categories: ['features', 'registration', 'mileage', 'ownership_type', 'ownership_history']
+- Missing: 'additional' category
+
+## Plan
+
+### Task 1: Add "additional" category to the processing logic
+- [ ] Add 'additional' to the categoryOrder array (line 1958)
+- [ ] Add Hebrew label for 'additional' in categoryLabels object (line 1959-1965)
+- [ ] Determine appropriate Hebrew translation for "additional" (suggest: 'נוספות' or 'תוספות נוספות')
+
+### Task 2: Verify the change works correctly
+- [ ] Ensure the new category processes the same data structure as other categories
+- [ ] Confirm it displays properly in the market value adjustments table
+
+## Implementation Details
+- File: `/Users/carmelcayouf/Library/Mobile Documents/com~apple~CloudDocs/1A Yaron Automation/IntegratedAppBuild/System Building Team/code/new code /SmartVal/estimate-report-builder.html`
+- Function: `generateLeviAdjustments()` 
+- Lines to modify: 1958 (categoryOrder array) and 1959-1965 (categoryLabels object)
+- Change scope: Very minimal - just adding one item to each array/object
+
+## Expected Result
+The "additional" category from estimate.adjustments.additional will be processed and displayed in the market value adjustments table alongside the existing categories.
+
+## Review Section
+*To be completed after implementation*
+
+---
+
 # תקנה 389 Field Implementation Analysis & Fix Plan
 **Date: 2025-09-15**
 
