@@ -9354,7 +9354,7 @@
               <option value="minus">הפחתה (-)</option>
             </select></div>
             <div><input type="text" placeholder="אחוז" title="" oninput="calculateAdjustmentValueSimple(this); this.title = this.value;" onchange="updateFullMarketValueCalculation(); syncAdjustmentToHelper(this, 'mileage'); this.title = this.value;" /></div>
-            <div><input type="text" placeholder="₪" title="" onchange="updateFullMarketValueCalculation(); syncAdjustmentToHelper(this, 'mileage'); saveAdjustmentAmount('mileage', safeParseAmount(this.value), 0); this.title = this.value;" oninput="this.title = this.value;" /></div>
+            <div><input type="text" placeholder="₪" title="" onchange="updateFullMarketValueCalculation(); syncAdjustmentToHelper(this, 'mileage'); this.title = this.value;" oninput="this.title = this.value;" /></div>
             <div><button class="btn remove" onclick="removeAdjustmentRow('${rowId}')">מחק</button></div>
           </div>
           <div style="text-align: right; font-size: 12px; color: #666; margin-top: 4px;">
@@ -9381,7 +9381,7 @@
             <option value="minus">הפחתה (-)</option>
           </select></div>
             <div><input type="text" placeholder="אחוז" title="" oninput="calculateAdjustmentValueSimple(this); this.title = this.value;" onchange="updateFullMarketValueCalculation(); syncAdjustmentToHelper(this, 'ownership_type'); this.title = this.value;" /></div>
-            <div><input type="text" placeholder="₪" title="" onchange="updateFullMarketValueCalculation(); syncAdjustmentToHelper(this, 'ownership_type'); saveAdjustmentAmount('ownership_type', safeParseAmount(this.value), 0); this.title = this.value;" oninput="this.title = this.value;" /></div>
+            <div><input type="text" placeholder="₪" title="" onchange="updateFullMarketValueCalculation(); syncAdjustmentToHelper(this, 'ownership_type'); this.title = this.value;" oninput="this.title = this.value;" /></div>
             <div><button class="btn remove" onclick="removeAdjustmentRow('${rowId}')">מחק</button></div>
           </div>
           <div style="text-align: right; font-size: 12px; color: #666; margin-top: 4px;">
@@ -9607,24 +9607,7 @@
         updateCumulativeDisplay('מס ק"מ', currentValue);
         const afterMileage = currentValue; // Store value after mileage
         
-        // Auto-save mileage amounts if we have data
-        if (mileageRows.length > 0) {
-          let totalMileageAmount = 0;
-          mileageRows.forEach(row => {
-            const select = row.querySelector('select');
-            const type = select?.value;
-            const inputs = row.querySelectorAll('input[type="text"]');
-            const valueInput = inputs[2];
-            if (valueInput && valueInput.value) {
-              const amount = parseFloat(valueInput.value.replace(/[₪,]/g, '')) || 0;
-              // FIXED: Apply proper sign based on type
-              const signedAmount = (type === 'minus') ? -Math.abs(amount) : Math.abs(amount);
-              totalMileageAmount += signedAmount;
-            }
-          });
-          // Round the total amount before saving
-          saveAdjustmentAmount('mileage', Math.round(totalMileageAmount), Math.round(currentValue));
-        }
+        // Removed saveAdjustmentAmount - syncAdjustmentToHelper handles row-level cumulative properly
         
         // 4. Process Ownership Adjustments
         const ownershipRows = document.querySelectorAll('#ownershipAdjustmentsList > div');
@@ -9679,24 +9662,7 @@
         updateCumulativeDisplay('סוג בעלות', currentValue);
         const afterOwnership = currentValue; // Store value after ownership
         
-        // Auto-save ownership type amounts if we have data
-        if (ownershipRows.length > 0) {
-          let totalOwnershipAmount = 0;
-          ownershipRows.forEach(row => {
-            const select = row.querySelector('select');
-            const type = select?.value;
-            const inputs = row.querySelectorAll('input[type="text"]');
-            const valueInput = inputs[2];
-            if (valueInput && valueInput.value) {
-              const amount = parseFloat(valueInput.value.replace(/[₪,]/g, '')) || 0;
-              // FIXED: Apply proper sign based on type
-              const signedAmount = (type === 'minus') ? -Math.abs(amount) : Math.abs(amount);
-              totalOwnershipAmount += signedAmount;
-            }
-          });
-          // Round the total amount before saving
-          saveAdjustmentAmount('ownership_type', Math.round(totalOwnershipAmount), Math.round(currentValue));
-        }
+        // Removed saveAdjustmentAmount - syncAdjustmentToHelper handles row-level cumulative properly
         
         // 5. Process Owners Adjustments
         const ownersRows = document.querySelectorAll('#ownersAdjustmentsList > div');
@@ -9750,20 +9716,7 @@
         // Update owners cumulative
         updateCumulativeDisplay('מספר בעלים', currentValue);
         
-        // Auto-save ownership history amounts if we have data
-        if (ownersRows.length > 0) {
-          let totalOwnersAmount = 0;
-          ownersRows.forEach(row => {
-            const inputs = row.querySelectorAll('input[type="text"]');
-            const valueInput = inputs[2];
-            if (valueInput && valueInput.value) {
-              const amount = parseFloat(valueInput.value.replace(/[₪,]/g, '')) || 0;
-              totalOwnersAmount += amount;
-            }
-          });
-          // Round the total amount before saving
-          saveAdjustmentAmount('ownership_history', Math.round(totalOwnersAmount), Math.round(currentValue));
-        }
+        // Removed saveAdjustmentAmount - syncAdjustmentToHelper handles row-level cumulative properly
         
         // 6. Process Additional Market Adjustments
         const additionalRows = document.querySelectorAll('#allAdjustmentsList > div');
