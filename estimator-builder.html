@@ -5864,34 +5864,48 @@
               }
             }
             
-            // Calculate cumulative value for this row based on category and index
+            // Calculate cumulative value for this row - CORRECT SEQUENTIAL LOGIC
             let rowCumulative = 0;
             const basePrice = parseFloat(helper.valuation?.base_price) || 0;
             
             if (category === 'features') {
-              // Features: Start from base price
+              // Features: Start from base price for first row, then sequential
               if (index === 0) {
                 rowCumulative = basePrice + parsedAmount;
               } else {
-                // Get cumulative from previous row within features
+                // Get cumulative from previous features row
                 const prevRowCumulative = helper.estimate.adjustments[category][index - 1]?.row_cumulative || basePrice;
                 rowCumulative = prevRowCumulative + parsedAmount;
               }
             } else if (category === 'registration') {
-              // Registration: Start from features total + base price
-              const featuresTotal = calculateCategoryTotal('features');
+              // Registration: Start from LAST features row cumulative (not total)
+              let startingValue = basePrice;
+              
+              // Get the last cumulative value from features
+              if (helper.estimate.adjustments['features'] && helper.estimate.adjustments['features'].length > 0) {
+                const lastFeaturesRow = helper.estimate.adjustments['features'][helper.estimate.adjustments['features'].length - 1];
+                startingValue = lastFeaturesRow.row_cumulative || basePrice;
+              }
+              
               if (index === 0) {
-                rowCumulative = basePrice + featuresTotal + parsedAmount;
+                rowCumulative = startingValue + parsedAmount;
               } else {
-                // Get cumulative from previous row within registration
-                const prevRowCumulative = helper.estimate.adjustments[category][index - 1]?.row_cumulative || (basePrice + featuresTotal);
+                // Get cumulative from previous registration row
+                const prevRowCumulative = helper.estimate.adjustments[category][index - 1]?.row_cumulative || startingValue;
                 rowCumulative = prevRowCumulative + parsedAmount;
               }
             } else if (category === 'mileage') {
-              // Mileage follows features and registration
-              const featuresTotal = calculateCategoryTotal('features');
-              const registrationTotal = calculateCategoryTotal('registration');
-              const startingValue = basePrice + featuresTotal + registrationTotal;
+              // Mileage: Start from LAST registration row cumulative
+              let startingValue = basePrice;
+              
+              // Get the last cumulative value from registration, or features if no registration
+              if (helper.estimate.adjustments['registration'] && helper.estimate.adjustments['registration'].length > 0) {
+                const lastRegistrationRow = helper.estimate.adjustments['registration'][helper.estimate.adjustments['registration'].length - 1];
+                startingValue = lastRegistrationRow.row_cumulative || basePrice;
+              } else if (helper.estimate.adjustments['features'] && helper.estimate.adjustments['features'].length > 0) {
+                const lastFeaturesRow = helper.estimate.adjustments['features'][helper.estimate.adjustments['features'].length - 1];
+                startingValue = lastFeaturesRow.row_cumulative || basePrice;
+              }
               
               if (index === 0) {
                 rowCumulative = startingValue + parsedAmount;
@@ -5900,11 +5914,20 @@
                 rowCumulative = prevRowCumulative + parsedAmount;
               }
             } else if (category === 'ownership_type') {
-              // Ownership type follows mileage
-              const featuresTotal = calculateCategoryTotal('features');
-              const registrationTotal = calculateCategoryTotal('registration');
-              const mileageTotal = calculateCategoryTotal('mileage');
-              const startingValue = basePrice + featuresTotal + registrationTotal + mileageTotal;
+              // Ownership type: Start from LAST mileage row cumulative
+              let startingValue = basePrice;
+              
+              // Walk through categories in order to find last cumulative
+              if (helper.estimate.adjustments['mileage'] && helper.estimate.adjustments['mileage'].length > 0) {
+                const lastMileageRow = helper.estimate.adjustments['mileage'][helper.estimate.adjustments['mileage'].length - 1];
+                startingValue = lastMileageRow.row_cumulative || basePrice;
+              } else if (helper.estimate.adjustments['registration'] && helper.estimate.adjustments['registration'].length > 0) {
+                const lastRegistrationRow = helper.estimate.adjustments['registration'][helper.estimate.adjustments['registration'].length - 1];
+                startingValue = lastRegistrationRow.row_cumulative || basePrice;
+              } else if (helper.estimate.adjustments['features'] && helper.estimate.adjustments['features'].length > 0) {
+                const lastFeaturesRow = helper.estimate.adjustments['features'][helper.estimate.adjustments['features'].length - 1];
+                startingValue = lastFeaturesRow.row_cumulative || basePrice;
+              }
               
               if (index === 0) {
                 rowCumulative = startingValue + parsedAmount;
@@ -5913,12 +5936,23 @@
                 rowCumulative = prevRowCumulative + parsedAmount;
               }
             } else if (category === 'ownership_history') {
-              // Ownership history follows ownership type
-              const featuresTotal = calculateCategoryTotal('features');
-              const registrationTotal = calculateCategoryTotal('registration');
-              const mileageTotal = calculateCategoryTotal('mileage');
-              const ownershipTypeTotal = calculateCategoryTotal('ownership_type');
-              const startingValue = basePrice + featuresTotal + registrationTotal + mileageTotal + ownershipTypeTotal;
+              // Ownership history: Start from LAST ownership_type row cumulative
+              let startingValue = basePrice;
+              
+              // Walk through categories in order to find last cumulative
+              if (helper.estimate.adjustments['ownership_type'] && helper.estimate.adjustments['ownership_type'].length > 0) {
+                const lastOwnershipTypeRow = helper.estimate.adjustments['ownership_type'][helper.estimate.adjustments['ownership_type'].length - 1];
+                startingValue = lastOwnershipTypeRow.row_cumulative || basePrice;
+              } else if (helper.estimate.adjustments['mileage'] && helper.estimate.adjustments['mileage'].length > 0) {
+                const lastMileageRow = helper.estimate.adjustments['mileage'][helper.estimate.adjustments['mileage'].length - 1];
+                startingValue = lastMileageRow.row_cumulative || basePrice;
+              } else if (helper.estimate.adjustments['registration'] && helper.estimate.adjustments['registration'].length > 0) {
+                const lastRegistrationRow = helper.estimate.adjustments['registration'][helper.estimate.adjustments['registration'].length - 1];
+                startingValue = lastRegistrationRow.row_cumulative || basePrice;
+              } else if (helper.estimate.adjustments['features'] && helper.estimate.adjustments['features'].length > 0) {
+                const lastFeaturesRow = helper.estimate.adjustments['features'][helper.estimate.adjustments['features'].length - 1];
+                startingValue = lastFeaturesRow.row_cumulative || basePrice;
+              }
               
               if (index === 0) {
                 rowCumulative = startingValue + parsedAmount;
