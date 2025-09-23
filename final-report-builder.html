@@ -14693,6 +14693,32 @@
             <div><label style="color: #333;">תוספות והורדות:</label><input type="text" id="sumAdjustments" style="background: white; color: #333;" /></div>
             <div><label style="color: #333;">סה״כ נכלל בחוות הדעת:</label><input type="text" id="sumTotalGlobalDynamic" style="background: white; color: #333;" /></div>
           `;
+          
+          // IMMEDIATE POPULATION FOR GLOBAL VARIANT - COPY FROM PRIVATE LOGIC
+          setTimeout(() => {
+            const helper = window.helper || JSON.parse(sessionStorage.getItem('helper') || '{}');
+            
+            // Market Value - from helper.calculations.full_market_value
+            const marketValue = helper.calculations?.full_market_value || 0;
+            const marketField = document.getElementById('sumMarketValueGlobal');
+            if (marketField && marketValue > 0) {
+              marketField.value = `₪${marketValue.toLocaleString()}`;
+            }
+            
+            // Total Claim - from totalClaim field (like private variant)
+            const totalClaimField = document.getElementById('totalClaim');
+            const claimField = document.getElementById('sumClaimGlobal');
+            if (totalClaimField && claimField && totalClaimField.value) {
+              claimField.value = totalClaimField.value;
+            }
+            
+            // Depreciation - from globalDepValue field (like private variant)
+            const globalDepField = document.getElementById('globalDepValue');
+            const depField = document.getElementById('sumDepreciation');
+            if (globalDepField && depField && globalDepField.value) {
+              depField.value = globalDepField.value;
+            }
+          }, 0);
           break;
           
         case 'חוות דעת טוטלוסט':
@@ -14702,6 +14728,16 @@
             <div><label style="color: #333;">תוספת בגין גרירה ואחסנה:</label><input type="text" id="sumTowingStorage" style="background: white; color: #333;" /></div>
             <div><label style="color: #333;">סה״כ לאחר מכירת שרידים:</label><input type="text" id="sumTotalTotalLoss" style="background: white; color: #333;" /></div>
           `;
+          
+          // IMMEDIATE POPULATION FOR TOTAL LOSS VARIANT
+          setTimeout(() => {
+            const helper = window.helper || JSON.parse(sessionStorage.getItem('helper') || '{}');
+            const marketValue = helper.calculations?.full_market_value || 0;
+            const marketField = document.getElementById('sumMarketValueTotal');
+            if (marketField && marketValue > 0) {
+              marketField.value = `₪${marketValue.toLocaleString()}`;
+            }
+          }, 0);
           break;
           
         case 'חוות דעת מכירה מצבו הניזוק':
@@ -14711,6 +14747,16 @@
             <div><label style="color: #333;">שיטת תשלום:</label><input type="text" id="paymentMethod" style="background: white; color: #333;" placeholder="מזומן, צ'ק, העברה בנקאית..." /></div>
             <div><label style="color: #333;">סה״כ לאחר מכירה:</label><input type="text" id="sumTotalDamagedSale" style="background: white; color: #333;" /></div>
           `;
+          
+          // IMMEDIATE POPULATION FOR DAMAGED STATE VARIANT
+          setTimeout(() => {
+            const helper = window.helper || JSON.parse(sessionStorage.getItem('helper') || '{}');
+            const marketValue = helper.calculations?.full_market_value || 0;
+            const marketField = document.getElementById('sumMarketValueDamage');
+            if (marketField && marketValue > 0) {
+              marketField.value = `₪${marketValue.toLocaleString()}`;
+            }
+          }, 0);
           break;
           
         case 'חוות דעת אובדן להלכה':
@@ -14718,6 +14764,16 @@
             <div><label style="color: #333;">ערך השוק של הרכב:</label><input type="text" id="sumMarketValueLegal" style="background: white; color: #333;" /></div>
             <div><label style="color: #333;">סה״כ נכלל בחוות הדעת:</label><input type="text" id="sumTotalLegalLoss" style="background: white; color: #333;" /></div>
           `;
+          
+          // IMMEDIATE POPULATION FOR LEGAL LOSS VARIANT
+          setTimeout(() => {
+            const helper = window.helper || JSON.parse(sessionStorage.getItem('helper') || '{}');
+            const marketValue = helper.calculations?.full_market_value || 0;
+            const marketField = document.getElementById('sumMarketValueLegal');
+            if (marketField && marketValue > 0) {
+              marketField.value = `₪${marketValue.toLocaleString()}`;
+            }
+          }, 0);
           break;
           
         default:
@@ -14732,53 +14788,63 @@
       }
       
       // Load data from helper for the new summary structure IMMEDIATELY
-      const helper = window.helper || JSON.parse(sessionStorage.getItem('helper') || '{}');
+      const helper = window.helper || JSON.parse(sessionStorage.getItem('helper') || '{}')
       
-      // COPY EXACT LOGIC FROM PRIVATE VARIANT FOR ALL VARIANTS
-      
-      // 1. AUTO-FILL MARKET VALUE FROM helper.calculations.full_market_value
-      const helperMarketValue = helper.calculations?.full_market_value || 0;
-      if (helperMarketValue > 0) {
-        // Global variant
-        const sumMarketValueGlobal = document.getElementById('sumMarketValueGlobal');
-        if (sumMarketValueGlobal) {
-          sumMarketValueGlobal.value = `₪${helperMarketValue.toLocaleString()}`;
-        }
-        // Total Loss variant
-        const sumMarketValueTotal = document.getElementById('sumMarketValueTotal');
-        if (sumMarketValueTotal) {
-          sumMarketValueTotal.value = `₪${helperMarketValue.toLocaleString()}`;
-        }
-        // Damaged variant
-        const sumMarketValueDamage = document.getElementById('sumMarketValueDamage');
-        if (sumMarketValueDamage) {
-          sumMarketValueDamage.value = `₪${helperMarketValue.toLocaleString()}`;
-        }
-        // Legal Loss variant
-        const sumMarketValueLegal = document.getElementById('sumMarketValueLegal');
-        if (sumMarketValueLegal) {
-          sumMarketValueLegal.value = `₪${helperMarketValue.toLocaleString()}`;
+      // 2. AUTO-FILL TOTAL CLAIM - Get the correct value from helper
+      let totalClaim = 0;
+      // Parse from claims_data.total_claim (may be formatted string)
+      if (helper.claims_data?.total_claim) {
+        const claimValue = helper.claims_data.total_claim;
+        if (typeof claimValue === 'string') {
+          totalClaim = parseFloat(claimValue.replace(/[₪,]/g, '')) || 0;
+        } else {
+          totalClaim = parseFloat(claimValue) || 0;
         }
       }
       
-      // 2. AUTO-FILL TOTAL CLAIM FROM totalClaim FIELD (NOT from helper directly)
-      const totalClaimValue = document.getElementById('totalClaim')?.value;
-      if (totalClaimValue) {
-        // Global variant
-        const sumClaimGlobal = document.getElementById('sumClaimGlobal');
-        if (sumClaimGlobal) {
-          sumClaimGlobal.value = totalClaimValue;
+      // Populate the global claim field with the correct value
+      const sumClaimGlobal = document.getElementById('sumClaimGlobal');
+      if (sumClaimGlobal && totalClaim > 0) {
+        sumClaimGlobal.value = `₪${totalClaim.toLocaleString()}`;
+      }
+      
+      // Also populate private claim field if it exists
+      const sumClaimPrivate = document.getElementById('sumClaimPrivate');
+      if (sumClaimPrivate && totalClaim > 0) {
+        sumClaimPrivate.value = `₪${totalClaim.toLocaleString()}`;
+      }
+      
+      // Also populate default claim field if it exists
+      const sumClaimDefault = document.getElementById('sumClaimDefault');
+      if (sumClaimDefault && totalClaim > 0) {
+        sumClaimDefault.value = `₪${totalClaim.toLocaleString()}`;
+      }
+      
+      // 3. AUTO-FILL DEPRECIATION - Get from helper
+      let depCompensation = 0;
+      if (helper.depreciation?.globalDepValue) {
+        const depValue = helper.depreciation.globalDepValue;
+        if (typeof depValue === 'string') {
+          depCompensation = parseFloat(depValue.replace(/[₪,]/g, '')) || 0;
+        } else {
+          depCompensation = parseFloat(depValue) || 0;
         }
       }
       
-      // 3. AUTO-FILL DEPRECIATION FROM globalDepValue FIELD
-      const globalDepValue = document.getElementById('globalDepValue')?.value;
-      if (globalDepValue) {
-        // Global variant
-        const sumDepreciation = document.getElementById('sumDepreciation');
-        if (sumDepreciation) {
-          sumDepreciation.value = globalDepValue;
-        }
+      // Populate depreciation fields
+      const sumDepreciation = document.getElementById('sumDepreciation');
+      if (sumDepreciation && depCompensation > 0) {
+        sumDepreciation.value = `₪${depCompensation.toLocaleString()}`;
+      }
+      
+      const depCompensationPrivate = document.getElementById('depCompensationPrivate');
+      if (depCompensationPrivate && depCompensation > 0) {
+        depCompensationPrivate.value = `₪${depCompensation.toLocaleString()}`;
+      }
+      
+      const sumDepreciationDefault = document.getElementById('sumDepreciationDefault');
+      if (sumDepreciationDefault && depCompensation > 0) {
+        sumDepreciationDefault.value = `₪${depCompensation.toLocaleString()}`;
       }
       
       loadSummaryFieldsFromHelper(helper);
