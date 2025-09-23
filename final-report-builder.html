@@ -14619,8 +14619,6 @@
     function updateSummaryVisibility() {
       const reportTypeSelect = document.getElementById('reportType');
       const reportType = reportTypeSelect?.value || 'חוות דעת פרטית';
-      console.log('🔄 Updating summary visibility for type:', reportType);
-      console.log('🔄 updateSummaryVisibility() called - will call refreshSummary()');
       
       // Hide all summary sections first
       const summaryBlocks = document.querySelectorAll('.summary-block');
@@ -14652,14 +14650,9 @@
       const selectedSummary = document.getElementById(summaryId);
       if (selectedSummary) {
         selectedSummary.style.display = 'block';
-        console.log('✅ Showing summary section:', summaryId);
         
         // Populate the fields with correct data mapping
-        console.log('🔄 About to call refreshSummary() from updateSummaryVisibility()');
         refreshSummary();
-        console.log('✅ refreshSummary() called from updateSummaryVisibility()');
-      } else {
-        console.warn('⚠️ Summary section not found:', summaryId);
       }
 
       // Control depreciation section visibility
@@ -14670,6 +14663,7 @@
                                 reportType === 'חוות דעת אובדן להלכה');
         depreciationSection.style.display = hideDepreciation ? 'none' : 'block';
       }
+    }
       
       // Control differentials section visibility for special report types
       const differentialsSection = document.getElementById('differentialsSection');
@@ -14692,16 +14686,7 @@
     
     // Refresh summary with correct field mapping as specified
     function refreshSummary() {
-      console.log('🚀 refreshSummary() CALLED!');
       const helper = window.helper || JSON.parse(sessionStorage.getItem('helper') || '{}');
-      
-      // DEBUG: Check what data is available
-      console.log('🔍 DEBUG calculations:', helper.calculations);
-      console.log('🔍 DEBUG claims_data:', helper.claims_data);
-      console.log('🔍 DEBUG depreciation:', helper.depreciation);
-      console.log('🔍 DEBUG full_market_value:', helper.calculations?.full_market_value);
-      console.log('🔍 DEBUG total_claim:', helper.claims_data?.total_claim);
-      console.log('🔍 DEBUG globalDepValue:', helper.depreciation?.globalDepValue);
       
       // Get values from YOUR specified sources - NO FALLBACKS
       const marketValue = helper.calculations?.full_market_value || 0;
@@ -14722,8 +14707,6 @@
           parseFloat(depValue) || 0;
       }
       
-      console.log('🔄 Refreshing summary with values:', { marketValue, totalClaim, depCompensation });
-      
       // Update market value fields across all variants
       const marketFields = [
         'sumMarketValue', 'sumMarketValueGlobal', 'sumMarketValueDamage', 
@@ -14734,14 +14717,6 @@
         const field = document.getElementById(fieldId);
         if (field && marketValue > 0) {
           field.value = `₪${marketValue.toLocaleString()}`;
-          console.log(`🔄 refreshSummary() set ${fieldId} = ${field.value}`);
-          
-          // Debug: Check if value gets cleared after 200ms
-          if (fieldId === 'sumMarketValue') {
-            setTimeout(() => {
-              console.log(`🔍 DEBUG: sumMarketValue after 200ms = "${field.value}"`);
-            }, 200);
-          }
         }
       });
       
@@ -17320,59 +17295,14 @@
     
     // Initialize summary after helper system is ready
     function initializeSummaryWhenReady() {
-      // DIAGNOSTIC: Check what fields actually exist on the page
-      const originalField = document.getElementById('sumMarketValue');
-      const privateField = document.getElementById('sumMarketValuePrivate');
-      console.log('🔍 DIAGNOSTIC: sumMarketValue field exists?', !!originalField);
-      console.log('🔍 DIAGNOSTIC: sumMarketValuePrivate field exists?', !!privateField);
-      
       // Check both window.helper and sessionStorage for helper data
       const helperFromWindow = window.helper;
       const helperFromSession = JSON.parse(sessionStorage.getItem('helper') || '{}');
       const helper = helperFromWindow || helperFromSession;
       
-      console.log('🔍 DIAGNOSTIC: window.helper exists?', !!helperFromWindow);
-      console.log('🔍 DIAGNOSTIC: sessionStorage helper exists?', !!helperFromSession && Object.keys(helperFromSession).length > 0);
-      console.log('🔍 DIAGNOSTIC: helper.calculations exists?', !!(helper?.calculations));
-      console.log('🔍 DIAGNOSTIC: full_market_value exists?', !!(helper?.calculations?.full_market_value));
-      console.log('🔍 DIAGNOSTIC: full_market_value value:', helper?.calculations?.full_market_value);
-      
       if (helper && helper.calculations && helper.calculations.full_market_value) {
         console.log('🔄 Helper data is ready, initializing summary...');
-        
-        // Check field existence again before calling updateSummaryVisibility
-        const fieldBeforeUpdate = document.getElementById('sumMarketValue');
-        console.log('🔍 DIAGNOSTIC: sumMarketValue exists before updateSummaryVisibility?', !!fieldBeforeUpdate);
-        
         updateSummaryVisibility();
-        
-        // Check field existence after updateSummaryVisibility
-        setTimeout(() => {
-          const fieldAfterUpdate = document.getElementById('sumMarketValue');
-          const privateFieldAfterUpdate = document.getElementById('sumMarketValuePrivate');
-          console.log('🔍 DIAGNOSTIC: sumMarketValue exists AFTER updateSummaryVisibility?', !!fieldAfterUpdate);
-          console.log('🔍 DIAGNOSTIC: sumMarketValuePrivate exists AFTER updateSummaryVisibility?', !!privateFieldAfterUpdate);
-          
-          if (fieldAfterUpdate) {
-            console.log('🔍 DIAGNOSTIC: sumMarketValue current value:', fieldAfterUpdate.value);
-            console.log('🔍 DIAGNOSTIC: sumMarketValue visible?', fieldAfterUpdate.offsetParent !== null);
-            console.log('🔍 DIAGNOSTIC: sumMarketValue display style:', getComputedStyle(fieldAfterUpdate).display);
-            console.log('🔍 DIAGNOSTIC: sumMarketValue visibility style:', getComputedStyle(fieldAfterUpdate).visibility);
-            console.log('🔍 DIAGNOSTIC: sumMarketValue opacity style:', getComputedStyle(fieldAfterUpdate).opacity);
-            console.log('🔍 DIAGNOSTIC: sumMarketValue color style:', getComputedStyle(fieldAfterUpdate).color);
-            console.log('🔍 DIAGNOSTIC: sumMarketValue parent container visible?', fieldAfterUpdate.parentElement?.offsetParent !== null);
-            
-            // Force the field to be visible and styled
-            fieldAfterUpdate.style.display = 'block';
-            fieldAfterUpdate.style.visibility = 'visible';
-            fieldAfterUpdate.style.opacity = '1';
-            fieldAfterUpdate.style.color = '#333';
-            fieldAfterUpdate.style.backgroundColor = 'white';
-            fieldAfterUpdate.style.border = '2px solid red'; // Make it obvious
-            console.log('🔧 DIAGNOSTIC: Applied force styling to make field visible');
-          }
-        }, 100);
-        
       } else {
         console.log('⏳ Helper data not ready yet, waiting 500ms...');
         setTimeout(initializeSummaryWhenReady, 500);
