@@ -5730,7 +5730,20 @@
               console.log(`🔍 Processing features[${index}]:`, adj);
               // Load all non-empty items (check for any content)
               if (adj && (adj.value || adj.description || adj.percentage || adj.percent || adj.amount)) {
-                featuresContainer.insertAdjacentHTML('beforeend', createTotalValueRow(adj, 'features', 'final_report'));
+                const rowHtml = createTotalValueRow(adj, 'features', 'final_report');
+                featuresContainer.insertAdjacentHTML('beforeend', rowHtml);
+                
+                // Update row cumulative if available from helper
+                if (adj.cumulative !== undefined) {
+                  setTimeout(() => {
+                    const rows = featuresContainer.querySelectorAll('.adjustment-row');
+                    const lastRow = rows[rows.length - 1];
+                    const cumulativeSpan = lastRow?.querySelector('.row-cumulative');
+                    if (cumulativeSpan) {
+                      cumulativeSpan.textContent = `₪${Math.round(adj.cumulative).toLocaleString()}`;
+                    }
+                  }, 10);
+                }
                 console.log(`✅ Added features[${index}] to Total Value Section`);
               } else {
                 console.log(`⚠️ Skipped features[${index}] - no content`);
@@ -5751,7 +5764,20 @@
               console.log(`🔍 Processing registration[${index}]:`, adj);
               // Load all non-empty items (check for any content)
               if (adj && (adj.value || adj.description || adj.percentage || adj.percent || adj.amount)) {
-                registrationContainer.insertAdjacentHTML('beforeend', createTotalValueRow(adj, 'registration', 'final_report'));
+                const rowHtml = createTotalValueRow(adj, 'registration', 'final_report');
+                registrationContainer.insertAdjacentHTML('beforeend', rowHtml);
+                
+                // Update row cumulative if available from helper
+                if (adj.cumulative !== undefined) {
+                  setTimeout(() => {
+                    const rows = registrationContainer.querySelectorAll('.adjustment-row');
+                    const lastRow = rows[rows.length - 1];
+                    const cumulativeSpan = lastRow?.querySelector('.row-cumulative');
+                    if (cumulativeSpan) {
+                      cumulativeSpan.textContent = `₪${Math.round(adj.cumulative).toLocaleString()}`;
+                    }
+                  }, 10);
+                }
                 console.log(`✅ Added registration[${index}] to Total Value Section`);
               } else {
                 console.log(`⚠️ Skipped registration[${index}] - no content`);
@@ -7183,7 +7209,7 @@
             
             // Add cumulative tracking for all adjustment categories
             if (category === 'mileage' || category === 'ownership_type' || category === 'ownership_history' || 
-                category === 'features' || category === 'registration') {
+                category === 'features' || category === 'registration' || category === 'additional') {
               // FIXED: Get cumulative from the row itself, not the category total
               const rowCumulativeSpan = row.querySelector('.row-cumulative');
               if (rowCumulativeSpan) {
@@ -9214,15 +9240,20 @@
       const rowId = 'fullFeaturesAdj_' + Date.now();
       
       const newRow = `
-        <div id="${rowId}" class="adjustment-row" style="display:grid; grid-template-columns:2fr 1fr 1fr 1fr 80px; gap:10px; margin-bottom:8px;">
-          <div><input type="text" placeholder="תיאור תוספת מאפיין" title="" onchange="updateFullMarketValueCalculation(); syncAdjustmentToHelper(this, 'features'); this.title = this.value;" oninput="this.title = this.value;" /></div>
-          <div><select onchange="updateFullMarketValueCalculation(); syncAdjustmentToHelper(this, 'features');" title="">
-            <option value="plus">תוספת (+)</option>
-            <option value="minus">הפחתה (-)</option>
-          </select></div>
-          <div><input type="text" placeholder="אחוז" title="" oninput="calculateAdjustmentValueSimple(this); this.title = this.value;" onchange="updateFullMarketValueCalculation(); syncAdjustmentToHelper(this, 'features'); this.title = this.value;" /></div>
-          <div><input type="text" placeholder="₪" title="" onchange="updateFullMarketValueCalculation(); syncAdjustmentToHelper(this, 'features'); this.title = this.value;" oninput="this.title = this.value;" /></div>
-          <div><button class="btn remove" onclick="removeAdjustmentRow('${rowId}')">מחק</button></div>
+        <div id="${rowId}" class="adjustment-row" data-source="manual">
+          <div style="display:grid; grid-template-columns:2fr 1fr 1fr 1fr 80px; gap:10px; margin-bottom:8px;">
+            <div><input type="text" placeholder="תיאור תוספת מאפיין" title="" onchange="updateFullMarketValueCalculation(); syncAdjustmentToHelper(this, 'features'); this.title = this.value;" oninput="this.title = this.value;" /></div>
+            <div><select onchange="updateFullMarketValueCalculation(); syncAdjustmentToHelper(this, 'features'); const row = this.closest('.adjustment-row'); const inputs = row.querySelectorAll('input, select'); formatAdjustmentDisplay(row, this.value, Math.abs(parseFloat(inputs[2].value) || 0), safeParseAmount(inputs[3].value));" title="">
+              <option value="plus">תוספת (+)</option>
+              <option value="minus">הפחתה (-)</option>
+            </select></div>
+            <div><input type="text" placeholder="אחוז" title="" oninput="calculateAdjustmentValueSimple(this); this.title = this.value;" onchange="updateFullMarketValueCalculation(); syncAdjustmentToHelper(this, 'features'); const row = this.closest('.adjustment-row'); const inputs = row.querySelectorAll('input, select'); formatAdjustmentDisplay(row, inputs[1].value, Math.abs(parseFloat(this.value) || 0), safeParseAmount(inputs[3].value)); this.title = this.value;" /></div>
+            <div><input type="text" placeholder="₪" title="" onchange="updateFullMarketValueCalculation(); syncAdjustmentToHelper(this, 'features'); const row = this.closest('.adjustment-row'); const inputs = row.querySelectorAll('input, select'); formatAdjustmentDisplay(row, inputs[1].value, Math.abs(parseFloat(inputs[2].value) || 0), safeParseAmount(this.value)); this.title = this.value;" oninput="this.title = this.value;" /></div>
+            <div><button class="btn remove" onclick="removeAdjustmentRow('${rowId}')">מחק</button></div>
+          </div>
+          <div style="text-align: right; font-size: 12px; color: #666; margin-top: 4px;">
+            ערך מצטבר: <span class="row-cumulative" style="font-weight: bold; color: #28a745;">₪0</span>
+          </div>
         </div>
       `;
       
@@ -9236,15 +9267,20 @@
       const rowId = 'fullRegistrationAdj_' + Date.now();
       
       const newRow = `
-        <div id="${rowId}" class="adjustment-row" style="display:grid; grid-template-columns:2fr 1fr 1fr 1fr 80px; gap:10px; margin-bottom:8px;">
-          <div><input type="text" placeholder="תיאור עליה לכביש" onchange="updateFullMarketValueCalculation(); syncAdjustmentToHelper(this, 'registration');" /></div>
-          <div><select onchange="updateFullMarketValueCalculation(); syncAdjustmentToHelper(this, 'registration');">
-            <option value="plus">תוספת (+)</option>
-            <option value="minus">הפחתה (-)</option>
-          </select></div>
-          <div><input type="text" placeholder="אחוז" oninput="calculateAdjustmentValueSimple(this);" onchange="updateFullMarketValueCalculation(); syncAdjustmentToHelper(this, 'registration');" /></div>
-          <div><input type="text" placeholder="₪" onchange="updateFullMarketValueCalculation(); syncAdjustmentToHelper(this, 'registration');" /></div>
-          <div><button class="btn remove" onclick="removeAdjustmentRow('${rowId}')">מחק</button></div>
+        <div id="${rowId}" class="adjustment-row" data-source="manual">
+          <div style="display:grid; grid-template-columns:2fr 1fr 1fr 1fr 80px; gap:10px; margin-bottom:8px;">
+            <div><input type="text" placeholder="תיאור עליה לכביש" onchange="updateFullMarketValueCalculation(); syncAdjustmentToHelper(this, 'registration');" /></div>
+            <div><select onchange="updateFullMarketValueCalculation(); syncAdjustmentToHelper(this, 'registration'); const row = this.closest('.adjustment-row'); const inputs = row.querySelectorAll('input, select'); formatAdjustmentDisplay(row, this.value, Math.abs(parseFloat(inputs[2].value) || 0), safeParseAmount(inputs[3].value));">
+              <option value="plus">תוספת (+)</option>
+              <option value="minus">הפחתה (-)</option>
+            </select></div>
+            <div><input type="text" placeholder="אחוז" oninput="calculateAdjustmentValueSimple(this);" onchange="updateFullMarketValueCalculation(); syncAdjustmentToHelper(this, 'registration'); const row = this.closest('.adjustment-row'); const inputs = row.querySelectorAll('input, select'); formatAdjustmentDisplay(row, inputs[1].value, Math.abs(parseFloat(this.value) || 0), safeParseAmount(inputs[3].value));" /></div>
+            <div><input type="text" placeholder="₪" onchange="updateFullMarketValueCalculation(); syncAdjustmentToHelper(this, 'registration'); const row = this.closest('.adjustment-row'); const inputs = row.querySelectorAll('input, select'); formatAdjustmentDisplay(row, inputs[1].value, Math.abs(parseFloat(inputs[2].value) || 0), safeParseAmount(this.value));" /></div>
+            <div><button class="btn remove" onclick="removeAdjustmentRow('${rowId}')">מחק</button></div>
+          </div>
+          <div style="text-align: right; font-size: 12px; color: #666; margin-top: 4px;">
+            ערך מצטבר: <span class="row-cumulative" style="font-weight: bold; color: #28a745;">₪0</span>
+          </div>
         </div>
       `;
       
@@ -9415,10 +9451,21 @@
         fullFeaturesRows.forEach(row => {
           const inputs = row.querySelectorAll('input, select');
           if (inputs.length >= 4) {
-            const amount = parseFloat((inputs[3].value || '').replace(/[₪,]/g, '')) || 0;
+            // FIXED: Parse amount considering it might already have a minus sign
+            const amountText = (inputs[3].value || '').trim();
+            const hasMinusSign = amountText.includes('-');
+            const amount = Math.abs(parseFloat(amountText.replace(/[₪,\s-]/g, '')) || 0);
             const type = inputs[1].value;
             const isNegative = isReductionType(type);
+            
+            // Only apply negative if type is reduction, ignore UI minus sign as it's just display
             currentValue += (isNegative ? -amount : amount);
+          }
+          
+          // Update row's cumulative display
+          const rowCumulativeSpan = row.querySelector('.row-cumulative');
+          if (rowCumulativeSpan) {
+            rowCumulativeSpan.textContent = `₪${Math.round(currentValue).toLocaleString()}`;
           }
         });
         
@@ -9431,10 +9478,21 @@
         fullRegistrationRows.forEach(row => {
           const inputs = row.querySelectorAll('input, select');
           if (inputs.length >= 4) {
-            const amount = parseFloat((inputs[3].value || '').replace(/[₪,]/g, '')) || 0;
+            // FIXED: Parse amount considering it might already have a minus sign
+            const amountText = (inputs[3].value || '').trim();
+            const hasMinusSign = amountText.includes('-');
+            const amount = Math.abs(parseFloat(amountText.replace(/[₪,\s-]/g, '')) || 0);
             const type = inputs[1].value;
             const isNegative = isReductionType(type);
+            
+            // Only apply negative if type is reduction, ignore UI minus sign as it's just display
             currentValue += (isNegative ? -amount : amount);
+          }
+          
+          // Update row's cumulative display
+          const rowCumulativeSpan = row.querySelector('.row-cumulative');
+          if (rowCumulativeSpan) {
+            rowCumulativeSpan.textContent = `₪${Math.round(currentValue).toLocaleString()}`;
           }
         });
         
@@ -9473,8 +9531,11 @@
               valueInput.value = (type === 'minus') ? `-₪${displayAmount}` : `₪${displayAmount}`;
             }
           } else if (valueInput && valueInput.value) {
-            const value = parseFloat(valueInput.value.replace(/[₪,]/g, '')) || 0;
-            const signedValue = (type === 'minus') ? -Math.abs(value) : Math.abs(value);
+            // FIXED: Parse amount considering it might already have a minus sign
+            const amountText = (valueInput.value || '').trim();
+            const hasMinusSign = amountText.includes('-');
+            const value = Math.abs(parseFloat(amountText.replace(/[₪,\s-]/g, '')) || 0);
+            const signedValue = (type === 'minus') ? -value : value;
             currentValue += signedValue;
           }
           
@@ -9539,7 +9600,10 @@
               valueInput.value = (type === 'minus') ? `-₪${displayAmount}` : `₪${displayAmount}`;
             }
           } else if (valueInput && valueInput.value) {
-            const value = parseFloat(valueInput.value.replace(/[₪,]/g, '')) || 0;
+            // FIXED: Parse amount considering it might already have a minus sign
+            const amountText = (valueInput.value || '').trim();
+            const hasMinusSign = amountText.includes('-');
+            const value = Math.abs(parseFloat(amountText.replace(/[₪,\s-]/g, '')) || 0);
             if (type === 'minus') {
               currentValue = currentValue - value;
             } else {
@@ -9608,7 +9672,10 @@
               valueInput.value = (type === 'minus') ? `-₪${displayAmount}` : `₪${displayAmount}`;
             }
           } else if (valueInput && valueInput.value) {
-            const value = parseFloat(valueInput.value.replace(/[₪,]/g, '')) || 0;
+            // FIXED: Parse amount considering it might already have a minus sign
+            const amountText = (valueInput.value || '').trim();
+            const hasMinusSign = amountText.includes('-');
+            const value = Math.abs(parseFloat(amountText.replace(/[₪,\s-]/g, '')) || 0);
             if (type === 'minus') {
               currentValue = currentValue - value;
             } else {
@@ -9657,7 +9724,10 @@
               currentValue += signedAdjustment;
             }
           } else if (valueInput && valueInput.value) {
-            const value = parseFloat(valueInput.value.replace(/[₪,]/g, '')) || 0;
+            // FIXED: Parse amount considering it might already have a minus sign
+            const amountText = (valueInput.value || '').trim();
+            const hasMinusSign = amountText.includes('-');
+            const value = Math.abs(parseFloat(amountText.replace(/[₪,\s-]/g, '')) || 0);
             const signedValue = (type === 'minus') ? -value : value;
             currentValue += signedValue;
           }
