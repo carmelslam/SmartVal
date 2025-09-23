@@ -14616,26 +14616,44 @@
     function updateSummaryVisibility() {
       const reportTypeSelect = document.getElementById('reportType');
       const reportType = reportTypeSelect?.value || 'חוות דעת פרטית';
-      console.log('Updating summary visibility for type:', reportType);
+      console.log('🔄 Updating summary visibility for type:', reportType);
       
-      // Update the summary title dynamically
-      const summaryTitle = document.querySelector('#summaryPrivate h3');
-      if (summaryTitle) {
-        summaryTitle.textContent = `סיכום - ${reportType}`;
+      // Hide all summary sections first
+      const summaryBlocks = document.querySelectorAll('.summary-block');
+      summaryBlocks.forEach(block => block.style.display = 'none');
+      
+      // Show the correct summary section based on selected type
+      let summaryId = '';
+      switch(reportType) {
+        case 'חוות דעת פרטית':
+          summaryId = 'summaryPrivate';
+          break;
+        case 'חוות דעת גלובלית':
+          summaryId = 'summaryGlobal';
+          break;
+        case 'חוות דעת מכירה מצבו הניזוק':
+          summaryId = 'summaryDamage';
+          break;
+        case 'חוות דעת טוטלוסט':
+          summaryId = 'summaryTotalLoss';
+          break;
+        case 'חוות דעת אובדן להלכה':
+          summaryId = 'summaryLegalLoss';
+          break;
+        default:
+          summaryId = 'summaryPrivate';
       }
       
-      // Always show the single summary section and update content
-      const summarySection = document.getElementById('summaryPrivate');
-      if (summarySection) {
-        summarySection.style.display = 'block';
-        // Update the summary content based on report type
-        updateSummaryContent(reportType);
+      // Show the selected summary section
+      const selectedSummary = document.getElementById(summaryId);
+      if (selectedSummary) {
+        selectedSummary.style.display = 'block';
+        console.log('✅ Showing summary section:', summaryId);
         
-        // CRITICAL FIX: Populate market value after content is updated
-        setTimeout(() => {
-          const helper = window.helper || JSON.parse(sessionStorage.getItem('helper') || '{}');
-          populateMarketValueForCurrentVariant(helper, reportType);
-        }, 200);
+        // Populate the fields with correct data mapping
+        refreshSummary();
+      } else {
+        console.warn('⚠️ Summary section not found:', summaryId);
       }
 
       // Control depreciation section visibility
@@ -14664,6 +14682,77 @@
           differentialsSection.style.display = 'block';
         }
       }
+    }
+    
+    // Refresh summary with correct field mapping as specified
+    function refreshSummary() {
+      const helper = window.helper || JSON.parse(sessionStorage.getItem('helper') || '{}');
+      
+      // Get values from YOUR specified sources
+      const marketValue = helper.calculations?.full_market_value || 0;
+      
+      let totalClaim = 0;
+      if (helper.claims_data?.total_claim) {
+        const claimValue = helper.claims_data.total_claim;
+        totalClaim = typeof claimValue === 'string' ? 
+          parseFloat(claimValue.replace(/[₪,]/g, '')) || 0 : 
+          parseFloat(claimValue) || 0;
+      }
+      
+      let depCompensation = 0;
+      if (helper.depreciation?.globalDepValue) {
+        const depValue = helper.depreciation.globalDepValue;
+        depCompensation = typeof depValue === 'string' ? 
+          parseFloat(depValue.replace(/[₪,]/g, '')) || 0 : 
+          parseFloat(depValue) || 0;
+      }
+      
+      console.log('🔄 Refreshing summary with values:', { marketValue, totalClaim, depCompensation });
+      
+      // Update market value fields across all variants
+      const marketFields = [
+        'sumMarketValue', 'sumMarketValueGlobal', 'sumMarketValueDamage', 
+        'sumMarketValueTotal', 'sumMarketValueLegal', 'sumMarketValuePrivate',
+        'sumMarketValueDefault'
+      ];
+      marketFields.forEach(fieldId => {
+        const field = document.getElementById(fieldId);
+        if (field && marketValue > 0) {
+          field.value = `₪${marketValue.toLocaleString()}`;
+        }
+      });
+      
+      // Update total claim fields for private and global variants
+      const claimFields = [
+        'sumClaim', 'sumClaimGlobal', 'sumClaimPrivate', 'sumClaimDefault'
+      ];
+      claimFields.forEach(fieldId => {
+        const field = document.getElementById(fieldId);
+        if (field && totalClaim > 0) {
+          field.value = `₪${totalClaim.toLocaleString()}`;
+        }
+      });
+      
+      // Update depreciation compensation fields for private and global variants
+      const depFields = [
+        'depCompensation', 'sumDepreciation', 'depCompensationPrivate', 'sumDepreciationDefault'
+      ];
+      depFields.forEach(fieldId => {
+        const field = document.getElementById(fieldId);
+        if (field && depCompensation > 0) {
+          field.value = `₪${depCompensation.toLocaleString()}`;
+        }
+      });
+      
+      // Calculate totals for private and global variants
+      const privateTotal = totalClaim + depCompensation;
+      const privateTotalFields = ['sumTotalPrivate', 'sumTotalDefault', 'sumTotalGlobal'];
+      privateTotalFields.forEach(fieldId => {
+        const field = document.getElementById(fieldId);
+        if (field && privateTotal > 0) {
+          field.value = `₪${privateTotal.toLocaleString()}`;
+        }
+      });
     }
     
     // Dynamic summary content based on report type
