@@ -2897,23 +2897,54 @@
         
         // AUTO-POPULATED FIELDS (COMMON ACROSS VARIANTS)
         
-        // 1. Market Value - using helper.calculations.full_market_value (standardized)
-        let marketValue = helper.calculations?.full_market_value || 
-                           helper.valuation?.calculations?.full_price?.total || 0;
+        // 1. Market Value - Check for raw market value first, then fall back to calculated value
+        let marketValue = 0;
         
-        // Debug logging to trace market value source
-        console.log('🔍 Market Value Debug:', {
-          'calculations.full_market_value': helper.calculations?.full_market_value,
-          'valuation.calculations.full_price.total': helper.valuation?.calculations?.full_price?.total,
-          'Selected marketValue': marketValue,
-          'Full helper.calculations': helper.calculations,
-          'Full helper.valuation': helper.valuation
-        });
+        // IMPORTANT: The system stores the CALCULATED value (base + adjustments) in full_market_value
+        // We need the RAW market value instead
+        
+        // Try to get the raw market value from various sources
+        // Priority order: base_market_value > final prices > market values
+        if (helper.calculations?.base_market_value) {
+          marketValue = helper.calculations.base_market_value;
+          console.log('✅ Using calculations.base_market_value as raw market value:', marketValue);
+        } else if (helper.levi_report?.final_price) {
+          marketValue = helper.levi_report.final_price;
+          console.log('📍 Using levi_report.final_price as raw market value:', marketValue);
+        } else if (helper.levisummary?.final_price) {
+          marketValue = helper.levisummary.final_price;
+          console.log('📍 Using levisummary.final_price as raw market value:', marketValue);
+        } else if (helper.valuation?.market_value) {
+          marketValue = helper.valuation.market_value;
+          console.log('📍 Using valuation.market_value as raw market value:', marketValue);
+        } else if (helper.vehicle?.market_value) {
+          marketValue = helper.vehicle.market_value;
+          console.log('📍 Using vehicle.market_value as raw market value:', marketValue);
+        } else if (helper.calculations?.market_value && helper.calculations?.market_value !== helper.calculations?.full_market_value) {
+          // Use market_value only if it's different from full_market_value
+          marketValue = helper.calculations.market_value;
+          console.log('📍 Using calculations.market_value as raw market value:', marketValue);
+        } else if (helper.calculations?.full_market_value) {
+          // Last resort - use the calculated value
+          marketValue = helper.calculations.full_market_value;
+          console.log('⚠️ WARNING: Using calculated full_market_value (includes adjustments):', marketValue);
+        }
         
         // Handle string values that need parsing
         if (typeof marketValue === 'string') {
           marketValue = parseFloat(marketValue.replace(/[₪,]/g, '')) || 0;
         }
+        
+        console.log('🔍 Market Value Resolution:', {
+          'Selected marketValue': marketValue,
+          'Available sources': {
+            'levi_report.final_price': helper.levi_report?.final_price,
+            'levisummary.final_price': helper.levisummary?.final_price,
+            'valuation.market_value': helper.valuation?.market_value,
+            'vehicle.market_value': helper.vehicle?.market_value,
+            'calculations.full_market_value (calculated)': helper.calculations?.full_market_value
+          }
+        });
         
         // Populate all market value fields across all variants
         const marketValueFields = ['sumMarketValue', 'sumMarketValueGlobal', 'sumMarketValueDamage', 'sumMarketValueTotal', 'sumMarketValueLegal'];
@@ -15193,18 +15224,33 @@
       try {
         const helper = window.helper || JSON.parse(sessionStorage.getItem('helper') || '{}');
         
-        // TASK 1: Fix market value auto-population
-        console.log('🔍 initializeSummaryFieldsFix - Market Value Sources:', {
-          'calculations.full_market_value': helper.calculations?.full_market_value,
-          'valuation.calculations.full_price.total': helper.valuation?.calculations?.full_price?.total,
-          'levi_report.final_price': helper.levi_report?.final_price,
-          'Full helper object': helper
+        // TASK 1: Fix market value auto-population - DIRECT MAPPING ONLY
+        console.log('🔍 initializeSummaryFieldsFix - DIRECT Market Value:', {
+          'Raw calculations.full_market_value': helper.calculations?.full_market_value,
+          'Helper calculations object': helper.calculations
         });
         
-        const marketValue = helper.calculations?.full_market_value || 
-                           helper.valuation?.calculations?.full_price?.total ||
-                           helper.levi_report?.final_price || 
-                           0;
+        // Get RAW market value (not the calculated one with adjustments)
+        let marketValue = 0;
+        
+        if (helper.calculations?.base_market_value) {
+          marketValue = helper.calculations.base_market_value;
+          console.log('✅ Using calculations.base_market_value:', marketValue);
+        } else if (helper.levi_report?.final_price) {
+          marketValue = helper.levi_report.final_price;
+          console.log('📍 Using levi_report.final_price:', marketValue);
+        } else if (helper.levisummary?.final_price) {
+          marketValue = helper.levisummary.final_price;
+          console.log('📍 Using levisummary.final_price:', marketValue);
+        } else if (helper.valuation?.market_value) {
+          marketValue = helper.valuation.market_value;
+          console.log('📍 Using valuation.market_value:', marketValue);
+        }
+        
+        // Handle string values that need parsing
+        if (typeof marketValue === 'string') {
+          marketValue = parseFloat(marketValue.replace(/[₪,]/g, '')) || 0;
+        }
         
         if (marketValue > 0) {
           console.log(`💰 Found market value: ₪${marketValue.toLocaleString()} (source: ${
