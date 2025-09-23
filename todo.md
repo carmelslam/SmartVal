@@ -1,3 +1,54 @@
+# Investigation: Market Value 163,621 Source in Final Report
+**Date: 2025-09-23**
+
+## Problem
+The market value field in final-report-builder.html is showing 163,621 instead of using calculations.full_market_value.
+
+## Investigation Results
+
+### Key Finding
+The value **163,621** is the sum of two values: **80,487 + 83,134**
+
+### Analysis Process
+1. Searched for hard-coded values of 163621 or 163,621 - not found
+2. Analyzed the `loadSummaryFieldsFromHelper` function which populates market value fields
+3. Found the primary source should be `helper.calculations.full_market_value` with fallback to `helper.valuation.calculations.full_price.total`
+4. Calculated that 163,621 = 80,487 + 83,134
+
+### Code Flow for Market Value Population
+
+1. **Primary Function**: `loadSummaryFieldsFromHelper()` (line 2891)
+   - Primary source: `helper.calculations?.full_market_value`
+   - Fallback source: `helper.valuation?.calculations?.full_price?.total`
+   - Populates fields: sumMarketValue, sumMarketValueGlobal, sumMarketValueDamage, sumMarketValueTotal, sumMarketValueLegal
+
+2. **Other Market Value Sources Found**:
+   - `helper.vehicle?.market_value`
+   - `helper.valuation?.market_value`
+   - `helper.levi_report?.final_price`
+   - `helper.levisummary?.final_price`
+   - `helper.expertise?.calculations?.market_value`
+
+### Hypothesis
+The value 163,621 appears to be an incorrect sum of two separate values (80,487 + 83,134) that are being combined somewhere in the data flow. This could be happening in:
+1. The webhook data processing
+2. A calculation function that's incorrectly summing values
+3. Data corruption in the helper object
+
+### Recommended Next Steps
+1. Check the helper object data to see what values are stored in:
+   - `helper.calculations.full_market_value`
+   - `helper.valuation.calculations.full_price.total`
+   - `helper.vehicle.market_value`
+2. Add console logging to track where this sum is being calculated
+3. Verify the webhook data to ensure correct values are being received
+4. Check if there's any code that might be adding market values together
+
+### No Code Changes Made
+This investigation was read-only. No files were modified during this analysis.
+
+---
+
 # Todo: Add "additional" Category to Market Value Adjustments Processing
 **Date: 2025-09-23**
 
