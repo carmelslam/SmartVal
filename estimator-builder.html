@@ -3689,6 +3689,11 @@
         console.log('✅ Updated gross market value to:', grossMarketValue);
         console.log('📊 Cumulative values - After features:', basicPrice + featuresTotal, 'After registration:', grossMarketValue);
         
+        // Update row-level cumulative displays for gross section
+        setTimeout(() => {
+          updateRowCumulativeDisplays();
+        }, 10);
+        
       } catch (error) {
         console.error('❌ Error updating gross market value:', error);
         
@@ -5662,6 +5667,19 @@
       
       // Save and recalculate
       sessionStorage.setItem('helper', JSON.stringify(helper));
+      
+      // Update appropriate calculations based on which section the row was deleted from
+      if (category === 'features' || category === 'registration') {
+        // Check if deletion was from gross section
+        const isFromGrossSection = container.id.includes('registration') ? 
+          container.id === 'registrationAdjustmentsList' : 
+          container.id === 'featuresAdjustmentsList';
+        
+        if (isFromGrossSection) {
+          updateGrossMarketValueCalculation();
+        }
+      }
+      
       updateFullMarketValueCalculation();
     }
     
