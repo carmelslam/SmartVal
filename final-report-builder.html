@@ -14694,7 +14694,7 @@
             <div><label style="color: #333;">סה״כ נכלל בחוות הדעת:</label><input type="text" id="sumTotalGlobalDynamic" style="background: white; color: #333;" /></div>
           `;
           
-          // IMMEDIATE POPULATION FOR GLOBAL VARIANT - COPY FROM PRIVATE LOGIC
+          // IMMEDIATE POPULATION FOR GLOBAL VARIANT - DIRECT FROM HELPER
           setTimeout(() => {
             const helper = window.helper || JSON.parse(sessionStorage.getItem('helper') || '{}');
             
@@ -14705,18 +14705,34 @@
               marketField.value = `₪${marketValue.toLocaleString()}`;
             }
             
-            // Total Claim - from totalClaim field (like private variant)
-            const totalClaimField = document.getElementById('totalClaim');
+            // Total Claim - directly from helper.claims_data.total_claim
+            let totalClaim = 0;
+            if (helper.claims_data?.total_claim) {
+              const claimValue = helper.claims_data.total_claim;
+              if (typeof claimValue === 'string') {
+                totalClaim = parseFloat(claimValue.replace(/[₪,]/g, '')) || 0;
+              } else {
+                totalClaim = parseFloat(claimValue) || 0;
+              }
+            }
             const claimField = document.getElementById('sumClaimGlobal');
-            if (totalClaimField && claimField && totalClaimField.value) {
-              claimField.value = totalClaimField.value;
+            if (claimField && totalClaim > 0) {
+              claimField.value = `₪${totalClaim.toLocaleString()}`;
             }
             
-            // Depreciation - from globalDepValue field (like private variant)
-            const globalDepField = document.getElementById('globalDepValue');
+            // Depreciation - from helper.depreciation.globalDepValue
+            let depCompensation = 0;
+            if (helper.depreciation?.globalDepValue) {
+              const depValue = helper.depreciation.globalDepValue;
+              if (typeof depValue === 'string') {
+                depCompensation = parseFloat(depValue.replace(/[₪,]/g, '')) || 0;
+              } else {
+                depCompensation = parseFloat(depValue) || 0;
+              }
+            }
             const depField = document.getElementById('sumDepreciation');
-            if (globalDepField && depField && globalDepField.value) {
-              depField.value = globalDepField.value;
+            if (depField && depCompensation > 0) {
+              depField.value = `₪${depCompensation.toLocaleString()}`;
             }
           }, 0);
           break;
@@ -14762,16 +14778,36 @@
         case 'חוות דעת אובדן להלכה':
           summaryContent.innerHTML = `
             <div><label style="color: #333;">ערך השוק של הרכב:</label><input type="text" id="sumMarketValueLegal" style="background: white; color: #333;" /></div>
-            <div><label style="color: #333;">סה״כ נכלל בחוות הדעת:</label><input type="text" id="sumTotalLegalLoss" style="background: white; color: #333;" /></div>
+            <div><label style="color: #333;">ערך שרידי הרכב:</label><input type="text" id="sumScrapValueLegal" style="background: white; color: #333;" /></div>
+            <div><label style="color: #333;">סה״כ לאחר מכירת שרידים:</label><input type="text" id="sumAfterScrapLegal" style="background: white; color: #333;" /></div>
           `;
           
           // IMMEDIATE POPULATION FOR LEGAL LOSS VARIANT
           setTimeout(() => {
             const helper = window.helper || JSON.parse(sessionStorage.getItem('helper') || '{}');
+            
+            // Market Value - from helper.calculations.full_market_value
             const marketValue = helper.calculations?.full_market_value || 0;
             const marketField = document.getElementById('sumMarketValueLegal');
             if (marketField && marketValue > 0) {
               marketField.value = `₪${marketValue.toLocaleString()}`;
+            }
+            
+            // Check if we have depreciation value (158,901) which might be used as after scrap value
+            let depCompensation = 0;
+            if (helper.depreciation?.globalDepValue) {
+              const depValue = helper.depreciation.globalDepValue;
+              if (typeof depValue === 'string') {
+                depCompensation = parseFloat(depValue.replace(/[₪,]/g, '')) || 0;
+              } else {
+                depCompensation = parseFloat(depValue) || 0;
+              }
+            }
+            
+            // Fill the after scrap value field
+            const afterScrapField = document.getElementById('sumAfterScrapLegal');
+            if (afterScrapField && depCompensation > 0) {
+              afterScrapField.value = `₪${depCompensation.toLocaleString()}`;
             }
           }, 0);
           break;
@@ -14788,19 +14824,7 @@
       }
       
       // Load data from helper for the new summary structure IMMEDIATELY
-      const helper = window.helper || JSON.parse(sessionStorage.getItem('helper') || '{}')
-      
-      // 2. AUTO-FILL TOTAL CLAIM - Get the correct value from helper
-      let totalClaim = 0;
-      // Parse from claims_data.total_claim (may be formatted string)
-      if (helper.claims_data?.total_claim) {
-        const claimValue = helper.claims_data.total_claim;
-        if (typeof claimValue === 'string') {
-          totalClaim = parseFloat(claimValue.replace(/[₪,]/g, '')) || 0;
-        } else {
-          totalClaim = parseFloat(claimValue) || 0;
-        }
-      }
+      const helper = window.helper || JSON.parse(sessionStorage.getItem('helper') || '{}');
       
       // Populate the global claim field with the correct value
       const sumClaimGlobal = document.getElementById('sumClaimGlobal');
