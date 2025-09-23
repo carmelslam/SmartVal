@@ -8607,15 +8607,20 @@
         grossFeaturesRows.forEach(row => {
           const inputs = row.querySelectorAll('input, select');
           if (inputs.length >= 4) {
-            // FIXED: Parse amount considering it might already have a minus sign
+            // FIXED: Parse amount preserving sign, then apply dropdown type logic
             const amountText = (inputs[3].value || '').trim();
-            const hasMinusSign = amountText.includes('-');
-            const amount = Math.abs(parseFloat(amountText.replace(/[₪,\s-]/g, '')) || 0);
+            let amount = parseFloat(amountText.replace(/[₪,\s]/g, '')) || 0;
             const type = inputs[1].value;
-            const isNegative = isReductionType(type);
             
-            // Only apply negative if type is reduction, ignore UI minus sign as it's just display
-            currentValue += (isNegative ? -amount : amount);
+            // Apply type logic: if type is minus and amount is positive, make negative
+            // If type is plus and amount is negative, use absolute value
+            if (isReductionType(type) && amount > 0) {
+              amount = -amount;
+            } else if (!isReductionType(type) && amount < 0) {
+              amount = Math.abs(amount);
+            }
+            
+            currentValue += amount;
           }
           
           // Update row's cumulative display
@@ -9508,15 +9513,20 @@
         fullFeaturesRows.forEach(row => {
           const inputs = row.querySelectorAll('input, select');
           if (inputs.length >= 4) {
-            // FIXED: Parse amount considering it might already have a minus sign
+            // FIXED: Parse amount preserving sign, then apply dropdown type logic
             const amountText = (inputs[3].value || '').trim();
-            const hasMinusSign = amountText.includes('-');
-            const amount = Math.abs(parseFloat(amountText.replace(/[₪,\s-]/g, '')) || 0);
+            let amount = parseFloat(amountText.replace(/[₪,\s]/g, '')) || 0;
             const type = inputs[1].value;
-            const isNegative = isReductionType(type);
             
-            // Only apply negative if type is reduction, ignore UI minus sign as it's just display
-            currentValue += (isNegative ? -amount : amount);
+            // Apply type logic: if type is minus and amount is positive, make negative
+            // If type is plus and amount is negative, use absolute value
+            if (isReductionType(type) && amount > 0) {
+              amount = -amount;
+            } else if (!isReductionType(type) && amount < 0) {
+              amount = Math.abs(amount);
+            }
+            
+            currentValue += amount;
           }
           
           // Update row's cumulative display
@@ -9535,15 +9545,20 @@
         fullRegistrationRows.forEach(row => {
           const inputs = row.querySelectorAll('input, select');
           if (inputs.length >= 4) {
-            // FIXED: Parse amount considering it might already have a minus sign
+            // FIXED: Parse amount preserving sign, then apply dropdown type logic
             const amountText = (inputs[3].value || '').trim();
-            const hasMinusSign = amountText.includes('-');
-            const amount = Math.abs(parseFloat(amountText.replace(/[₪,\s-]/g, '')) || 0);
+            let amount = parseFloat(amountText.replace(/[₪,\s]/g, '')) || 0;
             const type = inputs[1].value;
-            const isNegative = isReductionType(type);
             
-            // Only apply negative if type is reduction, ignore UI minus sign as it's just display
-            currentValue += (isNegative ? -amount : amount);
+            // Apply type logic: if type is minus and amount is positive, make negative
+            // If type is plus and amount is negative, use absolute value
+            if (isReductionType(type) && amount > 0) {
+              amount = -amount;
+            } else if (!isReductionType(type) && amount < 0) {
+              amount = Math.abs(amount);
+            }
+            
+            currentValue += amount;
           }
           
           // Update row's cumulative display
