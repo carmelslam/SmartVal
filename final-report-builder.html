@@ -14629,16 +14629,30 @@
       
       // Re-add event listeners for newly created fields and reload values
       setTimeout(() => {
-        // FORCE POPULATE MARKET VALUE FIELDS FOR ALL VARIANTS
-        const marketValue = helper.calculations?.full_market_value || 0;
+        // FORCE POPULATE MARKET VALUE FIELDS FOR ALL VARIANTS - HANDLE ALL FORMATS
+        let marketValue = helper.calculations?.full_market_value || 0;
+        
+        // Handle different value formats (string, number, formatted)
+        if (typeof marketValue === 'string') {
+          marketValue = parseFloat(marketValue.replace(/[₪,\s]/g, '')) || 0;
+        } else if (typeof marketValue === 'number') {
+          marketValue = marketValue || 0;
+        }
+        
+        console.log('🔍 Market value debug - helper.calculations.full_market_value:', helper.calculations?.full_market_value, 'parsed:', marketValue);
+        
         if (marketValue > 0) {
           const allMarketFields = ['sumMarketValue', 'sumMarketValueGlobal', 'sumMarketValueDamage', 'sumMarketValueTotal', 'sumMarketValueLegal', 'sumMarketValuePrivate', 'sumMarketValueDefault'];
           allMarketFields.forEach(fieldId => {
             const field = document.getElementById(fieldId);
             if (field) {
-              field.value = `₪${marketValue.toLocaleString()}`;
+              const formattedValue = `₪${marketValue.toLocaleString()}`;
+              field.value = formattedValue;
+              console.log(`📊 Set ${fieldId} = ${formattedValue}`);
             }
           });
+        } else {
+          console.log('❌ No market value found in helper.calculations.full_market_value');
         }
         
         const paymentMethodField = document.getElementById('paymentMethod');
