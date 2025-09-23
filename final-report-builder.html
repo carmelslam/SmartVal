@@ -17318,8 +17318,19 @@
     // Make functions globally available
     window.updateSummaryVisibility = updateSummaryVisibility;
     
-    // Initialize summary on page load
-    updateSummaryVisibility();
+    // Initialize summary after helper system is ready
+    function initializeSummaryWhenReady() {
+      if (window.helper && window.helper.calculations && window.helper.calculations.full_market_value) {
+        console.log('🔄 Helper data is ready, initializing summary...');
+        updateSummaryVisibility();
+      } else {
+        console.log('⏳ Helper data not ready yet, waiting 500ms...');
+        setTimeout(initializeSummaryWhenReady, 500);
+      }
+    }
+    
+    // Start checking for helper readiness
+    initializeSummaryWhenReady();
     window.addDepreciationRow = addDepreciationRow;
     window.addDifferentialRow = addDifferentialRow;
     window.updateDifferentialsSummary = updateDifferentialsSummary;
