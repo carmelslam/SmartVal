@@ -5781,14 +5781,22 @@
           if (!container) return;
 
           // Calculate cumulative values for this category in real-time
-          const basePrice = parseFloat(helper.valuation?.base_price) || 0;
-          console.log(`🏗️ BASE PRICE for ${category}: ${basePrice}`);
-          let runningCumulative = 0;
+          // Get base price from the same source as gross calculations
+          let basePrice = 0;
+          const basicPriceField = document.getElementById('basicPrice');
+          if (basicPriceField?.value) {
+            basePrice = parseFloat(basicPriceField.value.replace(/[₪,]/g, '')) || 0;
+          }
+          // Fallback to helper if UI field is empty
+          if (basePrice === 0) {
+            basePrice = parseFloat(helper.valuation?.base_price) || 0;
+          }
           
-          // Get starting value based on category
+          let runningCumulative = basePrice; // Always start with base price for features
+          
+          // Get starting value based on category  
           if (category === 'features') {
-            runningCumulative = basePrice;
-            console.log(`🎯 FEATURES starting cumulative: ${runningCumulative}`);
+            // Already set to basePrice above
           } else if (category === 'registration') {
             // Start from last features cumulative
             if (helper.estimate.adjustments['features'] && helper.estimate.adjustments['features'].length > 0) {
@@ -5850,8 +5858,6 @@
               
               const formattedValue = `₪${Math.abs(runningCumulative).toLocaleString()}`;
               cumulativeDisplay.textContent = formattedValue;
-              
-              console.log(`🔍 Category: ${category}, Row: ${index}, Amount: ${adjustments[index].amount}, Running: ${runningCumulative}, Base: ${basePrice}`);
               
               // Color coding: green for positive, red for negative
               if (runningCumulative >= 0) {
