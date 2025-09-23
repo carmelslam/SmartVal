@@ -2898,8 +2898,13 @@
         // AUTO-POPULATED FIELDS (COMMON ACROSS VARIANTS)
         
         // 1. Market Value - using helper.calculations.full_market_value (standardized)
-        const marketValue = helper.calculations?.full_market_value || 
+        let marketValue = helper.calculations?.full_market_value || 
                            helper.valuation?.calculations?.full_price?.total || 0;
+        
+        // Handle string values that need parsing
+        if (typeof marketValue === 'string') {
+          marketValue = parseFloat(marketValue.replace(/[₪,]/g, '')) || 0;
+        }
         
         // Populate all market value fields across all variants
         const marketValueFields = ['sumMarketValue', 'sumMarketValueGlobal', 'sumMarketValueDamage', 'sumMarketValueTotal', 'sumMarketValueLegal'];
@@ -2917,24 +2922,69 @@
         });
         
         // 2. Total Claim - from helper.claims_data.total_claim
-        const totalClaim = helper.claims_data?.total_claim || 
-                          helper.damage_centers_summary?.total_cost || 0;
-        const sumClaimField = document.getElementById('sumClaim');
-        if (sumClaimField) {
-          const formattedClaim = totalClaim > 0 ? `₪${totalClaim.toLocaleString()}` : '';
-          sumClaimField.value = formattedClaim;
-          helper.final_report.summary.total_claim = formattedClaim;
+        let totalClaim = 0;
+        
+        // Parse from claims_data.total_claim (may be formatted string)
+        if (helper.claims_data?.total_claim) {
+          const claimValue = helper.claims_data.total_claim;
+          if (typeof claimValue === 'string') {
+            totalClaim = parseFloat(claimValue.replace(/[₪,]/g, '')) || 0;
+          } else {
+            totalClaim = parseFloat(claimValue) || 0;
+          }
+        } 
+        // Fallback to damage_centers_summary.total_cost
+        else if (helper.damage_centers_summary?.total_cost) {
+          totalClaim = parseFloat(helper.damage_centers_summary.total_cost) || 0;
         }
         
+        // Populate all total claim fields across ALL variants
+        const allClaimFields = ['sumClaim', 'sumClaimGlobal', 'sumClaimPrivate', 'sumClaimDefault'];
+        allClaimFields.forEach(fieldId => {
+          const field = document.getElementById(fieldId);
+          if (field) {
+            const formattedClaim = totalClaim > 0 ? `₪${totalClaim.toLocaleString()}` : '';
+            field.value = formattedClaim;
+            helper.final_report.summary.total_claim = formattedClaim;
+          }
+        });
+        
         // 3. Depreciation Compensation - from helper.depreciation.globalDepValue
-        const depCompensation = helper.depreciation?.globalDepValue || 
-                               helper.depreciation?.total_compensation || 0;
-        const depCompensationField = document.getElementById('depCompensation');
-        if (depCompensationField) {
-          const formattedDepValue = depCompensation > 0 ? `₪${depCompensation.toLocaleString()}` : '';
-          depCompensationField.value = formattedDepValue;
-          helper.final_report.summary.dep_compensation = formattedDepValue;
+        let depCompensation = 0;
+        
+        // Parse from globalDepValue (preferred)
+        if (helper.depreciation?.globalDepValue) {
+          const depValue = helper.depreciation.globalDepValue;
+          if (typeof depValue === 'string') {
+            depCompensation = parseFloat(depValue.replace(/[₪,]/g, '')) || 0;
+          } else {
+            depCompensation = parseFloat(depValue) || 0;
+          }
         }
+        // Fallback to globalDep1 (may contain formatted string like "1,972₪")
+        else if (helper.depreciation?.globalDep1) {
+          const dep1Value = helper.depreciation.globalDep1;
+          if (typeof dep1Value === 'string') {
+            depCompensation = parseFloat(dep1Value.replace(/[₪,%]/g, '')) || 0;
+          } else {
+            depCompensation = parseFloat(dep1Value) || 0;
+          }
+        }
+        // Final fallback to total_compensation
+        else if (helper.depreciation?.total_compensation) {
+          depCompensation = parseFloat(helper.depreciation.total_compensation) || 0;
+        }
+        
+        // Populate all depreciation compensation fields across ALL variants
+        const allDepFields = ['depCompensation', 'depCompensationGlobal', 'depCompensationPrivate', 'sumDepreciation', 'sumDepreciationDefault'];
+        allDepFields.forEach(fieldId => {
+          const field = document.getElementById(fieldId);
+          if (field) {
+            const formattedDepValue = depCompensation > 0 ? `₪${depCompensation.toLocaleString()}` : '';
+            field.value = formattedDepValue;
+            helper.final_report.summary.dep_compensation = formattedDepValue;
+          }
+        });
         
         // 4. Adjustments Info - informative field only (not for calculations)
         const adjustmentsValue = helper.calculations?.final_adjustments_value || 0;
@@ -3169,6 +3219,12 @@
         // Load all summary fields using enhanced loader (this will handle the rest)
         loadSummaryFieldsFromHelper(helper);
         
+        // Retry loading after a delay to handle timing issues
+        setTimeout(() => {
+          const updatedHelper = window.helper || JSON.parse(sessionStorage.getItem('helper') || '{}');
+          loadSummaryFieldsFromHelper(updatedHelper);
+        }, 300);
+        
         // Calculate VAT and totals if we have claim data
         if (totalClaim > 0) {
           const vatRate = getVatRate();
@@ -3262,6 +3318,10 @@
           if (globalDepValue && depCompensationInput) {
             depCompensationInput.value = globalDepValue;
           }
+          
+          // Ensure all variant fields are populated
+          const updatedHelper = window.helper || JSON.parse(sessionStorage.getItem('helper') || '{}');
+          loadSummaryFieldsFromHelper(updatedHelper);
           
           // Get values - market price + claim + compensation - salvage = total
           const marketValue = parseFloat(sumMarketValueInput?.value.replace(/[₪,]/g, '') || '0') || 0;
