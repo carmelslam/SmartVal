@@ -5780,24 +5780,98 @@
           const container = document.getElementById(containerId);
           if (!container) return;
 
+          // Calculate cumulative values for this category in real-time
+          const basePrice = parseFloat(helper.valuation?.base_price) || 0;
+          let runningCumulative = 0;
+          
+          // Get starting value based on category
+          if (category === 'features') {
+            runningCumulative = basePrice;
+          } else if (category === 'registration') {
+            // Start from last features cumulative
+            if (helper.estimate.adjustments['features'] && helper.estimate.adjustments['features'].length > 0) {
+              const lastFeaturesRow = helper.estimate.adjustments['features'][helper.estimate.adjustments['features'].length - 1];
+              runningCumulative = lastFeaturesRow.row_cumulative || basePrice;
+            } else {
+              runningCumulative = basePrice;
+            }
+          } else if (category === 'mileage') {
+            // Start from last registration cumulative
+            if (helper.estimate.adjustments['registration'] && helper.estimate.adjustments['registration'].length > 0) {
+              const lastRegistrationRow = helper.estimate.adjustments['registration'][helper.estimate.adjustments['registration'].length - 1];
+              runningCumulative = lastRegistrationRow.row_cumulative || basePrice;
+            } else if (helper.estimate.adjustments['features'] && helper.estimate.adjustments['features'].length > 0) {
+              const lastFeaturesRow = helper.estimate.adjustments['features'][helper.estimate.adjustments['features'].length - 1];
+              runningCumulative = lastFeaturesRow.row_cumulative || basePrice;
+            } else {
+              runningCumulative = basePrice;
+            }
+          } else if (category === 'ownership_type') {
+            // Walk back to find last cumulative
+            if (helper.estimate.adjustments['mileage'] && helper.estimate.adjustments['mileage'].length > 0) {
+              const lastMileageRow = helper.estimate.adjustments['mileage'][helper.estimate.adjustments['mileage'].length - 1];
+              runningCumulative = lastMileageRow.row_cumulative || basePrice;
+            } else if (helper.estimate.adjustments['registration'] && helper.estimate.adjustments['registration'].length > 0) {
+              const lastRegistrationRow = helper.estimate.adjustments['registration'][helper.estimate.adjustments['registration'].length - 1];
+              runningCumulative = lastRegistrationRow.row_cumulative || basePrice;
+            } else if (helper.estimate.adjustments['features'] && helper.estimate.adjustments['features'].length > 0) {
+              const lastFeaturesRow = helper.estimate.adjustments['features'][helper.estimate.adjustments['features'].length - 1];
+              runningCumulative = lastFeaturesRow.row_cumulative || basePrice;
+            } else {
+              runningCumulative = basePrice;
+            }
+          } else if (category === 'ownership_history') {
+            // Walk back to find last cumulative
+            if (helper.estimate.adjustments['ownership_type'] && helper.estimate.adjustments['ownership_type'].length > 0) {
+              const lastOwnershipTypeRow = helper.estimate.adjustments['ownership_type'][helper.estimate.adjustments['ownership_type'].length - 1];
+              runningCumulative = lastOwnershipTypeRow.row_cumulative || basePrice;
+            } else if (helper.estimate.adjustments['mileage'] && helper.estimate.adjustments['mileage'].length > 0) {
+              const lastMileageRow = helper.estimate.adjustments['mileage'][helper.estimate.adjustments['mileage'].length - 1];
+              runningCumulative = lastMileageRow.row_cumulative || basePrice;
+            } else if (helper.estimate.adjustments['registration'] && helper.estimate.adjustments['registration'].length > 0) {
+              const lastRegistrationRow = helper.estimate.adjustments['registration'][helper.estimate.adjustments['registration'].length - 1];
+              runningCumulative = lastRegistrationRow.row_cumulative || basePrice;
+            } else if (helper.estimate.adjustments['features'] && helper.estimate.adjustments['features'].length > 0) {
+              const lastFeaturesRow = helper.estimate.adjustments['features'][helper.estimate.adjustments['features'].length - 1];
+              runningCumulative = lastFeaturesRow.row_cumulative || basePrice;
+            } else {
+              runningCumulative = basePrice;
+            }
+          }
+
           const rows = Array.from(container.children);
           rows.forEach((row, index) => {
             const cumulativeDisplay = row.querySelector('.row-cumulative');
-            if (cumulativeDisplay && adjustments[index] && adjustments[index].row_cumulative !== undefined) {
-              const formattedValue = `₪${Math.abs(adjustments[index].row_cumulative).toLocaleString()}`;
+            if (cumulativeDisplay && adjustments[index]) {
+              // Calculate cumulative for this row
+              runningCumulative += (adjustments[index].amount || 0);
+              
+              const formattedValue = `₪${Math.abs(runningCumulative).toLocaleString()}`;
               cumulativeDisplay.textContent = formattedValue;
+              
               // Color coding: green for positive, red for negative
-              if (adjustments[index].row_cumulative >= 0) {
-                cumulativeDisplay.style.background = '#e8f5e8';
-                cumulativeDisplay.style.color = '#2d5a2d';
+              if (runningCumulative >= 0) {
+                if (category === 'features' || category === 'registration') {
+                  cumulativeDisplay.style.background = '#e8f5e8';
+                  cumulativeDisplay.style.color = '#2d5a2d';
+                } else {
+                  cumulativeDisplay.style.background = '#ffe8e8';
+                  cumulativeDisplay.style.color = '#8b0000';
+                }
               } else {
                 cumulativeDisplay.style.background = '#ffe8e8';
                 cumulativeDisplay.style.color = '#8b0000';
               }
+              
+              // Update the stored cumulative value
+              adjustments[index].row_cumulative = runningCumulative;
             }
           });
         });
       });
+      
+      // Save updated cumulative values back to sessionStorage
+      sessionStorage.setItem('helper', JSON.stringify(helper));
     }
 
     // Sync adjustment to helper - REBUILD ENTIRE CATEGORY FROM ALL UI ROWS
