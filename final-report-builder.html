@@ -3283,12 +3283,10 @@
 
       function calculateSummaryTotals() {
         try {
-          // Auto-fill market value from helper.calculations.full_market_value (standardized)
+          // Skip auto-fill for private summary - handled by refreshSummary() 
           const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
           const helperMarketValue = helper.calculations?.full_market_value || 0;
-          if (helperMarketValue && helperMarketValue > 0 && sumMarketValueInput) {
-            sumMarketValueInput.value = `₪${helperMarketValue.toLocaleString()}`;
-          }
+          // Don't auto-fill private summary field - let refreshSummary() handle it
           
           // Also auto-fill global variant market value field if it exists
           const sumMarketValueGlobal = document.getElementById('sumMarketValueGlobal');
@@ -3347,9 +3345,10 @@
       }
 
       // Add listeners to trigger calculations for all relevant fields
-      if (sumMarketValueInput) {
-        sumMarketValueInput.addEventListener('input', calculateSummaryTotals);
-      }
+      // Disabled - private summary handled by refreshSummary()
+      // if (sumMarketValueInput) {
+      //   sumMarketValueInput.addEventListener('input', calculateSummaryTotals);
+      // }
       if (sumClaimInput) {
         sumClaimInput.addEventListener('input', calculateSummaryTotals);
       }
@@ -3366,13 +3365,14 @@
         });
       }
       
+      // Disabled - private summary handled by refreshSummary()
       // Auto-update when summary market value changes
-      if (sumMarketValueInput) {
-        sumMarketValueInput.addEventListener('input', () => {
-          calculateSummaryTotals();
-          triggerGlobalDepreciationCalc(); // Recalculate global depreciation when market value changes
-        });
-      }
+      // if (sumMarketValueInput) {
+      //   sumMarketValueInput.addEventListener('input', () => {
+      //     calculateSummaryTotals();
+      //     triggerGlobalDepreciationCalc(); // Recalculate global depreciation when market value changes
+      //   });
+      // }
       
       // ADD EVENT LISTENERS FOR SOURCE FIELDS TO AUTO-UPDATE SUMMARY
       const totalClaimInput = document.getElementById('totalClaim');
