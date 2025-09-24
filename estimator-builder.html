@@ -5388,34 +5388,53 @@
         // 4. Ownership Type Adjustments with index-based percentage logic
         const ownershipRows = document.querySelectorAll('#ownershipAdjustmentsList > div');
         ownershipRows.forEach((row, index) => {
-          const inputs = row.querySelectorAll('input, select');
-          if (inputs.length >= 4) {
-            const type = inputs[1].value;
-            const percent = parseFloat(inputs[2].value) || 0;
-            let value = parseFloat(inputs[3].value.replace(/[₪,]/g, '')) || 0;
-            
-            // INDEX-BASED LOGIC: percentage vs direct value
-            if (percent && !value) {
-              // For manual rows (index > 0), use previous category cumulative
-              let previousCumulative;
-              if (index > 0) {
-                // Manual row: use mileage cumulative (previous category)
-                previousCumulative = afterMileage;
-              } else {
-                // First row: use current running cumulative
-                previousCumulative = currentValue;
-              }
-              value = previousCumulative * (Math.abs(percent) / 100);
-              inputs[3].value = `₪${Math.round(value).toLocaleString()}`;
-              console.log(`🔧 Ownership row[${index}]: ${percent}% × ₪${previousCumulative.toLocaleString()} = ₪${Math.round(value).toLocaleString()}`);
-            }
-            
-            // Apply adjustment to running cumulative
-            if (type === 'plus') {
-              currentValue += Math.abs(value);
+          const select = row.querySelector('select');
+          const type = select?.value;
+          const inputs = row.querySelectorAll('input[type="text"]');
+          const percentInput = inputs[1]; // Percentage field
+          const valueInput = inputs[2];   // Value field
+          
+          // INDEX-BASED LOGIC: percentage vs direct value (matching final-report-builder.html)
+          if (percentInput && percentInput.value && parseFloat(percentInput.value) !== 0) {
+            // HAS PERCENTAGE: Calculate SPECIFIC result from PREVIOUS CATEGORY CUMULATIVE
+            const percent = parseFloat(percentInput.value);
+            // For manual rows (index > 0), use previous category cumulative
+            let previousCumulative;
+            if (index > 0) {
+              // Manual row: use mileage cumulative (previous category)
+              previousCumulative = afterMileage;
             } else {
-              currentValue -= Math.abs(value);
+              // First row: use current running cumulative
+              previousCumulative = currentValue;
             }
+            const specificResult = previousCumulative * (Math.abs(percent) / 100);
+            
+            // Apply dropdown selection to get final cumulative
+            if (type === 'minus') {
+              currentValue = currentValue - specificResult;
+            } else {
+              currentValue = currentValue + specificResult;
+            }
+            
+            // UPDATE THE UI: Set the correct specific value in the value field
+            if (valueInput && !window.pageLoadInProgress) {
+              const roundedResult = Math.round(specificResult);
+              const displayAmount = roundedResult.toLocaleString();
+              valueInput.value = (type === 'minus') ? `-₪${displayAmount}` : `₪${displayAmount}`;
+            }
+            
+            console.log(`🔧 Ownership row[${index}]: ${percent}% × ₪${previousCumulative.toLocaleString()} = ₪${Math.round(specificResult).toLocaleString()}`);
+          } else if (valueInput && valueInput.value) {
+            // FIXED: Parse amount considering it might already have a minus sign
+            const amountText = (valueInput.value || '').trim();
+            const hasMinusSign = amountText.includes('-');
+            const value = Math.abs(parseFloat(amountText.replace(/[₪,\s-]/g, '')) || 0);
+            if (type === 'minus') {
+              currentValue = currentValue - value;
+            } else {
+              currentValue = currentValue + value;
+            }
+          }
             
             // Update row's cumulative display
             const rowCumulativeSpan = row.querySelector('.row-cumulative');
@@ -5438,34 +5457,53 @@
         // 5. Number of Owners Adjustments with index-based percentage logic  
         const ownersRows = document.querySelectorAll('#ownersAdjustmentsList > div');
         ownersRows.forEach((row, index) => {
-          const inputs = row.querySelectorAll('input, select');
-          if (inputs.length >= 4) {
-            const type = inputs[1].value;
-            const percent = parseFloat(inputs[2].value) || 0;
-            let value = parseFloat(inputs[3].value.replace(/[₪,]/g, '')) || 0;
-            
-            // INDEX-BASED LOGIC: percentage vs direct value
-            if (percent && !value) {
-              // For manual rows (index > 0), use previous category cumulative
-              let previousCumulative;
-              if (index > 0) {
-                // Manual row: use ownership cumulative (previous category)
-                previousCumulative = afterOwnership;
-              } else {
-                // First row: use current running cumulative
-                previousCumulative = currentValue;
-              }
-              value = previousCumulative * (Math.abs(percent) / 100);
-              inputs[3].value = `₪${Math.round(value).toLocaleString()}`;
-              console.log(`🔧 Owners row[${index}]: ${percent}% × ₪${previousCumulative.toLocaleString()} = ₪${Math.round(value).toLocaleString()}`);
-            }
-            
-            // Apply adjustment to running cumulative
-            if (type === 'plus') {
-              currentValue += Math.abs(value);
+          const select = row.querySelector('select');
+          const type = select?.value;
+          const inputs = row.querySelectorAll('input[type="text"]');
+          const percentInput = inputs[1]; // Percentage field
+          const valueInput = inputs[2];   // Value field
+          
+          // INDEX-BASED LOGIC: percentage vs direct value (matching final-report-builder.html)
+          if (percentInput && percentInput.value && parseFloat(percentInput.value) !== 0) {
+            // HAS PERCENTAGE: Calculate SPECIFIC result from PREVIOUS CATEGORY CUMULATIVE
+            const percent = parseFloat(percentInput.value);
+            // For manual rows (index > 0), use previous category cumulative
+            let previousCumulative;
+            if (index > 0) {
+              // Manual row: use ownership cumulative (previous category)
+              previousCumulative = afterOwnership;
             } else {
-              currentValue -= Math.abs(value);
+              // First row: use current running cumulative
+              previousCumulative = currentValue;
             }
+            const specificResult = previousCumulative * (Math.abs(percent) / 100);
+            
+            // Apply dropdown selection to get final cumulative
+            if (type === 'minus') {
+              currentValue = currentValue - specificResult;
+            } else {
+              currentValue = currentValue + specificResult;
+            }
+            
+            // UPDATE THE UI: Set the correct specific value in the value field
+            if (valueInput && !window.pageLoadInProgress) {
+              const roundedResult = Math.round(specificResult);
+              const displayAmount = roundedResult.toLocaleString();
+              valueInput.value = (type === 'minus') ? `-₪${displayAmount}` : `₪${displayAmount}`;
+            }
+            
+            console.log(`🔧 Owners row[${index}]: ${percent}% × ₪${previousCumulative.toLocaleString()} = ₪${Math.round(specificResult).toLocaleString()}`);
+          } else if (valueInput && valueInput.value) {
+            // FIXED: Parse amount considering it might already have a minus sign
+            const amountText = (valueInput.value || '').trim();
+            const hasMinusSign = amountText.includes('-');
+            const value = Math.abs(parseFloat(amountText.replace(/[₪,\s-]/g, '')) || 0);
+            if (type === 'minus') {
+              currentValue = currentValue - value;
+            } else {
+              currentValue = currentValue + value;
+            }
+          }
             
             // Update row's cumulative display
             const rowCumulativeSpan = row.querySelector('.row-cumulative');
