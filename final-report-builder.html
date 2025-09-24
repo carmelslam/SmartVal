@@ -8341,10 +8341,24 @@
         const ownersRows = document.querySelectorAll('#ownersAdjustmentsList > div');
         helper.final_report.adjustments.ownership_history = [];
         
+        // DEBUG: Log when this function clears and rebuilds ownership_history
+        console.log(`🚨 updateFullMarketValueToFinalReportAndValuation CLEARING ownership_history and rebuilding from UI`, {
+          pageLoadInProgress: window.pageLoadInProgress,
+          ownersRowsCount: ownersRows.length
+        });
+        
         // Save ALL ownership history rows to final_report.adjustments
-        ownersRows.forEach(row => {
+        ownersRows.forEach((row, index) => {
           const inputs = row.querySelectorAll('input, select');
           if (inputs.length >= 4) {
+            // DEBUG: Log what type is being read from dropdown
+            console.log(`🔍 REBUILDING owners[${index}] type from dropdown: ${inputs[1].value}`, {
+              dropdown: inputs[1],
+              selectedValue: inputs[1].value,
+              selectedIndex: inputs[1].selectedIndex,
+              options: Array.from(inputs[1].options).map(o => ({value: o.value, selected: o.selected}))
+            });
+            
             const adjustmentData = {
               value: inputs[0].value || '',
               type: inputs[1].value || 'plus',
