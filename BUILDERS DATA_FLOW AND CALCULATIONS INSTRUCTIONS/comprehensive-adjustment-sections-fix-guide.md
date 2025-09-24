@@ -902,4 +902,274 @@ The row deletion bug was a perfect example of how subtle timing issues and ID ge
 - ✅ Correct row targeting 100% of the time
 - ✅ Helper data integrity maintained
 - ✅ Predictable deletion behavior regardless of timing
+
+---
+
+# PHASE 5: THE CUMULATIVE CALCULATION CATASTROPHE
+
+## Problem: Index-Based vs Running Cumulative Calculation Logic
+
+**Date**: September 24-25, 2025  
+**Issue**: Percentage calculations within adjustment categories were using **running cumulative** instead of **previous category's final cumulative**, causing incorrect compounding calculations.
+
+### The Core Problem
+
+**User Report**: "both 15% rows showing different amounts when they should use different bases"
+
+**Expected Behavior**: 
+- All rows within a category with the same percentage should calculate from the **same base** (previous category's cumulative)
+- Different percentages should yield proportionally correct amounts from the same base
+
+**Actual Behavior**:
+- First row: 26.88% × ₪132,620 = ₪35,648 (correct)  
+- Second row: 26.88% × ₪96,972 = ₪26,066 (WRONG - using running cumulative)
+
+## The Investigation Journey: Why Multiple Attempts Failed
+
+### **Attempt 1: Misunderstood the Architecture**
+**What I did**: Modified `calculateAdjustmentValueSimple()` function with complex logic
+**Why it failed**: This function handles real-time input calculations, not the main calculation engine
+**Lesson**: Understanding the **call flow** is critical - fixing the wrong function wastes time
+
+### **Attempt 2: Fixed Wrong Calculation Method**
+**What I did**: Modified `updateFullMarketValueCalculation()` but kept the old calculation pattern
+**Why it failed**: Used `if (percent && !value)` condition and still calculated from `currentValue`
+**Lesson**: **Condition logic matters** - the wrong conditional check negates the entire fix
+
+### **Attempt 3: Partial Implementation**
+**What I did**: Added index-based logic but only to ownership sections, not mileage
+**Why it failed**: **Inconsistent application** across all affected categories
+**Lesson**: System-wide issues require **system-wide fixes**
+
+### **Attempt 4: Wrong Input Structure Understanding**
+**What I did**: Used `inputs[1]` and `inputs[2]` array indices
+**Why it failed**: Didn't match the exact input structure used in final-report-builder.html
+**Lesson**: **Mirror working implementations exactly** - subtle differences break functionality
+
+### **Attempt 5: Syntax and Scoping Errors**
+**What I did**: Correct logic but with JavaScript syntax errors and misplaced code blocks
+**Why it failed**: **Syntax errors prevent execution** entirely
+**Lesson**: **Code structure and scoping** are as important as business logic
+
+## The Final Solution: Complete Architecture Alignment
+
+### **Key Insight**: final-report-builder.html had the working pattern
+
+**Critical Differences Discovered**:
+
+1. **Input Selection Method**:
+```javascript
+// WRONG (estimator-builder.html original):
+const inputs = row.querySelectorAll('input, select');
+const percent = parseFloat(inputs[2].value) || 0;
+let value = parseFloat(inputs[3].value.replace(/[₪,]/g, '')) || 0;
+
+// CORRECT (final-report-builder.html pattern):
+const inputs = row.querySelectorAll('input[type="text"]');
+const percentInput = inputs[1]; // Percentage field
+const valueInput = inputs[2];   // Value field
+```
+
+2. **Calculation Condition**:
+```javascript
+// WRONG: Only calculate when value is empty
+if (percent && !value) { ... }
+
+// CORRECT: Always calculate when percentage exists
+if (percentInput && percentInput.value && parseFloat(percentInput.value) !== 0) { ... }
+```
+
+3. **Base Calculation Logic**:
+```javascript
+// WRONG: Running cumulative (compounds incorrectly)
+value = (currentValue * Math.abs(percent)) / 100;
+
+// CORRECT: Previous category cumulative (consistent base)
+const previousCumulative = afterMileage; // or afterRegistration, afterOwnership
+const specificResult = previousCumulative * (Math.abs(percent) / 100);
+```
+
+4. **Category Cumulative Storage**:
+```javascript
+// MISSING: No storage of category endpoints
+// Added this pattern:
+const afterRegistration = currentValue; // Store after registration processing
+const afterMileage = currentValue;      // Store after mileage processing  
+const afterOwnership = currentValue;    // Store after ownership processing
+```
+
+### **The Complete Fix Implementation**
+
+#### **Step 1: Add Category Cumulative Storage**
+```javascript
+// After each category processing, store the cumulative
+const afterRegistration = currentValue;
+const afterMileage = currentValue; 
+const afterOwnership = currentValue;
+```
+
+#### **Step 2: Fix Input Structure to Match final-report-builder.html**
+```javascript
+// Change from array indices to proper input targeting
+const select = row.querySelector('select');
+const type = select?.value;
+const inputs = row.querySelectorAll('input[type="text"]');
+const percentInput = inputs[1]; // Percentage field
+const valueInput = inputs[2];   // Value field
+```
+
+#### **Step 3: Fix Calculation Condition**
+```javascript
+// Always recalculate when percentage exists (don't check !value)
+if (percentInput && percentInput.value && parseFloat(percentInput.value) !== 0) {
+```
+
+#### **Step 4: Use Previous Category Cumulative**
+```javascript
+// For each category, use the previous category's final cumulative
+// Mileage rows: use afterRegistration
+// Ownership_type rows: use afterMileage  
+// Ownership_history rows: use afterOwnership
+const previousCumulative = afterRegistration; // Example for mileage
+const specificResult = previousCumulative * (Math.abs(percent) / 100);
+```
+
+#### **Step 5: Update currentValue Correctly**
+```javascript
+// Apply the calculated result to running cumulative
+if (type === 'minus') {
+  currentValue = currentValue - specificResult;
+} else {
+  currentValue = currentValue + specificResult;
+}
+```
+
+#### **Step 6: Update UI with Proper Formatting**
+```javascript
+// Update the value field with correct formatting and sign
+if (valueInput && !window.pageLoadInProgress) {
+  const roundedResult = Math.round(specificResult);
+  const displayAmount = roundedResult.toLocaleString();
+  valueInput.value = (type === 'minus') ? `-₪${displayAmount}` : `₪${displayAmount}`;
+}
+```
+
+## Critical Success Factors
+
+### **1. Architecture Pattern Matching**
+- **Mirror working implementations exactly** - don't improvise when you have a working reference
+- **Study the differences systematically** - compare line by line, function by function
+- **Understand the data flow completely** - from input to calculation to display
+
+### **2. Comprehensive Scope Application**  
+- **Apply fixes to ALL affected areas** - partial fixes create inconsistent behavior
+- **Test all categories** - mileage, ownership_type, ownership_history all needed the same fix
+- **Maintain consistent patterns** - don't mix old and new calculation methods
+
+### **3. Input Structure Understanding**
+- **DOM selection patterns matter** - `querySelectorAll('input, select')` vs `querySelectorAll('input[type="text"]')`
+- **Array indexing can be fragile** - direct element references are more reliable  
+- **Field targeting must be precise** - wrong input = wrong calculation
+
+### **4. Conditional Logic Precision**
+- **Calculation triggers matter** - when to recalculate vs when to preserve values
+- **Boolean logic affects behavior** - `percent && !value` vs `percentInput && percentInput.value`
+- **Edge case handling** - empty values, zero values, page load states
+
+## The Architectural Insight: Why This Bug Existed
+
+### **Root Cause: Evolutionary Code Divergence**
+
+1. **estimator-builder.html** was built with **running cumulative logic** (easier to implement)
+2. **final-report-builder.html** was later enhanced with **index-based logic** (mathematically correct)
+3. **The two implementations diverged** without cross-pollination of improvements
+4. **Business logic requirements** demanded final-report-builder.html behavior in estimator-builder.html
+
+### **The Mathematics**
+
+**Running Cumulative (WRONG)**:
+- Row 1: 26.88% × ₪132,620 = ₪35,648 → Cumulative: ₪96,972
+- Row 2: 26.88% × ₪96,972 = ₪26,066 → Cumulative: ₪70,906
+- **Problem**: Each row compounds the previous row's effect
+
+**Previous Category Cumulative (CORRECT)**:
+- Row 1: 26.88% × ₪132,620 = ₪35,648 → Cumulative: ₪96,972  
+- Row 2: 26.88% × ₪132,620 = ₪35,648 → Cumulative: ₪61,324
+- **Solution**: Each row uses the same base, different cumulative results
+
+## Never Fucking Forget: Cumulative Calculation Edition
+
+1. **Working implementations are goldmines** - Study them extensively before creating new logic
+2. **Percentage calculations need consistent bases** - Running cumulatives compound incorrectly  
+3. **Input structure assumptions break easily** - Verify DOM selection patterns match expectations
+4. **Conditional logic determines behavior** - The wrong `if` condition negates correct calculation code
+5. **Category boundaries matter** - Store cumulative values at category endpoints for reuse
+6. **Systematic application prevents partial fixes** - Apply the pattern to ALL affected categories
+7. **Business requirements drive mathematical requirements** - Understand what the calculations should achieve
+8. **Code divergence creates maintenance nightmares** - Keep related implementations aligned
+9. **Debugging requires console logging** - Trace calculation inputs, bases, and results
+10. **UI updates must match calculation logic** - Display what was calculated, not what was expected
+
+## Success Metrics: Before vs After
+
+**Before Fix**:
+- ❌ 26.88% × ₪132,620 = ₪35,648 (first row)
+- ❌ 26.88% × ₪96,972 = ₪26,066 (second row) - WRONG BASE
+- ❌ Each row compounds previous row's effect
+- ❌ Inconsistent amounts for same percentages
+- ❌ User confusion about calculation logic
+
+**After Fix**:
+- ✅ 26.88% × ₪132,620 = ₪35,648 (first row)  
+- ✅ 26.88% × ₪132,620 = ₪35,648 (second row) - CORRECT BASE
+- ✅ All rows use previous category's final cumulative
+- ✅ Same percentages yield same amounts (from same base)
+- ✅ Mathematically predictable and correct behavior
+
+## Implementation Pattern for Future Reference
+
+```javascript
+// STANDARD PATTERN FOR CATEGORY-BASED CUMULATIVE CALCULATIONS
+
+// 1. Store previous category cumulative
+const after[PreviousCategory] = currentValue;
+
+// 2. Process current category rows
+current[Category]Rows.forEach((row, index) => {
+  const select = row.querySelector('select');
+  const type = select?.value;
+  const inputs = row.querySelectorAll('input[type="text"]');
+  const percentInput = inputs[1];
+  const valueInput = inputs[2];
+  
+  // 3. Calculate using previous category cumulative as base
+  if (percentInput && percentInput.value && parseFloat(percentInput.value) !== 0) {
+    const percent = parseFloat(percentInput.value);
+    const previousCumulative = after[PreviousCategory]; // CONSISTENT BASE
+    const specificResult = previousCumulative * (Math.abs(percent) / 100);
+    
+    // 4. Apply to running cumulative
+    if (type === 'minus') {
+      currentValue = currentValue - specificResult;
+    } else {
+      currentValue = currentValue + specificResult;
+    }
+    
+    // 5. Update UI with calculated result
+    if (valueInput && !window.pageLoadInProgress) {
+      const roundedResult = Math.round(specificResult);
+      const displayAmount = roundedResult.toLocaleString();
+      valueInput.value = (type === 'minus') ? `-₪${displayAmount}` : `₪${displayAmount}`;
+    }
+  }
+  
+  // 6. Update row cumulative display
+  const rowCumulativeSpan = row.querySelector('.row-cumulative');
+  if (rowCumulativeSpan) {
+    rowCumulativeSpan.textContent = `₪${Math.round(currentValue).toLocaleString()}`;
+  }
+});
+```
+
+This cumulative calculation fix represents a deep architectural alignment that required understanding mathematical requirements, code pattern analysis, DOM structure investigation, and systematic implementation across multiple categories. The lesson: sometimes the hardest bugs are architectural misalignments that require complete pattern replacement, not incremental fixes.
 - ✅ Clear source tracking for debugging and maintenance
