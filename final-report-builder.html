@@ -3149,10 +3149,11 @@
       try {
         console.log('📊 Loading summary data with enhanced auto-population');
         
-        // FIXED: Set correct final report type (not estimate type) based on selection
-        const selectedType = document.querySelector('input[name="final-report-type"]:checked')?.value || 'אובדן_להלכה';
-        const reportTypeText = selectedType === 'אובדן_להלכה' ? 'חוות דעת אובדן להלכה' : 'חוות דעת טוטלוסט';
-        document.getElementById('reportType').value = reportTypeText;
+        // DISABLED: Conflicting code that overrides saved dropdown selection
+        // const selectedType = document.querySelector('input[name="final-report-type"]:checked')?.value || 'אובדן_להלכה';
+        // const reportTypeText = selectedType === 'אובדן_להלכה' ? 'חוות דעת אובדן להלכה' : 'חוות דעת טוטלוסט';
+        // document.getElementById('reportType').value = reportTypeText;
+        console.log('📋 Skipping report type override - using saved dropdown selection');
         
         // ENHANCED AUTO-POPULATION SYSTEM
         
@@ -14791,8 +14792,13 @@
         const salvagePrice = parseFloat(salvageSaleField.value.replace(/[₪,]/g, '')) || 0;
         if (salvagePrice > 0) {
           const salvageSaleResult = marketValue - salvagePrice;
-          console.log(`🧮 Salvage Sale calculation: ${marketValue} - ${salvagePrice} = ${salvageSaleResult}`);
-          // Note: There's no separate result field shown in UI, so this is just the calculation logic
+          
+          // Update the result field
+          const resultField = document.getElementById('sumTotalDamagedSale');
+          if (resultField) {
+            resultField.value = `₪${salvageSaleResult.toLocaleString()}`;
+            console.log(`🧮 Salvage Sale calculation: ${marketValue} - ${salvagePrice} = ${salvageSaleResult}`);
+          }
         }
       }
     }
@@ -17363,16 +17369,20 @@
       }
     }
     
-    // Add event listeners for Total Loss calculation
+    // Add event listeners for Total Loss and Salvage Sale calculations
     function setupTotalLossCalculation() {
       const salvageField = document.getElementById('sumScrapValue');
       const towingField = document.getElementById('sumTowingStorage');
+      const salvageSaleField = document.getElementById('sumDamagedSaleValue');
       
       if (salvageField) {
         salvageField.addEventListener('input', refreshSummary);
       }
       if (towingField) {
         towingField.addEventListener('input', refreshSummary);
+      }
+      if (salvageSaleField) {
+        salvageSaleField.addEventListener('input', refreshSummary);
       }
     }
     
