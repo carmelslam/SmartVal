@@ -1734,7 +1734,7 @@
     <!-- Navigation Buttons -->
     <div class="form-section">
       <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px;">
-        <button type="button" class="nav-btn save-btn" onclick="saveAdjustmentsData()">שמור התאמות</button>
+        <button type="button" class="nav-btn save-btn" onclick="saveDepreciationData()">שמור נתונים</button>
         <button type="button" class="nav-btn" style="background: #1e40af;" onclick="previewFinalReport()">
           <span style="margin-left: 5px;">👁️</span>
           תצוגה מקדימה לחוו״ד
@@ -13602,6 +13602,32 @@
           sectionData.featuresAdjustments = collectAdjustmentData('#featuresAdjustmentsList');
           sectionData.registrationAdjustments = collectAdjustmentData('#registrationAdjustmentsList');
         } else if (sectionId === 'full-market-value') {
+          // CRITICAL FIX: Save ALL adjustment categories, not just additional
+          // Use the proven syncAdjustmentToHelper pattern to preserve user edits
+          console.log('💾 FULL-MARKET-VALUE SAVE: Using syncAdjustmentToHelper to preserve all user edits');
+          
+          const categories = [
+            { category: 'features', containerId: 'fullFeaturesAdjustmentsList' },
+            { category: 'registration', containerId: 'fullRegistrationAdjustmentsList' },
+            { category: 'mileage', containerId: 'mileageAdjustmentsList' },
+            { category: 'ownership_type', containerId: 'ownershipAdjustmentsList' },
+            { category: 'ownership_history', containerId: 'ownersAdjustmentsList' },
+            { category: 'additional', containerId: 'allAdjustmentsList' }
+          ];
+          
+          categories.forEach(({ category, containerId }) => {
+            const container = document.getElementById(containerId);
+            if (container && container.children.length > 0) {
+              // Trigger syncAdjustmentToHelper for each category to preserve user edits
+              const firstInput = container.children[0].querySelector('input');
+              if (firstInput) {
+                console.log(`💾 Saving ${category} from ${containerId} using syncAdjustmentToHelper`);
+                syncAdjustmentToHelper(firstInput, category);
+              }
+            }
+          });
+          
+          // Also collect for backward compatibility
           sectionData.allAdjustments = collectAdjustmentData('#allAdjustmentsList');
         } else if (sectionId === 'depreciation') {
           // ✅ FIX: Use saveDepreciationData() instead of collectDepreciationData() to avoid conflicts
