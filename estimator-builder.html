@@ -5338,16 +5338,20 @@
             const percent = parseFloat(inputs[2].value) || 0;
             let value = parseFloat(inputs[3].value.replace(/[₪,]/g, '')) || 0;
             
+            // FIXED: Calculate percentage using current cumulative value
             if (percent && !value) {
               value = (currentValue * Math.abs(percent)) / 100;
               inputs[3].value = `₪${Math.round(value).toLocaleString()}`;
+              console.log(`🔧 Mileage row: ${percent}% × ₪${currentValue.toLocaleString()} = ₪${Math.round(value).toLocaleString()}`);
             }
             
+            // CRITICAL FIX: Update currentValue IMMEDIATELY after calculating this row
             if (type === 'plus') {
               currentValue += Math.abs(value);
             } else {
               currentValue -= Math.abs(value);
             }
+            console.log(`📊 Mileage cumulative after row: ₪${currentValue.toLocaleString()}`);
           }
         });
         
@@ -5367,16 +5371,21 @@
             const percent = parseFloat(inputs[2].value) || 0;
             let value = parseFloat(inputs[3].value.replace(/[₪,]/g, '')) || 0;
             
+            // FIXED: Calculate percentage using current cumulative value
             if (percent && !value) {
               value = (currentValue * Math.abs(percent)) / 100;
               inputs[3].value = `₪${Math.round(value).toLocaleString()}`;
+              console.log(`🔧 Ownership row: ${percent}% × ₪${currentValue.toLocaleString()} = ₪${Math.round(value).toLocaleString()}`);
             }
             
+            // CRITICAL FIX: Update currentValue IMMEDIATELY after calculating this row
+            // so next row uses the updated cumulative
             if (type === 'plus') {
               currentValue += Math.abs(value);
             } else {
               currentValue -= Math.abs(value);
             }
+            console.log(`📊 Ownership cumulative after row: ₪${currentValue.toLocaleString()}`);
           }
         });
         
@@ -5396,16 +5405,20 @@
             const percent = parseFloat(inputs[2].value) || 0;
             let value = parseFloat(inputs[3].value.replace(/[₪,]/g, '')) || 0;
             
+            // FIXED: Calculate percentage using current cumulative value
             if (percent && !value) {
               value = (currentValue * Math.abs(percent)) / 100;
               inputs[3].value = `₪${Math.round(value).toLocaleString()}`;
+              console.log(`🔧 Owners row: ${percent}% × ₪${currentValue.toLocaleString()} = ₪${Math.round(value).toLocaleString()}`);
             }
             
+            // CRITICAL FIX: Update currentValue IMMEDIATELY after calculating this row
             if (type === 'plus') {
               currentValue += Math.abs(value);
             } else {
               currentValue -= Math.abs(value);
             }
+            console.log(`📊 Owners cumulative after row: ₪${currentValue.toLocaleString()}`);
           }
         });
         
@@ -5469,27 +5482,21 @@
       if (categoryContainer === 'mileageAdjustmentsList') {
         // Mileage should use cumulative after Features + Registration
         const registrationCumulative = document.getElementById('fullRegistrationCumulative');
-        console.log('🔍 Looking for fullRegistrationCumulative:', !!registrationCumulative);
         if (registrationCumulative) {
           const span = registrationCumulative.querySelector('span');
-          console.log('🔍 Found span in registration cumulative:', !!span);
           if (span) {
             const text = span.textContent.replace(/[₪,]/g, '');
             cumulativeValue = parseFloat(text) || 0;
-            console.log('🔍 Registration cumulative text:', text, '→ value:', cumulativeValue);
           }
         }
       } else if (categoryContainer === 'ownershipAdjustmentsList') {
         // Ownership Type should use cumulative after Mileage
         const mileageCumulative = document.getElementById('mileageCumulative');
-        console.log('🔍 Looking for mileageCumulative:', !!mileageCumulative);
         if (mileageCumulative) {
           const span = mileageCumulative.querySelector('span');
-          console.log('🔍 Found span in mileage cumulative:', !!span);
           if (span) {
             const text = span.textContent.replace(/[₪,]/g, '');
             cumulativeValue = parseFloat(text) || 0;
-            console.log('🔍 Mileage cumulative text:', text, '→ value:', cumulativeValue);
           }
         }
       } else if (categoryContainer === 'ownersAdjustmentsList') {
@@ -5504,7 +5511,6 @@
         }
       }
       
-      console.log('✅ getPreviousCategoryCumulative returning:', cumulativeValue);
       return cumulativeValue;
     }
 
@@ -5582,46 +5588,25 @@
     
     // Calculate adjustment value from percentage
     window.calculateAdjustmentValueSimple = function(percentInput) {
-      console.log('🎯 calculateAdjustmentValueSimple called with:', percentInput);
       const row = percentInput.closest('div');
-      if (!row) {
-        console.log('❌ No row found');
-        return;
-      }
-      
-      console.log('🔍 Found row:', row.id);
+      if (!row) return;
       
       // Skip calculation if page is still loading to preserve manual amounts
       if (window.pageLoadInProgress) {
-        console.log('⏸️ Skipping percentage calculation during page load');
         return;
       }
       
       const inputs = row.querySelectorAll('input, select');
-      if (inputs.length < 4) {
-        console.log('❌ Not enough inputs:', inputs.length);
-        return;
-      }
+      if (inputs.length < 4) return;
       
       const percent = parseFloat(percentInput.value) || 0;
-      if (percent === 0) {
-        console.log('❌ Percent is 0');
-        return;
+      if (percent === 0) return;
+      
+      // The main calculation is now handled correctly by updateFullMarketValueCalculation
+      // which is called automatically on input changes
+      if (typeof updateFullMarketValueCalculation === 'function') {
+        updateFullMarketValueCalculation();
       }
-      
-      console.log('✅ About to call performManualRowCalculation with percent:', percent);
-      
-      // CRITICAL: First ensure cumulative displays are updated by running calculation
-      setTimeout(() => {
-        if (typeof updateFullMarketValueCalculation === 'function') {
-          updateFullMarketValueCalculation();
-        }
-        
-        // Then proceed with the calculation using updated cumulatives
-        setTimeout(() => {
-          performManualRowCalculation(percentInput, row, inputs, percent);
-        }, 50);
-      }, 10);
     }
     
     // Global event listener for delete buttons - NEW APPROACH
