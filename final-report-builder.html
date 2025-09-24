@@ -14838,6 +14838,17 @@
       const towingField = document.getElementById('storageValueTotal');
       const totalLossResultField = document.getElementById('afterSaleTotal');
       
+      // Load manual fields from helper if they're empty
+      if (salvageField && !salvageField.value && helper.final_report?.summary?.salvage_value_total) {
+        salvageField.value = helper.final_report.summary.salvage_value_total;
+        console.log(`📥 Loaded salvage value from helper in refreshSummary: ${salvageField.value}`);
+      }
+      
+      if (towingField && !towingField.value && helper.final_report?.summary?.storage_towing_value_total) {
+        towingField.value = helper.final_report.summary.storage_towing_value_total;
+        console.log(`📥 Loaded towing value from helper in refreshSummary: ${towingField.value}`);
+      }
+      
       // Always perform calculation even if some values are 0
       if (totalLossResultField && marketValue > 0) {
         const salvageValue = parseFloat(salvageField?.value.replace(/[₪,]/g, '')) || 0;
@@ -17536,19 +17547,33 @@
           marketField.value = `₪${marketValue.toLocaleString()}`;
         }
         
-        // Perform calculation
+        // First, load manual fields from helper
         const salvageField = document.getElementById('salvageValueTotal');
         const towingField = document.getElementById('storageValueTotal');
-        const resultField = document.getElementById('afterSaleTotal');
         
-        if (resultField && marketValue > 0) {
-          const salvageValue = parseFloat(salvageField?.value.replace(/[₪,]/g, '')) || 0;
-          const towingValue = parseFloat(towingField?.value.replace(/[₪,]/g, '')) || 0;
-          const result = marketValue - salvageValue + towingValue;
-          
-          resultField.value = `₪${result.toLocaleString()}`;
-          console.log(`✅ Total loss calculation ensured: ${marketValue} - ${salvageValue} + ${towingValue} = ${result}`);
+        if (salvageField && !salvageField.value && helper.final_report?.summary?.salvage_value_total) {
+          salvageField.value = helper.final_report.summary.salvage_value_total;
+          console.log(`📥 Loaded salvage value from helper: ${salvageField.value}`);
         }
+        
+        if (towingField && !towingField.value && helper.final_report?.summary?.storage_towing_value_total) {
+          towingField.value = helper.final_report.summary.storage_towing_value_total;
+          console.log(`📥 Loaded towing value from helper: ${towingField.value}`);
+        }
+        
+        // Wait a bit for fields to settle, then perform calculation
+        setTimeout(() => {
+          const resultField = document.getElementById('afterSaleTotal');
+          
+          if (resultField && marketValue > 0) {
+            const salvageValue = parseFloat(salvageField?.value.replace(/[₪,]/g, '')) || 0;
+            const towingValue = parseFloat(towingField?.value.replace(/[₪,]/g, '')) || 0;
+            const result = marketValue - salvageValue + towingValue;
+            
+            resultField.value = `₪${result.toLocaleString()}`;
+            console.log(`✅ Total loss calculation ensured: ${marketValue} - ${salvageValue} + ${towingValue} = ${result}`);
+          }
+        }, 100);
       }
     }
     
@@ -17590,6 +17615,10 @@
           sessionStorage.setItem('helper', JSON.stringify(helper));
         }
         
+        // First load all summary fields from helper
+        loadSummaryFieldsFromHelper(helper);
+        console.log('✅ Loaded summary fields from helper');
+        
         console.log('🔄 About to call updateSummaryVisibility()');
         updateSummaryVisibility();
         console.log('✅ updateSummaryVisibility() called');
@@ -17600,7 +17629,15 @@
           refreshSummary();
           ensureSalvageSaleCalculation();
           ensureTotalLossCalculation();
-        }, 300);
+        }, 500);
+        
+        // Extra safety for Total Loss variant - ensure fields are populated before calculation
+        if (savedVariant === 'חוות דעת טוטלוסט') {
+          setTimeout(() => {
+            console.log('🔄 Extra safety refresh for Total Loss variant');
+            ensureTotalLossCalculation();
+          }, 1000);
+        }
       } else {
         console.log('⏳ Helper data not ready yet (market value missing), waiting 500ms...');
         setTimeout(initializeSummaryWhenReady, 500);
