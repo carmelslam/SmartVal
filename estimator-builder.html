@@ -2278,9 +2278,12 @@
     }
 
     // Add Features Adjustment
-    window.addFullFeaturesAdjustment = function() {
+    window.addFullFeaturesAdjustment = function(isAutopopulated = false) {
       const container = document.getElementById('fullFeaturesAdjustmentsList');
-      const rowId = 'fullFeaturesAdj_' + Date.now();
+      const timestamp = Date.now();
+      const randomSuffix = Math.random().toString(36).substr(2, 5);
+      const source = isAutopopulated ? 'auto' : 'manual';
+      const rowId = `fullFeaturesAdj_${source}_${timestamp}_${randomSuffix}`;
       const newRow = `
         <div id="${rowId}" class="adjustment-row" style="display:grid; grid-template-columns:2fr 1fr 1fr 1fr 1fr 80px; gap:10px; margin-bottom:8px;">
           <div><input type="text" placeholder="תיאור תוספת מאפיין" title="" onchange="updateFullMarketValueCalculation(); syncAdjustmentToHelper(this, 'features'); this.title = this.value;" oninput="this.title = this.value;" /></div>
@@ -2299,9 +2302,12 @@
     }
     
     // Add Registration Adjustment  
-    window.addFullRegistrationAdjustment = function() {
+    window.addFullRegistrationAdjustment = function(isAutopopulated = false) {
       const container = document.getElementById('fullRegistrationAdjustmentsList');
-      const rowId = 'fullRegistrationAdj_' + Date.now();
+      const timestamp = Date.now();
+      const randomSuffix = Math.random().toString(36).substr(2, 5);
+      const source = isAutopopulated ? 'auto' : 'manual';
+      const rowId = `fullRegistrationAdj_${source}_${timestamp}_${randomSuffix}`;
       const newRow = `
         <div id="${rowId}" class="adjustment-row" style="display:grid; grid-template-columns:2fr 1fr 1fr 1fr 1fr 80px; gap:10px; margin-bottom:8px;">
           <div><input type="text" placeholder="תיאור עליה לכביש" onchange="updateFullMarketValueCalculation(); syncAdjustmentToHelper(this, 'registration');" /></div>
@@ -2320,9 +2326,12 @@
     }
     
     // Add Mileage Adjustment
-    window.addMileageAdjustment = function() {
+    window.addMileageAdjustment = function(isAutopopulated = false) {
       const container = document.getElementById('mileageAdjustmentsList');
-      const rowId = 'mileageAdj_' + Date.now();
+      const timestamp = Date.now();
+      const randomSuffix = Math.random().toString(36).substr(2, 5);
+      const source = isAutopopulated ? 'auto' : 'manual';
+      const rowId = `mileageAdj_${source}_${timestamp}_${randomSuffix}`;
       
       const newRow = `
         <div id="${rowId}" class="adjustment-row" style="display:grid; grid-template-columns:2fr 1fr 1fr 1fr 1fr 80px; gap:10px; margin-bottom:8px;">
@@ -2342,9 +2351,12 @@
     }
     
     // Add Ownership Type Adjustment
-    window.addOwnershipAdjustment = function() {
+    window.addOwnershipAdjustment = function(isAutopopulated = false) {
       const container = document.getElementById('ownershipAdjustmentsList');
-      const rowId = 'ownershipAdj_' + Date.now();
+      const timestamp = Date.now();
+      const randomSuffix = Math.random().toString(36).substr(2, 5);
+      const source = isAutopopulated ? 'auto' : 'manual';
+      const rowId = `ownershipAdj_${source}_${timestamp}_${randomSuffix}`;
       
       const newRow = `
         <div id="${rowId}" class="adjustment-row" style="display:grid; grid-template-columns:2fr 1fr 1fr 1fr 1fr 80px; gap:10px; margin-bottom:8px;">
@@ -2364,9 +2376,12 @@
     }
     
     // Add Number of Owners Adjustment
-    window.addOwnersAdjustment = function() {
+    window.addOwnersAdjustment = function(isAutopopulated = false) {
       const container = document.getElementById('ownersAdjustmentsList');
-      const rowId = 'ownersAdj_' + Date.now();
+      const timestamp = Date.now();
+      const randomSuffix = Math.random().toString(36).substr(2, 5);
+      const source = isAutopopulated ? 'auto' : 'manual';
+      const rowId = `ownersAdj_${source}_${timestamp}_${randomSuffix}`;
       
       const newRow = `
         <div id="${rowId}" class="adjustment-row" style="display:grid; grid-template-columns:2fr 1fr 1fr 1fr 1fr 80px; gap:10px; margin-bottom:8px;">
@@ -5635,7 +5650,9 @@
           parentRow.id.includes('mileageAdj_') ||
           parentRow.id.includes('ownershipAdj_') ||
           parentRow.id.includes('ownersAdj_') ||
-          parentRow.id.includes('fullAdj_')
+          parentRow.id.includes('fullAdj_') ||
+          // NEW: Support new ID format with source tracking
+          /Adj_(auto|manual)_\d+_[a-z0-9]+$/.test(parentRow.id)
         )) {
           console.log('🗑️ Delete button clicked for row:', parentRow.id);
           removeAdjustmentRow(parentRow.id);
@@ -8291,7 +8308,7 @@
         if (adjustments.features && adjustments.features.length > 0) {
           console.log('📝 Loading features adjustments:', adjustments.features);
           adjustments.features.forEach(item => {
-            addFullFeaturesAdjustment();
+            addFullFeaturesAdjustment(true); // Mark as autopopulated
             const lastRow = document.querySelector('#fullFeaturesAdjustmentsList > div:last-child');
             if (lastRow) {
               const inputs = lastRow.querySelectorAll('input, select');
@@ -8325,7 +8342,7 @@
         if (adjustments.registration && adjustments.registration.length > 0) {
           console.log('📝 Loading registration adjustments:', adjustments.registration);
           adjustments.registration.forEach(item => {
-            addFullRegistrationAdjustment();
+            addFullRegistrationAdjustment(true); // Mark as autopopulated
             const lastRow = document.querySelector('#fullRegistrationAdjustmentsList > div:last-child');
             if (lastRow) {
               const inputs = lastRow.querySelectorAll('input, select');
@@ -8368,7 +8385,7 @@
         if (adjustments.mileage && adjustments.mileage.length > 0) {
           console.log('📝 Loading mileage adjustments:', adjustments.mileage);
           adjustments.mileage.forEach(item => {
-            addMileageAdjustment();
+            addMileageAdjustment(true); // Mark as autopopulated
             const lastRow = document.querySelector('#mileageAdjustmentsList > div:last-child');
             if (lastRow) {
               const inputs = lastRow.querySelectorAll('input, select');
@@ -8409,7 +8426,7 @@
         if (adjustments.ownership_type && adjustments.ownership_type.length > 0) {
           console.log('📝 Loading ownership_type adjustments:', adjustments.ownership_type);
           adjustments.ownership_type.forEach(item => {
-            addOwnershipAdjustment();
+            addOwnershipAdjustment(true); // Mark as autopopulated
             const lastRow = document.querySelector('#ownershipAdjustmentsList > div:last-child');
             if (lastRow) {
               const inputs = lastRow.querySelectorAll('input, select');
@@ -8450,7 +8467,7 @@
         if (adjustments.ownership_history && adjustments.ownership_history.length > 0) {
           console.log('📝 Loading ownership_history adjustments:', adjustments.ownership_history);
           adjustments.ownership_history.forEach(item => {
-            addOwnersAdjustment();
+            addOwnersAdjustment(true); // Mark as autopopulated
             const lastRow = document.querySelector('#ownersAdjustmentsList > div:last-child');
             if (lastRow) {
               const inputs = lastRow.querySelectorAll('input, select');
@@ -8711,7 +8728,7 @@
           // Features
           if (adjustments.features && adjustments.features.length > 0) {
             adjustments.features.forEach(item => {
-              addFullFeaturesAdjustment();
+              addFullFeaturesAdjustment(true); // Mark as autopopulated
               const lastRow = document.querySelector('#fullFeaturesAdjustmentsList > div:last-child');
               if (lastRow) {
                 const inputs = lastRow.querySelectorAll('input, select');
@@ -8730,7 +8747,7 @@
           // Registration  
           if (adjustments.registration && adjustments.registration.length > 0) {
             adjustments.registration.forEach(item => {
-              addFullRegistrationAdjustment();
+              addFullRegistrationAdjustment(true); // Mark as autopopulated
               const lastRow = document.querySelector('#fullRegistrationAdjustmentsList > div:last-child');
               if (lastRow) {
                 const inputs = lastRow.querySelectorAll('input, select');
@@ -8749,7 +8766,7 @@
           // Mileage
           if (adjustments.mileage && adjustments.mileage.length > 0) {
             adjustments.mileage.forEach(item => {
-              addMileageAdjustment();
+              addMileageAdjustment(true); // Mark as autopopulated
               const lastRow = document.querySelector('#mileageAdjustmentsList > div:last-child');
               if (lastRow) {
                 const inputs = lastRow.querySelectorAll('input, select');
@@ -8768,7 +8785,7 @@
           // Ownership Type
           if (adjustments.ownership_type && adjustments.ownership_type.length > 0) {
             adjustments.ownership_type.forEach(item => {
-              addOwnershipAdjustment();
+              addOwnershipAdjustment(true); // Mark as autopopulated
               const lastRow = document.querySelector('#ownershipAdjustmentsList > div:last-child');
               if (lastRow) {
                 const inputs = lastRow.querySelectorAll('input, select');
@@ -8787,7 +8804,7 @@
           // Ownership History (Owners)
           if (adjustments.ownership_history && adjustments.ownership_history.length > 0) {
             adjustments.ownership_history.forEach(item => {
-              addOwnersAdjustment();
+              addOwnersAdjustment(true); // Mark as autopopulated
               const lastRow = document.querySelector('#ownersAdjustmentsList > div:last-child');
               if (lastRow) {
                 const inputs = lastRow.querySelectorAll('input, select');
@@ -8830,7 +8847,7 @@
           
           // Features (single object, not array)
           if (adjustments.features && (adjustments.features.value || adjustments.features.amount || adjustments.features.percentage)) {
-            addFullFeaturesAdjustment();
+            addFullFeaturesAdjustment(true); // Mark as autopopulated
             const row = document.querySelector('#fullFeaturesAdjustmentsList > div:last-child');
             if (row) {
               const inputs = row.querySelectorAll('input, select');
@@ -8850,7 +8867,7 @@
           
           // Registration (single object, not array)
           if (adjustments.registration && (adjustments.registration.value || adjustments.registration.amount || adjustments.registration.percent)) {
-            addFullRegistrationAdjustment();
+            addFullRegistrationAdjustment(true); // Mark as autopopulated
             const row = document.querySelector('#fullRegistrationAdjustmentsList > div:last-child');
             if (row) {
               const inputs = row.querySelectorAll('input, select');
@@ -8870,7 +8887,7 @@
           
           // Mileage (single object, not array)
           if (adjustments.mileage && (adjustments.mileage.value || adjustments.mileage.amount || adjustments.mileage.percent)) {
-            addMileageAdjustment();
+            addMileageAdjustment(true); // Mark as autopopulated
             const row = document.querySelector('#mileageAdjustmentsList > div:last-child');
             if (row) {
               const inputs = row.querySelectorAll('input, select');
@@ -8890,7 +8907,7 @@
           
           // Ownership Type (single object, not array)
           if (adjustments.ownership_type && (adjustments.ownership_type.value || adjustments.ownership_type.amount || adjustments.ownership_type.percent)) {
-            addOwnershipAdjustment();
+            addOwnershipAdjustment(true); // Mark as autopopulated
             const row = document.querySelector('#ownershipAdjustmentsList > div:last-child');
             if (row) {
               const inputs = row.querySelectorAll('input, select');
@@ -8910,7 +8927,7 @@
           
           // Ownership History (single object, not array)
           if (adjustments.ownership_history && (adjustments.ownership_history.value || adjustments.ownership_history.amount || adjustments.ownership_history.percent)) {
-            addOwnersAdjustment();
+            addOwnersAdjustment(true); // Mark as autopopulated
             const row = document.querySelector('#ownersAdjustmentsList > div:last-child');
             if (row) {
               const inputs = row.querySelectorAll('input, select');
@@ -9258,7 +9275,7 @@
             
             // Add ownership row
             if (typeof addOwnershipAdjustment === 'function') {
-              addOwnershipAdjustment();
+              addOwnershipAdjustment(true); // Mark as autopopulated
               const row = document.querySelector('#ownershipAdjustmentsList > div:last-child');
               if (row) {
                 const inputs = row.querySelectorAll('input, select');
