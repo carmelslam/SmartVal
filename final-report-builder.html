@@ -14736,9 +14736,10 @@
             }
           }, 300);
           
-          // Extra safety - call ensureTotalLossCalculation after longer delay
+          // Extra safety - call variant calculations after longer delay
           setTimeout(() => {
             ensureTotalLossCalculation();
+            ensureLegalLossCalculation();
           }, 800);
         }
       } else {
@@ -17711,6 +17712,7 @@
           refreshSummary();
           ensureSalvageSaleCalculation();
           ensureTotalLossCalculation();
+          ensureLegalLossCalculation();
         }, 500);
         
         // Extra safety for Total Loss variant - ensure fields are populated before calculation
@@ -17718,6 +17720,14 @@
           setTimeout(() => {
             console.log('🔄 Extra safety refresh for Total Loss variant');
             ensureTotalLossCalculation();
+          }, 1000);
+        }
+        
+        // Extra safety for Legal Loss variant - ensure fields are populated before calculation
+        if (savedVariant === 'חוות דעת אובדן להלכה') {
+          setTimeout(() => {
+            console.log('🔄 Extra safety refresh for Legal Loss variant');
+            ensureLegalLossCalculation();
           }, 1000);
         }
       } else {
@@ -17762,6 +17772,64 @@
         }
       });
     }
+
+    // ENSURE LEGAL LOSS CALCULATION - Retry mechanism for page refresh timing issues
+    function ensureLegalLossCalculation(retryCount = 0) {
+      const reportType = document.getElementById('reportType')?.value;
+      if (reportType === 'חוות דעת אובדן להלכה') {
+        console.log(`🔄 Ensuring legal loss calculation (attempt ${retryCount + 1})`);
+        const helper = window.helper || JSON.parse(sessionStorage.getItem('helper') || '{}');
+        const marketValue = helper.calculations?.full_market_value || 0;
+        
+        // Update market value field
+        const marketField = document.getElementById('sumMarketValueLegal');
+        if (marketField && marketValue > 0) {
+          marketField.value = `₪${marketValue.toLocaleString()}`;
+        }
+        
+        // Get field elements
+        const salvageField = document.getElementById('salvageValueLegal');
+        const resultField = document.getElementById('afterSaleLegal');
+        
+        // Check if fields are populated
+        const fieldsReady = salvageField && 
+                           (salvageField.value || 
+                            helper.final_report?.summary?.salvage_value_legal);
+        
+        if (!fieldsReady && retryCount < 5) {
+          // Fields not ready, retry after delay
+          console.log(`⏳ Legal loss fields not ready, retrying in 500ms...`);
+          setTimeout(() => {
+            ensureLegalLossCalculation(retryCount + 1);
+          }, 500);
+          return;
+        }
+        
+        // Load manual fields from helper if they're empty
+        if (salvageField && !salvageField.value) {
+          const savedSalvage = helper.final_report?.summary?.salvage_value_legal || '';
+          if (savedSalvage) {
+            salvageField.value = savedSalvage;
+            console.log(`📥 Loaded legal loss salvage value: ${salvageField.value}`);
+          }
+        }
+        
+        // Perform calculation
+        if (resultField && marketValue > 0) {
+          const salvageValue = parseFloat(salvageField?.value.replace(/[₪,]/g, '')) || 0;
+          const legalLossResult = marketValue - salvageValue;
+          
+          resultField.value = `₪${legalLossResult.toLocaleString()}`;
+          console.log(`🧮 Legal Loss retry calculation: ₪${marketValue.toLocaleString()} - ₪${salvageValue.toLocaleString()} = ₪${legalLossResult.toLocaleString()}`);
+          
+          // Save to helper
+          helper.final_report = helper.final_report || {};
+          helper.final_report.summary = helper.final_report.summary || {};
+          helper.final_report.summary.total_after_salvage_legal = resultField.value;
+          sessionStorage.setItem('helper', JSON.stringify(helper));
+        }
+      }
+    }
     
     // Setup Total Loss calculation and start checking for helper readiness
     setupTotalLossCalculation();
@@ -17773,6 +17841,7 @@
         console.log('🔄 Window load - ensuring variant calculations');
         ensureSalvageSaleCalculation();
         ensureTotalLossCalculation();
+        ensureLegalLossCalculation();
       }, 1000);
     });
     window.addDepreciationRow = addDepreciationRow;
