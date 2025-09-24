@@ -5552,11 +5552,6 @@
     // LOAD GROSS ADJUSTMENTS FROM helper.estimate.adjustments
     function loadGrossAdjustments(helper, forceReload = false) {
       try {
-        // Simple flag-based approach: Check if import should be skipped
-        if (!forceReload && helper.grossSectionImportSkip) {
-          console.log('⚠️ SKIPPING gross section import - user has managed data (flag set)');
-          return;
-        }
 
         const featuresContainer = document.getElementById('featuresAdjustmentsList');
         const registrationContainer = document.getElementById('registrationAdjustmentsList');
@@ -5577,17 +5572,27 @@
         ];
         
         categories.forEach(({ key, addFunction, container }) => {
-          // FIXED: First check final_report.adjustments for manually added rows
           const finalReportData = helper.final_report?.adjustments?.[key] || [];
           const estimateData = adjustments[key];
+          const deletedItems = helper.grossSectionDeletedItems?.[key] || [];
           
-          // Use final_report data if it has manually added rows (length > 1)
           let categoryData;
-          if (Array.isArray(finalReportData) && finalReportData.length > 1) {
-            console.log(`📝 Loading ${key} from final_report (has ${finalReportData.length} items including manual additions)`);
+          // Always use final_report if it has data (preserves user changes)
+          if (Array.isArray(finalReportData) && finalReportData.length > 0) {
+            console.log(`📝 Loading ${key} from final_report (has ${finalReportData.length} items)`);
             categoryData = finalReportData;
+          } else if (estimateData && !forceReload) {
+            // Filter out deleted items from estimate data
+            const filteredData = Array.isArray(estimateData) ? estimateData : [estimateData];
+            categoryData = filteredData.filter(item => {
+              const isDeleted = deletedItems.some(deleted => 
+                deleted.value === item.value || deleted.description === item.description
+              );
+              return !isDeleted;
+            });
+            console.log(`📝 Loading ${key} from estimate (${categoryData.length} items after filtering deleted)`);
           } else {
-            console.log(`📝 Loading ${key} from estimate.adjustments`);
+            console.log(`📝 Loading ${key} from estimate.adjustments (full reload)`);
             categoryData = estimateData;
           }
           
@@ -6181,10 +6186,12 @@
         
         const helper = window.helper || JSON.parse(sessionStorage.getItem('helper') || '{}');
         
-        // Clear the skip flag to allow forced reload
-        helper.grossSectionImportSkip = false;
-        sessionStorage.setItem('helper', JSON.stringify(helper));
-        window.helper = helper;
+        // Clear deleted items list to allow full reload
+        if (helper.grossSectionDeletedItems) {
+          delete helper.grossSectionDeletedItems;
+          sessionStorage.setItem('helper', JSON.stringify(helper));
+          window.helper = helper;
+        }
         
         // FIXED: Only clear Gross section data (features and registration), preserve Total section data
         if (helper.final_report && helper.final_report.adjustments) {
@@ -6336,12 +6343,6 @@
     
     // Add feature adjustment row
     function addFeatureAdjustment() {
-      // Set flag to skip future imports
-      const helper = window.helper || JSON.parse(sessionStorage.getItem('helper') || '{}');
-      helper.grossSectionImportSkip = true;
-      sessionStorage.setItem('helper', JSON.stringify(helper));
-      window.helper = helper;
-      
       const container = document.getElementById('featuresAdjustmentsList');
       const rowId = 'featureAdj_' + Date.now();
       
@@ -6369,12 +6370,6 @@
     
     // Add registration adjustment row
     function addRegistrationAdjustment() {
-      // Set flag to skip future imports
-      const helper = window.helper || JSON.parse(sessionStorage.getItem('helper') || '{}');
-      helper.grossSectionImportSkip = true;
-      sessionStorage.setItem('helper', JSON.stringify(helper));
-      window.helper = helper;
-      
       const container = document.getElementById('registrationAdjustmentsList');
       const rowId = 'regAdj_' + Date.now();
       
@@ -7599,12 +7594,30 @@
         const isGrossRegistration = row.closest('#registrationAdjustmentsList');
         const isFullSection = row.closest('#fullFeaturesAdjustmentsList, #fullRegistrationAdjustmentsList, #mileageAdjustmentsList, #ownershipAdjustmentsList, #ownersAdjustmentsList, #allAdjustmentsList');
         
-        // Set flag to skip future imports when removing gross section rows
+        // Track deleted items for gross section rows
         if (isGrossFeatures || isGrossRegistration) {
-          const helper = window.helper || JSON.parse(sessionStorage.getItem('helper') || '{}');
-          helper.grossSectionImportSkip = true;
-          sessionStorage.setItem('helper', JSON.stringify(helper));
-          window.helper = helper;
+          const inputs = row.querySelectorAll('input, select');
+          if (inputs.length >= 4) {
+            const deletedItem = {
+              value: inputs[0]?.value || '',
+              description: inputs[0]?.value || '',
+              type: inputs[1]?.value || '',
+              percent: inputs[2]?.value || '',
+              amount: inputs[3]?.value || ''
+            };
+            
+            const category = isGrossFeatures ? 'features' : 'registration';
+            const helper = window.helper || JSON.parse(sessionStorage.getItem('helper') || '{}');
+            
+            if (!helper.grossSectionDeletedItems) helper.grossSectionDeletedItems = {};
+            if (!helper.grossSectionDeletedItems[category]) helper.grossSectionDeletedItems[category] = [];
+            
+            helper.grossSectionDeletedItems[category].push(deletedItem);
+            sessionStorage.setItem('helper', JSON.stringify(helper));
+            window.helper = helper;
+            
+            console.log(`🗑️ Tracked deleted ${category} item:`, deletedItem);
+          }
         }
         
         // Check if this is an additional adjustment row
