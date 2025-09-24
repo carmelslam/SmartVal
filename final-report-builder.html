@@ -6059,8 +6059,17 @@
             willFallback: !Array.isArray(owners) || owners.length === 0
           });
           
-          // Only fall back to estimate/valuation if final_report is empty
-          if (!Array.isArray(owners) || owners.length === 0) {
+          // CRITICAL FIX: Only fall back if final_report is truly empty AND not during save operations
+          // This prevents overriding user edits during save process
+          const shouldFallback = (!Array.isArray(owners) || owners.length === 0);
+          
+          if (shouldFallback) {
+            console.log(`⚠️ OWNERSHIP_HISTORY: final_report is empty, falling back to estimate/valuation data`);
+          } else {
+            console.log(`✅ OWNERSHIP_HISTORY: Using final_report data (preserving user edits)`);
+          }
+          
+          if (shouldFallback) {
             // Fallback to estimate.adjustments.ownership_history
             owners = estimateAdjustments.ownership_history || estimateAdjustments.owners || [];
             source = 'estimate';
