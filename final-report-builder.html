@@ -14695,9 +14695,26 @@
         
         // Additional refresh for total loss variant to ensure calculations work
         if (summaryId === 'summaryTotalLoss') {
+          // First, ensure fields are loaded from helper
+          const helper = window.helper || JSON.parse(sessionStorage.getItem('helper') || '{}');
+          
+          // Immediately load manual fields from helper
+          const salvageField = document.getElementById('salvageValueTotal');
+          const towingField = document.getElementById('storageValueTotal');
+          
+          if (salvageField && helper.final_report?.summary?.salvage_value_total) {
+            salvageField.value = helper.final_report.summary.salvage_value_total;
+            console.log(`📥 Immediately loaded salvage value: ${salvageField.value}`);
+          }
+          
+          if (towingField && helper.final_report?.summary?.storage_towing_value_total) {
+            towingField.value = helper.final_report.summary.storage_towing_value_total;
+            console.log(`📥 Immediately loaded towing value: ${towingField.value}`);
+          }
+          
+          // Then trigger calculation after a delay
           setTimeout(() => {
             console.log('🔄 Additional total loss variant refresh');
-            const helper = window.helper || JSON.parse(sessionStorage.getItem('helper') || '{}');
             const marketValue = helper.calculations?.full_market_value || 0;
             
             // Ensure market value field is populated
@@ -14706,20 +14723,23 @@
               totalMarketField.value = `₪${marketValue.toLocaleString()}`;
             }
             
-            // Trigger calculation again
-            const salvageField = document.getElementById('salvageValueTotal');
-            const towingField = document.getElementById('storageValueTotal');
+            // Trigger calculation with loaded values
             const resultField = document.getElementById('afterSaleTotal');
             
             if (resultField && marketValue > 0) {
-              const salvageValue = parseFloat(salvageField?.value.replace(/[₪,]/g, '')) || 0;
-              const towingValue = parseFloat(towingField?.value.replace(/[₪,]/g, '')) || 0;
+              const salvageValue = parseFloat(salvageField?.value?.replace(/[₪,]/g, '')) || 0;
+              const towingValue = parseFloat(towingField?.value?.replace(/[₪,]/g, '')) || 0;
               const result = marketValue - salvageValue + towingValue;
               
               resultField.value = `₪${result.toLocaleString()}`;
               console.log(`🔄 Re-calculated total loss: ${marketValue} - ${salvageValue} + ${towingValue} = ${result}`);
             }
-          }, 200);
+          }, 300);
+          
+          // Extra safety - call ensureTotalLossCalculation after longer delay
+          setTimeout(() => {
+            ensureTotalLossCalculation();
+          }, 800);
         }
       } else {
         console.error('❌ Summary section not found:', summaryId);
@@ -17533,11 +17553,11 @@
       }
     }
     
-    // Function to ensure total loss calculation works properly
-    function ensureTotalLossCalculation() {
+    // Function to ensure total loss calculation works properly with retry mechanism
+    function ensureTotalLossCalculation(retryCount = 0) {
       const reportType = document.getElementById('reportType')?.value;
       if (reportType === 'חוות דעת טוטלוסט') {
-        console.log('🔄 Ensuring total loss calculation');
+        console.log(`🔄 Ensuring total loss calculation (attempt ${retryCount + 1})`);
         const helper = window.helper || JSON.parse(sessionStorage.getItem('helper') || '{}');
         const marketValue = helper.calculations?.full_market_value || 0;
         
@@ -17547,40 +17567,98 @@
           marketField.value = `₪${marketValue.toLocaleString()}`;
         }
         
-        // First, load manual fields from helper
+        // Get field elements
         const salvageField = document.getElementById('salvageValueTotal');
         const towingField = document.getElementById('storageValueTotal');
+        const resultField = document.getElementById('afterSaleTotal');
         
-        if (salvageField && !salvageField.value && helper.final_report?.summary?.salvage_value_total) {
-          salvageField.value = helper.final_report.summary.salvage_value_total;
-          console.log(`📥 Loaded salvage value from helper: ${salvageField.value}`);
+        // Check if fields are populated
+        const fieldsReady = salvageField && towingField && 
+                           (salvageField.value || towingField.value || 
+                            helper.final_report?.summary?.salvage_value_total || 
+                            helper.final_report?.summary?.storage_towing_value_total);
+        
+        if (!fieldsReady && retryCount < 5) {
+          // Fields not ready, retry after delay
+          console.log(`⏳ Fields not ready, retrying in 500ms...`);
+          setTimeout(() => {
+            ensureTotalLossCalculation(retryCount + 1);
+          }, 500);
+          return;
         }
         
-        if (towingField && !towingField.value && helper.final_report?.summary?.storage_towing_value_total) {
-          towingField.value = helper.final_report.summary.storage_towing_value_total;
-          console.log(`📥 Loaded towing value from helper: ${towingField.value}`);
-        }
-        
-        // Wait a bit for fields to settle, then perform calculation
-        setTimeout(() => {
-          const resultField = document.getElementById('afterSaleTotal');
-          
-          if (resultField && marketValue > 0) {
-            const salvageValue = parseFloat(salvageField?.value.replace(/[₪,]/g, '')) || 0;
-            const towingValue = parseFloat(towingField?.value.replace(/[₪,]/g, '')) || 0;
-            const result = marketValue - salvageValue + towingValue;
-            
-            resultField.value = `₪${result.toLocaleString()}`;
-            console.log(`✅ Total loss calculation ensured: ${marketValue} - ${salvageValue} + ${towingValue} = ${result}`);
+        // Load manual fields from helper if empty
+        if (salvageField && !salvageField.value) {
+          const savedSalvage = helper.final_report?.summary?.salvage_value_total || '';
+          if (savedSalvage) {
+            salvageField.value = savedSalvage;
+            console.log(`📥 Loaded salvage value from helper: ${salvageField.value}`);
           }
-        }, 100);
+        }
+        
+        if (towingField && !towingField.value) {
+          const savedTowing = helper.final_report?.summary?.storage_towing_value_total || '';
+          if (savedTowing) {
+            towingField.value = savedTowing;
+            console.log(`📥 Loaded towing value from helper: ${towingField.value}`);
+          }
+        }
+        
+        // Perform calculation with current values
+        if (resultField && marketValue > 0) {
+          const salvageValue = parseFloat(salvageField?.value?.replace(/[₪,]/g, '')) || 0;
+          const towingValue = parseFloat(towingField?.value?.replace(/[₪,]/g, '')) || 0;
+          const result = marketValue - salvageValue + towingValue;
+          
+          resultField.value = `₪${result.toLocaleString()}`;
+          console.log(`✅ Total loss calculation: ${marketValue} - ${salvageValue} + ${towingValue} = ${result}`);
+          
+          // Double-check after delay to ensure it sticks
+          setTimeout(() => {
+            const currentValue = resultField.value;
+            const expectedValue = `₪${result.toLocaleString()}`;
+            if (currentValue !== expectedValue) {
+              resultField.value = expectedValue;
+              console.log(`🔧 Re-applied total loss result: ${expectedValue}`);
+            }
+          }, 1000);
+        }
       }
+    }
+    
+    // Debug function to check Total Loss field values
+    function debugTotalLossFields() {
+      console.log('🐛 DEBUG: Total Loss Fields Status');
+      const helper = window.helper || JSON.parse(sessionStorage.getItem('helper') || '{}');
+      
+      console.log('Helper values:', {
+        marketValue: helper.calculations?.full_market_value,
+        salvageInHelper: helper.final_report?.summary?.salvage_value_total,
+        towingInHelper: helper.final_report?.summary?.storage_towing_value_total
+      });
+      
+      const salvageField = document.getElementById('salvageValueTotal');
+      const towingField = document.getElementById('storageValueTotal');
+      const resultField = document.getElementById('afterSaleTotal');
+      
+      console.log('DOM field values:', {
+        salvageField: salvageField?.value,
+        towingField: towingField?.value,
+        resultField: resultField?.value
+      });
+      
+      console.log('Field elements exist:', {
+        salvageField: !!salvageField,
+        towingField: !!towingField,
+        resultField: !!resultField
+      });
     }
     
     // Make functions globally available
     window.updateSummaryVisibility = updateSummaryVisibility;
     window.ensureSalvageSaleCalculation = ensureSalvageSaleCalculation;
     window.ensureTotalLossCalculation = ensureTotalLossCalculation;
+    window.debugTotalLossFields = debugTotalLossFields;
     
     // Initialize summary after helper system is ready
     function initializeSummaryWhenReady() {
