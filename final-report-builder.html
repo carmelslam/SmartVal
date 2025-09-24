@@ -7737,6 +7737,21 @@
       const percent = parseFloat(percentInput.value) || 0;
       if (percent === 0) return;
       
+      // CRITICAL: First ensure cumulative displays are updated by running calculation
+      setTimeout(() => {
+        if (typeof updateFullMarketValueCalculation === 'function') {
+          updateFullMarketValueCalculation();
+        }
+        
+        // Then proceed with the calculation using updated cumulatives
+        setTimeout(() => {
+          performManualRowCalculation(percentInput, row, inputs, percent);
+        }, 50);
+      }, 10);
+    }
+    
+    // Separated calculation logic to run after cumulative updates
+    function performManualRowCalculation(percentInput, row, inputs, percent) {
       // CRITICAL FIX: Determine which category this row belongs to and get correct base value
       let baseValue = 0;
       const isMileage = row.closest('#mileageAdjustmentsList');
