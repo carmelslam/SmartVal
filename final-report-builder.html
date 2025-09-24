@@ -5552,32 +5552,27 @@
     // LOAD GROSS ADJUSTMENTS FROM helper.estimate.adjustments
     function loadGrossAdjustments(helper, forceReload = false) {
       try {
-        // Check if we should skip import to preserve user-managed data
-        if (!forceReload && grossSectionImportState.hasImportedOnce) {
-          console.log('⚠️ SKIPPING gross section import to preserve user-managed data');
+        // CRITICAL: Check if user has manually managed gross section data
+        const finalReportFeatures = helper.final_report?.adjustments?.features || [];
+        const finalReportRegistration = helper.final_report?.adjustments?.registration || [];
+        const estimateFeatures = helper.estimate?.adjustments?.features;
+        const estimateRegistration = helper.estimate?.adjustments?.registration;
+        const valuationFeatures = helper.valuation?.adjustments?.features;
+        const valuationRegistration = helper.valuation?.adjustments?.registration;
+        
+        // If final_report has empty arrays but estimate/valuation has data, user deleted imported rows
+        const userDeletedFeatures = (finalReportFeatures.length === 0) && (estimateFeatures || valuationFeatures);
+        const userDeletedRegistration = (finalReportRegistration.length === 0) && (estimateRegistration || valuationRegistration);
+        
+        // Skip import if user has deleted rows and this is not a forced reload
+        if (!forceReload && (userDeletedFeatures || userDeletedRegistration)) {
+          console.log('⚠️ SKIPPING gross section import - user has deleted imported rows');
+          console.log('🔍 Features deleted:', userDeletedFeatures, 'Registration deleted:', userDeletedRegistration);
           return;
         }
 
         const featuresContainer = document.getElementById('featuresAdjustmentsList');
         const registrationContainer = document.getElementById('registrationAdjustmentsList');
-
-        // Detect if user has manually managed the data
-        const existingFeatures = featuresContainer?.children.length || 0;
-        const existingRegistration = registrationContainer?.children.length || 0;
-        const finalReportFeatures = helper.final_report?.adjustments?.features || [];
-        const finalReportRegistration = helper.final_report?.adjustments?.registration || [];
-
-        // If user has deleted rows (final_report has fewer items than containers), mark as user-managed
-        if ((existingFeatures > finalReportFeatures.length) || (existingRegistration > finalReportRegistration.length)) {
-          grossSectionImportState.userHasManagedData = true;
-          console.log('🧠 Detected user data management - preserving current state');
-        }
-
-        // Skip import if user has managed data and this is not a forced reload
-        if (!forceReload && grossSectionImportState.userHasManagedData) {
-          console.log('⚠️ SKIPPING import - user has managed gross section data');
-          return;
-        }
 
         if (featuresContainer) featuresContainer.innerHTML = '';
         if (registrationContainer) registrationContainer.innerHTML = '';
@@ -5678,11 +5673,6 @@
             });
           }
         });
-        
-        // Mark import as completed
-        grossSectionImportState.hasImportedOnce = true;
-        grossSectionImportState.featuresImported = true;
-        grossSectionImportState.registrationImported = true;
         
         // Trigger calculations after loading
         setTimeout(() => {
@@ -6202,12 +6192,6 @@
       try {
         console.log('🔄 Reloading gross adjustments from estimate.adjustments with fallback to valuation.adjustments');
         
-        // Reset import state to allow forced reload
-        grossSectionImportState.hasImportedOnce = false;
-        grossSectionImportState.userHasManagedData = false;
-        grossSectionImportState.featuresImported = false;
-        grossSectionImportState.registrationImported = false;
-        
         const helper = window.helper || JSON.parse(sessionStorage.getItem('helper') || '{}');
         
         // FIXED: Only clear Gross section data (features and registration), preserve Total section data
@@ -6360,9 +6344,6 @@
     
     // Add feature adjustment row
     function addFeatureAdjustment() {
-      // Mark as user-managed data
-      grossSectionImportState.userHasManagedData = true;
-      
       const container = document.getElementById('featuresAdjustmentsList');
       const rowId = 'featureAdj_' + Date.now();
       
@@ -6390,9 +6371,6 @@
     
     // Add registration adjustment row
     function addRegistrationAdjustment() {
-      // Mark as user-managed data
-      grossSectionImportState.userHasManagedData = true;
-      
       const container = document.getElementById('registrationAdjustmentsList');
       const rowId = 'regAdj_' + Date.now();
       
@@ -7615,11 +7593,6 @@
         // Determine which section this row belongs to
         const isGrossFeatures = row.closest('#featuresAdjustmentsList');
         const isGrossRegistration = row.closest('#registrationAdjustmentsList');
-        
-        // Mark as user-managed data if removing from gross section
-        if (isGrossFeatures || isGrossRegistration) {
-          grossSectionImportState.userHasManagedData = true;
-        }
         const isFullSection = row.closest('#fullFeaturesAdjustmentsList, #fullRegistrationAdjustmentsList, #mileageAdjustmentsList, #ownershipAdjustmentsList, #ownersAdjustmentsList, #allAdjustmentsList');
         
         // Check if this is an additional adjustment row
