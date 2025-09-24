@@ -10789,12 +10789,14 @@
         reportTypeSelect.addEventListener('change', function() {
           const selectedType = this.value;
           
-          // Save dropdown selection to helper
+          // Save dropdown selection to helper AND sessionStorage for persistence
           const helper = window.helper || {};
           if (!helper.final_report) helper.final_report = {};
           helper.final_report.dropdown_type = selectedType;
           window.helper = helper;
-          console.log('💾 Saved dropdown report type to helper:', selectedType);
+          sessionStorage.setItem('helper', JSON.stringify(helper));
+          sessionStorage.setItem('selectedReportVariant', selectedType);
+          console.log('💾 Saved dropdown report type to helper and sessionStorage:', selectedType);
           
           updateReportType();
           loadLegalText().catch(console.error);
@@ -14443,12 +14445,14 @@
           const selectedType = this.value;
           console.log('Report type changed to:', selectedType);
           
-          // Save dropdown selection to helper
+          // Save dropdown selection to helper AND sessionStorage for persistence
           const helper = window.helper || {};
           if (!helper.final_report) helper.final_report = {};
           helper.final_report.dropdown_type = selectedType;
           window.helper = helper;
-          console.log('💾 Saved dropdown report type to helper:', selectedType);
+          sessionStorage.setItem('helper', JSON.stringify(helper));
+          sessionStorage.setItem('selectedReportVariant', selectedType);
+          console.log('💾 Saved dropdown report type to helper and sessionStorage:', selectedType);
           
           updateReportType();
           loadLegalText().catch(console.error); // Update legal text when report type changes
@@ -14791,33 +14795,50 @@
       if (salvageSaleField) {
         // Get market value directly from helper instead of relying on passed parameter
         const helper = window.helper || JSON.parse(sessionStorage.getItem('helper') || '{}');
-        const directMarketValue = helper.calculations?.full_market_value || 0;
+        let actualMarketValue = helper.calculations?.full_market_value || 0;
         
-        console.log(`🔍 Salvage Sale Debug - Passed marketValue: ${marketValue}, Direct from helper: ${directMarketValue}`);
-        
-        // Use the direct market value from helper
-        const actualMarketValue = directMarketValue;
-        
-        if (actualMarketValue > 0) {
-          const salvagePrice = parseFloat(salvageSaleField.value.replace(/[₪,]/g, '')) || 0;
-          console.log(`💰 Market Value: ₪${actualMarketValue.toLocaleString()}, Salvage Price: ₪${salvagePrice.toLocaleString()}`);
-          
-          if (salvagePrice > 0) {
-            const salvageSaleResult = actualMarketValue - salvagePrice;
-            
-            // Update the result field
-            const resultField = document.getElementById('sumTotalDamagedSale');
-            if (resultField) {
-              resultField.value = `₪${salvageSaleResult.toLocaleString()}`;
-              console.log(`🧮 Salvage Sale calculation: ₪${actualMarketValue.toLocaleString()} - ₪${salvagePrice.toLocaleString()} = ₪${salvageSaleResult.toLocaleString()}`);
-            } else {
-              console.warn('⚠️ Result field sumTotalDamagedSale not found');
-            }
-          } else {
-            console.log('⏳ Salvage price is 0 or empty, waiting for input');
+        // Fallback to other market value sources if needed
+        if (!actualMarketValue || actualMarketValue === 0) {
+          // Try to get from the damage variant market value field
+          const damageMarketField = document.getElementById('sumMarketValueDamage');
+          if (damageMarketField && damageMarketField.value) {
+            actualMarketValue = parseFloat(damageMarketField.value.replace(/[₪,]/g, '')) || 0;
           }
+          
+          // If still no value, try the general market value field
+          if (!actualMarketValue || actualMarketValue === 0) {
+            const generalMarketField = document.getElementById('sumMarketValue');
+            if (generalMarketField && generalMarketField.value) {
+              actualMarketValue = parseFloat(generalMarketField.value.replace(/[₪,]/g, '')) || 0;
+            }
+          }
+        }
+        
+        console.log(`🔍 Salvage Sale Debug - Market value sources checked:`);
+        console.log(`  - helper.calculations.full_market_value: ${helper.calculations?.full_market_value}`);
+        console.log(`  - sumMarketValueDamage field: ${document.getElementById('sumMarketValueDamage')?.value}`);
+        console.log(`  - Final actualMarketValue: ${actualMarketValue}`);
+        
+        // Always update the market value field for damage variant
+        const damageMarketField = document.getElementById('sumMarketValueDamage');
+        if (damageMarketField && actualMarketValue > 0) {
+          damageMarketField.value = `₪${actualMarketValue.toLocaleString()}`;
+        }
+        
+        // Calculate salvage sale result
+        const salvagePrice = parseFloat(salvageSaleField.value.replace(/[₪,]/g, '')) || 0;
+        console.log(`💰 Market Value: ₪${actualMarketValue.toLocaleString()}, Salvage Price: ₪${salvagePrice.toLocaleString()}`);
+        
+        // Always show the calculation result, even if salvage price is 0
+        const salvageSaleResult = actualMarketValue - salvagePrice;
+        
+        // Update the result field
+        const resultField = document.getElementById('sumTotalDamagedSale');
+        if (resultField) {
+          resultField.value = `₪${salvageSaleResult.toLocaleString()}`;
+          console.log(`🧮 Salvage Sale calculation: ₪${actualMarketValue.toLocaleString()} - ₪${salvagePrice.toLocaleString()} = ₪${salvageSaleResult.toLocaleString()}`);
         } else {
-          console.warn('⚠️ Market value not available from helper.calculations.full_market_value:', helper.calculations);
+          console.warn('⚠️ Result field sumTotalDamagedSale not found');
         }
       }
     }
@@ -17382,11 +17403,18 @@
       if (helper && helper.calculations && helper.calculations.full_market_value) {
         console.log('🔄 Helper data is ready, initializing summary...');
         
-        // Restore the saved report type from helper
+        // Restore the saved report type from helper or sessionStorage
         const reportTypeSelect = document.getElementById('reportType');
-        if (reportTypeSelect && helper.final_report?.dropdown_type) {
-          reportTypeSelect.value = helper.final_report.dropdown_type;
-          console.log('✅ Restored report type:', helper.final_report.dropdown_type);
+        const savedVariant = sessionStorage.getItem('selectedReportVariant') || helper.final_report?.dropdown_type;
+        if (reportTypeSelect && savedVariant) {
+          reportTypeSelect.value = savedVariant;
+          console.log('✅ Restored report type:', savedVariant);
+          
+          // Ensure helper is updated with the restored value
+          if (!helper.final_report) helper.final_report = {};
+          helper.final_report.dropdown_type = savedVariant;
+          window.helper = helper;
+          sessionStorage.setItem('helper', JSON.stringify(helper));
         }
         
         console.log('🔄 About to call updateSummaryVisibility()');
