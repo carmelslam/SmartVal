@@ -6050,6 +6050,15 @@
           let owners = finalReportAdjustments.ownership_history || [];
           let source = 'final_report';
           
+          // DEBUG: Log ownership_history data source decision
+          console.log(`🔍 OWNERSHIP_HISTORY DATA SOURCE CHECK:`, {
+            finalReportOwners: finalReportAdjustments.ownership_history,
+            ownersFallback: owners,
+            estimateOwners: estimateAdjustments.owners,
+            estimateOwnershipHistory: estimateAdjustments.ownership_history,
+            willFallback: !Array.isArray(owners) || owners.length === 0
+          });
+          
           // Only fall back to estimate/valuation if final_report is empty
           if (!Array.isArray(owners) || owners.length === 0) {
             // Fallback to estimate.adjustments.ownership_history
@@ -8144,6 +8153,12 @@
      */
     function updateFullMarketValueToFinalReportAndValuation(helper) {
       try {
+        // CRITICAL FIX: Skip during page load to prevent overriding saved dropdown states
+        if (window.pageLoadInProgress) {
+          console.log('⏸️ Skipping updateFullMarketValueToFinalReportAndValuation during page load to preserve saved types');
+          return;
+        }
+        
         // Initialize structures
         if (!helper.valuation) helper.valuation = {};
         if (!helper.valuation.adjustments) helper.valuation.adjustments = {};
@@ -13075,6 +13090,11 @@
             // Sync all adjustments to ensure cumulative values are saved
             setTimeout(() => {
               console.log('🔄 Syncing all adjustment data to helper...');
+              
+              // CRITICAL: Now safe to run updateFullMarketValueToFinalReportAndValuation after page load
+              const helper = window.helper || JSON.parse(sessionStorage.getItem('helper') || '{}');
+              updateFullMarketValueToFinalReportAndValuation(helper);
+              console.log('💾 Safe to update final_report after page load complete');
               const categories = ['features', 'registration', 'mileage', 'ownership_type', 'ownership_history', 'additional'];
               categories.forEach(category => {
                 const containers = {
