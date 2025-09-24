@@ -5552,22 +5552,9 @@
     // LOAD GROSS ADJUSTMENTS FROM helper.estimate.adjustments
     function loadGrossAdjustments(helper, forceReload = false) {
       try {
-        // CRITICAL: Check if user has manually managed gross section data
-        const finalReportFeatures = helper.final_report?.adjustments?.features || [];
-        const finalReportRegistration = helper.final_report?.adjustments?.registration || [];
-        const estimateFeatures = helper.estimate?.adjustments?.features;
-        const estimateRegistration = helper.estimate?.adjustments?.registration;
-        const valuationFeatures = helper.valuation?.adjustments?.features;
-        const valuationRegistration = helper.valuation?.adjustments?.registration;
-        
-        // If final_report has empty arrays but estimate/valuation has data, user deleted imported rows
-        const userDeletedFeatures = (finalReportFeatures.length === 0) && (estimateFeatures || valuationFeatures);
-        const userDeletedRegistration = (finalReportRegistration.length === 0) && (estimateRegistration || valuationRegistration);
-        
-        // Skip import if user has deleted rows and this is not a forced reload
-        if (!forceReload && (userDeletedFeatures || userDeletedRegistration)) {
-          console.log('⚠️ SKIPPING gross section import - user has deleted imported rows');
-          console.log('🔍 Features deleted:', userDeletedFeatures, 'Registration deleted:', userDeletedRegistration);
+        // Simple flag-based approach: Check if import should be skipped
+        if (!forceReload && helper.grossSectionImportSkip) {
+          console.log('⚠️ SKIPPING gross section import - user has managed data (flag set)');
           return;
         }
 
@@ -6194,6 +6181,11 @@
         
         const helper = window.helper || JSON.parse(sessionStorage.getItem('helper') || '{}');
         
+        // Clear the skip flag to allow forced reload
+        helper.grossSectionImportSkip = false;
+        sessionStorage.setItem('helper', JSON.stringify(helper));
+        window.helper = helper;
+        
         // FIXED: Only clear Gross section data (features and registration), preserve Total section data
         if (helper.final_report && helper.final_report.adjustments) {
           // Preserve Total section data before clearing
@@ -6344,6 +6336,12 @@
     
     // Add feature adjustment row
     function addFeatureAdjustment() {
+      // Set flag to skip future imports
+      const helper = window.helper || JSON.parse(sessionStorage.getItem('helper') || '{}');
+      helper.grossSectionImportSkip = true;
+      sessionStorage.setItem('helper', JSON.stringify(helper));
+      window.helper = helper;
+      
       const container = document.getElementById('featuresAdjustmentsList');
       const rowId = 'featureAdj_' + Date.now();
       
@@ -6371,6 +6369,12 @@
     
     // Add registration adjustment row
     function addRegistrationAdjustment() {
+      // Set flag to skip future imports
+      const helper = window.helper || JSON.parse(sessionStorage.getItem('helper') || '{}');
+      helper.grossSectionImportSkip = true;
+      sessionStorage.setItem('helper', JSON.stringify(helper));
+      window.helper = helper;
+      
       const container = document.getElementById('registrationAdjustmentsList');
       const rowId = 'regAdj_' + Date.now();
       
@@ -7594,6 +7598,14 @@
         const isGrossFeatures = row.closest('#featuresAdjustmentsList');
         const isGrossRegistration = row.closest('#registrationAdjustmentsList');
         const isFullSection = row.closest('#fullFeaturesAdjustmentsList, #fullRegistrationAdjustmentsList, #mileageAdjustmentsList, #ownershipAdjustmentsList, #ownersAdjustmentsList, #allAdjustmentsList');
+        
+        // Set flag to skip future imports when removing gross section rows
+        if (isGrossFeatures || isGrossRegistration) {
+          const helper = window.helper || JSON.parse(sessionStorage.getItem('helper') || '{}');
+          helper.grossSectionImportSkip = true;
+          sessionStorage.setItem('helper', JSON.stringify(helper));
+          window.helper = helper;
+        }
         
         // Check if this is an additional adjustment row
         const isAdditionalAdjustment = row.closest('#allAdjustmentsList');
