@@ -5338,43 +5338,64 @@
           }
         });
         
-        // Update registration cumulative
+        // Update registration cumulative and store for later use
         const registrationCumulative = document.querySelector('#registrationCumulative span');
         if (registrationCumulative) {
           registrationCumulative.textContent = `₪${Math.round(currentValue).toLocaleString()}`;
         }
+        const afterRegistration = currentValue; // Store registration cumulative for index-based calculations
         
         // 3. Mileage Adjustments (calculate from cumulative)
         const mileageRows = document.querySelectorAll('#mileageAdjustmentsList > div');
-        mileageRows.forEach(row => {
-          const inputs = row.querySelectorAll('input, select');
-          if (inputs.length >= 4) {
-            const type = inputs[1].value;
-            const percent = parseFloat(inputs[2].value) || 0;
-            let value = parseFloat(inputs[3].value.replace(/[₪,]/g, '')) || 0;
+        mileageRows.forEach((row, index) => {
+          const select = row.querySelector('select');
+          const type = select?.value;
+          const inputs = row.querySelectorAll('input[type="text"]');
+          const percentInput = inputs[1]; // Percentage field
+          const valueInput = inputs[2];   // Value field
+          
+          // INDEX-BASED LOGIC: percentage vs direct value (matching final-report-builder.html)
+          if (percentInput && percentInput.value && parseFloat(percentInput.value) !== 0) {
+            // HAS PERCENTAGE: Calculate SPECIFIC result from PREVIOUS CATEGORY CUMULATIVE
+            const percent = parseFloat(percentInput.value);
+            // ALL rows should use previous category cumulative for percentage calculations
+            const previousCumulative = afterRegistration;
+            const specificResult = previousCumulative * (Math.abs(percent) / 100);
             
-            // FIXED: Calculate percentage using current cumulative value
-            if (percent && !value) {
-              value = (currentValue * Math.abs(percent)) / 100;
-              inputs[3].value = `₪${Math.round(value).toLocaleString()}`;
-              console.log(`🔧 Mileage row: ${percent}% × ₪${currentValue.toLocaleString()} = ₪${Math.round(value).toLocaleString()}`);
-            }
-            
-            // CRITICAL FIX: Update currentValue IMMEDIATELY after calculating this row
-            if (type === 'plus') {
-              currentValue += Math.abs(value);
+            // Apply dropdown selection to get final cumulative
+            if (type === 'minus') {
+              currentValue = currentValue - specificResult;
             } else {
-              currentValue -= Math.abs(value);
+              currentValue = currentValue + specificResult;
             }
             
-            // Update row's cumulative display
-            const rowCumulativeSpan = row.querySelector('.row-cumulative');
-            if (rowCumulativeSpan) {
-              rowCumulativeSpan.textContent = `₪${Math.round(currentValue).toLocaleString()}`;
+            // UPDATE THE UI: Set the correct specific value in the value field
+            if (valueInput && !window.pageLoadInProgress) {
+              const roundedResult = Math.round(specificResult);
+              const displayAmount = roundedResult.toLocaleString();
+              valueInput.value = (type === 'minus') ? `-₪${displayAmount}` : `₪${displayAmount}`;
             }
             
-            console.log(`📊 Mileage cumulative after row: ₪${currentValue.toLocaleString()}`);
+            console.log(`🔧 Mileage row[${index}]: ${percent}% × ₪${previousCumulative.toLocaleString()} = ₪${Math.round(specificResult).toLocaleString()}`);
+          } else if (valueInput && valueInput.value) {
+            // FIXED: Parse amount considering it might already have a minus sign
+            const amountText = (valueInput.value || '').trim();
+            const hasMinusSign = amountText.includes('-');
+            const value = Math.abs(parseFloat(amountText.replace(/[₪,\s-]/g, '')) || 0);
+            if (type === 'minus') {
+              currentValue = currentValue - value;
+            } else {
+              currentValue = currentValue + value;
+            }
           }
+          
+          // Update row's cumulative display
+          const rowCumulativeSpan = row.querySelector('.row-cumulative');
+          if (rowCumulativeSpan) {
+            rowCumulativeSpan.textContent = `₪${Math.round(currentValue).toLocaleString()}`;
+          }
+          
+          console.log(`📊 Mileage cumulative after row[${index}]: ₪${currentValue.toLocaleString()}`);
         });
         
         // Update mileage cumulative and store for later use
