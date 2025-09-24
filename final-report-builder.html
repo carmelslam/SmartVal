@@ -2814,13 +2814,17 @@
         // Trigger calculations after data is loaded
         setTimeout(() => {
           updateGrossMarketValueCalculation();
-          updateFullMarketValueCalculation();
           
-          // CRITICAL: Save all adjustment data including added rows after calculations
-          updateFullMarketValueToFinalReportAndValuation(helper);
-          
-          // CRITICAL: Trigger all change events to ensure formatAdjustmentDisplay runs
-          triggerAllAdjustmentChangeEvents();
+          // CRITICAL FIX: Allow more time for DOM updates before reading dropdown states
+          setTimeout(() => {
+            updateFullMarketValueCalculation();
+            
+            // CRITICAL: Save all adjustment data including added rows after calculations
+            updateFullMarketValueToFinalReportAndValuation(helper);
+            
+            // CRITICAL: Trigger all change events to ensure formatAdjustmentDisplay runs
+            triggerAllAdjustmentChangeEvents();
+          }, 50);  // Additional delay to ensure dropdown states are ready
           
           // Save formatted state back to sessionStorage so refresh loads correct data  
           setTimeout(() => {
@@ -9987,6 +9991,9 @@
         ownersRows.forEach((row, index) => {
           const select = row.querySelector('select');
           const type = select?.value;
+          
+          // DEBUG: Log ownership_history type reading during calculation
+          console.log(`🔍 updateFullMarketValueCalculation owners[${index}] type: ${type}, pageLoadInProgress: ${window.pageLoadInProgress}`);
           const inputs = row.querySelectorAll('input[type="text"]');
           const percentInput = inputs[1]; // Percentage field
           const valueInput = inputs[2];   // Value field
