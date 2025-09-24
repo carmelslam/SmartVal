@@ -14889,62 +14889,28 @@
 
       // SALVAGE SALE CALCULATION: Market Value - Salvage Price
       const salvageSaleField = document.getElementById('saleValueDamage');
-      if (salvageSaleField) {
-        // Get market value directly from helper instead of relying on passed parameter
-        const helper = window.helper || JSON.parse(sessionStorage.getItem('helper') || '{}');
-        let actualMarketValue = helper.calculations?.full_market_value || 0;
-        
-        // If market value is not yet loaded from helper, use the marketValue parameter from refreshSummary
-        if (!actualMarketValue || actualMarketValue === 0) {
-          actualMarketValue = marketValue || 0;
-        }
-        
-        // Fallback to other market value sources if needed
-        if (!actualMarketValue || actualMarketValue === 0) {
-          // Try to get from the damage variant market value field
-          const damageMarketField = document.getElementById('sumMarketValueDamage');
-          if (damageMarketField && damageMarketField.value) {
-            actualMarketValue = parseFloat(damageMarketField.value.replace(/[₪,]/g, '')) || 0;
-          }
-          
-          // If still no value, try the general market value field
-          if (!actualMarketValue || actualMarketValue === 0) {
-            const generalMarketField = document.getElementById('sumMarketValue');
-            if (generalMarketField && generalMarketField.value) {
-              actualMarketValue = parseFloat(generalMarketField.value.replace(/[₪,]/g, '')) || 0;
-            }
-          }
-        }
-        
-        console.log(`🔍 Salvage Sale Debug - Market value sources checked:`);
-        console.log(`  - marketValue from refreshSummary: ${marketValue}`);
-        console.log(`  - helper.calculations.full_market_value: ${helper.calculations?.full_market_value}`);
-        console.log(`  - sumMarketValueDamage field: ${document.getElementById('sumMarketValueDamage')?.value}`);
-        console.log(`  - Final actualMarketValue: ${actualMarketValue}`);
-        
-        // Always update the market value field for damage variant FIRST
-        const damageMarketField = document.getElementById('sumMarketValueDamage');
-        if (damageMarketField) {
-          if (actualMarketValue > 0) {
-            damageMarketField.value = `₪${actualMarketValue.toLocaleString()}`;
-            console.log(`✅ Updated sumMarketValueDamage to: ${damageMarketField.value}`);
-          } else {
-            console.warn('⚠️ Market value is 0, cannot update sumMarketValueDamage');
-          }
-        }
-        
-        // Calculate salvage sale result
-        const salvagePrice = parseFloat(salvageSaleField.value.replace(/[₪,]/g, '')) || 0;
-        console.log(`💰 Market Value: ₪${actualMarketValue.toLocaleString()}, Salvage Price: ₪${salvagePrice.toLocaleString()}`);
-        
-        // Always show the calculation result, even if salvage price is 0
-        const salvageSaleResult = actualMarketValue - salvagePrice;
+      
+      // Load manual field from helper if empty
+      if (salvageSaleField && !salvageSaleField.value && helper.final_report?.summary?.sale_value_damaged) {
+        salvageSaleField.value = helper.final_report.summary.sale_value_damaged;
+        console.log(`📥 Loaded salvage sale value from helper in refreshSummary: ${salvageSaleField.value}`);
+      }
+      
+      if (salvageSaleField && marketValue > 0) {
+        const salvageSaleValue = parseFloat(salvageSaleField.value.replace(/[₪,]/g, '')) || 0;
+        const salvageSaleResult = marketValue - salvageSaleValue;
         
         // Update the result field
         const resultField = document.getElementById('afterSaleDamage');
         if (resultField) {
           resultField.value = `₪${salvageSaleResult.toLocaleString()}`;
-          console.log(`🧮 Salvage Sale calculation: ₪${actualMarketValue.toLocaleString()} - ₪${salvagePrice.toLocaleString()} = ₪${salvageSaleResult.toLocaleString()}`);
+          console.log(`🧮 Salvage Sale calculation: ₪${marketValue.toLocaleString()} - ₪${salvageSaleValue.toLocaleString()} = ₪${salvageSaleResult.toLocaleString()}`);
+          
+          // Save to helper
+          helper.final_report = helper.final_report || {};
+          helper.final_report.summary = helper.final_report.summary || {};
+          helper.final_report.summary.total_after_sale_damage = resultField.value;
+          sessionStorage.setItem('helper', JSON.stringify(helper));
           
           // Ensure the result persists after a delay
           setTimeout(() => {
@@ -14956,6 +14922,38 @@
         } else {
           console.warn('⚠️ Result field afterSaleDamage not found');
         }
+      }
+
+      // LEGAL LOSS CALCULATION: Market Value - Salvage Price
+      const salvageLegalField = document.getElementById('salvageValueLegal');
+      const legalLossResultField = document.getElementById('afterSaleLegal');
+      
+      // Load manual field from helper if empty
+      if (salvageLegalField && !salvageLegalField.value && helper.final_report?.summary?.salvage_value_legal) {
+        salvageLegalField.value = helper.final_report.summary.salvage_value_legal;
+        console.log(`📥 Loaded salvage legal value from helper in refreshSummary: ${salvageLegalField.value}`);
+      }
+      
+      if (legalLossResultField && marketValue > 0) {
+        const salvageLegalValue = parseFloat(salvageLegalField?.value.replace(/[₪,]/g, '')) || 0;
+        const legalLossResult = marketValue - salvageLegalValue;
+        
+        legalLossResultField.value = `₪${legalLossResult.toLocaleString()}`;
+        console.log(`🧮 Legal Loss calculation: ₪${marketValue.toLocaleString()} - ₪${salvageLegalValue.toLocaleString()} = ₪${legalLossResult.toLocaleString()}`);
+        
+        // Save to helper
+        helper.final_report = helper.final_report || {};
+        helper.final_report.summary = helper.final_report.summary || {};
+        helper.final_report.summary.total_after_salvage_legal = legalLossResultField.value;
+        sessionStorage.setItem('helper', JSON.stringify(helper));
+        
+        // Ensure the result persists after a delay
+        setTimeout(() => {
+          if (legalLossResultField.value !== `₪${legalLossResult.toLocaleString()}`) {
+            legalLossResultField.value = `₪${legalLossResult.toLocaleString()}`;
+            console.log(`🔧 Re-applied legal loss result after delay`);
+          }
+        }, 500);
       }
     }
     
@@ -17731,6 +17729,9 @@
       // Salvage Sale field
       const salvageSaleField = document.getElementById('saleValueDamage');
       
+      // Legal Loss field
+      const salvageLegalField = document.getElementById('salvageValueLegal');
+      
       if (salvageFieldTotal) {
         salvageFieldTotal.addEventListener('input', refreshSummary);
       }
@@ -17740,12 +17741,16 @@
       if (salvageSaleField) {
         salvageSaleField.addEventListener('input', refreshSummary);
       }
+      if (salvageLegalField) {
+        salvageLegalField.addEventListener('input', refreshSummary);
+      }
       
       // Add event delegation for dynamically created fields
       document.addEventListener('input', function(event) {
         const fieldId = event.target.id;
         if (fieldId === 'saleValueDamage' || fieldId === 'sumDamagedSaleValue' || 
-            fieldId === 'salvageValueTotal' || fieldId === 'storageValueTotal') {
+            fieldId === 'salvageValueTotal' || fieldId === 'storageValueTotal' ||
+            fieldId === 'salvageValueLegal') {
           console.log(`🎯 Field input detected via event delegation: ${fieldId}`);
           refreshSummary();
         }
