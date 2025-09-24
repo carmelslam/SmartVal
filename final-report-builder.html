@@ -5728,14 +5728,8 @@
           } else if (storedType === 'plus' || storedType === 'תוספת' || storedType === 'תוספת (+)') {
             selectedType = 'plus';
           } else {
-            // Determine if it's percentage or amount based
-            if (itemPercent !== undefined && itemPercent !== null && itemPercent !== '') {
-              selectedType = '%';
-            } else if (itemAmount !== undefined && itemAmount !== null && itemAmount !== '') {
-              selectedType = '₪';
-            } else {
-              selectedType = '%'; // default
-            }
+            // Default to plus if type is unclear
+            selectedType = 'plus';
           }
           
           
@@ -5778,8 +5772,6 @@
           } else {
             amount = '';
           }
-          const isPercent = selectedType === '%';
-          const isAmount = selectedType === '₪';
           
           // Make features and registration read-only in Total Market Value section
           const isReadOnlyCategory = (category === 'features' || category === 'registration');
@@ -5800,15 +5792,13 @@
                       <option value="minus" ${adj.type === 'minus' || selectedType === 'הפחתה (-)' ? 'selected' : ''}>הפחתה (-)</option>
                     </select>` :
                     `<select ${disabledAttr} style="${readOnlyStyle}" ${isReadOnlyCategory ? '' : `onchange="updateFullMarketValueCalculation(); syncAdjustmentToHelper(this, '${category}');"`}>
-                      <option value="%" ${selectedType === '%' ? 'selected' : ''}>%</option>
-                      <option value="₪" ${selectedType === '₪' ? 'selected' : ''}>₪</option>
-                      <option value="plus" ${selectedType === 'תוספת (+)' || adj.type === 'plus' ? 'selected' : ''}>תוספת (+)</option>
-                      <option value="minus" ${selectedType === 'הפחתה (-)' || adj.type === 'minus' ? 'selected' : ''}>הפחתה (-)</option>
+                      <option value="plus" ${selectedType === 'plus' ? 'selected' : ''}>תוספת (+)</option>
+                      <option value="minus" ${selectedType === 'minus' ? 'selected' : ''}>הפחתה (-)</option>
                     </select>`
                   }
                 </div>
-                <div><input type="text" placeholder="אחוז" value="${percentage}" ${readOnlyAttr || (!isPercent ? 'readonly' : '')} style="direction: ltr; text-align: right;${readOnlyStyle}${!isPercent ? ' background: #f0f0f0;' : ''}" ${isReadOnlyCategory ? '' : `onchange="updateFullMarketValueCalculation(); syncAdjustmentToHelper(this, '${category}');"`} /></div>
-                <div><input type="text" placeholder="ערך" value="${amount}" ${readOnlyAttr || (isPercent ? 'readonly' : '')} style="direction: ltr; text-align: right;${readOnlyStyle}${isPercent ? ' background: #f0f0f0;' : ''}" ${isReadOnlyCategory ? '' : `onchange="updateFullMarketValueCalculation(); syncAdjustmentToHelper(this, '${category}');"`} /></div>
+                <div><input type="text" placeholder="אחוז" value="${percentage}" ${readOnlyAttr} style="direction: ltr; text-align: right;${readOnlyStyle}" ${isReadOnlyCategory ? '' : `onchange="updateFullMarketValueCalculation(); syncAdjustmentToHelper(this, '${category}');"`} /></div>
+                <div><input type="text" placeholder="ערך" value="${amount}" ${readOnlyAttr} style="direction: ltr; text-align: right;${readOnlyStyle}" ${isReadOnlyCategory ? '' : `onchange="updateFullMarketValueCalculation(); syncAdjustmentToHelper(this, '${category}');"`} /></div>
                 <div>
                   ${isReadOnlyCategory ? 
                     '<span style="color: #6c757d; font-size: 12px;">קריאה בלבד</span>' : 
