@@ -1734,7 +1734,7 @@
     <!-- Navigation Buttons -->
     <div class="form-section">
       <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px;">
-        <button type="button" class="nav-btn save-btn" onclick="saveDepreciationData()">שמור נתונים</button>
+        <button type="button" class="nav-btn save-btn" onclick="saveAdjustmentsData()">שמור התאמות</button>
         <button type="button" class="nav-btn" style="background: #1e40af;" onclick="previewFinalReport()">
           <span style="margin-left: 5px;">👁️</span>
           תצוגה מקדימה לחוו״ד
@@ -2035,7 +2035,125 @@
       }
     }
 
-    // SAVE DEPRECIATION DATA TO HELPER
+    // NEW CLEAN SAVE FUNCTION - ONLY SAVES ADJUSTMENTS DATA
+    function saveAdjustmentsData() {
+      console.log('💾 SAVE ADJUSTMENTS BUTTON CLICKED!');
+      const button = document.querySelector('.save-btn');
+      
+      // Show visual feedback
+      if (button) {
+        button.style.background = '#059669';
+        button.innerHTML = '⏳ שומר התאמות...';
+        button.disabled = true;
+      }
+      
+      try {
+        const helper = window.helper || JSON.parse(sessionStorage.getItem('helper') || '{}');
+        
+        // CRITICAL: Only save adjustments data using syncAdjustmentToHelper pattern
+        // This preserves user edits without triggering competing functions
+        
+        console.log('🔄 Saving adjustments data using syncAdjustmentToHelper pattern...');
+        
+        // FIRST: Save depreciation data (same as old button)
+        const globalPercent = document.getElementById('globalDep1')?.value || '';
+        const globalValue = document.getElementById('globalDepValue')?.value || '';
+        
+        const depreciationData = {
+          global_percent: globalPercent,
+          global_value: globalValue,
+          bulk_items: []
+        };
+        
+        // Collect depreciation rows
+        const depRows = document.querySelectorAll('#depreciationBulkTable .dep-row');
+        depRows.forEach((row, index) => {
+          const inputs = row.querySelectorAll('input');
+          if (inputs.length >= 5) {
+            depreciationData.bulk_items.push({
+              center_number: inputs[0].value,
+              damaged_part: inputs[1].value,
+              repair_type: inputs[2].value,
+              percent: inputs[3].value,
+              value: inputs[4].value
+            });
+          }
+        });
+        
+        // Save depreciation data to helper (same structure as old button)
+        if (!helper.depreciation) helper.depreciation = {};
+        helper.depreciation = {
+          global_percentage: parseFloat(String(globalPercent).replace('%', '').replace(/[^0-9.-]/g, '')) || 0,
+          global_amount: parseFloat(String(globalValue).replace(/[₪,]/g, '')) || 0,
+          work_days_impact: parseInt(document.getElementById('garageDays')?.value) || 0,
+          bulk_items: depreciationData.bulk_items,
+          last_updated: new Date().toISOString(),
+          source: 'final_report_builder'
+        };
+        
+        if (!helper.final_report) helper.final_report = {};
+        helper.final_report.depreciation = helper.depreciation;
+        
+        console.log('✅ Depreciation data saved');
+        
+        // SECOND: Save all adjustment categories using the proven syncAdjustmentToHelper logic
+        const categories = [
+          { category: 'features', containerId: 'featuresAdjustmentsList' },
+          { category: 'features', containerId: 'fullFeaturesAdjustmentsList' },
+          { category: 'registration', containerId: 'registrationAdjustmentsList' }, 
+          { category: 'registration', containerId: 'fullRegistrationAdjustmentsList' },
+          { category: 'mileage', containerId: 'mileageAdjustmentsList' },
+          { category: 'ownership_type', containerId: 'ownershipAdjustmentsList' },
+          { category: 'ownership_history', containerId: 'ownersAdjustmentsList' },
+          { category: 'additional', containerId: 'allAdjustmentsList' }
+        ];
+        
+        categories.forEach(({ category, containerId }) => {
+          const container = document.getElementById(containerId);
+          if (container && container.children.length > 0) {
+            // Trigger syncAdjustmentToHelper for each category to save current UI state
+            const firstInput = container.children[0].querySelector('input');
+            if (firstInput) {
+              console.log(`💾 Saving ${category} from ${containerId}`);
+              syncAdjustmentToHelper(firstInput, category);
+            }
+          }
+        });
+        
+        // Save updated helper to sessionStorage
+        sessionStorage.setItem('helper', JSON.stringify(helper));
+        window.helper = helper; // Update window.helper too
+        
+        console.log('✅ ADJUSTMENTS DATA SAVED SUCCESSFULLY!');
+        
+        // Show success feedback
+        if (button) {
+          button.style.background = '#16a34a';
+          button.innerHTML = '✅ נשמר!';
+          setTimeout(() => {
+            button.style.background = 'linear-gradient(135deg, #28a745 0%, #20c997 100%)';
+            button.innerHTML = 'שמור התאמות';
+            button.disabled = false;
+          }, 2000);
+        }
+        
+      } catch (error) {
+        console.error('❌ Error saving adjustments data:', error);
+        
+        // Show error feedback
+        if (button) {
+          button.style.background = '#dc3545';
+          button.innerHTML = '❌ שגיאה';
+          setTimeout(() => {
+            button.style.background = 'linear-gradient(135deg, #28a745 0%, #20c997 100%)';
+            button.innerHTML = 'שמור התאמות';
+            button.disabled = false;
+          }, 3000);
+        }
+      }
+    }
+
+    // OLD DEPRECIATION SAVE FUNCTION - KEEP FOR OTHER FUNCTIONALITY
     function saveDepreciationData() {
       console.log('💾 SAVE DATA BUTTON CLICKED!');
       const button = document.querySelector('.save-btn');
