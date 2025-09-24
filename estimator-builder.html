@@ -5329,9 +5329,6 @@
           registrationCumulative.textContent = `₪${Math.round(currentValue).toLocaleString()}`;
         }
         
-        // Capture registration final value as base for mileage calculations
-        const afterRegistrationValue = currentValue;
-        
         // 3. Mileage Adjustments (calculate from cumulative)
         const mileageRows = document.querySelectorAll('#mileageAdjustmentsList > div');
         mileageRows.forEach(row => {
@@ -5342,7 +5339,7 @@
             let value = parseFloat(inputs[3].value.replace(/[₪,]/g, '')) || 0;
             
             if (percent && !value) {
-              value = (afterRegistrationValue * Math.abs(percent)) / 100;
+              value = (currentValue * Math.abs(percent)) / 100;
               inputs[3].value = `₪${Math.round(value).toLocaleString()}`;
             }
             
@@ -5361,9 +5358,6 @@
           mileageCumulative.style.color = currentValue < basePrice ? '#dc3545' : '#28a745';
         }
         
-        // Capture mileage final value as base for ownership calculations
-        const afterMileageValue = currentValue;
-        
         // 4. Ownership Type Adjustments (calculate from cumulative)
         const ownershipRows = document.querySelectorAll('#ownershipAdjustmentsList > div');
         ownershipRows.forEach(row => {
@@ -5374,7 +5368,7 @@
             let value = parseFloat(inputs[3].value.replace(/[₪,]/g, '')) || 0;
             
             if (percent && !value) {
-              value = (afterMileageValue * Math.abs(percent)) / 100;
+              value = (currentValue * Math.abs(percent)) / 100;
               inputs[3].value = `₪${Math.round(value).toLocaleString()}`;
             }
             
@@ -5393,9 +5387,6 @@
           ownershipCumulative.style.color = currentValue < basePrice ? '#dc3545' : '#28a745';
         }
         
-        // Capture ownership final value as base for ownership history calculations
-        const afterOwnershipValue = currentValue;
-        
         // 5. Number of Owners Adjustments (calculate from cumulative)
         const ownersRows = document.querySelectorAll('#ownersAdjustmentsList > div');
         ownersRows.forEach(row => {
@@ -5406,7 +5397,7 @@
             let value = parseFloat(inputs[3].value.replace(/[₪,]/g, '')) || 0;
             
             if (percent && !value) {
-              value = (afterOwnershipValue * Math.abs(percent)) / 100;
+              value = (currentValue * Math.abs(percent)) / 100;
               inputs[3].value = `₪${Math.round(value).toLocaleString()}`;
             }
             
@@ -5471,6 +5462,117 @@
       }
     }
     
+    // Get cumulative value from previous category for correct percentage base calculation
+    function getPreviousCategoryCumulative(categoryContainer) {
+      let cumulativeValue = 0;
+      
+      if (categoryContainer === 'mileageAdjustmentsList') {
+        // Mileage should use cumulative after Features + Registration
+        const registrationCumulative = document.getElementById('registrationCumulative');
+        if (registrationCumulative) {
+          const span = registrationCumulative.querySelector('span');
+          if (span) {
+            const text = span.textContent.replace(/[₪,]/g, '');
+            cumulativeValue = parseFloat(text) || 0;
+          }
+        }
+      } else if (categoryContainer === 'ownershipAdjustmentsList') {
+        // Ownership Type should use cumulative after Mileage
+        const mileageCumulative = document.getElementById('mileageCumulative');
+        if (mileageCumulative) {
+          const span = mileageCumulative.querySelector('span');
+          if (span) {
+            const text = span.textContent.replace(/[₪,]/g, '');
+            cumulativeValue = parseFloat(text) || 0;
+          }
+        }
+      } else if (categoryContainer === 'ownersAdjustmentsList') {
+        // Ownership History should use cumulative after Ownership Type
+        const ownershipCumulative = document.getElementById('ownershipCumulative');
+        if (ownershipCumulative) {
+          const span = ownershipCumulative.querySelector('span');
+          if (span) {
+            const text = span.textContent.replace(/[₪,]/g, '');
+            cumulativeValue = parseFloat(text) || 0;
+          }
+        }
+      }
+      
+      return cumulativeValue;
+    }
+
+    // Separated calculation logic to run after cumulative updates
+    function performManualRowCalculation(percentInput, row, inputs, percent) {
+      // CRITICAL FIX: Determine which category this row belongs to and get correct base value
+      let baseValue = 0;
+      const isMileage = row.closest('#mileageAdjustmentsList');
+      const isOwnership = row.closest('#ownershipAdjustmentsList'); 
+      const isOwners = row.closest('#ownersAdjustmentsList');
+      const isAdditional = row.closest('#allAdjustmentsList');
+      const isGrossFeatures = row.closest('#featuresAdjustmentsList');
+      const isGrossRegistration = row.closest('#registrationAdjustmentsList');
+      const isFullFeatures = row.closest('#fullFeaturesAdjustmentsList');
+      const isFullRegistration = row.closest('#fullRegistrationAdjustmentsList');
+      
+      if (isMileage) {
+        // Mileage manual rows should use cumulative from Features+Registration
+        baseValue = getPreviousCategoryCumulative('mileageAdjustmentsList');
+        console.log(`🔧 MILEAGE manual row: Using Features+Registration cumulative base: ₪${baseValue.toLocaleString()}`);
+      } else if (isOwnership) {
+        // Ownership Type manual rows should use cumulative from Mileage
+        baseValue = getPreviousCategoryCumulative('ownershipAdjustmentsList');
+        console.log(`🔧 OWNERSHIP TYPE manual row: Using Mileage cumulative base: ₪${baseValue.toLocaleString()}`);
+      } else if (isOwners) {
+        // Ownership History manual rows should use cumulative from Ownership Type
+        baseValue = getPreviousCategoryCumulative('ownersAdjustmentsList');
+        console.log(`🔧 OWNERSHIP HISTORY manual row: Using Ownership History cumulative base: ₪${baseValue.toLocaleString()}`);
+      } else if (isAdditional) {
+        // Additional manual rows should use cumulative from Ownership History
+        baseValue = getPreviousCategoryCumulative('allAdjustmentsList');
+        console.log(`🔧 ADDITIONAL manual row: Using Ownership History cumulative base: ₪${baseValue.toLocaleString()}`);
+      } else if (isGrossFeatures || isGrossRegistration || isFullFeatures || isFullRegistration) {
+        // Gross section OR Full Market Features/Registration continue using basicPrice
+        let basicPriceValue = 0;
+        const basicPriceField = document.getElementById('basicPrice');
+        if (basicPriceField && basicPriceField.value) {
+          basicPriceValue = parseFloat(basicPriceField.value.replace(/[₪,]/g, '')) || 0;
+        }
+        baseValue = basicPriceValue;
+        const sectionType = (isGrossFeatures || isGrossRegistration) ? 'GROSS' : 'FULL MARKET';
+        console.log(`🔧 ${sectionType} Features/Registration manual row: Using basic price base: ₪${baseValue.toLocaleString()}`);
+      } else {
+        // Default fallback to basicPrice for unknown categories
+        let basicPriceValue = 0;
+        const basicPriceField = document.getElementById('basicPrice');
+        if (basicPriceField && basicPriceField.value) {
+          basicPriceValue = parseFloat(basicPriceField.value.replace(/[₪,]/g, '')) || 0;
+        }
+        baseValue = basicPriceValue;
+        console.log(`🔧 UNKNOWN category manual row: Using basic price fallback: ₪${baseValue.toLocaleString()}`);
+      }
+      
+      // If no cumulative found, fallback to basic price
+      if (baseValue === 0) {
+        const basicPriceField = document.getElementById('basicPrice');
+        if (basicPriceField && basicPriceField.value) {
+          baseValue = parseFloat(basicPriceField.value.replace(/[₪,]/g, '')) || 0;
+        }
+        console.log(`🔧 No cumulative found, using basic price fallback: ₪${baseValue.toLocaleString()}`);
+      }
+      
+      const calculatedValue = (baseValue * percent) / 100;
+      const type = inputs[1].value;
+      
+      console.log(`💰 Manual row calculation: ${percent}% × ₪${baseValue.toLocaleString()} = ₪${Math.round(calculatedValue).toLocaleString()}`);
+      
+      // Apply sign based on type
+      if (type === 'minus' || type === 'הפחתה' || type === 'הפחתה (-)') {
+        inputs[3].value = `-₪${Math.round(calculatedValue).toLocaleString()}`;
+      } else {
+        inputs[3].value = `₪${Math.round(calculatedValue).toLocaleString()}`;
+      }
+    }
+    
     // Calculate adjustment value from percentage
     window.calculateAdjustmentValueSimple = function(percentInput) {
       const row = percentInput.closest('div');
@@ -5486,48 +5588,19 @@
       if (inputs.length < 4) return;
       
       const percent = parseFloat(percentInput.value) || 0;
+      if (percent === 0) return;
       
-      // Determine which section this adjustment belongs to
-      const isCumulative = row.closest('#mileageAdjustmentsList') || 
-                          row.closest('#ownershipAdjustmentsList') || 
-                          row.closest('#ownersAdjustmentsList');
-      
-      let referenceValue = 0;
-      
-      if (isCumulative) {
-        // For cumulative sections, get the previous cumulative value
-        const section = row.closest('div[id$="Adjustments"]');
-        if (section) {
-          const prevSection = section.previousElementSibling;
-          if (prevSection) {
-            const cumulativeSpan = prevSection.querySelector('div[id$="Cumulative"] span');
-            if (cumulativeSpan) {
-              referenceValue = parseFloat(cumulativeSpan.textContent.replace(/[₪,]/g, '')) || 0;
-            }
-          }
+      // CRITICAL: First ensure cumulative displays are updated by running calculation
+      setTimeout(() => {
+        if (typeof updateFullMarketValueCalculation === 'function') {
+          updateFullMarketValueCalculation();
         }
         
-        // If no previous cumulative, use registration cumulative as fallback
-        if (referenceValue === 0) {
-          const registrationCumulative = document.querySelector('#registrationCumulative span');
-          if (registrationCumulative) {
-            referenceValue = parseFloat(registrationCumulative.textContent.replace(/[₪,]/g, '')) || 0;
-          }
-        }
-      } else {
-        // For non-cumulative sections, use base price
-        const basicPrice = document.getElementById('basicPrice');
-        if (basicPrice && basicPrice.value) {
-          referenceValue = parseFloat(basicPrice.value.replace(/[₪,]/g, '')) || 0;
-        }
-      }
-      
-      if (referenceValue > 0 && percent !== 0) {
-        const calculatedValue = (referenceValue * Math.abs(percent)) / 100;
-        inputs[3].value = `₪${Math.round(calculatedValue).toLocaleString()}`;
-      } else {
-        inputs[3].value = '';
-      }
+        // Then proceed with the calculation using updated cumulatives
+        setTimeout(() => {
+          performManualRowCalculation(percentInput, row, inputs, percent);
+        }, 50);
+      }, 10);
     }
     
     // Global event listener for delete buttons - NEW APPROACH
