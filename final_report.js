@@ -1485,7 +1485,7 @@ function generateWorksTableForFinalReport(works) {
       <tr>
         <td>${rowNum}</td>
         <td>${category}</td>
-        <td>${cost} ₪</td>
+        <td>₪${parseFloat(cost || 0).toLocaleString()}</td>
         <td>${comments}</td>
       </tr>
     `;
@@ -1513,8 +1513,8 @@ function generatePartsTableForFinalReport(parts) {
     const rowNum = index + 1;
     const name = part.name || '';
     const rawPrice = part.מחיר || part.price || 0;
-    // Check if price already contains currency symbol
-    const price = String(rawPrice).includes('₪') ? rawPrice : `${rawPrice} ₪`;
+    // Format price with thousands separator
+    const price = `₪${parseFloat(rawPrice || 0).toLocaleString()}`;
     const source = part.source || '';
     const description = part.תיאור || part.description || '';
     
@@ -1557,7 +1557,7 @@ function generateRepairsTableForFinalReport(repairs) {
       <tr>
         <td>${rowNum}</td>
         <td>${name}</td>
-        <td>${cost} ₪</td>
+        <td>₪${parseFloat(cost || 0).toLocaleString()}</td>
         <td>${description}</td>
       </tr>
     `;
