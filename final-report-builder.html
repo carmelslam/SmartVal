@@ -15515,8 +15515,14 @@
     function calculateLegalLossReport(helper, marketValue) {
       console.log('📊 Calculating Legal Loss Report');
       
-      // Get salvage value from manual input (user specified as manual)
+      // Load salvage field from helper if empty (same logic as refreshSummary)
       const salvageField = document.getElementById('salvageValueLegal');
+      if (salvageField && !salvageField.value && helper.final_report?.summary?.salvage_value_legal) {
+        salvageField.value = helper.final_report.summary.salvage_value_legal;
+        console.log(`📥 Loaded salvage legal value from helper in calculateLegalLossReport: ${salvageField.value}`);
+      }
+      
+      // Get salvage value from manual input (user specified as manual)
       const salvageValue = salvageField ? parseFloat(salvageField.value.replace(/[₪,]/g, '') || '0') : 0;
       
       // Calculation: Market Value - Salvage Value (from user mapping)
@@ -15529,7 +15535,7 @@
         helper.final_report.summary.total_after_salvage_legal = totalField.value;
       }
       
-      console.log(`Legal loss calculation: ${marketValue} - ${salvageValue} = ${calculatedTotal}`);
+      console.log(`🧮 Legal loss calculation: ₪${marketValue.toLocaleString()} - ₪${salvageValue.toLocaleString()} = ₪${calculatedTotal.toLocaleString()}`);
     }
     
     // ENHANCED MANUAL INPUT FIELD LISTENERS - Real-time persistence and calculations
