@@ -945,18 +945,8 @@ function savePartsData() {
     
     // === PHASE 6: Update comprehensive data and case_summary AFTER accumulation ===
     updatePartsSearchComprehensiveData(helper, validParts, isStandaloneMode, activeCenterId);
-    console.log('🔄 PHASE 6 DEBUG: Calling updateCaseSummary() from savePartsData');
     updateCaseSummary();
     
-    // === PHASE 6 DEBUG: Check what's actually in helper.parts_search.selected_parts ===
-    console.log('🔍 PHASE 6 FINAL DEBUG: Current helper state:');
-    console.log('- parts_search.selected_parts count:', helper.parts_search.selected_parts?.length || 0);
-    console.log('- parts_search.selected_parts details:', helper.parts_search.selected_parts);
-    console.log('- case_summary:', helper.parts_search.case_summary);
-    
-    console.log('✅ FINAL DEBUG: helper.parts_search.selected_parts final result:', helper.parts_search.selected_parts);
-    console.log('✅ FINAL DEBUG: total selected_parts count:', helper.parts_search.selected_parts.length);
-    console.log('✅ Parts data saved to helper:', helper.damage_assessment.parts);
     
     // Show save confirmation (safely check if button exists)
     const saveBtn = document.querySelector('.save-btn') || document.getElementById('saveBtn') || document.querySelector('button[onclick*="save"]');
@@ -1654,7 +1644,6 @@ function savePartsData() {
         updatePartCount();
         
         // === PHASE 6: Update case_summary after delete ===
-        console.log('🔄 PHASE 6 DEBUG: Calling updateCaseSummary() from deletePartRow');
         updateCaseSummary();
         
         // === PHASE 3: Notify wizard of changes ===
@@ -1802,10 +1791,8 @@ function savePartsData() {
     
     // === PHASE 6: Dedicated function to update case_summary aggregation ===
     function updateCaseSummary() {
-      console.log('🚀 PHASE 6 DEBUG: updateCaseSummary() called!');
       try {
         const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
-        console.log('📄 PHASE 6 DEBUG: Raw helper data:', JSON.stringify(helper.parts_search, null, 2));
         
         if (!helper.parts_search) {
           helper.parts_search = {};
@@ -1815,26 +1802,15 @@ function savePartsData() {
         const allSearchResults = helper.parts_search.search_results || [];
         const unselectedParts = helper.parts_search.unselected_parts || [];
         
-        console.log('🔢 PHASE 6 DEBUG: Parts count - selected:', allSelectedParts.length, 'search_results:', allSearchResults.length, 'unselected:', unselectedParts.length);
-        
         // Calculate accurate total cost
         const totalCost = allSelectedParts.reduce((sum, part) => {
           const price = parseFloat(part.price) || 0;
           const quantity = parseInt(part.quantity) || 1;
-          const partCost = price * quantity;
-          console.log(`💰 PHASE 6 DEBUG: Part ${part.name || part.part}: ${price} x ${quantity} = ${partCost}`);
-          return sum + partCost;
+          return sum + (price * quantity);
         }, 0);
-        
-        console.log('💰 PHASE 6 DEBUG: Total calculated cost:', totalCost);
-        
-        // Store old values for comparison
-        const oldCaseSummary = helper.parts_search.case_summary || {};
-        console.log('📊 PHASE 6 DEBUG: OLD case_summary:', oldCaseSummary);
         
         // Update case_summary with correct aggregation
         helper.parts_search.case_summary = {
-          // Only preserve total_searches - don't increment it (only increment on actual searches)
           total_searches: helper.parts_search.case_summary?.total_searches || 0,
           total_results: allSearchResults.length,
           selected_count: allSelectedParts.length,
@@ -1843,19 +1819,12 @@ function savePartsData() {
           estimated_total_cost: totalCost
         };
         
-        console.log('📊 PHASE 6 DEBUG: NEW case_summary:', helper.parts_search.case_summary);
-        
         sessionStorage.setItem('helper', JSON.stringify(helper));
-        console.log('💾 PHASE 6 DEBUG: Saved to sessionStorage');
-        
-        // Verify it was saved correctly
-        const verifyHelper = JSON.parse(sessionStorage.getItem('helper') || '{}');
-        console.log('✅ PHASE 6 DEBUG: Verification - case_summary after save:', verifyHelper.parts_search.case_summary);
         
         return helper.parts_search.case_summary;
         
       } catch (error) {
-        console.error('❌ PHASE 6 ERROR: Failed to update case_summary:', error);
+        console.warn('Could not update case_summary:', error);
         return null;
       }
     }

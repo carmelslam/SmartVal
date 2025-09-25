@@ -3677,14 +3677,11 @@
               console.log('📊 Total parts_search.selected_parts:', helper.parts_search.selected_parts.length);
               
               // === PHASE 6: Update case_summary after parts save in wizard ===
-              console.log('🔄 PHASE 6 DEBUG: Calling updateCaseSummary() from wizard step 5 save');
               try {
-                // Define updateCaseSummary function in wizard context
+                // Update case_summary in wizard context
                 function updateCaseSummaryInWizard() {
-                  console.log('🚀 PHASE 6 DEBUG: updateCaseSummary() called from wizard!');
                   try {
                     const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
-                    console.log('📄 PHASE 6 DEBUG: Raw helper data from wizard:', JSON.stringify(helper.parts_search, null, 2));
                     
                     if (!helper.parts_search) {
                       helper.parts_search = {};
@@ -3694,17 +3691,13 @@
                     const allSearchResults = helper.parts_search.search_results || [];
                     const unselectedParts = helper.parts_search.unselected_parts || [];
                     
-                    console.log('🔢 PHASE 6 DEBUG: Parts count from wizard - selected:', allSelectedParts.length, 'search_results:', allSearchResults.length, 'unselected:', unselectedParts.length);
-                    
-                    // === PHASE 6 FIX: In wizard context, prioritize parts with damage_center_id over orphaned duplicates ===
+                    // Filter out orphaned duplicates in wizard context
                     const wizardModeParts = [];
                     const partsWithCenters = allSelectedParts.filter(part => part.damage_center_id);
                     const orphanedParts = allSelectedParts.filter(part => !part.damage_center_id);
                     
-                    // Add all parts with center IDs (these are legitimate)
                     wizardModeParts.push(...partsWithCenters);
                     
-                    // For orphaned parts, only add if there's no equivalent part with a center ID
                     orphanedParts.forEach(orphanedPart => {
                       const hasEquivalentWithCenter = partsWithCenters.some(centerPart => 
                         (centerPart.name || centerPart.part) === (orphanedPart.name || orphanedPart.part)
@@ -3712,95 +3705,47 @@
                       
                       if (!hasEquivalentWithCenter) {
                         wizardModeParts.push(orphanedPart);
-                        console.log(`✅ PHASE 6: Keeping orphaned part ${orphanedPart.name || orphanedPart.part} (no center equivalent)`);
-                      } else {
-                        console.log(`🗑️ PHASE 6: Skipping orphaned duplicate ${orphanedPart.name || orphanedPart.part} (has center equivalent)`);
                       }
                     });
                     
-                    console.log(`🔢 PHASE 6: Original parts: ${allSelectedParts.length}, Wizard-filtered: ${wizardModeParts.length}`);
-                    console.log(`📊 PHASE 6: Parts with centers: ${partsWithCenters.length}, Orphaned: ${orphanedParts.length}`);
-                    
-                    // Calculate total cost using wizard-filtered parts
+                    // Calculate total cost
                     const totalCost = wizardModeParts.reduce((sum, part) => {
                       const price = parseFloat(part.price) || 0;
                       const quantity = parseInt(part.quantity) || 1;
-                      const partCost = price * quantity;
-                      const centerInfo = part.damage_center_id || 'no_center';
-                      console.log(`💰 PHASE 6 DEBUG: Part ${part.name || part.part} (${centerInfo}): ${price} x ${quantity} = ${partCost}`);
-                      return sum + partCost;
+                      return sum + (price * quantity);
                     }, 0);
                     
-                    console.log('💰 PHASE 6 DEBUG: Total calculated cost from wizard:', totalCost);
-                    
-                    // Store old values for comparison
-                    const oldCaseSummary = helper.parts_search.case_summary || {};
-                    console.log('📊 PHASE 6 DEBUG: OLD case_summary from wizard:', oldCaseSummary);
-                    
-                    // Update case_summary with correct aggregation
+                    // Update case_summary
                     helper.parts_search.case_summary = {
-                      // === PHASE 6 FIX: Set total_searches to 0 since we haven't performed actual searches ===
-                      total_searches: 0, // Reset since these are manual part entries, not search operations
+                      total_searches: 0,
                       total_results: allSearchResults.length,
-                      selected_count: wizardModeParts.length, // Use wizard-filtered count (removes orphaned duplicates)
+                      selected_count: wizardModeParts.length,
                       unselected_count: unselectedParts.length,
                       last_search: new Date().toISOString(),
                       estimated_total_cost: totalCost
                     };
                     
-                    // === AGGRESSIVE FIX: Force multiple save attempts ===
-                    console.log('🔧 PHASE 6 AGGRESSIVE: Forcing multiple saves to prevent overwrite');
-                    
-                    // Save 1: Direct sessionStorage
+                    // Save to multiple locations
                     sessionStorage.setItem('helper', JSON.stringify(helper));
                     
-                    // Save 2: Try window.helper if available
                     if (typeof window.helper === 'object') {
                       window.helper.parts_search.case_summary = helper.parts_search.case_summary;
-                      console.log('🔧 Updated window.helper.parts_search.case_summary');
                     }
                     
-                    // Save 3: Try parent window if in iframe
                     if (window.parent && window.parent !== window && window.parent.helper) {
                       window.parent.helper.parts_search.case_summary = helper.parts_search.case_summary;
-                      console.log('🔧 Updated parent.helper.parts_search.case_summary');
                     }
                     
-                    // Save 4: Force localStorage as backup
-                    try {
-                      const backupHelper = JSON.parse(localStorage.getItem('helper_backup') || '{}');
-                      if (!backupHelper.parts_search) backupHelper.parts_search = {};
-                      backupHelper.parts_search.case_summary = helper.parts_search.case_summary;
-                      localStorage.setItem('helper_backup', JSON.stringify(backupHelper));
-                      console.log('🔧 Saved backup to localStorage');
-                    } catch (e) {
-                      console.warn('Could not save to localStorage backup:', e);
-                    }
-                    
-                    console.log('📊 PHASE 6 DEBUG: NEW case_summary from wizard:', helper.parts_search.case_summary);
-                    console.log('💾 PHASE 6 DEBUG: Saved to multiple locations from wizard');
-                    
-                    // Immediate verification
-                    const verifyHelper = JSON.parse(sessionStorage.getItem('helper') || '{}');
-                    console.log('✅ PHASE 6 DEBUG: Immediate verification - case_summary:', verifyHelper.parts_search.case_summary);
-                    
-                    // === PHASE 6 ULTIMATE FIX: Override broadcastHelperUpdate to prevent overwrites ===
+                    // Override broadcastHelperUpdate temporarily to prevent overwrites
                     const originalBroadcastHelperUpdate = window.broadcastHelperUpdate;
                     const preservedCaseSummary = { ...helper.parts_search.case_summary };
                     
-                    console.log('🔧 PHASE 6 ULTIMATE: Temporarily overriding broadcastHelperUpdate to preserve case_summary');
-                    
-                    // Replace broadcastHelperUpdate with a protective version
                     window.broadcastHelperUpdate = function(sections, source) {
-                      console.log('🛡️ PHASE 6: Intercepted broadcastHelperUpdate call from:', source);
-                      console.log('🛡️ PHASE 6: Preserving case_summary before calling original function');
-                      
-                      // Call the original function
                       if (originalBroadcastHelperUpdate) {
                         originalBroadcastHelperUpdate(sections, source);
                       }
                       
-                      // Force restore our case_summary after a short delay (longer than the 200ms in broadcastHelperUpdate)
+                      // Restore case_summary after broadcast
                       setTimeout(() => {
                         try {
                           const currentHelper = JSON.parse(sessionStorage.getItem('helper') || '{}');
@@ -3811,47 +3756,21 @@
                           if (window.helper?.parts_search) {
                             window.helper.parts_search.case_summary = preservedCaseSummary;
                           }
-                          
-                          console.log('🛡️ PHASE 6: Force restored case_summary after broadcastHelperUpdate:', preservedCaseSummary);
                         } catch (e) {
-                          console.error('❌ Failed to force restore case_summary:', e);
+                          console.warn('Could not restore case_summary after broadcast:', e);
                         }
                       }, 300);
                     };
                     
-                    // Restore the original function after 5 seconds
+                    // Restore original function after 5 seconds
                     setTimeout(() => {
                       window.broadcastHelperUpdate = originalBroadcastHelperUpdate;
-                      console.log('🔧 PHASE 6: Restored original broadcastHelperUpdate function');
                     }, 5000);
-                    
-                    // Delayed verification to check for overwrites
-                    setTimeout(() => {
-                      const delayedHelper = JSON.parse(sessionStorage.getItem('helper') || '{}');
-                      console.log('🕐 PHASE 6 DEBUG: Delayed verification (2s later) - case_summary:', delayedHelper.parts_search.case_summary);
-                      
-                      if (delayedHelper.parts_search.case_summary.selected_count !== wizardModeParts.length || 
-                          delayedHelper.parts_search.case_summary.estimated_total_cost !== totalCost) {
-                        console.error('❌ PHASE 6 ERROR: case_summary was overwritten by another process!');
-                        console.error('Expected selected_count:', wizardModeParts.length, 'Got:', delayedHelper.parts_search.case_summary.selected_count);
-                        console.error('Expected estimated_total_cost:', totalCost, 'Got:', delayedHelper.parts_search.case_summary.estimated_total_cost);
-                        
-                        // LAST RESORT: Force fix the values one more time
-                        console.log('🚨 PHASE 6 LAST RESORT: Force fixing case_summary values');
-                        const fixHelper = JSON.parse(sessionStorage.getItem('helper') || '{}');
-                        if (!fixHelper.parts_search) fixHelper.parts_search = {};
-                        fixHelper.parts_search.case_summary = preservedCaseSummary;
-                        sessionStorage.setItem('helper', JSON.stringify(fixHelper));
-                        console.log('🚨 PHASE 6: Applied last resort fix');
-                      } else {
-                        console.log('✅ PHASE 6 SUCCESS: case_summary values persisted correctly!');
-                      }
-                    }, 2000);
                     
                     return helper.parts_search.case_summary;
                     
                   } catch (error) {
-                    console.error('❌ PHASE 6 ERROR: Failed to update case_summary from wizard:', error);
+                    console.warn('Could not update case_summary:', error);
                     return null;
                   }
                 }
@@ -3860,7 +3779,7 @@
                 updateCaseSummaryInWizard();
                 
               } catch (updateError) {
-                console.error('❌ Failed to call updateCaseSummary from wizard:', updateError);
+                console.warn('Could not update case_summary from wizard:', updateError);
               }
               
             } catch (error) {
