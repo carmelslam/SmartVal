@@ -475,6 +475,18 @@ form button {
 
 // Save parts data to helper without navigation
 function savePartsData() {
+  // === PHASE 0: DIAGNOSTIC LOGGING ===
+  console.log('=== PARTS MODULE DIAGNOSTIC (savePartsData) ===');
+  const diagnosticHelper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+  console.log('Current damage center:', diagnosticHelper.current_damage_center);
+  console.log('Selected parts count:', diagnosticHelper.parts_search?.selected_parts?.length);
+  console.log('Selected parts array:', diagnosticHelper.parts_search?.selected_parts);
+  console.log('Damage centers summary:', diagnosticHelper.parts_search?.damage_centers_summary);
+  console.log('Parts in UI:', document.querySelectorAll('#partsList .row').length);
+  console.log('Active damage center ID from session:', sessionStorage.getItem('active_damage_center_id'));
+  console.log('Damage center mode:', sessionStorage.getItem('damage_center_mode'));
+  console.log('=== END DIAGNOSTIC ===');
+  
   const allParts = [];
 
   document.querySelectorAll("#partsList .row").forEach(row => {
@@ -698,6 +710,13 @@ function savePartsData() {
     // ✅ SMART ACCUMULATION: Remove existing parts for current damage center, then add new ones
     // This prevents overwrite of other damage centers while avoiding duplication in current center
     
+    // === PHASE 0: DIAGNOSTIC - Log before accumulation ===
+    console.log('=== BEFORE ACCUMULATION ===');
+    console.log('Is standalone mode:', isStandaloneMode);
+    console.log('Active center ID:', activeCenterId);
+    console.log('Current selected_parts length:', helper.parts_search.selected_parts.length);
+    console.log('New parts to add:', newPartsWithContext.length);
+    
     if (!isStandaloneMode && activeCenterId) {
       // Remove existing parts for current damage center only
       const partsFromOtherCenters = helper.parts_search.selected_parts.filter(existingPart => 
@@ -712,12 +731,21 @@ function savePartsData() {
         ...partsFromOtherCenters,
         ...newPartsWithContext
       ];
+      
+      // === PHASE 0: DIAGNOSTIC - Log after accumulation ===
+      console.log('=== AFTER ACCUMULATION (damage center mode) ===');
+      console.log('Final selected_parts length:', helper.parts_search.selected_parts.length);
+      console.log('Parts for current center:', helper.parts_search.selected_parts.filter(p => p.damage_center_id === activeCenterId).length);
     } else {
       // Standalone mode: just accumulate (no damage center conflicts)
       helper.parts_search.selected_parts = [
         ...helper.parts_search.selected_parts,
         ...newPartsWithContext
       ];
+      
+      // === PHASE 0: DIAGNOSTIC - Log after accumulation ===
+      console.log('=== AFTER ACCUMULATION (standalone mode) ===');
+      console.log('Final selected_parts length:', helper.parts_search.selected_parts.length);
     }
     
     // ✅ DAMAGE CENTER CLASSIFICATION: Update classification metadata
@@ -1335,9 +1363,24 @@ function savePartsData() {
       const confirmDelete = confirm(`האם אתה בטוח שברצונך למחוק את החלק?\n\n${partInfo}`);
       
       if (confirmDelete) {
+        // === PHASE 0: DIAGNOSTIC - Log delete operation ===
+        console.log('=== DELETE OPERATION DIAGNOSTIC ===');
+        console.log('Part to delete:', { name, desc, rowIndex });
+        console.log('Active damage center ID sources:');
+        
         // ✅ COMPREHENSIVE DELETE: Remove from ALL 3 required locations
         try {
           let helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+          
+          console.log('- helper.damage_assessment?.current_center_id:', helper.damage_assessment?.current_center_id);
+          console.log('- helper.damage_centers?.current_center_id:', helper.damage_centers?.current_center_id);
+          console.log('- sessionStorage active_damage_center_id:', sessionStorage.getItem('active_damage_center_id'));
+          console.log('Helper structure before delete:', {
+            'helper.centers': helper.centers,
+            'helper.current_damage_center': helper.current_damage_center,
+            'parts_search.selected_parts': helper.parts_search?.selected_parts
+          });
+          
           const activeCenterId = helper.damage_assessment?.current_center_id || 
                                 helper.damage_centers?.current_center_id ||
                                 sessionStorage.getItem('active_damage_center_id');

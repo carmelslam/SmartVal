@@ -3562,16 +3562,30 @@
             
             // ✅ NEW: Register parts in parts_search.selected_parts for dual-purpose functionality
             try {
+              // === PHASE 0: DIAGNOSTIC - Log wizard parts save ===
+              console.log('=== WIZARD PARTS SAVE DIAGNOSTIC (Step 5) ===');
+              console.log('Module data parts:', moduleData.parts);
+              console.log('Current damage center:', helper.current_damage_center);
+              console.log('Damage center mode:', sessionStorage.getItem('damage_center_mode'));
+              console.log('Active damage center ID:', sessionStorage.getItem('active_damage_center_id'));
+              
               // Get damage center info
               const activeCenterId = helper.current_damage_center?.id || helper.current_damage_center?.Id;
               const damageCenterNumber = helper.current_damage_center?.["Damage center Number"] || helper.current_damage_center?.number;
               const damageCenterName = `מוקד נזק ${damageCenterNumber}`;
               const damageCenterLocation = helper.current_damage_center?.Location || helper.current_damage_center?.location || '';
               
+              console.log('Extracted center info:', { activeCenterId, damageCenterNumber, damageCenterName, damageCenterLocation });
+              
               // Initialize parts_search structure
               helper.parts_search = helper.parts_search || {};
               helper.parts_search.selected_parts = helper.parts_search.selected_parts || [];
               helper.parts_search.damage_centers_summary = helper.parts_search.damage_centers_summary || {};
+              
+              console.log('Parts search before save:', {
+                'selected_parts length': helper.parts_search.selected_parts.length,
+                'damage_centers_summary keys': Object.keys(helper.parts_search.damage_centers_summary)
+              });
               
               // Remove existing parts for current damage center to avoid duplicates
               helper.parts_search.selected_parts = helper.parts_search.selected_parts.filter(part => 
@@ -7059,12 +7073,20 @@
           return;
         }
         
+        // === PHASE 0: DIAGNOSTIC - Log edit mode ===
+        console.log('=== EDIT MODE DIAGNOSTIC ===');
+        console.log('Center to edit:', centerToEdit);
+        console.log('Selected value (center number):', selectedValue);
+        
         // Load center data into wizard
         damageCenterData = {
           ...centerToEdit,
           mode: 'edit_existing',
           original_id: centerToEdit.Id || centerToEdit.id || centerToEdit.center_id || centerToEdit.block_id
         };
+        
+        console.log('Damage center data created:', damageCenterData);
+        console.log('Parts in center:', centerToEdit.Parts?.parts_required);
         
         // ✅ CRITICAL FIX: Set session storage mode for step 2 restoration logic
         sessionStorage.setItem('damage_center_mode', 'edit_existing');
