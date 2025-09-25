@@ -3696,12 +3696,37 @@
                     
                     console.log('🔢 PHASE 6 DEBUG: Parts count from wizard - selected:', allSelectedParts.length, 'search_results:', allSearchResults.length, 'unselected:', unselectedParts.length);
                     
-                    // Calculate total cost from all parts (duplicates are legitimate for different damage centers)
-                    const totalCost = allSelectedParts.reduce((sum, part) => {
+                    // === PHASE 6 FIX: In wizard context, prioritize parts with damage_center_id over orphaned duplicates ===
+                    const wizardModeParts = [];
+                    const partsWithCenters = allSelectedParts.filter(part => part.damage_center_id);
+                    const orphanedParts = allSelectedParts.filter(part => !part.damage_center_id);
+                    
+                    // Add all parts with center IDs (these are legitimate)
+                    wizardModeParts.push(...partsWithCenters);
+                    
+                    // For orphaned parts, only add if there's no equivalent part with a center ID
+                    orphanedParts.forEach(orphanedPart => {
+                      const hasEquivalentWithCenter = partsWithCenters.some(centerPart => 
+                        (centerPart.name || centerPart.part) === (orphanedPart.name || orphanedPart.part)
+                      );
+                      
+                      if (!hasEquivalentWithCenter) {
+                        wizardModeParts.push(orphanedPart);
+                        console.log(`✅ PHASE 6: Keeping orphaned part ${orphanedPart.name || orphanedPart.part} (no center equivalent)`);
+                      } else {
+                        console.log(`🗑️ PHASE 6: Skipping orphaned duplicate ${orphanedPart.name || orphanedPart.part} (has center equivalent)`);
+                      }
+                    });
+                    
+                    console.log(`🔢 PHASE 6: Original parts: ${allSelectedParts.length}, Wizard-filtered: ${wizardModeParts.length}`);
+                    console.log(`📊 PHASE 6: Parts with centers: ${partsWithCenters.length}, Orphaned: ${orphanedParts.length}`);
+                    
+                    // Calculate total cost using wizard-filtered parts
+                    const totalCost = wizardModeParts.reduce((sum, part) => {
                       const price = parseFloat(part.price) || 0;
                       const quantity = parseInt(part.quantity) || 1;
                       const partCost = price * quantity;
-                      const centerInfo = part.damage_center_id || 'unknown_center';
+                      const centerInfo = part.damage_center_id || 'no_center';
                       console.log(`💰 PHASE 6 DEBUG: Part ${part.name || part.part} (${centerInfo}): ${price} x ${quantity} = ${partCost}`);
                       return sum + partCost;
                     }, 0);
@@ -3717,7 +3742,7 @@
                       // === PHASE 6 FIX: Set total_searches to 0 since we haven't performed actual searches ===
                       total_searches: 0, // Reset since these are manual part entries, not search operations
                       total_results: allSearchResults.length,
-                      selected_count: allSelectedParts.length, // Total parts across all damage centers
+                      selected_count: wizardModeParts.length, // Use wizard-filtered count (removes orphaned duplicates)
                       unselected_count: unselectedParts.length,
                       last_search: new Date().toISOString(),
                       estimated_total_cost: totalCost
@@ -3805,10 +3830,10 @@
                       const delayedHelper = JSON.parse(sessionStorage.getItem('helper') || '{}');
                       console.log('🕐 PHASE 6 DEBUG: Delayed verification (2s later) - case_summary:', delayedHelper.parts_search.case_summary);
                       
-                      if (delayedHelper.parts_search.case_summary.selected_count !== allSelectedParts.length || 
+                      if (delayedHelper.parts_search.case_summary.selected_count !== wizardModeParts.length || 
                           delayedHelper.parts_search.case_summary.estimated_total_cost !== totalCost) {
                         console.error('❌ PHASE 6 ERROR: case_summary was overwritten by another process!');
-                        console.error('Expected selected_count:', allSelectedParts.length, 'Got:', delayedHelper.parts_search.case_summary.selected_count);
+                        console.error('Expected selected_count:', wizardModeParts.length, 'Got:', delayedHelper.parts_search.case_summary.selected_count);
                         console.error('Expected estimated_total_cost:', totalCost, 'Got:', delayedHelper.parts_search.case_summary.estimated_total_cost);
                         
                         // LAST RESORT: Force fix the values one more time
