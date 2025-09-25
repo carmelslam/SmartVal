@@ -5703,12 +5703,21 @@
           console.log('🧹 Current damage center data cleared to prevent parts carryover');
         }
         
-        // ✅ FIX: Clear parts search data to prevent parts aggregation across damage centers
+        // ❌ DISABLED: Do NOT clear parts_search.selected_parts - it should ACCUMULATE across damage centers!
+        // The parts_search.selected_parts is meant to track ALL selected parts from ALL damage centers
+        /*
         if (helper.parts_search) {
           delete helper.parts_search.selected_parts;
           delete helper.parts_search.unselected_parts;
           delete helper.parts_search.current_session;
           console.log('🧹 Parts search data cleared to prevent parts carryover');
+        }
+        */
+        
+        // ✅ ONLY clear temporary session data, keep selected_parts accumulation
+        if (helper.parts_search && helper.parts_search.current_session) {
+          delete helper.parts_search.current_session;
+          console.log('🧹 Parts search current_session cleared, but selected_parts preserved');
         }
         
         sessionStorage.setItem('helper', JSON.stringify(helper));
