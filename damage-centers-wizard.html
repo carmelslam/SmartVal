@@ -2468,36 +2468,69 @@
     }
     
     function restoreDescriptionData(helper) {
-      // ✅ FIXED: Check for active damage center first, then wizard temp
+      console.log('🔄 === RESTORE DESCRIPTION DATA - STEP 2 ===');
+      
+      // Get UI elements first
+      const descriptionTextarea = document.getElementById('damageDescription');
+      const repairNatureTextarea = document.getElementById('repairNature');
+      
+      if (!descriptionTextarea || !repairNatureTextarea) {
+        console.log('❌ UI elements not found for step 2');
+        return;
+      }
+      
+      // ✅ CRITICAL FIX: Check if this is a NEW damage center creation
+      const damageCenterMode = sessionStorage.getItem('damage_center_mode');
+      console.log('🔍 Damage center mode:', damageCenterMode);
+      
+      if (damageCenterMode === 'create_new') {
+        // ✅ NEW DAMAGE CENTER: Clear fields to start fresh
+        console.log('🆕 NEW DAMAGE CENTER: Clearing step 2 fields for fresh start');
+        descriptionTextarea.value = '';
+        repairNatureTextarea.value = '';
+        
+        // Clear any previous validation errors
+        descriptionTextarea.style.border = '2px solid #e5e7eb';
+        repairNatureTextarea.style.border = '2px solid #e5e7eb';
+        
+        console.log('✅ Step 2 fields cleared for new damage center');
+        return;
+      }
+      
+      // ✅ EDITING EXISTING CENTER: Restore specific center's data
       let currentCenterData = null;
       
       // First check if we have an active damage center ID
       const activeCenterId = sessionStorage.getItem('active_damage_center_id');
+      console.log('🔍 Active center ID for editing:', activeCenterId);
       
       if (activeCenterId) {
         // Check in helper.centers array (where data is actually stored)
         if (helper.centers && Array.isArray(helper.centers)) {
           currentCenterData = helper.centers.find(c => c.Id === activeCenterId || c.id === activeCenterId);
+          console.log('🔍 Found in helper.centers:', !!currentCenterData);
         }
         
         // Also check helper.damage_centers for backward compatibility
         if (!currentCenterData && helper.damage_centers) {
           currentCenterData = helper.damage_centers.find(c => c.id === activeCenterId);
+          console.log('🔍 Found in helper.damage_centers:', !!currentCenterData);
         }
       }
       
-      // ✅ DAMAGE CENTERS FIX: Check multiple fallback locations  
-      if (!currentCenterData) {
+      // ✅ FALLBACK: Check current_damage_center only if actively editing
+      if (!currentCenterData && damageCenterMode === 'edit_existing') {
         currentCenterData = helper.current_damage_center || helper.wizard_temp?.current_damage_center;
+        console.log('🔍 Found in current_damage_center fallback:', !!currentCenterData);
       }
       
       if (!currentCenterData) {
-        console.log('❌ DESCRIPTION NOT RESTORED - No center data found. Active ID:', activeCenterId);
+        console.log('❌ DESCRIPTION NOT RESTORED - No center data found for editing. Active ID:', activeCenterId, 'Mode:', damageCenterMode);
+        // Clear fields when no data to restore
+        descriptionTextarea.value = '';
+        repairNatureTextarea.value = '';
         return;
       }
-      
-      const descriptionTextarea = document.getElementById('damageDescription');
-      const repairNatureTextarea = document.getElementById('repairNature');
       
       // ✅ DAMAGE CENTERS FIX: Check both lowercase and uppercase property names
       const description = currentCenterData.description || currentCenterData.Description;
@@ -5542,6 +5575,11 @@
         searchResults: []
       };
       
+      // ✅ CRITICAL FIX: Clear session storage mode flags
+      sessionStorage.removeItem('damage_center_mode');
+      sessionStorage.removeItem('active_damage_center_id');
+      console.log('✅ Cleared damage_center_mode and active_damage_center_id from sessionStorage');
+      
       // ✅ FIXED: Clear wizard temporary data
       clearWizardTempData();
       
@@ -6668,6 +6706,10 @@
           mode: 'create_new'
         };
         
+        // ✅ CRITICAL FIX: Set session storage mode for step 2 restoration logic
+        sessionStorage.setItem('damage_center_mode', 'create_new');
+        console.log('✅ Set damage_center_mode to create_new in sessionStorage');
+        
         // ✅ CRITICAL FIX: Set the number AFTER showStep(1) to prevent overwriting
         setTimeout(() => {
           document.getElementById('damageCenterNumber').value = nextNumber;
@@ -6816,6 +6858,12 @@
           mode: 'edit_existing',
           original_id: centerToEdit.Id || centerToEdit.id || centerToEdit.center_id || centerToEdit.block_id
         };
+        
+        // ✅ CRITICAL FIX: Set session storage mode for step 2 restoration logic
+        sessionStorage.setItem('damage_center_mode', 'edit_existing');
+        sessionStorage.setItem('active_damage_center_id', damageCenterData.original_id);
+        console.log('✅ Set damage_center_mode to edit_existing in sessionStorage');
+        console.log('✅ Set active_damage_center_id to', damageCenterData.original_id);
         
         // Load module data from proper structure
         moduleData = {
