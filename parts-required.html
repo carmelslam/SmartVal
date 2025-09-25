@@ -1814,7 +1814,8 @@ function savePartsData() {
         
         // Update case_summary with correct aggregation
         helper.parts_search.case_summary = {
-          ...helper.parts_search.case_summary, // Preserve existing fields like total_searches
+          // Only preserve total_searches - don't increment it (only increment on actual searches)
+          total_searches: helper.parts_search.case_summary?.total_searches || 0,
           total_results: allSearchResults.length,
           selected_count: allSelectedParts.length,
           unselected_count: unselectedParts.length,
@@ -1825,6 +1826,13 @@ function savePartsData() {
         sessionStorage.setItem('helper', JSON.stringify(helper));
         
         console.log('✅ PHASE 6: Updated case_summary:', helper.parts_search.case_summary);
+        console.log('🔍 PHASE 6 DEBUG: Selected parts details:', allSelectedParts.map(p => ({
+          name: p.name || p.part,
+          price: p.price,
+          quantity: p.quantity,
+          center: p.damage_center_id,
+          calculated: (parseFloat(p.price) || 0) * (parseInt(p.quantity) || 1)
+        })));
         return helper.parts_search.case_summary;
         
       } catch (error) {
@@ -1932,10 +1940,11 @@ function savePartsData() {
         const uniqueSuppliers = new Set(helper.parts_search.global_parts_bank.suppliers.map(s => s.name));
         
         helper.parts_search.search_history.statistics = {
-          total_searches: helper.parts_search.case_summary.total_searches,
+          total_searches: helper.parts_search.case_summary?.total_searches || 0,
           unique_parts: uniquePartNames.size,
           unique_suppliers: uniqueSuppliers.size,
-          average_results_per_search: allSelectedParts.length / Math.max(helper.parts_search.case_summary.total_searches, 1)
+          average_results_per_search: helper.parts_search.case_summary?.total_searches > 0 ? 
+            allSelectedParts.length / helper.parts_search.case_summary.total_searches : 0
         };
 
         // Add current session to search history by_date
