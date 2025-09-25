@@ -362,21 +362,25 @@ form button {
           }
         }
         
-        // Pre-fill with existing selected parts
-        console.log('🔍 EDIT MODE DEBUG - Full contextData received:', contextData);
-        console.log('🔍 EDIT MODE DEBUG - contextData.selectedParts:', contextData.selectedParts);
-        console.log('🔍 EDIT MODE DEBUG - selectedParts length:', contextData.selectedParts?.length || 0);
+        // Pre-fill with existing selected parts for current damage center
+        console.log('🔍 EDIT MODE DEBUG - contextData.selectedParts:', contextData.selectedParts?.length || 0);
+        console.log('🔍 EDIT MODE DEBUG - damageCenterId:', contextData.damageCenterId);
         
         if (contextData.selectedParts && contextData.selectedParts.length > 0) {
-          console.log('🔍 EDIT MODE DEBUG - About to pre-fill parts:', contextData.selectedParts);
+          // Clear existing parts first to avoid duplicates
+          const partsList = document.getElementById('partsList');
+          partsList.innerHTML = '';
+          
           contextData.selectedParts.forEach((part, index) => {
-            console.log(`🔍 EDIT MODE DEBUG - Adding part ${index}:`, part);
+            console.log(`🔍 Adding part ${index} for center ${contextData.damageCenterId}:`, part);
             addPartFromData(part);
           });
-          console.log(`✅ Pre-filled ${contextData.selectedParts.length} parts from wizard`);
+          console.log(`✅ Pre-filled ${contextData.selectedParts.length} parts for damage center ${contextData.damageCenterId}`);
         } else {
-          console.log('⚠️ EDIT MODE DEBUG - No selectedParts found in contextData');
-          console.log('🔍 EDIT MODE DEBUG - Available contextData keys:', Object.keys(contextData));
+          // If no parts for this center, clear the UI and show empty state
+          const partsList = document.getElementById('partsList');
+          partsList.innerHTML = '';
+          console.log(`📝 No existing parts found for damage center ${contextData.damageCenterId}`);
         }
         
         // Show wizard mode indicator
@@ -438,12 +442,12 @@ form button {
   row.setAttribute("data-row-index", newRowIndex);
   row.innerHTML = `
     <div class="input-wrap">
-          <input type="text" class="name" placeholder="שם החלק" oninput="suggestPart(this)">
+          <input type="text" class="name" placeholder="שם החלק" oninput="suggestPart(this); autoSaveOnChange(this)">
           <select class="suggest-dropdown" style="display:none;"></select>
         </div>
-        <input type="text" class="desc" placeholder="תיאור" oninput="suggestPart(this)">
-        <input type="number" class="quantity" placeholder="כמות" value="1" min="1" style="width: 60px; margin-left: 8px;">
-        <input type="text" class="price" placeholder="מחיר">
+        <input type="text" class="desc" placeholder="תיאור" oninput="suggestPart(this); autoSaveOnChange(this)">
+        <input type="number" class="quantity" placeholder="כמות" value="1" min="1" style="width: 60px; margin-left: 8px;" onchange="autoSaveOnChange(this)">
+        <input type="text" class="price" placeholder="מחיר" onchange="autoSaveOnChange(this)">
         <select class="source">
           <option value="">מקור</option>
           <option value="חליפי/מקורי">חליפי/מקורי</option>
@@ -1545,20 +1549,25 @@ function savePartsData() {
             const beforeCount = helper.parts_search.selected_parts.length;
             
             // Remove the part from parts_search.selected_parts
-            // Match by name, description AND damage center to ensure we remove the right part
+            // Match by name OR description AND damage center to ensure we remove the right part
+            const beforeDelete = helper.parts_search.selected_parts.length;
             helper.parts_search.selected_parts = helper.parts_search.selected_parts.filter(part => {
               const partName = part.name || part.part || '';
               const partDesc = part.desc || part.description || '';
               const partCenter = part.damage_center_id;
               
-              // Remove if this part matches name/desc AND is from current damage center (or standalone)
-              const nameMatch = partName.toLowerCase() === name.toLowerCase();
-              const descMatch = partDesc.toLowerCase() === desc.toLowerCase();
+              // Match criteria: (name OR desc) AND same damage center
+              const nameMatch = partName.toLowerCase().trim() === name.toLowerCase().trim();
+              const descMatch = partDesc.toLowerCase().trim() === desc.toLowerCase().trim();
               const centerMatch = activeCenterId ? (partCenter === activeCenterId) : (!partCenter);
               
-              // Keep parts that DON'T match (filter out matching parts)
-              return !(nameMatch && centerMatch) && !(descMatch && centerMatch);
+              // Keep parts that DON'T match - remove parts that DO match
+              const shouldRemove = (nameMatch || descMatch) && centerMatch;
+              return !shouldRemove;
             });
+            
+            const afterDelete = helper.parts_search.selected_parts.length;
+            console.log(`🗑️ DELETE SYNC: Removed ${beforeDelete - afterDelete} parts from parts_search (${name}/${desc} from center ${activeCenterId})`);
             
             const afterCount = helper.parts_search.selected_parts.length;
             console.log(`🧹 Removed ${beforeCount - afterCount} parts from parts_search.selected_parts`);
@@ -1741,11 +1750,22 @@ function savePartsData() {
       }
     }
 
+    // ✅ AUTO-SAVE FUNCTION: Automatically save when parts change
+    function autoSaveOnChange(element) {
+      // Debounce to avoid excessive saves
+      clearTimeout(window.autoSaveTimer);
+      window.autoSaveTimer = setTimeout(() => {
+        console.log('🔄 Auto-saving parts data after change...');
+        savePartsData();
+      }, 1000); // Wait 1 second after last change
+    }
+
     // Make functions globally available
     window.editPartRow = editPartRow;
     window.deletePartRow = deletePartRow;
     window.updateRowIndices = updateRowIndices;
     window.updatePartsSearchComprehensiveData = updatePartsSearchComprehensiveData;
+    window.autoSaveOnChange = autoSaveOnChange;
   </script>
   <script type="module">
     // Try to load parts bank for better suggestions
