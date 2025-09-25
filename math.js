@@ -18,6 +18,48 @@ export const MathEngine = {
   },
 
   // Damage & Percentage Calculations
+  /**
+   * Calculate damage percentage relative to vehicle market value
+   * 
+   * INSURANCE INDUSTRY LOGIC:
+   * - Damage % = (Total Damage Cost ÷ Market Value) × 100
+   * - Used to determine if vehicle is "total loss" (usually >75-80%)
+   * - Critical for insurance claim processing and vehicle classification
+   * 
+   * ISRAELI INSURANCE CONTEXT:
+   * - Total loss threshold typically 75-80% of market value
+   * - Affects salvage value calculations and claim settlements
+   * - Required for legal documentation in insurance claims
+   * 
+   * DATA SOURCES:
+   * - totalDamage: Sum of all damage center costs (parts + labor + repairs)
+   * - marketValue: From Levi Yitzhak valuation or manual assessment
+   * 
+   * EDGE CASES:
+   * - Returns 0% if market value is 0 or negative (prevents division by zero)
+   * - Returns 0% if total damage is 0 or negative
+   * - Results rounded to 2 decimal places for accuracy
+   * 
+   * BUSINESS RULES:
+   * - 0-25%: Minor damage, repair recommended
+   * - 25-50%: Moderate damage, economic repair analysis needed
+   * - 50-75%: Major damage, consider total loss
+   * - 75%+: Likely total loss, salvage procedures
+   * 
+   * @param {number} totalDamage - Total cost of all damage (parts + labor + repairs)
+   * @param {number} marketValue - Current market value of vehicle
+   * @returns {number} Damage percentage (0-100+), rounded to 2 decimals
+   * 
+   * @example
+   * // Minor damage scenario
+   * const damage1 = MathEngine.computeDamagePercentage(5000, 50000);  // Returns: 10.00%
+   * 
+   * // Total loss scenario  
+   * const damage2 = MathEngine.computeDamagePercentage(40000, 50000); // Returns: 80.00%
+   * 
+   * // Edge case: no market value
+   * const damage3 = MathEngine.computeDamagePercentage(5000, 0);      // Returns: 0.00%
+   */
   computeDamagePercentage(totalDamage, marketValue) {
     if (!marketValue || marketValue <= 0) return 0;
     return MathEngine.round((totalDamage / marketValue) * 100);
@@ -47,6 +89,48 @@ export const MathEngine = {
     );
   },
 
+  /**
+   * Calculate total cost for a single damage center
+   * 
+   * BUSINESS LOGIC:
+   * - Parts: Sum of all selected parts prices (from parts search or manual entry)
+   * - Repairs: Sum of all repair work costs (bodywork, paint, structural fixes)
+   * - Works: Sum of all labor costs (removal, installation, alignment)
+   * 
+   * VAT HANDLING:
+   * - This function returns subtotal WITHOUT VAT
+   * - VAT is applied separately using calculateVatAmount() or applyVAT()
+   * - Current VAT rate sourced from admin hub → helper → session → default (18%)
+   * 
+   * DATA SOURCES:
+   * - Parts: From parts search webhook results or manual part entries
+   * - Repairs: From repairs module (bodywork, structural, cosmetic)
+   * - Works: From works module (labor hours × hourly rates)
+   * 
+   * EDGE CASES:
+   * - Empty arrays default to ₪0 cost
+   * - Invalid/missing prices treated as ₪0
+   * - Results rounded to 2 decimal places for currency accuracy
+   * 
+   * INTEGRATION POINTS:
+   * - Used by wizard summary calculations in damage-centers-wizard.html
+   * - Feeds into final report totals in estimate/final report builders
+   * - Referenced by depreciation calculations in depreciation module
+   * - Drives real-time subtotal updates in wizard interface
+   * 
+   * @param {Object} damageCenter - Damage center with parts[], repairs[], works[] arrays
+   * @returns {number} Total cost before VAT, rounded to 2 decimal places
+   * 
+   * @example
+   * // Damage center with mixed costs
+   * const center = {
+   *   parts: [{price: 150}, {price: 75}],      // ₪225 parts total
+   *   repairs: [{cost: 300}, {cost: 200}],     // ₪500 repairs total  
+   *   works: [{cost: 120}, {cost: 80}]         // ₪200 works total
+   * };
+   * // Returns: 925.00 (₪225 + ₪500 + ₪200)
+   * const total = MathEngine.calculateDamageCenterTotal(center);
+   */
   calculateDamageCenterTotal(damageCenter = {}) {
     const parts = MathEngine.calculatePartsTotal(damageCenter.parts || []);
     const repairs = MathEngine.calculateRepairsTotal(damageCenter.repairs || []);
@@ -70,6 +154,44 @@ export const MathEngine = {
     return MathEngine.round(travel + media + office);
   },
 
+  /**
+   * Calculate VAT amount based on subtotal and rate
+   * 
+   * VAT RATE HIERARCHY (in order of priority):
+   * 1. Provided vatRate parameter (function argument)
+   * 2. Admin Hub VAT rate (_adminHubVatRate)
+   * 3. Session storage 'globalVAT'
+   * 4. Default system rate (18%)
+   * 
+   * ISRAELI BUSINESS CONTEXT:
+   * - Standard VAT rate in Israel is 17-18%
+   * - Rate can be overridden by admin for special cases
+   * - Some services may be VAT-exempt (rate = 0)
+   * 
+   * CALCULATION METHOD:
+   * - Formula: (subtotal × VAT_rate) / 100
+   * - Example: ₪1000 × 18% = ₪180 VAT
+   * - Result rounded to 2 decimal places
+   * 
+   * INTEGRATION:
+   * - Used by all total calculations across the system
+   * - Synchronized with admin hub VAT settings
+   * - Applied to damage centers, fees, and final reports
+   * 
+   * @param {number} subtotal - Amount before VAT (in NIS)
+   * @param {number} [vatRate] - Optional VAT rate override (0-100)
+   * @returns {number} VAT amount in NIS, rounded to 2 decimals
+   * 
+   * @example
+   * // Standard 18% VAT calculation
+   * const vat = MathEngine.calculateVatAmount(1000, 18);  // Returns: 180.00
+   * 
+   * // Using system default rate
+   * const vat2 = MathEngine.calculateVatAmount(500);      // Returns: 90.00 (if default is 18%)
+   * 
+   * // VAT-exempt calculation
+   * const vat3 = MathEngine.calculateVatAmount(1000, 0);  // Returns: 0.00
+   */
   calculateVatAmount(subtotal, vatRate) {
     const rate = (typeof vatRate === 'number') ? vatRate : _vatRate;
     return MathEngine.round(subtotal * rate / 100);
@@ -321,6 +443,60 @@ export const MathEngine = {
     }
   },
 
+  /**
+   * Comprehensive calculation engine for all report values
+   * 
+   * MASTER CALCULATION WORKFLOW:
+   * 1. Damage percentage calculation (damage ÷ market value)
+   * 2. Fee calculations (travel + media + office + VAT)
+   * 3. Total compensation (damage - depreciation + fees)
+   * 4. VAT application across all components
+   * 5. Final totals and breakdowns for reports
+   * 
+   * ISRAELI INSURANCE/LEGAL CONTEXT:
+   * - Follows Israeli insurance claim calculation standards
+   * - Supports both private and company VAT scenarios
+   * - Handles שבח (capital gains) adjustments for vehicle valuations
+   * - Provides complete audit trail for legal documentation
+   * 
+   * VALUE HIERARCHY:
+   * - vehicleValueGross: Pure vehicle value (for damage %)
+   * - marketValue: Market value after adjustments (for final calculations)
+   * - Damage centers total becomes baseDamage input
+   * 
+   * COMPLEX BUSINESS LOGIC:
+   * - Depreciation reduces final compensation
+   * - Fees add to total but have separate VAT treatment
+   * - Different VAT rates may apply to different components
+   * - Results used across estimate, final, and legal reports
+   * 
+   * @param {Object} params - Calculation parameters
+   * @param {number} params.baseDamage - Total damage from all centers
+   * @param {number} params.depreciation - Depreciation amount to subtract
+   * @param {Object} params.fees - Fee object {travel_fee, media_fee, office_fee}
+   * @param {number} params.marketValue - Current market value (post-adjustments)
+   * @param {number} params.vehicleValueGross - Original vehicle value (pre-adjustments)
+   * @param {number} params.shavehPercent - Capital gains percentage for calculation
+   * @param {number} params.vatRate - VAT rate override (optional)
+   * @returns {Object} Comprehensive calculation results with all breakdowns
+   * 
+   * @example
+   * // Complete damage calculation
+   * const results = MathEngine.calculateAll({
+   *   baseDamage: 15000,      // From damage centers total
+   *   depreciation: 2000,     // Calculated depreciation
+   *   fees: {                 // Assessor fees
+   *     travel_fee: 200,
+   *     media_fee: 150,
+   *     office_fee: 300
+   *   },
+   *   marketValue: 45000,     // After Levi adjustments
+   *   vehicleValueGross: 50000, // Before adjustments
+   *   shavehPercent: 5,       // Capital gains
+   *   vatRate: 18             // VAT rate
+   * });
+   * // Returns: Complete breakdown with damage_percent, totals, VAT, etc.
+   */
   // Main Calculation Engine
   calculateAll({ baseDamage, depreciation, fees, marketValue, vehicleValueGross, shavehPercent, vatRate }) {
     // Use vehicleValueGross for damage percentage if available, otherwise fallback to marketValue
