@@ -440,20 +440,20 @@ window.calculateDamageCenterTotals = function(centerId) {
   const vatAmount = subtotalBeforeVat * (vatPercentage / 100);
   const totalWithVat = subtotalBeforeVat + vatAmount;
   
-  // Update center calculations
+  // Update center calculations with 2 decimal places
   center.calculations = {
     ...center.calculations,
-    works_subtotal: worksTotal,
-    parts_subtotal: partsTotal,
-    repairs_subtotal: repairsTotal,
-    fees_subtotal: feesTotal,
-    subtotal_before_vat: subtotalBeforeVat,
-    vat_amount: vatAmount,
-    total_with_vat: totalWithVat,
+    works_subtotal: Math.round(worksTotal * 100) / 100,
+    parts_subtotal: Math.round(partsTotal * 100) / 100,
+    repairs_subtotal: Math.round(repairsTotal * 100) / 100,
+    fees_subtotal: Math.round(feesTotal * 100) / 100,
+    subtotal_before_vat: Math.round(subtotalBeforeVat * 100) / 100,
+    vat_amount: Math.round(vatAmount * 100) / 100,
+    total_with_vat: Math.round(totalWithVat * 100) / 100,
     
     breakdown: {
-      labor_hours: workItems.reduce((sum, item) => sum + (parseFloat(item.hours) || 0), 0),
-      hourly_rate: workItems.length > 0 ? worksTotal / Math.max(1, workItems.reduce((sum, item) => sum + (parseFloat(item.hours) || 1), 0)) : 0,
+      labor_hours: Math.round(workItems.reduce((sum, item) => sum + (parseFloat(item.hours) || 0), 0) * 100) / 100,
+      hourly_rate: workItems.length > 0 ? Math.round((worksTotal / Math.max(1, workItems.reduce((sum, item) => sum + (parseFloat(item.hours) || 1), 0))) * 100) / 100 : 0,
       parts_count: partsItems.length,
       repairs_count: repairsItems.length
     },
@@ -6229,6 +6229,97 @@ window.getVatRateInfo = function() {
     updated: window.helper.calculations.vat_rate_updated || null
   };
 };
+
+// 🔧 DECIMAL PRECISION FIX: Round all calculations to 2 decimal places
+window.formatCalculationsDecimalPrecision = function() {
+  console.log('🔢 Formatting all calculations to 2 decimal places...');
+  
+  if (!window.helper) {
+    console.warn('⚠️ Helper not initialized, cannot format calculations');
+    return;
+  }
+  
+  // Function to round a number to 2 decimal places
+  const roundTo2Decimals = (num) => Math.round(parseFloat(num || 0) * 100) / 100;
+  
+  // Format helper.calculations
+  if (window.helper.calculations) {
+    Object.keys(window.helper.calculations).forEach(key => {
+      const value = window.helper.calculations[key];
+      if (typeof value === 'number' && !Number.isInteger(value)) {
+        window.helper.calculations[key] = roundTo2Decimals(value);
+      }
+    });
+    console.log('✅ Formatted helper.calculations decimal precision');
+  }
+  
+  // Format center calculations
+  if (window.helper.centers && Array.isArray(window.helper.centers)) {
+    window.helper.centers.forEach((center, index) => {
+      if (center.calculations) {
+        Object.keys(center.calculations).forEach(key => {
+          const value = center.calculations[key];
+          if (typeof value === 'number' && !Number.isInteger(value)) {
+            center.calculations[key] = roundTo2Decimals(value);
+          }
+        });
+        
+        // Format breakdown if it exists
+        if (center.calculations.breakdown) {
+          Object.keys(center.calculations.breakdown).forEach(key => {
+            const value = center.calculations.breakdown[key];
+            if (typeof value === 'number' && !Number.isInteger(value)) {
+              center.calculations.breakdown[key] = roundTo2Decimals(value);
+            }
+          });
+        }
+      }
+    });
+    console.log(`✅ Formatted ${window.helper.centers.length} center calculations decimal precision`);
+  }
+  
+  // Format damage assessment totals
+  if (window.helper.damage_assessment?.totals) {
+    Object.keys(window.helper.damage_assessment.totals).forEach(key => {
+      const value = window.helper.damage_assessment.totals[key];
+      if (typeof value === 'number' && !Number.isInteger(value)) {
+        window.helper.damage_assessment.totals[key] = roundTo2Decimals(value);
+      }
+    });
+    console.log('✅ Formatted damage assessment totals decimal precision');
+  }
+  
+  // Format financials
+  if (window.helper.financials) {
+    // Format invoice amounts
+    if (window.helper.financials.invoices?.current_invoice?.invoice_data) {
+      const invoice = window.helper.financials.invoices.current_invoice.invoice_data;
+      ['subtotal', 'vat_amount', 'total_amount'].forEach(field => {
+        if (typeof invoice[field] === 'number' && !Number.isInteger(invoice[field])) {
+          invoice[field] = roundTo2Decimals(invoice[field]);
+        }
+      });
+    }
+    
+    // Format fees subtotal
+    if (typeof window.helper.financials.fees?.subtotal === 'number' && !Number.isInteger(window.helper.financials.fees.subtotal)) {
+      window.helper.financials.fees.subtotal = roundTo2Decimals(window.helper.financials.fees.subtotal);
+    }
+    
+    console.log('✅ Formatted financials decimal precision');
+  }
+  
+  // Save formatted data
+  saveHelperToAllStorageLocations();
+  console.log('🔢 All calculations formatted to 2 decimal places');
+};
+
+// Auto-format calculations on helper initialization
+setTimeout(() => {
+  if (window.helper && Object.keys(window.helper).length > 0) {
+    window.formatCalculationsDecimalPrecision();
+  }
+}, 1000);
 
 console.log('🏛️ Helper VAT integration complete - all modules can now use getHelperVatRate()');
 console.log('🔄 Admin can call refreshHelperVatRate() to update all modules when VAT changes');
