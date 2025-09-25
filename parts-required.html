@@ -812,6 +812,35 @@ function savePartsData() {
       savePartsData();
     });
 
+    // ✅ Helper function to get car details from helper or form
+    function getCarDetails() {
+      const urlParams = new URLSearchParams(window.location.search);
+      const isStandalone = urlParams.get('standalone') === '1';
+      
+      if (isStandalone) {
+        return {
+          plate: document.getElementById("inputPlate")?.value?.trim() || "",
+          manufacturer: document.getElementById("inputManufacturer")?.value?.trim() || "",
+          model: document.getElementById("inputModel")?.value?.trim() || "",
+          year: document.getElementById("inputYear")?.value?.trim() || ""
+        };
+      } else {
+        // Get from helper data
+        try {
+          const helperData = JSON.parse(sessionStorage.getItem("helper") || '{}');
+          return {
+            plate: helperData.meta?.plate || helperData.vehicle?.plate_number || helperData.car_details?.plate || "",
+            manufacturer: helperData.vehicle?.manufacturer || helperData.car_details?.manufacturer || "",
+            model: helperData.vehicle?.model || helperData.car_details?.model || "",
+            year: helperData.vehicle?.year || helperData.car_details?.year || ""
+          };
+        } catch(e) {
+          console.error('Error reading helper data:', e);
+          return { plate: "", manufacturer: "", model: "", year: "" };
+        }
+      }
+    }
+
     // --- Suggestion logic with dropdown ---
     function suggestPart(input) {
       const row = input.closest('.row');
