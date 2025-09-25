@@ -4117,6 +4117,18 @@ function getModuleFields(module) {
 window.populateAllForms = function() {
   console.log('🔄 Populating all forms from helper data');
   
+  // === PHASE 6 FIX: Preserve case_summary before populateAllForms runs ===
+  let preservedCaseSummary = null;
+  try {
+    const currentHelper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+    if (currentHelper.parts_search?.case_summary) {
+      preservedCaseSummary = { ...currentHelper.parts_search.case_summary };
+      console.log('🔧 PHASE 6: Preserved case_summary before populateAllForms:', preservedCaseSummary);
+    }
+  } catch (e) {
+    console.warn('Could not preserve case_summary:', e);
+  }
+  
   const currentModule = detectCurrentModule();
   console.log('📍 Detected current module:', currentModule);
   
@@ -4328,6 +4340,29 @@ window.populateAllForms = function() {
   
   // Update helper timestamp
   if (window.helper.meta) window.helper.meta.last_updated = new Date().toISOString();
+  
+  // === PHASE 6 FIX: Restore preserved case_summary after populateAllForms ===
+  if (preservedCaseSummary) {
+    try {
+      if (!window.helper.parts_search) {
+        window.helper.parts_search = {};
+      }
+      window.helper.parts_search.case_summary = preservedCaseSummary;
+      console.log('🔧 PHASE 6: Restored case_summary after populateAllForms:', preservedCaseSummary);
+      
+      // Also restore to sessionStorage to ensure consistency
+      const sessionHelper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+      if (!sessionHelper.parts_search) {
+        sessionHelper.parts_search = {};
+      }
+      sessionHelper.parts_search.case_summary = preservedCaseSummary;
+      sessionStorage.setItem('helper', JSON.stringify(sessionHelper));
+      console.log('🔧 PHASE 6: Restored case_summary to sessionStorage as well');
+    } catch (e) {
+      console.error('❌ Failed to restore case_summary:', e);
+    }
+  }
+  
   saveHelperToAllStorageLocations();
   
   // 🔧 PHASE 3 FIX: Return success info for retry logic
