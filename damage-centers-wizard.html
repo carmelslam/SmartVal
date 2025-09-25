@@ -3676,6 +3676,76 @@
               console.log('✅ Step 5 - Parts registered in parts_search.selected_parts');
               console.log('📊 Total parts_search.selected_parts:', helper.parts_search.selected_parts.length);
               
+              // === PHASE 6: Update case_summary after parts save in wizard ===
+              console.log('🔄 PHASE 6 DEBUG: Calling updateCaseSummary() from wizard step 5 save');
+              try {
+                // Define updateCaseSummary function in wizard context
+                function updateCaseSummaryInWizard() {
+                  console.log('🚀 PHASE 6 DEBUG: updateCaseSummary() called from wizard!');
+                  try {
+                    const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+                    console.log('📄 PHASE 6 DEBUG: Raw helper data from wizard:', JSON.stringify(helper.parts_search, null, 2));
+                    
+                    if (!helper.parts_search) {
+                      helper.parts_search = {};
+                    }
+                    
+                    const allSelectedParts = helper.parts_search.selected_parts || [];
+                    const allSearchResults = helper.parts_search.search_results || [];
+                    const unselectedParts = helper.parts_search.unselected_parts || [];
+                    
+                    console.log('🔢 PHASE 6 DEBUG: Parts count from wizard - selected:', allSelectedParts.length, 'search_results:', allSearchResults.length, 'unselected:', unselectedParts.length);
+                    
+                    // Calculate accurate total cost
+                    const totalCost = allSelectedParts.reduce((sum, part) => {
+                      const price = parseFloat(part.price) || 0;
+                      const quantity = parseInt(part.quantity) || 1;
+                      const partCost = price * quantity;
+                      console.log(`💰 PHASE 6 DEBUG: Part ${part.name || part.part}: ${price} x ${quantity} = ${partCost}`);
+                      return sum + partCost;
+                    }, 0);
+                    
+                    console.log('💰 PHASE 6 DEBUG: Total calculated cost from wizard:', totalCost);
+                    
+                    // Store old values for comparison
+                    const oldCaseSummary = helper.parts_search.case_summary || {};
+                    console.log('📊 PHASE 6 DEBUG: OLD case_summary from wizard:', oldCaseSummary);
+                    
+                    // Update case_summary with correct aggregation
+                    helper.parts_search.case_summary = {
+                      // Only preserve total_searches - don't increment it (only increment on actual searches)
+                      total_searches: helper.parts_search.case_summary?.total_searches || 0,
+                      total_results: allSearchResults.length,
+                      selected_count: allSelectedParts.length,
+                      unselected_count: unselectedParts.length,
+                      last_search: new Date().toISOString(),
+                      estimated_total_cost: totalCost
+                    };
+                    
+                    console.log('📊 PHASE 6 DEBUG: NEW case_summary from wizard:', helper.parts_search.case_summary);
+                    
+                    sessionStorage.setItem('helper', JSON.stringify(helper));
+                    console.log('💾 PHASE 6 DEBUG: Saved to sessionStorage from wizard');
+                    
+                    // Verify it was saved correctly
+                    const verifyHelper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+                    console.log('✅ PHASE 6 DEBUG: Verification from wizard - case_summary after save:', verifyHelper.parts_search.case_summary);
+                    
+                    return helper.parts_search.case_summary;
+                    
+                  } catch (error) {
+                    console.error('❌ PHASE 6 ERROR: Failed to update case_summary from wizard:', error);
+                    return null;
+                  }
+                }
+                
+                // Call the function
+                updateCaseSummaryInWizard();
+                
+              } catch (updateError) {
+                console.error('❌ Failed to call updateCaseSummary from wizard:', updateError);
+              }
+              
             } catch (error) {
               console.warn('Failed to register parts in parts_search:', error);
             }
