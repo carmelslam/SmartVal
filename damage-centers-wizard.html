@@ -3696,12 +3696,13 @@
                     
                     console.log('🔢 PHASE 6 DEBUG: Parts count from wizard - selected:', allSelectedParts.length, 'search_results:', allSearchResults.length, 'unselected:', unselectedParts.length);
                     
-                    // Calculate accurate total cost
+                    // Calculate total cost from all parts (duplicates are legitimate for different damage centers)
                     const totalCost = allSelectedParts.reduce((sum, part) => {
                       const price = parseFloat(part.price) || 0;
                       const quantity = parseInt(part.quantity) || 1;
                       const partCost = price * quantity;
-                      console.log(`💰 PHASE 6 DEBUG: Part ${part.name || part.part}: ${price} x ${quantity} = ${partCost}`);
+                      const centerInfo = part.damage_center_id || 'unknown_center';
+                      console.log(`💰 PHASE 6 DEBUG: Part ${part.name || part.part} (${centerInfo}): ${price} x ${quantity} = ${partCost}`);
                       return sum + partCost;
                     }, 0);
                     
@@ -3713,10 +3714,10 @@
                     
                     // Update case_summary with correct aggregation
                     helper.parts_search.case_summary = {
-                      // Only preserve total_searches - don't increment it (only increment on actual searches)
-                      total_searches: helper.parts_search.case_summary?.total_searches || 0,
+                      // === PHASE 6 FIX: Set total_searches to 0 since we haven't performed actual searches ===
+                      total_searches: 0, // Reset since these are manual part entries, not search operations
                       total_results: allSearchResults.length,
-                      selected_count: allSelectedParts.length,
+                      selected_count: allSelectedParts.length, // Total parts across all damage centers
                       unselected_count: unselectedParts.length,
                       last_search: new Date().toISOString(),
                       estimated_total_cost: totalCost
