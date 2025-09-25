@@ -3722,14 +3722,56 @@
                       estimated_total_cost: totalCost
                     };
                     
-                    console.log('📊 PHASE 6 DEBUG: NEW case_summary from wizard:', helper.parts_search.case_summary);
+                    // === AGGRESSIVE FIX: Force multiple save attempts ===
+                    console.log('🔧 PHASE 6 AGGRESSIVE: Forcing multiple saves to prevent overwrite');
                     
+                    // Save 1: Direct sessionStorage
                     sessionStorage.setItem('helper', JSON.stringify(helper));
-                    console.log('💾 PHASE 6 DEBUG: Saved to sessionStorage from wizard');
                     
-                    // Verify it was saved correctly
+                    // Save 2: Try window.helper if available
+                    if (typeof window.helper === 'object') {
+                      window.helper.parts_search.case_summary = helper.parts_search.case_summary;
+                      console.log('🔧 Updated window.helper.parts_search.case_summary');
+                    }
+                    
+                    // Save 3: Try parent window if in iframe
+                    if (window.parent && window.parent !== window && window.parent.helper) {
+                      window.parent.helper.parts_search.case_summary = helper.parts_search.case_summary;
+                      console.log('🔧 Updated parent.helper.parts_search.case_summary');
+                    }
+                    
+                    // Save 4: Force localStorage as backup
+                    try {
+                      const backupHelper = JSON.parse(localStorage.getItem('helper_backup') || '{}');
+                      if (!backupHelper.parts_search) backupHelper.parts_search = {};
+                      backupHelper.parts_search.case_summary = helper.parts_search.case_summary;
+                      localStorage.setItem('helper_backup', JSON.stringify(backupHelper));
+                      console.log('🔧 Saved backup to localStorage');
+                    } catch (e) {
+                      console.warn('Could not save to localStorage backup:', e);
+                    }
+                    
+                    console.log('📊 PHASE 6 DEBUG: NEW case_summary from wizard:', helper.parts_search.case_summary);
+                    console.log('💾 PHASE 6 DEBUG: Saved to multiple locations from wizard');
+                    
+                    // Immediate verification
                     const verifyHelper = JSON.parse(sessionStorage.getItem('helper') || '{}');
-                    console.log('✅ PHASE 6 DEBUG: Verification from wizard - case_summary after save:', verifyHelper.parts_search.case_summary);
+                    console.log('✅ PHASE 6 DEBUG: Immediate verification - case_summary:', verifyHelper.parts_search.case_summary);
+                    
+                    // Delayed verification to check for overwrites
+                    setTimeout(() => {
+                      const delayedHelper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+                      console.log('🕐 PHASE 6 DEBUG: Delayed verification (2s later) - case_summary:', delayedHelper.parts_search.case_summary);
+                      
+                      if (delayedHelper.parts_search.case_summary.selected_count !== allSelectedParts.length || 
+                          delayedHelper.parts_search.case_summary.estimated_total_cost !== totalCost) {
+                        console.error('❌ PHASE 6 ERROR: case_summary was overwritten by another process!');
+                        console.error('Expected selected_count:', allSelectedParts.length, 'Got:', delayedHelper.parts_search.case_summary.selected_count);
+                        console.error('Expected estimated_total_cost:', totalCost, 'Got:', delayedHelper.parts_search.case_summary.estimated_total_cost);
+                      } else {
+                        console.log('✅ PHASE 6 SUCCESS: case_summary values persisted correctly!');
+                      }
+                    }, 2000);
                     
                     return helper.parts_search.case_summary;
                     
