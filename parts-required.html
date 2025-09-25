@@ -779,6 +779,16 @@ function savePartsData() {
     console.log('Current selected_parts length:', helper.parts_search.selected_parts.length);
     console.log('New parts to add:', newPartsWithContext.length);
     
+    // Show breakdown by damage center
+    if (helper.parts_search.selected_parts.length > 0) {
+      const centerBreakdown = {};
+      helper.parts_search.selected_parts.forEach(p => {
+        const centerId = p.damage_center_id || 'no_center';
+        centerBreakdown[centerId] = (centerBreakdown[centerId] || 0) + 1;
+      });
+      console.log('📊 Current parts breakdown by center:', centerBreakdown);
+    }
+    
     if (!isStandaloneMode && activeCenterId) {
       // === PHASE 2: Implement update vs create logic ===
       // Keep parts from other damage centers
@@ -836,6 +846,14 @@ function savePartsData() {
       console.log('=== AFTER ACCUMULATION (damage center mode) ===');
       console.log('Final selected_parts length:', helper.parts_search.selected_parts.length);
       console.log('Parts for current center:', helper.parts_search.selected_parts.filter(p => p.damage_center_id === activeCenterId).length);
+      
+      // Show final breakdown by damage center
+      const finalCenterBreakdown = {};
+      helper.parts_search.selected_parts.forEach(p => {
+        const centerId = p.damage_center_id || 'no_center';
+        finalCenterBreakdown[centerId] = (finalCenterBreakdown[centerId] || 0) + 1;
+      });
+      console.log('📊 FINAL parts breakdown by center:', finalCenterBreakdown);
     } else {
       // Standalone mode: just accumulate (no damage center conflicts)
       helper.parts_search.selected_parts = [
@@ -1870,13 +1888,107 @@ function savePartsData() {
     
     // === PHASE 3: Initialize totals on page load ===
     function initializeTotals() {
-      console.log('🚀 Initializing totals on page load...');
+      console.log('🚀 Initializing parts module on page load...');
       
       // Clean up existing duplicates first
       cleanupExistingDuplicates();
       
-      updateTotalCost();
-      updatePartCount();
+      // Load existing parts from current damage center
+      loadExistingPartsIntoUI();
+      
+      // Update totals after parts are loaded
+      setTimeout(() => {
+        updateTotalCost();
+        updatePartCount();
+      }, 100);
+    }
+    
+    // === FIX: Load existing parts into UI on page load ===
+    function loadExistingPartsIntoUI() {
+      try {
+        const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+        const activeCenterId = helper.damage_assessment?.current_center_id || 
+                              helper.damage_centers?.current_center_id ||
+                              sessionStorage.getItem('active_damage_center_id');
+        
+        if (!activeCenterId) {
+          console.log('⚠️ No active damage center ID found, loading all parts');
+        }
+        
+        // Get parts for current damage center or all parts if standalone
+        let partsToLoad = [];
+        
+        if (helper.parts_search?.selected_parts) {
+          if (activeCenterId) {
+            partsToLoad = helper.parts_search.selected_parts.filter(p => 
+              p.damage_center_id === activeCenterId);
+            console.log(`📦 Loading ${partsToLoad.length} parts for damage center ${activeCenterId}`);
+          } else {
+            partsToLoad = helper.parts_search.selected_parts;
+            console.log(`📦 Loading ${partsToLoad.length} parts (standalone mode)`);
+          }
+        }
+        
+        if (partsToLoad.length === 0) {
+          console.log('ℹ️ No existing parts found to load');
+          return;
+        }
+        
+        // Clear existing UI rows first
+        const partsList = document.getElementById('partsList');
+        if (partsList) {
+          partsList.innerHTML = '';
+        }
+        
+        // Add each part to the UI
+        partsToLoad.forEach((part, index) => {
+          addPartToUI(part, index);
+        });
+        
+        console.log(`✅ Loaded ${partsToLoad.length} existing parts into UI`);
+        
+      } catch (error) {
+        console.error('Failed to load existing parts:', error);
+      }
+    }
+    
+    // === Helper function to add a part to the UI ===
+    function addPartToUI(part, index) {
+      const partsList = document.getElementById("partsList");
+      if (!partsList) return;
+      
+      const row = document.createElement("div");
+      row.className = "row";
+      row.setAttribute("data-row-index", index);
+      row.innerHTML = `
+        <div class="input-wrap">
+              <input type="text" class="name" placeholder="שם החלק" value="${part.name || part.part || ''}" oninput="suggestPart(this); autoSaveOnChange(this)">
+              <select class="suggest-dropdown" style="display:none;"></select>
+            </div>
+            <input type="text" class="desc" placeholder="תיאור" value="${part.desc || part.description || part.תיאור || ''}" oninput="suggestPart(this); autoSaveOnChange(this)">
+            <input type="number" class="quantity" placeholder="כמות" value="${part.quantity || part.כמות || 1}" min="1" style="width: 60px; margin-left: 8px;" onchange="autoSaveOnChange(this)">
+            <input type="text" class="price" placeholder="מחיר" value="${part.price || part.מחיר || ''}" onchange="autoSaveOnChange(this)">
+            <select class="source">
+              <option value="">מקור</option>
+              <option value="חליפי/מקורי" ${(part.source || part['סוג חלק']) === 'חליפי/מקורי' ? 'selected' : ''}>חליפי/מקורי</option>
+              <option value="חליפי/משומש" ${(part.source || part['סוג חלק']) === 'חליפי/משומש' ? 'selected' : ''}>חליפי/משומש</option>
+              <option value="חדש מקורי" ${(part.source || part['סוג חלק']) === 'חדש מקורי' ? 'selected' : ''}>חדש מקורי</option>
+              <option value="חליפי" ${(part.source || part['סוג חלק']) === 'חליפי' ? 'selected' : ''}>חליפי</option>
+              <option value="משומש" ${(part.source || part['סוג חלק']) === 'משומש' ? 'selected' : ''}>משומש</option>
+              <option value="ריק" ${(part.source || part['סוג חלק']) === 'ריק' ? 'selected' : ''}>ריק</option>
+            </select>
+            <div class="row-actions" style="display: flex; gap: 5px; margin-right: 8px;">
+              <button type="button" class="btn-edit" onclick="editPartRow(${index})" title="ערוך חלק" style="
+                background: #f59e0b; color: white; border: none; padding: 6px 10px; 
+                border-radius: 5px; cursor: pointer; font-size: 12px; font-weight: bold;
+              ">✏️</button>
+              <button type="button" class="btn-delete" onclick="deletePartRow(${index})" title="מחק חלק" style="
+                background: #dc3545; color: white; border: none; padding: 6px 10px; 
+                border-radius: 5px; cursor: pointer; font-size: 12px; font-weight: bold;
+              ">🗑️</button>
+            </div>
+      `;
+      partsList.appendChild(row);
     }
     
     // === FIX: Clean up existing duplicates on page load ===
@@ -1902,12 +2014,35 @@ function savePartsData() {
       }
     }
     
-    // Call initialization after DOM is ready
+    // Call initialization with retry logic for timing issues
+    function initializeWithRetry(attempt = 1, maxAttempts = 5) {
+      console.log(`🔄 Initialization attempt ${attempt}/${maxAttempts}`);
+      
+      try {
+        const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+        const hasValidData = helper.parts_search || helper.damage_centers || helper.vehicle;
+        
+        if (hasValidData || attempt >= maxAttempts) {
+          console.log('✅ Data found or max attempts reached, proceeding with initialization');
+          initializeTotals();
+        } else {
+          console.log(`⏳ Data not ready, retrying in ${500 * attempt}ms...`);
+          setTimeout(() => initializeWithRetry(attempt + 1, maxAttempts), 500 * attempt);
+        }
+      } catch (error) {
+        console.error(`❌ Initialization attempt ${attempt} failed:`, error);
+        if (attempt < maxAttempts) {
+          setTimeout(() => initializeWithRetry(attempt + 1, maxAttempts), 1000);
+        }
+      }
+    }
+    
+    // Start initialization when DOM is ready
     if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', initializeTotals);
+      document.addEventListener('DOMContentLoaded', () => initializeWithRetry());
     } else {
       // DOM is already ready
-      initializeTotals();
+      setTimeout(() => initializeWithRetry(), 100);
     }
   </script>
   <script type="module">
