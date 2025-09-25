@@ -609,9 +609,14 @@ function savePartsData() {
       }
       
       // === PHASE 4: Apply part info update to ensure description integrity ===
+      // Preserve user-entered description from form, don't let search result overwrite it
+      const userDescription = part.description || part.desc || '';
       const updatedPart = updatePartInfo({
         ...part,
         ...searchResultData,
+        // CRITICAL FIX: Always preserve the user-entered description from form
+        description: userDescription,
+        desc: userDescription,
         addedAt: new Date().toISOString(),
         fromWizard: true,
         fromSearch: !!matchingResult
