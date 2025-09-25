@@ -2575,18 +2575,57 @@ window.helper = existingHelper || {
   },
   
   parts_search: {
-    current_search: '',
-    search_results: [],
-    selected_parts: [],
-    unselected_parts: [],
+    // Case-specific selections (for dual-purpose functionality)
+    selected_parts: [],           // Parts chosen for THIS case
+    unselected_parts: [],         // Parts not chosen for this case
+    case_search_history: [],      // Search history for this case
+    
+    // Global parts bank (accumulates across all cases)
+    global_parts_bank: {
+      all_parts: [],              // Every part ever searched/found
+      suppliers: [],              // All supplier information
+      price_history: [],          // Price tracking over time
+      search_patterns: [],        // Common search patterns
+      ocr_results: [],            // All OCR processing results
+      manual_additions: []        // Manually added parts
+    },
+    
+    // Search session data
+    current_session: {
+      search_query: '',
+      vehicle_context: {},        // Vehicle info for current search
+      results: [],               // Current search results
+      timestamp: '',
+      search_method: ''          // 'manual', 'ocr_image', 'ocr_file', etc.
+    },
+    
+    // Comprehensive search history
     search_history: {
-      recent_searches: [],
+      by_date: [],               // Chronological search history
+      by_vehicle: {},            // Searches grouped by vehicle/plate
+      by_part_name: {},          // Searches grouped by part name
+      by_supplier: {},           // Searches grouped by supplier
       statistics: {
         total_searches: 0,
         unique_parts: 0,
-        successful_finds: 0
+        unique_suppliers: 0,
+        average_results_per_search: 0
       }
     },
+    
+    // Summary for current case
+    case_summary: {
+      total_searches: 0,
+      total_results: 0,
+      selected_count: 0,
+      unselected_count: 0,
+      last_search: '',
+      estimated_total_cost: 0
+    },
+    
+    // Legacy fields for backward compatibility
+    current_search: '',
+    search_results: [],
     webhook_capture: {
       raw_responses: [],
       last_capture: '',
@@ -2899,55 +2938,6 @@ window.helper = existingHelper || {
     last_updated: '',
     overrides: [],                   // Manual overrides with reasons
     audit_trail: []                  // All changes tracked
-  },
-  parts_search: {
-    // Case-specific selections
-    selected_parts: [],           // Parts chosen for THIS case
-    unselected_parts: [],         // Parts not chosen for this case
-    case_search_history: [],      // Search history for this case
-    
-    // Global parts bank (accumulates across all cases)
-    global_parts_bank: {
-      all_parts: [],              // Every part ever searched/found
-      suppliers: [],              // All supplier information
-      price_history: [],          // Price tracking over time
-      search_patterns: [],        // Common search patterns
-      ocr_results: [],            // All OCR processing results
-      manual_additions: []        // Manually added parts
-    },
-    
-    // Search session data
-    current_session: {
-      search_query: '',
-      vehicle_context: {},        // Vehicle info for current search
-      results: [],               // Current search results
-      timestamp: '',
-      search_method: ''          // 'manual', 'ocr_image', 'ocr_file', etc.
-    },
-    
-    // Comprehensive search history
-    search_history: {
-      by_date: [],               // Chronological search history
-      by_vehicle: {},            // Searches grouped by vehicle/plate
-      by_part_name: {},          // Searches grouped by part name
-      by_supplier: {},           // Searches grouped by supplier
-      statistics: {
-        total_searches: 0,
-        unique_parts: 0,
-        unique_suppliers: 0,
-        average_results_per_search: 0
-      }
-    },
-    
-    // Summary for current case
-    case_summary: {
-      total_searches: 0,
-      total_results: 0,
-      selected_count: 0,
-      unselected_count: 0,
-      last_search: '',
-      estimated_total_cost: 0
-    }
   },
   documents: {
     images: [],
