@@ -1711,8 +1711,18 @@
       if (previousSession) {
         restorePreviousWizardSession(previousSession);
       } else {
-        // Generate new damage center number
-        generateDamageCenterNumber();
+        // === PHASE 1 FIX: Check if we're in edit mode before generating new number ===
+        const editMode = sessionStorage.getItem('damage_center_mode');
+        const activeCenterId = sessionStorage.getItem('active_damage_center_id');
+        
+        if (editMode === 'edit_existing' && activeCenterId) {
+          console.log('📝 PHASE 1: In edit mode, NOT generating new number');
+          // Don't generate new number - we're editing existing
+        } else {
+          // Generate new damage center number only for new centers
+          console.log('➕ PHASE 1: Creating new center, generating number');
+          generateDamageCenterNumber();
+        }
       }
       
       // Populate location dropdown
@@ -1831,6 +1841,15 @@
     }
     
     function generateDamageCenterNumber() {
+      // === PHASE 1 FIX: Don't generate if we're in edit mode ===
+      const editMode = sessionStorage.getItem('damage_center_mode');
+      const activeCenterId = sessionStorage.getItem('active_damage_center_id');
+      
+      if (editMode === 'edit_existing' && activeCenterId) {
+        console.log('📝 PHASE 1: generateDamageCenterNumber called but we are in EDIT mode - skipping');
+        return; // Don't generate new number when editing
+      }
+      
       // Use the new helper API for proper damage center numbering
       let nextNumber = 1;
       
@@ -3361,18 +3380,39 @@
             location = otherLocationInput?.value?.trim() || 'מיקום אחר לא צוין';
           }
           
-          // Get next damage center number based on existing centers
-          const existingCenters = getDamageCentersFromHelper();
-          const nextNumber = existingCenters.length + 1;
+          // === PHASE 1 FIX: Use correct number based on mode ===
+          const editMode = sessionStorage.getItem('damage_center_mode');
+          const activeCenterId = sessionStorage.getItem('active_damage_center_id');
+          let centerNumber;
+          let centerId;
+          
+          if (editMode === 'edit_existing' && activeCenterId) {
+            console.log('📝 PHASE 1: Step 1 save - using existing center number');
+            // Use existing center data
+            centerId = activeCenterId;
+            // Find the center number from damageCenterData or helper
+            if (damageCenterData && damageCenterData["Damage center Number"]) {
+              centerNumber = damageCenterData["Damage center Number"];
+            } else {
+              // Try to find from helper.centers
+              const existingCenter = helper.centers?.find(c => c.Id === activeCenterId || c.id === activeCenterId);
+              centerNumber = existingCenter?.["Damage center Number"] || existingCenter?.number || "1";
+            }
+          } else {
+            console.log('➕ PHASE 1: Step 1 save - creating new center');
+            // Get next damage center number based on existing centers
+            const existingCenters = getDamageCentersFromHelper();
+            centerNumber = existingCenters.length + 1;
+            centerId = helper.current_damage_center?.Id || `dc_${Date.now()}_${centerNumber}`;
+          }
           
           // ✅ FIXED: Initialize or update current_damage_center while preserving existing data
-          const centerId = helper.current_damage_center?.Id || `dc_${Date.now()}_${nextNumber}`;
           const existingDescription = helper.current_damage_center?.Description || "";
           const existingRepairNature = helper.current_damage_center?.RepairNature || "";
           
           helper.current_damage_center = {
             "Id": centerId,
-            "Damage center Number": nextNumber.toString(),
+            "Damage center Number": centerNumber.toString(),
             "Location": location,
             "Description": existingDescription, // Preserve existing description
             "RepairNature": existingRepairNature, // Preserve existing repair nature
@@ -3421,17 +3461,22 @@
           };
           // Update tracking variables
           damageCenterData.id = centerId;
-          damageCenterData.number = nextNumber;
+          damageCenterData.number = centerNumber;
           damageCenterData.location = location;
           moduleData.location = location;
           
           console.log('✅ Current damage center initialized:', {
             id: centerId,
-            number: nextNumber,
+            number: centerNumber,
             location: location
           });
           
-          showUserNotification(`מוקד נזק ${nextNumber} נוצר בהצלחה!`, 'success', 2000);
+          // === PHASE 1 FIX: Show appropriate message based on mode ===
+          if (editMode === 'edit_existing' && activeCenterId) {
+            showUserNotification(`מוקד נזק ${centerNumber} עודכן בהצלחה!`, 'success', 2000);
+          } else {
+            showUserNotification(`מוקד נזק ${centerNumber} נוצר בהצלחה!`, 'success', 2000);
+          }
           
           console.log('✅ Step 1 - Damage center created and saved to helper:', location);
           break;
