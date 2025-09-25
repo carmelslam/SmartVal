@@ -932,11 +932,17 @@ function savePartsData() {
     helper.meta = helper.meta || {};
     helper.meta.last_updated = new Date().toISOString();
     
+    // === PHASE 5: Apply bidirectional sync before saving ===
+    syncPartsBetweenModules();
+    
     // Save to session storage
     sessionStorage.setItem('helper', JSON.stringify(helper));
     
     // === PHASE 2: Remove duplicates before final save ===
     removeDuplicateParts(helper, activeCenterId);
+    
+    // === PHASE 6: Final count update after all processing ===
+    updatePartCount();
     
     console.log('✅ FINAL DEBUG: helper.parts_search.selected_parts final result:', helper.parts_search.selected_parts);
     console.log('✅ FINAL DEBUG: total selected_parts count:', helper.parts_search.selected_parts.length);
@@ -1741,27 +1747,42 @@ function savePartsData() {
       }
     }
     
-    // === PHASE 3: Update part count function (now handled by updateTotalCost) ===
+    // === PHASE 6: Fix part count function per task document ===
     function updatePartCount() {
-      console.log('📊 Part count is now included in total cost display');
-      
-      // Update in helper if in damage center mode
       try {
-        const rows = document.querySelectorAll('#partsList .row');
-        const partCount = rows.length;
-        
         const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+        
+        // Get actual count from helper.parts_search.selected_parts (global truth)
+        const actualCount = helper.parts_search?.selected_parts?.length || 0;
+        console.log(`📊 PHASE 6: Updating part count - actual count: ${actualCount}`);
+        
+        // Update UI element if it exists
+        const countElement = document.querySelector('.parts-total-count');
+        if (countElement) {
+          countElement.textContent = actualCount;
+          console.log(`✅ Updated UI count display: ${actualCount}`);
+        }
+        
+        // Also update UI row count for consistency
+        const rows = document.querySelectorAll('#partsList .row');
+        const uiRowCount = rows.length;
+        console.log(`📊 UI rows count: ${uiRowCount}, Helper count: ${actualCount}`);
+        
+        // Update in helper if in damage center mode
         const activeCenterId = helper.damage_assessment?.current_center_id || 
                               helper.damage_centers?.current_center_id ||
                               sessionStorage.getItem('active_damage_center_id');
         
         if (activeCenterId && helper.parts_search?.damage_centers_summary?.[activeCenterId]) {
-          helper.parts_search.damage_centers_summary[activeCenterId].parts_count = partCount;
+          helper.parts_search.damage_centers_summary[activeCenterId].parts_count = actualCount;
           sessionStorage.setItem('helper', JSON.stringify(helper));
-          console.log(`✅ Updated part count in helper: ${partCount}`);
+          console.log(`✅ Updated part count in damage center summary: ${actualCount}`);
         }
+        
+        return actualCount;
       } catch (error) {
-        console.error('Failed to update count in helper:', error);
+        console.error('Failed to update part count:', error);
+        return 0;
       }
     }
     
@@ -1910,6 +1931,76 @@ function savePartsData() {
       }, 100);
     };
     
+    // === PHASE 5: Implement bidirectional sync between modules ===
+    function syncPartsBetweenModules() {
+      try {
+        const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+        const activeCenterId = sessionStorage.getItem('active_damage_center_id') ||
+                              helper.damage_assessment?.current_center_id || 
+                              helper.damage_centers?.current_center_id;
+        
+        // Only sync when in wizard context (parts search initiated from wizard)
+        const isWizardContext = window.parent !== window || // iframe context
+                               activeCenterId || // has damage center ID
+                               helper.current_damage_center; // has current damage center
+        
+        if (!isWizardContext) {
+          console.log('🔄 SYNC: Skipping sync - standalone parts_search.html mode');
+          return;
+        }
+        
+        console.log('🔄 SYNC: Starting bidirectional sync for wizard context, center:', activeCenterId);
+        
+        // Bidirectional sync: parts_search ↔ current_damage_center
+        if (helper.parts_search?.selected_parts && activeCenterId) {
+          
+          // 1. Sync FROM current_damage_center TO parts_search
+          if (helper.current_damage_center?.Parts?.parts_required) {
+            helper.current_damage_center.Parts.parts_required.forEach(centerPart => {
+              const existingIndex = helper.parts_search.selected_parts.findIndex(p => 
+                p.damage_center_id === activeCenterId && 
+                (p.name || p.part) === (centerPart.name || centerPart.part)
+              );
+              
+              if (existingIndex >= 0) {
+                // Update existing part in parts_search with current_damage_center data
+                helper.parts_search.selected_parts[existingIndex] = {
+                  ...helper.parts_search.selected_parts[existingIndex],
+                  ...centerPart,
+                  damage_center_id: activeCenterId
+                };
+                console.log(`🔄 SYNC: Updated parts_search with "${centerPart.name}" from current_damage_center`);
+              }
+            });
+          }
+          
+          // 2. Sync FROM parts_search TO current_damage_center
+          const centerParts = helper.parts_search.selected_parts.filter(p => 
+            p.damage_center_id === activeCenterId
+          );
+          
+          if (centerParts.length > 0) {
+            helper.current_damage_center = helper.current_damage_center || {};
+            helper.current_damage_center.Parts = helper.current_damage_center.Parts || {};
+            helper.current_damage_center.Parts.parts_required = centerParts.map(part => ({
+              name: part.name || part.part,
+              description: part.description || part.desc || part.תיאור || '',
+              quantity: part.quantity || part.כמות || 1,
+              price: part.price || 0,
+              source: part.source || 'manual'
+            }));
+            console.log(`🔄 SYNC: Updated current_damage_center with ${centerParts.length} parts from parts_search`);
+          }
+          
+          sessionStorage.setItem('helper', JSON.stringify(helper));
+          console.log('✅ SYNC: Bidirectional sync completed');
+        }
+        
+      } catch (error) {
+        console.error('❌ SYNC: Error in bidirectional sync:', error);
+      }
+    }
+    
     // === PHASE 4: Ensure description is separate field and not overwritten ===
     function updatePartInfo(part) {
       // Add description field if missing
@@ -1934,6 +2025,7 @@ function savePartsData() {
     
     // Make updatePartInfo globally available
     window.updatePartInfo = updatePartInfo;
+    window.syncPartsBetweenModules = syncPartsBetweenModules;
     
     // === PHASE 3: Initialize totals on page load ===
     function initializeTotals() {
