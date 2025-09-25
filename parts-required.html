@@ -539,6 +539,8 @@ function savePartsData() {
   }
 
   console.log('💾 Saving parts data to helper...');
+  console.log('📊 DEBUG: validParts array:', validParts);
+  console.log('📊 DEBUG: validParts length:', validParts.length);
   
   // Send data to parent wizard if in iframe
   if (window.parent !== window) {
@@ -614,8 +616,95 @@ function savePartsData() {
     // DO NOT save to global damage_assessment - this prevents orphaned data
     
     // ✅ DUAL-PURPOSE PARTS_SEARCH REGISTRATION: Works for both modes
+    console.log('🔍 DEBUG: helper.parts_search before init:', helper.parts_search);
+    
+    // ✅ ENSURE COMPREHENSIVE STRUCTURE: Fix old helpers with basic structure
     helper.parts_search = helper.parts_search || {};
-    helper.parts_search.selected_parts = helper.parts_search.selected_parts || [];
+    
+    // Check if this is an old helper with basic structure (only has results array) OR completely missing structure
+    if ((helper.parts_search.results && !helper.parts_search.selected_parts) || 
+        (!helper.parts_search.selected_parts && !helper.parts_search.global_parts_bank)) {
+      console.log('🔄 MIGRATION: Converting old parts_search structure to comprehensive structure');
+      
+      // Preserve any existing data
+      const oldResults = helper.parts_search.results || [];
+      const oldCurrent = helper.parts_search.current_search || '';
+      
+      // Replace with comprehensive structure
+      helper.parts_search = {
+        // Case-specific selections (for dual-purpose functionality)
+        selected_parts: [],
+        unselected_parts: [],
+        case_search_history: [],
+        
+        // Global parts bank (accumulates across all cases)
+        global_parts_bank: {
+          all_parts: [],
+          suppliers: [],
+          price_history: [],
+          search_patterns: [],
+          ocr_results: [],
+          manual_additions: []
+        },
+        
+        // Search session data
+        current_session: {
+          search_query: oldCurrent,
+          vehicle_context: {},
+          results: oldResults,
+          timestamp: '',
+          search_method: ''
+        },
+        
+        // Comprehensive search history
+        search_history: {
+          by_date: [],
+          by_vehicle: {},
+          by_part_name: {},
+          by_supplier: {},
+          statistics: {
+            total_searches: 0,
+            unique_parts: 0,
+            unique_suppliers: 0,
+            average_results_per_search: 0
+          }
+        },
+        
+        // Summary for current case
+        case_summary: {
+          total_searches: 0,
+          total_results: 0,
+          selected_count: 0,
+          unselected_count: 0,
+          last_search: '',
+          estimated_total_cost: 0
+        },
+        
+        // Legacy fields for backward compatibility
+        current_search: oldCurrent,
+        search_results: oldResults,
+        webhook_capture: {
+          raw_responses: [],
+          last_capture: '',
+          capture_enabled: true
+        }
+      };
+      
+      console.log('✅ MIGRATION: parts_search structure upgraded successfully');
+    } else {
+      // Ensure all required fields exist
+      helper.parts_search.selected_parts = helper.parts_search.selected_parts || [];
+      helper.parts_search.global_parts_bank = helper.parts_search.global_parts_bank || {
+        all_parts: [],
+        suppliers: [],
+        price_history: [],
+        search_patterns: [],
+        ocr_results: [],
+        manual_additions: []
+      };
+    }
+    
+    console.log('🔍 DEBUG: helper.parts_search after init/migration:', helper.parts_search);
     
     // Get context for categorization
     const damageCenterMode = sessionStorage.getItem('damage_center_mode');
@@ -660,6 +749,8 @@ function savePartsData() {
     // Save to session storage
     sessionStorage.setItem('helper', JSON.stringify(helper));
     
+    console.log('✅ FINAL DEBUG: helper.parts_search.selected_parts final result:', helper.parts_search.selected_parts);
+    console.log('✅ FINAL DEBUG: total selected_parts count:', helper.parts_search.selected_parts.length);
     console.log('✅ Parts data saved to helper:', helper.damage_assessment.parts);
     
     // Show save confirmation (safely check if button exists)
