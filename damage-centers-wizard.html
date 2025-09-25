@@ -4031,6 +4031,11 @@
       // Show subtotal
       document.getElementById('workSubtotal').style.display = 'block';
       
+      // ✅ FIX: Force works total calculation after module loads
+      setTimeout(() => {
+        forceWorksSubtotalUpdate(moduleData.works || []);
+      }, 1000); // Wait for initialization to complete
+      
       console.log('✅ Work component loaded inline (no iframe)');
     }
     
@@ -4063,6 +4068,11 @@
           addWorkRowWithData(work);
         });
         updateWorkData();
+        
+        // ✅ FIX: Force works total calculation after data restoration
+        setTimeout(() => {
+          forceWorksSubtotalUpdate(moduleData.works);
+        }, 500); // Wait for data restoration to complete
       } else {
         // Add initial empty row
         addWorkRow();
@@ -4500,6 +4510,11 @@
       // Show subtotal
       document.getElementById('repairsSubtotal').style.display = 'block';
       
+      // ✅ FIX: Force repairs total calculation after module loads
+      setTimeout(() => {
+        forceRepairsSubtotalUpdate(moduleData.repairs || []);
+      }, 1000); // Wait for initialization to complete
+      
       console.log('✅ Repairs component loaded inline (no iframe)');
     }
     
@@ -4511,6 +4526,11 @@
           addRepairRowWithData(repair);
         });
         updateRepairData();
+        
+        // ✅ FIX: Force repairs total calculation after data restoration
+        setTimeout(() => {
+          forceRepairsSubtotalUpdate(moduleData.repairs);
+        }, 500); // Wait for data restoration to complete
       } else {
         // Add initial empty row
         addRepairRow();
@@ -7580,6 +7600,122 @@
         
       } catch (error) {
         console.error('❌ Error in forcePartsSubtotalUpdate:', error);
+      }
+    }
+
+    /**
+     * ✅ FORCE WORKS SUBTOTAL UPDATE: Calculate and display works total manually
+     * Fixes issue where works total doesn't appear without refresh
+     */
+    function forceWorksSubtotalUpdate(worksData) {
+      try {
+        console.log('🔄 Force calculating works subtotal...', worksData);
+        
+        if (!worksData || worksData.length === 0) {
+          console.log('❌ No works data to calculate');
+          return;
+        }
+        
+        // Calculate works total manually
+        const worksTotal = worksData.reduce((total, work) => {
+          const cost = parseFloat(work.cost) || 0;
+          return total + cost;
+        }, 0);
+        
+        console.log(`🧮 Calculated works total: ₪${worksTotal}`);
+        
+        if (worksTotal > 0) {
+          // Update wizard display elements
+          const worksAmount = document.getElementById('workAmount');
+          const worksAmountWithVat = document.getElementById('workAmountWithVat');
+          const workSubtotal = document.getElementById('workSubtotal');
+          
+          if (worksAmount) {
+            worksAmount.textContent = `₪${worksTotal.toLocaleString()}`;
+            console.log('✅ Updated worksAmount display');
+          }
+          
+          if (worksAmountWithVat) {
+            const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+            const vatRate = (helper.calculations && helper.calculations.vat_rate) ? helper.calculations.vat_rate : 18;
+            const totalWithVat = worksTotal * (1 + vatRate / 100);
+            worksAmountWithVat.textContent = `₪${totalWithVat.toLocaleString()}`;
+            console.log('✅ Updated worksAmountWithVat display');
+          }
+          
+          if (workSubtotal) {
+            workSubtotal.style.display = 'block';
+            console.log('✅ Made workSubtotal visible');
+          }
+          
+          // Also update module data for internal consistency
+          moduleData.worksTotal = worksTotal;
+          
+          console.log(`✅ Force updated works subtotal: ₪${worksTotal}`);
+        } else {
+          console.log('❌ Works total is 0, not updating display');
+        }
+        
+      } catch (error) {
+        console.error('❌ Error in forceWorksSubtotalUpdate:', error);
+      }
+    }
+
+    /**
+     * ✅ FORCE REPAIRS SUBTOTAL UPDATE: Calculate and display repairs total manually
+     * Fixes issue where repairs total doesn't appear without refresh
+     */
+    function forceRepairsSubtotalUpdate(repairsData) {
+      try {
+        console.log('🔄 Force calculating repairs subtotal...', repairsData);
+        
+        if (!repairsData || repairsData.length === 0) {
+          console.log('❌ No repairs data to calculate');
+          return;
+        }
+        
+        // Calculate repairs total manually
+        const repairsTotal = repairsData.reduce((total, repair) => {
+          const cost = parseFloat(repair.cost) || 0;
+          return total + cost;
+        }, 0);
+        
+        console.log(`🧮 Calculated repairs total: ₪${repairsTotal}`);
+        
+        if (repairsTotal > 0) {
+          // Update wizard display elements
+          const repairsAmount = document.getElementById('repairsAmount');
+          const repairsAmountWithVat = document.getElementById('repairsAmountWithVat');
+          const repairsSubtotal = document.getElementById('repairsSubtotal');
+          
+          if (repairsAmount) {
+            repairsAmount.textContent = `₪${repairsTotal.toLocaleString()}`;
+            console.log('✅ Updated repairsAmount display');
+          }
+          
+          if (repairsAmountWithVat) {
+            const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+            const vatRate = (helper.calculations && helper.calculations.vat_rate) ? helper.calculations.vat_rate : 18;
+            const totalWithVat = repairsTotal * (1 + vatRate / 100);
+            repairsAmountWithVat.textContent = `₪${totalWithVat.toLocaleString()}`;
+            console.log('✅ Updated repairsAmountWithVat display');
+          }
+          
+          if (repairsSubtotal) {
+            repairsSubtotal.style.display = 'block';
+            console.log('✅ Made repairsSubtotal visible');
+          }
+          
+          // Also update module data for internal consistency
+          moduleData.repairsTotal = repairsTotal;
+          
+          console.log(`✅ Force updated repairs subtotal: ₪${repairsTotal}`);
+        } else {
+          console.log('❌ Repairs total is 0, not updating display');
+        }
+        
+      } catch (error) {
+        console.error('❌ Error in forceRepairsSubtotalUpdate:', error);
       }
     }
     
