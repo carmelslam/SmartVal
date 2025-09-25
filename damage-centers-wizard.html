@@ -5824,11 +5824,15 @@
                   ...part
                 }));
               
-              // ✅ NEW: Add flag to prevent auto-adding empty fields in parts iframe
+              // ✅ ENHANCED: Add comprehensive mode flags to prevent auto-adding empty fields in parts iframe
+              const damageCenterMode = sessionStorage.getItem('damage_center_mode');
               contextData.preventAutoAddField = true;
-              contextData.isEditMode = !!damageCenterData.mode;
+              contextData.isEditMode = damageCenterMode === 'edit_existing';
+              contextData.mode = damageCenterMode;
+              contextData.preventEmptyFields = damageCenterMode === 'edit_existing';
+              contextData.hasExistingParts = contextData.selectedParts.length > 0;
               contextData.partsBank = window.PARTS_BANK || {};
-              console.log(`🎯 Sending ${contextData.selectedParts.length} valid parts for current center ${currentCenterId} (edit mode: ${!!damageCenterData.mode})`);
+              console.log(`🎯 Sending ${contextData.selectedParts.length} valid parts for current center ${currentCenterId} (mode: ${damageCenterMode}, prevent empty: ${contextData.preventEmptyFields})`);
               break;
               
             case 'work':
@@ -5881,16 +5885,28 @@
               console.log(`📊 Requested current totals from ${moduleType} iframe for wizard sync`);
             }, 1000);
             
-            // ✅ SPECIFIC FIX: Tell parts-required iframe not to auto-add empty fields
+            // ✅ ENHANCED FIX: Tell parts-required iframe not to auto-add empty fields
             if (moduleType === 'parts') {
-              setTimeout(() => {
-                iframe.contentWindow.postMessage({
-                  type: 'preventAutoAddField',
-                  reason: 'edit_mode_with_existing_data',
-                  hasExistingData: contextData.selectedParts && contextData.selectedParts.length > 0
-                }, '*');
-                console.log(`🚫 Told parts iframe to prevent auto-adding empty fields (has ${contextData.selectedParts.length} existing parts)`);
-              }, 300);
+              // Send multiple messages to ensure iframe receives the instruction
+              const damageCenterMode = sessionStorage.getItem('damage_center_mode');
+              const sendPreventAutoAdd = () => {
+                if (iframe && iframe.contentWindow) {
+                  iframe.contentWindow.postMessage({
+                    type: 'preventAutoAddField',
+                    reason: 'edit_mode_with_existing_data',
+                    hasExistingData: contextData.selectedParts && contextData.selectedParts.length > 0,
+                    editMode: damageCenterMode === 'edit_existing',
+                    preventEmptyFields: true,
+                    mode: damageCenterMode
+                  }, '*');
+                  console.log(`🚫 Told parts iframe to prevent auto-adding empty fields (has ${contextData.selectedParts.length} existing parts, edit mode: ${damageCenterMode === 'edit_existing'})`);
+                }
+              };
+              
+              // Send message multiple times to ensure it's received
+              setTimeout(sendPreventAutoAdd, 100);
+              setTimeout(sendPreventAutoAdd, 500);
+              setTimeout(sendPreventAutoAdd, 1000);
             }
           }
         }
