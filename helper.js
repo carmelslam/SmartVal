@@ -3026,6 +3026,93 @@ window.helper = existingHelper || {
   damage_centers: []
 };
 
+// ✅ PARTS_SEARCH STRUCTURE MIGRATION: Fix old helpers with incomplete structure
+if (window.helper.parts_search) {
+  // Check if this is an old helper with basic structure (only has results array) OR completely missing structure
+  if ((window.helper.parts_search.results && !window.helper.parts_search.selected_parts) || 
+      (!window.helper.parts_search.selected_parts && !window.helper.parts_search.global_parts_bank)) {
+    console.log('🔄 MIGRATION: Converting old parts_search structure to comprehensive structure');
+    
+    // Preserve any existing data
+    const oldResults = window.helper.parts_search.results || [];
+    const oldCurrent = window.helper.parts_search.current_search || '';
+    const oldWebhook = window.helper.parts_search.webhook_capture || {};
+    
+    // Replace with comprehensive structure
+    window.helper.parts_search = {
+      // Case-specific selections (for dual-purpose functionality)
+      selected_parts: [],
+      unselected_parts: [],
+      case_search_history: [],
+      
+      // Global parts bank (accumulates across all cases)
+      global_parts_bank: {
+        all_parts: [],
+        suppliers: [],
+        price_history: [],
+        search_patterns: [],
+        ocr_results: [],
+        manual_additions: []
+      },
+      
+      // Search session data
+      current_session: {
+        search_query: oldCurrent,
+        vehicle_context: {},
+        results: oldResults,
+        timestamp: '',
+        search_method: ''
+      },
+      
+      // Comprehensive search history
+      search_history: {
+        by_date: [],
+        by_vehicle: {},
+        by_part_name: {},
+        by_supplier: {},
+        statistics: {
+          total_searches: 0,
+          unique_parts: 0,
+          unique_suppliers: 0,
+          average_results_per_search: 0
+        }
+      },
+      
+      // Summary for current case
+      case_summary: {
+        total_searches: 0,
+        total_results: 0,
+        selected_count: 0,
+        unselected_count: 0,
+        last_search: '',
+        estimated_total_cost: 0
+      },
+      
+      // Legacy fields for backward compatibility
+      current_search: oldCurrent,
+      search_results: oldResults,
+      webhook_capture: oldWebhook.raw_responses ? oldWebhook : {
+        raw_responses: [],
+        last_capture: '',
+        capture_enabled: true
+      }
+    };
+    
+    console.log('✅ MIGRATION: parts_search structure upgraded successfully in helper initialization');
+  } else {
+    // Ensure all required fields exist for existing comprehensive structure
+    window.helper.parts_search.selected_parts = window.helper.parts_search.selected_parts || [];
+    window.helper.parts_search.global_parts_bank = window.helper.parts_search.global_parts_bank || {
+      all_parts: [],
+      suppliers: [],
+      price_history: [],
+      search_patterns: [],
+      ocr_results: [],
+      manual_additions: []
+    };
+  }
+}
+
 // 🔧 Ensure VAT rate is always populated from admin hub on helper initialization
 if (!window.helper.calculations) {
   window.helper.calculations = {};
