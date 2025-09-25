@@ -558,8 +558,10 @@ function savePartsData() {
     // ✅ CHANGED: Include quantity in parts data
     if (name || desc || price || source) {
       allParts.push({ 
-        part: name, 
-        desc, 
+        part: name,
+        name: name,  // === PHASE 4: Ensure consistent field naming ===
+        desc: desc,
+        description: desc,  // === PHASE 4: Ensure description field exists ===
         quantity: quantity,
         price, 
         source 
@@ -606,13 +608,16 @@ function savePartsData() {
         };
       }
       
-      validParts.push({
+      // === PHASE 4: Apply part info update to ensure description integrity ===
+      const updatedPart = updatePartInfo({
         ...part,
         ...searchResultData,
         addedAt: new Date().toISOString(),
         fromWizard: true,
         fromSearch: !!matchingResult
       });
+      
+      validParts.push(updatedPart);
     }
   });
   
@@ -744,30 +749,35 @@ function savePartsData() {
     
     // === PHASE 2: Add unique key for deduplication ===
     // Add new parts to the accumulated array with appropriate context
-    const newPartsWithContext = validParts.map((part, index) => ({
-      ...part,
-      // === PHASE 2: Create unique key for each part ===
-      unique_key: `${activeCenterId || 'standalone'}_${part.part || part.name}_${index}_${Date.now()}`,
-      selected_at: new Date().toISOString(),
-      selected_in_module: 'parts_required',
-      // ✅ ENHANCED DAMAGE CENTER CLASSIFICATION: Complete center information
-      damage_center_id: isStandaloneMode ? null : activeCenterId,
-      damage_center_number: isStandaloneMode ? null : damageCenterNumber,
-      damage_center_name: isStandaloneMode ? null : damageCenterName,
-      damage_center_location: isStandaloneMode ? null : damageCenterLocation,
-      assigned_to_center: !isStandaloneMode,
-      selection_mode: isStandaloneMode ? 'standalone_search' : (damageCenterMode || 'damage_center_integrated'),
-      usage_context: isStandaloneMode ? 'general_query' : 'damage_center_assignment',
-      // ✅ NEW: Distinguish between manual entry and suggestion selection
-      entry_type: part.fromSuggestion ? 'suggestion_selected' : 'manual_entry',
-      manual_entry: !part.fromSuggestion,
-      case_context: {
-        plate: helper.vehicle?.plate || '',
-        case_id: helper.case_info?.case_id || '',
-        step: isStandaloneMode ? null : 5,
-        wizard_session: new Date().toISOString()
-      }
-    }));
+    const newPartsWithContext = validParts.map((part, index) => {
+      // === PHASE 4: Ensure description integrity for each part ===
+      const updatedPart = updatePartInfo(part);
+      
+      return {
+        ...updatedPart,
+        // === PHASE 2: Create unique key for each part ===
+        unique_key: `${activeCenterId || 'standalone'}_${updatedPart.part || updatedPart.name}_${index}_${Date.now()}`,
+        selected_at: new Date().toISOString(),
+        selected_in_module: 'parts_required',
+        // ✅ ENHANCED DAMAGE CENTER CLASSIFICATION: Complete center information
+        damage_center_id: isStandaloneMode ? null : activeCenterId,
+        damage_center_number: isStandaloneMode ? null : damageCenterNumber,
+        damage_center_name: isStandaloneMode ? null : damageCenterName,
+        damage_center_location: isStandaloneMode ? null : damageCenterLocation,
+        assigned_to_center: !isStandaloneMode,
+        selection_mode: isStandaloneMode ? 'standalone_search' : (damageCenterMode || 'damage_center_integrated'),
+        usage_context: isStandaloneMode ? 'general_query' : 'damage_center_assignment',
+        // ✅ NEW: Distinguish between manual entry and suggestion selection
+        entry_type: part.fromSuggestion ? 'suggestion_selected' : 'manual_entry',
+        manual_entry: !part.fromSuggestion,
+        case_context: {
+          plate: helper.vehicle?.plate || '',
+          case_id: helper.case_info?.case_id || '',
+          step: isStandaloneMode ? null : 5,
+          wizard_session: new Date().toISOString()
+        }
+      };
+    });
     
     // ✅ SMART ACCUMULATION: Remove existing parts for current damage center, then add new ones
     // This prevents overwrite of other damage centers while avoiding duplication in current center
@@ -1894,6 +1904,31 @@ function savePartsData() {
         updatePartCount();
       }, 100);
     };
+    
+    // === PHASE 4: Ensure description is separate field and not overwritten ===
+    function updatePartInfo(part) {
+      // Add description field if missing
+      if (!part.hasOwnProperty('description')) {
+        part.description = part.desc || '';
+      }
+      
+      // Ensure both desc and description fields exist and match
+      if (part.desc && !part.description) {
+        part.description = part.desc;
+      } else if (part.description && !part.desc) {
+        part.desc = part.description;
+      }
+      
+      // Don't overwrite description with name - ensure they stay separate
+      if (part.description === part.name && part.desc && part.desc !== part.name) {
+        part.description = part.desc;
+      }
+      
+      return part;
+    }
+    
+    // Make updatePartInfo globally available
+    window.updatePartInfo = updatePartInfo;
     
     // === PHASE 3: Initialize totals on page load ===
     function initializeTotals() {
