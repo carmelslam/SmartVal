@@ -1457,14 +1457,19 @@ function savePartsData() {
       
       const confirmDelete = confirm(`האם אתה בטוח שברצונך למחוק את החלק?\n\n${partInfo}`);
       
-      if (confirmDelete) {
-        // === PHASE 0: DIAGNOSTIC - Log delete operation ===
-        console.log('=== DELETE OPERATION DIAGNOSTIC ===');
-        console.log('Part to delete:', { name, desc, rowIndex });
-        console.log('Active damage center ID sources:');
-        
-        // ✅ COMPREHENSIVE DELETE: Remove from ALL 3 required locations
-        try {
+      if (!confirmDelete) {
+        console.log('🚫 Delete cancelled by user');
+        return;
+      }
+      
+      console.log('🗑️ Starting delete process...');
+      // === PHASE 0: DIAGNOSTIC - Log delete operation ===
+      console.log('=== DELETE OPERATION DIAGNOSTIC ===');
+      console.log('Part to delete:', { name, desc, rowIndex });
+      console.log('Active damage center ID sources:');
+      
+      // ✅ COMPREHENSIVE DELETE: Remove from ALL 3 required locations
+      try {
           let helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
           
           console.log('- helper.damage_assessment?.current_center_id:', helper.damage_assessment?.current_center_id);
@@ -1609,8 +1614,8 @@ function savePartsData() {
       // Calculate from UI rows
       const rows = document.querySelectorAll('#partsList .row');
       rows.forEach(row => {
-        const priceInput = row.querySelector('input[type="number"][id^="price_"]');
-        const quantityInput = row.querySelector('input[type="number"][id^="quantity_"]');
+        const priceInput = row.querySelector('.price');
+        const quantityInput = row.querySelector('.quantity');
         
         if (priceInput && quantityInput) {
           const price = parseFloat(priceInput.value) || 0;
@@ -1619,16 +1624,40 @@ function savePartsData() {
         }
       });
       
-      // Update total display
-      const totalElement = document.querySelector('.total-cost') || 
-                          document.querySelector('.parts-total') ||
-                          document.querySelector('[class*="total"]');
+      // Update total display - use the correct ID
+      let totalDisplay = document.getElementById('partsTotal');
       
-      if (totalElement) {
-        totalElement.textContent = `₪${totalCost.toFixed(2)}`;
+      if (totalDisplay) {
+        totalDisplay.innerHTML = `
+          <div style="font-size: 18px; color: #2e7d32; margin-bottom: 5px;">סיכום חלפים (${rows.length} פריטים)</div>
+          <div style="font-size: 24px; color: #1b5e20;">₪${totalCost.toLocaleString()}</div>
+          <div style="font-size: 14px; color: #424242;">כולל מע"מ: ₪${(totalCost * 1.17).toLocaleString()}</div>
+        `;
         console.log(`✅ Updated total cost: ₪${totalCost.toFixed(2)}`);
       } else {
-        console.log(`⚠️ Total cost element not found, calculated: ₪${totalCost.toFixed(2)}`);
+        // Create total display if it doesn't exist
+        totalDisplay = document.createElement('div');
+        totalDisplay.id = 'partsTotal';
+        totalDisplay.style.cssText = 'background: #e8f5e8; padding: 15px; margin: 20px 0; border-radius: 8px; font-weight: bold; text-align: center; border: 2px solid #4caf50;';
+        
+        const container = document.querySelector('.container');
+        const footer = document.querySelector('.footer');
+        if (container) {
+          if (footer) {
+            container.insertBefore(totalDisplay, footer);
+          } else {
+            container.appendChild(totalDisplay);
+          }
+          
+          totalDisplay.innerHTML = `
+            <div style="font-size: 18px; color: #2e7d32; margin-bottom: 5px;">סיכום חלפים (${rows.length} פריטים)</div>
+            <div style="font-size: 24px; color: #1b5e20;">₪${totalCost.toLocaleString()}</div>
+            <div style="font-size: 14px; color: #424242;">כולל מע"מ: ₪${(totalCost * 1.17).toLocaleString()}</div>
+          `;
+          console.log(`✅ Created and updated total cost: ₪${totalCost.toFixed(2)}`);
+        } else {
+          console.log(`⚠️ Container not found, calculated: ₪${totalCost.toFixed(2)}`);
+        }
       }
       
       // Also update in helper if in damage center mode
@@ -1648,27 +1677,15 @@ function savePartsData() {
       }
     }
     
-    // === PHASE 3: Update part count function ===
+    // === PHASE 3: Update part count function (now handled by updateTotalCost) ===
     function updatePartCount() {
-      console.log('📊 Updating part count...');
+      console.log('📊 Part count is now included in total cost display');
       
-      const rows = document.querySelectorAll('#partsList .row');
-      const partCount = rows.length;
-      
-      // Update count display
-      const countElement = document.querySelector('.parts-count') || 
-                          document.querySelector('.parts-total-count') ||
-                          document.querySelector('[class*="count"]');
-      
-      if (countElement) {
-        countElement.textContent = partCount;
-        console.log(`✅ Updated part count: ${partCount}`);
-      } else {
-        console.log(`⚠️ Part count element not found, calculated: ${partCount}`);
-      }
-      
-      // Also update in helper if in damage center mode
+      // Update in helper if in damage center mode
       try {
+        const rows = document.querySelectorAll('#partsList .row');
+        const partCount = rows.length;
+        
         const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
         const activeCenterId = helper.damage_assessment?.current_center_id || 
                               helper.damage_centers?.current_center_id ||
@@ -1677,6 +1694,7 @@ function savePartsData() {
         if (activeCenterId && helper.parts_search?.damage_centers_summary?.[activeCenterId]) {
           helper.parts_search.damage_centers_summary[activeCenterId].parts_count = partCount;
           sessionStorage.setItem('helper', JSON.stringify(helper));
+          console.log(`✅ Updated part count in helper: ${partCount}`);
         }
       } catch (error) {
         console.error('Failed to update count in helper:', error);
