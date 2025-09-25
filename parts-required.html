@@ -473,6 +473,58 @@ form button {
   console.log(`➕ Added new part row ${newRowIndex}`);
 }
 
+// === PHASE 2: Remove duplicate parts function ===
+function removeDuplicateParts(helper, activeCenterId) {
+  console.log('🧹 PHASE 2: Starting duplicate removal for center:', activeCenterId);
+  
+  if (!helper.parts_search?.selected_parts) {
+    console.log('⚠️ No selected_parts array found, skipping deduplication');
+    return;
+  }
+  
+  const seen = new Map();
+  const originalCount = helper.parts_search.selected_parts.length;
+  
+  // Remove duplicates based on centerId + partNumber combination
+  helper.parts_search.selected_parts = helper.parts_search.selected_parts.filter(part => {
+    // Create unique key based on damage center ID and part number
+    const key = `${part.damage_center_id || part.centerId}_${part.partNumber}`;
+    
+    if (seen.has(key)) {
+      console.log(`🗑️ Removing duplicate part: ${key}`);
+      return false;
+    }
+    
+    seen.set(key, true);
+    return true;
+  });
+  
+  const newCount = helper.parts_search.selected_parts.length;
+  console.log(`✅ Deduplication complete: ${originalCount} → ${newCount} parts (removed ${originalCount - newCount} duplicates)`);
+  
+  // Also update damage_centers_summary if exists (it's an object keyed by center ID)
+  if (helper.parts_search?.damage_centers_summary && helper.parts_search.damage_centers_summary[activeCenterId]) {
+    const centerSummary = helper.parts_search.damage_centers_summary[activeCenterId];
+    
+    if (centerSummary && centerSummary.parts_list) {
+      const centerSeenMap = new Map();
+      const originalCenterCount = centerSummary.parts_list.length;
+      
+      centerSummary.parts_list = centerSummary.parts_list.filter(part => {
+        // Use part name as key since parts_list items don't have partNumber
+        const key = `${part.name}`;
+        if (centerSeenMap.has(key)) {
+          return false;
+        }
+        centerSeenMap.set(key, true);
+        return true;
+      });
+      
+      console.log(`✅ Center ${activeCenterId} summary deduplication: ${originalCenterCount} → ${centerSummary.parts_list.length} parts`);
+    }
+  }
+}
+
 // Save parts data to helper without navigation
 function savePartsData() {
   // === PHASE 0: DIAGNOSTIC LOGGING ===
@@ -683,9 +735,12 @@ function savePartsData() {
       }
     }
     
+    // === PHASE 2: Add unique key for deduplication ===
     // Add new parts to the accumulated array with appropriate context
-    const newPartsWithContext = validParts.map(part => ({
+    const newPartsWithContext = validParts.map((part, index) => ({
       ...part,
+      // === PHASE 2: Create unique key for each part ===
+      unique_key: `${activeCenterId || 'standalone'}_${part.part || part.name}_${index}_${Date.now()}`,
       selected_at: new Date().toISOString(),
       selected_in_module: 'parts_required',
       // ✅ ENHANCED DAMAGE CENTER CLASSIFICATION: Complete center information
@@ -718,19 +773,53 @@ function savePartsData() {
     console.log('New parts to add:', newPartsWithContext.length);
     
     if (!isStandaloneMode && activeCenterId) {
-      // Remove existing parts for current damage center only
+      // === PHASE 2: Implement update vs create logic ===
+      // Keep parts from other damage centers
       const partsFromOtherCenters = helper.parts_search.selected_parts.filter(existingPart => 
         existingPart.damage_center_id !== activeCenterId
       );
       
-      console.log(`🧹 Removed ${helper.parts_search.selected_parts.length - partsFromOtherCenters.length} existing parts for center ${activeCenterId}`);
       console.log(`📊 Keeping ${partsFromOtherCenters.length} parts from other damage centers`);
       
-      // Add new parts to the filtered array (keeps other centers + adds current center)
+      // For current center, update existing parts or add new ones
+      const updatedPartsForCurrentCenter = [];
+      const existingPartsMap = new Map();
+      
+      // Create a map of existing parts for current center by part number
+      helper.parts_search.selected_parts
+        .filter(p => p.damage_center_id === activeCenterId)
+        .forEach(p => existingPartsMap.set(p.partNumber, p));
+      
+      console.log(`📋 Found ${existingPartsMap.size} existing parts for center ${activeCenterId}`);
+      
+      // Process each new part
+      newPartsWithContext.forEach(newPart => {
+        const existingPart = existingPartsMap.get(newPart.partNumber);
+        
+        if (existingPart) {
+          // UPDATE existing part (merge properties)
+          const updatedPart = {
+            ...existingPart,
+            ...newPart,
+            unique_key: existingPart.unique_key || newPart.unique_key, // Preserve original key
+            updated_at: new Date().toISOString()
+          };
+          updatedPartsForCurrentCenter.push(updatedPart);
+          console.log(`🔄 Updated existing part: ${newPart.partNumber}`);
+        } else {
+          // CREATE new part
+          updatedPartsForCurrentCenter.push(newPart);
+          console.log(`➕ Added new part: ${newPart.partNumber}`);
+        }
+      });
+      
+      // Combine parts from other centers with updated/new parts for current center
       helper.parts_search.selected_parts = [
         ...partsFromOtherCenters,
-        ...newPartsWithContext
+        ...updatedPartsForCurrentCenter
       ];
+      
+      console.log(`🧹 Final result: ${helper.parts_search.selected_parts.length} total parts`);
       
       // === PHASE 0: DIAGNOSTIC - Log after accumulation ===
       console.log('=== AFTER ACCUMULATION (damage center mode) ===');
@@ -801,6 +890,9 @@ function savePartsData() {
     
     // Save to session storage
     sessionStorage.setItem('helper', JSON.stringify(helper));
+    
+    // === PHASE 2: Remove duplicates before final save ===
+    removeDuplicateParts(helper, activeCenterId);
     
     console.log('✅ FINAL DEBUG: helper.parts_search.selected_parts final result:', helper.parts_search.selected_parts);
     console.log('✅ FINAL DEBUG: total selected_parts count:', helper.parts_search.selected_parts.length);
