@@ -5914,6 +5914,11 @@
                   removeEmptyPartRowsFromIframe(iframe, contextData.selectedParts.length);
                 }, 2000); // Wait for iframe to fully load
               }
+              
+              // ✅ FIX: Force parts total calculation after iframe loads
+              setTimeout(() => {
+                forcePartsSubtotalUpdate(contextData.selectedParts);
+              }, 2500); // Wait for iframe to fully initialize
             }
           }
         }
@@ -7242,6 +7247,65 @@
         
       } catch (error) {
         console.error('❌ Error removing empty part rows from iframe:', error);
+      }
+    }
+    
+    /**
+     * ✅ FORCE PARTS SUBTOTAL UPDATE: Calculate and display parts total manually
+     * Fixes issue where parts iframe total doesn't appear without refresh
+     */
+    function forcePartsSubtotalUpdate(selectedParts) {
+      try {
+        console.log('🔄 Force calculating parts subtotal...', selectedParts);
+        
+        if (!selectedParts || selectedParts.length === 0) {
+          console.log('❌ No selected parts to calculate');
+          return;
+        }
+        
+        // Calculate total from parts data
+        const partsTotal = selectedParts.reduce((total, part) => {
+          const price = parseFloat(part.price) || 0;
+          const quantity = parseInt(part.quantity) || 1;
+          return total + (price * quantity);
+        }, 0);
+        
+        console.log(`🧮 Calculated parts total: ₪${partsTotal}`);
+        
+        if (partsTotal > 0) {
+          // Update the display elements
+          const partsAmount = document.getElementById('partsAmount');
+          const partsAmountWithVat = document.getElementById('partsAmountWithVat');
+          const partsSubtotal = document.getElementById('partsSubtotal');
+          
+          if (partsAmount) {
+            partsAmount.textContent = `₪${partsTotal.toLocaleString()}`;
+            console.log('✅ Updated partsAmount display');
+          }
+          
+          if (partsAmountWithVat) {
+            const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+            const vatRate = (helper.calculations && helper.calculations.vat_rate) ? helper.calculations.vat_rate : 18;
+            const totalWithVat = partsTotal * (1 + vatRate / 100);
+            partsAmountWithVat.textContent = `₪${totalWithVat.toLocaleString()}`;
+            console.log('✅ Updated partsAmountWithVat display');
+          }
+          
+          if (partsSubtotal) {
+            partsSubtotal.style.display = 'block';
+            console.log('✅ Made partsSubtotal visible');
+          }
+          
+          // Also update module data for internal consistency
+          moduleData.partsTotal = partsTotal;
+          
+          console.log(`✅ Force updated parts subtotal: ₪${partsTotal}`);
+        } else {
+          console.log('❌ Parts total is 0, not updating display');
+        }
+        
+      } catch (error) {
+        console.error('❌ Error in forcePartsSubtotalUpdate:', error);
       }
     }
     
