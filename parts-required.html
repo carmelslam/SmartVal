@@ -921,8 +921,7 @@ function savePartsData() {
       console.log(`📊 Updated classification for damage center ${damageCenterNumber}: ${currentCenterParts.length} parts, ₪${currentCenterTotal.toFixed(2)} total`);
     }
     
-    // ✅ COMPREHENSIVE DATA CAPTURE: Update all parts_search objects
-    updatePartsSearchComprehensiveData(helper, validParts, isStandaloneMode, activeCenterId);
+    // ✅ COMPREHENSIVE DATA CAPTURE: Will be called after accumulation is complete
     
     console.log(`✅ DUAL-PURPOSE: Registered ${validParts.length} parts in parts_search.selected_parts`);
     console.log(`📊 Mode: ${isStandaloneMode ? 'Standalone Search' : 'Damage Center Integrated'}`);
@@ -944,8 +943,15 @@ function savePartsData() {
     // === PHASE 6: Final count update after all processing ===
     updatePartCount();
     
-    // === PHASE 6: Update case_summary aggregation ===
+    // === PHASE 6: Update comprehensive data and case_summary AFTER accumulation ===
+    updatePartsSearchComprehensiveData(helper, validParts, isStandaloneMode, activeCenterId);
     updateCaseSummary();
+    
+    // === PHASE 6 DEBUG: Check what's actually in helper.parts_search.selected_parts ===
+    console.log('🔍 PHASE 6 FINAL DEBUG: Current helper state:');
+    console.log('- parts_search.selected_parts count:', helper.parts_search.selected_parts?.length || 0);
+    console.log('- parts_search.selected_parts details:', helper.parts_search.selected_parts);
+    console.log('- case_summary:', helper.parts_search.case_summary);
     
     console.log('✅ FINAL DEBUG: helper.parts_search.selected_parts final result:', helper.parts_search.selected_parts);
     console.log('✅ FINAL DEBUG: total selected_parts count:', helper.parts_search.selected_parts.length);
