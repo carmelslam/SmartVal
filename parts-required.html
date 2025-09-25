@@ -944,6 +944,9 @@ function savePartsData() {
     // === PHASE 6: Final count update after all processing ===
     updatePartCount();
     
+    // === PHASE 6: Update case_summary aggregation ===
+    updateCaseSummary();
+    
     console.log('✅ FINAL DEBUG: helper.parts_search.selected_parts final result:', helper.parts_search.selected_parts);
     console.log('✅ FINAL DEBUG: total selected_parts count:', helper.parts_search.selected_parts.length);
     console.log('✅ Parts data saved to helper:', helper.damage_assessment.parts);
@@ -1643,6 +1646,9 @@ function savePartsData() {
         updateTotalCost();
         updatePartCount();
         
+        // === PHASE 6: Update case_summary after delete ===
+        updateCaseSummary();
+        
         // === PHASE 3: Notify wizard of changes ===
         if (typeof sendPartsUpdateToWizard === 'function') {
           sendPartsUpdateToWizard();
@@ -1786,6 +1792,47 @@ function savePartsData() {
       }
     }
     
+    // === PHASE 6: Dedicated function to update case_summary aggregation ===
+    function updateCaseSummary() {
+      try {
+        const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+        
+        if (!helper.parts_search) {
+          helper.parts_search = {};
+        }
+        
+        const allSelectedParts = helper.parts_search.selected_parts || [];
+        const allSearchResults = helper.parts_search.search_results || [];
+        const unselectedParts = helper.parts_search.unselected_parts || [];
+        
+        // Calculate accurate total cost
+        const totalCost = allSelectedParts.reduce((sum, part) => {
+          const price = parseFloat(part.price) || 0;
+          const quantity = parseInt(part.quantity) || 1;
+          return sum + (price * quantity);
+        }, 0);
+        
+        // Update case_summary with correct aggregation
+        helper.parts_search.case_summary = {
+          ...helper.parts_search.case_summary, // Preserve existing fields like total_searches
+          total_results: allSearchResults.length,
+          selected_count: allSelectedParts.length,
+          unselected_count: unselectedParts.length,
+          last_search: new Date().toISOString(),
+          estimated_total_cost: totalCost
+        };
+        
+        sessionStorage.setItem('helper', JSON.stringify(helper));
+        
+        console.log('✅ PHASE 6: Updated case_summary:', helper.parts_search.case_summary);
+        return helper.parts_search.case_summary;
+        
+      } catch (error) {
+        console.error('❌ Failed to update case_summary:', error);
+        return null;
+      }
+    }
+    
     // ✅ COMPREHENSIVE DATA CAPTURE FUNCTION: Updates all parts_search statistics and data
     function updatePartsSearchComprehensiveData(helper, newParts, isStandaloneMode, activeCenterId) {
       try {
@@ -1803,19 +1850,30 @@ function savePartsData() {
 
         const currentTimestamp = new Date().toISOString();
         
-        // Update case_summary
+        // === PHASE 6: Fix case_summary aggregation logic ===
         const allSelectedParts = helper.parts_search.selected_parts || [];
+        const allSearchResults = helper.parts_search.search_results || [];
+        const unselectedParts = helper.parts_search.unselected_parts || [];
+        
+        // Calculate total cost from all selected parts (across all damage centers)
         const totalCost = allSelectedParts.reduce((sum, part) => {
           const price = parseFloat(part.price) || 0;
           const quantity = parseInt(part.quantity) || 1;
           return sum + (price * quantity);
         }, 0);
         
+        console.log('📊 PHASE 6: Case Summary Calculation:', {
+          allSelectedParts_count: allSelectedParts.length,
+          allSearchResults_count: allSearchResults.length,
+          unselectedParts_count: unselectedParts.length,
+          calculatedTotalCost: totalCost
+        });
+        
         helper.parts_search.case_summary = {
-          total_searches: (helper.parts_search.case_summary.total_searches || 0) + 1, // Count manual entry as a "search"
-          total_results: allSelectedParts.length,
-          selected_count: allSelectedParts.length,
-          unselected_count: helper.parts_search.unselected_parts?.length || 0,
+          total_searches: helper.parts_search.case_summary?.total_searches || 0, // Don't auto-increment
+          total_results: allSearchResults.length, // Total search results received
+          selected_count: allSelectedParts.length, // Actually selected parts
+          unselected_count: unselectedParts.length,
           last_search: currentTimestamp,
           estimated_total_cost: totalCost
         };
@@ -2026,6 +2084,7 @@ function savePartsData() {
     // Make updatePartInfo globally available
     window.updatePartInfo = updatePartInfo;
     window.syncPartsBetweenModules = syncPartsBetweenModules;
+    window.updateCaseSummary = updateCaseSummary;
     
     // === PHASE 3: Initialize totals on page load ===
     function initializeTotals() {
