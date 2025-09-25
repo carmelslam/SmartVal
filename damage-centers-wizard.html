@@ -1711,18 +1711,9 @@
       if (previousSession) {
         restorePreviousWizardSession(previousSession);
       } else {
-        // === PHASE 1 FIX: Check if we're in edit mode before generating new number ===
-        const editMode = sessionStorage.getItem('damage_center_mode');
-        const activeCenterId = sessionStorage.getItem('active_damage_center_id');
-        
-        if (editMode === 'edit_existing' && activeCenterId) {
-          console.log('📝 PHASE 1: In edit mode, NOT generating new number');
-          // Don't generate new number - we're editing existing
-        } else {
-          // Generate new damage center number only for new centers
-          console.log('➕ PHASE 1: Creating new center, generating number');
-          generateDamageCenterNumber();
-        }
+        // Always generate new damage center number on initialization
+        // It will be overridden when user clicks "Edit"
+        generateDamageCenterNumber();
       }
       
       // Populate location dropdown
@@ -1841,15 +1832,6 @@
     }
     
     function generateDamageCenterNumber() {
-      // === PHASE 1 FIX: Don't generate if we're in edit mode ===
-      const editMode = sessionStorage.getItem('damage_center_mode');
-      const activeCenterId = sessionStorage.getItem('active_damage_center_id');
-      
-      if (editMode === 'edit_existing' && activeCenterId) {
-        console.log('📝 PHASE 1: generateDamageCenterNumber called but we are in EDIT mode - skipping');
-        return; // Don't generate new number when editing
-      }
-      
       // Use the new helper API for proper damage center numbering
       let nextNumber = 1;
       
@@ -1875,6 +1857,10 @@
       
       document.getElementById('damageCenterNumber').value = nextNumber;
       damageCenterData.number = nextNumber;
+      
+      // === PHASE 1: Clear any edit mode data when generating new number ===
+      sessionStorage.removeItem('damage_center_mode');
+      sessionStorage.removeItem('active_damage_center_id');
       
       // FIXED: Generate and set active center ID to prevent orphaned data
       const newCenterId = `center_${Date.now()}_${nextNumber}`;
