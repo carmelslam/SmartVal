@@ -1885,6 +1885,15 @@ function savePartsData() {
     window.autoSaveOnChange = autoSaveOnChange;
     window.updateTotalCost = updateTotalCost;
     window.updatePartCount = updatePartCount;
+    window.loadExistingPartsIntoUI = loadExistingPartsIntoUI;
+    window.debugLoadParts = function() {
+      console.log('🔧 Manual debug load triggered');
+      loadExistingPartsIntoUI();
+      setTimeout(() => {
+        updateTotalCost();
+        updatePartCount();
+      }, 100);
+    };
     
     // === PHASE 3: Initialize totals on page load ===
     function initializeTotals() {
@@ -1911,6 +1920,14 @@ function savePartsData() {
                               helper.damage_centers?.current_center_id ||
                               sessionStorage.getItem('active_damage_center_id');
         
+        console.log('🔍 LOAD DEBUG: Active center ID:', activeCenterId);
+        console.log('🔍 LOAD DEBUG: Helper structure:', {
+          has_parts_search: !!helper.parts_search,
+          has_selected_parts: !!helper.parts_search?.selected_parts,
+          selected_parts_length: helper.parts_search?.selected_parts?.length || 0,
+          selected_parts_sample: helper.parts_search?.selected_parts?.slice(0, 2)
+        });
+        
         if (!activeCenterId) {
           console.log('⚠️ No active damage center ID found, loading all parts');
         }
@@ -1920,14 +1937,19 @@ function savePartsData() {
         
         if (helper.parts_search?.selected_parts) {
           if (activeCenterId) {
-            partsToLoad = helper.parts_search.selected_parts.filter(p => 
-              p.damage_center_id === activeCenterId);
+            partsToLoad = helper.parts_search.selected_parts.filter(p => {
+              const matches = p.damage_center_id === activeCenterId;
+              console.log(`🔍 FILTER DEBUG: Part "${p.name}" center "${p.damage_center_id}" matches "${activeCenterId}": ${matches}`);
+              return matches;
+            });
             console.log(`📦 Loading ${partsToLoad.length} parts for damage center ${activeCenterId}`);
           } else {
             partsToLoad = helper.parts_search.selected_parts;
             console.log(`📦 Loading ${partsToLoad.length} parts (standalone mode)`);
           }
         }
+        
+        console.log('🔍 LOAD DEBUG: Parts to load:', partsToLoad);
         
         if (partsToLoad.length === 0) {
           console.log('ℹ️ No existing parts found to load');
@@ -1954,8 +1976,12 @@ function savePartsData() {
     
     // === Helper function to add a part to the UI ===
     function addPartToUI(part, index) {
+      console.log(`➕ Adding part ${index} to UI:`, part);
       const partsList = document.getElementById("partsList");
-      if (!partsList) return;
+      if (!partsList) {
+        console.error('❌ partsList element not found!');
+        return;
+      }
       
       const row = document.createElement("div");
       row.className = "row";
