@@ -4921,11 +4921,24 @@
     function goToSummary() {
       console.log('📊 Quick navigation to wizard step 7 summary requested');
       
-      // Check if there are any damage centers to show
+      // ✅ FIX: Check all possible damage center storage locations
       const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
-      const damageCenters = helper.damage_assessment?.centers || helper.centers || [];
+      let damageCenters = [];
+      
+      // Check primary location first
+      if (helper.centers && Array.isArray(helper.centers)) {
+        damageCenters = helper.centers;
+        console.log('📊 Found damage centers in helper.centers:', damageCenters.length);
+      } else if (helper.damage_centers && Array.isArray(helper.damage_centers)) {
+        damageCenters = helper.damage_centers;
+        console.log('📊 Found damage centers in helper.damage_centers:', damageCenters.length);
+      } else if (helper.damage_assessment?.centers && Array.isArray(helper.damage_assessment.centers)) {
+        damageCenters = helper.damage_assessment.centers;
+        console.log('📊 Found damage centers in helper.damage_assessment.centers:', damageCenters.length);
+      }
       
       if (damageCenters.length === 0) {
+        console.log('❌ No damage centers found in any location');
         showUserNotification('אין מוקדי נזק ליצור סיכום. צור מוקד נזק ראשון.', 'warning', 3000);
         return;
       }
