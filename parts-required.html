@@ -575,9 +575,17 @@ function savePartsData() {
     }
     
     // ✅ DUAL-PURPOSE SUPPORT: Handle both damage-center-integrated and standalone modes
-    const activeCenterId = helper.damage_assessment?.current_center_id || 
-                          helper.damage_centers?.current_center_id ||
-                          sessionStorage.getItem('active_damage_center_id');
+    // ✅ FIX: Use the actual damage center being edited, not the "active" one for new centers
+    const activeCenterId = sessionStorage.getItem('active_damage_center_id') ||
+                          helper.damage_assessment?.current_center_id || 
+                          helper.damage_centers?.current_center_id;
+    
+    console.log('🔍 SAVE DEBUG - Center IDs:', {
+      'sessionStorage active_damage_center_id': sessionStorage.getItem('active_damage_center_id'),
+      'helper.damage_assessment?.current_center_id': helper.damage_assessment?.current_center_id,
+      'helper.damage_centers?.current_center_id': helper.damage_centers?.current_center_id,
+      'final activeCenterId': activeCenterId
+    });
     
     const isStandaloneMode = !activeCenterId;
     
@@ -631,17 +639,44 @@ function savePartsData() {
     
     // Get context for categorization
     const damageCenterMode = sessionStorage.getItem('damage_center_mode');
-    const damageCenterNumber = helper.current_damage_center?.["Damage center Number"] || 
-                              helper.current_damage_center?.number || 'unknown';
+    
+    // ✅ ENHANCED: Get damage center details from multiple sources
+    let damageCenterNumber = 'unknown';
+    let damageCenterName = 'unknown';
+    let damageCenterLocation = '';
+    
+    if (!isStandaloneMode && activeCenterId) {
+      // First try to find in helper.centers (most reliable)
+      const centerInHelper = helper.centers?.find(center => 
+        center.id === activeCenterId || center.Id === activeCenterId
+      );
+      
+      if (centerInHelper) {
+        damageCenterNumber = centerInHelper["Damage center Number"] || centerInHelper.number || 'unknown';
+        damageCenterName = `מוקד נזק ${damageCenterNumber}`;
+        damageCenterLocation = centerInHelper.Location || centerInHelper.location || '';
+        console.log('🔍 Found center in helper.centers:', { damageCenterNumber, damageCenterName, damageCenterLocation });
+      } else {
+        // Fallback to current_damage_center
+        damageCenterNumber = helper.current_damage_center?.["Damage center Number"] || 
+                            helper.current_damage_center?.number || 'unknown';
+        damageCenterName = `מוקד נזק ${damageCenterNumber}`;
+        damageCenterLocation = helper.current_damage_center?.Location || 
+                              helper.current_damage_center?.location || '';
+        console.log('🔍 Using current_damage_center fallback:', { damageCenterNumber, damageCenterName, damageCenterLocation });
+      }
+    }
     
     // Add new parts to the accumulated array with appropriate context
     const newPartsWithContext = validParts.map(part => ({
       ...part,
       selected_at: new Date().toISOString(),
       selected_in_module: 'parts_required',
-      // ✅ DUAL-PURPOSE: Set context based on mode
+      // ✅ ENHANCED DAMAGE CENTER CLASSIFICATION: Complete center information
       damage_center_id: isStandaloneMode ? null : activeCenterId,
       damage_center_number: isStandaloneMode ? null : damageCenterNumber,
+      damage_center_name: isStandaloneMode ? null : damageCenterName,
+      damage_center_location: isStandaloneMode ? null : damageCenterLocation,
       assigned_to_center: !isStandaloneMode,
       selection_mode: isStandaloneMode ? 'standalone_search' : (damageCenterMode || 'damage_center_integrated'),
       usage_context: isStandaloneMode ? 'general_query' : 'damage_center_assignment',
@@ -651,7 +686,8 @@ function savePartsData() {
       case_context: {
         plate: helper.vehicle?.plate || '',
         case_id: helper.case_info?.case_id || '',
-        step: isStandaloneMode ? null : 5
+        step: isStandaloneMode ? null : 5,
+        wizard_session: new Date().toISOString()
       }
     }));
     
@@ -696,10 +732,12 @@ function savePartsData() {
         return sum + (price * quantity);
       }, 0);
       
-      // Update damage center classification
+      // Update damage center classification with enhanced information
       helper.parts_search.damage_centers_summary[activeCenterId] = {
         damage_center_id: activeCenterId,
         damage_center_number: damageCenterNumber,
+        damage_center_name: damageCenterName,
+        damage_center_location: damageCenterLocation,
         parts_count: currentCenterParts.length,
         total_cost: currentCenterTotal,
         parts_list: currentCenterParts.map(part => ({
@@ -708,9 +746,11 @@ function savePartsData() {
           quantity: part.quantity,
           price: part.price,
           source: part.source,
-          entry_type: part.entry_type
+          entry_type: part.entry_type,
+          selected_at: part.selected_at
         })),
-        last_updated: new Date().toISOString()
+        last_updated: new Date().toISOString(),
+        summary: `${damageCenterName} (${damageCenterLocation}): ${currentCenterParts.length} חלקים, ₪${currentCenterTotal.toFixed(2)}`
       };
       
       console.log(`📊 Updated classification for damage center ${damageCenterNumber}: ${currentCenterParts.length} parts, ₪${currentCenterTotal.toFixed(2)} total`);
