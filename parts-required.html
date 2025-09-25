@@ -620,13 +620,44 @@ function savePartsData() {
     
     // DO NOT save to global damage_assessment - this prevents orphaned data
     
-    // ALSO store in parts_search.selected_parts as requested
+    // ✅ CRITICAL FIX: ACCUMULATE instead of overwrite parts_search.selected_parts
     helper.parts_search = helper.parts_search || {};
-    helper.parts_search.selected_parts = validParts.map(part => ({
+    helper.parts_search.selected_parts = helper.parts_search.selected_parts || [];
+    
+    // Get damage center context for categorization
+    const damageCenterMode = sessionStorage.getItem('damage_center_mode');
+    const activeCenterId = sessionStorage.getItem('active_damage_center_id') || 
+                           helper.current_damage_center?.Id || 
+                           helper.damage_assessment?.current_session?.active_center_id;
+    const damageCenterNumber = helper.current_damage_center?.["Damage center Number"] || 
+                              helper.current_damage_center?.number || 'unknown';
+    
+    // Add new parts to the accumulated array with damage center context
+    const newPartsWithContext = validParts.map(part => ({
       ...part,
       selected_at: new Date().toISOString(),
-      selected_in_module: 'parts_required'
+      selected_in_module: 'parts_required',
+      damage_center_id: activeCenterId,
+      damage_center_number: damageCenterNumber,
+      assigned_to_center: true,
+      selection_mode: damageCenterMode,
+      // ✅ NEW: Distinguish between manual entry and suggestion selection
+      entry_type: part.fromSuggestion ? 'suggestion_selected' : 'manual_entry',
+      manual_entry: !part.fromSuggestion,
+      case_context: {
+        plate: helper.vehicle?.plate || '',
+        case_id: helper.case_info?.case_id || '',
+        step: 5
+      }
     }));
+    
+    // ✅ ACCUMULATE: Add new parts to existing array instead of replacing
+    helper.parts_search.selected_parts = [
+      ...helper.parts_search.selected_parts,
+      ...newPartsWithContext
+    ];
+    
+    console.log(`✅ ACCUMULATED ${validParts.length} new parts to existing ${helper.parts_search.selected_parts.length - validParts.length} parts in selected_parts array`);
     
     console.log(`✅ Also saved ${validParts.length} parts to helper.parts_search.selected_parts`);
     
@@ -929,16 +960,65 @@ function savePartsData() {
       // ✅ FIXED: Search ONLY in helper parts_search results (from parts search module)
       const searchResults = [];
       
-      // Get search results from helper.parts_search (populated by parts search module)
+      // ✅ ENHANCED: Multi-source search integration with cross-damage-center suggestions
+      
+      // 1. Get search results from helper.parts_search (populated by parts search module)
       if (window.helper?.parts_search?.all_results) {
         searchResults.push(...window.helper.parts_search.all_results);
-        console.log(`🔍 Using ${window.helper.parts_search.all_results.length} parts from helper.parts_search.all_results`);
+        console.log(`🔍 Using ${window.helper.parts_search.all_results.length} parts from comprehensive search history`);
       }
       
-      // Also check results array (legacy support)
+      // 2. Also check results array (legacy support)
       if (window.helper?.parts_search?.results) {
         searchResults.push(...window.helper.parts_search.results);
-        console.log(`🔍 Using ${window.helper.parts_search.results.length} parts from helper.parts_search.results`);
+        console.log(`🔍 Using ${window.helper.parts_search.results.length} parts from current search results`);
+      }
+      
+      // 3. Include wizard search results (temporary session data from wizard)
+      if (window.wizardSearchResults && window.wizardSearchResults.length > 0) {
+        searchResults.push(...window.wizardSearchResults);
+        console.log(`🔍 Using ${window.wizardSearchResults.length} parts from wizard session`);
+      }
+      
+      // 4. ✅ NEW: Cross-damage-center suggestions (parts from other centers in this case)
+      if (window.helper?.parts_search?.selected_parts) {
+        const activeCenterId = sessionStorage.getItem('active_damage_center_id') || 
+                              window.helper.current_damage_center?.Id;
+        
+        // Filter parts from other damage centers to suggest as cross-references
+        const otherCenterParts = window.helper.parts_search.selected_parts.filter(part => 
+          part.damage_center_id && part.damage_center_id !== activeCenterId
+        );
+        
+        if (otherCenterParts.length > 0) {
+          searchResults.push(...otherCenterParts.map(part => ({
+            ...part,
+            crossReference: true,
+            source_damage_center: part.damage_center_number || 'מוקד אחר',
+            suggestion_type: 'cross_reference'
+          })));
+          console.log(`🔗 Including ${otherCenterParts.length} cross-reference parts from other damage centers`);
+        }
+      }
+      
+      // 5. ✅ NEW: Include global parts bank for broader suggestions
+      if (window.PARTS_BANK && query.length >= 2) {
+        Object.keys(window.PARTS_BANK).forEach(category => {
+          if (window.PARTS_BANK[category] && Array.isArray(window.PARTS_BANK[category])) {
+            window.PARTS_BANK[category].forEach(partName => {
+              if (partName.toLowerCase().includes(query.toLowerCase())) {
+                searchResults.push({
+                  name: partName,
+                  desc: category,
+                  source: 'בנק חלקים גלובלי',
+                  category: category,
+                  fromPartsBank: true,
+                  suggestion_type: 'parts_bank'
+                });
+              }
+            });
+          }
+        });
       }
       
       console.log(`📋 Total search results available for suggestions: ${searchResults.length}`);
@@ -1027,19 +1107,77 @@ function savePartsData() {
       dropdown.style.display = "";
       dropdown._suggestions = uniqueSuggestions;
 
-      // Enhanced selection handling
+      // ✅ ENHANCED: Comprehensive autofill functionality
       dropdown.onchange = function () {
         const idx = this.value;
         if (!this._suggestions || !this._suggestions[idx]) return;
         const suggestion = this._suggestions[idx];
+        
+        // Core fields autofill
         nameInput.value = suggestion.name || "";
-        descInput.value = suggestion.desc || "";
-        if (suggestion.price) priceInput.value = suggestion.price;
-        if (suggestion.source) sourceSelect.value = suggestion.source;
+        descInput.value = suggestion.desc || suggestion.description || "";
+        
+        // Enhanced autofill for all available fields
+        if (suggestion.price) {
+          priceInput.value = suggestion.price;
+        }
+        
+        if (suggestion.source || suggestion.condition) {
+          const sourceValue = suggestion.source || suggestion.condition;
+          // Try to match source value with dropdown options
+          const sourceOptions = Array.from(sourceSelect.options);
+          const matchingOption = sourceOptions.find(opt => 
+            opt.value.toLowerCase() === sourceValue.toLowerCase() ||
+            opt.textContent.toLowerCase().includes(sourceValue.toLowerCase())
+          );
+          if (matchingOption) {
+            sourceSelect.value = matchingOption.value;
+          } else if (sourceValue) {
+            // If no exact match, try common mappings
+            const sourceMap = {
+              'new': 'חדש',
+              'used': 'משומש', 
+              'oem': 'מקורי',
+              'aftermarket': 'תחליפי',
+              'refurbished': 'מחודש'
+            };
+            const hebrewSource = sourceMap[sourceValue.toLowerCase()] || sourceValue;
+            const hebrewMatch = sourceOptions.find(opt => opt.textContent.includes(hebrewSource));
+            if (hebrewMatch) {
+              sourceSelect.value = hebrewMatch.value;
+            }
+          }
+        }
+        
+        // Set quantity if available
+        if (suggestion.quantity || suggestion.qty) {
+          quantityInput.value = suggestion.quantity || suggestion.qty;
+        }
+        
         dropdown.style.display = "none";
         
-        // Trigger change event for potential additional processing
-        nameInput.dispatchEvent(new Event('change'));
+        // Visual feedback for successful autofill
+        [nameInput, descInput, priceInput, sourceSelect].forEach(field => {
+          if (field.value) {
+            field.style.backgroundColor = '#e8f5e8'; // Light green background
+            setTimeout(() => {
+              field.style.backgroundColor = '';
+            }, 1500);
+          }
+        });
+        
+        // Trigger change events for potential additional processing
+        [nameInput, descInput, priceInput, sourceSelect, quantityInput].forEach(field => {
+          field.dispatchEvent(new Event('change', { bubbles: true }));
+        });
+        
+        // ✅ NEW: Mark as suggestion-selected for proper categorization
+        nameInput.dataset.fromSuggestion = 'true';
+        descInput.dataset.fromSuggestion = 'true';
+        priceInput.dataset.fromSuggestion = 'true';
+        sourceSelect.dataset.fromSuggestion = 'true';
+        
+        console.log(`✅ ENHANCED AUTOFILL: ${suggestion.name} with comprehensive field population (marked as suggestion-selected)`);
       };
     }
     // Calculate and display totals
@@ -1061,7 +1199,10 @@ function savePartsData() {
         const source = sourceSelect ? sourceSelect.value : '';
         
         if (name || desc) {
-          // ✅ Format according to webhook response structure
+          // ✅ ENHANCED: Track suggestion vs manual entry and format according to webhook response structure
+          const fromSuggestion = nameInput?.dataset.fromSuggestion === 'true' || 
+                                 descInput?.dataset.fromSuggestion === 'true';
+          
           parts.push({ 
             "name": name,
             "תיאור": desc,
@@ -1069,6 +1210,8 @@ function savePartsData() {
             "מחיר": `₪${price}`,
             "סוג חלק": source,
             "ספק": "", // To be filled from search results
+            "fromSuggestion": fromSuggestion,
+            "entry_method": fromSuggestion ? "suggestion_selected" : "manual_typed",
             "מיקום": "ישראל", // Default
             "זמינות": "זמין", // Default
             "מספר OEM": "", // To be filled if available
