@@ -488,10 +488,14 @@ function removeDuplicateParts(helper, activeCenterId) {
   const seen = new Map();
   const originalCount = helper.parts_search.selected_parts.length;
   
-  // Remove duplicates based on centerId + partNumber combination
+  // Remove duplicates based on centerId + part name combination
   helper.parts_search.selected_parts = helper.parts_search.selected_parts.filter(part => {
-    // Create unique key based on damage center ID and part number
-    const key = `${part.damage_center_id || part.centerId}_${part.partNumber}`;
+    // Create unique key based on damage center ID and part name/number
+    const partIdentifier = part.name || part.partNumber || part.part || '';
+    const centerIdentifier = part.damage_center_id || part.centerId || '';
+    const key = `${centerIdentifier}_${partIdentifier}`;
+    
+    console.log(`🔍 DEDUP: Checking part "${partIdentifier}" in center "${centerIdentifier}" -> key: ${key}`);
     
     if (seen.has(key)) {
       console.log(`🗑️ Removing duplicate part: ${key}`);
@@ -788,16 +792,20 @@ function savePartsData() {
       const updatedPartsForCurrentCenter = [];
       const existingPartsMap = new Map();
       
-      // Create a map of existing parts for current center by part number
+      // Create a map of existing parts for current center by part name/number
       helper.parts_search.selected_parts
         .filter(p => p.damage_center_id === activeCenterId)
-        .forEach(p => existingPartsMap.set(p.partNumber, p));
+        .forEach(p => {
+          const partKey = p.name || p.partNumber || p.part || '';
+          existingPartsMap.set(partKey, p);
+        });
       
       console.log(`📋 Found ${existingPartsMap.size} existing parts for center ${activeCenterId}`);
       
       // Process each new part
       newPartsWithContext.forEach(newPart => {
-        const existingPart = existingPartsMap.get(newPart.partNumber);
+        const newPartKey = newPart.name || newPart.partNumber || newPart.part || '';
+        const existingPart = existingPartsMap.get(newPartKey);
         
         if (existingPart) {
           // UPDATE existing part (merge properties)
@@ -808,11 +816,11 @@ function savePartsData() {
             updated_at: new Date().toISOString()
           };
           updatedPartsForCurrentCenter.push(updatedPart);
-          console.log(`🔄 Updated existing part: ${newPart.partNumber}`);
+          console.log(`🔄 Updated existing part: ${newPartKey}`);
         } else {
           // CREATE new part
           updatedPartsForCurrentCenter.push(newPart);
-          console.log(`➕ Added new part: ${newPart.partNumber}`);
+          console.log(`➕ Added new part: ${newPartKey}`);
         }
       });
       
@@ -1863,8 +1871,35 @@ function savePartsData() {
     // === PHASE 3: Initialize totals on page load ===
     function initializeTotals() {
       console.log('🚀 Initializing totals on page load...');
+      
+      // Clean up existing duplicates first
+      cleanupExistingDuplicates();
+      
       updateTotalCost();
       updatePartCount();
+    }
+    
+    // === FIX: Clean up existing duplicates on page load ===
+    function cleanupExistingDuplicates() {
+      try {
+        let helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+        
+        if (helper.parts_search?.selected_parts && helper.parts_search.selected_parts.length > 0) {
+          console.log('🧹 Cleaning up existing duplicates on page load...');
+          const beforeCount = helper.parts_search.selected_parts.length;
+          
+          removeDuplicateParts(helper, null); // null activeCenterId to clean all centers
+          
+          sessionStorage.setItem('helper', JSON.stringify(helper));
+          const afterCount = helper.parts_search.selected_parts.length;
+          
+          if (beforeCount !== afterCount) {
+            console.log(`✅ Cleaned up ${beforeCount - afterCount} duplicate parts on page load`);
+          }
+        }
+      } catch (error) {
+        console.error('Failed to cleanup duplicates:', error);
+      }
     }
     
     // Call initialization after DOM is ready
