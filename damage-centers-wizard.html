@@ -5907,6 +5907,13 @@
               setTimeout(sendPreventAutoAdd, 100);
               setTimeout(sendPreventAutoAdd, 500);
               setTimeout(sendPreventAutoAdd, 1000);
+              
+              // ✅ ALTERNATIVE APPROACH: Direct DOM cleanup for edit mode
+              if (damageCenterMode === 'edit_existing') {
+                setTimeout(() => {
+                  removeEmptyPartRowsFromIframe(iframe, contextData.selectedParts.length);
+                }, 2000); // Wait for iframe to fully load
+              }
             }
           }
         }
@@ -7160,6 +7167,81 @@
       } catch (error) {
         console.error('❌ Failed to refresh parts search module:', error);
         showUserNotification('שגיאה ברענון חיפוש חלפים', 'error', 2000);
+      }
+    }
+    
+    /**
+     * ✅ DIRECT DOM APPROACH: Remove empty part rows from iframe in edit mode
+     * More reliable than iframe communication - directly manipulates iframe DOM
+     */
+    function removeEmptyPartRowsFromIframe(iframe, expectedPartsCount) {
+      try {
+        console.log(`🧹 Cleaning empty part rows from iframe (expecting ${expectedPartsCount} parts)`);
+        
+        if (!iframe || !iframe.contentDocument) {
+          console.log('❌ Cannot access iframe content document');
+          return;
+        }
+        
+        const iframeDoc = iframe.contentDocument;
+        
+        // Common selectors for part rows in parts-required iframe
+        const partRowSelectors = [
+          '.part-row',
+          '.parts-row', 
+          '.part-item',
+          '[class*="part"]',
+          'tr[class*="part"]',
+          '.row:has(input[placeholder*="חלק"])',
+          '.row:has(input[placeholder*="שם"])'
+        ];
+        
+        let removedCount = 0;
+        
+        for (const selector of partRowSelectors) {
+          const partRows = iframeDoc.querySelectorAll(selector);
+          console.log(`🔍 Found ${partRows.length} elements with selector: ${selector}`);
+          
+          partRows.forEach((row, index) => {
+            // Check if row is empty (all inputs are empty)
+            const inputs = row.querySelectorAll('input, select, textarea');
+            const isEmpty = Array.from(inputs).every(input => {
+              const value = input.value ? input.value.trim() : '';
+              return value === '' || value === '0' || value === 'בחר';
+            });
+            
+            if (isEmpty && index >= expectedPartsCount) {
+              console.log(`🗑️ Removing empty part row ${index} (beyond expected ${expectedPartsCount} parts)`);
+              row.remove();
+              removedCount++;
+            }
+          });
+        }
+        
+        // Alternative approach: look for any empty rows beyond expected count
+        if (removedCount === 0) {
+          const allRows = iframeDoc.querySelectorAll('tr, .row, [class*="item"]');
+          console.log(`🔍 Fallback: Found ${allRows.length} total rows in iframe`);
+          
+          allRows.forEach((row, index) => {
+            if (index >= expectedPartsCount) {
+              const inputs = row.querySelectorAll('input');
+              if (inputs.length > 0) {
+                const isEmpty = Array.from(inputs).every(input => !input.value || input.value.trim() === '');
+                if (isEmpty) {
+                  console.log(`🗑️ Fallback: Removing empty row ${index}`);
+                  row.remove();
+                  removedCount++;
+                }
+              }
+            }
+          });
+        }
+        
+        console.log(`✅ Removed ${removedCount} empty part rows from iframe`);
+        
+      } catch (error) {
+        console.error('❌ Error removing empty part rows from iframe:', error);
       }
     }
     
