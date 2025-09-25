@@ -2387,6 +2387,10 @@
             break;
             
           case 3:
+            // Restore works data
+            restoreWorksData();
+            break;
+            
           case 4:
           case 5:
           case 6:
@@ -2518,11 +2522,7 @@
         }
       }
       
-      // ✅ FALLBACK: Check current_damage_center only if actively editing
-      if (!currentCenterData && damageCenterMode === 'edit_existing') {
-        currentCenterData = helper.current_damage_center || helper.wizard_temp?.current_damage_center;
-        console.log('🔍 Found in current_damage_center fallback:', !!currentCenterData);
-      }
+      // ✅ NO FALLBACK TO current_damage_center: It's a temporary workspace, not data source
       
       if (!currentCenterData) {
         console.log('❌ DESCRIPTION NOT RESTORED - No center data found for editing. Active ID:', activeCenterId, 'Mode:', damageCenterMode);
@@ -2548,6 +2548,100 @@
         console.log('✅ REPAIR NATURE RESTORED:', repairNature, 'from center:', currentCenterData.Id || currentCenterData.id);
       } else {
         console.log('❌ REPAIR NATURE NOT RESTORED - repairNature:', repairNature, 'textarea:', !!repairNatureTextarea, 'center:', currentCenterData?.Id || currentCenterData?.id);
+      }
+    }
+    
+    function restoreWorksData() {
+      console.log('🔄 === RESTORE WORKS DATA - STEP 3 ===');
+      
+      // Get UI element first
+      const takanaSelect = document.getElementById('takana389Work');
+      
+      if (!takanaSelect) {
+        console.log('❌ תקנה 389 select element not found for step 3');
+        return;
+      }
+      
+      // ✅ CRITICAL FIX: Check if this is a NEW damage center creation
+      const damageCenterMode = sessionStorage.getItem('damage_center_mode');
+      console.log('🔍 Damage center mode for step 3:', damageCenterMode);
+      
+      if (damageCenterMode === 'create_new') {
+        // ✅ NEW DAMAGE CENTER: Clear fields to start fresh
+        console.log('🆕 NEW DAMAGE CENTER: Clearing step 3 fields for fresh start');
+        takanaSelect.value = '';
+        
+        // Clear any validation errors
+        takanaSelect.style.border = '2px solid #e5e7eb';
+        
+        console.log('✅ Step 3 fields cleared for new damage center');
+        return;
+      }
+      
+      // ✅ EDITING EXISTING CENTER: Restore specific center's data
+      let currentCenterData = null;
+      
+      try {
+        const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+        
+        // First check if we have an active damage center ID
+        const activeCenterId = sessionStorage.getItem('active_damage_center_id');
+        console.log('🔍 Active center ID for editing (step 3):', activeCenterId);
+        
+        if (activeCenterId) {
+          console.log('🔍 Searching for center with ID:', activeCenterId);
+          console.log('🔍 Available centers in helper.centers:', helper.centers?.length || 0);
+          if (helper.centers?.length > 0) {
+            console.log('🔍 Center IDs in helper.centers:', helper.centers.map(c => c.Id || c.id));
+          }
+          
+          // Check in helper.centers array (where data is actually stored)
+          if (helper.centers && Array.isArray(helper.centers)) {
+            currentCenterData = helper.centers.find(c => c.Id === activeCenterId || c.id === activeCenterId);
+            console.log('🔍 Found in helper.centers (step 3):', !!currentCenterData);
+            if (currentCenterData) {
+              console.log('🔍 Center data structure:', {
+                id: currentCenterData.Id || currentCenterData.id,
+                hasWorks: !!currentCenterData.Works,
+                hasTakana389: !!(currentCenterData.Works?.takana389),
+                takana389Value: currentCenterData.Works?.takana389
+              });
+            }
+          }
+          
+          // Also check helper.damage_centers for backward compatibility
+          if (!currentCenterData && helper.damage_centers) {
+            currentCenterData = helper.damage_centers.find(c => c.id === activeCenterId);
+            console.log('🔍 Found in helper.damage_centers (step 3):', !!currentCenterData);
+          }
+        }
+        
+        // ✅ NO FALLBACK TO current_damage_center: It's a temporary workspace, not data source
+        
+        if (!currentCenterData) {
+          console.log('❌ WORKS DATA NOT RESTORED - No center data found for editing. Active ID:', activeCenterId, 'Mode:', damageCenterMode);
+          // Clear fields when no data to restore
+          takanaSelect.value = '';
+          return;
+        }
+        
+        // ✅ RESTORE תקנה 389: Check both lowercase and uppercase property names
+        const takana389 = currentCenterData.Works?.takana389 || 
+                          currentCenterData.works?.takana389 || 
+                          currentCenterData.takana389;
+        
+        if (takana389 && takanaSelect) {
+          takanaSelect.value = takana389;
+          console.log('✅ תקנה 389 RESTORED:', takana389, 'from center:', currentCenterData.Id || currentCenterData.id);
+          
+          // Update module data to reflect restored value
+          moduleData.takana389 = takana389;
+        } else {
+          console.log('❌ תקנה 389 NOT RESTORED - takana389:', takana389, 'select:', !!takanaSelect, 'center:', currentCenterData?.Id || currentCenterData?.id);
+        }
+        
+      } catch (error) {
+        console.error('❌ Failed to restore תקנה 389 field:', error);
       }
     }
     
@@ -3732,26 +3826,10 @@
         "אחר"
       ];
       
-      // 🔥 FIX: Restore תקנה 389 field value from existing data
-      try {
-        const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
-        const existingTakana389 = helper.current_damage_center?.Works?.takana389;
-        
-        if (existingTakana389) {
-          setTimeout(() => {
-            const takanaSelect = document.getElementById('takana389Work');
-            if (takanaSelect) {
-              takanaSelect.value = existingTakana389;
-              console.log('✅ Restored תקנה 389 field value:', existingTakana389);
-              
-              // Update module data to reflect restored value
-              moduleData.takana389 = existingTakana389;
-            }
-          }, 100);
-        }
-      } catch (error) {
-        console.error('❌ Failed to restore תקנה 389 field:', error);
-      }
+      // ✅ CRITICAL FIX: Use mode-based restoration for תקנה 389 (same logic as step 2)
+      setTimeout(() => {
+        restoreWorksData();
+      }, 100);
       
       // Pre-load existing work data if any
       if (moduleData.works && moduleData.works.length > 0) {
