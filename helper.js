@@ -4129,6 +4129,18 @@ window.populateAllForms = function() {
     console.warn('Could not preserve case_summary:', e);
   }
   
+  // === NEW FIX: Preserve expertise.summary before populateAllForms runs ===
+  let preservedExpertiseSummary = null;
+  try {
+    const currentHelper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+    if (currentHelper.expertise?.summary) {
+      preservedExpertiseSummary = { ...currentHelper.expertise.summary };
+      console.log('🔧 Preserved expertise.summary before populateAllForms:', preservedExpertiseSummary);
+    }
+  } catch (e) {
+    console.warn('Could not preserve expertise.summary:', e);
+  }
+  
   const currentModule = detectCurrentModule();
   console.log('📍 Detected current module:', currentModule);
   
@@ -4360,6 +4372,28 @@ window.populateAllForms = function() {
       console.log('🔧 PHASE 6: Restored case_summary to sessionStorage as well');
     } catch (e) {
       console.error('❌ Failed to restore case_summary:', e);
+    }
+  }
+  
+  // === NEW FIX: Restore preserved expertise.summary after populateAllForms ===
+  if (preservedExpertiseSummary) {
+    try {
+      if (!window.helper.expertise) {
+        window.helper.expertise = {};
+      }
+      window.helper.expertise.summary = preservedExpertiseSummary;
+      console.log('🔧 Restored expertise.summary after populateAllForms:', preservedExpertiseSummary);
+      
+      // Also restore to sessionStorage to ensure consistency
+      const sessionHelper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+      if (!sessionHelper.expertise) {
+        sessionHelper.expertise = {};
+      }
+      sessionHelper.expertise.summary = preservedExpertiseSummary;
+      sessionStorage.setItem('helper', JSON.stringify(sessionHelper));
+      console.log('🔧 Restored expertise.summary to sessionStorage as well');
+    } catch (e) {
+      console.error('❌ Failed to restore expertise.summary:', e);
     }
   }
   

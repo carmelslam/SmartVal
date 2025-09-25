@@ -216,6 +216,32 @@
         
         console.log('Form populated with saved data');
       }
+      
+      // If no expertise date is saved yet, default to inspection date
+      const dateInput = document.getElementById('expertiseDate');
+      if (!dateInput.value && currentHelper?.case_info?.inspection_date) {
+        // Convert inspection_date to YYYY-MM-DD format for date input
+        const inspectionDate = new Date(currentHelper.case_info.inspection_date);
+        if (!isNaN(inspectionDate)) {
+          const formattedDate = inspectionDate.toISOString().split('T')[0];
+          dateInput.value = formattedDate;
+          
+          // Auto-save this default date
+          if (!currentHelper.expertise) {
+            currentHelper.expertise = {};
+          }
+          if (!currentHelper.expertise.summary) {
+            currentHelper.expertise.summary = {};
+          }
+          currentHelper.expertise.summary.expertise_date = formattedDate;
+          
+          // Update helper
+          window.helper = currentHelper;
+          sessionStorage.setItem('helper', JSON.stringify(currentHelper));
+          
+          console.log('Auto-populated expertise date from inspection date:', formattedDate);
+        }
+      }
     }
     
     // Wait for DOM to be ready, then populate form
