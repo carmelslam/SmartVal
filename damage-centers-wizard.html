@@ -3560,6 +3560,75 @@
               timestamp: new Date().toISOString()
             };
             
+            // ✅ NEW: Register parts in parts_search.selected_parts for dual-purpose functionality
+            try {
+              // Get damage center info
+              const activeCenterId = helper.current_damage_center?.id || helper.current_damage_center?.Id;
+              const damageCenterNumber = helper.current_damage_center?.["Damage center Number"] || helper.current_damage_center?.number;
+              const damageCenterName = `מוקד נזק ${damageCenterNumber}`;
+              const damageCenterLocation = helper.current_damage_center?.Location || helper.current_damage_center?.location || '';
+              
+              // Initialize parts_search structure
+              helper.parts_search = helper.parts_search || {};
+              helper.parts_search.selected_parts = helper.parts_search.selected_parts || [];
+              helper.parts_search.damage_centers_summary = helper.parts_search.damage_centers_summary || {};
+              
+              // Remove existing parts for current damage center to avoid duplicates
+              helper.parts_search.selected_parts = helper.parts_search.selected_parts.filter(part => 
+                part.damage_center_id !== activeCenterId
+              );
+              
+              // Add current parts with enhanced classification
+              const newPartsWithContext = partsData.map(part => ({
+                ...part,
+                selected_at: new Date().toISOString(),
+                selected_in_module: 'parts_required',
+                damage_center_id: activeCenterId,
+                damage_center_number: damageCenterNumber,
+                damage_center_name: damageCenterName,
+                damage_center_location: damageCenterLocation,
+                assigned_to_center: true,
+                selection_mode: 'damage_center_integrated',
+                usage_context: 'damage_center_assignment',
+                entry_type: 'manual_entry',
+                case_context: {
+                  plate: helper.vehicle?.plate || '',
+                  case_id: helper.case_info?.case_id || '',
+                  step: 5,
+                  wizard_session: new Date().toISOString()
+                }
+              }));
+              
+              // Add new parts to accumulated array
+              helper.parts_search.selected_parts.push(...newPartsWithContext);
+              
+              // Update damage center summary
+              const totalCost = partsData.reduce((sum, part) => sum + (parseFloat(part.price) || 0), 0);
+              helper.parts_search.damage_centers_summary[activeCenterId] = {
+                damage_center_id: activeCenterId,
+                damage_center_number: damageCenterNumber,
+                damage_center_name: damageCenterName,
+                damage_center_location: damageCenterLocation,
+                parts_count: partsData.length,
+                total_cost: totalCost,
+                parts_list: partsData.map(part => ({
+                  name: part.name || part.part,
+                  description: part.description || part.desc,
+                  quantity: part.quantity,
+                  price: part.price,
+                  source: part.source
+                })),
+                last_updated: new Date().toISOString(),
+                summary: `${damageCenterName} (${damageCenterLocation}): ${partsData.length} חלקים, ₪${totalCost.toFixed(2)}`
+              };
+              
+              console.log('✅ Step 5 - Parts registered in parts_search.selected_parts');
+              console.log('📊 Total parts_search.selected_parts:', helper.parts_search.selected_parts.length);
+              
+            } catch (error) {
+              console.warn('Failed to register parts in parts_search:', error);
+            }
+            
             console.log('✅ Step 5 - Parts required data saved to current_damage_center.Parts');
             showUserNotification(`חלקים נדרשים נוספו למוקד ${damageCenterData.number}`, 'success', 2000);
           }
