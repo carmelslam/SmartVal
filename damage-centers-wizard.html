@@ -3758,6 +3758,47 @@
                     const verifyHelper = JSON.parse(sessionStorage.getItem('helper') || '{}');
                     console.log('✅ PHASE 6 DEBUG: Immediate verification - case_summary:', verifyHelper.parts_search.case_summary);
                     
+                    // === PHASE 6 ULTIMATE FIX: Override broadcastHelperUpdate to prevent overwrites ===
+                    const originalBroadcastHelperUpdate = window.broadcastHelperUpdate;
+                    const preservedCaseSummary = { ...helper.parts_search.case_summary };
+                    
+                    console.log('🔧 PHASE 6 ULTIMATE: Temporarily overriding broadcastHelperUpdate to preserve case_summary');
+                    
+                    // Replace broadcastHelperUpdate with a protective version
+                    window.broadcastHelperUpdate = function(sections, source) {
+                      console.log('🛡️ PHASE 6: Intercepted broadcastHelperUpdate call from:', source);
+                      console.log('🛡️ PHASE 6: Preserving case_summary before calling original function');
+                      
+                      // Call the original function
+                      if (originalBroadcastHelperUpdate) {
+                        originalBroadcastHelperUpdate(sections, source);
+                      }
+                      
+                      // Force restore our case_summary after a short delay (longer than the 200ms in broadcastHelperUpdate)
+                      setTimeout(() => {
+                        try {
+                          const currentHelper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+                          if (!currentHelper.parts_search) currentHelper.parts_search = {};
+                          currentHelper.parts_search.case_summary = preservedCaseSummary;
+                          sessionStorage.setItem('helper', JSON.stringify(currentHelper));
+                          
+                          if (window.helper?.parts_search) {
+                            window.helper.parts_search.case_summary = preservedCaseSummary;
+                          }
+                          
+                          console.log('🛡️ PHASE 6: Force restored case_summary after broadcastHelperUpdate:', preservedCaseSummary);
+                        } catch (e) {
+                          console.error('❌ Failed to force restore case_summary:', e);
+                        }
+                      }, 300);
+                    };
+                    
+                    // Restore the original function after 5 seconds
+                    setTimeout(() => {
+                      window.broadcastHelperUpdate = originalBroadcastHelperUpdate;
+                      console.log('🔧 PHASE 6: Restored original broadcastHelperUpdate function');
+                    }, 5000);
+                    
                     // Delayed verification to check for overwrites
                     setTimeout(() => {
                       const delayedHelper = JSON.parse(sessionStorage.getItem('helper') || '{}');
@@ -3768,6 +3809,14 @@
                         console.error('❌ PHASE 6 ERROR: case_summary was overwritten by another process!');
                         console.error('Expected selected_count:', allSelectedParts.length, 'Got:', delayedHelper.parts_search.case_summary.selected_count);
                         console.error('Expected estimated_total_cost:', totalCost, 'Got:', delayedHelper.parts_search.case_summary.estimated_total_cost);
+                        
+                        // LAST RESORT: Force fix the values one more time
+                        console.log('🚨 PHASE 6 LAST RESORT: Force fixing case_summary values');
+                        const fixHelper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+                        if (!fixHelper.parts_search) fixHelper.parts_search = {};
+                        fixHelper.parts_search.case_summary = preservedCaseSummary;
+                        sessionStorage.setItem('helper', JSON.stringify(fixHelper));
+                        console.log('🚨 PHASE 6: Applied last resort fix');
                       } else {
                         console.log('✅ PHASE 6 SUCCESS: case_summary values persisted correctly!');
                       }
