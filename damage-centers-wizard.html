@@ -5814,8 +5814,19 @@
               const currentCenter = helper.damage_assessment?.centers?.find(center => 
                 center.id === currentCenterId || center.current_center_id === currentCenterId
               );
-              // ✅ FIX: Filter out empty/invalid parts and ensure proper field mapping
-              const rawParts = currentCenter?.parts_items || moduleData.parts || [];
+              // ✅ FIX: Check multiple possible field names for parts data and ensure proper field mapping
+              const rawParts = currentCenter?.parts_items || 
+                              currentCenter?.Parts?.parts_required || 
+                              moduleData.parts || [];
+              
+              console.log(`🔍 EDIT MODE DEBUG - Data sources for parts:`, {
+                'currentCenter?.parts_items': currentCenter?.parts_items?.length || 0,
+                'currentCenter?.Parts?.parts_required': currentCenter?.Parts?.parts_required?.length || 0,
+                'moduleData.parts': moduleData.parts?.length || 0,
+                'final rawParts': rawParts.length,
+                'currentCenterId': currentCenterId,
+                'currentCenter found': !!currentCenter
+              });
               contextData.selectedParts = rawParts
                 .filter(part => 
                   part && 

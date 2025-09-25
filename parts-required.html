@@ -646,11 +646,69 @@ function savePartsData() {
       }
     }));
     
-    // ✅ ACCUMULATE: Add new parts to existing array instead of replacing
-    helper.parts_search.selected_parts = [
-      ...helper.parts_search.selected_parts,
-      ...newPartsWithContext
-    ];
+    // ✅ SMART ACCUMULATION: Remove existing parts for current damage center, then add new ones
+    // This prevents overwrite of other damage centers while avoiding duplication in current center
+    
+    if (!isStandaloneMode && activeCenterId) {
+      // Remove existing parts for current damage center only
+      const partsFromOtherCenters = helper.parts_search.selected_parts.filter(existingPart => 
+        existingPart.damage_center_id !== activeCenterId
+      );
+      
+      console.log(`🧹 Removed ${helper.parts_search.selected_parts.length - partsFromOtherCenters.length} existing parts for center ${activeCenterId}`);
+      console.log(`📊 Keeping ${partsFromOtherCenters.length} parts from other damage centers`);
+      
+      // Add new parts to the filtered array (keeps other centers + adds current center)
+      helper.parts_search.selected_parts = [
+        ...partsFromOtherCenters,
+        ...newPartsWithContext
+      ];
+    } else {
+      // Standalone mode: just accumulate (no damage center conflicts)
+      helper.parts_search.selected_parts = [
+        ...helper.parts_search.selected_parts,
+        ...newPartsWithContext
+      ];
+    }
+    
+    // ✅ DAMAGE CENTER CLASSIFICATION: Update classification metadata
+    if (!isStandaloneMode && activeCenterId) {
+      // Update damage center summary in parts_search
+      helper.parts_search.damage_centers_summary = helper.parts_search.damage_centers_summary || {};
+      
+      // Calculate totals for current damage center
+      const currentCenterParts = helper.parts_search.selected_parts.filter(part => 
+        part.damage_center_id === activeCenterId
+      );
+      
+      const currentCenterTotal = currentCenterParts.reduce((sum, part) => {
+        const price = parseFloat(part.price) || 0;
+        const quantity = parseInt(part.quantity) || 1;
+        return sum + (price * quantity);
+      }, 0);
+      
+      // Update damage center classification
+      helper.parts_search.damage_centers_summary[activeCenterId] = {
+        damage_center_id: activeCenterId,
+        damage_center_number: damageCenterNumber,
+        parts_count: currentCenterParts.length,
+        total_cost: currentCenterTotal,
+        parts_list: currentCenterParts.map(part => ({
+          name: part.name || part.part,
+          description: part.desc || part.description,
+          quantity: part.quantity,
+          price: part.price,
+          source: part.source,
+          entry_type: part.entry_type
+        })),
+        last_updated: new Date().toISOString()
+      };
+      
+      console.log(`📊 Updated classification for damage center ${damageCenterNumber}: ${currentCenterParts.length} parts, ₪${currentCenterTotal.toFixed(2)} total`);
+    }
+    
+    // ✅ COMPREHENSIVE DATA CAPTURE: Update all parts_search objects
+    updatePartsSearchComprehensiveData(helper, validParts, isStandaloneMode, activeCenterId);
     
     console.log(`✅ DUAL-PURPOSE: Registered ${validParts.length} parts in parts_search.selected_parts`);
     console.log(`📊 Mode: ${isStandaloneMode ? 'Standalone Search' : 'Damage Center Integrated'}`);
@@ -1427,6 +1485,63 @@ function savePartsData() {
       const confirmDelete = confirm(`האם אתה בטוח שברצונך למחוק את החלק?\n\n${partInfo}`);
       
       if (confirmDelete) {
+        // ✅ SYNC DELETE: Remove from parts_search.selected_parts before UI removal
+        try {
+          let helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+          const activeCenterId = helper.damage_assessment?.current_center_id || 
+                                helper.damage_centers?.current_center_id ||
+                                sessionStorage.getItem('active_damage_center_id');
+          
+          if (helper.parts_search && helper.parts_search.selected_parts) {
+            const beforeCount = helper.parts_search.selected_parts.length;
+            
+            // Remove the part from parts_search.selected_parts
+            // Match by name, description AND damage center to ensure we remove the right part
+            helper.parts_search.selected_parts = helper.parts_search.selected_parts.filter(part => {
+              const partName = part.name || part.part || '';
+              const partDesc = part.desc || part.description || '';
+              const partCenter = part.damage_center_id;
+              
+              // Remove if this part matches name/desc AND is from current damage center (or standalone)
+              const nameMatch = partName.toLowerCase() === name.toLowerCase();
+              const descMatch = partDesc.toLowerCase() === desc.toLowerCase();
+              const centerMatch = activeCenterId ? (partCenter === activeCenterId) : (!partCenter);
+              
+              // Keep parts that DON'T match (filter out matching parts)
+              return !(nameMatch && centerMatch) && !(descMatch && centerMatch);
+            });
+            
+            const afterCount = helper.parts_search.selected_parts.length;
+            console.log(`🧹 Removed ${beforeCount - afterCount} parts from parts_search.selected_parts`);
+            
+            // Update damage center classification if applicable
+            if (activeCenterId && helper.parts_search.damage_centers_summary) {
+              const currentCenterParts = helper.parts_search.selected_parts.filter(part => 
+                part.damage_center_id === activeCenterId
+              );
+              
+              const currentCenterTotal = currentCenterParts.reduce((sum, part) => {
+                const price = parseFloat(part.price) || 0;
+                const quantity = parseInt(part.quantity) || 1;
+                return sum + (price * quantity);
+              }, 0);
+              
+              if (helper.parts_search.damage_centers_summary[activeCenterId]) {
+                helper.parts_search.damage_centers_summary[activeCenterId].parts_count = currentCenterParts.length;
+                helper.parts_search.damage_centers_summary[activeCenterId].total_cost = currentCenterTotal;
+                helper.parts_search.damage_centers_summary[activeCenterId].last_updated = new Date().toISOString();
+              }
+            }
+            
+            // Save updated helper
+            sessionStorage.setItem('helper', JSON.stringify(helper));
+            console.log(`✅ Updated parts_search after deletion`);
+          }
+        } catch (error) {
+          console.warn('Failed to sync delete with parts_search:', error);
+        }
+        
+        // Remove from UI
         row.remove();
         
         // Update row indices for remaining rows
@@ -1460,10 +1575,128 @@ function savePartsData() {
       }
     }
     
+    // ✅ COMPREHENSIVE DATA CAPTURE FUNCTION: Updates all parts_search statistics and data
+    function updatePartsSearchComprehensiveData(helper, newParts, isStandaloneMode, activeCenterId) {
+      try {
+        // Ensure all parts_search structures exist
+        helper.parts_search = helper.parts_search || {};
+        helper.parts_search.case_summary = helper.parts_search.case_summary || {};
+        helper.parts_search.global_parts_bank = helper.parts_search.global_parts_bank || {
+          all_parts: [], suppliers: [], price_history: [], search_patterns: [], 
+          ocr_results: [], manual_additions: []
+        };
+        helper.parts_search.search_history = helper.parts_search.search_history || {
+          by_date: [], by_vehicle: {}, by_part_name: {}, by_supplier: {},
+          statistics: { total_searches: 0, unique_parts: 0, unique_suppliers: 0, average_results_per_search: 0 }
+        };
+
+        const currentTimestamp = new Date().toISOString();
+        
+        // Update case_summary
+        const allSelectedParts = helper.parts_search.selected_parts || [];
+        const totalCost = allSelectedParts.reduce((sum, part) => {
+          const price = parseFloat(part.price) || 0;
+          const quantity = parseInt(part.quantity) || 1;
+          return sum + (price * quantity);
+        }, 0);
+        
+        helper.parts_search.case_summary = {
+          total_searches: (helper.parts_search.case_summary.total_searches || 0) + 1, // Count manual entry as a "search"
+          total_results: allSelectedParts.length,
+          selected_count: allSelectedParts.length,
+          unselected_count: helper.parts_search.unselected_parts?.length || 0,
+          last_search: currentTimestamp,
+          estimated_total_cost: totalCost
+        };
+
+        // Update global_parts_bank with manual additions
+        newParts.forEach(part => {
+          const partEntry = {
+            id: `manual_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+            name: part.name || part.part,
+            description: part.desc || part.description,
+            price: parseFloat(part.price) || 0,
+            quantity: parseInt(part.quantity) || 1,
+            source: part.source,
+            supplier: part.supplier || '',
+            added_date: currentTimestamp,
+            added_method: 'manual_entry',
+            damage_center_id: isStandaloneMode ? null : activeCenterId,
+            vehicle_plate: helper.vehicle?.plate || '',
+            case_id: helper.case_info?.case_id || ''
+          };
+
+          // Add to all_parts (avoid duplicates by name+price combination)
+          const existsInBank = helper.parts_search.global_parts_bank.all_parts.some(existing => 
+            existing.name === partEntry.name && existing.price === partEntry.price
+          );
+          
+          if (!existsInBank) {
+            helper.parts_search.global_parts_bank.all_parts.push(partEntry);
+          }
+
+          // Add to manual_additions
+          helper.parts_search.global_parts_bank.manual_additions.push(partEntry);
+
+          // Update price_history
+          helper.parts_search.global_parts_bank.price_history.push({
+            part_name: partEntry.name,
+            price: partEntry.price,
+            supplier: partEntry.supplier,
+            date: currentTimestamp,
+            source: 'manual_entry'
+          });
+
+          // Update suppliers list
+          if (partEntry.supplier && !helper.parts_search.global_parts_bank.suppliers.find(s => s.name === partEntry.supplier)) {
+            helper.parts_search.global_parts_bank.suppliers.push({
+              name: partEntry.supplier,
+              contact_info: {},
+              parts_supplied: [partEntry.id],
+              last_interaction: currentTimestamp
+            });
+          }
+        });
+
+        // Update search_history statistics
+        const uniquePartNames = new Set(helper.parts_search.global_parts_bank.all_parts.map(p => p.name.toLowerCase()));
+        const uniqueSuppliers = new Set(helper.parts_search.global_parts_bank.suppliers.map(s => s.name));
+        
+        helper.parts_search.search_history.statistics = {
+          total_searches: helper.parts_search.case_summary.total_searches,
+          unique_parts: uniquePartNames.size,
+          unique_suppliers: uniqueSuppliers.size,
+          average_results_per_search: allSelectedParts.length / Math.max(helper.parts_search.case_summary.total_searches, 1)
+        };
+
+        // Add current session to search history by_date
+        helper.parts_search.search_history.by_date.push({
+          timestamp: currentTimestamp,
+          search_type: 'manual_entry',
+          parts_added: newParts.length,
+          damage_center_id: isStandaloneMode ? null : activeCenterId,
+          total_cost: newParts.reduce((sum, part) => sum + ((parseFloat(part.price) || 0) * (parseInt(part.quantity) || 1)), 0)
+        });
+
+        console.log('📊 COMPREHENSIVE DATA: Updated all parts_search statistics and data');
+        console.log('📊 Case Summary:', helper.parts_search.case_summary);
+        console.log('📊 Global Bank Stats:', {
+          all_parts: helper.parts_search.global_parts_bank.all_parts.length,
+          manual_additions: helper.parts_search.global_parts_bank.manual_additions.length,
+          suppliers: helper.parts_search.global_parts_bank.suppliers.length,
+          price_history: helper.parts_search.global_parts_bank.price_history.length
+        });
+
+      } catch (error) {
+        console.warn('Failed to update comprehensive parts_search data:', error);
+      }
+    }
+
     // Make functions globally available
     window.editPartRow = editPartRow;
     window.deletePartRow = deletePartRow;
     window.updateRowIndices = updateRowIndices;
+    window.updatePartsSearchComprehensiveData = updatePartsSearchComprehensiveData;
   </script>
   <script type="module">
     // Try to load parts bank for better suggestions
