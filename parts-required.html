@@ -470,6 +470,9 @@ form button {
   `;
   partsList.appendChild(row);
   
+  // === PHASE 3: Update counts after adding new row ===
+  updatePartCount();
+  
   console.log(`➕ Added new part row ${newRowIndex}`);
 }
 
@@ -1566,6 +1569,10 @@ function savePartsData() {
         // Update row indices for remaining rows
         updateRowIndices();
         
+        // === PHASE 3: Update totals after delete ===
+        updateTotalCost();
+        updatePartCount();
+        
         console.log(`🗑️ Deleted row ${rowIndex}: ${partInfo}`);
         
         // Show notification if available
@@ -1591,6 +1598,88 @@ function savePartsData() {
       // Reset editing state if we were editing a deleted row
       if (editingRowIndex >= rows.length) {
         editingRowIndex = -1;
+      }
+    }
+    
+    // === PHASE 3: Update total cost function ===
+    function updateTotalCost() {
+      console.log('💰 Updating total cost...');
+      let totalCost = 0;
+      
+      // Calculate from UI rows
+      const rows = document.querySelectorAll('#partsList .row');
+      rows.forEach(row => {
+        const priceInput = row.querySelector('input[type="number"][id^="price_"]');
+        const quantityInput = row.querySelector('input[type="number"][id^="quantity_"]');
+        
+        if (priceInput && quantityInput) {
+          const price = parseFloat(priceInput.value) || 0;
+          const quantity = parseInt(quantityInput.value) || 1;
+          totalCost += price * quantity;
+        }
+      });
+      
+      // Update total display
+      const totalElement = document.querySelector('.total-cost') || 
+                          document.querySelector('.parts-total') ||
+                          document.querySelector('[class*="total"]');
+      
+      if (totalElement) {
+        totalElement.textContent = `₪${totalCost.toFixed(2)}`;
+        console.log(`✅ Updated total cost: ₪${totalCost.toFixed(2)}`);
+      } else {
+        console.log(`⚠️ Total cost element not found, calculated: ₪${totalCost.toFixed(2)}`);
+      }
+      
+      // Also update in helper if in damage center mode
+      try {
+        const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+        const activeCenterId = helper.damage_assessment?.current_center_id || 
+                              helper.damage_centers?.current_center_id ||
+                              sessionStorage.getItem('active_damage_center_id');
+        
+        if (activeCenterId && helper.parts_search?.damage_centers_summary?.[activeCenterId]) {
+          helper.parts_search.damage_centers_summary[activeCenterId].total_cost = totalCost;
+          helper.parts_search.damage_centers_summary[activeCenterId].last_updated = new Date().toISOString();
+          sessionStorage.setItem('helper', JSON.stringify(helper));
+        }
+      } catch (error) {
+        console.error('Failed to update total in helper:', error);
+      }
+    }
+    
+    // === PHASE 3: Update part count function ===
+    function updatePartCount() {
+      console.log('📊 Updating part count...');
+      
+      const rows = document.querySelectorAll('#partsList .row');
+      const partCount = rows.length;
+      
+      // Update count display
+      const countElement = document.querySelector('.parts-count') || 
+                          document.querySelector('.parts-total-count') ||
+                          document.querySelector('[class*="count"]');
+      
+      if (countElement) {
+        countElement.textContent = partCount;
+        console.log(`✅ Updated part count: ${partCount}`);
+      } else {
+        console.log(`⚠️ Part count element not found, calculated: ${partCount}`);
+      }
+      
+      // Also update in helper if in damage center mode
+      try {
+        const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+        const activeCenterId = helper.damage_assessment?.current_center_id || 
+                              helper.damage_centers?.current_center_id ||
+                              sessionStorage.getItem('active_damage_center_id');
+        
+        if (activeCenterId && helper.parts_search?.damage_centers_summary?.[activeCenterId]) {
+          helper.parts_search.damage_centers_summary[activeCenterId].parts_count = partCount;
+          sessionStorage.setItem('helper', JSON.stringify(helper));
+        }
+      } catch (error) {
+        console.error('Failed to update count in helper:', error);
       }
     }
     
@@ -1727,6 +1816,23 @@ function savePartsData() {
     window.updateRowIndices = updateRowIndices;
     window.updatePartsSearchComprehensiveData = updatePartsSearchComprehensiveData;
     window.autoSaveOnChange = autoSaveOnChange;
+    window.updateTotalCost = updateTotalCost;
+    window.updatePartCount = updatePartCount;
+    
+    // === PHASE 3: Initialize totals on page load ===
+    function initializeTotals() {
+      console.log('🚀 Initializing totals on page load...');
+      updateTotalCost();
+      updatePartCount();
+    }
+    
+    // Call initialization after DOM is ready
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', initializeTotals);
+    } else {
+      // DOM is already ready
+      initializeTotals();
+    }
   </script>
   <script type="module">
     // Try to load parts bank for better suggestions
