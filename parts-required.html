@@ -1490,6 +1490,8 @@ function savePartsData() {
           // 1. Remove from parts_search.selected_parts
           if (helper.parts_search && helper.parts_search.selected_parts) {
             const beforeCount = helper.parts_search.selected_parts.length;
+            console.log(`🔍 DELETE DEBUG: Looking for parts with name="${name}" or desc="${desc}" in center="${activeCenterId}"`);
+            
             helper.parts_search.selected_parts = helper.parts_search.selected_parts.filter(part => {
               const partName = part.name || part.part || '';
               const partDesc = part.desc || part.description || '';
@@ -1502,6 +1504,10 @@ function savePartsData() {
               
               // Keep parts that DON'T match - remove parts that DO match
               const shouldRemove = (nameMatch || descMatch) && centerMatch;
+              
+              // Debug each part
+              console.log(`🔍 Part check: "${partName}" (center: ${partCenter}) - nameMatch: ${nameMatch}, descMatch: ${descMatch}, centerMatch: ${centerMatch}, shouldRemove: ${shouldRemove}`);
+              
               return !shouldRemove;
             });
             const afterCount = helper.parts_search.selected_parts.length;
@@ -1562,6 +1568,18 @@ function savePartsData() {
           
           // Save updated helper
           sessionStorage.setItem('helper', JSON.stringify(helper));
+          // === DEBUG: Check if delete worked ===
+          helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+          console.log('🔍 VERIFICATION: After delete attempt:');
+          console.log('- parts_search.selected_parts count:', helper.parts_search?.selected_parts?.length || 0);
+          console.log('- current_damage_center parts count:', helper.current_damage_center?.parts?.length || 0);
+          
+          if (helper.parts_search?.selected_parts) {
+            const matchingParts = helper.parts_search.selected_parts.filter(p => 
+              (p.name === name || p.desc === desc || p.description === desc));
+            console.log(`- Still found ${matchingParts.length} matching parts in selected_parts:`, matchingParts);
+          }
+          
           console.log(`✅ Comprehensive delete completed - removed "${partInfo}" from all 3 locations`);
           
         } catch (error) {
@@ -1577,6 +1595,12 @@ function savePartsData() {
         // === PHASE 3: Update totals after delete ===
         updateTotalCost();
         updatePartCount();
+        
+        // === PHASE 3: Notify wizard of changes ===
+        if (typeof sendPartsUpdateToWizard === 'function') {
+          sendPartsUpdateToWizard();
+          console.log('📤 Sent update to wizard after delete');
+        }
         
         console.log(`🗑️ Deleted row ${rowIndex}: ${partInfo}`);
         
