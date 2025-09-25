@@ -1916,10 +1916,15 @@ function savePartsData() {
     function loadExistingPartsIntoUI() {
       try {
         const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
-        const activeCenterId = helper.damage_assessment?.current_center_id || 
-                              helper.damage_centers?.current_center_id ||
-                              sessionStorage.getItem('active_damage_center_id');
+        // In edit mode, use the editing center ID, otherwise use current center ID
+        const editMode = sessionStorage.getItem('damage_center_mode');
+        const activeCenterId = editMode === 'edit_existing' ? 
+                              sessionStorage.getItem('active_damage_center_id') :
+                              (helper.damage_assessment?.current_center_id || 
+                               helper.damage_centers?.current_center_id ||
+                               sessionStorage.getItem('active_damage_center_id'));
         
+        console.log('🔍 LOAD DEBUG: Edit mode:', editMode);
         console.log('🔍 LOAD DEBUG: Active center ID:', activeCenterId);
         console.log('🔍 LOAD DEBUG: Helper structure:', {
           has_parts_search: !!helper.parts_search,
