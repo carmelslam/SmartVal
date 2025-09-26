@@ -85,19 +85,31 @@
             
             addResult('מתקן is_current flags...', 'info');
             try {
-                // First, set all to false
-                const updateAllResponse = await fetch(`${SUPABASE_URL}/rest/v1/case_helper`, {
-                    method: 'PATCH',
+                // First, get all helpers and set each to false individually
+                const getAllResponse = await fetch(`${SUPABASE_URL}/rest/v1/case_helper?select=id`, {
                     headers: {
                         'apikey': SUPABASE_ANON_KEY,
-                        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ is_current: false })
+                        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+                    }
                 });
                 
-                if (!updateAllResponse.ok) {
-                    throw new Error('שגיאה בעדכון כללי');
+                if (!getAllResponse.ok) {
+                    throw new Error('שגיאה בשליפת כל ההלפרים');
+                }
+                
+                const allHelpers = await getAllResponse.json();
+                
+                // Set each helper to is_current = false
+                for (const helper of allHelpers) {
+                    await fetch(`${SUPABASE_URL}/rest/v1/case_helper?id=eq.${helper.id}`, {
+                        method: 'PATCH',
+                        headers: {
+                            'apikey': SUPABASE_ANON_KEY,
+                            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ is_current: false })
+                    });
                 }
                 
                 // Get all helpers grouped by case_id
