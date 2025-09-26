@@ -130,5 +130,48 @@ All functions now handle both data structures:
 - **Legacy Format**: Direct helper structure (unchanged)
 - **Wrapped Format**: `{helper_data: {actual_helper_content}}` (unwrapped automatically)
 
+## FINAL UPDATE - Validation-Based Preview System
+
+### Task 5: Validation-Based Preview System Rewrite
+**Status:** ✅ COMPLETED  
+**Files Modified:** `/SmartVal/admin.html` (lines 6545-6947)  
+**Changes Made:**
+- Completely rewrote `generateUserFriendlyReport()` function to use validation logs
+- Added sophisticated validation scanning functions:
+  - `analyzeWorkflowValidations(helper)` - scans validation logs for each workflow stage
+  - `extractFinancialFromValidations(helper)` - extracts financial data from validation system
+  - `analyzeReportsValidations(helper)` - analyzes report completion status
+  - Stage-specific validation checks: `checkVehicleValidation()`, `checkDamageValidation()`, etc.
+- Implemented timeline extraction from actual validation logs
+- **Result:** Preview now shows real workflow completion status based on validation logs from estimate helpers, final report builders, and expertise workflows
+
+### User Feedback Resolution
+**Original Issue:** "this report is wrng, it doesnt tactually read teh actual helper"  
+**User Request:** "use teh validations log from final report and estiamte helpers to shwo the sanp shot and status of each atge"  
+**Solution:** Implemented validation-specific scanning that reads actual workflow completion status from validation logs rather than guessing from data structure
+
+### Validation Status Sources
+The new system reads validation logs from:
+- **Vehicle Details:** Vehicle validation workflow completion
+- **Damage Assessment:** Damage evaluation validation logs  
+- **Estimates:** Estimate helper validation entries
+- **Expertise:** Expertise workflow validation tracking
+- **Final Reports:** Final report builder validation logs
+- **Financial Data:** Depreciation calculations and report dates from actual validation system
+
+### Professional Case Status Features
+- Real-time workflow validation status display
+- Validation dates and completion tracking  
+- Hebrew RTL professional status reporting
+- Shows "לא זמין" only when workflow genuinely hasn't been completed
+- Displays actual completion status when validation logs exist
+
 ## Review Section
-Successfully implemented complete PHASE 4 fixes for admin version management. Fixed database `is_current` flags, implemented universal data unwrapping across all functions, and added comprehensive debug logging. The system now provides fully functional 5-button version management for historical versions and properly displays real case data in all operations.
+Successfully completed ALL admin version management fixes including:
+
+1. **Database Integrity:** Fixed `is_current` flags for proper historical version display (5 buttons)
+2. **System Stability:** Resolved OneSignal IndexedDB errors blocking selection page  
+3. **Data Accuracy:** Transformed preview from generic scanning to validation-log-based reporting
+4. **Professional UX:** Real workflow completion status from actual validation system
+
+The system now provides fully functional version management with meaningful case status snapshots based on actual validation logs from the SmartVal workflow system. Preview function shows real workflow completion status rather than placeholder data.

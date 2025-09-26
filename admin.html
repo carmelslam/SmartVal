@@ -6745,11 +6745,12 @@ function analyzeWorkflowValidations(helper) {
   };
 }
 
-// Validation check functions - look for actual validation entries
+// Validation check functions - read from ACTUAL validation locations
 function checkVehicleValidation(helper) {
-  return !!(helper.validation_log?.vehicle?.validated || 
-           helper.validations?.vehicle_validation?.status === 'validated' ||
-           helper.car_details?.validation_status === 'completed');
+  // Vehicle validation is typically stored in validation_progress.vehicle
+  const vehicleValidated = helper.validation_progress?.vehicle === true;
+  console.log('🔧 VEHICLE VALIDATION:', vehicleValidated, helper.validation_progress?.vehicle);
+  return vehicleValidated;
 }
 
 function checkVehicleStarted(helper) {
@@ -6757,9 +6758,10 @@ function checkVehicleStarted(helper) {
 }
 
 function checkDamageValidation(helper) {
-  return !!(helper.validation_log?.damage_assessment?.validated ||
-           helper.validations?.damage_validation?.status === 'validated' ||
-           helper.damage_assessment?.validation_status === 'completed');
+  // Damage validation is typically stored in validation_progress.damage
+  const damageValidated = helper.validation_progress?.damage === true;
+  console.log('🔧 DAMAGE VALIDATION:', damageValidated, helper.validation_progress?.damage);
+  return damageValidated;
 }
 
 function checkDamageStarted(helper) {
@@ -6769,10 +6771,14 @@ function checkDamageStarted(helper) {
 }
 
 function checkEstimateValidation(helper) {
-  return !!(helper.validation_log?.estimate?.validated ||
-           helper.validations?.estimate_validation?.status === 'validated' ||
-           helper.estimate_totals?.validation_status === 'completed' ||
-           helper.validation_results?.estimate_approved);
+  // Check estimate.validation structure
+  const estimateValidated = !!(helper.estimate?.validation?.validated_at || 
+                              helper.validation_progress?.fees === true);
+  console.log('🔧 ESTIMATE VALIDATION:', estimateValidated, {
+    estimate_validation: helper.estimate?.validation,
+    validation_progress_fees: helper.validation_progress?.fees
+  });
+  return estimateValidated;
 }
 
 function checkEstimateStarted(helper) {
@@ -6780,9 +6786,10 @@ function checkEstimateStarted(helper) {
 }
 
 function checkExpertiseValidation(helper) {
-  return !!(helper.validation_log?.expertise?.validated ||
-           helper.validations?.expertise_validation?.status === 'validated' ||
-           helper.expertise_data?.validation_status === 'completed');
+  // Check expertise.validation structure  
+  const expertiseValidated = !!(helper.expertise?.validation?.validated_at);
+  console.log('🔧 EXPERTISE VALIDATION:', expertiseValidated, helper.expertise?.validation);
+  return expertiseValidated;
 }
 
 function checkExpertiseStarted(helper) {
@@ -6790,71 +6797,93 @@ function checkExpertiseStarted(helper) {
 }
 
 function checkFinalReportValidation(helper) {
-  return !!(helper.validation_log?.final_report?.validated ||
-           helper.validations?.final_validation?.status === 'validated' ||
-           helper.final_report?.validation_status === 'completed');
+  // Check final_report.validation structure
+  const finalReportValidated = !!(helper.final_report?.validation?.validated_at || 
+                                 helper.validation?.validated_at);
+  console.log('🔧 FINAL REPORT VALIDATION:', finalReportValidated, {
+    final_report_validation: helper.final_report?.validation,
+    main_validation: helper.validation
+  });
+  return finalReportValidated;
 }
 
 function checkFinalReportStarted(helper) {
   return !!(helper.final_report || helper.report || helper.final_data);
 }
 
-// Get validation dates from logs
+// Get validation dates from ACTUAL validation locations
 function getValidationDate(helper, type) {
-  const validationLog = helper.validation_log?.[type];
-  if (validationLog?.validated_at) {
-    return new Date(validationLog.validated_at).toLocaleDateString('he-IL');
+  let validationDate = null;
+  
+  // Read from actual validation structure locations
+  switch(type) {
+    case 'final_report':
+      validationDate = helper.final_report?.validation?.validated_at || helper.validation?.validated_at;
+      break;
+    case 'estimate':
+      validationDate = helper.estimate?.validation?.validated_at;
+      break;
+    case 'expertise':
+      validationDate = helper.expertise?.validation?.validated_at;
+      break;
+    case 'vehicle':
+    case 'damage':
+      // These might not have specific validation dates, use main validation if available
+      validationDate = helper.validation?.validated_at;
+      break;
   }
   
-  const validations = helper.validations?.[`${type}_validation`];
-  if (validations?.validated_at) {
-    return new Date(validations.validated_at).toLocaleDateString('he-IL');
+  if (validationDate) {
+    try {
+      return new Date(validationDate).toLocaleDateString('he-IL');
+    } catch (e) {
+      console.warn('Error parsing validation date:', validationDate);
+      return null;
+    }
   }
   
   return null;
 }
 
-// Get validation details
+// Get validation details from ACTUAL validation locations
 function getVehicleValidationDetails(helper) {
-  const validation = helper.validation_log?.vehicle || helper.validations?.vehicle_validation;
-  if (validation?.validated) {
-    return `מאומת על ידי: ${validation.validated_by || 'מערכת'}`;
+  if (helper.validation_progress?.vehicle === true && helper.validation?.validated_by) {
+    return `מאומת על ידי: ${helper.validation.validated_by}`;
   }
   return null;
 }
 
 function getDamageValidationDetails(helper) {
-  const damage = helper.damage_assessment;
-  if (damage?.centers?.length) {
-    const completedCenters = damage.centers.filter(c => c.validated || c.status === 'completed').length;
-    return `${completedCenters}/${damage.centers.length} מוקדים מאומתים`;
+  if (helper.validation_progress?.damage === true && helper.validation?.validated_by) {
+    return `מאומת על ידי: ${helper.validation.validated_by}`;
   }
   return null;
 }
 
 function getEstimateValidationDetails(helper) {
-  const estimate = helper.estimate_totals || helper.estimate;
-  if (estimate?.validation_status === 'completed') {
-    return `סכום: ₪${Number(estimate.total_estimate || estimate.total || 0).toLocaleString('he-IL')}`;
+  const estimateValidation = helper.estimate?.validation;
+  if (estimateValidation?.validated_at && estimateValidation?.validated_by) {
+    return `מאומת על ידי: ${estimateValidation.validated_by}`;
   }
   return null;
 }
 
 function getExpertiseValidationDetails(helper) {
-  const expertise = helper.expertise_data || helper.expertise;
-  if (expertise?.validation_status === 'completed') {
-    return `מאומת ומוכן להפקה`;
+  const expertiseValidation = helper.expertise?.validation;
+  if (expertiseValidation?.validated_at && expertiseValidation?.validated_by) {
+    return `מאומת על ידי: ${expertiseValidation.validated_by}`;
   }
   return null;
 }
 
 function getFinalReportValidationDetails(helper) {
-  const finalReport = helper.final_report || helper.report;
-  if (finalReport?.validation_status === 'completed') {
-    return `דוח סופי מאושר`;
+  const finalValidation = helper.final_report?.validation || helper.validation;
+  if (finalValidation?.validated_at && finalValidation?.validated_by) {
+    return `מאומת על ידי: ${finalValidation.validated_by}`;
   }
   return null;
 }
+
 
 // Extract financial data from validation logs
 function extractFinancialFromValidations(helper) {
