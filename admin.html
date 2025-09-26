@@ -6542,7 +6542,7 @@ function getSectionName(section) {
   return names[section] || section;
 }
 
-// Generate user-friendly readable report
+// Generate professional case status snapshot
 function generateUserFriendlyReport(helper) {
   // 🔧 PHASE 4 FIX: Unwrap helper_data if it exists
   let unwrappedHelper = helper;
@@ -6553,63 +6553,154 @@ function generateUserFriendlyReport(helper) {
   
   let report = '';
   
-  // Header
-  report += `דוח תיק - SmartVal\n`;
-  report += `=====================\n\n`;
-  report += `רכב: ${unwrappedHelper.meta?.plate || unwrappedHelper.vehicle?.plate || 'לא זמין'}\n`;
-  report += `תאריך הדוח: ${new Date().toLocaleDateString('he-IL')}\n\n`;
+  // Professional Header
+  report += `📋 סקירת מצב תיק - SmartVal\n`;
+  report += `═══════════════════════════════════\n\n`;
   
-  // Vehicle Information
-  if (unwrappedHelper.vehicle) {
-    report += `פרטי הרכב:\n`;
-    report += `----------\n`;
-    report += `מספר רכב: ${unwrappedHelper.vehicle.plate || 'לא זמין'}\n`;
-    report += `יצרן: ${unwrappedHelper.vehicle.make || 'לא זמין'}\n`;
-    report += `דגם: ${unwrappedHelper.vehicle.model || 'לא זמין'}\n`;
-    report += `שנה: ${unwrappedHelper.vehicle.year || 'לא זמין'}\n`;
-    report += `צבע: ${unwrappedHelper.vehicle.color || 'לא זמין'}\n\n`;
+  // 🚗 VEHICLE ID TABLE (mimicking final report beginning)
+  report += `🚗 פרטי הרכב המוערך:\n`;
+  report += `┌─────────────────────────────────────┐\n`;
+  report += `│ מספר רכב: ${(unwrappedHelper.vehicle?.plate || unwrappedHelper.meta?.plate || 'לא זמין').padEnd(20)} │\n`;
+  report += `│ יצרן:     ${(unwrappedHelper.vehicle?.make || 'לא זמין').padEnd(20)} │\n`;
+  report += `│ דגם:      ${(unwrappedHelper.vehicle?.model || 'לא זמין').padEnd(20)} │\n`;
+  report += `│ שנה:      ${(unwrappedHelper.vehicle?.year || 'לא זמין').toString().padEnd(20)} │\n`;
+  report += `│ צבע:      ${(unwrappedHelper.vehicle?.color || 'לא זמין').padEnd(20)} │\n`;
+  report += `│ נפח מנוע: ${(unwrappedHelper.vehicle?.engine_capacity || 'לא זמין').toString().padEnd(20)} │\n`;
+  report += `└─────────────────────────────────────┘\n\n`;
+  
+  // 📊 CASE STATUS OVERVIEW
+  report += `📊 סטטוס התיק:\n`;
+  report += `──────────────\n`;
+  
+  // Calculate completion status
+  const completionStatus = calculateCaseCompletion(unwrappedHelper);
+  report += `שלמות התיק: ${completionStatus.percentage}% (${completionStatus.completed}/${completionStatus.total} שלבים)\n\n`;
+  
+  // 🔧 DAMAGE CENTERS STATUS
+  const damageCount = unwrappedHelper.damage_assessment?.centers?.length || 0;
+  report += `🔧 מוקדי נזק: ${damageCount} מוקדים\n`;
+  if (damageCount > 0) {
+    const completedDamage = unwrappedHelper.damage_assessment.centers.filter(c => c.status === 'completed').length;
+    report += `   הושלמו: ${completedDamage}/${damageCount} מוקדים\n`;
+    
+    // Show damage summary
+    unwrappedHelper.damage_assessment.centers.forEach((center, index) => {
+      const status = center.status === 'completed' ? '✅' : center.status === 'in_progress' ? '🔄' : '⏳';
+      report += `   ${index + 1}. ${status} ${center.name || 'מוקד נזק'}\n`;
+    });
   }
+  report += `\n`;
   
-  // Customer Information
-  if (unwrappedHelper.case_info) {
-    report += `פרטי הלקוח:\n`;
-    report += `------------\n`;
-    report += `שם הלקוח: ${unwrappedHelper.case_info.customer_name || 'לא זמין'}\n`;
-    report += `טלפון: ${unwrappedHelper.case_info.customer_phone || 'לא זמין'}\n`;
-    if (unwrappedHelper.case_info.created_at) {
-      report += `התיק נפתח: ${new Date(unwrappedHelper.case_info.created_at).toLocaleDateString('he-IL')}\n`;
-    }
+  // 💰 FINANCIAL STATUS
+  report += `💰 מצב כספי:\n`;
+  report += `─────────────\n`;
+  const estimate = unwrappedHelper.estimate_totals || unwrappedHelper.estimate || {};
+  const finalCosts = unwrappedHelper.final_totals || {};
+  
+  if (estimate.total_estimate) {
+    report += `אומדן כולל: ₪${Number(estimate.total_estimate).toLocaleString('he-IL')}\n`;
+  }
+  if (estimate.total_parts) {
+    report += `חלקים: ₪${Number(estimate.total_parts).toLocaleString('he-IL')}\n`;
+  }
+  if (estimate.total_labor) {
+    report += `עבודה: ₪${Number(estimate.total_labor).toLocaleString('he-IL')}\n`;
+  }
+  if (finalCosts.total_after_adjustments) {
+    report += `לאחר התאמות: ₪${Number(finalCosts.total_after_adjustments).toLocaleString('he-IL')}\n`;
+  }
+  report += `\n`;
+  
+  // 📄 REPORTS STATUS
+  report += `📄 מצב דוחות:\n`;
+  report += `──────────────\n`;
+  const expertiseStatus = getReportStatus(unwrappedHelper, 'expertise');
+  const estimateStatus = getReportStatus(unwrappedHelper, 'estimate');
+  const finalReportStatus = getReportStatus(unwrappedHelper, 'final_report');
+  
+  report += `${expertiseStatus.icon} אקספרטיזה: ${expertiseStatus.text}\n`;
+  report += `${estimateStatus.icon} אומדן: ${estimateStatus.text}\n`;
+  report += `${finalReportStatus.icon} דוח סופי: ${finalReportStatus.text}\n\n`;
+  
+  // 📉 DEPRECIATION STATUS
+  report += `📉 פחת ושווי:\n`;
+  report += `──────────────\n`;
+  const depreciation = unwrappedHelper.depreciation || {};
+  if (depreciation.market_value) {
+    report += `שווי שוק: ₪${Number(depreciation.market_value).toLocaleString('he-IL')}\n`;
+  }
+  if (depreciation.depreciation_amount) {
+    report += `פחת: ₪${Number(depreciation.depreciation_amount).toLocaleString('he-IL')}\n`;
+  }
+  if (depreciation.residual_value) {
+    report += `שווי שיורי: ₪${Number(depreciation.residual_value).toLocaleString('he-IL')}\n`;
+  }
+  report += `\n`;
+  
+  // ⚙️ ADJUSTMENTS STATUS
+  const adjustments = unwrappedHelper.adjustments || {};
+  if (Object.keys(adjustments).length > 0) {
+    report += `⚙️ התאמות:\n`;
+    report += `──────────\n`;
+    if (adjustments.betterment) report += `שיפורים: ₪${Number(adjustments.betterment).toLocaleString('he-IL')}\n`;
+    if (adjustments.deductibles) report += `השתתפות עצמית: ₪${Number(adjustments.deductibles).toLocaleString('he-IL')}\n`;
+    if (adjustments.salvage) report += `שווי פירוק: ₪${Number(adjustments.salvage).toLocaleString('he-IL')}\n`;
     report += `\n`;
   }
   
-  // Damage Information
-  if (unwrappedHelper.damage_assessment?.centers?.length) {
-    report += `נזקים שנמצאו:\n`;
-    report += `-------------\n`;
-    unwrappedHelper.damage_assessment.centers.forEach((center, index) => {
-      report += `${index + 1}. ${center.name || 'אזור נזק'}\n`;
-      if (center.damage_type) report += `   סוג נזק: ${center.damage_type}\n`;
-      if (center.severity) report += `   חומרה: ${center.severity}\n`;
-      if (center.parts?.length) {
-        report += `   חלקים שניזוקו: ${center.parts.map(p => p.name).join(', ')}\n`;
-      }
-      report += `\n`;
-    });
+  // 📅 TIMELINE INFO
+  report += `📅 מידע זמנים:\n`;
+  report += `───────────────\n`;
+  if (unwrappedHelper.case_info?.created_at) {
+    report += `נפתח: ${new Date(unwrappedHelper.case_info.created_at).toLocaleDateString('he-IL')}\n`;
   }
-  
-  // System info
-  report += `מידע נוסף:\n`;
-  report += `-----------\n`;
   if (unwrappedHelper.last_modified) {
     report += `עדכון אחרון: ${new Date(unwrappedHelper.last_modified).toLocaleString('he-IL')}\n`;
   }
-  if (unwrappedHelper.modified_by && unwrappedHelper.modified_by !== 'system') {
-    report += `עודכן על ידי: ${unwrappedHelper.modified_by}\n`;
-  }
   
-  report += `\nהדוח הופק ב: ${new Date().toLocaleString('he-IL')}`;
+  report += `\n📊 דוח נוצר: ${new Date().toLocaleString('he-IL')}`;
   
   return report;
+}
+
+// Helper function to calculate case completion
+function calculateCaseCompletion(helper) {
+  const stages = [
+    { name: 'פרטי רכב', completed: !!(helper.vehicle?.make && helper.vehicle?.model) },
+    { name: 'מוקדי נזק', completed: !!(helper.damage_assessment?.centers?.length) },
+    { name: 'אומדן', completed: !!(helper.estimate_totals?.total_estimate) },
+    { name: 'אקספרטיזה', completed: !!(helper.expertise_data?.completed) },
+    { name: 'דוח סופי', completed: !!(helper.final_report?.completed) }
+  ];
+  
+  const completed = stages.filter(s => s.completed).length;
+  const total = stages.length;
+  const percentage = Math.round((completed / total) * 100);
+  
+  return { completed, total, percentage, stages };
+}
+
+// Helper function to get report status
+function getReportStatus(helper, reportType) {
+  switch (reportType) {
+    case 'expertise':
+      if (helper.expertise_data?.completed) return { icon: '✅', text: 'הושלם' };
+      if (helper.expertise_data?.started) return { icon: '🔄', text: 'בתהליך' };
+      return { icon: '⏳', text: 'לא התחיל' };
+      
+    case 'estimate':
+      if (helper.estimate_totals?.total_estimate) return { icon: '✅', text: 'הושלם' };
+      if (helper.estimate?.started) return { icon: '🔄', text: 'בתהליך' };
+      return { icon: '⏳', text: 'לא התחיל' };
+      
+    case 'final_report':
+      if (helper.final_report?.completed) return { icon: '✅', text: 'הושלם' };
+      if (helper.final_report?.started) return { icon: '🔄', text: 'בתהליך' };
+      return { icon: '⏳', text: 'לא התחיל' };
+      
+    default:
+      return { icon: '❓', text: 'לא ידוע' };
+  }
 }
 
 // Helper functions (keeping existing ones for compatibility)
