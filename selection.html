@@ -844,9 +844,43 @@ async function verifyAdminAccess(event) {
 window.verifyAdminAccess = verifyAdminAccess;
 </script>
 
+<!-- 🔧 EMERGENCY FIX: Disable OneSignal on selection page due to IndexedDB errors -->
+<script>
+console.log('🔧 EMERGENCY: Disabling OneSignal to prevent IndexedDB errors');
+// Block OneSignal completely
+window.OneSignal = {
+  push: function() { console.log('OneSignal disabled - push blocked'); },
+  init: function() { console.log('OneSignal disabled - init blocked'); return Promise.resolve(); },
+  on: function() { console.log('OneSignal disabled - event blocked'); },
+  off: function() { console.log('OneSignal disabled - off blocked'); },
+  once: function() { console.log('OneSignal disabled - once blocked'); },
+  showSlidedownPrompt: function() { console.log('OneSignal disabled - prompt blocked'); return Promise.resolve(); },
+  showNativePrompt: function() { console.log('OneSignal disabled - native blocked'); return Promise.resolve(); },
+  registerForPushNotifications: function() { console.log('OneSignal disabled - register blocked'); return Promise.resolve(); },
+  setSubscription: function() { console.log('OneSignal disabled - subscription blocked'); return Promise.resolve(); },
+  getSubscription: function() { console.log('OneSignal disabled - get subscription blocked'); return Promise.resolve(false); },
+  getUserId: function() { console.log('OneSignal disabled - getUserId blocked'); return Promise.resolve(null); },
+  getRegistrationId: function() { console.log('OneSignal disabled - getRegistrationId blocked'); return Promise.resolve(null); },
+  setEmail: function() { console.log('OneSignal disabled - setEmail blocked'); return Promise.resolve(); },
+  setSMSNumber: function() { console.log('OneSignal disabled - setSMS blocked'); return Promise.resolve(); },
+  sendTag: function() { console.log('OneSignal disabled - sendTag blocked'); return Promise.resolve(); },
+  sendTags: function() { console.log('OneSignal disabled - sendTags blocked'); return Promise.resolve(); },
+  getTags: function() { console.log('OneSignal disabled - getTags blocked'); return Promise.resolve({}); },
+  deleteTag: function() { console.log('OneSignal disabled - deleteTag blocked'); return Promise.resolve(); },
+  deleteTags: function() { console.log('OneSignal disabled - deleteTags blocked'); return Promise.resolve(); }
+};
+
+// Block OneSignalDeferred array
+window.OneSignalDeferred = [];
+
+// Override OneSignal script loading
+window.OneSignalScriptBlocked = true;
+console.log('✅ OneSignal completely disabled - selection page should load without IndexedDB errors');
+</script>
+
 <script src="logout-sound.js"></script>
 <script src="assistant-floating.js"></script>
-<script src="onesignal-integration.js"></script>
+<!-- TEMPORARILY DISABLED: <script src="onesignal-integration.js"></script> -->
 <script src="internal-browser.js"></script>
 </body>
 </html>

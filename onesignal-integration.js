@@ -23,6 +23,14 @@
 
     async init() {
       try {
+        // 🔧 EMERGENCY CHECK: Skip if OneSignal is blocked by emergency script
+        if (window.OneSignalScriptBlocked) {
+          console.log('🔧 OneSignal: EMERGENCY BLOCK detected - completely skipping initialization');
+          this.disabled = true;
+          this.initialized = false;
+          return;
+        }
+        
         // Check if temporarily disabled
         if (this.disabled) {
           console.log('📱 OneSignal: Temporarily disabled to fix subscription errors');
@@ -961,6 +969,12 @@
 
   // Auto-initialize when DOM is ready
   function autoInit() {
+    // 🔧 EMERGENCY CHECK: Skip if OneSignal is blocked
+    if (window.OneSignalScriptBlocked) {
+      console.log('🔧 OneSignal: EMERGENCY BLOCK detected - skipping autoInit');
+      return;
+    }
+    
     // Don't auto-init on login page
     if (window.location.pathname.includes('index.html') || window.location.pathname === '/') {
       return;
