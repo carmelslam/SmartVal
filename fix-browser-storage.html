@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="he">
+<head>
+    <meta charset="UTF-8">
+    <title>🔧 Fix Browser Storage Issues</title>
+    <style>
+        body { font-family: sans-serif; padding: 20px; background: #f5f5f5; text-align: right; }
+        .container { max-width: 600px; margin: 0 auto; background: white; padding: 20px; border-radius: 8px; }
+        button { padding: 10px 20px; margin: 5px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; }
+        .result { background: #f8f9fa; padding: 15px; margin: 10px 0; border-radius: 4px; border: 1px solid #ddd; white-space: pre-line; }
+        .error { background: #f8d7da; border-color: #f5c6cb; }
+        .success { background: #d4edda; border-color: #c3e6cb; }
+        .info { background: #d1ecf1; border-color: #bee5eb; }
+        .warning { background: #fff3cd; border-color: #ffeaa7; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔧 Fix Browser Storage Issues</h1>
+        <p>This tool fixes IndexedDB and browser storage issues that prevent the selection page from loading.</p>
+        
+        <button onclick="clearBrowserStorage()">🧹 Clear Browser Storage</button>
+        <button onclick="testStorage()">🔍 Test Storage</button>
+        <button onclick="fixOneSignalStorage()">📱 Fix OneSignal Storage</button>
+        
+        <div id="results"></div>
+    </div>
+
+    <script>
+        async function clearBrowserStorage() {
+            addResult('🧹 Clearing browser storage...', 'info');
+            
+            try {
+                // Clear localStorage
+                const localStorageCount = localStorage.length;
+                localStorage.clear();
+                addResult(`✅ Cleared ${localStorageCount} localStorage items`, 'success');
+                
+                // Clear sessionStorage  
+                const sessionStorageCount = sessionStorage.length;
+                sessionStorage.clear();
+                addResult(`✅ Cleared ${sessionStorageCount} sessionStorage items`, 'success');
+                
+                // Clear IndexedDB databases
+                if ('indexedDB' in window) {
+                    try {
+                        // Try to clear OneSignal database specifically
+                        const dbDeleteRequest = indexedDB.deleteDatabase('OneSignalSDK');
+                        dbDeleteRequest.onsuccess = () => {
+                            addResult('✅ Cleared OneSignal IndexedDB database', 'success');
+                        };
+                        dbDeleteRequest.onerror = () => {
+                            addResult('⚠️ Could not clear OneSignal database (may not exist)', 'warning');
+                        };
+                        
+                        // Try to clear other common databases
+                        const commonDbs = ['localforage', 'keyval-store', 'idb-keyval'];
+                        for (const dbName of commonDbs) {
+                            indexedDB.deleteDatabase(dbName);
+                        }
+                        
+                        addResult('✅ Attempted to clear IndexedDB databases', 'success');
+                    } catch (error) {
+                        addResult(`⚠️ IndexedDB cleanup error: ${error.message}`, 'warning');
+                    }
+                } else {
+                    addResult('❌ IndexedDB not supported in this browser', 'error');
+                }
+                
+                // Clear cache if available
+                if ('caches' in window) {
+                    try {
+                        const cacheNames = await caches.keys();
+                        await Promise.all(cacheNames.map(name => caches.delete(name)));
+                        addResult(`✅ Cleared ${cacheNames.length} cache entries`, 'success');
+                    } catch (error) {
+                        addResult(`⚠️ Cache cleanup error: ${error.message}`, 'warning');
+                    }
+                }
+                
+                addResult('🎉 Browser storage cleanup completed!', 'success');
+                addResult('💡 Now reload the selection page to test if the errors are fixed', 'info');
+                
+            } catch (error) {
+                addResult(`❌ Storage cleanup error: ${error.message}`, 'error');
+            }
+        }
+        
+        async function testStorage() {
+            addResult('🔍 Testing browser storage capabilities...', 'info');
+            
+            // Test localStorage
+            try {
+                localStorage.setItem('test', 'value');
+                localStorage.removeItem('test');
+                addResult('✅ localStorage: Working', 'success');
+            } catch (error) {
+                addResult(`❌ localStorage: Failed - ${error.message}`, 'error');
+            }
+            
+            // Test sessionStorage
+            try {
+                sessionStorage.setItem('test', 'value');
+                sessionStorage.removeItem('test');
+                addResult('✅ sessionStorage: Working', 'success');
+            } catch (error) {
+                addResult(`❌ sessionStorage: Failed - ${error.message}`, 'error');
+            }
+            
+            // Test IndexedDB
+            if ('indexedDB' in window) {
+                try {
+                    const request = indexedDB.open('test-db', 1);
+                    request.onsuccess = () => {
+                        addResult('✅ IndexedDB: Working', 'success');
+                        indexedDB.deleteDatabase('test-db');
+                    };
+                    request.onerror = () => {
+                        addResult('❌ IndexedDB: Failed to open', 'error');
+                    };
+                } catch (error) {
+                    addResult(`❌ IndexedDB: Error - ${error.message}`, 'error');
+                }
+            } else {
+                addResult('❌ IndexedDB: Not supported', 'error');
+            }
+        }
+        
+        async function fixOneSignalStorage() {
+            addResult('📱 Fixing OneSignal storage issues...', 'info');
+            
+            try {
+                // Clear OneSignal specific storage
+                const oneSignalKeys = [];
+                for (let i = 0; i < localStorage.length; i++) {
+                    const key = localStorage.key(i);
+                    if (key && key.includes('OneSignal')) {
+                        oneSignalKeys.push(key);
+                    }
+                }
+                
+                oneSignalKeys.forEach(key => localStorage.removeItem(key));
+                addResult(`✅ Removed ${oneSignalKeys.length} OneSignal localStorage items`, 'success');
+                
+                // Clear OneSignal IndexedDB
+                if ('indexedDB' in window) {
+                    const oneSignalDbs = ['OneSignalSDK', 'OneSignal', 'onesignal'];
+                    for (const dbName of oneSignalDbs) {
+                        try {
+                            indexedDB.deleteDatabase(dbName);
+                            addResult(`✅ Deleted ${dbName} database`, 'success');
+                        } catch (error) {
+                            addResult(`⚠️ Could not delete ${dbName}: ${error.message}`, 'warning');
+                        }
+                    }
+                }
+                
+                addResult('🎉 OneSignal storage cleanup completed!', 'success');
+                addResult('💡 OneSignal will reinitialize cleanly on next page load', 'info');
+                
+            } catch (error) {
+                addResult(`❌ OneSignal cleanup error: ${error.message}`, 'error');
+            }
+        }
+        
+        function addResult(text, type) {
+            const results = document.getElementById('results');
+            const div = document.createElement('div');
+            div.className = `result ${type}`;
+            div.textContent = text;
+            results.appendChild(div);
+            results.scrollTop = results.scrollHeight;
+        }
+        
+        // Auto-run storage test on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            setTimeout(() => {
+                addResult('🔧 Browser Storage Fix Tool Loaded', 'info');
+                addResult('💡 Click "Test Storage" to diagnose issues or "Clear Browser Storage" to fix them', 'info');
+            }, 500);
+        });
+    </script>
+</body>
+</html>

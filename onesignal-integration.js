@@ -135,6 +135,14 @@
               // Use minimal initialization to prevent subscription errors
               try {
                 console.log('📱 OneSignal: Starting minimal initialization...');
+                
+                // Add IndexedDB error handling
+                const originalIndexedDB = window.indexedDB;
+                if (!originalIndexedDB) {
+                  console.warn('📱 OneSignal: IndexedDB not available, using fallback mode');
+                  // Continue with initialization even without IndexedDB
+                }
+                
                 await OneSignal.init(initConfig);
                 console.log('📱 OneSignal: Core SDK initialized successfully');
                 
@@ -155,6 +163,14 @@
               } catch (initError) {
                 console.error('📱 OneSignal: Initialization failed:', initError);
                 
+                // Check if it's an IndexedDB error
+                if (initError.message && initError.message.includes('indexedDB')) {
+                  console.log('📱 OneSignal: IndexedDB error detected - browser storage issue');
+                  console.log('📱 OneSignal: This is usually caused by browser settings or storage corruption');
+                } else if (initError.name === 'UnknownError') {
+                  console.log('📱 OneSignal: Browser storage error - continuing without push notifications');
+                }
+                
                 // Restore error handler
                 window.onerror = originalOnError;
                 
@@ -162,13 +178,18 @@
                 this.disabled = true;
                 this.initialized = false;
                 
-                console.log('📱 OneSignal: Disabled due to initialization error');
+                console.log('📱 OneSignal: Disabled due to initialization error - app will continue normally');
               }
 
               resolve();
             } catch (error) {
-              console.error('📱 OneSignal: Initialization error:', error);
-              reject(error);
+              console.error('📱 OneSignal: Outer initialization error:', error);
+              
+              // Always resolve to prevent blocking the app
+              this.disabled = true;
+              this.initialized = false;
+              console.log('📱 OneSignal: Completely disabled - app will continue without push notifications');
+              resolve(); // Don't reject - let the app continue
             }
           });
         });
