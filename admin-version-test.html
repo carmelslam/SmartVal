@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <title>🔧 PHASE 4 Admin Version Test - NEW FILE</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body {
+      font-family: sans-serif;
+      background: #1a1a1a;
+      margin: 0;
+      padding: 20px;
+      color: #e0e0e0;
+      direction: rtl;
+    }
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      background: #2a2a2a;
+      padding: 20px;
+      border-radius: 12px;
+      border: 2px solid #ff6b35;
+    }
+    button {
+      padding: 10px 20px;
+      margin: 5px;
+      background: #007bff;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    .result {
+      background: #333;
+      padding: 15px;
+      margin: 10px 0;
+      border-radius: 4px;
+      border: 1px solid #555;
+    }
+    .version-container {
+      background: #2a2a2a;
+      border: 1px solid #555;
+      border-radius: 8px;
+      padding: 15px;
+      margin: 10px 0;
+    }
+    .buttons-container {
+      display: flex;
+      gap: 8px;
+      justify-content: flex-start;
+      flex-wrap: wrap;
+      border-top: 1px solid #444;
+      padding-top: 10px;
+      margin-top: 10px;
+    }
+    .btn {
+      padding: 8px 12px;
+      border: none;
+      border-radius: 4px;
+      font-size: 13px;
+      cursor: pointer;
+    }
+    .btn-preview { background: #17a2b8; color: white; }
+    .btn-download { background: #6c757d; color: white; }
+    .btn-restore { background: #ffc107; color: black; font-weight: bold; }
+    .btn-load { background: #28a745; color: white; }
+    .btn-compare { background: #6f42c1; color: white; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1 style="color: #ff6b35;">🔧 PHASE 4 Admin Version Management Test</h1>
+    <p style="color: #17a2b8;">זהו קובץ בדיקה חדש לבדיקת הכפתורים החדשים</p>
+    
+    <div>
+      <label>מספר צלחה:</label>
+      <input type="text" id="plateInput" value="21284003" style="padding: 8px; margin: 0 10px;">
+      <button onclick="testVersionManagement()" style="background: #28a745;">🔍 בדוק ניהול גרסאות</button>
+    </div>
+    
+    <div id="results"></div>
+  </div>
+
+  <script>
+    const SUPABASE_URL = 'https://nvqrptokmwdhvpiufrad.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im52cXJwdG9rbXdkaHZwaXVmcmFkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTYwMzU0ODUsImV4cCI6MjA3MTYxMTQ4NX0.yvFalmZE7Xpvo_j6wzRj44Pa7Bx9LQegcyLzbz3QL5s';
+    
+    async function testVersionManagement() {
+      const plate = document.getElementById('plateInput').value.trim();
+      const resultsDiv = document.getElementById('results');
+      
+      if (!plate) {
+        alert('הכנס מספר צלחה');
+        return;
+      }
+      
+      resultsDiv.innerHTML = '<div class="result">🔍 מחפש תיק ובודק גרסאות...</div>';
+      
+      try {
+        // Find case
+        const caseResponse = await fetch(`${SUPABASE_URL}/rest/v1/cases?plate=eq.${plate}&select=id,plate,owner_name,status,created_at,updated_at`, {
+          headers: {
+            'apikey': SUPABASE_ANON_KEY,
+            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+          }
+        });
+        
+        const cases = await caseResponse.json();
+        if (!cases || cases.length === 0) {
+          resultsDiv.innerHTML = '<div class="result">❌ לא נמצא תיק עבור צלחה זו</div>';
+          return;
+        }
+        
+        const case_ = cases[0];
+        
+        // Get all versions
+        const versionsResponse = await fetch(`${SUPABASE_URL}/rest/v1/case_helper?case_id=eq.${case_.id}&select=id,helper_name,version,is_current,updated_at,source&order=updated_at.desc`, {
+          headers: {
+            'apikey': SUPABASE_ANON_KEY,
+            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+          }
+        });
+        
+        const versions = await versionsResponse.json();
+        
+        displayVersionsWithNewButtons(case_, versions);
+        
+      } catch (error) {
+        resultsDiv.innerHTML = `<div class="result">❌ שגיאה: ${error.message}</div>`;
+      }
+    }
+    
+    function displayVersionsWithNewButtons(case_, versions) {
+      const resultsDiv = document.getElementById('results');
+      
+      let html = `
+        <div class="result">
+          <h3 style="color: #28a745;">✅ נמצא תיק: ${case_.plate}</h3>
+          <p><strong>בעלים:</strong> ${case_.owner_name || 'לא זמין'}</p>
+          <p><strong>סטטוס:</strong> ${case_.status}</p>
+          <p><strong>סה"כ גרסאות:</strong> ${versions.length}</p>
+        </div>
+      `;
+      
+      versions.forEach((version, index) => {
+        const isCurrentVersion = version.is_current;
+        const versionDate = new Date(version.updated_at).toLocaleString('he-IL');
+        const dayName = getDayName(new Date(version.updated_at));
+        
+        html += `
+          <div class="version-container">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+              <div>
+                <h4 style="color: ${isCurrentVersion ? '#28a745' : '#17a2b8'}; margin: 0;">
+                  ${isCurrentVersion ? '🟢 גרסה נוכחית' : '📄 גרסה היסטורית'} - ${dayName}
+                </h4>
+                <div style="font-size: 12px; color: #999;">
+                  ${version.helper_name} | ${versionDate}
+                </div>
+              </div>
+            </div>
+            
+            <div class="buttons-container">
+              <!-- כפתור 1: תצוגה מקדימה -->
+              <button class="btn btn-preview" onclick="alert('תצוגה מקדימה של ${version.helper_name}')">
+                👁️ ראה מה היה בתיק
+              </button>
+              
+              <!-- כפתור 2: הורדה -->
+              <button class="btn btn-download" onclick="alert('הורדת דוח עבור ${version.helper_name}')">
+                📄 הורד כקובץ
+              </button>
+              
+              ${!isCurrentVersion ? `
+                <!-- כפתור 3: שחזור מלא -->
+                <button class="btn btn-restore" onclick="alert('שחזור מלא ל-${dayName}')">
+                  🔄 חזור לתאריך זה
+                </button>
+                
+                <!-- כפתור 4: טעינה לעבודה נוכחית (חדש!) -->
+                <button class="btn btn-load" onclick="alert('📥 טעינה לעבודה נוכחית מ-${dayName}')">
+                  📥 טען לעבודה נוכחית
+                </button>
+                
+                <!-- כפתור 5: השוואה (חדש!) -->
+                <button class="btn btn-compare" onclick="alert('🆚 השוואה עם גרסה נוכחית מ-${dayName}')">
+                  🆚 השווה לנוכחי
+                </button>
+              ` : `
+                <span style="color: #28a745; font-weight: bold;">זוהי הגרסה הנוכחית - אין אפשרויות נוספות</span>
+              `}
+            </div>
+          </div>
+        `;
+      });
+      
+      resultsDiv.innerHTML = html;
+    }
+    
+    function getDayName(date) {
+      const now = new Date();
+      const diffTime = now - date;
+      const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+      
+      if (diffDays === 0) return 'היום';
+      if (diffDays === 1) return 'אתמול';
+      if (diffDays === 2) return 'שלשום';
+      
+      const dayNames = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'];
+      return `יום ${dayNames[date.getDay()]}`;
+    }
+  </script>
+</body>
+</html>

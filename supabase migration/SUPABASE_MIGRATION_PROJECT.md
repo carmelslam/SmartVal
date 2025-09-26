@@ -376,8 +376,8 @@ INSERT INTO storage.buckets (id, name, public) VALUES
 5. Test data integrity
 
 ### Phase 5: New Modules (Parts & Invoices)
-1. Build parts search UI with Supabase
-2. Implement invoice management
+1. Build parts search UI with Supabase - use the current parts search module and use the parts search results json 
+2. Implement invoice management - use the current invoices modul module and use the invoice json structure 
 3. Create search functionality
 4. Test new module workflows
 5. Integrate with existing helper structure
