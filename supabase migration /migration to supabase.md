@@ -9,7 +9,11 @@ fundementals :
  7. proceed with caution in this project , the system is complex and hasty implentation can break it 
  8. as you will see in the instructions below, we want to move gradualy and carefully , in the first satge to have dual flow and seconf stage to full migration to supabase.
  9. the following instructions were written with teh helpe of ChatGpt and Claude, there are 2 sets of instructions, examin both and decide on your best implementaion startegy.
- 10 the helper instruction part is a part of teh project scope. 
+ 10. the helper instruction part is a part of teh project scope. 
+ **important** 
+ 1. if you have any questions or clarifications regarding any of the project componets - YOU NEED TO ASK ME FOR CLARIFICATIONS do not assume things.
+ 2. implemenation should be by phases not at once, and each pahse needs to be approved by me before executing and tested. we dont move to teh next stage if the current phase is not succesful or i didnt approve. 
+
 Context (short):
 In the system UI the helper = case (a large JSON that drives all pages/modals). Make.com orchestrations exist and currently write back to the app helper and to OneDrive. I’m introducing Supabase as primary state + backup without breaking UI mappings.
 Non-negotiables & rules:
