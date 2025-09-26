@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="he">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>תיקון is_current</title>
+    <style>
+        body { font-family: sans-serif; padding: 20px; background: #f5f5f5; text-align: right; }
+        .container { max-width: 800px; margin: 0 auto; background: white; padding: 20px; border-radius: 8px; }
+        button { padding: 10px 20px; margin: 5px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; }
+        .result { background: #f8f9fa; padding: 15px; margin: 10px 0; border-radius: 4px; border: 1px solid #ddd; white-space: pre-line; }
+        .error { background: #f8d7da; border-color: #f5c6cb; }
+        .success { background: #d4edda; border-color: #c3e6cb; }
+        .warning { background: #fff3cd; border-color: #ffeaa7; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>תיקון is_current עבור case_id</h1>
+        
+        <button onclick="checkCurrentStatus()">🔍 בדוק סטטוס is_current</button>
+        <button onclick="fixCurrentStatus()">✅ תקן is_current עבור case_id</button>
+        <button onclick="testAfterFix()">🧪 בדוק אחרי תיקון</button>
+        
+        <div id="results"></div>
+    </div>
+
+    <script type="module">
+        import { supabase } from './lib/supabaseClient.js';
+        
+        const TARGET_CASE_ID = 'cba57625-40ba-49a3-b40d-e2efe503d99e';
+        
+        window.checkCurrentStatus = async function() {
+            addResult('בודק סטטוס is_current...', 'info');
+            try {
+                const result = await supabase
+                    .from('case_helper')
+                    .select('id, case_id, helper_name, version, is_current, updated_at')
+                    .eq('case_id', TARGET_CASE_ID);
+                
+                if (result.error) {
+                    addResult(`❌ שגיאה: ${result.error.message}`, 'error');
+                    return;
+                }
+                
+                if (!result.data || result.data.length === 0) {
+                    addResult(`❌ לא נמצאו helpers עבור case_id: ${TARGET_CASE_ID}`, 'error');
+                    return;
+                }
+                
+                addResult(`✅ נמצאו ${result.data.length} helpers:
+${result.data.map(h => `- ${h.helper_name} | גרסה: ${h.version} | is_current: ${h.is_current} | עודכן: ${h.updated_at}`).join('\n')}`, 'success');
+                
+            } catch (error) {
+                addResult(`❌ שגיאה: ${error.message}`, 'error');
+            }
+        };
+        
+        window.fixCurrentStatus = async function() {
+            addResult('מתקן is_current...', 'info');
+            try {
+                // First, set all helpers for this case to is_current = false
+                const updateAllResult = await supabase
+                    .from('case_helper')
+                    .update({ is_current: false })
+                    .eq('case_id', TARGET_CASE_ID);
+                
+                if (updateAllResult.error) {
+                    addResult(`❌ שגיאה בעדכון כללי: ${updateAllResult.error.message}`, 'error');
+                    return;
+                }
+                
+                // Then, set the latest version to is_current = true
+                const latestResult = await supabase
+                    .from('case_helper')
+                    .select('id, helper_name, version')
+                    .eq('case_id', TARGET_CASE_ID)
+                    .order('version', { ascending: false })
+                    .limit(1);
+                
+                if (latestResult.error || !latestResult.data || latestResult.data.length === 0) {
+                    addResult(`❌ לא נמצא helper לעדכון`, 'error');
+                    return;
+                }
+                
+                const latestHelper = latestResult.data[0];
+                
+                const setCurrentResult = await supabase
+                    .from('case_helper')
+                    .update({ is_current: true })
+                    .eq('id', latestHelper.id);
+                
+                if (setCurrentResult.error) {
+                    addResult(`❌ שגיאה בקביעת current: ${setCurrentResult.error.message}`, 'error');
+                    return;
+                }
+                
+                addResult(`✅ תוקן! ${latestHelper.helper_name} (גרסה ${latestHelper.version}) הוגדר כ-current`, 'success');
+                
+            } catch (error) {
+                addResult(`❌ שגיאה: ${error.message}`, 'error');
+            }
+        };
+        
+        window.testAfterFix = async function() {
+            addResult('בודק שהתיקון עבד...', 'info');
+            try {
+                const caseService = await import('./services/caseRetrievalService.js').then(m => m.default);
+                const result = await caseService.loadCaseByPlate('22184003');
+                
+                if (result.success) {
+                    addResult(`✅ התיקון עבד! תיק נטען:
+צלחה: ${result.case.plate}
+בעלים: ${result.case.owner_name}
+סטטוס: ${result.case.status}
+גרסת helper: ${result.metadata.version}
+שם helper: ${result.metadata.helperName}`, 'success');
+                } else {
+                    addResult(`❌ עדיין לא עובד: ${result.message}`, 'error');
+                }
+            } catch (error) {
+                addResult(`❌ שגיאה: ${error.message}`, 'error');
+            }
+        };
+        
+        function addResult(text, type) {
+            const results = document.getElementById('results');
+            const div = document.createElement('div');
+            div.className = `result ${type}`;
+            div.textContent = text;
+            results.appendChild(div);
+            results.scrollTop = results.scrollHeight;
+        }
+    </script>
+</body>
+</html>
