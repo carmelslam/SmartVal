@@ -144,7 +144,7 @@
       }
     }
 
-    window.loadExistingCase = function () {
+    window.loadExistingCase = async function () {
       const plateNumber = document.getElementById('plateNumber').value.trim();
       if (!plateNumber) {
         alert('אנא הכנס מספר רכב');
@@ -185,116 +185,124 @@
       
       if (loadButton) {
         loadButton.disabled = true;
-        loadButton.textContent = 'טוען תיק...';
+        loadButton.textContent = 'טוען מ-Supabase...';
       }
 
-      sendToWebhook('ADMIN_FETCH_CASE', { plate: plateNumber })
-        .then(response => {
-          console.log('🔍 ADMIN_FETCH_CASE response:', response);
+      try {
+        // PRIMARY: Try loading from Supabase first
+        console.log('🔄 Attempting to load case from Supabase:', plateNumber);
+        
+        // Import the case retrieval service
+        const caseRetrievalService = await import('./services/caseRetrievalService.js').then(m => m.default);
+        const result = await caseRetrievalService.loadCaseIntoSession(plateNumber);
+        
+        if (result.success) {
+          console.log('✅ Case loaded successfully from Supabase');
           
-          // Check if response is successful and has data
-          // Note: sendToWebhook returns data directly, not as response.data
-          if (response && response.success !== false && response && typeof response === 'object' && !response.error) {
-            // Check if response has actual case data (not just success message)
-            if (response.meta || response.car_details || response.general_info) {
-              const caseData = response;
-              
-              // CRITICAL FIX: Store as carData for floating button
-              sessionStorage.setItem('carData', JSON.stringify(caseData));
-              
-              sessionStorage.setItem('helper', JSON.stringify(caseData));
-              sessionStorage.setItem('plate', plateNumber);
-              sessionStorage.setItem('caseLoaded', 'true');
-              
-              document.getElementById('caseStatus').textContent = caseData.meta?.status || 'לא זמין';
-              document.getElementById('caseDate').textContent = caseData.meta?.inspection_date || 'לא זמין';
-              document.getElementById('caseVehicle').textContent = 
-                `${caseData.car_details?.manufacturer || ''} ${caseData.car_details?.model || ''}`.trim() || 'לא זמין';
-              
-              document.getElementById('caseInfo').classList.add('show');
-              
-              // Reset input field styling on success
-              const plateInput = document.getElementById('plateNumber');
-              plateInput.style.color = '';
-              plateInput.style.borderColor = '';
-              
-              alert('התיק נטען בהצלחה');
-            } else {
-              // Response is successful but no case data found
-              console.log('🚫 Case not found - applying red styling and clearing field');
-              
-              // Show alert first
-              alert('תיק לא נמצא במערכת');
-              
-              // Make input field red and clear it after 3 seconds
-              const plateInput = document.getElementById('plateNumber');
-              plateInput.style.color = '#dc2626';
-              plateInput.style.borderColor = '#dc2626';
-              
-              setTimeout(() => {
-                plateInput.value = '';
-                plateInput.style.color = '';
-                plateInput.style.borderColor = '';
-              }, 3000);
-              
-              // Clear any existing helper data
-              sessionStorage.removeItem('helper');
-              sessionStorage.removeItem('plate');
-              sessionStorage.removeItem('caseLoaded');
-              
-              // Hide case info if it was showing
-              document.getElementById('caseInfo').classList.remove('show');
-            }
-          } else {
-            // Handle "no case found" with same behavior as report selection page
-            console.log('🚫 Case not found - applying red styling and clearing field');
-            
-            // Show alert first
-            alert('תיק לא נמצא במערכת');
-            
-            // Make input field red and clear it after 3 seconds
-            const plateInput = document.getElementById('plateNumber');
-            plateInput.style.color = '#dc2626';
-            plateInput.style.borderColor = '#dc2626';
-            
-            setTimeout(() => {
-              plateInput.value = '';
-              plateInput.style.color = '';
-              plateInput.style.borderColor = '';
-            }, 3000);
-            
-            // Clear any existing helper data
-            sessionStorage.removeItem('helper');
-            sessionStorage.removeItem('plate');
-            sessionStorage.removeItem('caseLoaded');
-            
-            // Hide case info if it was showing
-            document.getElementById('caseInfo').classList.remove('show');
-          }
-        })
-        .catch(error => {
-          console.error('Error loading case:', error);
+          // Update UI with Supabase data
+          const helper = result.helper;
+          const metadata = result.metadata;
           
-          // Handle system errors with orange styling
+          document.getElementById('caseStatus').textContent = 
+            caseRetrievalService.getStatusDisplay(metadata.caseStatus);
+          
+          document.getElementById('caseDate').textContent = 
+            helper.case_info?.created_at ? 
+            new Date(helper.case_info.created_at).toLocaleDateString('he-IL') : 'לא זמין';
+            
+          document.getElementById('caseVehicle').textContent = 
+            `${helper.vehicle?.make || ''} ${helper.vehicle?.model || ''}`.trim() || 'לא זמין';
+          
+          document.getElementById('caseInfo').classList.add('show');
+          
+          // Reset input field styling on success
           const plateInput = document.getElementById('plateNumber');
-          plateInput.style.color = '#f59e0b';
-          plateInput.style.borderColor = '#f59e0b';
+          plateInput.style.color = '';
+          plateInput.style.borderColor = '';
           
-          setTimeout(() => {
-            plateInput.value = '';
+          alert(`התיק נטען בהצלחה מ-Supabase (גרסה ${metadata.version})`);
+          return;
+        }
+        
+        // If Supabase fails, try webhook as fallback
+        console.log('⚠️ Supabase load failed, trying webhook fallback:', result.message);
+        
+        if (loadButton) {
+          loadButton.textContent = 'טוען מ-Make.com...';
+        }
+        
+        const response = await sendToWebhook('ADMIN_FETCH_CASE', { plate: plateNumber });
+        console.log('🔍 ADMIN_FETCH_CASE response:', response);
+        
+        // Check if webhook response is successful and has data
+        if (response && response.success !== false && response && typeof response === 'object' && !response.error) {
+          // Check if response has actual case data (not just success message)
+          if (response.meta || response.car_details || response.general_info) {
+            const caseData = response;
+            
+            // Store webhook data with compatibility format
+            sessionStorage.setItem('carData', JSON.stringify(caseData));
+            sessionStorage.setItem('helper', JSON.stringify(caseData));
+            sessionStorage.setItem('plate', plateNumber);
+            sessionStorage.setItem('caseLoaded', 'true');
+            
+            document.getElementById('caseStatus').textContent = caseData.meta?.status || 'לא זמין';
+            document.getElementById('caseDate').textContent = caseData.meta?.inspection_date || 'לא זמין';
+            document.getElementById('caseVehicle').textContent = 
+              `${caseData.car_details?.manufacturer || ''} ${caseData.car_details?.model || ''}`.trim() || 'לא זמין';
+            
+            document.getElementById('caseInfo').classList.add('show');
+            
+            // Reset input field styling on success
+            const plateInput = document.getElementById('plateNumber');
             plateInput.style.color = '';
             plateInput.style.borderColor = '';
-          }, 3000);
-          
-          alert('שגיאה בטעינת התיק');
-        })
-        .finally(() => {
-          // Restore button state
-          if (loadButton) {
-            loadButton.disabled = false;
-            loadButton.textContent = originalText;
+            
+            alert('התיק נטען בהצלחה מ-Make.com (גיבוי)');
+            return;
           }
-        });
+        }
+        
+        // Both systems failed - case not found
+        throw new Error('CASE_NOT_FOUND');
+        
+      } catch (error) {
+        console.log('🚫 Case not found in both systems:', error.message);
+        
+        // Show appropriate error message
+        let errorMessage = 'תיק לא נמצא במערכת';
+        if (error.message === 'SYSTEM_ERROR') {
+          errorMessage = 'שגיאה בטעינת התיק - נסה שוב';
+        }
+        
+        alert(errorMessage);
+        
+        // Make input field red and clear it after 3 seconds
+        const plateInput = document.getElementById('plateNumber');
+        plateInput.style.color = '#dc2626';
+        plateInput.style.borderColor = '#dc2626';
+        
+        setTimeout(() => {
+          plateInput.value = '';
+          plateInput.style.color = '';
+          plateInput.style.borderColor = '';
+        }, 3000);
+        
+        // Clear any existing helper data
+        sessionStorage.removeItem('helper');
+        sessionStorage.removeItem('plate');
+        sessionStorage.removeItem('caseLoaded');
+        
+        // Hide case info if it was showing
+        document.getElementById('caseInfo').classList.remove('show');
+        
+      } finally {
+        // Restore button state
+        if (loadButton) {
+          loadButton.disabled = false;
+          loadButton.textContent = originalText;
+        }
+      }
     }
 
     window.generateEstimate = function () {

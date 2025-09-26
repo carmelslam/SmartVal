@@ -286,6 +286,7 @@
         <button onclick="loadSection('reminders')">רשימת תזכורות</button>
         <button onclick="loadSection('override')">שינוי נתונים</button>
         <button onclick="loadSection('logView')">יומן פעולות</button>
+        <button onclick="loadSection('versionManagement')">📚 ניהול גרסאות תיקים</button>
         <button onclick="loadSection('clearSystem')">🗑️ מחק נתוני מערכת</button>
         <button onclick="loadSection('deleteCase')">🗂️ מחק תיק מ-OneDrive</button>
         <button onclick="window.open('https://ycshamautcoil-my.sharepoint.com/personal/yaron_yc-shamaut_co_il/_layouts/15/onedrive.aspx?id=%2Fpersonal%2Fyaron%5Fyc%2Dshamaut%5Fco%5Fil%2FDocuments%2FYC%20שמאות%2Fתיקים%20פתוחים&ga=1', '_blank')">כניסה לתיקים פתוחים</button>
@@ -787,6 +788,44 @@
             </div>
             
             <div id="deleteCaseStatus" style="margin-top: 15px; text-align: center; display: none;"></div>
+          `;
+          break;
+          
+        case 'versionManagement':
+          content.innerHTML = `
+            <h2 style="color: #ff6b35; font-size: 18px; margin-bottom: 15px; text-align: center;">📚 ניהול גרסאות תיקים</h2>
+            
+            <div style="background: #2a2a2a; color: #e0e0e0; padding: 20px; border-radius: 8px; margin-bottom: 20px; border: 2px solid #17a2b8;">
+              <h3 style="color: #17a2b8; margin-top: 0;">🔍 חיפוש תיק לניהול גרסאות</h3>
+              <p style="margin-bottom: 15px;">מודול זה מיועד לטיפול במצבי חירום וקונפליקטים בין גרסאות. כאן תוכל לצפות, לשחזר ולהוריד גרסאות קודמות של תיקים.</p>
+              
+              <div style="background: #1a365d; padding: 15px; border-radius: 6px; margin: 15px 0; border: 1px solid #17a2b8;">
+                <strong style="color: #17a2b8;">מטרת המודול:</strong> שחזור נתונים במקרה של שגיאות, קונפליקטים או צורך בגרסה קודמת של התיק
+              </div>
+              
+              <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 15px;">
+                <label style="font-weight: bold; min-width: 120px;">מספר רכב:</label>
+                <input type="text" id="versionPlateSearch" placeholder="הכנס מספר רכב (לדוגמה: 12345678)" 
+                       style="width: 200px; padding: 8px; background: #3a3a3a; color: #e0e0e0; border: 1px solid #555; border-radius: 4px;">
+                <button onclick="loadCaseVersionHistory()" 
+                        style="padding: 8px 16px; background: #17a2b8; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;">
+                  🔍 טען גרסאות התיק
+                </button>
+              </div>
+              
+              <div style="font-size: 12px; color: #999; margin-top: 10px;">
+                💡 טיפ: התיק יטען עם כל הגרסאות ההיסטוריות. תוכל לראות מתי כל גרסה נשמרה ומה השתנה בה.
+              </div>
+            </div>
+            
+            <div id="versionResults" style="display: none;">
+              <div style="background: #333; padding: 15px; border-radius: 8px; border: 1px solid #555; margin-bottom: 20px;">
+                <div id="caseInfoDisplay" style="margin-bottom: 15px;"></div>
+                <div id="versionsList"></div>
+              </div>
+            </div>
+            
+            <div id="versionStatus" style="margin-top: 15px; text-align: center;"></div>
           `;
           break;
           
@@ -5816,6 +5855,417 @@ window.showContent = function(id) {
     }, 50);
   }
 };
+
+// ============================================================================
+// VERSION MANAGEMENT FUNCTIONS - User-friendly for non-technical users
+// ============================================================================
+
+// Supabase configuration for admin operations
+const SUPABASE_URL = 'https://nvqrptokmwdhvpiufrad.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im52cXJwdG9rbXdkaHZwaXVmcmFkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTYwMzU0ODUsImV4cCI6MjA3MTYxMTQ4NX0.yvFalmZE7Xpvo_j6wzRj44Pa7Bx9LQegcyLzbz3QL5s';
+
+// Load case version history - user-friendly with date-based navigation
+window.loadCaseVersionHistory = async function() {
+  const plate = document.getElementById('versionPlateSearch').value.trim();
+  if (!plate) {
+    alert('אנא הכנס מספר רכב');
+    return;
+  }
+  
+  const statusDiv = document.getElementById('versionStatus');
+  const resultsDiv = document.getElementById('versionResults');
+  
+  statusDiv.innerHTML = `
+    <div style="color: #17a2b8; padding: 15px; background: #1a365d; border: 1px solid #17a2b8; border-radius: 6px;">
+      <strong>🔄 מחפש את התיק שלך...</strong><br>
+      בודק בבסיס הנתונים עבור רכב: ${plate}
+    </div>`;
+    
+  resultsDiv.style.display = 'none';
+  
+  try {
+    // Find case by plate
+    const caseResponse = await fetch(`${SUPABASE_URL}/rest/v1/cases?plate=eq.${plate}&order=created_at.desc`, {
+      headers: {
+        'apikey': SUPABASE_ANON_KEY,
+        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+      }
+    });
+    
+    if (!caseResponse.ok) {
+      throw new Error(`HTTP error! status: ${caseResponse.status}`);
+    }
+    
+    const cases = await caseResponse.json();
+    
+    if (!cases || cases.length === 0) {
+      statusDiv.innerHTML = `
+        <div style="color: #dc3545; padding: 15px; background: #450a0a; border: 1px solid #dc3545; border-radius: 6px;">
+          <strong>❌ התיק לא נמצא</strong><br>
+          לא מצאתי תיק עבור רכב מספר: ${plate}<br>
+          <small>בדוק שהמספר נכון או שהתיק אכן קיים במערכת</small>
+        </div>`;
+      return;
+    }
+    
+    const case_ = cases[0]; // Most recent case
+    
+    // Get all versions for this case
+    const versionsResponse = await fetch(`${SUPABASE_URL}/rest/v1/case_helper?case_id=eq.${case_.id}&order=version.desc`, {
+      headers: {
+        'apikey': SUPABASE_ANON_KEY,
+        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+      }
+    });
+    
+    if (!versionsResponse.ok) {
+      throw new Error(`HTTP error! status: ${versionsResponse.status}`);
+    }
+    
+    const versions = await versionsResponse.json();
+    
+    if (!versions || versions.length === 0) {
+      statusDiv.innerHTML = `
+        <div style="color: #ffc107; padding: 15px; background: #332701; border: 1px solid #ffc107; border-radius: 6px;">
+          <strong>⚠️ אין נתונים לתיק</strong><br>
+          מצאתי את התיק ${plate} אך אין עדיין נתוני עבודה שמורים
+        </div>`;
+      return;
+    }
+    
+    // Display results
+    displayVersionHistoryForUser(case_, versions);
+    statusDiv.innerHTML = `
+      <div style="color: #28a745; padding: 15px; background: #0f2419; border: 1px solid #28a745; border-radius: 6px;">
+        <strong>✅ מצאתי ${versions.length} גיבויים עבור תיק ${plate}</strong><br>
+        כל שמירה שעשית נשמרה כגיבוי נפרד - תוכל לראות מתי ולחזור לכל נקודה
+      </div>`;
+      
+  } catch (error) {
+    console.error('Error loading version history:', error);
+    statusDiv.innerHTML = `
+      <div style="color: #dc3545; padding: 15px; background: #450a0a; border: 1px solid #dc3545; border-radius: 6px;">
+        <strong>❌ שגיאה בחיפוש</strong><br>
+        משהו השתבש בחיפוש התיק. נסה שוב או צור קשר לתמיכה.
+      </div>`;
+  }
+};
+
+// Display version history in user-friendly format with dates
+function displayVersionHistoryForUser(case_, versions) {
+  const resultsDiv = document.getElementById('versionResults');
+  const caseInfoDiv = document.getElementById('caseInfoDisplay');
+  const versionsListDiv = document.getElementById('versionsList');
+  
+  // Case information - user friendly
+  caseInfoDiv.innerHTML = `
+    <div style="background: #1a365d; padding: 15px; border-radius: 6px; border: 1px solid #17a2b8;">
+      <h3 style="color: #17a2b8; margin-top: 0;">📋 פרטי התיק</h3>
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; font-size: 14px;">
+        <div><strong>מספר רכב:</strong> ${case_.plate}</div>
+        <div><strong>מצב התיק:</strong> <span style="color: ${getStatusColor(case_.status)};">${getStatusDisplay(case_.status)}</span></div>
+        <div><strong>בעל הרכב:</strong> ${case_.owner_name || 'לא רשום'}</div>
+        <div><strong>התיק נפתח:</strong> ${formatDate(case_.created_at)}</div>
+        <div><strong>עדכון אחרון:</strong> ${formatDate(case_.updated_at)}</div>
+        <div><strong>סה"כ גיבויים:</strong> ${versions.length}</div>
+      </div>
+    </div>`;
+  
+  // Versions list - focus on dates, not technical versions
+  let versionsHtml = `
+    <h3 style="color: #ff6b35; margin-bottom: 15px;">📚 גיבויים של התיק (לפי תאריך)</h3>
+    <div style="color: #ccc; font-size: 13px; margin-bottom: 15px; background: #1a1a1a; padding: 10px; border-radius: 4px;">
+      💡 <strong>הסבר:</strong> כל פעם שעבדת על התיק ושמרת אותו, המערכת יצרה גיבוי אוטומטי. 
+      אתה יכול לראות בדיוק מתי עבדת על התיק ולחזור לכל נקודת זמן.
+    </div>`;
+  
+  versions.forEach((version, index) => {
+    const isCurrentVersion = version.is_current;
+    const versionDate = formatDateWithTime(version.updated_at);
+    const timeAgo = getTimeAgo(new Date(version.updated_at));
+    const dayName = getDayName(new Date(version.updated_at));
+    
+    versionsHtml += `
+      <div style="background: ${isCurrentVersion ? '#0f2419' : '#2a2a2a'}; border: 1px solid ${isCurrentVersion ? '#28a745' : '#555'}; border-radius: 8px; padding: 15px; margin-bottom: 10px;">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px;">
+          <div style="flex: 1;">
+            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 5px;">
+              <h4 style="margin: 0; color: ${isCurrentVersion ? '#28a745' : '#ff6b35'}; font-size: 16px;">
+                ${isCurrentVersion ? '📌 הגרסה הנוכחית' : `📅 ${dayName}`}
+              </h4>
+              ${isCurrentVersion ? '<span style="background: #28a745; color: white; padding: 3px 10px; border-radius: 12px; font-size: 11px;">עובד עליה עכשיו</span>' : ''}
+            </div>
+            
+            <div style="font-size: 14px; color: #e0e0e0; margin-bottom: 8px;">
+              <div style="margin-bottom: 4px;"><strong>📅 תאריך ושעה:</strong> ${versionDate}</div>
+              <div style="margin-bottom: 4px;"><strong>⏰ לפני:</strong> ${timeAgo}</div>
+              <div><strong>💾 נשמר:</strong> ${getSourceDisplayForUser(version.source)}</div>
+            </div>
+          </div>
+        </div>
+        
+        <div style="display: flex; gap: 8px; justify-content: flex-start; flex-wrap: wrap; border-top: 1px solid #444; padding-top: 10px;">
+          <button onclick="previewVersionForUser('${version.id}', '${dayName}', '${versionDate}')" 
+                  style="padding: 8px 12px; background: #17a2b8; color: white; border: none; border-radius: 4px; font-size: 13px; cursor: pointer;">
+            👁️ ראה מה היה בתיק
+          </button>
+          <button onclick="downloadVersionReportForUser('${version.id}', '${case_.plate}', '${dayName}')" 
+                  style="padding: 8px 12px; background: #6c757d; color: white; border: none; border-radius: 4px; font-size: 13px; cursor: pointer;">
+            📄 הורד כקובץ
+          </button>
+          ${!isCurrentVersion ? `
+            <button onclick="confirmRestoreVersion('${version.id}', '${dayName}', '${versionDate}', '${case_.plate}')" 
+                    style="padding: 8px 12px; background: #ffc107; color: black; border: none; border-radius: 4px; font-size: 13px; cursor: pointer; font-weight: bold;">
+              🔄 חזור לתאריך זה
+            </button>
+          ` : ''}
+        </div>
+      </div>`;
+  });
+  
+  versionsListDiv.innerHTML = versionsHtml;
+  resultsDiv.style.display = 'block';
+}
+
+// Helper functions - user-friendly versions
+function getDayName(date) {
+  const days = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'];
+  const today = new Date();
+  const yesterday = new Date(today);
+  yesterday.setDate(yesterday.getDate() - 1);
+  
+  if (date.toDateString() === today.toDateString()) {
+    return 'היום';
+  } else if (date.toDateString() === yesterday.toDateString()) {
+    return 'אתמול';
+  } else {
+    return `יום ${days[date.getDay()]}`;
+  }
+}
+
+function getSourceDisplayForUser(source) {
+  const displays = {
+    'system': 'אוטומטית על ידי המערכת',
+    'realtime_test': 'במהלך בדיקה',
+    'version_restore': 'שוחזר מגיבוי קודם',
+    'manual': 'נשמר ידנית',
+    'dual_write': 'נשמר במהלך העבודה'
+  };
+  return displays[source] || 'על ידי המערכת';
+}
+
+// User-friendly preview function
+window.previewVersionForUser = async function(versionId, dayName, versionDate) {
+  try {
+    const response = await fetch(`${SUPABASE_URL}/rest/v1/case_helper?id=eq.${versionId}`, {
+      headers: {
+        'apikey': SUPABASE_ANON_KEY,
+        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+      }
+    });
+    
+    const versions = await response.json();
+    if (!versions || versions.length === 0) {
+      alert('לא הצלחתי לטעון את הגיבוי');
+      return;
+    }
+    
+    const version = versions[0];
+    const readableContent = generateUserFriendlyReport(version.helper_json);
+    
+    // Create user-friendly modal
+    const modal = document.createElement('div');
+    modal.style.cssText = `
+      position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+      background: rgba(0,0,0,0.8); z-index: 1000; display: flex; 
+      justify-content: center; align-items: center; direction: rtl;
+    `;
+    
+    modal.innerHTML = `
+      <div style="background: #2a2a2a; padding: 20px; border-radius: 10px; max-width: 80%; max-height: 80%; overflow-y: auto; color: #e0e0e0; border: 2px solid #17a2b8;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border-bottom: 1px solid #555; padding-bottom: 10px;">
+          <h3 style="color: #17a2b8; margin: 0;">👁️ איך נראה התיק ${dayName}</h3>
+          <button onclick="document.body.removeChild(this.parentElement.parentElement.parentElement)" 
+                  style="background: #dc3545; color: white; border: none; padding: 8px 12px; border-radius: 4px; cursor: pointer; font-weight: bold;">
+            ✕ סגור
+          </button>
+        </div>
+        <div style="color: #ccc; font-size: 12px; margin-bottom: 15px; text-align: center;">
+          נשמר ב: ${versionDate}
+        </div>
+        <div style="background: #1a1a1a; padding: 15px; border-radius: 5px; white-space: pre-wrap; font-family: Arial, sans-serif; font-size: 13px; line-height: 1.5; max-height: 60vh; overflow-y: auto;">
+${readableContent.replace(/</g, '&lt;').replace(/>/g, '&gt;')}
+        </div>
+      </div>
+    `;
+    
+    document.body.appendChild(modal);
+    
+  } catch (error) {
+    alert('שגיאה בטעינת הגיבוי: ' + error.message);
+  }
+};
+
+// User-friendly download function
+window.downloadVersionReportForUser = async function(versionId, plate, dayName) {
+  try {
+    const response = await fetch(`${SUPABASE_URL}/rest/v1/case_helper?id=eq.${versionId}`, {
+      headers: {
+        'apikey': SUPABASE_ANON_KEY,
+        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+      }
+    });
+    
+    const versions = await response.json();
+    if (!versions || versions.length === 0) {
+      alert('לא הצלחתי לטעון את הגיבוי');
+      return;
+    }
+    
+    const version = versions[0];
+    const readableContent = generateUserFriendlyReport(version.helper_json);
+    
+    // Create and download file
+    const blob = new Blob([readableContent], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    const dateStr = new Date().toISOString().split('T')[0];
+    a.download = `תיק_${plate}_גיבוי_${dayName}_${dateStr}.txt`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    
+    alert(`הקובץ הורד בהצלחה!`);
+    
+  } catch (error) {
+    alert('שגיאה בהורדת הקובץ: ' + error.message);
+  }
+};
+
+// User-friendly confirmation for restore
+window.confirmRestoreVersion = function(versionId, dayName, versionDate, plate) {
+  const confirmed = confirm(
+    `האם אתה בטוח שאתה רוצה לחזור לאיך שהתיק נראה ${dayName}?\n\n` +
+    `תאריך הגיבוי: ${versionDate}\n` +
+    `תיק: ${plate}\n\n` +
+    `זה ישמור את העבודה הנוכחית ויחזור אותך לנקודת הזמן הזו.\n` +
+    `תוכל תמיד לחזור לגרסה הנוכחית אחר כך.\n\n` +
+    `להמשיך?`
+  );
+  
+  if (confirmed) {
+    alert(`החזרה לתאריך ${dayName} בתהליך פיתוח.\n\nבמקרה של בעיה דחופה, צור קשר עם התמיכה הטכנית.`);
+  }
+};
+
+// Generate user-friendly readable report
+function generateUserFriendlyReport(helper) {
+  let report = '';
+  
+  // Header
+  report += `דוח תיק - SmartVal\n`;
+  report += `=====================\n\n`;
+  report += `רכב: ${helper.meta?.plate || helper.vehicle?.plate || 'לא זמין'}\n`;
+  report += `תאריך הדוח: ${new Date().toLocaleDateString('he-IL')}\n\n`;
+  
+  // Vehicle Information
+  if (helper.vehicle) {
+    report += `פרטי הרכב:\n`;
+    report += `----------\n`;
+    report += `מספר רכב: ${helper.vehicle.plate || 'לא זמין'}\n`;
+    report += `יצרן: ${helper.vehicle.make || 'לא זמין'}\n`;
+    report += `דגם: ${helper.vehicle.model || 'לא זמין'}\n`;
+    report += `שנה: ${helper.vehicle.year || 'לא זמין'}\n`;
+    report += `צבע: ${helper.vehicle.color || 'לא זמין'}\n\n`;
+  }
+  
+  // Customer Information
+  if (helper.case_info) {
+    report += `פרטי הלקוח:\n`;
+    report += `------------\n`;
+    report += `שם הלקוח: ${helper.case_info.customer_name || 'לא זמין'}\n`;
+    report += `טלפון: ${helper.case_info.customer_phone || 'לא זמין'}\n`;
+    if (helper.case_info.created_at) {
+      report += `התיק נפתח: ${new Date(helper.case_info.created_at).toLocaleDateString('he-IL')}\n`;
+    }
+    report += `\n`;
+  }
+  
+  // Damage Information
+  if (helper.damage_assessment?.centers?.length) {
+    report += `נזקים שנמצאו:\n`;
+    report += `-------------\n`;
+    helper.damage_assessment.centers.forEach((center, index) => {
+      report += `${index + 1}. ${center.name || 'אזור נזק'}\n`;
+      if (center.damage_type) report += `   סוג נזק: ${center.damage_type}\n`;
+      if (center.severity) report += `   חומרה: ${center.severity}\n`;
+      if (center.parts?.length) {
+        report += `   חלקים שניזוקו: ${center.parts.map(p => p.name).join(', ')}\n`;
+      }
+      report += `\n`;
+    });
+  }
+  
+  // System info
+  report += `מידע נוסף:\n`;
+  report += `-----------\n`;
+  if (helper.last_modified) {
+    report += `עדכון אחרון: ${new Date(helper.last_modified).toLocaleString('he-IL')}\n`;
+  }
+  if (helper.modified_by && helper.modified_by !== 'system') {
+    report += `עודכן על ידי: ${helper.modified_by}\n`;
+  }
+  
+  report += `\nהדוח הופק ב: ${new Date().toLocaleString('he-IL')}`;
+  
+  return report;
+}
+
+// Helper functions (keeping existing ones for compatibility)
+function getStatusColor(status) {
+  const colors = {
+    'OPEN': '#28a745',
+    'IN_PROGRESS': '#ffc107',
+    'CLOSED': '#6c757d',
+    'ARCHIVED': '#dc3545'
+  };
+  return colors[status] || '#999';
+}
+
+function getStatusDisplay(status) {
+  const displays = {
+    'OPEN': 'פתוח',
+    'IN_PROGRESS': 'בעבודה', 
+    'CLOSED': 'סגור',
+    'ARCHIVED': 'בארכיון'
+  };
+  return displays[status] || status;
+}
+
+function formatDate(dateString) {
+  return new Date(dateString).toLocaleDateString('he-IL');
+}
+
+function formatDateWithTime(dateString) {
+  return new Date(dateString).toLocaleString('he-IL');
+}
+
+function getTimeAgo(date) {
+  const now = new Date();
+  const diffMs = now - date;
+  const diffMins = Math.floor(diffMs / 60000);
+  const diffHours = Math.floor(diffMins / 60);
+  const diffDays = Math.floor(diffHours / 24);
+  
+  if (diffMins < 1) return 'זה עתה';
+  if (diffMins < 60) return `${diffMins} דקות`;
+  if (diffHours < 24) return `${diffHours} שעות`;
+  if (diffDays < 7) return `${diffDays} ימים`;
+  
+  return formatDate(date);
+}
 
 
 </script>

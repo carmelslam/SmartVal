@@ -1,0 +1,561 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Version Manager - SmartVal</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 20px auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        
+        h1 {
+            color: #333;
+            text-align: center;
+            border-bottom: 2px solid #007bff;
+            padding-bottom: 10px;
+        }
+        
+        .case-selector {
+            margin-bottom: 20px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 5px;
+        }
+        
+        .case-selector label {
+            font-weight: bold;
+            display: block;
+            margin-bottom: 5px;
+        }
+        
+        .case-selector input {
+            width: 200px;
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 3px;
+        }
+        
+        .case-selector button {
+            padding: 8px 16px;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+            margin-left: 10px;
+        }
+        
+        .version-list {
+            display: none;
+        }
+        
+        .version-item {
+            border: 1px solid #dee2e6;
+            border-radius: 5px;
+            margin: 10px 0;
+            padding: 15px;
+            background: white;
+        }
+        
+        .version-item.current {
+            border-color: #28a745;
+            background: #f8fff8;
+        }
+        
+        .version-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        
+        .version-title {
+            font-weight: bold;
+            color: #333;
+        }
+        
+        .version-current {
+            background: #28a745;
+            color: white;
+            padding: 3px 8px;
+            border-radius: 3px;
+            font-size: 12px;
+        }
+        
+        .version-info {
+            color: #666;
+            font-size: 14px;
+            margin-bottom: 10px;
+        }
+        
+        .version-actions {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .btn {
+            padding: 6px 12px;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+        
+        .btn-view { background: #17a2b8; color: white; }
+        .btn-restore { background: #ffc107; color: black; }
+        .btn-download { background: #6c757d; color: white; }
+        .btn-danger { background: #dc3545; color: white; }
+        
+        .preview-panel {
+            display: none;
+            margin-top: 20px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 5px;
+            border: 1px solid #dee2e6;
+        }
+        
+        .preview-content {
+            max-height: 400px;
+            overflow-y: auto;
+            background: white;
+            padding: 15px;
+            border-radius: 3px;
+            font-family: monospace;
+            white-space: pre-wrap;
+            font-size: 12px;
+            line-height: 1.4;
+        }
+        
+        .loading {
+            text-align: center;
+            color: #666;
+            padding: 20px;
+        }
+        
+        .error {
+            color: #dc3545;
+            background: #f8d7da;
+            padding: 10px;
+            border-radius: 3px;
+            margin: 10px 0;
+        }
+        
+        .success {
+            color: #155724;
+            background: #d4edda;
+            padding: 10px;
+            border-radius: 3px;
+            margin: 10px 0;
+        }
+        
+        .no-versions {
+            text-align: center;
+            color: #666;
+            padding: 40px;
+            font-style: italic;
+        }
+    </style>
+    
+    <!-- Supabase CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+    <div class="container">
+        <h1>📚 Version Manager</h1>
+        
+        <div class="case-selector">
+            <label for="plate-input">Enter Case Plate Number:</label>
+            <input type="text" id="plate-input" placeholder="e.g., 12345678" />
+            <button onclick="loadCaseVersions()">Load Versions</button>
+        </div>
+        
+        <div id="message-area"></div>
+        
+        <div id="version-list" class="version-list">
+            <h3>Version History</h3>
+            <div id="versions-container"></div>
+        </div>
+        
+        <div id="preview-panel" class="preview-panel">
+            <h3>Version Preview</h3>
+            <button onclick="closePreview()" style="float: right; background: #dc3545; color: white; border: none; padding: 5px 10px; border-radius: 3px; cursor: pointer;">Close</button>
+            <div id="preview-content" class="preview-content"></div>
+        </div>
+    </div>
+
+    <script>
+        // Supabase configuration
+        const SUPABASE_URL = 'https://nvqrptokmwdhvpiufrad.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im52cXJwdG9rbXdkaHZwaXVmcmFkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTYwMzU0ODUsImV4cCI6MjA3MTYxMTQ4NX0.yvFalmZE7Xpvo_j6wzRj44Pa7Bx9LQegcyLzbz3QL5s';
+        
+        const { createClient } = supabase;
+        const supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        
+        let currentCaseId = null;
+        let currentPlate = null;
+        
+        // Show message to user
+        function showMessage(message, type = 'info') {
+            const messageArea = document.getElementById('message-area');
+            messageArea.innerHTML = `<div class="${type}">${message}</div>`;
+            setTimeout(() => {
+                messageArea.innerHTML = '';
+            }, 5000);
+        }
+        
+        // Load versions for a case
+        async function loadCaseVersions() {
+            const plate = document.getElementById('plate-input').value.trim();
+            if (!plate) {
+                showMessage('Please enter a plate number', 'error');
+                return;
+            }
+            
+            currentPlate = plate;
+            showMessage('Loading case versions...', 'loading');
+            
+            try {
+                // Find case by plate
+                const { data: cases, error: caseError } = await supabaseClient
+                    .from('cases')
+                    .select('id, plate, status, owner_name, created_at')
+                    .eq('plate', plate)
+                    .order('created_at', { ascending: false });
+                
+                if (caseError) throw caseError;
+                
+                if (!cases || cases.length === 0) {
+                    showMessage(`No case found for plate: ${plate}`, 'error');
+                    return;
+                }
+                
+                // Use the most recent case if multiple exist
+                currentCaseId = cases[0].id;
+                
+                // Get all versions for this case
+                const { data: versions, error: versionsError } = await supabaseClient
+                    .from('case_helper')
+                    .select(`
+                        id,
+                        version,
+                        helper_name,
+                        is_current,
+                        updated_at,
+                        source
+                    `)
+                    .eq('case_id', currentCaseId)
+                    .order('version', { ascending: false });
+                
+                if (versionsError) throw versionsError;
+                
+                displayVersions(versions, cases[0]);
+                
+            } catch (error) {
+                console.error('Error loading versions:', error);
+                showMessage(`Error: ${error.message}`, 'error');
+            }
+        }
+        
+        // Display versions in the UI
+        function displayVersions(versions, caseInfo) {
+            const container = document.getElementById('versions-container');
+            const versionList = document.getElementById('version-list');
+            
+            if (!versions || versions.length === 0) {
+                container.innerHTML = '<div class="no-versions">No versions found for this case</div>';
+                versionList.style.display = 'block';
+                return;
+            }
+            
+            let html = `
+                <div style="background: #e9ecef; padding: 10px; border-radius: 5px; margin-bottom: 15px;">
+                    <strong>Case:</strong> ${caseInfo.plate} | 
+                    <strong>Status:</strong> ${caseInfo.status} | 
+                    <strong>Owner:</strong> ${caseInfo.owner_name || 'N/A'} |
+                    <strong>Created:</strong> ${new Date(caseInfo.created_at).toLocaleDateString('he-IL')}
+                </div>
+            `;
+            
+            versions.forEach(version => {
+                const savedAt = new Date(version.updated_at).toLocaleString('he-IL');
+                const timeAgo = getTimeAgo(new Date(version.updated_at));
+                
+                html += `
+                    <div class="version-item ${version.is_current ? 'current' : ''}">
+                        <div class="version-header">
+                            <div class="version-title">
+                                Version ${version.version}
+                                ${version.is_current ? '<span class="version-current">Current</span>' : ''}
+                            </div>
+                        </div>
+                        
+                        <div class="version-info">
+                            📅 Saved: ${savedAt} (${timeAgo})<br>
+                            🔧 Source: ${version.source || 'system'}<br>
+                            📝 Name: ${version.helper_name}
+                        </div>
+                        
+                        <div class="version-actions">
+                            <button class="btn btn-view" onclick="previewVersion('${version.id}')">
+                                👁️ View
+                            </button>
+                            <button class="btn btn-download" onclick="downloadVersion('${version.id}')">
+                                📥 Download Report
+                            </button>
+                            ${!version.is_current ? `
+                                <button class="btn btn-restore" onclick="restoreVersion('${version.id}', ${version.version})">
+                                    ↩️ Restore
+                                </button>
+                            ` : ''}
+                        </div>
+                    </div>
+                `;
+            });
+            
+            container.innerHTML = html;
+            versionList.style.display = 'block';
+            showMessage(`Found ${versions.length} versions for case ${currentPlate}`, 'success');
+        }
+        
+        // Preview a version
+        async function previewVersion(versionId) {
+            showMessage('Loading version preview...', 'loading');
+            
+            try {
+                const { data: version, error } = await supabaseClient
+                    .from('case_helper')
+                    .select('helper_json, version, helper_name, updated_at')
+                    .eq('id', versionId)
+                    .single();
+                
+                if (error) throw error;
+                
+                // Generate readable report
+                const readableReport = generateReadableReport(version.helper_json);
+                
+                document.getElementById('preview-content').textContent = readableReport;
+                document.getElementById('preview-panel').style.display = 'block';
+                
+                // Scroll to preview
+                document.getElementById('preview-panel').scrollIntoView({ behavior: 'smooth' });
+                
+                showMessage('Version loaded for preview', 'success');
+                
+            } catch (error) {
+                console.error('Error previewing version:', error);
+                showMessage(`Error: ${error.message}`, 'error');
+            }
+        }
+        
+        // Download version as text report
+        async function downloadVersion(versionId) {
+            showMessage('Preparing download...', 'loading');
+            
+            try {
+                const { data: version, error } = await supabaseClient
+                    .from('case_helper')
+                    .select('helper_json, version, helper_name, updated_at')
+                    .eq('id', versionId)
+                    .single();
+                
+                if (error) throw error;
+                
+                // Generate readable report
+                const readableReport = generateReadableReport(version.helper_json);
+                
+                // Create and download file
+                const blob = new Blob([readableReport], { type: 'text/plain;charset=utf-8' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `${version.helper_name}_report.txt`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+                
+                showMessage('Report downloaded successfully!', 'success');
+                
+            } catch (error) {
+                console.error('Error downloading version:', error);
+                showMessage(`Error: ${error.message}`, 'error');
+            }
+        }
+        
+        // Restore a previous version
+        async function restoreVersion(versionId, versionNumber) {
+            const confirmed = confirm(
+                `Are you sure you want to restore Version ${versionNumber}?\n\n` +
+                `This will create a new current version based on the selected version.\n` +
+                `The current version will be preserved in history.`
+            );
+            
+            if (!confirmed) return;
+            
+            showMessage('Restoring version...', 'loading');
+            
+            try {
+                // Get the version to restore
+                const { data: versionData, error: getError } = await supabaseClient
+                    .from('case_helper')
+                    .select('helper_json, version, helper_name')
+                    .eq('id', versionId)
+                    .single();
+                
+                if (getError) throw getError;
+                
+                // Get current max version
+                const { data: maxVersion, error: maxError } = await supabaseClient
+                    .from('case_helper')
+                    .select('version')
+                    .eq('case_id', currentCaseId)
+                    .order('version', { ascending: false })
+                    .limit(1)
+                    .single();
+                
+                if (maxError) throw maxError;
+                
+                const newVersion = (maxVersion?.version || 0) + 1;
+                
+                // Mark all versions as not current
+                await supabaseClient
+                    .from('case_helper')
+                    .update({ is_current: false })
+                    .eq('case_id', currentCaseId);
+                
+                // Create new version based on restored data
+                const { error: insertError } = await supabaseClient
+                    .from('case_helper')
+                    .insert({
+                        case_id: currentCaseId,
+                        version: newVersion,
+                        is_current: true,
+                        helper_name: `${currentPlate}_helper_v${newVersion}`,
+                        helper_json: {
+                            ...versionData.helper_json,
+                            version: newVersion,
+                            last_modified: new Date().toISOString(),
+                            restored_from_version: versionData.version,
+                            restore_reason: 'User requested version restore'
+                        },
+                        source: 'version_restore'
+                    });
+                
+                if (insertError) throw insertError;
+                
+                showMessage(`Version ${versionNumber} successfully restored as Version ${newVersion}!`, 'success');
+                
+                // Reload versions to show the change
+                setTimeout(() => {
+                    loadCaseVersions();
+                }, 1000);
+                
+            } catch (error) {
+                console.error('Error restoring version:', error);
+                showMessage(`Error: ${error.message}`, 'error');
+            }
+        }
+        
+        // Close preview panel
+        function closePreview() {
+            document.getElementById('preview-panel').style.display = 'none';
+        }
+        
+        // Generate human-readable report
+        function generateReadableReport(helper) {
+            let report = '';
+            
+            // Header
+            report += `=== SMARTVAL CASE REPORT ===\n\n`;
+            report += `Case: ${helper.meta?.plate || 'Unknown'}\n`;
+            report += `Generated: ${new Date().toLocaleString('he-IL')}\n`;
+            report += `Version: ${helper.version || 'N/A'}\n\n`;
+            
+            // Case Information
+            if (helper.case_info) {
+                report += `--- CASE INFORMATION ---\n`;
+                report += `Customer: ${helper.case_info.customer_name || 'N/A'}\n`;
+                report += `Phone: ${helper.case_info.customer_phone || 'N/A'}\n`;
+                report += `Created: ${helper.case_info.created_at ? new Date(helper.case_info.created_at).toLocaleString('he-IL') : 'N/A'}\n\n`;
+            }
+            
+            // Vehicle Information
+            if (helper.vehicle) {
+                report += `--- VEHICLE INFORMATION ---\n`;
+                report += `Plate: ${helper.vehicle.plate || 'N/A'}\n`;
+                report += `Make: ${helper.vehicle.make || 'N/A'}\n`;
+                report += `Model: ${helper.vehicle.model || 'N/A'}\n`;
+                report += `Year: ${helper.vehicle.year || 'N/A'}\n`;
+                report += `Color: ${helper.vehicle.color || 'N/A'}\n\n`;
+            }
+            
+            // Damage Assessment
+            if (helper.damage_assessment) {
+                report += `--- DAMAGE ASSESSMENT ---\n`;
+                if (helper.damage_assessment.centers && Array.isArray(helper.damage_assessment.centers)) {
+                    helper.damage_assessment.centers.forEach((center, index) => {
+                        report += `Damage Center ${index + 1}: ${center.name || 'Unknown'}\n`;
+                        report += `  Damage Type: ${center.damage_type || 'N/A'}\n`;
+                        report += `  Severity: ${center.severity || 'N/A'}\n`;
+                        if (center.parts && Array.isArray(center.parts)) {
+                            report += `  Parts Affected: ${center.parts.map(p => p.name).join(', ')}\n`;
+                        }
+                    });
+                }
+                report += '\n';
+            }
+            
+            // System Information
+            report += `--- SYSTEM INFORMATION ---\n`;
+            report += `Last Modified: ${helper.last_modified ? new Date(helper.last_modified).toLocaleString('he-IL') : 'N/A'}\n`;
+            report += `Modified By: ${helper.modified_by || 'System'}\n`;
+            
+            if (helper.restored_from_version) {
+                report += `Restored From: Version ${helper.restored_from_version}\n`;
+                report += `Restore Reason: ${helper.restore_reason || 'N/A'}\n`;
+            }
+            
+            report += '\n=== END OF REPORT ===';
+            
+            return report;
+        }
+        
+        // Calculate time ago
+        function getTimeAgo(date) {
+            const now = new Date();
+            const diffMs = now - date;
+            const diffMins = Math.floor(diffMs / 60000);
+            const diffHours = Math.floor(diffMins / 60);
+            const diffDays = Math.floor(diffHours / 24);
+            
+            if (diffMins < 1) return 'Just now';
+            if (diffMins < 60) return `${diffMins} minutes ago`;
+            if (diffHours < 24) return `${diffHours} hours ago`;
+            if (diffDays < 7) return `${diffDays} days ago`;
+            
+            return date.toLocaleDateString('he-IL');
+        }
+        
+        // Allow enter key to search
+        document.getElementById('plate-input').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                loadCaseVersions();
+            }
+        });
+    </script>
+</body>
+</html>
