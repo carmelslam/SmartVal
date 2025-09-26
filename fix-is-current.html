@@ -87,35 +87,47 @@
             
             addResult('🔧 PHASE 4: מתקן ALL is_current flags...', 'info');
             try {
-                // Step 1: Set all helpers to is_current = false
+                // Step 1: Get all helpers and set each to false individually
                 addResult('Step 1: Setting all helpers to is_current = false...', 'info');
                 
-                const setAllFalseResult = await supabase
-                    .from('case_helper')
-                    .update({ is_current: false })
-                    .neq('id', '00000000-0000-0000-0000-000000000000'); // Update all by using a condition that matches all
-                
-                if (setAllFalseResult.error) {
-                    addResult(`❌ שגיאה בקביעת false: ${setAllFalseResult.error.message}`, 'error');
-                    return;
-                }
-                
-                addResult('✅ All helpers set to is_current = false', 'success');
-                
-                // Step 2: Get all helpers grouped by case_id
                 const getAllResult = await supabase
                     .from('case_helper')
-                    .select('id, case_id, helper_name, version, updated_at')
-                    .order('case_id, updated_at', { ascending: false });
+                    .select('id');
                 
                 if (getAllResult.error) {
                     addResult(`❌ שגיאה בשליפת helpers: ${getAllResult.error.message}`, 'error');
                     return;
                 }
                 
+                // Set each helper to is_current = false individually
+                let updatedCount = 0;
+                for (const helper of getAllResult.data) {
+                    const updateResult = await supabase
+                        .from('case_helper')
+                        .update({ is_current: false })
+                        .eq('id', helper.id);
+                    
+                    if (!updateResult.error) {
+                        updatedCount++;
+                    }
+                }
+                
+                addResult(`✅ Set ${updatedCount} helpers to is_current = false`, 'success');
+                
+                // Step 2: Get all helpers grouped by case_id
+                const getGroupedResult = await supabase
+                    .from('case_helper')
+                    .select('id, case_id, helper_name, version, updated_at')
+                    .order('case_id, updated_at', { ascending: false });
+                
+                if (getGroupedResult.error) {
+                    addResult(`❌ שגיאה בשליפת helpers: ${getGroupedResult.error.message}`, 'error');
+                    return;
+                }
+                
                 // Group by case_id and find latest for each
                 const groupedByCaseId = {};
-                getAllResult.data.forEach(helper => {
+                getGroupedResult.data.forEach(helper => {
                     if (!groupedByCaseId[helper.case_id]) {
                         groupedByCaseId[helper.case_id] = [];
                     }
