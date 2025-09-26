@@ -6544,12 +6544,22 @@ function getSectionName(section) {
 
 // Generate professional case status snapshot
 function generateUserFriendlyReport(helper) {
+  // 🔧 DEBUG: Log the actual helper structure
+  console.log('🔧 PREVIEW DEBUG: Raw helper structure:', helper);
+  console.log('🔧 PREVIEW DEBUG: Helper keys:', Object.keys(helper || {}));
+  console.log('🔧 PREVIEW DEBUG: Has helper_data?', !!(helper?.helper_data));
+  
   // 🔧 PHASE 4 FIX: Unwrap helper_data if it exists
   let unwrappedHelper = helper;
   if (helper && helper.helper_data && typeof helper.helper_data === 'object') {
     console.log('🔧 PREVIEW: Unwrapping helper_data structure for display');
+    console.log('🔧 PREVIEW: Unwrapped keys:', Object.keys(helper.helper_data));
     unwrappedHelper = helper.helper_data;
   }
+  
+  console.log('🔧 PREVIEW DEBUG: Final unwrapped helper:', unwrappedHelper);
+  console.log('🔧 PREVIEW DEBUG: Vehicle data:', unwrappedHelper?.vehicle);
+  console.log('🔧 PREVIEW DEBUG: Damage assessment:', unwrappedHelper?.damage_assessment);
   
   let report = '';
   
@@ -6558,14 +6568,38 @@ function generateUserFriendlyReport(helper) {
   report += `═══════════════════════════════════\n\n`;
   
   // 🚗 VEHICLE ID TABLE (mimicking final report beginning)
+  // Smart data extraction with multiple fallback paths
+  const getVehicleData = () => {
+    // Try multiple possible paths for vehicle data
+    const vehiclePaths = [
+      unwrappedHelper.vehicle,
+      unwrappedHelper.car_details,
+      unwrappedHelper.general_info,
+      helper.vehicle,
+      helper.car_details,
+      helper.general_info
+    ].filter(Boolean)[0] || {};
+    
+    const plate = vehiclePaths.plate || vehiclePaths.license_plate || unwrappedHelper.meta?.plate || helper.meta?.plate || 'לא זמין';
+    const make = vehiclePaths.make || vehiclePaths.manufacturer || vehiclePaths.brand || 'לא זמין';
+    const model = vehiclePaths.model || vehiclePaths.car_model || 'לא זמין';
+    const year = vehiclePaths.year || vehiclePaths.manufacture_year || vehiclePaths.model_year || 'לא זמין';
+    const color = vehiclePaths.color || vehiclePaths.paint_color || 'לא זמין';
+    const engine = vehiclePaths.engine_capacity || vehiclePaths.engine_size || vehiclePaths.displacement || 'לא זמין';
+    
+    return { plate, make, model, year, color, engine };
+  };
+  
+  const vehicleData = getVehicleData();
+  
   report += `🚗 פרטי הרכב המוערך:\n`;
   report += `┌─────────────────────────────────────┐\n`;
-  report += `│ מספר רכב: ${(unwrappedHelper.vehicle?.plate || unwrappedHelper.meta?.plate || 'לא זמין').padEnd(20)} │\n`;
-  report += `│ יצרן:     ${(unwrappedHelper.vehicle?.make || 'לא זמין').padEnd(20)} │\n`;
-  report += `│ דגם:      ${(unwrappedHelper.vehicle?.model || 'לא זמין').padEnd(20)} │\n`;
-  report += `│ שנה:      ${(unwrappedHelper.vehicle?.year || 'לא זמין').toString().padEnd(20)} │\n`;
-  report += `│ צבע:      ${(unwrappedHelper.vehicle?.color || 'לא זמין').padEnd(20)} │\n`;
-  report += `│ נפח מנוע: ${(unwrappedHelper.vehicle?.engine_capacity || 'לא זמין').toString().padEnd(20)} │\n`;
+  report += `│ מספר רכב: ${vehicleData.plate.toString().padEnd(20)} │\n`;
+  report += `│ יצרן:     ${vehicleData.make.toString().padEnd(20)} │\n`;
+  report += `│ דגם:      ${vehicleData.model.toString().padEnd(20)} │\n`;
+  report += `│ שנה:      ${vehicleData.year.toString().padEnd(20)} │\n`;
+  report += `│ צבע:      ${vehicleData.color.toString().padEnd(20)} │\n`;
+  report += `│ נפח מנוע: ${vehicleData.engine.toString().padEnd(20)} │\n`;
   report += `└─────────────────────────────────────┘\n\n`;
   
   // 📊 CASE STATUS OVERVIEW
@@ -6577,16 +6611,37 @@ function generateUserFriendlyReport(helper) {
   report += `שלמות התיק: ${completionStatus.percentage}% (${completionStatus.completed}/${completionStatus.total} שלבים)\n\n`;
   
   // 🔧 DAMAGE CENTERS STATUS
-  const damageCount = unwrappedHelper.damage_assessment?.centers?.length || 0;
+  const getDamageCenters = () => {
+    // Try multiple possible paths for damage data
+    const damagePaths = [
+      unwrappedHelper.damage_assessment?.centers,
+      unwrappedHelper.damage_centers,
+      unwrappedHelper.damages,
+      unwrappedHelper.centers,
+      helper.damage_assessment?.centers,
+      helper.damage_centers,
+      helper.damages,
+      helper.centers
+    ].filter(Boolean).find(path => Array.isArray(path) && path.length > 0) || [];
+    
+    return damagePaths;
+  };
+  
+  const damageCenters = getDamageCenters();
+  const damageCount = damageCenters.length;
+  
   report += `🔧 מוקדי נזק: ${damageCount} מוקדים\n`;
   if (damageCount > 0) {
-    const completedDamage = unwrappedHelper.damage_assessment.centers.filter(c => c.status === 'completed').length;
+    const completedDamage = damageCenters.filter(c => c.status === 'completed' || c.completed === true).length;
     report += `   הושלמו: ${completedDamage}/${damageCount} מוקדים\n`;
     
     // Show damage summary
-    unwrappedHelper.damage_assessment.centers.forEach((center, index) => {
-      const status = center.status === 'completed' ? '✅' : center.status === 'in_progress' ? '🔄' : '⏳';
-      report += `   ${index + 1}. ${status} ${center.name || 'מוקד נזק'}\n`;
+    damageCenters.forEach((center, index) => {
+      const isCompleted = center.status === 'completed' || center.completed === true;
+      const inProgress = center.status === 'in_progress' || center.in_progress === true;
+      const status = isCompleted ? '✅' : inProgress ? '🔄' : '⏳';
+      const name = center.name || center.center_name || center.area || center.location || `מוקד נזק ${index + 1}`;
+      report += `   ${index + 1}. ${status} ${name}\n`;
     });
   }
   report += `\n`;
@@ -6594,21 +6649,59 @@ function generateUserFriendlyReport(helper) {
   // 💰 FINANCIAL STATUS
   report += `💰 מצב כספי:\n`;
   report += `─────────────\n`;
-  const estimate = unwrappedHelper.estimate_totals || unwrappedHelper.estimate || {};
-  const finalCosts = unwrappedHelper.final_totals || {};
   
-  if (estimate.total_estimate) {
-    report += `אומדן כולל: ₪${Number(estimate.total_estimate).toLocaleString('he-IL')}\n`;
+  const getFinancialData = () => {
+    // Try multiple possible paths for financial data
+    const estimatePaths = [
+      unwrappedHelper.estimate_totals,
+      unwrappedHelper.estimate,
+      unwrappedHelper.totals,
+      unwrappedHelper.financial,
+      helper.estimate_totals,
+      helper.estimate,
+      helper.totals,
+      helper.financial
+    ].filter(Boolean)[0] || {};
+    
+    const finalPaths = [
+      unwrappedHelper.final_totals,
+      unwrappedHelper.final_costs,
+      unwrappedHelper.adjusted_totals,
+      helper.final_totals,
+      helper.final_costs,
+      helper.adjusted_totals
+    ].filter(Boolean)[0] || {};
+    
+    return { estimate: estimatePaths, final: finalPaths };
+  };
+  
+  const financialData = getFinancialData();
+  const estimate = financialData.estimate;
+  const finalCosts = financialData.final;
+  
+  const totalEstimate = estimate.total_estimate || estimate.total || estimate.grand_total || estimate.sum;
+  const totalParts = estimate.total_parts || estimate.parts_total || estimate.parts_cost;
+  const totalLabor = estimate.total_labor || estimate.labor_total || estimate.labor_cost || estimate.work_cost;
+  const adjustedTotal = finalCosts.total_after_adjustments || finalCosts.adjusted_total || finalCosts.final_total;
+  
+  if (totalEstimate) {
+    report += `אומדן כולל: ₪${Number(totalEstimate).toLocaleString('he-IL')}\n`;
   }
-  if (estimate.total_parts) {
-    report += `חלקים: ₪${Number(estimate.total_parts).toLocaleString('he-IL')}\n`;
+  if (totalParts) {
+    report += `חלקים: ₪${Number(totalParts).toLocaleString('he-IL')}\n`;
   }
-  if (estimate.total_labor) {
-    report += `עבודה: ₪${Number(estimate.total_labor).toLocaleString('he-IL')}\n`;
+  if (totalLabor) {
+    report += `עבודה: ₪${Number(totalLabor).toLocaleString('he-IL')}\n`;
   }
-  if (finalCosts.total_after_adjustments) {
-    report += `לאחר התאמות: ₪${Number(finalCosts.total_after_adjustments).toLocaleString('he-IL')}\n`;
+  if (adjustedTotal) {
+    report += `לאחר התאמות: ₪${Number(adjustedTotal).toLocaleString('he-IL')}\n`;
   }
+  
+  // If no specific financial data found, show a message
+  if (!totalEstimate && !totalParts && !totalLabor && !adjustedTotal) {
+    report += `טרם הוגדרו נתונים כספיים\n`;
+  }
+  
   report += `\n`;
   
   // 📄 REPORTS STATUS
@@ -6665,12 +6758,43 @@ function generateUserFriendlyReport(helper) {
 
 // Helper function to calculate case completion
 function calculateCaseCompletion(helper) {
+  // Smart detection of completion status
+  const hasVehicleData = () => {
+    const vehiclePaths = [helper.vehicle, helper.car_details, helper.general_info].filter(Boolean);
+    return vehiclePaths.some(v => v.make || v.manufacturer || (v.model || v.car_model));
+  };
+  
+  const hasDamageCenters = () => {
+    const damagePaths = [
+      helper.damage_assessment?.centers,
+      helper.damage_centers,
+      helper.damages,
+      helper.centers
+    ].filter(Boolean);
+    return damagePaths.some(path => Array.isArray(path) && path.length > 0);
+  };
+  
+  const hasEstimate = () => {
+    const estimatePaths = [helper.estimate_totals, helper.estimate, helper.totals, helper.financial].filter(Boolean);
+    return estimatePaths.some(e => e.total_estimate || e.total || e.grand_total);
+  };
+  
+  const hasExpertise = () => {
+    const expertisePaths = [helper.expertise_data, helper.expertise, helper.expert_report].filter(Boolean);
+    return expertisePaths.some(e => e.completed || e.finished || e.done);
+  };
+  
+  const hasFinalReport = () => {
+    const reportPaths = [helper.final_report, helper.report, helper.final_data].filter(Boolean);
+    return reportPaths.some(r => r.completed || r.finished || r.generated);
+  };
+  
   const stages = [
-    { name: 'פרטי רכב', completed: !!(helper.vehicle?.make && helper.vehicle?.model) },
-    { name: 'מוקדי נזק', completed: !!(helper.damage_assessment?.centers?.length) },
-    { name: 'אומדן', completed: !!(helper.estimate_totals?.total_estimate) },
-    { name: 'אקספרטיזה', completed: !!(helper.expertise_data?.completed) },
-    { name: 'דוח סופי', completed: !!(helper.final_report?.completed) }
+    { name: 'פרטי רכב', completed: hasVehicleData() },
+    { name: 'מוקדי נזק', completed: hasDamageCenters() },
+    { name: 'אומדן', completed: hasEstimate() },
+    { name: 'אקספרטיזה', completed: hasExpertise() },
+    { name: 'דוח סופי', completed: hasFinalReport() }
   ];
   
   const completed = stages.filter(s => s.completed).length;
