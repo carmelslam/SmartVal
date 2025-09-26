@@ -374,6 +374,15 @@ INSERT INTO storage.buckets (id, name, public) VALUES
 3. Add case resume capability
 4. Build admin recovery tools
 5. Test data integrity
+6. change the window that opens in the selction page when retrieving a case to the details window in the admin : 
+📋 פרטי התיק
+מספר רכב: 12345678
+מצב התיק: פתוח
+בעל הרכב: כרמל כיוף
+התיק נפתח: dd/mm/yyyy
+עדכון אחרון:  dd/mm/yyyy
+סה"כ גיבויים: n
+
 
 ### Phase 5: New Modules (Parts & Invoices)
 1. Build parts search UI with Supabase - use the current parts search module and use the parts search results json 
@@ -403,6 +412,18 @@ INSERT INTO storage.buckets (id, name, public) VALUES
 4. Error handling improvements
 5. Create deployment procedures
 
+### Phase 9: admin functions migration
+1. check all menue functions and connect to supabase: 
+סטטוס תיקים
+סקירה לפי שדות
+רשימת תזכורות
+שינוי נתונים
+יומן פעולות
+
+### Phase 10 : connect the load report on modules to supabase
+1. final report builder and estimate builder have reload case, ourpose : to reload existing reports.
+2. Restored case on selection page P populates the plate window in estimator builder and the fina report builder in the window טען תיק קיים
+3. The buttons of the report retrieval will call the actual report of the plate from supabase buckets
 ---
 
 ## Implementation Log

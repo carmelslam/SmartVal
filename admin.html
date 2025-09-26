@@ -2,7 +2,7 @@
 <html lang="he" dir="rtl">
 <head>
   <meta charset="UTF-8">
-  <title>מרכז ניהול - ירון כיוף</title>
+  <title>מרכז ניהול - ירון כיוף [PHASE 4 UPDATED 23:52]</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
@@ -6125,6 +6125,8 @@ window.previewVersionForUser = async function(versionId, dayName, versionDate) {
     }
     
     const version = versions[0];
+    console.log('🔧 PREVIEW: Raw helper_json structure:', Object.keys(version.helper_json || {}));
+    console.log('🔧 PREVIEW: Has helper_data wrapper?', !!(version.helper_json?.helper_data));
     const readableContent = generateUserFriendlyReport(version.helper_json);
     
     // Create user-friendly modal
@@ -6542,42 +6544,49 @@ function getSectionName(section) {
 
 // Generate user-friendly readable report
 function generateUserFriendlyReport(helper) {
+  // 🔧 PHASE 4 FIX: Unwrap helper_data if it exists
+  let unwrappedHelper = helper;
+  if (helper && helper.helper_data && typeof helper.helper_data === 'object') {
+    console.log('🔧 PREVIEW: Unwrapping helper_data structure for display');
+    unwrappedHelper = helper.helper_data;
+  }
+  
   let report = '';
   
   // Header
   report += `דוח תיק - SmartVal\n`;
   report += `=====================\n\n`;
-  report += `רכב: ${helper.meta?.plate || helper.vehicle?.plate || 'לא זמין'}\n`;
+  report += `רכב: ${unwrappedHelper.meta?.plate || unwrappedHelper.vehicle?.plate || 'לא זמין'}\n`;
   report += `תאריך הדוח: ${new Date().toLocaleDateString('he-IL')}\n\n`;
   
   // Vehicle Information
-  if (helper.vehicle) {
+  if (unwrappedHelper.vehicle) {
     report += `פרטי הרכב:\n`;
     report += `----------\n`;
-    report += `מספר רכב: ${helper.vehicle.plate || 'לא זמין'}\n`;
-    report += `יצרן: ${helper.vehicle.make || 'לא זמין'}\n`;
-    report += `דגם: ${helper.vehicle.model || 'לא זמין'}\n`;
-    report += `שנה: ${helper.vehicle.year || 'לא זמין'}\n`;
-    report += `צבע: ${helper.vehicle.color || 'לא זמין'}\n\n`;
+    report += `מספר רכב: ${unwrappedHelper.vehicle.plate || 'לא זמין'}\n`;
+    report += `יצרן: ${unwrappedHelper.vehicle.make || 'לא זמין'}\n`;
+    report += `דגם: ${unwrappedHelper.vehicle.model || 'לא זמין'}\n`;
+    report += `שנה: ${unwrappedHelper.vehicle.year || 'לא זמין'}\n`;
+    report += `צבע: ${unwrappedHelper.vehicle.color || 'לא זמין'}\n\n`;
   }
   
   // Customer Information
-  if (helper.case_info) {
+  if (unwrappedHelper.case_info) {
     report += `פרטי הלקוח:\n`;
     report += `------------\n`;
-    report += `שם הלקוח: ${helper.case_info.customer_name || 'לא זמין'}\n`;
-    report += `טלפון: ${helper.case_info.customer_phone || 'לא זמין'}\n`;
-    if (helper.case_info.created_at) {
-      report += `התיק נפתח: ${new Date(helper.case_info.created_at).toLocaleDateString('he-IL')}\n`;
+    report += `שם הלקוח: ${unwrappedHelper.case_info.customer_name || 'לא זמין'}\n`;
+    report += `טלפון: ${unwrappedHelper.case_info.customer_phone || 'לא זמין'}\n`;
+    if (unwrappedHelper.case_info.created_at) {
+      report += `התיק נפתח: ${new Date(unwrappedHelper.case_info.created_at).toLocaleDateString('he-IL')}\n`;
     }
     report += `\n`;
   }
   
   // Damage Information
-  if (helper.damage_assessment?.centers?.length) {
+  if (unwrappedHelper.damage_assessment?.centers?.length) {
     report += `נזקים שנמצאו:\n`;
     report += `-------------\n`;
-    helper.damage_assessment.centers.forEach((center, index) => {
+    unwrappedHelper.damage_assessment.centers.forEach((center, index) => {
       report += `${index + 1}. ${center.name || 'אזור נזק'}\n`;
       if (center.damage_type) report += `   סוג נזק: ${center.damage_type}\n`;
       if (center.severity) report += `   חומרה: ${center.severity}\n`;
@@ -6591,11 +6600,11 @@ function generateUserFriendlyReport(helper) {
   // System info
   report += `מידע נוסף:\n`;
   report += `-----------\n`;
-  if (helper.last_modified) {
-    report += `עדכון אחרון: ${new Date(helper.last_modified).toLocaleString('he-IL')}\n`;
+  if (unwrappedHelper.last_modified) {
+    report += `עדכון אחרון: ${new Date(unwrappedHelper.last_modified).toLocaleString('he-IL')}\n`;
   }
-  if (helper.modified_by && helper.modified_by !== 'system') {
-    report += `עודכן על ידי: ${helper.modified_by}\n`;
+  if (unwrappedHelper.modified_by && unwrappedHelper.modified_by !== 'system') {
+    report += `עודכן על ידי: ${unwrappedHelper.modified_by}\n`;
   }
   
   report += `\nהדוח הופק ב: ${new Date().toLocaleString('he-IL')}`;

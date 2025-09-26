@@ -16,11 +16,11 @@
 </head>
 <body>
     <div class="container">
-        <h1>תיקון is_current עבור case_id</h1>
+        <h1>🔧 PHASE 4: Fix is_current Flags for ALL Cases</h1>
         
-        <button onclick="checkCurrentStatus()">🔍 בדוק סטטוס is_current</button>
-        <button onclick="fixCurrentStatus()">✅ תקן is_current עבור case_id</button>
-        <button onclick="testAfterFix()">🧪 בדוק אחרי תיקון</button>
+        <button onclick="checkAllCurrentStatus()">🔍 בדוק כל ה-is_current flags</button>
+        <button onclick="fixAllCurrentStatus()">✅ תקן ALL is_current flags</button>
+        <button onclick="verifyFix()">🧪 אמת שהתיקון עבד</button>
         
         <div id="results"></div>
     </div>
@@ -28,15 +28,13 @@
     <script type="module">
         import { supabase } from './lib/supabaseClient.js';
         
-        const TARGET_CASE_ID = 'cba57625-40ba-49a3-b40d-e2efe503d99e';
-        
-        window.checkCurrentStatus = async function() {
-            addResult('בודק סטטוס is_current...', 'info');
+        window.checkAllCurrentStatus = async function() {
+            addResult('🔧 PHASE 4: בודק כל ה-is_current flags...', 'info');
             try {
                 const result = await supabase
                     .from('case_helper')
                     .select('id, case_id, helper_name, version, is_current, updated_at')
-                    .eq('case_id', TARGET_CASE_ID);
+                    .order('updated_at', { ascending: false });
                 
                 if (result.error) {
                     addResult(`❌ שגיאה: ${result.error.message}`, 'error');
@@ -44,82 +42,165 @@
                 }
                 
                 if (!result.data || result.data.length === 0) {
-                    addResult(`❌ לא נמצאו helpers עבור case_id: ${TARGET_CASE_ID}`, 'error');
+                    addResult(`❌ לא נמצאו helpers`, 'error');
                     return;
                 }
                 
-                addResult(`✅ נמצאו ${result.data.length} helpers:
-${result.data.map(h => `- ${h.helper_name} | גרסה: ${h.version} | is_current: ${h.is_current} | עודכן: ${h.updated_at}`).join('\n')}`, 'success');
+                // Group by case_id
+                const groupedByCaseId = {};
+                result.data.forEach(helper => {
+                    if (!groupedByCaseId[helper.case_id]) {
+                        groupedByCaseId[helper.case_id] = [];
+                    }
+                    groupedByCaseId[helper.case_id].push(helper);
+                });
+                
+                let statusReport = `✅ נמצאו ${result.data.length} helpers ב-${Object.keys(groupedByCaseId).length} cases:\n\n`;
+                
+                Object.keys(groupedByCaseId).forEach(caseId => {
+                    const helpers = groupedByCaseId[caseId];
+                    const currentHelpers = helpers.filter(h => h.is_current);
+                    
+                    statusReport += `Case ${caseId.substring(0, 8)}...:\n`;
+                    statusReport += `  Total helpers: ${helpers.length}\n`;
+                    statusReport += `  Current helpers: ${currentHelpers.length}\n`;
+                    
+                    if (currentHelpers.length !== 1) {
+                        statusReport += `  ❌ PROBLEM: Should have exactly 1 current helper\n`;
+                    } else {
+                        statusReport += `  ✅ OK: Exactly 1 current helper\n`;
+                    }
+                    statusReport += '\n';
+                });
+                
+                addResult(statusReport, 'success');
                 
             } catch (error) {
                 addResult(`❌ שגיאה: ${error.message}`, 'error');
             }
         };
         
-        window.fixCurrentStatus = async function() {
-            addResult('מתקן is_current...', 'info');
+        window.fixAllCurrentStatus = async function() {
+            if (!confirm('האם אתה בטוח שתרצה לתקן את כל ה-is_current flags?\n\nזה יגדיר רק את הגרסה האחרונה של כל case כ-current.')) {
+                return;
+            }
+            
+            addResult('🔧 PHASE 4: מתקן ALL is_current flags...', 'info');
             try {
-                // First, set all helpers for this case to is_current = false
-                const updateAllResult = await supabase
+                // Step 1: Set all helpers to is_current = false
+                addResult('Step 1: Setting all helpers to is_current = false...', 'info');
+                
+                const setAllFalseResult = await supabase
                     .from('case_helper')
                     .update({ is_current: false })
-                    .eq('case_id', TARGET_CASE_ID);
+                    .neq('id', '00000000-0000-0000-0000-000000000000'); // Update all by using a condition that matches all
                 
-                if (updateAllResult.error) {
-                    addResult(`❌ שגיאה בעדכון כללי: ${updateAllResult.error.message}`, 'error');
+                if (setAllFalseResult.error) {
+                    addResult(`❌ שגיאה בקביעת false: ${setAllFalseResult.error.message}`, 'error');
                     return;
                 }
                 
-                // Then, set the latest version to is_current = true
-                const latestResult = await supabase
+                addResult('✅ All helpers set to is_current = false', 'success');
+                
+                // Step 2: Get all helpers grouped by case_id
+                const getAllResult = await supabase
                     .from('case_helper')
-                    .select('id, helper_name, version')
-                    .eq('case_id', TARGET_CASE_ID)
-                    .order('version', { ascending: false })
-                    .limit(1);
+                    .select('id, case_id, helper_name, version, updated_at')
+                    .order('case_id, updated_at', { ascending: false });
                 
-                if (latestResult.error || !latestResult.data || latestResult.data.length === 0) {
-                    addResult(`❌ לא נמצא helper לעדכון`, 'error');
+                if (getAllResult.error) {
+                    addResult(`❌ שגיאה בשליפת helpers: ${getAllResult.error.message}`, 'error');
                     return;
                 }
                 
-                const latestHelper = latestResult.data[0];
+                // Group by case_id and find latest for each
+                const groupedByCaseId = {};
+                getAllResult.data.forEach(helper => {
+                    if (!groupedByCaseId[helper.case_id]) {
+                        groupedByCaseId[helper.case_id] = [];
+                    }
+                    groupedByCaseId[helper.case_id].push(helper);
+                });
                 
-                const setCurrentResult = await supabase
-                    .from('case_helper')
-                    .update({ is_current: true })
-                    .eq('id', latestHelper.id);
+                addResult(`Step 2: Setting latest helper per case to is_current = true...`, 'info');
+                let fixedCases = 0;
                 
-                if (setCurrentResult.error) {
-                    addResult(`❌ שגיאה בקביעת current: ${setCurrentResult.error.message}`, 'error');
-                    return;
+                // Set latest helper for each case to is_current = true
+                for (const caseId of Object.keys(groupedByCaseId)) {
+                    const helpers = groupedByCaseId[caseId];
+                    const latestHelper = helpers[0]; // First is latest due to desc order
+                    
+                    const setCurrentResult = await supabase
+                        .from('case_helper')
+                        .update({ is_current: true })
+                        .eq('id', latestHelper.id);
+                    
+                    if (setCurrentResult.error) {
+                        addResult(`❌ שגיאה case ${caseId}: ${setCurrentResult.error.message}`, 'error');
+                    } else {
+                        fixedCases++;
+                        addResult(`✅ Case ${caseId.substring(0, 8)}: Set ${latestHelper.helper_name} as current`, 'success');
+                    }
                 }
                 
-                addResult(`✅ תוקן! ${latestHelper.helper_name} (גרסה ${latestHelper.version}) הוגדר כ-current`, 'success');
+                addResult(`🎉 PHASE 4: Successfully fixed ${fixedCases} cases!`, 'success');
+                addResult('✅ Now historical versions should show 5 buttons and current versions show 2 buttons', 'success');
                 
             } catch (error) {
                 addResult(`❌ שגיאה: ${error.message}`, 'error');
             }
         };
         
-        window.testAfterFix = async function() {
-            addResult('בודק שהתיקון עבד...', 'info');
+        window.verifyFix = async function() {
+            addResult('Step 3: Verifying the fix...', 'info');
+            
             try {
-                const caseService = await import('./services/caseRetrievalService.js').then(m => m.default);
-                const result = await caseService.loadCaseByPlate('22184003');
+                const result = await supabase
+                    .from('case_helper')
+                    .select('id, case_id, helper_name, is_current, updated_at')
+                    .order('updated_at', { ascending: false });
                 
-                if (result.success) {
-                    addResult(`✅ התיקון עבד! תיק נטען:
-צלחה: ${result.case.plate}
-בעלים: ${result.case.owner_name}
-סטטוס: ${result.case.status}
-גרסת helper: ${result.metadata.version}
-שם helper: ${result.metadata.helperName}`, 'success');
-                } else {
-                    addResult(`❌ עדיין לא עובד: ${result.message}`, 'error');
+                if (result.error) {
+                    addResult(`❌ שגיאה: ${result.error.message}`, 'error');
+                    return;
                 }
+                
+                const groupedByCaseId = {};
+                result.data.forEach(helper => {
+                    if (!groupedByCaseId[helper.case_id]) {
+                        groupedByCaseId[helper.case_id] = [];
+                    }
+                    groupedByCaseId[helper.case_id].push(helper);
+                });
+                
+                let verificationResults = 'Verification Results:\n';
+                let allGood = true;
+                
+                Object.keys(groupedByCaseId).forEach(caseId => {
+                    const helpers = groupedByCaseId[caseId];
+                    const currentHelpers = helpers.filter(h => h.is_current);
+                    
+                    verificationResults += `Case ${caseId.substring(0, 8)}: ${helpers.length} helpers, ${currentHelpers.length} current\n`;
+                    
+                    if (currentHelpers.length !== 1) {
+                        verificationResults += `  ❌ ERROR: Should have exactly 1 current helper\n`;
+                        allGood = false;
+                    } else {
+                        verificationResults += `  ✅ OK: Exactly 1 current helper\n`;
+                    }
+                });
+                
+                addResult(verificationResults, allGood ? 'success' : 'error');
+                
+                if (allGood) {
+                    addResult('🎉 PHASE 4 is_current fix verified successfully!', 'success');
+                    addResult('You can now test the admin version management - historical versions should show 5 buttons', 'success');
+                } else {
+                    addResult('❌ Verification failed - manual check needed', 'error');
+                }
+                
             } catch (error) {
-                addResult(`❌ שגיאה: ${error.message}`, 'error');
+                addResult(`❌ Verification error: ${error.message}`, 'error');
             }
         };
         
@@ -131,6 +212,14 @@ ${result.data.map(h => `- ${h.helper_name} | גרסה: ${h.version} | is_current
             results.appendChild(div);
             results.scrollTop = results.scrollHeight;
         }
+        
+        // Auto-run check when page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            setTimeout(() => {
+                addResult('🔧 PHASE 4: Auto-checking is_current status...', 'info');
+                checkAllCurrentStatus();
+            }, 1000);
+        });
     </script>
 </body>
 </html>
