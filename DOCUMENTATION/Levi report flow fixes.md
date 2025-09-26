@@ -1,16 +1,13 @@
-# Claude Cursor Prompt: Levi Report System Improvements
-
-## Overview
+Claude Cursor Prompt: Levi Report System Improvements
+Overview
 Fix critical issues with the Levi report OCR system including data preservation, proper field handling, and admin recovery tools. These changes focus on improving data integrity and user experience.
-
-## Issue 1: Selective Levi Report Re-upload
-
-### Problem
+Issue 1: Selective Levi Report Re-upload
+Problem
 Re-uploading a Levi report currently clears ALL system data instead of just replacing Levi-specific data.
+Details:
+Re uploading Levi report for OCR, clears most of the system data . There need to be an option to re-upload the Levi report without affecting other data or modules and at the same time the new upload replaces the Levi data (the new webhook response replaces the old one) - modify the clear form button to clear just the Levi webhook response and Levi data identify source for all Levi data in the helper and clear main source.
 
-### Solution Implementation
-
-```javascript
+Solution Implementation
 // services/LeviReportService.js
 
 class LeviReportService {
@@ -130,11 +127,7 @@ class LeviReportService {
 }
 
 export default new LeviReportService();
-```
-
-### UI Component Update
-
-```javascript
+UI Component Update
 // components/LeviUploadPage.js
 
 import LeviReportService from '../services/LeviReportService';
@@ -171,13 +164,14 @@ function LeviUploadComponent() {
     </div>
   );
 }
-```
+Issue 2: New Case Button with Data Clearing
+Descriptions:
+Open case page Required behavior: Starting a new case needs to clear all previous data except admin defined vat rate - 
+1. we need a new button in the open new case page: פתח תיק חדש this opens a message that all data will be cleared of previous case, confirm, = clears data and unlock the fields in the pagefor new input -( double confirmation)
+2. Existing form needs to be read only - to edit we add a new edit button 
+3. If form is empty - both buttons are disabled and the default is starting a new case 
 
-## Issue 2: New Case Button with Data Clearing
-
-### Implementation
-
-```javascript
+Implementation
 // components/NewCasePage.js
 
 class NewCaseManager {
@@ -358,11 +352,7 @@ document.addEventListener('DOMContentLoaded', () => {
     container.appendChild(newCaseManager.createNewCaseButton());
   }
 });
-```
-
-### CSS for Modal and Button
-
-```css
+CSS for Modal and Button
 /* styles/new-case.css */
 
 .new-case-btn {
@@ -427,13 +417,13 @@ document.addEventListener('DOMContentLoaded', () => {
   border-radius: 4px;
   cursor: pointer;
 }
-```
+Issues 3-4: 
+Levi report upload html :
+1. The קוד משרד התחבורה: field in the upload Levi report page behaves like a passwords and always asks to save password , this is not a password field its a plain text field 
+2. In the Levi upload page, after receiving the OCR results a 💾 שמור תוצאות button appears , what does it do ? Where does it save ? For now its just causing errors 
 
-## Issue 3: Fix Ministry Code Field (Password Autofill Issue)
-
-### Solution
-
-```javascript
+Issue 3: Fix Ministry Code Field (Password Autofill Issue)
+Solution
 // Fix for the קוד משרד התחבורה field
 
 // Option 1: Update the HTML input field
@@ -496,13 +486,8 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 });
-```
-
-## Issue 4: Fix Save Results Button (שמור תוצאות)
-
-### Implementation
-
-```javascript
+Issue 4: Fix Save Results Button (שמור תוצאות)
+Implementation
 // services/OCRResultsService.js
 
 class OCRResultsService {
@@ -689,13 +674,10 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 export default OCRResultsService;
-```
-
-## Issue 5: Admin Hub - Add Webhook Response Recovery Tools
-
-### Implementation
-
-```javascript
+Issue 5: Admin Hub - Add Webhook Response Recovery Tools
+Purpose:
+In the admin hub - Add a reload Levi webhook response from the existing webhook response in helper - and a open case webhook response - overwrites an retrigger Levi data flow or car data  to fix or compensate on corrupted / missing data -
+Implementation
 // components/AdminHub.js
 
 class AdminWebhookRecovery {
@@ -999,11 +981,7 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 export default AdminWebhookRecovery;
-```
-
-### CSS for Admin Recovery Panel
-
-```css
+CSS for Admin Recovery Panel
 /* styles/admin-recovery.css */
 
 .admin-recovery-panel {
@@ -1067,53 +1045,43 @@ export default AdminWebhookRecovery;
 .log-entry.error { color: #f44336; }
 .log-entry.warning { color: #FF9800; }
 .log-entry.info { color: #2196F3; }
-```
-
-## Testing Checklist
-
-### Levi Re-upload
-- [ ] Upload initial Levi report
-- [ ] Fill other system data
-- [ ] Re-upload Levi with "preserve data" checked
-- [ ] Verify only Levi data replaced
-- [ ] Verify other data intact
-
-### New Case Button
-- [ ] Click "פתח תיק חדש"
-- [ ] Confirm modal appears with warning
-- [ ] Click confirm
-- [ ] Verify all data cleared except VAT rate
-- [ ] Verify all fields unlocked
-
-### Ministry Code Field
-- [ ] Navigate to Levi upload page
-- [ ] Click on ministry code field
-- [ ] Verify no password save prompt
-- [ ] Type text normally
-- [ ] Verify browser doesn't treat as password
-
-### Save Results Button
-- [ ] Complete OCR process
-- [ ] Click "שמור תוצאות"
-- [ ] Verify success message
-- [ ] Check localStorage for saved data
-- [ ] Verify no console errors
-
-### Admin Recovery Tools
-- [ ] Access admin hub
-- [ ] Test Levi webhook reload
-- [ ] Test Open Case webhook reload
-- [ ] Run data validation
-- [ ] Test backup restore
-- [ ] Clear corrupted data
-
-## Important Notes
-
-1. **Data Integrity**: Always backup before clearing data
-2. **Webhook Security**: Ensure admin authentication for webhook reloads
-3. **Error Handling**: Comprehensive logging for debugging
-4. **User Feedback**: Clear messages for all operations
-5. **RTL Support**: All Hebrew text properly aligned
-6. **Browser Compatibility**: Test password field fix across browsers
-
+Testing Checklist
+Levi Re-upload
+* [ ] Upload initial Levi report
+* [ ] Fill other system data
+* [ ] Re-upload Levi with "preserve data" checked
+* [ ] Verify only Levi data replaced
+* [ ] Verify other data intact
+New Case Button
+* [ ] Click "פתח תיק חדש"
+* [ ] Confirm modal appears with warning
+* [ ] Click confirm
+* [ ] Verify all data cleared except VAT rate
+* [ ] Verify all fields unlocked
+Ministry Code Field
+* [ ] Navigate to Levi upload page
+* [ ] Click on ministry code field
+* [ ] Verify no password save prompt
+* [ ] Type text normally
+* [ ] Verify browser doesn't treat as password
+Save Results Button
+* [ ] Complete OCR process
+* [ ] Click "שמור תוצאות"
+* [ ] Verify success message
+* [ ] Check localStorage for saved data
+* [ ] Verify no console errors
+Admin Recovery Tools
+* [ ] Access admin hub
+* [ ] Test Levi webhook reload
+* [ ] Test Open Case webhook reload
+* [ ] Run data validation
+* [ ] Test backup restore
+* [ ] Clear corrupted data
+Important Notes
+1. Data Integrity: Always backup before clearing data
+2. Webhook Security: Ensure admin authentication for webhook reloads
+3. Error Handling: Comprehensive logging for debugging
+4. User Feedback: Clear messages for all operations
+5. RTL Support: All Hebrew text properly aligned
+6. Browser Compatibility: Test password field fix across browsers
 This implementation provides robust solutions for all identified issues while maintaining system stability and data integrity.
