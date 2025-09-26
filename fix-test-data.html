@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="he">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>תיקון נתוני בדיקה - Fix Test Data</title>
+    <style>
+        body { 
+            font-family: sans-serif; 
+            padding: 20px; 
+            background: #f5f5f5; 
+            text-align: right;
+        }
+        .container { 
+            max-width: 800px; 
+            margin: 0 auto; 
+            background: white; 
+            padding: 20px; 
+            border-radius: 8px; 
+        }
+        button { 
+            padding: 10px 20px; 
+            margin: 5px; 
+            background: #28a745; 
+            color: white; 
+            border: none; 
+            border-radius: 4px; 
+            cursor: pointer; 
+        }
+        .result { 
+            background: #f8f9fa; 
+            padding: 15px; 
+            margin: 10px 0; 
+            border-radius: 4px; 
+            border: 1px solid #ddd;
+            white-space: pre-line;
+        }
+        .error { background: #f8d7da; border-color: #f5c6cb; }
+        .success { background: #d4edda; border-color: #c3e6cb; }
+        .warning { background: #fff3cd; border-color: #ffeaa7; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>תיקון נתוני בדיקה - Fix Test Data</h1>
+        <p>הכלי הזה יוצר רשומת case חסרה עבור ה-helper הקיים</p>
+        
+        <button onclick="checkOrphanedHelpers()">🔍 מצא helpers יתומים</button>
+        <button onclick="createMissingCase()">✅ צור case חסר עבור 21284003</button>
+        <button onclick="verifyFix()">🧪 בדוק תיקון</button>
+        
+        <div id="results"></div>
+    </div>
+
+    <script type="module">
+        import { supabase } from './lib/supabaseClient.js';
+        
+        window.checkOrphanedHelpers = async function() {
+            addResult('מחפש helpers יתומים...', 'info');
+            try {
+                // Get all helpers
+                const helpersResult = await supabase
+                    .from('case_helper')
+                    .select('case_id, helper_name, version');
+                
+                if (helpersResult.error) {
+                    addResult(`❌ שגיאה בקריאת helpers: ${helpersResult.error.message}`, 'error');
+                    return;
+                }
+                
+                // Get all cases  
+                const casesResult = await supabase
+                    .from('cases')
+                    .select('id, plate');
+                
+                if (casesResult.error) {
+                    addResult(`❌ שגיאה בקריאת cases: ${casesResult.error.message}`, 'error');
+                    return;
+                }
+                
+                const caseIds = new Set(casesResult.data.map(c => c.id));
+                const orphanedHelpers = helpersResult.data.filter(h => !caseIds.has(h.case_id));
+                
+                if (orphanedHelpers.length === 0) {
+                    addResult('✅ לא נמצאו helpers יתומים', 'success');
+                } else {
+                    addResult(`⚠️ נמצאו ${orphanedHelpers.length} helpers יתומים:
+${orphanedHelpers.map(h => `- ${h.helper_name} (case_id: ${h.case_id})`).join('\n')}`, 'warning');
+                }
+                
+            } catch (error) {
+                addResult(`❌ שגיאה: ${error.message}`, 'error');
+            }
+        };
+        
+        window.createMissingCase = async function() {
+            addResult('יוצר case חסר עבור 21284003...', 'info');
+            try {
+                // First, find the helper to get the case_id
+                const helperResult = await supabase
+                    .from('case_helper')
+                    .select('case_id, helper_name, helper_json')
+                    .ilike('helper_name', '%21284003%')
+                    .single();
+                
+                if (helperResult.error) {
+                    addResult(`❌ לא נמצא helper עבור 21284003: ${helperResult.error.message}`, 'error');
+                    return;
+                }
+                
+                const helper = helperResult.data;
+                addResult(`✅ נמצא helper: ${helper.helper_name}`, 'success');
+                
+                // Check if case already exists
+                const existingCase = await supabase
+                    .from('cases')
+                    .select('id')
+                    .eq('id', helper.case_id)
+                    .single();
+                
+                if (!existingCase.error) {
+                    addResult(`ℹ️ Case כבר קיים עבור case_id: ${helper.case_id}`, 'warning');
+                    return;
+                }
+                
+                // Create the missing case record
+                const newCase = {
+                    id: helper.case_id, // Use the same ID that helper references
+                    plate: '21284003',
+                    owner_name: 'בעלים בדיקה',
+                    status: 'OPEN',
+                    created_at: new Date().toISOString(),
+                    updated_at: new Date().toISOString()
+                };
+                
+                const insertResult = await supabase
+                    .from('cases')
+                    .insert(newCase);
+                
+                if (insertResult.error) {
+                    addResult(`❌ שגיאה ביצירת case: ${insertResult.error.message}`, 'error');
+                    return;
+                }
+                
+                addResult(`✅ נוצר case חדש!
+ID: ${newCase.id}
+צלחה: ${newCase.plate}
+בעלים: ${newCase.owner_name}
+סטטוס: ${newCase.status}`, 'success');
+                
+            } catch (error) {
+                addResult(`❌ שגיאה: ${error.message}`, 'error');
+            }
+        };
+        
+        window.verifyFix = async function() {
+            addResult('בודק שהתיקון עבד...', 'info');
+            try {
+                // Import case service and test the search
+                const caseService = await import('./services/caseRetrievalService.js').then(m => m.default);
+                const result = await caseService.loadCaseByPlate('21284003');
+                
+                if (result.success) {
+                    addResult(`✅ התיקון עבד! תיק נמצא:
+צלחה: ${result.case.plate}
+בעלים: ${result.case.owner_name}
+סטטוס: ${result.case.status}
+גרסת helper: ${result.metadata.version}`, 'success');
+                } else {
+                    addResult(`❌ התיקון לא עבד: ${result.message}`, 'error');
+                }
+            } catch (error) {
+                addResult(`❌ שגיאה: ${error.message}`, 'error');
+            }
+        };
+        
+        function addResult(text, type) {
+            const results = document.getElementById('results');
+            const div = document.createElement('div');
+            div.className = `result ${type}`;
+            div.textContent = text;
+            results.appendChild(div);
+            results.scrollTop = results.scrollHeight;
+        }
+    </script>
+</body>
+</html>

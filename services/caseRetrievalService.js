@@ -36,10 +36,73 @@ export const caseRetrievalService = {
       
       if (!cases || cases.length === 0) {
         console.log(`📭 No case found for plate: ${plate}`);
+        
+        // FALLBACK: Search for orphaned helpers (data integrity issue)
+        console.warn(`⚠️ ORPHANED HELPER SEARCH: Searching helper table directly for plate ${plate}`);
+        console.warn(`⚠️ DATA INTEGRITY ISSUE: This suggests a helper exists without a corresponding case record`);
+        
+        const { data: orphanedHelpers, error: orphanError } = await supabase
+          .from('case_helper')
+          .select(`
+            id,
+            case_id,
+            version,
+            helper_name,
+            helper_json,
+            updated_at,
+            source
+          `)
+          .ilike('helper_name', `%${plate}%`)
+          .eq('is_current', true)
+          .order('updated_at', { ascending: false });
+        
+        if (orphanError) {
+          console.error('❌ Error searching orphaned helpers:', orphanError);
+          return {
+            success: false,
+            error: 'CASE_NOT_FOUND',
+            message: `לא נמצא תיק עבור רכב ${plate}`
+          };
+        }
+        
+        if (!orphanedHelpers || orphanedHelpers.length === 0) {
+          console.log(`📭 No orphaned helpers found for plate: ${plate}`);
+          return {
+            success: false,
+            error: 'CASE_NOT_FOUND',
+            message: `לא נמצא תיק עבור רכב ${plate}`
+          };
+        }
+        
+        // Found orphaned helper - use it but warn about data integrity
+        const orphanedHelper = orphanedHelpers[0];
+        console.warn(`⚠️ USING ORPHANED HELPER: ${orphanedHelper.helper_name}`);
+        console.warn(`⚠️ Missing case_id: ${orphanedHelper.case_id} - This should be investigated`);
+        
+        // Create mock case record for compatibility
+        const mockCaseRecord = {
+          id: orphanedHelper.case_id,
+          plate: plate,
+          owner_name: 'לא זמין (נתונים חסרים)',
+          status: 'UNKNOWN',
+          created_at: orphanedHelper.updated_at,
+          updated_at: orphanedHelper.updated_at
+        };
+        
         return {
-          success: false,
-          error: 'CASE_NOT_FOUND',
-          message: `לא נמצא תיק עבור רכב ${plate}`
+          success: true,
+          case: mockCaseRecord,
+          helper: orphanedHelper.helper_json,
+          metadata: {
+            caseId: mockCaseRecord.id,
+            version: orphanedHelper.version,
+            helperName: orphanedHelper.helper_name,
+            lastUpdated: orphanedHelper.updated_at,
+            source: orphanedHelper.source,
+            caseStatus: mockCaseRecord.status,
+            dataIntegrityWarning: true,
+            warning: 'נמצא helper יתום - יש בעיית שלמות נתונים'
+          }
         };
       }
       
