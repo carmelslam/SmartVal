@@ -220,8 +220,31 @@
           plateInput.style.color = '';
           plateInput.style.borderColor = '';
           
+          // PHASE 4: Auto-populate UI with retrieved data
+          console.log('🔧 PHASE 4: Auto-populating UI with retrieved helper data');
+          
+          // Set global helper for UI components
+          window.helper = helper;
+          
+          // Trigger UI population events if available
+          if (typeof window.populateUIFromHelper === 'function') {
+            console.log('📋 Calling populateUIFromHelper function');
+            window.populateUIFromHelper(helper);
+          }
+          
+          // Dispatch custom event for modules that listen for data updates
+          const dataLoadedEvent = new CustomEvent('helperDataLoaded', {
+            detail: { helper, metadata, source: 'supabase' }
+          });
+          document.dispatchEvent(dataLoadedEvent);
+          console.log('📡 Dispatched helperDataLoaded event for UI modules');
+          
           // Show appropriate success message with warning if needed
           let successMessage = `התיק נטען בהצלחה מ-Supabase (גרסה ${metadata.version})`;
+          if (metadata.unwrapped) {
+            successMessage += `\n✅ מבנה הנתונים תוקן אוטומטית לתאימות UI`;
+            console.log('🔧 Data structure was unwrapped for UI compatibility');
+          }
           if (metadata.dataIntegrityWarning) {
             successMessage += `\n\n⚠️ אזהרה: ${metadata.warning}`;
             console.warn('⚠️ Data integrity warning shown to user');

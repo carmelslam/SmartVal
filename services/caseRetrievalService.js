@@ -89,10 +89,23 @@ export const caseRetrievalService = {
           updated_at: orphanedHelper.updated_at
         };
         
+        // CRITICAL FIX: Unwrap helper_data for orphaned helpers too
+        let unwrappedHelper = orphanedHelper.helper_json;
+        
+        if (unwrappedHelper && unwrappedHelper.helper_data && typeof unwrappedHelper.helper_data === 'object') {
+          console.log('🔧 UNWRAPPING orphaned helper_data structure for UI compatibility');
+          unwrappedHelper = unwrappedHelper.helper_data;
+        }
+        
+        // Ensure meta exists at root level
+        if (unwrappedHelper && !unwrappedHelper.meta && orphanedHelper.helper_json.meta) {
+          unwrappedHelper.meta = orphanedHelper.helper_json.meta;
+        }
+        
         return {
           success: true,
           case: mockCaseRecord,
-          helper: orphanedHelper.helper_json,
+          helper: unwrappedHelper,
           metadata: {
             caseId: mockCaseRecord.id,
             version: orphanedHelper.version,
@@ -101,7 +114,8 @@ export const caseRetrievalService = {
             source: orphanedHelper.source,
             caseStatus: mockCaseRecord.status,
             dataIntegrityWarning: true,
-            warning: 'נמצא helper יתום - יש בעיית שלמות נתונים'
+            warning: 'נמצא helper יתום - יש בעיית שלמות נתונים',
+            unwrapped: !!orphanedHelper.helper_json.helper_data
           }
         };
       }
@@ -143,17 +157,33 @@ export const caseRetrievalService = {
       
       console.log(`✅ Loaded helper: ${helper.helper_name} (v${helper.version})`);
       
+      // CRITICAL FIX: Unwrap helper_data if it exists
+      let unwrappedHelper = helper.helper_json;
+      
+      // Check if data is wrapped in helper_data structure
+      if (unwrappedHelper && unwrappedHelper.helper_data && typeof unwrappedHelper.helper_data === 'object') {
+        console.log('🔧 UNWRAPPING helper_data structure for UI compatibility');
+        console.log('📦 Original structure had helper_data wrapper - removing it');
+        unwrappedHelper = unwrappedHelper.helper_data;
+      }
+      
+      // Ensure meta exists at root level for UI compatibility
+      if (unwrappedHelper && !unwrappedHelper.meta && helper.helper_json.meta) {
+        unwrappedHelper.meta = helper.helper_json.meta;
+      }
+      
       return {
         success: true,
         case: caseRecord,
-        helper: helper.helper_json,
+        helper: unwrappedHelper,
         metadata: {
           caseId: caseRecord.id,
           version: helper.version,
           helperName: helper.helper_name,
           lastUpdated: helper.updated_at,
           source: helper.source,
-          caseStatus: caseRecord.status
+          caseStatus: caseRecord.status,
+          unwrapped: !!helper.helper_json.helper_data
         }
       };
       
