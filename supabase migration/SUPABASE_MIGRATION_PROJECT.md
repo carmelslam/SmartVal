@@ -374,7 +374,7 @@ INSERT INTO storage.buckets (id, name, public) VALUES
 3. Add case resume capability
 4. Build admin recovery tools
 5. Test data integrity
-6. change the window that opens in the selction page when retrieving a case to the details window in the admin : 
+6. change the window that opens in the selction page when retrieving a case to match the details window in the admin : 
 📋 פרטי התיק
 מספר רכב: 12345678
 מצב התיק: פתוח
