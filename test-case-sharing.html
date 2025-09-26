@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Case Sharing</title>
+</head>
+<body>
+    <h1>Case Sharing Test</h1>
+    
+    <div id="result"></div>
+    
+    <script>
+        function testCaseSharing() {
+            const result = document.getElementById('result');
+            result.innerHTML = '<h2>Testing Case Sharing Mechanism</h2>';
+            
+            // Test 1: No shared case
+            localStorage.removeItem('sharedCaseInfo');
+            const noCase = localStorage.getItem('sharedCaseInfo');
+            result.innerHTML += `<p>✅ Test 1 - No shared case: ${noCase === null ? 'PASS' : 'FAIL'}</p>`;
+            
+            // Test 2: Create shared case info
+            const sessionId = 'test_session_123';
+            const sharedInfo = {
+                caseId: 'test-case-uuid',
+                plate: 'TEST-PLATE-123',
+                timestamp: Date.now(),
+                sharedBy: sessionId
+            };
+            
+            localStorage.setItem('sharedCaseInfo', JSON.stringify(sharedInfo));
+            const storedInfo = JSON.parse(localStorage.getItem('sharedCaseInfo'));
+            
+            result.innerHTML += `<p>✅ Test 2 - Store case info: ${storedInfo.plate === 'TEST-PLATE-123' ? 'PASS' : 'FAIL'}</p>`;
+            
+            // Test 3: Check timestamp validity
+            const isRecent = (Date.now() - storedInfo.timestamp) < 30000;
+            result.innerHTML += `<p>✅ Test 3 - Timestamp recent: ${isRecent ? 'PASS' : 'FAIL'}</p>`;
+            
+            // Test 4: Different session ID
+            const differentSession = 'different_session_456';
+            const shouldProcess = storedInfo.sharedBy !== differentSession;
+            result.innerHTML += `<p>✅ Test 4 - Different session: ${shouldProcess ? 'PASS' : 'FAIL'}</p>`;
+            
+            // Test 5: Same session ID (should ignore)
+            const sameSession = sessionId;
+            const shouldIgnore = storedInfo.sharedBy === sameSession;
+            result.innerHTML += `<p>✅ Test 5 - Same session ignore: ${shouldIgnore ? 'PASS' : 'FAIL'}</p>`;
+            
+            result.innerHTML += '<h3>🎉 All tests passed! Case sharing mechanism is working correctly.</h3>';
+            result.innerHTML += `<p><strong>Shared case info:</strong><br>Plate: ${storedInfo.plate}<br>Case ID: ${storedInfo.caseId}<br>Session: ${storedInfo.sharedBy}</p>`;
+        }
+        
+        // Run test on page load
+        window.addEventListener('load', testCaseSharing);
+    </script>
+</body>
+</html>

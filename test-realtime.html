@@ -227,15 +227,25 @@
             <div class="session-title">Session 2 (Open Another Window)</div>
             
             <p style="color: #666;">
-                <strong>Instructions for testing:</strong><br>
-                1. Open this same page in another browser window<br>
-                2. Connect both sessions to the same case<br>
-                3. Make changes in one window<br>
-                4. Watch changes appear in the other window instantly!
+                <strong>Real-time Testing Instructions:</strong><br>
+                1. First, connect to Supabase and create a test case<br>
+                2. Click "Open Second Window" to share the case<br>
+                3. The second window will auto-join the same case<br>
+                4. Make changes in either window<br>
+                5. Watch changes appear instantly in both windows!
             </p>
             
             <div class="button-group">
                 <button class="btn-primary" onclick="openSecondWindow()">🪟 Open Second Window</button>
+                <button class="btn-success" onclick="findAvailableCases()">🔍 Find Available Cases</button>
+                <button class="btn-warning" onclick="joinCase()">🔗 Join Case</button>
+            </div>
+            
+            <div id="available-cases" style="margin-top: 10px; display: none;">
+                <label><strong>Available Cases:</strong></label>
+                <select id="case-selector" style="width: 100%; padding: 5px; margin: 5px 0;">
+                    <option value="">Select a case to join...</option>
+                </select>
             </div>
         </div>
     </div>
@@ -314,7 +324,15 @@
         function updateCurrentCase(plate, caseId) {
             currentPlate = plate;
             currentCaseId = caseId;
-            document.getElementById('current-case').textContent = plate || 'None';
+            const caseElement = document.getElementById('current-case');
+            
+            if (plate) {
+                caseElement.textContent = plate;
+                caseElement.style.color = '#28a745'; // Green for active case
+            } else {
+                caseElement.textContent = 'None - Create or join a case to start testing';
+                caseElement.style.color = '#dc3545'; // Red for no active case
+            }
         }
         
         // Initialize real-time connection
@@ -628,10 +646,206 @@
             showNotification('Disconnected', 'info');
         }
         
+        // Find available cases for joining
+        async function findAvailableCases() {
+            if (!isConnected) {
+                showNotification('Please connect first!', 'warning');
+                return;
+            }
+            
+            try {
+                log('🔍 Finding available cases...', 'info');
+                
+                // Get recent test cases
+                const { data: cases, error } = await supabaseClient
+                    .from('cases')
+                    .select(`
+                        id,
+                        plate,
+                        owner_name,
+                        status,
+                        created_at,
+                        case_helper!inner(id, version, is_current, helper_name, updated_at)
+                    `)
+                    .eq('status', 'OPEN')
+                    .eq('case_helper.is_current', true)
+                    .order('created_at', { ascending: false })
+                    .limit(10);
+                
+                if (error) throw error;
+                
+                const selector = document.getElementById('case-selector');
+                const container = document.getElementById('available-cases');
+                
+                // Clear existing options
+                selector.innerHTML = '<option value="">Select a case to join...</option>';
+                
+                if (cases && cases.length > 0) {
+                    cases.forEach(case_ => {
+                        const option = document.createElement('option');
+                        option.value = JSON.stringify({
+                            id: case_.id,
+                            plate: case_.plate,
+                            helperName: case_.case_helper[0].helper_name
+                        });
+                        
+                        const isTestCase = case_.plate.startsWith('TEST-') || case_.plate.startsWith('SYNC-');
+                        const indicator = isTestCase ? '🧪 ' : '';
+                        const timeAgo = new Date(case_.created_at).toLocaleTimeString();
+                        
+                        option.textContent = `${indicator}${case_.plate} - ${case_.owner_name} (${timeAgo})`;
+                        selector.appendChild(option);
+                    });
+                    
+                    container.style.display = 'block';
+                    log(`✅ Found ${cases.length} available case(s)`, 'success');
+                    showNotification(`Found ${cases.length} cases to join`, 'success');
+                } else {
+                    container.style.display = 'none';
+                    log('ℹ️ No cases found', 'info');
+                    showNotification('No available cases found', 'info');
+                }
+                
+            } catch (error) {
+                log(`❌ Error finding cases: ${error.message}`, 'error');
+                showNotification('Failed to find cases!', 'error');
+            }
+        }
+        
+        // Join an existing case
+        async function joinCase() {
+            const selector = document.getElementById('case-selector');
+            const selectedValue = selector.value;
+            
+            if (!selectedValue) {
+                showNotification('Please select a case to join!', 'warning');
+                return;
+            }
+            
+            try {
+                const caseInfo = JSON.parse(selectedValue);
+                log(`🔗 Joining case: ${caseInfo.plate}...`, 'info');
+                
+                // Get the current helper for this case
+                const { data: helper, error } = await supabaseClient
+                    .from('case_helper')
+                    .select('helper_json, version, helper_name')
+                    .eq('case_id', caseInfo.id)
+                    .eq('is_current', true)
+                    .single();
+                
+                if (error) throw error;
+                
+                // Update UI
+                updateCurrentCase(caseInfo.plate, caseInfo.id);
+                document.getElementById('helper-data').value = 
+                    JSON.stringify(helper.helper_json, null, 2);
+                
+                // Subscribe to changes
+                await subscribeToCase(caseInfo.id);
+                
+                log(`✅ Joined case: ${caseInfo.plate}`, 'success');
+                showNotification(`Joined case: ${caseInfo.plate}`, 'success');
+                
+                // Hide the case selector
+                document.getElementById('available-cases').style.display = 'none';
+                
+            } catch (error) {
+                log(`❌ Error joining case: ${error.message}`, 'error');
+                showNotification('Failed to join case!', 'error');
+            }
+        }
+        
         // Open second window for testing
         function openSecondWindow() {
+            // Check if we have an active case to share
+            if (!currentCaseId || !currentPlate) {
+                showNotification('Please create or join a test case first!', 'warning');
+                log('⚠️ No active case to share with second window', 'warning');
+                return;
+            }
+            
+            // Store current case info in localStorage for the new window
+            const sharedInfo = {
+                caseId: currentCaseId,
+                plate: currentPlate,
+                timestamp: Date.now(),
+                sharedBy: sessionId
+            };
+            localStorage.setItem('sharedCaseInfo', JSON.stringify(sharedInfo));
+            log(`📤 Sharing case with second window: ${currentPlate}`, 'info');
+            
             const newWindow = window.open(window.location.href, '_blank');
-            showNotification('Second window opened for multi-session testing!', 'info');
+            if (newWindow) {
+                showNotification(`Second window opened - will auto-join case: ${currentPlate}`, 'success');
+                log(`🪟 New window opened, case info shared`, 'success');
+            } else {
+                showNotification('Failed to open second window - check popup blocker', 'error');
+                log(`❌ Failed to open second window`, 'error');
+            }
+        }
+        
+        // Check for shared case info on load
+        async function checkForSharedCase() {
+            const sharedInfo = localStorage.getItem('sharedCaseInfo');
+            if (sharedInfo) {
+                try {
+                    const info = JSON.parse(sharedInfo);
+                    
+                    // Check if the share is recent (within 30 seconds)
+                    const isRecent = (Date.now() - info.timestamp) < 30000;
+                    
+                    if (isRecent && info.sharedBy !== sessionId) {
+                        log(`📥 Found shared case: ${info.plate}`, 'info');
+                        showNotification(`Auto-joining shared case: ${info.plate}`, 'info');
+                        
+                        // Auto-connect and join
+                        await initializeRealtime();
+                        
+                        setTimeout(async () => {
+                            // Get the helper data
+                            const { data: helper, error } = await supabaseClient
+                                .from('case_helper')
+                                .select('helper_json, version, helper_name')
+                                .eq('case_id', info.caseId)
+                                .eq('is_current', true)
+                                .single();
+                            
+                            if (!error && helper) {
+                                updateCurrentCase(info.plate, info.caseId);
+                                document.getElementById('helper-data').value = 
+                                    JSON.stringify(helper.helper_json, null, 2);
+                                
+                                await subscribeToCase(info.caseId);
+                                
+                                log(`✅ Auto-joined case: ${info.plate}`, 'success');
+                                showNotification(`Ready for real-time sync!`, 'success');
+                            } else {
+                                log(`❌ Failed to load helper data: ${error?.message}`, 'error');
+                                showNotification('Failed to load case data!', 'error');
+                            }
+                        }, 1000);
+                        
+                        // Clear the shared info after using it
+                        localStorage.removeItem('sharedCaseInfo');
+                    } else if (!isRecent) {
+                        log(`⏰ Shared case info expired (${Math.round((Date.now() - info.timestamp) / 1000)}s old)`, 'info');
+                        localStorage.removeItem('sharedCaseInfo');
+                    } else if (info.sharedBy === sessionId) {
+                        log(`🔄 Ignoring own shared case info`, 'info');
+                    }
+                } catch (e) {
+                    console.warn('Error processing shared case info:', e);
+                    localStorage.removeItem('sharedCaseInfo');
+                }
+            } else {
+                log(`ℹ️ No shared case found - this is a fresh session`, 'info');
+                log(`💡 To test real-time sync:`, 'info');
+                log(`   1. Connect to Supabase`, 'info');
+                log(`   2. Create a test case`, 'info');
+                log(`   3. Open second window`, 'info');
+                log(`   4. Make changes and watch them sync!`, 'info');
+            }
         }
         
         // Clear log
@@ -641,9 +855,12 @@
         }
         
         // Auto-connect on load
-        window.addEventListener('load', () => {
+        window.addEventListener('load', async () => {
             log('🚀 Real-time test page ready', 'info');
             log('💡 Tip: Create a test case, then open another window to test real-time sync!', 'info');
+            
+            // Check if there's a shared case to auto-join
+            await checkForSharedCase();
         });
         
         // Cleanup on unload
