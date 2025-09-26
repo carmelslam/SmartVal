@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Dual-Write to Supabase</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+        }
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin: 20px 0;
+            justify-content: center;
+        }
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .primary {
+            background: #007bff;
+            color: white;
+        }
+        .primary:hover {
+            background: #0056b3;
+        }
+        .secondary {
+            background: #6c757d;
+            color: white;
+        }
+        .secondary:hover {
+            background: #545b62;
+        }
+        .success {
+            background: #28a745;
+            color: white;
+        }
+        .danger {
+            background: #dc3545;
+            color: white;
+        }
+        .log {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            padding: 15px;
+            border-radius: 5px;
+            margin-top: 20px;
+            max-height: 400px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 14px;
+        }
+        .log-entry {
+            margin: 5px 0;
+            padding: 5px;
+        }
+        .log-success {
+            color: #28a745;
+        }
+        .log-error {
+            color: #dc3545;
+        }
+        .log-info {
+            color: #007bff;
+        }
+        .helper-display {
+            background: #e9ecef;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+            font-family: monospace;
+            font-size: 12px;
+            max-height: 200px;
+            overflow: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧪 Test Dual-Write to Supabase</h1>
+        
+        <div class="button-group">
+            <button class="primary" onclick="createTestHelper()">1. Create Test Helper</button>
+            <button class="secondary" onclick="simulateLogout()">2. Simulate Logout (Dual-Write)</button>
+            <button class="success" onclick="checkSupabase()">3. Check Supabase</button>
+        </div>
+        
+        <div class="button-group">
+            <button class="secondary" onclick="clearLog()">Clear Log</button>
+            <button class="danger" onclick="clearTestData()">Clear Test Data</button>
+        </div>
+        
+        <div id="helper-display" class="helper-display" style="display: none;">
+            <strong>Current Helper:</strong>
+            <pre id="helper-content"></pre>
+        </div>
+        
+        <div class="log" id="log">
+            <div class="log-entry log-info">Ready to test dual-write functionality...</div>
+        </div>
+    </div>
+
+    <!-- Include dependencies -->
+    <script type="module">
+        import { securityManager } from './security-manager.js';
+        import { supabaseHelperService } from './services/supabaseHelperService.js';
+        import { supabase } from './lib/supabaseClient.js';
+        
+        // Make functions available globally
+        window.securityManager = securityManager;
+        window.supabaseHelperService = supabaseHelperService;
+        window.supabase = supabase;
+        
+        // Logging function
+        window.log = function(message, type = 'info') {
+            const logDiv = document.getElementById('log');
+            const entry = document.createElement('div');
+            entry.className = `log-entry log-${type}`;
+            const timestamp = new Date().toLocaleTimeString();
+            entry.innerHTML = `[${timestamp}] ${message}`;
+            logDiv.appendChild(entry);
+            logDiv.scrollTop = logDiv.scrollHeight;
+        };
+        
+        // Create test helper
+        window.createTestHelper = function() {
+            const testPlate = 'TEST-' + Date.now();
+            const testHelper = {
+                meta: { plate: testPlate },
+                case_info: {
+                    case_id: 'test-case-' + Date.now(),
+                    customer_name: 'Test Customer',
+                    created_at: new Date().toISOString()
+                },
+                vehicle: {
+                    plate: testPlate,
+                    make: 'Toyota',
+                    model: 'Corolla',
+                    year: 2020
+                },
+                damage_assessment: {
+                    centers: [],
+                    summary: { total_damage_amount: 5000 }
+                },
+                version: 1,
+                test_data: true
+            };
+            
+            // Store in sessionStorage (simulating real helper)
+            sessionStorage.setItem('helper', JSON.stringify(testHelper));
+            
+            // Display helper
+            document.getElementById('helper-display').style.display = 'block';
+            document.getElementById('helper-content').textContent = JSON.stringify(testHelper, null, 2);
+            
+            log(`✅ Test helper created for plate: ${testPlate}`, 'success');
+            log('Helper stored in sessionStorage', 'info');
+        };
+        
+        // Simulate logout (triggers dual-write)
+        window.simulateLogout = function() {
+            const helperData = sessionStorage.getItem('helper');
+            if (!helperData) {
+                log('❌ No helper found. Create a test helper first!', 'error');
+                return;
+            }
+            
+            log('🔄 Simulating logout...', 'info');
+            
+            // We'll manually call the logout logic without actually redirecting
+            const helper = JSON.parse(helperData);
+            const plate = helper?.meta?.plate || 'unknown';
+            const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+            
+            log(`📤 Sending to Make.com webhook (simulated)...`, 'info');
+            
+            // Simulate Make.com webhook (we won't actually send to avoid issues)
+            setTimeout(() => {
+                log('✅ Make.com webhook would be called (skipped in test)', 'success');
+            }, 500);
+            
+            // Call Supabase save directly
+            log('📤 Saving to Supabase...', 'info');
+            
+            supabaseHelperService.saveHelper({
+                plate: plate,
+                helperData: helper,
+                helperName: `${plate}_helper_${timestamp}`,
+                timestamp: timestamp
+            }).then(result => {
+                if (result.success) {
+                    log(`✅ Helper saved to Supabase successfully!`, 'success');
+                    log(`Case ID: ${result.data.case_id}`, 'info');
+                    log(`Helper ID: ${result.data.helper_id}`, 'info');
+                    log(`Version: ${result.data.version}`, 'info');
+                } else {
+                    log(`❌ Supabase save failed: ${result.error}`, 'error');
+                }
+            }).catch(err => {
+                log(`❌ Supabase error: ${err.message}`, 'error');
+            });
+        };
+        
+        // Check Supabase data
+        window.checkSupabase = async function() {
+            log('🔍 Checking Supabase for saved helpers...', 'info');
+            
+            try {
+                // Get recent helpers
+                const { data: helpers, error } = await supabase
+                    .from('case_helper')
+                    .select(`
+                        id,
+                        helper_name,
+                        version,
+                        is_current,
+                        created_at:updated_at,
+                        case:cases(plate, owner_name)
+                    `)
+                    .order('updated_at', { ascending: false })
+                    .limit(5);
+                
+                if (error) throw error;
+                
+                if (!helpers || helpers.length === 0) {
+                    log('No helpers found in Supabase yet', 'info');
+                    return;
+                }
+                
+                log(`Found ${helpers.length} helper(s) in Supabase:`, 'success');
+                
+                helpers.forEach(helper => {
+                    log(`📄 ${helper.helper_name} - v${helper.version} - ${helper.case?.plate || 'N/A'}`, 'info');
+                });
+                
+            } catch (error) {
+                log(`❌ Error checking Supabase: ${error.message}`, 'error');
+            }
+        };
+        
+        // Clear log
+        window.clearLog = function() {
+            document.getElementById('log').innerHTML = '<div class="log-entry log-info">Log cleared.</div>';
+        };
+        
+        // Clear test data
+        window.clearTestData = async function() {
+            log('🗑️ Clearing test data...', 'info');
+            
+            try {
+                // Delete test cases
+                const { error } = await supabase
+                    .from('cases')
+                    .delete()
+                    .like('plate', 'TEST-%');
+                
+                if (error) throw error;
+                
+                sessionStorage.removeItem('helper');
+                document.getElementById('helper-display').style.display = 'none';
+                
+                log('✅ Test data cleared', 'success');
+            } catch (error) {
+                log(`❌ Error clearing data: ${error.message}`, 'error');
+            }
+        };
+        
+        // Test connection on load
+        window.addEventListener('load', async () => {
+            log('🔄 Testing Supabase connection...', 'info');
+            const connected = await supabaseHelperService.testConnection();
+            if (connected) {
+                log('✅ Supabase connection successful', 'success');
+            } else {
+                log('❌ Supabase connection failed', 'error');
+            }
+        });
+    </script>
+</body>
+</html>

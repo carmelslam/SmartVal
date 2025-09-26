@@ -1,6 +1,7 @@
 // 🔒 Security Manager - Comprehensive Security Layer
 import { helper, updateHelper } from './helper.js';
 import { WEBHOOKS } from './webhook.js';
+import { supabaseHelperService } from './services/supabaseHelperService.js';
 
 class SecurityManager {
   constructor() {
@@ -523,13 +524,30 @@ class SecurityManager {
           reason: 'auto_logout'
         };
         
-        // Send to Make.com webhook
+        // Send to Make.com webhook (PRIMARY)
         const webhookUrl = WEBHOOKS.HELPER_EXPORT;
         fetch(webhookUrl, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload)
         }).catch(err => console.warn('Failed to send logout backup:', err));
+        
+        // PHASE 2: Also save to Supabase (BACKUP)
+        // This is non-blocking and won't affect Make.com flow
+        supabaseHelperService.saveHelper({
+          plate: plate,
+          helperData: JSON.parse(helperData),
+          helperName: payload.plate_helper_timestamp,
+          timestamp: timestamp
+        }).then(result => {
+          if (result.success) {
+            console.log('✅ Helper backed up to Supabase');
+          } else {
+            console.log('⚠️ Supabase backup failed (Make.com still worked)');
+          }
+        }).catch(err => {
+          console.warn('⚠️ Supabase backup error (non-critical):', err);
+        });
         
         // Save to localStorage for persistence
         localStorage.setItem('lastCaseData', helperData);
