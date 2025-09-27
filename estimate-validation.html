@@ -951,6 +951,34 @@
         }, 2000);
         return;
       }
+      
+      // Try to restore validation data from localStorage if sessionStorage is empty
+      const currentHelper = sessionStorage.getItem('helper');
+      if (!currentHelper || !JSON.parse(currentHelper)?.estimate?.validation) {
+        console.log('🔄 Attempting to restore validation data from localStorage...');
+        
+        const lastSaveTime = localStorage.getItem('lastValidationSave');
+        const helperKeys = Object.keys(localStorage).filter(key => key.startsWith('helper_validation_'));
+        
+        if (lastSaveTime && helperKeys.length > 0) {
+          // Find the most recent validation save
+          const mostRecentKey = helperKeys[helperKeys.length - 1]; // Get the last one
+          const savedHelper = localStorage.getItem(mostRecentKey);
+          
+          if (savedHelper) {
+            try {
+              const parsedHelper = JSON.parse(savedHelper);
+              if (parsedHelper?.estimate?.validation) {
+                sessionStorage.setItem('helper', savedHelper);
+                console.log('✅ Restored validation data from localStorage:', parsedHelper.estimate.validation);
+                showAlert('נתוני האימות השמורים שוחזרו בהצלחה', 'success');
+              }
+            } catch (error) {
+              console.error('❌ Error restoring validation data:', error);
+            }
+          }
+        }
+      }
 
       const helperData = sessionStorage.getItem('helper');
       const selectedReportType = sessionStorage.getItem('selectedReportType');
@@ -3662,11 +3690,19 @@
           }
         };
 
+        // Save to sessionStorage for current session
         sessionStorage.setItem('helper', JSON.stringify(helper));
+        
+        // ALSO save to localStorage for persistence across browser sessions
+        const persistentKey = `helper_validation_${helper?.vehicle?.plate || helper?.meta?.plate || 'unknown'}`;
+        localStorage.setItem(persistentKey, JSON.stringify(helper));
+        localStorage.setItem('lastValidationSave', new Date().toISOString());
+        
+        console.log('✅ Estimate validation data saved to both sessionStorage and localStorage for persistence');
         
         // Enhanced success message with progress info
         const progressText = `${completedSections.length}/${totalSections} סעיפים אומתו`;
-        showAlert(`✅ נתוני האימות נשמרו בהצלחה (${progressText})`, 'success');
+        showAlert(`✅ נתוני האימות נשמרו בהצלחה ויישמרו גם לאחר סגירת הדפדפן (${progressText})`, 'success');
         
         // Restore buttons with success indication
         setTimeout(() => {
