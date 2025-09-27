@@ -1725,37 +1725,16 @@ function savePartsData() {
       
       // Calculate from UI rows
       const rows = document.querySelectorAll('#partsList .row');
-      console.log(`🔍 DEBUG: Found ${rows.length} rows for total calculation`);
-      
-      rows.forEach((row, index) => {
+      rows.forEach(row => {
         const priceInput = row.querySelector('.price');
         const quantityInput = row.querySelector('.quantity');
         
-        console.log(`🔍 Row ${index}:`, {
-          priceInput: priceInput ? priceInput.value : 'NOT FOUND',
-          quantityInput: quantityInput ? quantityInput.value : 'NOT FOUND'
-        });
-        
         if (priceInput && quantityInput) {
-          // Clean price value by removing currency symbols and non-numeric characters except decimal point
-          const cleanPriceValue = priceInput.value.replace(/[₪,\s]/g, '').replace(/[^\d.]/g, '');
-          const price = parseFloat(cleanPriceValue) || 0;
+          const price = parseFloat(priceInput.value) || 0;
           const quantity = parseInt(quantityInput.value) || 1;
-          const rowTotal = price * quantity;
-          totalCost += rowTotal;
-          
-          console.log(`🔍 Row ${index} calculation:`, {
-            priceValue: priceInput.value,
-            cleanPriceValue: cleanPriceValue,
-            parsedPrice: price,
-            quantityValue: quantityInput.value,
-            parsedQuantity: quantity,
-            rowTotal: rowTotal
-          });
+          totalCost += price * quantity;
         }
       });
-      
-      console.log(`🔍 FINAL TOTAL COST: ${totalCost}`);
       
       // Update total display - use the correct ID
       let totalDisplay = document.getElementById('partsTotal');
@@ -2152,13 +2131,6 @@ function savePartsData() {
         updateTotalCost();
         updatePartCount();
       }, 100);
-      
-      // DEBUG: Add manual trigger function for testing
-      window.debugUpdateTotals = function() {
-        console.log('🔧 Manual debug trigger for totals');
-        updateTotalCost();
-        updatePartCount();
-      };
     }
     
     // === FIX: Load existing parts into UI on page load ===
