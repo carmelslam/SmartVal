@@ -1493,19 +1493,28 @@
     </div>
   </div>
   
-  <script src="helper.js" type="module"></script>
-  <script type="module" src="parts.js"></script>
-  
-  <!-- ✅ CRITICAL FIX: Add Supabase integration for proper versioning -->
+  <!-- ✅ CRITICAL FIX: Load Supabase BEFORE helper.js to ensure availability -->
   <script type="module">
     import { supabaseHelperService } from './services/supabaseHelperService.js';
     import { supabase } from './lib/supabaseClient.js';
     
-    // Make Supabase service globally available
+    // Make Supabase service globally available BEFORE helper.js loads
     window.supabaseHelperService = supabaseHelperService;
     window.supabase = supabase;
     
-    console.log('✅ Supabase services loaded for versioning integration');
+    console.log('✅ Supabase services loaded BEFORE helper.js');
+    
+    // Now load helper.js after Supabase is ready
+    const helperScript = document.createElement('script');
+    helperScript.src = 'helper.js';
+    helperScript.type = 'module';
+    document.head.appendChild(helperScript);
+    
+    // Load parts.js as well
+    const partsScript = document.createElement('script');
+    partsScript.src = 'parts.js';
+    partsScript.type = 'module';
+    document.head.appendChild(partsScript);
   </script>
   
   <script>

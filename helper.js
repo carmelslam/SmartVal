@@ -4118,24 +4118,35 @@ function saveHelperToAllStorageLocations() {
       const helperName = `${plate}_helper_v${newVersion}`;
       
       // Save to Supabase asynchronously (don't block UI)
-      if (typeof window.supabaseHelperService !== 'undefined') {
-        window.supabaseHelperService.saveHelper({
-          plate: plate,
-          helperData: window.helper,
-          helperName: helperName,
-          timestamp: timestamp
-        }).then(result => {
-          if (result.success) {
-            console.log(`✅ Helper v${newVersion} saved to Supabase successfully`);
-          } else {
-            console.warn('⚠️ Supabase save failed, but local storage succeeded:', result.error);
-          }
-        }).catch(error => {
-          console.warn('⚠️ Supabase save error, but local storage succeeded:', error);
-        });
-      } else {
-        console.warn('⚠️ Supabase service not available, saved to local storage only');
-      }
+      const attemptSupabaseSave = () => {
+        if (typeof window.supabaseHelperService !== 'undefined') {
+          window.supabaseHelperService.saveHelper({
+            plate: plate,
+            helperData: window.helper,
+            helperName: helperName,
+            timestamp: timestamp
+          }).then(result => {
+            if (result.success) {
+              console.log(`✅ Helper v${newVersion} saved to Supabase successfully`);
+            } else {
+              console.warn('⚠️ Supabase save failed, but local storage succeeded:', result.error);
+            }
+          }).catch(error => {
+            console.warn('⚠️ Supabase save error, but local storage succeeded:', error);
+          });
+        } else {
+          // Wait a bit and try again (Supabase service might still be loading)
+          setTimeout(() => {
+            if (typeof window.supabaseHelperService !== 'undefined') {
+              attemptSupabaseSave();
+            } else {
+              console.warn('⚠️ Supabase service not available after retry, saved to local storage only');
+            }
+          }, 1000);
+        }
+      };
+      
+      attemptSupabaseSave();
     } else {
       console.warn('⚠️ No plate found, saved to local storage only (no Supabase sync)');
     }
