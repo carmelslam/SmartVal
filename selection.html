@@ -11,6 +11,24 @@
     import { WEBHOOKS } from './webhook.js';
     import { sendToWebhook } from './webhook.js';
 
+    // Toggle case details visibility
+    window.toggleCaseDetails = function() {
+      const caseInfo = document.getElementById('caseInfo');
+      const toggleBtn = document.getElementById('toggleDetailsBtn');
+      const toggleIcon = document.getElementById('toggleDetailsIcon');
+      const toggleText = document.getElementById('toggleDetailsText');
+      
+      if (caseInfo.style.display === 'none' || caseInfo.style.display === '') {
+        caseInfo.style.display = 'block';
+        toggleIcon.textContent = '🙈';
+        toggleText.textContent = 'הסתר פרטי תיק';
+      } else {
+        caseInfo.style.display = 'none';
+        toggleIcon.textContent = '👁️';
+        toggleText.textContent = 'הצג פרטי תיק';
+      }
+    };
+
     window.verifyAdminAccess = async function (event) {
       const password = prompt("Enter admin password:");
       if (!password) return;
@@ -239,9 +257,14 @@
           document.getElementById('caseVehicle').textContent = 
             `${helper.vehicle?.make || ''} ${helper.vehicle?.model || ''}`.trim() || 'לא זמין';
           
-          // Show the case info div
+          // Show the case info div and toggle button
           document.getElementById('caseInfo').style.display = 'block';
           document.getElementById('caseInfo').classList.add('show');
+          
+          // Show the toggle details button
+          document.getElementById('toggleDetailsBtn').style.display = 'inline-block';
+          document.getElementById('toggleDetailsIcon').textContent = '🙈';
+          document.getElementById('toggleDetailsText').textContent = 'הסתר פרטי תיק';
           
           // Reset input field styling on success
           const plateInput = document.getElementById('plateNumber');
@@ -333,9 +356,14 @@
             document.getElementById('caseVehicle').textContent = 
               `${caseData.car_details?.manufacturer || ''} ${caseData.car_details?.model || ''}`.trim() || 'לא זמין';
             
-            // Show the case info div
+            // Show the case info div and toggle button
             document.getElementById('caseInfo').style.display = 'block';
             document.getElementById('caseInfo').classList.add('show');
+            
+            // Show the toggle details button
+            document.getElementById('toggleDetailsBtn').style.display = 'inline-block';
+            document.getElementById('toggleDetailsIcon').textContent = '🙈';
+            document.getElementById('toggleDetailsText').textContent = 'הסתר פרטי תיק';
             
             // Reset input field styling on success
             const plateInput = document.getElementById('plateNumber');
@@ -618,6 +646,9 @@
     <h3>טעינת תיק קיים</h3>
     <input type="text" class="case-input" id="plateNumber" placeholder="הכנס מספר רכב (לטעינת תיק קיים)">
     <button class="case-button" onclick="loadExistingCase()">טען תיק קיים</button>
+    <button class="case-button" id="toggleDetailsBtn" onclick="toggleCaseDetails()" style="display: none; background: #17a2b8;">
+      <span id="toggleDetailsIcon">👁️</span> <span id="toggleDetailsText">הצג פרטי תיק</span>
+    </button>
     <div class="case-info" id="caseInfo" style="display: none;">
       <!-- PHASE 4: Updated case details format to match admin -->
       <div style="background: #1a365d; padding: 15px; border-radius: 6px; border: 1px solid #17a2b8; margin-top: 15px;">
