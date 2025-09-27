@@ -7109,7 +7109,10 @@ function generateUserFriendlyReport(helper, supabaseData = {}) {
   report += `\n`;
   
   // 📅 TIMELINE (from validation timestamps)
-  const caseCreatedDate = unwrappedHelper.case_info?.created_at || unwrappedHelper.meta?.created_at;
+  const caseCreatedDate = unwrappedHelper.case_info?.created_at || 
+                          unwrappedHelper.meta?.created_at || 
+                          unwrappedHelper.case_info?.inspection_date ||
+                          unwrappedHelper.created_at;
   
   report += `📅 לוח זמנים:\n`;
   report += `─────────────\n`;
@@ -7188,6 +7191,8 @@ function extractVehicleFromValidation(helper) {
   
   if (helper.case_info?.inspection_date) {
     vehicleData.inspectionDate = new Date(helper.case_info.inspection_date).toLocaleDateString('he-IL');
+  } else if (helper.case_info?.created_at) {
+    vehicleData.inspectionDate = new Date(helper.case_info.created_at).toLocaleDateString('he-IL');
   }
   
   if (helper.case_info?.garage_name || helper.stakeholders?.garage?.name) {
@@ -7196,10 +7201,14 @@ function extractVehicleFromValidation(helper) {
   
   if (helper.case_info?.insurance_company || helper.stakeholders?.insurance?.name) {
     vehicleData.insuranceCompany = helper.case_info.insurance_company || helper.stakeholders.insurance.name;
+  } else if (helper.stakeholders?.insurance_company) {
+    vehicleData.insuranceCompany = helper.stakeholders.insurance_company.name || helper.stakeholders.insurance_company;
   }
   
   if (helper.case_info?.agent_name || helper.stakeholders?.agent?.name) {
     vehicleData.agentName = helper.case_info.agent_name || helper.stakeholders.agent.name;
+  } else if (helper.stakeholders?.insurance_agent) {
+    vehicleData.agentName = helper.stakeholders.insurance_agent.name || helper.stakeholders.insurance_agent;
   }
   
   return vehicleData;
@@ -7310,15 +7319,19 @@ function analyzeWorkflowValidations(helper, caseId) {
 }
 
 // Validation check functions - read from ACTUAL validation locations
-function checkVehicleValidation(helper) {
-  // Vehicle validation is typically stored in validation_progress.vehicle
-  const vehicleValidated = helper.validation_progress?.vehicle === true;
-  console.log('🔧 VEHICLE VALIDATION:', vehicleValidated, helper.validation_progress?.vehicle);
-  return vehicleValidated;
-}
 
 function checkVehicleStarted(helper) {
-  return !!(helper.car_details || helper.vehicle || helper.general_info);
+  return !!(helper.car_details || helper.vehicle || helper.general_info || helper.case_info?.vehicle_info);
+}
+
+function checkVehicleValidation(helper) {
+  // Check if we have complete vehicle data
+  const hasPlate = !!(helper.vehicle?.plate || helper.car_details?.plate || helper.case_info?.plate);
+  const hasMake = !!(helper.vehicle?.make || helper.car_details?.manufacturer || helper.case_info?.vehicle_make);
+  const hasModel = !!(helper.vehicle?.model || helper.car_details?.model || helper.case_info?.vehicle_model);
+  const hasYear = !!(helper.vehicle?.year || helper.car_details?.year || helper.case_info?.vehicle_year);
+  
+  return hasPlate && hasMake && hasModel && hasYear;
 }
 
 // New validation check functions for additional workflow stages
@@ -7327,7 +7340,8 @@ function checkLeviValidation(helper) {
 }
 
 function checkLeviStarted(helper) {
-  return !!(helper.levi_summary || helper.levi_data || helper.leviData);
+  // Check multiple possible locations for Levi data
+  return !!(helper.levi_summary || helper.levi_data || helper.leviData || helper.expertise?.levi_report);
 }
 
 function getLeviValidationDetails(helper) {
@@ -7368,11 +7382,12 @@ function getDepreciationValidationDetails(helper) {
 }
 
 function checkInitialEstimateValidation(helper) {
-  return !!(helper.estimate?.validation?.validated_at);
+  // Check if estimate has been validated
+  return !!(helper.estimate?.validation?.validated_at || (helper.estimate && helper.estimate.totals));
 }
 
 function checkInitialEstimateStarted(helper) {
-  return !!(helper.estimate || helper.initial_estimate);
+  return !!(helper.estimate || helper.initial_estimate || helper.estimate_totals);
 }
 
 function getInitialEstimateValidationDetails(helper) {
@@ -7411,9 +7426,11 @@ function checkEstimateStarted(helper) {
 }
 
 function checkExpertiseValidation(helper) {
-  // Check expertise.validation structure  
-  const expertiseValidated = !!(helper.expertise?.validation?.validated_at);
-  console.log('🔧 EXPERTISE VALIDATION:', expertiseValidated, helper.expertise?.validation);
+  // Check expertise validation - it's validated if expertise exists with data
+  const hasExpertise = !!(helper.expertise && Object.keys(helper.expertise).length > 0);
+  const hasExpertiseValidation = !!(helper.expertise?.validation?.validated_at || helper.expertise_summary);
+  const expertiseValidated = hasExpertise && (hasExpertiseValidation || helper.expertise?.summary);
+  console.log('🔧 EXPERTISE VALIDATION:', expertiseValidated, helper.expertise);
   return expertiseValidated;
 }
 
@@ -7588,17 +7605,23 @@ function calculateHealthAssessment(workflowStatus, helper) {
     factors.push('🔴 דורש התקדמות');
   }
   
-  // Factor 2: Critical stages
+  // Factor 2: Critical stages with specific details
   const hasVehicleData = workflowStatus.stages.find(s => s.name === 'פרטי רכב')?.validated;
   const hasDamageData = workflowStatus.stages.find(s => s.name === 'הערכת נזקים')?.validated;
   const hasFinalReport = workflowStatus.stages.find(s => s.name === 'חוות דעת')?.validated;
+  const hasExpertise = workflowStatus.stages.find(s => s.name === 'אקספרטיזה')?.validated;
+  
+  const missingCritical = [];
+  if (!hasVehicleData) missingCritical.push('פרטי רכב');
+  if (!hasDamageData) missingCritical.push('הערכת נזקים');
+  if (!hasExpertise) missingCritical.push('אקספרטיזה');
   
   if (hasVehicleData && hasDamageData && hasFinalReport) {
     factors.push('✅ כל השלבים הקריטיים הושלמו');
   } else if (hasVehicleData && hasDamageData) {
     factors.push('🟡 שלבים קריטיים בהתקדמות');
   } else {
-    factors.push('🔴 חסרים שלבים קריטיים');
+    factors.push(`🔴 חסרים שלבים קריטיים: ${missingCritical.join(', ')}`);
   }
   
   // Factor 3: Data quality
