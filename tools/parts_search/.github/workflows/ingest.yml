@@ -1,0 +1,32 @@
+
+name: Ingest Catalog
+
+on:
+  workflow_dispatch:
+    inputs:
+      supplier_slug: { description: "e.g., m-pines", required: true }
+      version_date:  { description: "YYYY-MM-01", required: true }
+      source_path:   { description: "storage path for provenance", required: true }
+      signed_url:    { description: "signed URL to the PDF", required: true }
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: python -m pip install --upgrade pip
+      - run: pip install -r requirements.txt
+      - name: Parse + Upsert
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          SUPPLIER_SLUG: ${{ github.event.inputs.supplier_slug }}
+          VERSION_DATE:  ${{ github.event.inputs.version_date }}
+          SOURCE_PATH:   ${{ github.event.inputs.source_path }}
+          SIGNED_URL:    ${{ github.event.inputs.signed_url }}
+        run: python parser.py
+
