@@ -838,6 +838,58 @@
       console.log('Loading expertise validation data for plate:', plate);
       console.log('Helper object:', helper);
       
+      // Restore validation state from previous session if it exists
+      const savedValidationData = sessionStorage.getItem('validationData');
+      const validationSavedAt = sessionStorage.getItem('validationSavedAt');
+      
+      if (savedValidationData && validationSavedAt) {
+        try {
+          const parsedValidationData = JSON.parse(savedValidationData);
+          console.log('🔄 Restoring validation state from previous session:', parsedValidationData);
+          
+          // Restore validation state objects
+          if (parsedValidationData.validationState) {
+            window.validationState = parsedValidationData.validationState;
+            console.log('✅ Restored validation state:', window.validationState);
+          }
+          
+          if (parsedValidationData.validationEdits) {
+            window.validationEdits = parsedValidationData.validationEdits;
+            console.log('✅ Restored validation edits:', window.validationEdits);
+          }
+          
+          // Also check if we have validation data in helper.expertise.validation
+          if (helper?.expertise?.validation) {
+            console.log('✅ Found validation data in helper.expertise.validation');
+            console.log('Validation was saved at:', helper.expertise.validation.validated_at);
+          }
+          
+        } catch (error) {
+          console.error('❌ Error restoring validation data:', error);
+        }
+      }
+      
+      // Initialize validation state objects if they don't exist
+      if (!window.validationState) {
+        console.log('🔧 Initializing fresh validation state');
+        window.validationState = {
+          vehicle: { approved: false, status: 'pending' },
+          levi: { approved: false, status: 'pending' },
+          damage: { approved: false, status: 'pending' },
+          summary: { approved: false, status: 'pending' }
+        };
+      }
+      
+      if (!window.validationEdits) {
+        console.log('🔧 Initializing fresh validation edits');
+        window.validationEdits = {
+          fields_edited: {},
+          discrepancies_ignored: [],
+          sections_approved: [],
+          validation_start: new Date().toISOString()
+        };
+      }
+      
       // ✅ CRITICAL FIX: Force rebuild assessment on page load to prevent stale data
       console.log('🔄 Force rebuilding damage assessment on validation page load...');
       if (typeof window.buildComprehensiveDamageAssessment === 'function') {
@@ -1003,19 +1055,48 @@
       
       populateEnhancedValidationItems('vehicle-validation-items', vehicleValidationItems, helper);
       
+      // Enhanced validation checks with logging
+      const hasVehicleData = !!(helper?.vehicle?.plate && helper?.vehicle?.manufacturer && helper?.vehicle?.model && helper?.vehicle?.year);
+      const hasOwnerData = !!(helper?.stakeholders?.owner?.name);
+      const hasGarageData = !!(helper?.stakeholders?.garage?.name || helper?.case_info?.garage_name);
+      const hasInsuranceData = !!(helper?.stakeholders?.insurance?.company || helper?.case_info?.insurance_company);
+      const hasDatesData = !!(helper?.case_info?.damage_date && helper?.case_info?.inspection_date);
+      
+      console.log('🔍 Vehicle validation status:', {
+        hasVehicleData,
+        hasOwnerData,
+        hasGarageData,
+        hasInsuranceData,
+        hasDatesData,
+        vehicleDetails: helper?.vehicle,
+        ownerDetails: helper?.stakeholders?.owner,
+        garageDetails: helper?.stakeholders?.garage,
+        caseInfo: helper?.case_info
+      });
+      
       return [
-        { id: 'vehicle-details-status', valid: !!(helper?.vehicle?.plate && helper?.vehicle?.manufacturer && helper?.vehicle?.model), message: 'פרטי רכב' },
-        { id: 'owner-details-status', valid: !!helper?.stakeholders?.owner?.name, message: 'פרטי בעלים' },
-        { id: 'garage-details-status', valid: !!helper?.stakeholders?.garage?.name, message: 'פרטי מוסך' },
-        { id: 'insurance-details-status', valid: !!helper?.stakeholders?.insurance?.company, message: 'פרטי ביטוח' },
-        { id: 'dates-status', valid: !!(helper?.case_info?.damage_date && helper?.case_info?.inspection_date), message: 'תאריכים' }
+        { id: 'vehicle-details-status', valid: hasVehicleData, message: 'פרטי רכב' },
+        { id: 'owner-details-status', valid: hasOwnerData, message: 'פרטי בעלים' },
+        { id: 'garage-details-status', valid: hasGarageData, message: 'פרטי מוסך' },
+        { id: 'insurance-details-status', valid: hasInsuranceData, message: 'פרטי ביטוח' },
+        { id: 'dates-status', valid: hasDatesData, message: 'תאריכים' }
       ];
     }
     
     async function validateLeviSection() {
       const helper = window.helper || JSON.parse(sessionStorage.getItem('helper') || '{}');
-      const hasLeviData = helper?.valuation?.base_price || helper?.valuation?.final_price;
-      const hasAdjustments = helper?.valuation?.adjustments && Object.keys(helper.valuation.adjustments).length > 0;
+      
+      // Check for valuation data more thoroughly
+      const hasLeviData = !!(helper?.valuation?.base_price || helper?.valuation?.final_price || helper?.levisummary?.base_price || helper?.levisummary?.final_price);
+      const hasAdjustments = !!(helper?.valuation?.adjustments && Object.keys(helper.valuation.adjustments).length > 0) || 
+                            !!(helper?.levisummary?.adjustments && helper.levisummary.adjustments.length > 0);
+      
+      console.log('🔍 Levi validation status:', {
+        hasLeviData,
+        hasAdjustments,
+        valuationData: helper?.valuation,
+        leviSummaryData: helper?.levisummary
+      });
       
       
       // Calculate adjustments_value and update helper using the helper function
@@ -2055,6 +2136,25 @@
         const helper = window.helper || JSON.parse(sessionStorage.getItem('helper') || '{}');
         console.log('📋 Current helper:', helper);
         
+        // Ensure validation state objects exist
+        if (!window.validationState) {
+          window.validationState = {
+            vehicle: { approved: false, status: 'pending' },
+            levi: { approved: false, status: 'pending' },
+            damage: { approved: false, status: 'pending' },
+            summary: { approved: false, status: 'pending' }
+          };
+        }
+        
+        if (!window.validationEdits) {
+          window.validationEdits = {
+            fields_edited: {},
+            discrepancies_ignored: [],
+            sections_approved: [],
+            validation_start: new Date().toISOString()
+          };
+        }
+        
         // Ensure expertise object exists using helper.js function
         if (window.ensureExpertiseValidation) {
           window.ensureExpertiseValidation();
@@ -2135,24 +2235,40 @@
         window.helper = helper;
         
         // Save helper to sessionStorage - this persists the validation
-        sessionStorage.setItem('helper', JSON.stringify(helper));
-        console.log('✅ Helper saved to sessionStorage');
-        
-        // Verify it was saved
-        const savedHelper = JSON.parse(sessionStorage.getItem('helper'));
-        if (savedHelper.expertise?.validation) {
-          console.log('✅ Verified: expertise.validation exists in saved helper');
-        } else {
-          console.error('❌ ERROR: expertise.validation missing from saved helper!');
+        try {
+          const helperString = JSON.stringify(helper);
+          sessionStorage.setItem('helper', helperString);
+          console.log('✅ Helper saved to sessionStorage');
+          
+          // Verify it was saved correctly
+          const savedHelper = JSON.parse(sessionStorage.getItem('helper'));
+          if (savedHelper.expertise?.validation) {
+            console.log('✅ Verified: expertise.validation exists in saved helper');
+            
+            // Also save validation timestamp for recovery
+            sessionStorage.setItem('validationSavedAt', new Date().toISOString());
+            
+            // Show success message
+            showAlert('נתוני האימות נשמרו בהצלחה ויישמרו בזיכרון', 'success');
+          } else {
+            console.error('❌ ERROR: expertise.validation missing from saved helper!');
+            throw new Error('Failed to save validation data');
+          }
+        } catch (saveError) {
+          console.error('❌ ERROR saving to sessionStorage:', saveError);
+          throw new Error('Failed to save validation data: ' + saveError.message);
         }
         
-        // Also save validation data separately for backward compatibility
+        // Also save validation data separately for session recovery
         const validationData = {
           validationState: window.validationState,
+          validationEdits: window.validationEdits,
           timestamp: new Date().toISOString(),
-          plate: helper?.vehicle?.plate || 'לא ידוע'
+          plate: helper?.vehicle?.plate || 'לא ידוע',
+          savedAt: new Date().toISOString()
         };
         sessionStorage.setItem('validationData', JSON.stringify(validationData));
+        console.log('✅ Validation state saved for session recovery:', validationData);
         
         showAlert('נתוני האימות נשמרו בהצלחה', 'success');
         console.log('✅ Validation data saved to helper.expertise.validation');
