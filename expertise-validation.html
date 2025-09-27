@@ -813,6 +813,16 @@
     // Access global validation state
     const validationState = window.validationState;
     
+    // Debug function to check validation state
+    window.debugValidationState = function() {
+      console.log('🔍 Current validation state:', window.validationState);
+      console.log('🔍 Approved sections:', Object.keys(window.validationState).filter(key => window.validationState[key].approved === true));
+      console.log('🔍 Status of each section:');
+      Object.keys(window.validationState).forEach(key => {
+        console.log(`  ${key}: approved=${window.validationState[key].approved}, status=${window.validationState[key].status}`);
+      });
+    };
+    
     // Helper data loading
     function loadExpertiseData() {
       const helper = window.helper || JSON.parse(sessionStorage.getItem('helper') || '{}');
@@ -942,7 +952,7 @@
             }
           });
           
-          validationState[sectionName].status = hasErrors ? 'error' : 'completed';
+          window.validationState[sectionName].status = hasErrors ? 'error' : 'completed';
         }, 1500);
         
       } catch (error) {
@@ -1763,7 +1773,8 @@
       const approveBtn = section.querySelector('.btn-success');
       
       // Mark as approved
-      validationState[sectionName].approved = true;
+      window.validationState[sectionName].approved = true;
+      window.validationState[sectionName].status = 'approved'; // Set status to approved
       approveBtn.disabled = true;
       approveBtn.textContent = '✅ אושר';
       
@@ -1877,7 +1888,7 @@
           validated_at: new Date().toISOString(),
           validated_by: 'expertise_user',
           workflow_type: 'expertise',
-          completed_sections: Object.keys(validationState).filter(key => validationState[key].status === 'approved'),
+          completed_sections: Object.keys(validationState).filter(key => validationState[key].approved === true),
           validation_state: validationState,
           vehicle_validated: validationState.vehicle?.approved || false,
           levi_validated: validationState.levi?.approved || false,
@@ -1940,7 +1951,7 @@
           validated_at: new Date().toISOString(),
           validated_by: 'expertise_user',
           workflow_type: 'expertise',
-          completed_sections: Object.keys(window.validationState).filter(key => window.validationState[key].status === 'approved'),
+          completed_sections: Object.keys(window.validationState).filter(key => window.validationState[key].approved === true),
           validation_state: window.validationState,
           vehicle_validated: window.validationState.vehicle?.approved || false,
           levi_validated: window.validationState.levi?.approved || false,
