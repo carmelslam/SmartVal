@@ -11,6 +11,30 @@
     import { WEBHOOKS } from './webhook.js';
     import { sendToWebhook } from './webhook.js';
 
+    // Load actual backup count from Supabase
+    async function loadBackupCount(caseId, plateNumber) {
+      if (!caseId) return;
+      
+      try {
+        // Import Supabase client
+        const { supabase } = await import('./lib/supabaseClient.js');
+        
+        // Count all versions for this case
+        const { count, error } = await supabase
+          .from('case_helper')
+          .select('*', { count: 'exact', head: true })
+          .eq('case_id', caseId);
+        
+        if (!error && count !== null) {
+          document.getElementById('caseBackups').textContent = 
+            count > 1 ? `${count} גיבויים` : `${count} גיבוי`;
+        }
+      } catch (err) {
+        console.log('Could not load backup count:', err);
+        // Keep the version text as fallback
+      }
+    }
+    
     // Toggle case details visibility
     window.toggleCaseDetails = function() {
       const caseInfo = document.getElementById('caseInfo');
@@ -228,26 +252,30 @@
           document.getElementById('caseStatus').style.color = 
             metadata.caseStatus === 'OPEN' ? '#28a745' : '#6c757d';
           
-          // Owner name from helper
-          const ownerName = helper.case_info?.owner_name || 
+          // Owner name from case record or helper
+          const ownerName = result.case?.owner_name || 
+                           helper.case_info?.owner_name || 
                            helper.vehicle?.owner_name || 
                            helper.stakeholders?.owner?.name || 
                            'לא רשום';
           document.getElementById('caseOwner').textContent = ownerName;
           
-          // Created date
-          const createdDate = helper.case_info?.created_at || metadata.createdAt;
+          // Created date from case record
+          const createdDate = result.case?.created_at || helper.case_info?.created_at;
           document.getElementById('caseCreated').textContent = 
             createdDate ? new Date(createdDate).toLocaleDateString('he-IL') : 'לא זמין';
           
-          // Updated date
-          const updatedDate = metadata.updatedAt || helper.case_info?.updated_at;
+          // Updated date from metadata or case record
+          const updatedDate = metadata.lastUpdated || result.case?.updated_at || helper.case_info?.updated_at;
           document.getElementById('caseUpdated').textContent = 
             updatedDate ? new Date(updatedDate).toLocaleDateString('he-IL') : 'לא זמין';
           
-          // Version count as backup count
-          document.getElementById('caseBackups').textContent = 
-            metadata.versionCount ? `${metadata.versionCount} גיבויים` : '1 גיבוי';
+          // Version number as backup count (we'll query for actual count later)
+          const versionText = metadata.version ? `גרסה ${metadata.version}` : 'בודק...';
+          document.getElementById('caseBackups').textContent = versionText;
+          
+          // Async load actual backup count
+          loadBackupCount(result.case?.id, plateNumber);
           
           // Legacy fields for compatibility
           document.getElementById('caseDate').textContent = 
@@ -645,15 +673,17 @@
   <div class="case-management">
     <h3>טעינת תיק קיים</h3>
     <input type="text" class="case-input" id="plateNumber" placeholder="הכנס מספר רכב (לטעינת תיק קיים)">
-    <button class="case-button" onclick="loadExistingCase()">טען תיק קיים</button>
-    <button class="case-button" id="toggleDetailsBtn" onclick="toggleCaseDetails()" style="display: none; background: #17a2b8;">
-      <span id="toggleDetailsIcon">👁️</span> <span id="toggleDetailsText">הצג פרטי תיק</span>
-    </button>
+    <div style="display: flex; gap: 10px; justify-content: center; margin-top: 10px;">
+      <button class="case-button" onclick="loadExistingCase()">טען תיק קיים</button>
+      <button class="case-button" id="toggleDetailsBtn" onclick="toggleCaseDetails()" style="display: none; background: #17a2b8; margin: 0;">
+        <span id="toggleDetailsIcon">👁️</span> <span id="toggleDetailsText">הצג פרטי תיק</span>
+      </button>
+    </div>
     <div class="case-info" id="caseInfo" style="display: none;">
       <!-- PHASE 4: Updated case details format to match admin -->
       <div style="background: #1a365d; padding: 15px; border-radius: 6px; border: 1px solid #17a2b8; margin-top: 15px;">
         <h3 style="color: #17a2b8; margin-top: 0;">📋 פרטי התיק</h3>
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; font-size: 14px;">
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; font-size: 14px; color: #e0e0e0;">
           <div><strong>מספר רכב:</strong> <span id="casePlate"></span></div>
           <div><strong>מצב התיק:</strong> <span id="caseStatus"></span></div>
           <div><strong>בעל הרכב:</strong> <span id="caseOwner">לא רשום</span></div>

@@ -382,6 +382,7 @@ INSERT INTO storage.buckets (id, name, public) VALUES
 התיק נפתח: dd/mm/yyyy
 עדכון אחרון:  dd/mm/yyyy
 סה"כ גיבויים: n
+7. in admin hub add delete case from supabase (שרת) and give 2 step confirmation
 
 
 ### Phase 5: New Modules (Parts & Invoices)
