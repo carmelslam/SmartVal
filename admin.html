@@ -6036,7 +6036,8 @@ window.loadCaseVersionHistory = async function() {
     const case_ = cases[0]; // Most recent case
     
     // Get all versions for this case
-    const versionsResponse = await fetch(`${SUPABASE_URL}/rest/v1/case_helper?case_id=eq.${case_.id}&order=version.desc`, {
+    // PHASE 4 FIX: Explicitly select is_current field to ensure proper boolean handling
+    const versionsResponse = await fetch(`${SUPABASE_URL}/rest/v1/case_helper?case_id=eq.${case_.id}&select=id,case_id,version,is_current,helper_name,helper_json,source,updated_by,updated_at&order=updated_at.desc`, {
       headers: {
         'apikey': SUPABASE_ANON_KEY,
         'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
@@ -6057,6 +6058,18 @@ window.loadCaseVersionHistory = async function() {
         </div>`;
       return;
     }
+    
+    // Debug logging to check is_current values
+    console.log('🔍 DEBUG: Versions fetched from database:', versions.length);
+    versions.forEach((version, index) => {
+      console.log(`🔍 Version ${index + 1}:`, {
+        id: version.id,
+        helper_name: version.helper_name,
+        version: version.version,
+        is_current: version.is_current,
+        updated_at: version.updated_at
+      });
+    });
     
     // Display results
     displayVersionHistoryForUser(case_, versions);
@@ -6099,6 +6112,12 @@ function displayVersionHistoryForUser(case_, versions) {
       </div>
     </div>`;
   
+  // Check if all versions are incorrectly marked as current
+  const allMarkedCurrent = versions.every(v => v.is_current === true || v.is_current === 'true' || v.is_current === 1);
+  
+  // PHASE 4 FIX: Check if only one version exists
+  const hasOnlyOneVersion = versions.length === 1;
+  
   // Versions list - focus on dates, not technical versions
   let versionsHtml = `
     <h3 style="color: #ff6b35; margin-bottom: 15px;">📚 גיבויים של התיק (לפי תאריך)</h3>
@@ -6107,14 +6126,45 @@ function displayVersionHistoryForUser(case_, versions) {
       אתה יכול לראות בדיוק מתי עבדת על התיק ולחזור לכל נקודת זמן.
     </div>`;
   
+  if (hasOnlyOneVersion) {
+    versionsHtml += `
+      <div style="color: #17a2b8; font-size: 13px; margin-bottom: 15px; background: #1a365d; padding: 10px; border-radius: 4px; border: 1px solid #17a2b8;">
+        ℹ️ <strong>שים לב:</strong> זוהי הגרסה היחידה של התיק. אין גרסאות קודמות להשוואה או שחזור.
+        הכפתורים של ניהול גרסאות יוצגו אך יהיו מושבתים.
+      </div>`;
+  } else if (allMarkedCurrent) {
+    versionsHtml += `
+      <div style="color: #ffc107; font-size: 13px; margin-bottom: 15px; background: #332701; padding: 10px; border-radius: 4px; border: 1px solid #ffc107;">
+        ⚠️ <strong>זוהתה בעיה:</strong> כל הגרסאות מסומנות כ"נוכחיות" במסד הנתונים. 
+        המערכת תשתמש בגרסה האחרונה (הראשונה ברשימה) כגרסה הנוכחית.
+        <br><a href="fix-is-current.html" target="_blank" style="color: #ffc107;">לחץ כאן לתיקון הבעיה</a>
+      </div>`;
+  }
+  
   versions.forEach((version, index) => {
-    const isCurrentVersion = version.is_current;
+    // PHASE 4 FIX: Determine current version by position (first in list) as a fallback
+    // If all versions have is_current = true (database issue), only treat the first as current
+    const allVersionsMarkedCurrent = versions.every(v => v.is_current === true || v.is_current === 'true' || v.is_current === 1);
+    
+    let isCurrentVersion;
+    if (allVersionsMarkedCurrent) {
+      console.log('⚠️ PHASE 4: All versions marked as current - using position-based logic');
+      isCurrentVersion = index === 0; // Only first (most recent) is current
+    } else {
+      isCurrentVersion = version.is_current === true || version.is_current === 'true' || version.is_current === 1;
+    }
     const versionDate = formatDateWithTime(version.updated_at);
     const timeAgo = getTimeAgo(new Date(version.updated_at));
     const dayName = getDayName(new Date(version.updated_at));
     
     console.log('🔧 PROCESSING VERSION:', version.helper_name, 'isCurrent:', isCurrentVersion);
     console.log('🔧 Should show 5 buttons?', !isCurrentVersion);
+    console.log('🔧 Raw version.is_current value:', version.is_current);
+    console.log('🔧 Type of is_current:', typeof version.is_current);
+    console.log('🔧 Version full object:', JSON.stringify(version, null, 2));
+    console.log('🔧 Strict equality check: version.is_current === true?', version.is_current === true);
+    console.log('🔧 Strict equality check: version.is_current === false?', version.is_current === false);
+    console.log('🔧 Truthy check: !!version.is_current?', !!version.is_current);
     
     versionsHtml += `
       <div style="background: ${isCurrentVersion ? '#0f2419' : '#2a2a2a'}; border: 1px solid ${isCurrentVersion ? '#28a745' : '#555'}; border-radius: 8px; padding: 15px; margin-bottom: 10px;">
@@ -6158,7 +6208,24 @@ function displayVersionHistoryForUser(case_, versions) {
                     style="padding: 8px 12px; background: #6f42c1; color: white; border: none; border-radius: 4px; font-size: 13px; cursor: pointer;">
               🆚 השווה לנוכחי
             </button>
-          ` : 'CURRENT VERSION - NO EXTRA BUTTONS'}
+          ` : hasOnlyOneVersion ? `
+            <!-- PHASE 4: Show disabled buttons when only one version exists -->
+            <button disabled title="אין גרסאות קודמות לשחזור" 
+                    style="padding: 8px 12px; background: #6c757d; color: #ccc; border: none; border-radius: 4px; font-size: 13px; cursor: not-allowed; opacity: 0.5;">
+              🔄 חזור לתאריך זה
+            </button>
+            <button disabled title="אין גרסאות קודמות לטעינה" 
+                    style="padding: 8px 12px; background: #6c757d; color: #ccc; border: none; border-radius: 4px; font-size: 13px; cursor: not-allowed; opacity: 0.5;">
+              📥 טען לעבודה נוכחית
+            </button>
+            <button disabled title="אין גרסאות להשוואה" 
+                    style="padding: 8px 12px; background: #6c757d; color: #ccc; border: none; border-radius: 4px; font-size: 13px; cursor: not-allowed; opacity: 0.5;">
+              🆚 השווה לנוכחי
+            </button>
+            <div style="margin-top: 8px; font-size: 11px; color: #999;">
+              פעולות גרסאות לא זמינות - זוהי הגרסה היחידה
+            </div>
+          ` : ''}
         </div>
       </div>`;
   });
