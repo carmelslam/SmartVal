@@ -1462,7 +1462,7 @@ window.fixHelperStructure = function() {
   // Ensure expertise section only contains appropriate data
   if (window.helper.expertise) {
     // Keep only valid expertise fields
-    const validExpertiseFields = ['damage_blocks', 'levi_report', 'field_inspection', 'photos'];
+    const validExpertiseFields = ['damage_blocks', 'levi_report', 'field_inspection', 'photos', 'validation', 'summary'];
     const currentFields = Object.keys(window.helper.expertise);
     
     currentFields.forEach(field => {
@@ -6354,3 +6354,74 @@ setTimeout(() => {
 console.log('🏛️ Helper VAT integration complete - all modules can now use getHelperVatRate()');
 console.log('🔄 Admin can call refreshHelperVatRate() to update all modules when VAT changes');
 console.log('✏️ Manual override: setHelperVatRate(rate) - allows manual VAT rate changes');
+
+// ========================================
+// EXPERTISE VALIDATION FUNCTIONS
+// ========================================
+
+// Function to ensure expertise validation structure exists
+window.ensureExpertiseValidation = function() {
+  console.log('🔍 Ensuring expertise validation structure exists...');
+  
+  // Get current helper
+  const helper = window.helper || JSON.parse(sessionStorage.getItem('helper') || '{}');
+  
+  // Ensure expertise object exists
+  if (!helper.expertise) {
+    helper.expertise = {
+      damage_blocks: [],
+      levi_report: {},
+      validation: null,
+      summary: {}
+    };
+    console.log('📝 Created expertise object');
+  }
+  
+  // Ensure all required expertise fields exist
+  if (!helper.expertise.damage_blocks) helper.expertise.damage_blocks = [];
+  if (!helper.expertise.levi_report) helper.expertise.levi_report = {};
+  if (!helper.expertise.summary) helper.expertise.summary = {};
+  
+  // Update window.helper
+  window.helper = helper;
+  
+  // Save to sessionStorage
+  sessionStorage.setItem('helper', JSON.stringify(helper));
+  
+  console.log('✅ Expertise validation structure ready');
+  return helper.expertise;
+};
+
+// Function to save expertise validation data
+window.saveExpertiseValidation = function(validationData) {
+  console.log('💾 Saving expertise validation data...');
+  
+  // Ensure structure exists
+  window.ensureExpertiseValidation();
+  
+  // Get current helper
+  const helper = window.helper || JSON.parse(sessionStorage.getItem('helper') || '{}');
+  
+  // Save validation data
+  helper.expertise.validation = validationData;
+  
+  // Update window.helper
+  window.helper = helper;
+  
+  // Save to sessionStorage
+  sessionStorage.setItem('helper', JSON.stringify(helper));
+  
+  console.log('✅ Expertise validation saved successfully');
+  
+  // Verify save
+  const savedHelper = JSON.parse(sessionStorage.getItem('helper'));
+  if (savedHelper.expertise?.validation) {
+    console.log('✅ Verified: expertise.validation exists in saved helper');
+    return true;
+  } else {
+    console.error('❌ ERROR: expertise.validation missing from saved helper!');
+    return false;
+  }
+};
+
+console.log('🎯 Expertise validation functions loaded');
