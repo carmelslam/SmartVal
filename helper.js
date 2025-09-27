@@ -1545,7 +1545,9 @@ window.fixHelperStructure = function() {
       } else if (section === 'expertise') {
         window.helper[section] = {
           damage_blocks: [],
-          levi_report: {}
+          levi_report: {},
+          validation: null, // Will be populated by expertise-validation.html
+          summary: {} // For expertise summary data
         };
       }
       
@@ -2223,6 +2225,34 @@ function initializeHelper() {
 
 // Load existing data or create default structure
 const existingHelper = initializeHelper();
+
+// 🔧 EXPERTISE VALIDATION: Ensure expertise validation structure exists
+window.ensureExpertiseValidation = function() {
+  if (!window.helper) {
+    console.error('❌ Helper not initialized');
+    return false;
+  }
+  
+  // Ensure expertise section exists
+  if (!window.helper.expertise) {
+    console.log('📝 Creating expertise section');
+    window.helper.expertise = {
+      damage_blocks: [],
+      levi_report: {},
+      validation: null,
+      summary: {}
+    };
+  }
+  
+  // Ensure validation structure exists if not already populated
+  if (!window.helper.expertise.validation) {
+    console.log('📝 Expertise validation structure ready to be populated');
+    // Don't create the validation object here - let expertise-validation.html do it
+    // This just ensures the parent structure exists
+  }
+  
+  return true;
+};
 
 // 🚨 CRITICAL FIX: Fix leviSummary values that show "₪0" from webhook
 function fixLeviSummaryValuesDirectly(helper) {
