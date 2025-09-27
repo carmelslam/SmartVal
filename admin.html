@@ -289,7 +289,7 @@
         <button onclick="loadSection('logView')">יומן פעולות</button>
         <button onclick="loadSection('versionManagement')">📚 ניהול גרסאות תיקים</button>
         <button onclick="loadSection('clearSystem')">🗑️ מחק נתוני מערכת</button>
-        <button onclick="loadSection('deleteCase')">🗂️ מחק תיק מ-OneDrive</button>
+        <button onclick="loadSection('deleteCase')" style="background: #dc3545;">🗑️ מחק תיק</button>
         <button onclick="window.open('https://ycshamautcoil-my.sharepoint.com/personal/yaron_yc-shamaut_co_il/_layouts/15/onedrive.aspx?id=%2Fpersonal%2Fyaron%5Fyc%2Dshamaut%5Fco%5Fil%2FDocuments%2FYC%20שמאות%2Fתיקים%20פתוחים&ga=1', '_blank')">כניסה לתיקים פתוחים</button>
         <button class="devButton" onclick="window.location.href='validation-dashboard.html'">לוח בקרת אימות</button>
         <div class="vat-config">
@@ -549,12 +549,15 @@
       }
     };
     
-    // Delete case from OneDrive function with double authentication - defined early for immediate availability
+    // Delete case function with double authentication - defined early for immediate availability
     window.performCaseDeletion = async function() {
       const plateNumber = document.getElementById('deleteCasePlate').value.trim();
       const auth1 = document.getElementById('deleteAuth1').value.trim();
       const auth2 = document.getElementById('deleteAuth2').value.trim();
       const statusDiv = document.getElementById('deleteCaseStatus');
+      
+      // Get selected deletion source
+      const deleteSource = document.querySelector('input[name="deleteSource"]:checked')?.value || 'both';
       
       // Validation
       if (!plateNumber) {
@@ -622,30 +625,159 @@
         return;
       }
       
-      // Final confirmation
-      if (!confirm(`⚠️ האם אתה בטוח לחלוטין שברצונך למחוק את התיק של רכב ${plateNumber} מ-OneDrive?\\n\\nפעולה זו בלתי הפיכה ותמחק את כל הקבצים הקשורים לתיק זה!\\n\\nלחץ OK למחיקה סופית או Cancel לביטול`)) {
+      // Final confirmation with source info
+      let confirmMessage = '';
+      switch(deleteSource) {
+        case 'supabase':
+          confirmMessage = `⚠️ האם אתה בטוח לחלוטין שברצונך למחוק את התיק של רכב ${plateNumber} מ-Supabase (שרת)?\\n\\nפעולה זו בלתי הפיכה ותמחק את כל הנתונים הקשורים לתיק זה מהשרת!`;
+          break;
+        case 'onedrive':
+          confirmMessage = `⚠️ האם אתה בטוח לחלוטין שברצונך למחוק את התיק של רכב ${plateNumber} מ-OneDrive?\\n\\nפעולה זו בלתי הפיכה ותמחק את כל הקבצים הקשורים לתיק זה!`;
+          break;
+        case 'both':
+          confirmMessage = `⚠️ האם אתה בטוח לחלוטין שברצונך למחוק את התיק של רכב ${plateNumber} גם מ-Supabase וגם מ-OneDrive?\\n\\nפעולה זו בלתי הפיכה ותמחק את כל הנתונים והקבצים הקשורים לתיק זה!`;
+          break;
+      }
+      
+      if (!confirm(confirmMessage + '\\n\\nלחץ OK למחיקה סופית או Cancel לביטול')) {
         return;
       }
       
       // Show loading
       statusDiv.style.display = 'block';
-      statusDiv.innerHTML = '<div style="color: #ffc107; padding: 10px;">🔄 מוחק תיק מ-OneDrive...</div>';
+      let loadingMessage = '';
+      switch(deleteSource) {
+        case 'supabase':
+          loadingMessage = '🔄 מוחק תיק מ-Supabase (שרת)...';
+          break;
+        case 'onedrive':
+          loadingMessage = '🔄 מוחק תיק מ-OneDrive...';
+          break;
+        case 'both':
+          loadingMessage = '🔄 מוחק תיק מ-Supabase ומ-OneDrive...';
+          break;
+      }
+      statusDiv.innerHTML = `<div style="color: #ffc107; padding: 10px;">${loadingMessage}</div>`;
       
       try {
-        // Call the DELETE_CASE_IN_ONEDRIVE webhook
-        const response = await window.sendToWebhook('DELETE_CASE_IN_ONEDRIVE', {
-          plate: plateNumber,
-          admin_password: auth1,
-          confirmation: 'DELETE',
-          timestamp: Date.now(),
-          action: 'permanent_delete'
-        });
+        let deleteResults = {
+          supabase: null,
+          onedrive: null
+        };
         
-        if (response && response.success) {
+        // Delete from Supabase if needed
+        if (deleteSource === 'supabase' || deleteSource === 'both') {
+          try {
+            statusDiv.innerHTML += '<div style="color: #17a2b8; padding: 5px;">🔍 מחפש תיק ב-Supabase...</div>';
+            
+            // Import Supabase client
+            const { supabase } = await import('./lib/supabaseClient.js');
+            
+            // First find the case
+            const { data: cases, error: findError } = await supabase
+              .from('cases')
+              .select('id')
+              .eq('plate', plateNumber);
+            
+            if (findError) {
+              throw new Error(`שגיאה בחיפוש תיק: ${findError.message}`);
+            }
+            
+            if (!cases || cases.length === 0) {
+              deleteResults.supabase = { success: false, message: 'תיק לא נמצא ב-Supabase' };
+            } else {
+              const caseId = cases[0].id;
+              
+              // Delete related helpers first (foreign key constraint)
+              const { error: helperError } = await supabase
+                .from('case_helper')
+                .delete()
+                .eq('case_id', caseId);
+              
+              if (helperError) {
+                throw new Error(`שגיאה במחיקת נתוני helper: ${helperError.message}`);
+              }
+              
+              // Delete the case
+              const { error: caseError } = await supabase
+                .from('cases')
+                .delete()
+                .eq('id', caseId);
+              
+              if (caseError) {
+                throw new Error(`שגיאה במחיקת תיק: ${caseError.message}`);
+              }
+              
+              deleteResults.supabase = { success: true };
+              console.log(`🗑️ Case ${plateNumber} deleted from Supabase successfully`);
+            }
+          } catch (error) {
+            console.error('Error deleting from Supabase:', error);
+            deleteResults.supabase = { success: false, message: error.message };
+          }
+        }
+        
+        // Delete from OneDrive if needed
+        if (deleteSource === 'onedrive' || deleteSource === 'both') {
+          try {
+            statusDiv.innerHTML += '<div style="color: #ffc107; padding: 5px;">🔄 מוחק מ-OneDrive...</div>';
+            
+            // Call the DELETE_CASE_IN_ONEDRIVE webhook
+            const response = await window.sendToWebhook('DELETE_CASE_IN_ONEDRIVE', {
+              plate: plateNumber,
+              admin_password: auth1,
+              confirmation: 'DELETE',
+              timestamp: Date.now(),
+              action: 'permanent_delete'
+            });
+            
+            if (response && response.success) {
+              deleteResults.onedrive = { success: true };
+              console.log(`🗂️ Case ${plateNumber} deleted from OneDrive successfully`);
+            } else {
+              deleteResults.onedrive = { 
+                success: false, 
+                message: response?.message || 'תיק לא נמצא או שגיאה במערכת' 
+              };
+            }
+          } catch (error) {
+            console.error('Error deleting from OneDrive:', error);
+            deleteResults.onedrive = { success: false, message: error.message };
+          }
+        }
+        
+        // Display results
+        let resultMessage = '';
+        let hasSuccess = false;
+        let hasFailure = false;
+        
+        if (deleteResults.supabase) {
+          if (deleteResults.supabase.success) {
+            resultMessage += '<div style="color: #28a745;">✅ נמחק בהצלחה מ-Supabase (שרת)</div>';
+            hasSuccess = true;
+          } else {
+            resultMessage += `<div style="color: #dc3545;">❌ שגיאה ב-Supabase: ${deleteResults.supabase.message}</div>`;
+            hasFailure = true;
+          }
+        }
+        
+        if (deleteResults.onedrive) {
+          if (deleteResults.onedrive.success) {
+            resultMessage += '<div style="color: #28a745;">✅ נמחק בהצלחה מ-OneDrive</div>';
+            hasSuccess = true;
+          } else {
+            resultMessage += `<div style="color: #dc3545;">❌ שגיאה ב-OneDrive: ${deleteResults.onedrive.message}</div>`;
+            hasFailure = true;
+          }
+        }
+        
+        // Final status message
+        if (hasSuccess && !hasFailure) {
           statusDiv.innerHTML = `
             <div style="color: #28a745; padding: 15px; background: #1a2e1a; border: 1px solid #28a745; border-radius: 6px;">
               <strong>✅ תיק נמחק בהצלחה!</strong><br>
-              התיק של רכב ${plateNumber} נמחק לצמיתות מ-OneDrive.<br><br>
+              התיק של רכב ${plateNumber} נמחק לצמיתות.<br><br>
+              ${resultMessage}
               <small style="color: #ffc107;">ℹ️ ייתכן שהמחיקה תיקח מספר דקות להסתיים במלואה.</small>
             </div>
           `;
@@ -655,13 +787,19 @@
           document.getElementById('deleteAuth1').value = '';
           document.getElementById('deleteAuth2').value = '';
           
-          console.log(`🗂️ Case ${plateNumber} deleted from OneDrive successfully`);
-          
+        } else if (hasFailure && hasSuccess) {
+          statusDiv.innerHTML = `
+            <div style="color: #ffc107; padding: 15px; background: #2e2a1a; border: 1px solid #ffc107; border-radius: 6px;">
+              <strong>⚠️ מחיקה חלקית</strong><br>
+              חלק מהמחיקה הצליחה וחלק נכשלה:<br><br>
+              ${resultMessage}
+            </div>
+          `;
         } else {
           statusDiv.innerHTML = `
             <div style="color: #dc3545; padding: 15px; background: #2d1a1a; border: 1px solid #dc3545; border-radius: 6px;">
               <strong>❌ שגיאה במחיקת התיק:</strong><br>
-              ${response?.message || 'תיק לא נמצא או שגיאה במערכת'}<br><br>
+              ${resultMessage}
               <small>ודא שמספר הרכב נכון ונסה שוב.</small>
             </div>
           `;
@@ -746,14 +884,29 @@
           
         case 'deleteCase':
           content.innerHTML = `
-            <h2 style="color: #e74c3c; font-size: 18px; margin-bottom: 15px; text-align: center;">🗂️ מחיקת תיק מ-OneDrive</h2>
+            <h2 style="color: #e74c3c; font-size: 18px; margin-bottom: 15px; text-align: center;">🗑️ מחיקת תיק</h2>
             
             <div style="background: #2a2a2a; color: #e0e0e0; padding: 20px; border-radius: 8px; margin-bottom: 20px; border: 2px solid #e74c3c;">
               <h3 style="color: #e74c3c; margin-top: 0;">⚠️ מחיקת תיק קבועה</h3>
-              <p style="margin-bottom: 15px;">פעולה זו תמחק לצמיתות את התיק הנבחר מתיקיית OneDrive.</p>
+              <p style="margin-bottom: 15px;">בחר מאיפה למחוק את התיק:</p>
+              
+              <div style="margin: 20px 0; background: #333; padding: 15px; border-radius: 6px;">
+                <label style="display: block; margin-bottom: 10px; cursor: pointer;">
+                  <input type="radio" name="deleteSource" value="supabase" style="margin-left: 10px;">
+                  🗄️ מחק מ-Supabase (שרת) בלבד
+                </label>
+                <label style="display: block; margin-bottom: 10px; cursor: pointer;">
+                  <input type="radio" name="deleteSource" value="onedrive" style="margin-left: 10px;">
+                  📁 מחק מ-OneDrive בלבד
+                </label>
+                <label style="display: block; margin-bottom: 10px; cursor: pointer;">
+                  <input type="radio" name="deleteSource" value="both" checked style="margin-left: 10px;">
+                  🗑️ מחק משני המקומות
+                </label>
+              </div>
               
               <div style="background: #450a0a; padding: 15px; border-radius: 6px; margin: 15px 0; border: 1px solid #e74c3c;">
-                <strong style="color: #e74c3c;">זהירות:</strong> פעולה זו בלתי הפיכה ותמחק את כל קבצי התיק כולל מסמכים, תמונות ודוחות!
+                <strong style="color: #e74c3c;">זהירות:</strong> פעולה זו בלתי הפיכה ותמחק את כל נתוני התיק!
               </div>
               
               <div style="margin: 20px 0;">
@@ -779,7 +932,7 @@
                         style="padding: 12px 24px; background: #e74c3c; color: white; border: none; border-radius: 6px; font-size: 16px; font-weight: bold; cursor: pointer; margin-right: 10px;"
                         onmouseover="this.style.background='#c0392b'" 
                         onmouseout="this.style.background='#e74c3c'">
-                  🗂️ מחק תיק מ-OneDrive
+                  🗑️ בצע מחיקה
                 </button>
                 <button onclick="loadSection('caseStatus')" 
                         style="padding: 12px 24px; background: #6c757d; color: white; border: none; border-radius: 6px; font-size: 16px; cursor: pointer;"
@@ -1721,14 +1874,29 @@
           
         case 'deleteCase':
           content.innerHTML = `
-            <h2 style="color: #e74c3c; font-size: 18px; margin-bottom: 15px; text-align: center;">🗂️ מחיקת תיק מ-OneDrive</h2>
+            <h2 style="color: #e74c3c; font-size: 18px; margin-bottom: 15px; text-align: center;">🗑️ מחיקת תיק</h2>
             
             <div style="background: #2a2a2a; color: #e0e0e0; padding: 20px; border-radius: 8px; margin-bottom: 20px; border: 2px solid #e74c3c;">
               <h3 style="color: #e74c3c; margin-top: 0;">⚠️ מחיקת תיק קבועה</h3>
-              <p style="margin-bottom: 15px;">פעולה זו תמחק לצמיתות את התיק הנבחר מתיקיית OneDrive.</p>
+              <p style="margin-bottom: 15px;">בחר מאיפה למחוק את התיק:</p>
+              
+              <div style="margin: 20px 0; background: #333; padding: 15px; border-radius: 6px;">
+                <label style="display: block; margin-bottom: 10px; cursor: pointer;">
+                  <input type="radio" name="deleteSource" value="supabase" style="margin-left: 10px;">
+                  🗄️ מחק מ-Supabase (שרת) בלבד
+                </label>
+                <label style="display: block; margin-bottom: 10px; cursor: pointer;">
+                  <input type="radio" name="deleteSource" value="onedrive" style="margin-left: 10px;">
+                  📁 מחק מ-OneDrive בלבד
+                </label>
+                <label style="display: block; margin-bottom: 10px; cursor: pointer;">
+                  <input type="radio" name="deleteSource" value="both" checked style="margin-left: 10px;">
+                  🗑️ מחק משני המקומות
+                </label>
+              </div>
               
               <div style="background: #450a0a; padding: 15px; border-radius: 6px; margin: 15px 0; border: 1px solid #e74c3c;">
-                <strong style="color: #e74c3c;">זהירות:</strong> פעולה זו בלתי הפיכה ותמחק את כל קבצי התיק כולל מסמכים, תמונות ודוחות!
+                <strong style="color: #e74c3c;">זהירות:</strong> פעולה זו בלתי הפיכה ותמחק את כל נתוני התיק!
               </div>
               
               <div style="margin: 20px 0;">
@@ -1754,7 +1922,7 @@
                         style="padding: 12px 24px; background: #e74c3c; color: white; border: none; border-radius: 6px; font-size: 16px; font-weight: bold; cursor: pointer; margin-right: 10px;"
                         onmouseover="this.style.background='#c0392b'" 
                         onmouseout="this.style.background='#e74c3c'">
-                  🗂️ מחק תיק מ-OneDrive
+                  🗑️ בצע מחיקה
                 </button>
                 <button onclick="loadSection('caseStatus')" 
                         style="padding: 12px 24px; background: #6c757d; color: white; border: none; border-radius: 6px; font-size: 16px; cursor: pointer;"
