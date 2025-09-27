@@ -449,6 +449,7 @@ form button {
         <input type="text" class="desc" placeholder="תיאור" oninput="suggestPart(this); autoSaveOnChange(this)">
         <input type="number" class="quantity" placeholder="כמות" value="1" min="1" style="width: 60px; margin-left: 8px;" onchange="autoSaveOnChange(this)">
         <input type="text" class="price" placeholder="מחיר" onchange="autoSaveOnChange(this)">
+        <input type="text" class="code" placeholder="קוד חלק" style="width: 80px; margin-left: 8px;" onchange="autoSaveOnChange(this)">
         <select class="source">
           <option value="">מקור</option>
           <option value="חליפי/מקורי">חליפי/מקורי</option>
@@ -489,21 +490,29 @@ function removeDuplicateParts(helper, activeCenterId) {
   const seen = new Map();
   const originalCount = helper.parts_search.selected_parts.length;
   
-  // Remove duplicates based on centerId + part name combination
-  helper.parts_search.selected_parts = helper.parts_search.selected_parts.filter(part => {
-    // Create unique key based on damage center ID and part name/number
+  // ✅ ENHANCED: Remove duplicates with better unique key generation
+  helper.parts_search.selected_parts = helper.parts_search.selected_parts.filter((part, index) => {
+    // Create comprehensive unique key based on multiple fields
     const partIdentifier = part.name || part.partNumber || part.part || '';
     const centerIdentifier = part.damage_center_id || part.centerId || '';
-    const key = `${centerIdentifier}_${partIdentifier}`;
+    const description = part.desc || part.description || part.תיאור || '';
+    const code = part.code || '';
+    const price = part.price || '';
+    
+    // Create enhanced unique key
+    const key = `${centerIdentifier}_${partIdentifier}_${description}_${code}`.toLowerCase().trim();
     
     console.log(`🔍 DEDUP: Checking part "${partIdentifier}" in center "${centerIdentifier}" -> key: ${key}`);
     
     if (seen.has(key)) {
-      console.log(`🗑️ Removing duplicate part: ${key}`);
+      const originalPart = seen.get(key);
+      // Keep the more recent part (with higher index) and remove the older one
+      console.log(`🗑️ Removing duplicate part: ${key} (keeping more recent version)`);
       return false;
     }
     
-    seen.set(key, true);
+    // Store with additional metadata for debugging
+    seen.set(key, { part, index });
     return true;
   });
   
@@ -535,6 +544,22 @@ function removeDuplicateParts(helper, activeCenterId) {
 
 // Save parts data to helper without navigation
 function savePartsData() {
+  // ✅ IDEMPOTENT PROTECTION: Prevent multiple rapid saves
+  const now = Date.now();
+  const activeCenterId = sessionStorage.getItem('active_damage_center_id') || 'standalone';
+  const lastSaveKey = `parts_save_${activeCenterId}`;
+  const lastSaveTime = parseInt(sessionStorage.getItem(lastSaveKey) || '0');
+  const timeSinceLastSave = now - lastSaveTime;
+  
+  // If the same operation was performed less than 1.5 seconds ago, skip to prevent duplicates
+  if (timeSinceLastSave < 1500) {
+    console.log('⏭️ IDEMPOTENT SAVE: Skipping duplicate savePartsData() call (last save was', timeSinceLastSave, 'ms ago)');
+    return;
+  }
+  
+  // Record this save operation timestamp
+  sessionStorage.setItem(lastSaveKey, now.toString());
+  
   // === PHASE 0: DIAGNOSTIC LOGGING ===
   console.log('=== PARTS MODULE DIAGNOSTIC (savePartsData) ===');
   const diagnosticHelper = JSON.parse(sessionStorage.getItem('helper') || '{}');
@@ -555,9 +580,10 @@ function savePartsData() {
     const quantity = parseInt(row.querySelector(".quantity")?.value) || 1;
     const price = row.querySelector(".price").value.trim();
     const source = row.querySelector(".source").value;
+    const code = row.querySelector(".code")?.value?.trim() || ''; // ✅ Extract code field
     
-    // ✅ CHANGED: Include quantity in parts data
-    if (name || desc || price || source) {
+    // ✅ CHANGED: Include quantity and code in parts data
+    if (name || desc || price || source || code) {
       allParts.push({ 
         part: name,
         name: name,  // === PHASE 4: Ensure consistent field naming ===
@@ -565,7 +591,8 @@ function savePartsData() {
         description: desc,  // === PHASE 4: Ensure description field exists ===
         quantity: quantity,
         price, 
-        source 
+        source,
+        code: code  // ✅ Add code field for parts search compatibility
       });
     }
   });
@@ -941,12 +968,29 @@ function savePartsData() {
     // === PHASE 2: Remove duplicates before final save ===
     removeDuplicateParts(helper, activeCenterId);
     
+    // Save after deduplication
+    sessionStorage.setItem('helper', JSON.stringify(helper));
+    
     // === PHASE 6: Final count update after all processing ===
     updatePartCount();
     
     // === PHASE 6: Update comprehensive data and case_summary AFTER accumulation ===
     updatePartsSearchComprehensiveData(helper, validParts, isStandaloneMode, activeCenterId);
     updateCaseSummary();
+    
+    // ✅ SAFETY NET: Final deduplication check to catch any edge cases
+    const finalHelper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+    if (finalHelper.parts_search?.selected_parts) {
+      const preCountFinal = finalHelper.parts_search.selected_parts.length;
+      removeDuplicateParts(finalHelper, activeCenterId);
+      const postCountFinal = finalHelper.parts_search.selected_parts.length;
+      
+      if (preCountFinal !== postCountFinal) {
+        console.log(`🧹 SAFETY NET: Caught ${preCountFinal - postCountFinal} additional duplicates`);
+        sessionStorage.setItem('helper', JSON.stringify(finalHelper));
+        updatePartCount(); // Update UI to reflect final count
+      }
+    }
     
     
     // Show save confirmation (safely check if button exists)
@@ -978,9 +1022,21 @@ function savePartsData() {
     document.getElementById("partsForm").addEventListener("submit", function(e) {
       e.preventDefault();
       
+      // ✅ AUTO-SAVE COORDINATION: Clear auto-save timer and set manual save flag
+      if (window.autoSaveTimer) {
+        clearTimeout(window.autoSaveTimer);
+        console.log('🔄 Cleared auto-save timer for manual save');
+      }
+      window.saveInProgress = true;
+      
       // ✅ FIX: Call the main savePartsData() function instead of duplicating code
       console.log('📝 Form submitted, calling savePartsData()...');
       savePartsData();
+      
+      // Clear save-in-progress flag after a short delay
+      setTimeout(() => {
+        window.saveInProgress = false;
+      }, 500);
     });
 
     // ✅ Helper function to get car details from helper or form
@@ -1959,9 +2015,20 @@ function savePartsData() {
 
     // ✅ AUTO-SAVE FUNCTION: Automatically save when parts change
     function autoSaveOnChange(element) {
+      // Skip auto-save if manual save is in progress
+      if (window.saveInProgress) {
+        console.log('⏸️ Skipping auto-save: manual save in progress');
+        return;
+      }
+      
       // Debounce to avoid excessive saves
       clearTimeout(window.autoSaveTimer);
       window.autoSaveTimer = setTimeout(() => {
+        // Double-check that manual save isn't in progress
+        if (window.saveInProgress) {
+          console.log('⏸️ Cancelling auto-save: manual save started');
+          return;
+        }
         console.log('🔄 Auto-saving parts data after change...');
         savePartsData();
       }, 1000); // Wait 1 second after last change
@@ -2186,6 +2253,7 @@ function savePartsData() {
             <input type="text" class="desc" placeholder="תיאור" value="${part.desc || part.description || part.תיאור || ''}" oninput="suggestPart(this); autoSaveOnChange(this)">
             <input type="number" class="quantity" placeholder="כמות" value="${part.quantity || part.כמות || 1}" min="1" style="width: 60px; margin-left: 8px;" onchange="autoSaveOnChange(this)">
             <input type="text" class="price" placeholder="מחיר" value="${part.price || part.מחיר || ''}" onchange="autoSaveOnChange(this)">
+            <input type="text" class="code" placeholder="קוד חלק" value="${part.code || ''}" style="width: 80px; margin-left: 8px;" onchange="autoSaveOnChange(this)">
             <select class="source">
               <option value="">מקור</option>
               <option value="חליפי/מקורי" ${(part.source || part['סוג חלק']) === 'חליפי/מקורי' ? 'selected' : ''}>חליפי/מקורי</option>
