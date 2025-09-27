@@ -501,8 +501,10 @@
             final_report: {}
           };
           
-          // Save the reset helper
+          // Save the reset helper - use both keys for compatibility
           sessionStorage.setItem('helper', JSON.stringify(window.helper));
+          sessionStorage.setItem('currentHelper', JSON.stringify(window.helper)); // PHASE 4 FIX
+          sessionStorage.setItem('lastHelperUpdate', new Date().toISOString());
           
           // Broadcast the reset to all modules
           if (typeof window.broadcastHelperUpdate === 'function') {
@@ -2142,6 +2144,34 @@
     if (existingVat) {
       document.getElementById('vat-input').value = existingVat;
     }
+    
+    // PHASE 4 FIX: Initialize helper from sessionStorage
+    try {
+      const currentHelper = sessionStorage.getItem('currentHelper') || sessionStorage.getItem('helper');
+      if (currentHelper) {
+        window.helper = JSON.parse(currentHelper);
+        console.log('✅ Helper loaded from sessionStorage:', window.helper?.plate || 'No plate');
+      } else {
+        window.helper = {};
+        console.log('⚠️ No helper found in sessionStorage, initialized empty helper');
+      }
+    } catch (e) {
+      console.error('Error loading helper from sessionStorage:', e);
+      window.helper = {};
+    }
+    
+    // Listen for helper updates from other modules
+    window.addEventListener('storage', (e) => {
+      if (e.key === 'currentHelper' || e.key === 'helper') {
+        try {
+          const updatedHelper = JSON.parse(e.newValue);
+          window.helper = updatedHelper;
+          console.log('✅ Helper updated from storage event:', window.helper?.plate);
+        } catch (err) {
+          console.error('Error updating helper from storage event:', err);
+        }
+      }
+    });
   });
 
     // Helper functions for admin sections
@@ -5069,6 +5099,34 @@
     if (existingVat) {
       document.getElementById('vat-input').value = existingVat;
     }
+    
+    // PHASE 4 FIX: Initialize helper from sessionStorage
+    try {
+      const currentHelper = sessionStorage.getItem('currentHelper') || sessionStorage.getItem('helper');
+      if (currentHelper) {
+        window.helper = JSON.parse(currentHelper);
+        console.log('✅ Helper loaded from sessionStorage:', window.helper?.plate || 'No plate');
+      } else {
+        window.helper = {};
+        console.log('⚠️ No helper found in sessionStorage, initialized empty helper');
+      }
+    } catch (e) {
+      console.error('Error loading helper from sessionStorage:', e);
+      window.helper = {};
+    }
+    
+    // Listen for helper updates from other modules
+    window.addEventListener('storage', (e) => {
+      if (e.key === 'currentHelper' || e.key === 'helper') {
+        try {
+          const updatedHelper = JSON.parse(e.newValue);
+          window.helper = updatedHelper;
+          console.log('✅ Helper updated from storage event:', window.helper?.plate);
+        } catch (err) {
+          console.error('Error updating helper from storage event:', err);
+        }
+      }
+    });
   });
 </script>
 
@@ -5903,6 +5961,34 @@ window.showContent = function(id) {
 const SUPABASE_URL = 'https://nvqrptokmwdhvpiufrad.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im52cXJwdG9rbXdkaHZwaXVmcmFkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTYwMzU0ODUsImV4cCI6MjA3MTYxMTQ4NX0.yvFalmZE7Xpvo_j6wzRj44Pa7Bx9LQegcyLzbz3QL5s';
 
+// Helper function to show version operation status
+function showVersionStatus(message, type) {
+  const statusDiv = document.getElementById('versionStatus');
+  if (!statusDiv) {
+    console.log(`Version Status: ${message}`);
+    return;
+  }
+  
+  const colorMap = {
+    loading: '#17a2b8',
+    success: '#28a745',
+    error: '#dc3545',
+    warning: '#ffc107'
+  };
+  
+  const bgMap = {
+    loading: '#1a365d',
+    success: '#0f2419',
+    error: '#450a0a',
+    warning: '#332701'
+  };
+  
+  statusDiv.innerHTML = `
+    <div style="color: ${colorMap[type] || '#e0e0e0'}; padding: 15px; background: ${bgMap[type] || '#2a2a2a'}; border: 1px solid ${colorMap[type] || '#555'}; border-radius: 6px;">
+      <strong>${type === 'loading' ? '🔄' : type === 'success' ? '✅' : type === 'error' ? '❌' : '⚠️'} ${message}</strong>
+    </div>`;
+}
+
 // Load case version history - user-friendly with date-based navigation
 window.loadCaseVersionHistory = async function() {
   const plate = document.getElementById('versionPlateSearch').value.trim();
@@ -6216,8 +6302,8 @@ window.confirmRestoreVersion = async function(versionId, dayName, versionDate, p
   try {
     showVersionStatus('מחזיר גרסה מ-' + dayName + '...', 'loading');
     
-    // Step 1: Get the version data
-    const versionResponse = await fetch(`${SUPABASE_URL}/rest/v1/case_helper?id=eq.${versionId}&select=helper_json,version,helper_name`, {
+    // Step 1: Get the version data with case_id
+    const versionResponse = await fetch(`${SUPABASE_URL}/rest/v1/case_helper?id=eq.${versionId}&select=helper_json,version,helper_name,case_id`, {
       headers: {
         'apikey': SUPABASE_ANON_KEY,
         'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
@@ -6234,6 +6320,7 @@ window.confirmRestoreVersion = async function(versionId, dayName, versionDate, p
     }
     
     const versionHelper = versionData[0];
+    const caseId = versionHelper.case_id || window.currentCaseId;
     
     // Step 2: Create backup of current version
     showVersionStatus('יוצר גיבוי של הגרסה הנוכחית...', 'loading');
@@ -6248,7 +6335,7 @@ window.confirmRestoreVersion = async function(versionId, dayName, versionDate, p
         'Prefer': 'return=representation'
       },
       body: JSON.stringify({
-        case_id: window.currentCaseId,
+        case_id: caseId,
         helper_name: `${plate}_backup_${Date.now()}`,
         helper_json: window.helper || {},
         version: Date.now(),
@@ -6266,7 +6353,7 @@ window.confirmRestoreVersion = async function(versionId, dayName, versionDate, p
     showVersionStatus('מעדכן את הגרסה הנוכחית...', 'loading');
     
     // First, set all versions to is_current = false
-    await fetch(`${SUPABASE_URL}/rest/v1/case_helper?case_id=eq.${window.currentCaseId}`, {
+    await fetch(`${SUPABASE_URL}/rest/v1/case_helper?case_id=eq.${caseId}`, {
       method: 'PATCH',
       headers: {
         'apikey': SUPABASE_ANON_KEY,
@@ -6378,14 +6465,39 @@ window.loadVersionToCurrentHelper = async function(versionId, dayName, plate) {
     // Smart merge - only add missing data
     mergeHelperData(window.helper, versionHelper);
     
+    // Update sessionStorage with merged helper - use both keys for compatibility
+    try {
+      sessionStorage.setItem('currentHelper', JSON.stringify(window.helper));
+      sessionStorage.setItem('helper', JSON.stringify(window.helper)); // PHASE 4 FIX: Also save to 'helper' key
+      sessionStorage.setItem('lastHelperUpdate', new Date().toISOString());
+      sessionStorage.setItem('helperName', window.helper.plate ? `${window.helper.plate}_helper_v1` : 'helper');
+      console.log('✅ Helper saved to sessionStorage after version load (both keys)');
+    } catch (e) {
+      console.error('Failed to save helper to sessionStorage:', e);
+    }
+    
     // Dispatch event for UI update
     const loadEvent = new CustomEvent('helperDataLoaded', {
       detail: { helper: window.helper, source: 'admin_load', fromDate: dayName }
     });
     document.dispatchEvent(loadEvent);
     
+    // Also dispatch storage event for cross-module communication
+    window.dispatchEvent(new StorageEvent('storage', {
+      key: 'currentHelper',
+      newValue: JSON.stringify(window.helper),
+      url: window.location.href
+    }));
+    
+    // PHASE 4 FIX: Also dispatch for 'helper' key
+    window.dispatchEvent(new StorageEvent('storage', {
+      key: 'helper',
+      newValue: JSON.stringify(window.helper),
+      url: window.location.href
+    }));
+    
     showVersionStatus(`✅ נתונים נטענו בהצלחה מ-${dayName}`, 'success');
-    alert(`נתונים נטענו בהצלחה מ-${dayName}!\n\nהנתונים נוספו לעבודה הנוכחית שלך.\nהמשך לעבוד במודולים השונים.`);
+    alert(`נתונים נטענו בהצלחה מ-${dayName}!\n\nהנתונים נוספו לעבודה הנוכחית שלך.\nכדי לראות את השינויים במודולים אחרים, יש לרענן את הדף.`);
     
   } catch (error) {
     console.error('❌ Load error:', error);

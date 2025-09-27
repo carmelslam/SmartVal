@@ -203,9 +203,35 @@
           const helper = result.helper;
           const metadata = result.metadata;
           
+          // PHASE 4: Update new case details format
+          document.getElementById('casePlate').textContent = plateNumber;
           document.getElementById('caseStatus').textContent = 
             caseRetrievalService.getStatusDisplay(metadata.caseStatus);
+          document.getElementById('caseStatus').style.color = 
+            metadata.caseStatus === 'OPEN' ? '#28a745' : '#6c757d';
           
+          // Owner name from helper
+          const ownerName = helper.case_info?.owner_name || 
+                           helper.vehicle?.owner_name || 
+                           helper.stakeholders?.owner?.name || 
+                           'לא רשום';
+          document.getElementById('caseOwner').textContent = ownerName;
+          
+          // Created date
+          const createdDate = helper.case_info?.created_at || metadata.createdAt;
+          document.getElementById('caseCreated').textContent = 
+            createdDate ? new Date(createdDate).toLocaleDateString('he-IL') : 'לא זמין';
+          
+          // Updated date
+          const updatedDate = metadata.updatedAt || helper.case_info?.updated_at;
+          document.getElementById('caseUpdated').textContent = 
+            updatedDate ? new Date(updatedDate).toLocaleDateString('he-IL') : 'לא זמין';
+          
+          // Version count as backup count
+          document.getElementById('caseBackups').textContent = 
+            metadata.versionCount ? `${metadata.versionCount} גיבויים` : '1 גיבוי';
+          
+          // Legacy fields for compatibility
           document.getElementById('caseDate').textContent = 
             helper.case_info?.created_at ? 
             new Date(helper.case_info.created_at).toLocaleDateString('he-IL') : 'לא זמין';
@@ -213,6 +239,8 @@
           document.getElementById('caseVehicle').textContent = 
             `${helper.vehicle?.make || ''} ${helper.vehicle?.model || ''}`.trim() || 'לא זמין';
           
+          // Show the case info div
+          document.getElementById('caseInfo').style.display = 'block';
           document.getElementById('caseInfo').classList.add('show');
           
           // Reset input field styling on success
@@ -276,11 +304,37 @@
             sessionStorage.setItem('plate', plateNumber);
             sessionStorage.setItem('caseLoaded', 'true');
             
+            // PHASE 4: Update new case details format for webhook fallback
+            document.getElementById('casePlate').textContent = plateNumber;
             document.getElementById('caseStatus').textContent = caseData.meta?.status || 'לא זמין';
+            document.getElementById('caseStatus').style.color = 
+              caseData.meta?.status === 'פעיל' || caseData.meta?.status === 'OPEN' ? '#28a745' : '#6c757d';
+            
+            // Owner name from webhook data
+            const ownerName = caseData.general_info?.insured_name || 
+                             caseData.meta?.owner_name || 
+                             caseData.stakeholders?.owner?.name || 
+                             'לא רשום';
+            document.getElementById('caseOwner').textContent = ownerName;
+            
+            // Created date - webhook data
+            document.getElementById('caseCreated').textContent = 
+              caseData.meta?.created_date || caseData.meta?.inspection_date || 'לא זמין';
+            
+            // Updated date - webhook data
+            document.getElementById('caseUpdated').textContent = 
+              caseData.meta?.last_updated || caseData.meta?.inspection_date || 'לא זמין';
+            
+            // Version count - webhook doesn't provide this
+            document.getElementById('caseBackups').textContent = 'מידע מ-Make.com';
+            
+            // Legacy fields for compatibility
             document.getElementById('caseDate').textContent = caseData.meta?.inspection_date || 'לא זמין';
             document.getElementById('caseVehicle').textContent = 
               `${caseData.car_details?.manufacturer || ''} ${caseData.car_details?.model || ''}`.trim() || 'לא זמין';
             
+            // Show the case info div
+            document.getElementById('caseInfo').style.display = 'block';
             document.getElementById('caseInfo').classList.add('show');
             
             // Reset input field styling on success
@@ -564,10 +618,24 @@
     <h3>טעינת תיק קיים</h3>
     <input type="text" class="case-input" id="plateNumber" placeholder="הכנס מספר רכב (לטעינת תיק קיים)">
     <button class="case-button" onclick="loadExistingCase()">טען תיק קיים</button>
-    <div class="case-info" id="caseInfo">
-      <p><strong>תיק נמצא:</strong> <span id="caseStatus"></span></p>
-      <p><strong>תאריך בדיקה:</strong> <span id="caseDate"></span></p>
-      <p><strong>יצרן ודגם:</strong> <span id="caseVehicle"></span></p>
+    <div class="case-info" id="caseInfo" style="display: none;">
+      <!-- PHASE 4: Updated case details format to match admin -->
+      <div style="background: #1a365d; padding: 15px; border-radius: 6px; border: 1px solid #17a2b8; margin-top: 15px;">
+        <h3 style="color: #17a2b8; margin-top: 0;">📋 פרטי התיק</h3>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; font-size: 14px;">
+          <div><strong>מספר רכב:</strong> <span id="casePlate"></span></div>
+          <div><strong>מצב התיק:</strong> <span id="caseStatus"></span></div>
+          <div><strong>בעל הרכב:</strong> <span id="caseOwner">לא רשום</span></div>
+          <div><strong>התיק נפתח:</strong> <span id="caseCreated"></span></div>
+          <div><strong>עדכון אחרון:</strong> <span id="caseUpdated"></span></div>
+          <div><strong>סה"כ גיבויים:</strong> <span id="caseBackups">בודק...</span></div>
+        </div>
+      </div>
+      <!-- Legacy display for compatibility -->
+      <div style="margin-top: 10px;">
+        <p><strong>תאריך בדיקה:</strong> <span id="caseDate"></span></p>
+        <p><strong>יצרן ודגם:</strong> <span id="caseVehicle"></span></p>
+      </div>
       <div class="case-actions">
         <button class="estimate-button" onclick="generateEstimate()">הפק אומדן</button>
         <button class="case-button" onclick="generateFinalReport()">הפק דו"ח סופי</button>

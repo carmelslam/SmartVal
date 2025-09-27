@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="he">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>בדיקת כפתורי ניהול גרסאות</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            padding: 20px; 
+            background: #1a1a1a; 
+            color: #e0e0e0;
+            text-align: right;
+            direction: rtl;
+        }
+        .container { 
+            max-width: 900px; 
+            margin: 0 auto; 
+            background: #2a2a2a; 
+            padding: 30px; 
+            border-radius: 12px;
+            border: 2px solid #ff6b35;
+        }
+        h1 {
+            color: #ff6b35;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+        .test-section {
+            background: #333;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+            border: 1px solid #555;
+        }
+        .test-section h2 {
+            color: #17a2b8;
+            margin-top: 0;
+        }
+        button {
+            padding: 10px 20px;
+            margin: 5px;
+            background: #17a2b8;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        button:hover {
+            opacity: 0.8;
+        }
+        .result {
+            background: #1a1a1a;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 4px;
+            white-space: pre-wrap;
+            font-family: monospace;
+            font-size: 12px;
+        }
+        .success { border: 1px solid #28a745; color: #28a745; }
+        .error { border: 1px solid #dc3545; color: #dc3545; }
+        .info { border: 1px solid #17a2b8; color: #17a2b8; }
+        .warning { border: 1px solid #ffc107; color: #ffc107; }
+        .button-count {
+            font-size: 18px;
+            font-weight: bold;
+            padding: 10px;
+            background: #444;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔧 בדיקת כפתורי ניהול גרסאות - Admin UI</h1>
+        
+        <div class="test-section">
+            <h2>📊 סטטוס מערכת</h2>
+            <button onclick="checkDatabaseStatus()">🔍 בדוק סטטוס is_current</button>
+            <button onclick="checkAdminPage()">📋 בדוק עמוד Admin</button>
+            <div id="systemStatus"></div>
+        </div>
+        
+        <div class="test-section">
+            <h2>🔢 ספירת כפתורים</h2>
+            <p>לפי התיכון:</p>
+            <ul>
+                <li><strong>גרסה היסטורית (is_current = false):</strong> צריכה להציג 5 כפתורים</li>
+                <li><strong>גרסה נוכחית (is_current = true):</strong> צריכה להציג 2 כפתורים בלבד</li>
+            </ul>
+            <button onclick="simulateButtonDisplay()">🎭 סימולציה של תצוגת כפתורים</button>
+            <div id="buttonSimulation"></div>
+        </div>
+        
+        <div class="test-section">
+            <h2>✅ בדיקות פונקציונליות</h2>
+            <button onclick="testHelperIntegration()">🔗 בדוק אינטגרציה עם Helper</button>
+            <button onclick="testSessionStorage()">💾 בדוק SessionStorage</button>
+            <div id="functionalTests"></div>
+        </div>
+        
+        <div id="results"></div>
+    </div>
+
+    <script type="module">
+        import { supabase } from './lib/supabaseClient.js';
+        
+        window.checkDatabaseStatus = async function() {
+            addResult('🔍 בודק סטטוס is_current בכל התיקים...', 'info');
+            
+            try {
+                const { data, error } = await supabase
+                    .from('case_helper')
+                    .select('case_id, helper_name, is_current, updated_at')
+                    .order('case_id, updated_at', { ascending: false });
+                
+                if (error) throw error;
+                
+                const grouped = {};
+                data.forEach(h => {
+                    if (!grouped[h.case_id]) grouped[h.case_id] = [];
+                    grouped[h.case_id].push(h);
+                });
+                
+                let report = `נמצאו ${Object.keys(grouped).length} תיקים:\n\n`;
+                let allGood = true;
+                
+                Object.entries(grouped).forEach(([caseId, helpers]) => {
+                    const currentCount = helpers.filter(h => h.is_current).length;
+                    report += `Case ${caseId.substring(0, 8)}...: ${helpers.length} גרסאות, ${currentCount} נוכחיות\n`;
+                    
+                    if (currentCount !== 1) {
+                        report += `  ❌ בעיה: צריכה להיות רק גרסה נוכחית אחת!\n`;
+                        allGood = false;
+                    }
+                });
+                
+                addResult(report, allGood ? 'success' : 'error');
+                if (!allGood) {
+                    addResult('💡 טיפ: השתמש בקובץ fix-is-current.html כדי לתקן את הבעיה', 'warning');
+                }
+                
+            } catch (error) {
+                addResult(`❌ שגיאה: ${error.message}`, 'error');
+            }
+        };
+        
+        window.checkAdminPage = function() {
+            addResult('📋 בודק את עמוד Admin...', 'info');
+            
+            // Check if admin page is accessible
+            const adminUrl = window.location.href.replace('test-admin-buttons.html', 'admin.html');
+            addResult(`ניתן לגשת לעמוד Admin בכתובת:\n${adminUrl}`, 'info');
+            
+            // Check critical functions
+            const functions = [
+                'loadCaseVersionHistory',
+                'displayVersionHistoryForUser', 
+                'previewVersionForUser',
+                'downloadVersionReportForUser',
+                'confirmRestoreVersion',
+                'loadVersionToCurrentHelper',
+                'compareVersionWithCurrent'
+            ];
+            
+            let report = 'בדיקת פונקציות Admin:\n';
+            functions.forEach(fn => {
+                const exists = typeof window[fn] === 'function';
+                report += `${exists ? '✅' : '❌'} ${fn}\n`;
+            });
+            
+            addResult(report, 'info');
+        };
+        
+        window.simulateButtonDisplay = function() {
+            addResult('🎭 מדמה תצוגת כפתורים...', 'info');
+            
+            const resultsDiv = document.getElementById('buttonSimulation');
+            
+            // Simulate historical version
+            const historicalButtons = `
+                <div class="button-count">גרסה היסטורית (is_current = false):</div>
+                <div style="background: #2a2a2a; border: 1px solid #555; border-radius: 8px; padding: 15px; margin-bottom: 20px;">
+                    <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                        <button style="background: #17a2b8;">👁️ ראה מה היה בתיק</button>
+                        <button style="background: #6c757d;">📄 הורד כקובץ</button>
+                        <button style="background: #ffc107; color: black;">🔄 חזור לתאריך זה</button>
+                        <button style="background: #28a745;">📥 טען לעבודה נוכחית</button>
+                        <button style="background: #6f42c1;">🆚 השווה לנוכחי</button>
+                    </div>
+                    <div style="margin-top: 10px; color: #28a745;">✅ 5 כפתורים - נכון!</div>
+                </div>`;
+            
+            // Simulate current version
+            const currentButtons = `
+                <div class="button-count">גרסה נוכחית (is_current = true):</div>
+                <div style="background: #0f2419; border: 1px solid #28a745; border-radius: 8px; padding: 15px;">
+                    <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                        <button style="background: #17a2b8;">👁️ ראה מה היה בתיק</button>
+                        <button style="background: #6c757d;">📄 הורד כקובץ</button>
+                    </div>
+                    <div style="margin-top: 10px; color: #28a745;">✅ 2 כפתורים - נכון!</div>
+                </div>`;
+            
+            resultsDiv.innerHTML = historicalButtons + currentButtons;
+        };
+        
+        window.testHelperIntegration = function() {
+            addResult('🔗 בודק אינטגרציה עם Helper...', 'info');
+            
+            // Check if helper exists
+            if (window.helper) {
+                addResult(`✅ window.helper קיים עם ${Object.keys(window.helper).length} מפתחות`, 'success');
+            } else {
+                addResult('⚠️ window.helper לא קיים - נוצר helper ריק לבדיקה', 'warning');
+                window.helper = { test: true, plate: '12345678' };
+            }
+            
+            // Test event dispatching
+            let eventReceived = false;
+            document.addEventListener('helperDataLoaded', (e) => {
+                eventReceived = true;
+                addResult(`✅ אירוע helperDataLoaded התקבל עם מקור: ${e.detail?.source}`, 'success');
+            }, { once: true });
+            
+            // Dispatch test event
+            const testEvent = new CustomEvent('helperDataLoaded', {
+                detail: { helper: window.helper, source: 'test', fromDate: 'היום' }
+            });
+            document.dispatchEvent(testEvent);
+            
+            setTimeout(() => {
+                if (!eventReceived) {
+                    addResult('❌ אירוע helperDataLoaded לא התקבל', 'error');
+                }
+            }, 100);
+        };
+        
+        window.testSessionStorage = function() {
+            addResult('💾 בודק SessionStorage...', 'info');
+            
+            try {
+                // Test write
+                const testData = { test: true, timestamp: new Date().toISOString() };
+                sessionStorage.setItem('testHelper', JSON.stringify(testData));
+                
+                // Test read
+                const retrieved = JSON.parse(sessionStorage.getItem('testHelper'));
+                if (retrieved && retrieved.test) {
+                    addResult('✅ SessionStorage עובד כראוי', 'success');
+                    
+                    // Check for current helper
+                    const currentHelper = sessionStorage.getItem('currentHelper');
+                    if (currentHelper) {
+                        const helperData = JSON.parse(currentHelper);
+                        addResult(`✅ נמצא currentHelper עם ${Object.keys(helperData).length} מפתחות`, 'success');
+                    } else {
+                        addResult('ℹ️ אין currentHelper ב-SessionStorage כרגע', 'info');
+                    }
+                } else {
+                    addResult('❌ בעיה בקריאה מ-SessionStorage', 'error');
+                }
+                
+                // Cleanup
+                sessionStorage.removeItem('testHelper');
+                
+            } catch (error) {
+                addResult(`❌ שגיאה ב-SessionStorage: ${error.message}`, 'error');
+            }
+        };
+        
+        function addResult(text, type) {
+            const results = document.getElementById('results');
+            const div = document.createElement('div');
+            div.className = `result ${type}`;
+            div.textContent = text;
+            results.appendChild(div);
+            results.scrollTop = results.scrollHeight;
+        }
+        
+        // Auto-run basic check on load
+        document.addEventListener('DOMContentLoaded', () => {
+            setTimeout(() => {
+                addResult('🚀 מערכת בדיקה מוכנה', 'info');
+                addResult('השתמש בכפתורים למעלה כדי לבדוק את המערכת', 'info');
+            }, 500);
+        });
+    </script>
+</body>
+</html>
