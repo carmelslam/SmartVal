@@ -2325,12 +2325,31 @@
       }, 100);
     }
 
-    // Initialize on page load
-    document.addEventListener('DOMContentLoaded', loadExpertiseData);
+    // Initialize on page load - wait for helper to be available
+    document.addEventListener('DOMContentLoaded', function() {
+      // Simple initialization without waiting for modules
+      console.log('DOM loaded, initializing expertise validation...');
+      
+      // Try to load from sessionStorage immediately
+      const savedHelper = sessionStorage.getItem('helper');
+      if (savedHelper) {
+        try {
+          window.helper = JSON.parse(savedHelper);
+          console.log('Helper loaded from sessionStorage');
+        } catch (e) {
+          console.error('Error parsing saved helper:', e);
+          window.helper = {};
+        }
+      } else {
+        window.helper = {};
+      }
+      
+      // Now load the expertise data
+      loadExpertiseData();
+    });
   </script>
   
-  <!-- Helper integration -->
-  <script type="module" src="./helper.js"></script>
+  <!-- Helper integration - removed as it causes module loading issues -->
   
   <!-- Floating screens integration -->
   <script src="car-details-floating.js"></script>
