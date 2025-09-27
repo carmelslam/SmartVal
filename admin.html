@@ -6450,7 +6450,56 @@ window.previewVersionForUser = async function(versionId, dayName, versionDate) {
     const version = versions[0];
     console.log('🔧 PREVIEW: Raw helper_json structure:', Object.keys(version.helper_json || {}));
     console.log('🔧 PREVIEW: Has helper_data wrapper?', !!(version.helper_json?.helper_data));
-    const readableContent = generateUserFriendlyReport(version.helper_json);
+    
+    // Get case ID for Supabase queries
+    const caseId = version.case_id || version.helper_json?.meta?.caseId || version.helper_json?.case_info?.id;
+    
+    // Perform Supabase queries for additional data
+    let supabaseData = {
+      hasParts: false,
+      hasInvoice: false,
+      feeStatus: 'לא זמין'
+    };
+    
+    if (caseId) {
+      try {
+        // Check for parts
+        const partsResponse = await fetch(`${SUPABASE_URL}/rest/v1/selected_parts?case_id=eq.${caseId}&limit=1`, {
+          headers: {
+            'apikey': SUPABASE_ANON_KEY,
+            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+          }
+        });
+        const partsData = await partsResponse.json();
+        supabaseData.hasParts = partsData && partsData.length > 0;
+        
+        // Check for invoice
+        const invoiceResponse = await fetch(`${SUPABASE_URL}/rest/v1/invoices?case_id=eq.${caseId}&limit=1`, {
+          headers: {
+            'apikey': SUPABASE_ANON_KEY,
+            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+          }
+        });
+        const invoiceData = await invoiceResponse.json();
+        supabaseData.hasInvoice = invoiceData && invoiceData.length > 0;
+        
+        // Check for fee payment status
+        const feeResponse = await fetch(`${SUPABASE_URL}/rest/v1/fees?case_id=eq.${caseId}&select=payment_status&limit=1`, {
+          headers: {
+            'apikey': SUPABASE_ANON_KEY,
+            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+          }
+        });
+        const feeData = await feeResponse.json();
+        if (feeData && feeData.length > 0) {
+          supabaseData.feeStatus = feeData[0].payment_status === 'paid' ? 'שולם' : 'לא שולם';
+        }
+      } catch (error) {
+        console.error('Error fetching Supabase data:', error);
+      }
+    }
+    
+    const readableContent = generateUserFriendlyReport(version.helper_json, supabaseData);
     
     // Create user-friendly modal
     const modal = document.createElement('div');
@@ -6892,7 +6941,7 @@ function getSectionName(section) {
 }
 
 // Generate professional case status snapshot using ACTUAL VALIDATION LOGS
-function generateUserFriendlyReport(helper) {
+function generateUserFriendlyReport(helper, supabaseData = {}) {
   // 🔧 PHASE 4 FIX: Unwrap helper_data if it exists
   let unwrappedHelper = helper;
   if (helper && helper.helper_data && typeof helper.helper_data === 'object') {
@@ -6905,8 +6954,24 @@ function generateUserFriendlyReport(helper) {
   
   let report = '';
   
-  // Professional Header
-  report += `📋 מצב התיק - SmartVal\n`;
+  // Extract case ID for Supabase queries
+  const caseId = unwrappedHelper.meta?.caseId || unwrappedHelper.case_info?.id || null;
+  
+  // Determine case status based on workflow completion
+  const workflowStatus = analyzeWorkflowValidations(unwrappedHelper, caseId);
+  let caseStatus = 'פתוח';
+  if (workflowStatus.completionPercentage === 100) {
+    caseStatus = 'הושלם';
+  } else if (workflowStatus.completionPercentage >= 80) {
+    caseStatus = 'כמעט הושלם';
+  } else if (workflowStatus.completionPercentage >= 50) {
+    caseStatus = 'בטיפול מתקדם';
+  } else if (workflowStatus.validatedCount > 0) {
+    caseStatus = 'בטיפול';
+  }
+  
+  // Professional Header with actual status
+  report += `📋 מצב התיק: ${caseStatus}\n`;
   report += `═══════════════════════════════════\n\n`;
   
   // 🚗 VEHICLE ID TABLE (from validation data)
@@ -6918,13 +6983,42 @@ function generateUserFriendlyReport(helper) {
   report += `│ יצרן:     ${vehicleData.make.toString().padEnd(20)} │\n`;
   report += `│ דגם:      ${vehicleData.model.toString().padEnd(20)} │\n`;
   report += `│ שנה:      ${vehicleData.year.toString().padEnd(20)} │\n`;
+  report += `│ בעל הרכב: ${vehicleData.ownerName.toString().padEnd(20)} │\n`;
+  report += `│ תאריך בדיקה: ${vehicleData.inspectionDate.toString().padEnd(17)} │\n`;
+  report += `│ מוסך:      ${vehicleData.garageName.toString().padEnd(20)} │\n`;
+  report += `│ חברת ביטוח: ${vehicleData.insuranceCompany.toString().padEnd(18)} │\n`;
+  report += `│ סוכן:      ${vehicleData.agentName.toString().padEnd(20)} │\n`;
   report += `└─────────────────────────────────────┘\n\n`;
   
   // 📊 WORKFLOW STATUS (based on ACTUAL validations)
   report += `📊 מצב זרימת העבודה:\n`;
   report += `──────────────────────\n`;
   
-  const workflowStatus = analyzeWorkflowValidations(unwrappedHelper);
+  const workflowStatus = analyzeWorkflowValidations(unwrappedHelper, caseId);
+  
+  // Update Supabase stages with actual data
+  workflowStatus.stages.forEach(stage => {
+    if (stage.requiresSupabase && supabaseData) {
+      if (stage.supabaseCheck === 'parts') {
+        stage.validated = supabaseData.hasParts;
+        stage.started = supabaseData.hasParts;
+      } else if (stage.supabaseCheck === 'invoice') {
+        stage.validated = supabaseData.hasInvoice;
+        stage.started = supabaseData.hasInvoice;
+      } else if (stage.supabaseCheck === 'fee') {
+        stage.validated = supabaseData.feeStatus === 'שולם';
+        stage.started = supabaseData.feeStatus !== 'לא זמין';
+        if (stage.started) {
+          stage.details = supabaseData.feeStatus;
+        }
+      }
+    }
+  });
+  
+  // Recalculate completion percentage with updated data
+  const validatedCount = workflowStatus.stages.filter(s => s.validated).length;
+  const completionPercentage = Math.round((validatedCount / workflowStatus.stages.length) * 100);
+  workflowStatus.completionPercentage = completionPercentage;
   
   // Show each workflow stage with validation status
   workflowStatus.stages.forEach(stage => {
@@ -6970,6 +7064,16 @@ function generateUserFriendlyReport(helper) {
     report += `💰 מצב כספי: טרם הושלמו חישובים כספיים\n\n`;
   }
   
+  // 🏥 GENERAL HEALTH ASSESSMENT
+  // Use updated workflow status with recalculated percentage
+  workflowStatus.validatedCount = validatedCount;
+  workflowStatus.completionPercentage = completionPercentage;
+  const healthAssessment = calculateHealthAssessment(workflowStatus, unwrappedHelper);
+  
+  report += `🏥 הערכת בריאות התיק:\n`;
+  report += `────────────────────\n`;
+  report += `${healthAssessment}\n\n`;
+  
   // 📄 REPORTS STATUS (from actual validation logs)
   const reportsStatus = analyzeReportsValidations(unwrappedHelper);
   
@@ -6987,16 +7091,32 @@ function generateUserFriendlyReport(helper) {
   report += `\n`;
   
   // 📅 TIMELINE (from validation timestamps)
-  const timeline = extractTimelineFromValidations(unwrappedHelper);
+  const caseCreatedDate = unwrappedHelper.case_info?.created_at || unwrappedHelper.meta?.created_at;
   
   report += `📅 לוח זמנים:\n`;
   report += `─────────────\n`;
-  if (timeline.length > 0) {
-    timeline.forEach(event => {
-      report += `${event.date}: ${event.description}\n`;
-    });
+  
+  if (caseCreatedDate) {
+    const created = new Date(caseCreatedDate);
+    const now = new Date();
+    const diffMs = now - created;
+    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+    const diffWeeks = Math.floor(diffDays / 7);
+    const diffMonths = Math.floor(diffDays / 30);
+    
+    let duration = '';
+    if (diffMonths > 0) {
+      duration = `${diffMonths} חודשים ו-${diffDays % 30} ימים`;
+    } else if (diffWeeks > 0) {
+      duration = `${diffWeeks} שבועות ו-${diffDays % 7} ימים`;
+    } else {
+      duration = `${diffDays} ימים`;
+    }
+    
+    report += `נפתח: ${created.toLocaleDateString('he-IL')}\n`;
+    report += `משך טיפול: ${duration}\n`;
   } else {
-    report += `טרם נרשמו פעילויות מאומתות\n`;
+    report += `לא נמצא תאריך פתיחה\n`;
   }
   
   report += `\n📊 דוח נוצר: ${new Date().toLocaleString('he-IL')}`;
@@ -7017,7 +7137,9 @@ function extractVehicleFromValidation(helper) {
     helper.car_details,
     helper.vehicle,
     helper.general_info,
-    helper.meta
+    helper.meta,
+    helper.case_info,
+    helper.stakeholders
   ].filter(Boolean);
   
   console.log('🔧 VEHICLE SCAN: Found validation sources:', validationSources.length);
@@ -7026,7 +7148,12 @@ function extractVehicleFromValidation(helper) {
     plate: 'לא זמין',
     make: 'לא זמין', 
     model: 'לא זמין',
-    year: 'לא זמין'
+    year: 'לא זמין',
+    ownerName: 'לא זמין',
+    inspectionDate: 'לא זמין',
+    garageName: 'לא זמין',
+    insuranceCompany: 'לא זמין',
+    agentName: 'לא זמין'
   };
   
   validationSources.forEach(source => {
@@ -7036,11 +7163,32 @@ function extractVehicleFromValidation(helper) {
     if (source.year || source.manufacture_year) vehicleData.year = source.year || source.manufacture_year;
   });
   
+  // Extract additional fields
+  if (helper.case_info?.owner_name || helper.stakeholders?.owner?.name) {
+    vehicleData.ownerName = helper.case_info.owner_name || helper.stakeholders.owner.name;
+  }
+  
+  if (helper.case_info?.inspection_date) {
+    vehicleData.inspectionDate = new Date(helper.case_info.inspection_date).toLocaleDateString('he-IL');
+  }
+  
+  if (helper.case_info?.garage_name || helper.stakeholders?.garage?.name) {
+    vehicleData.garageName = helper.case_info.garage_name || helper.stakeholders.garage.name;
+  }
+  
+  if (helper.case_info?.insurance_company || helper.stakeholders?.insurance?.name) {
+    vehicleData.insuranceCompany = helper.case_info.insurance_company || helper.stakeholders.insurance.name;
+  }
+  
+  if (helper.case_info?.agent_name || helper.stakeholders?.agent?.name) {
+    vehicleData.agentName = helper.case_info.agent_name || helper.stakeholders.agent.name;
+  }
+  
   return vehicleData;
 }
 
 // Analyze workflow validations to determine real completion status
-function analyzeWorkflowValidations(helper) {
+function analyzeWorkflowValidations(helper, caseId) {
   console.log('🔧 WORKFLOW SCAN: Analyzing validation logs...');
   
   const stages = [
@@ -7052,6 +7200,13 @@ function analyzeWorkflowValidations(helper) {
       details: getVehicleValidationDetails(helper)
     },
     {
+      name: 'נתוני לוי יצחק',
+      validated: checkLeviValidation(helper),
+      started: checkLeviStarted(helper),
+      validationDate: helper.levi_summary?.report_date ? new Date(helper.levi_summary.report_date).toLocaleDateString('he-IL') : null,
+      details: getLeviValidationDetails(helper)
+    },
+    {
       name: 'הערכת נזקים',
       validated: checkDamageValidation(helper),
       started: checkDamageStarted(helper), 
@@ -7060,10 +7215,10 @@ function analyzeWorkflowValidations(helper) {
     },
     {
       name: 'אומדן עלויות',
-      validated: checkEstimateValidation(helper),
-      started: checkEstimateStarted(helper),
-      validationDate: getValidationDate(helper, 'estimate'),
-      details: getEstimateValidationDetails(helper)
+      validated: checkCostEstimateValidation(helper),
+      started: checkCostEstimateStarted(helper),
+      validationDate: getValidationDate(helper, 'cost_estimate'),
+      details: getCostEstimateValidationDetails(helper)
     },
     {
       name: 'אקספרטיזה',
@@ -7073,11 +7228,52 @@ function analyzeWorkflowValidations(helper) {
       details: getExpertiseValidationDetails(helper)
     },
     {
-      name: 'דוח סופי',
+      name: 'נתוני ירידת ערך',
+      validated: checkDepreciationValidation(helper),
+      started: checkDepreciationStarted(helper),
+      validationDate: getValidationDate(helper, 'depreciation'),
+      details: getDepreciationValidationDetails(helper)
+    },
+    {
+      name: 'אומדן ראשוני',
+      validated: checkInitialEstimateValidation(helper),
+      started: checkInitialEstimateStarted(helper),
+      validationDate: helper.estimate?.validation?.validated_at ? new Date(helper.estimate.validation.validated_at).toLocaleDateString('he-IL') : null,
+      details: getInitialEstimateValidationDetails(helper)
+    },
+    {
+      name: 'חוות דעת',
       validated: checkFinalReportValidation(helper),
       started: checkFinalReportStarted(helper),
-      validationDate: getValidationDate(helper, 'final_report'),
+      validationDate: helper.final_report?.validation?.validated_at ? new Date(helper.final_report.validation.validated_at).toLocaleDateString('he-IL') : null,
       details: getFinalReportValidationDetails(helper)
+    },
+    {
+      name: 'בדיקת חלקים',
+      validated: false, // Will be set by Supabase query
+      started: false, // Will be set by Supabase query
+      validationDate: null,
+      details: null,
+      requiresSupabase: true,
+      supabaseCheck: 'parts'
+    },
+    {
+      name: 'חשבונית תיקון',
+      validated: false, // Will be set by Supabase query
+      started: false, // Will be set by Supabase query
+      validationDate: null,
+      details: null,
+      requiresSupabase: true,
+      supabaseCheck: 'invoice'
+    },
+    {
+      name: 'שכר טרחה',
+      validated: false, // Will be set by Supabase query
+      started: false, // Will be set by Supabase query
+      validationDate: null,
+      details: null,
+      requiresSupabase: true,
+      supabaseCheck: 'fee'
     }
   ];
   
@@ -7090,7 +7286,8 @@ function analyzeWorkflowValidations(helper) {
     stages,
     completionPercentage,
     validatedCount,
-    totalStages: stages.length
+    totalStages: stages.length,
+    caseId
   };
 }
 
@@ -7104,6 +7301,67 @@ function checkVehicleValidation(helper) {
 
 function checkVehicleStarted(helper) {
   return !!(helper.car_details || helper.vehicle || helper.general_info);
+}
+
+// New validation check functions for additional workflow stages
+function checkLeviValidation(helper) {
+  return !!(helper.levi_summary && Object.keys(helper.levi_summary).length > 0);
+}
+
+function checkLeviStarted(helper) {
+  return !!(helper.levi_summary || helper.levi_data || helper.leviData);
+}
+
+function getLeviValidationDetails(helper) {
+  if (helper.levi_summary?.report_date) {
+    return `תאריך דוח: ${new Date(helper.levi_summary.report_date).toLocaleDateString('he-IL')}`;
+  }
+  return null;
+}
+
+function checkCostEstimateValidation(helper) {
+  return !!(helper.damage_assessment?.totals && Object.keys(helper.damage_assessment.totals).length > 0);
+}
+
+function checkCostEstimateStarted(helper) {
+  return !!(helper.damage_assessment?.totals || helper.estimate_totals || helper.costs);
+}
+
+function getCostEstimateValidationDetails(helper) {
+  if (helper.damage_assessment?.totals?.total_cost) {
+    return `סה"כ: ₪${Number(helper.damage_assessment.totals.total_cost).toLocaleString('he-IL')}`;
+  }
+  return null;
+}
+
+function checkDepreciationValidation(helper) {
+  return !!(helper.depreciation?.globalDep1 !== undefined && helper.depreciation.globalDep1 !== null);
+}
+
+function checkDepreciationStarted(helper) {
+  return !!(helper.depreciation || helper.depreciation_data);
+}
+
+function getDepreciationValidationDetails(helper) {
+  if (helper.depreciation?.globalDep1) {
+    return `ירידת ערך: ${helper.depreciation.globalDep1}%`;
+  }
+  return null;
+}
+
+function checkInitialEstimateValidation(helper) {
+  return !!(helper.estimate?.validation?.validated_at);
+}
+
+function checkInitialEstimateStarted(helper) {
+  return !!(helper.estimate || helper.initial_estimate);
+}
+
+function getInitialEstimateValidationDetails(helper) {
+  if (helper.estimate?.validation?.validated_at && helper.estimate?.type) {
+    return `סוג אומדן: ${helper.estimate.type}`;
+  }
+  return null;
 }
 
 function checkDamageValidation(helper) {
@@ -7297,6 +7555,60 @@ function analyzeReportsValidations(helper) {
       date: getValidationDate(helper, 'final_report')
     }
   ];
+}
+
+// Calculate general health assessment
+function calculateHealthAssessment(workflowStatus, helper) {
+  const factors = [];
+  
+  // Factor 1: Completion percentage
+  if (workflowStatus.completionPercentage >= 80) {
+    factors.push('✅ התקדמות מצוינת');
+  } else if (workflowStatus.completionPercentage >= 50) {
+    factors.push('🟡 התקדמות סבירה');
+  } else {
+    factors.push('🔴 דורש התקדמות');
+  }
+  
+  // Factor 2: Critical stages
+  const hasVehicleData = workflowStatus.stages.find(s => s.name === 'פרטי רכב')?.validated;
+  const hasDamageData = workflowStatus.stages.find(s => s.name === 'הערכת נזקים')?.validated;
+  const hasFinalReport = workflowStatus.stages.find(s => s.name === 'חוות דעת')?.validated;
+  
+  if (hasVehicleData && hasDamageData && hasFinalReport) {
+    factors.push('✅ כל השלבים הקריטיים הושלמו');
+  } else if (hasVehicleData && hasDamageData) {
+    factors.push('🟡 שלבים קריטיים בהתקדמות');
+  } else {
+    factors.push('🔴 חסרים שלבים קריטיים');
+  }
+  
+  // Factor 3: Data quality
+  const hasFinancialData = !!(helper.damage_assessment?.totals || helper.estimate?.totals);
+  const hasDepreciation = !!helper.depreciation?.globalDep1;
+  
+  if (hasFinancialData && hasDepreciation) {
+    factors.push('✅ נתונים כספיים מלאים');
+  } else if (hasFinancialData) {
+    factors.push('🟡 נתונים כספיים חלקיים');
+  } else {
+    factors.push('🔴 חסרים נתונים כספיים');
+  }
+  
+  // Overall assessment
+  const greenCount = factors.filter(f => f.includes('✅')).length;
+  const yellowCount = factors.filter(f => f.includes('🟡')).length;
+  
+  let overall = '';
+  if (greenCount >= 2) {
+    overall = '🟢 מצב כללי: תקין';
+  } else if (yellowCount >= 2 || greenCount + yellowCount >= 2) {
+    overall = '🟡 מצב כללי: דורש השלמה';
+  } else {
+    overall = '🔴 מצב כללי: דורש טיפול';
+  }
+  
+  return `${overall}\n${factors.join('\n')}`;
 }
 
 // Extract timeline from validation logs
