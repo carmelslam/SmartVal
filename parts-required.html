@@ -663,31 +663,16 @@ function savePartsData() {
     // ✅ FIX: Use the actual damage center being edited, not the "active" one for new centers
     const activeCenterId = sessionStorage.getItem('active_damage_center_id') ||
                           helper.damage_assessment?.current_center_id || 
-                          helper.damage_centers?.current_center_id ||
-                          helper.current_damage_center?.Id ||
-                          helper.current_damage_center?.id;
+                          helper.damage_centers?.current_center_id;
     
     console.log('🔍 SAVE DEBUG - Center IDs:', {
       'sessionStorage active_damage_center_id': sessionStorage.getItem('active_damage_center_id'),
       'helper.damage_assessment?.current_center_id': helper.damage_assessment?.current_center_id,
       'helper.damage_centers?.current_center_id': helper.damage_centers?.current_center_id,
-      'helper.current_damage_center?.Id': helper.current_damage_center?.Id,
-      'helper.current_damage_center?.id': helper.current_damage_center?.id,
       'final activeCenterId': activeCenterId
     });
     
-    // ✅ CRITICAL FIX: Never allow standalone mode in wizard context
-    // If we're in the wizard (damage_center_mode exists), always use damage center mode
-    const damageCenterMode = sessionStorage.getItem('damage_center_mode');
-    const forceDatageCenterMode = !!damageCenterMode;
-    const isStandaloneMode = !activeCenterId && !forceDatageCenterMode;
-    
-    console.log('🔍 MODE RESOLUTION:', {
-      'activeCenterId': activeCenterId,
-      'damageCenterMode': damageCenterMode,
-      'forceDatageCenterMode': forceDatageCenterMode,
-      'isStandaloneMode': isStandaloneMode
-    });
+    const isStandaloneMode = !activeCenterId;
     
     if (isStandaloneMode) {
       console.log('🔍 Standalone parts search mode - saving to parts_search only');
@@ -738,7 +723,7 @@ function savePartsData() {
     helper.parts_search.selected_parts = helper.parts_search.selected_parts || [];
     
     // Get context for categorization
-    // damageCenterMode already declared above
+    const damageCenterMode = sessionStorage.getItem('damage_center_mode');
     
     // ✅ ENHANCED: Get damage center details from multiple sources
     let damageCenterNumber = 'unknown';
@@ -779,12 +764,12 @@ function savePartsData() {
         unique_key: `${activeCenterId || 'standalone'}_${updatedPart.part || updatedPart.name}_${index}_${Date.now()}`,
         selected_at: new Date().toISOString(),
         selected_in_module: 'parts_required',
-        // ✅ CRITICAL FIX: Always assign damage center info when in wizard context
-        damage_center_id: (isStandaloneMode && !forceDatageCenterMode) ? null : (activeCenterId || 'unknown_center'),
-        damage_center_number: (isStandaloneMode && !forceDatageCenterMode) ? null : damageCenterNumber,
-        damage_center_name: (isStandaloneMode && !forceDatageCenterMode) ? null : damageCenterName,
-        damage_center_location: (isStandaloneMode && !forceDatageCenterMode) ? null : damageCenterLocation,
-        assigned_to_center: !isStandaloneMode || forceDatageCenterMode,
+        // ✅ ENHANCED DAMAGE CENTER CLASSIFICATION: Complete center information
+        damage_center_id: isStandaloneMode ? null : activeCenterId,
+        damage_center_number: isStandaloneMode ? null : damageCenterNumber,
+        damage_center_name: isStandaloneMode ? null : damageCenterName,
+        damage_center_location: isStandaloneMode ? null : damageCenterLocation,
+        assigned_to_center: !isStandaloneMode,
         selection_mode: isStandaloneMode ? 'standalone_search' : (damageCenterMode || 'damage_center_integrated'),
         usage_context: isStandaloneMode ? 'general_query' : 'damage_center_assignment',
         // ✅ NEW: Distinguish between manual entry and suggestion selection
@@ -819,13 +804,11 @@ function savePartsData() {
       console.log('📊 Current parts breakdown by center:', centerBreakdown);
     }
     
-    // ✅ CRITICAL FIX: Use damage center accumulation logic when in wizard context OR when we have a center ID
-    if (!isStandaloneMode || forceDatageCenterMode || activeCenterId) {
+    if (!isStandaloneMode && activeCenterId) {
       // === PHASE 2: Implement update vs create logic ===
-      // Keep parts from other damage centers (handle missing activeCenterId)
-      const currentCenterId = activeCenterId || 'unknown_center';
+      // Keep parts from other damage centers
       const partsFromOtherCenters = helper.parts_search.selected_parts.filter(existingPart => 
-        existingPart.damage_center_id !== currentCenterId
+        existingPart.damage_center_id !== activeCenterId
       );
       
       console.log(`📊 Keeping ${partsFromOtherCenters.length} parts from other damage centers`);
@@ -836,13 +819,13 @@ function savePartsData() {
       
       // Create a map of existing parts for current center by part name/number
       helper.parts_search.selected_parts
-        .filter(p => p.damage_center_id === currentCenterId)
+        .filter(p => p.damage_center_id === activeCenterId)
         .forEach(p => {
           const partKey = p.name || p.partNumber || p.part || '';
           existingPartsMap.set(partKey, p);
         });
       
-      console.log(`📋 Found ${existingPartsMap.size} existing parts for center ${currentCenterId}`);
+      console.log(`📋 Found ${existingPartsMap.size} existing parts for center ${activeCenterId}`);
       
       // Process each new part
       newPartsWithContext.forEach(newPart => {
@@ -877,9 +860,7 @@ function savePartsData() {
       // === PHASE 0: DIAGNOSTIC - Log after accumulation ===
       console.log('=== AFTER ACCUMULATION (damage center mode) ===');
       console.log('Final selected_parts length:', helper.parts_search.selected_parts.length);
-      console.log('Parts for current center:', helper.parts_search.selected_parts.filter(p => p.damage_center_id === currentCenterId).length);
-      console.log('🔍 ACCUMULATION SUCCESS: Parts kept from other centers:', partsFromOtherCenters.length);
-      console.log('🔍 ACCUMULATION SUCCESS: Parts added/updated for current center:', updatedPartsForCurrentCenter.length);
+      console.log('Parts for current center:', helper.parts_search.selected_parts.filter(p => p.damage_center_id === activeCenterId).length);
       
       // Show final breakdown by damage center
       const finalCenterBreakdown = {};
@@ -901,15 +882,13 @@ function savePartsData() {
     }
     
     // ✅ DAMAGE CENTER CLASSIFICATION: Update classification metadata
-    if ((!isStandaloneMode || forceDatageCenterMode) && (activeCenterId || forceDatageCenterMode)) {
-      const summaryKey = activeCenterId || 'unknown_center';
-      
+    if (!isStandaloneMode && activeCenterId) {
       // Update damage center summary in parts_search
       helper.parts_search.damage_centers_summary = helper.parts_search.damage_centers_summary || {};
       
       // Calculate totals for current damage center
       const currentCenterParts = helper.parts_search.selected_parts.filter(part => 
-        part.damage_center_id === summaryKey
+        part.damage_center_id === activeCenterId
       );
       
       const currentCenterTotal = currentCenterParts.reduce((sum, part) => {
@@ -919,8 +898,8 @@ function savePartsData() {
       }, 0);
       
       // Update damage center classification with enhanced information
-      helper.parts_search.damage_centers_summary[summaryKey] = {
-        damage_center_id: summaryKey,
+      helper.parts_search.damage_centers_summary[activeCenterId] = {
+        damage_center_id: activeCenterId,
         damage_center_number: damageCenterNumber,
         damage_center_name: damageCenterName,
         damage_center_location: damageCenterLocation,
@@ -947,24 +926,6 @@ function savePartsData() {
     console.log(`✅ DUAL-PURPOSE: Registered ${validParts.length} parts in parts_search.selected_parts`);
     console.log(`📊 Mode: ${isStandaloneMode ? 'Standalone Search' : 'Damage Center Integrated'}`);
     console.log(`📊 Total parts_search.selected_parts count: ${helper.parts_search.selected_parts.length}`);
-    
-    // ✅ CRITICAL DIAGNOSTIC: Show all parts by damage center after save
-    console.log('🔍 FINAL PARTS BREAKDOWN BY DAMAGE CENTER:');
-    const finalDiagnosticBreakdown = {};
-    helper.parts_search.selected_parts.forEach((part, index) => {
-      const centerId = part.damage_center_id || 'no_center';
-      if (!finalDiagnosticBreakdown[centerId]) {
-        finalDiagnosticBreakdown[centerId] = [];
-      }
-      finalDiagnosticBreakdown[centerId].push({
-        index,
-        name: part.name || part.part,
-        desc: part.desc || part.description,
-        code: part.code,
-        selected_at: part.selected_at
-      });
-    });
-    console.table(finalDiagnosticBreakdown);
     
     // Update meta information
     helper.meta = helper.meta || {};

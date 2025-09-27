@@ -1495,7 +1495,6 @@
   
   <script src="helper.js" type="module"></script>
   <script type="module" src="parts.js"></script>
-  
   <script>
     // Global wizard state and module data storage
     let moduleData = {
@@ -3567,12 +3566,7 @@
           break;
           
         case 5:
-          // ✅ DUPLICATE REGISTRATION FIX: Parts registration is handled by iframe's savePartsData()
-          // The updateStepSaveStatus() function already calls iframe.savePartsData() which handles
-          // adding parts to parts_search.selected_parts. We should not duplicate this here.
-          console.log('📝 Step 5: Parts data is handled by iframe savePartsData() - skipping duplicate registration');
-          
-          // Only update current_damage_center.Parts structure for wizard's internal tracking
+          // Save parts required data to current_damage_center
           const partsData = moduleData.parts || [];
           
           if (helper.current_damage_center) {
@@ -3589,8 +3583,7 @@
               'מספר OEM': part.part_number || '',
               מיקום: part.location || 'ישראל',
               הערות: part.notes || '',
-              זמינות: part.availability || 'זמין',
-              code: part.code || '' // Add code field for parts search compatibility
+              זמינות: part.availability || 'זמין'
             }));
             helper.current_damage_center.Parts.parts_meta = {
               total_items: partsData.length,
@@ -3598,8 +3591,200 @@
               timestamp: new Date().toISOString()
             };
             
-            console.log('✅ DUPLICATE REGISTRATION FIX: Parts registration is delegated to iframe savePartsData()');
-            console.log('📝 Wizard only updates current_damage_center.Parts for internal tracking')
+            // ✅ NEW: Register parts in parts_search.selected_parts for dual-purpose functionality
+            try {
+              // === PHASE 0: DIAGNOSTIC - Log wizard parts save ===
+              console.log('=== WIZARD PARTS SAVE DIAGNOSTIC (Step 5) ===');
+              console.log('Module data parts:', moduleData.parts);
+              console.log('Current damage center:', helper.current_damage_center);
+              console.log('Damage center mode:', sessionStorage.getItem('damage_center_mode'));
+              console.log('Active damage center ID:', sessionStorage.getItem('active_damage_center_id'));
+              
+              // Get damage center info
+              const activeCenterId = helper.current_damage_center?.id || helper.current_damage_center?.Id;
+              const damageCenterNumber = helper.current_damage_center?.["Damage center Number"] || helper.current_damage_center?.number;
+              const damageCenterName = `מוקד נזק ${damageCenterNumber}`;
+              const damageCenterLocation = helper.current_damage_center?.Location || helper.current_damage_center?.location || '';
+              
+              console.log('Extracted center info:', { activeCenterId, damageCenterNumber, damageCenterName, damageCenterLocation });
+              
+              // Initialize parts_search structure
+              helper.parts_search = helper.parts_search || {};
+              helper.parts_search.selected_parts = helper.parts_search.selected_parts || [];
+              helper.parts_search.damage_centers_summary = helper.parts_search.damage_centers_summary || {};
+              
+              console.log('Parts search before save:', {
+                'selected_parts length': helper.parts_search.selected_parts.length,
+                'damage_centers_summary keys': Object.keys(helper.parts_search.damage_centers_summary)
+              });
+              
+              // Remove existing parts for current damage center to avoid duplicates
+              helper.parts_search.selected_parts = helper.parts_search.selected_parts.filter(part => 
+                part.damage_center_id !== activeCenterId
+              );
+              
+              // Add current parts with enhanced classification
+              const newPartsWithContext = partsData.map(part => ({
+                ...part,
+                selected_at: new Date().toISOString(),
+                selected_in_module: 'parts_required',
+                damage_center_id: activeCenterId,
+                damage_center_number: damageCenterNumber,
+                damage_center_name: damageCenterName,
+                damage_center_location: damageCenterLocation,
+                assigned_to_center: true,
+                selection_mode: 'damage_center_integrated',
+                usage_context: 'damage_center_assignment',
+                entry_type: 'manual_entry',
+                case_context: {
+                  plate: helper.vehicle?.plate || '',
+                  case_id: helper.case_info?.case_id || '',
+                  step: 5,
+                  wizard_session: new Date().toISOString()
+                }
+              }));
+              
+              // Add new parts to accumulated array
+              helper.parts_search.selected_parts.push(...newPartsWithContext);
+              
+              // Update damage center summary
+              const totalCost = partsData.reduce((sum, part) => sum + (parseFloat(part.price) || 0), 0);
+              helper.parts_search.damage_centers_summary[activeCenterId] = {
+                damage_center_id: activeCenterId,
+                damage_center_number: damageCenterNumber,
+                damage_center_name: damageCenterName,
+                damage_center_location: damageCenterLocation,
+                parts_count: partsData.length,
+                total_cost: totalCost,
+                parts_list: partsData.map(part => {
+                  console.log('🔍 DESCRIPTION DEBUG - Part data:', part);
+                  console.log('🔍 DESCRIPTION DEBUG - part.description:', part.description);
+                  console.log('🔍 DESCRIPTION DEBUG - part.desc:', part.desc);
+                  
+                  return {
+                    name: part.name || part.part,
+                    description: part.description || part.desc || part.תיאור || '', // === PHASE 4: Include Hebrew field ===
+                    quantity: part.quantity || part.כמות,
+                    price: part.price,
+                    source: part.source
+                  };
+                }),
+                last_updated: new Date().toISOString(),
+                summary: `${damageCenterName} (${damageCenterLocation}): ${partsData.length} חלקים, ₪${totalCost.toFixed(2)}`
+              };
+              
+              console.log('✅ Step 5 - Parts registered in parts_search.selected_parts');
+              console.log('📊 Total parts_search.selected_parts:', helper.parts_search.selected_parts.length);
+              
+              // === PHASE 6: Update case_summary after parts save in wizard ===
+              try {
+                // Update case_summary in wizard context
+                function updateCaseSummaryInWizard() {
+                  try {
+                    const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+                    
+                    if (!helper.parts_search) {
+                      helper.parts_search = {};
+                    }
+                    
+                    const allSelectedParts = helper.parts_search.selected_parts || [];
+                    const allSearchResults = helper.parts_search.search_results || [];
+                    const unselectedParts = helper.parts_search.unselected_parts || [];
+                    
+                    // Filter out orphaned duplicates in wizard context
+                    const wizardModeParts = [];
+                    const partsWithCenters = allSelectedParts.filter(part => part.damage_center_id);
+                    const orphanedParts = allSelectedParts.filter(part => !part.damage_center_id);
+                    
+                    wizardModeParts.push(...partsWithCenters);
+                    
+                    orphanedParts.forEach(orphanedPart => {
+                      const hasEquivalentWithCenter = partsWithCenters.some(centerPart => 
+                        (centerPart.name || centerPart.part) === (orphanedPart.name || orphanedPart.part)
+                      );
+                      
+                      if (!hasEquivalentWithCenter) {
+                        wizardModeParts.push(orphanedPart);
+                      }
+                    });
+                    
+                    // Calculate total cost
+                    const totalCost = wizardModeParts.reduce((sum, part) => {
+                      const price = parseFloat(part.price) || 0;
+                      const quantity = parseInt(part.quantity) || 1;
+                      return sum + (price * quantity);
+                    }, 0);
+                    
+                    // Update case_summary
+                    helper.parts_search.case_summary = {
+                      total_searches: 0,
+                      total_results: allSearchResults.length,
+                      selected_count: wizardModeParts.length,
+                      unselected_count: unselectedParts.length,
+                      last_search: new Date().toISOString(),
+                      estimated_total_cost: totalCost
+                    };
+                    
+                    // Save to multiple locations
+                    sessionStorage.setItem('helper', JSON.stringify(helper));
+                    
+                    if (typeof window.helper === 'object') {
+                      window.helper.parts_search.case_summary = helper.parts_search.case_summary;
+                    }
+                    
+                    if (window.parent && window.parent !== window && window.parent.helper) {
+                      window.parent.helper.parts_search.case_summary = helper.parts_search.case_summary;
+                    }
+                    
+                    // Override broadcastHelperUpdate temporarily to prevent overwrites
+                    const originalBroadcastHelperUpdate = window.broadcastHelperUpdate;
+                    const preservedCaseSummary = { ...helper.parts_search.case_summary };
+                    
+                    window.broadcastHelperUpdate = function(sections, source) {
+                      if (originalBroadcastHelperUpdate) {
+                        originalBroadcastHelperUpdate(sections, source);
+                      }
+                      
+                      // Restore case_summary after broadcast
+                      setTimeout(() => {
+                        try {
+                          const currentHelper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+                          if (!currentHelper.parts_search) currentHelper.parts_search = {};
+                          currentHelper.parts_search.case_summary = preservedCaseSummary;
+                          sessionStorage.setItem('helper', JSON.stringify(currentHelper));
+                          
+                          if (window.helper?.parts_search) {
+                            window.helper.parts_search.case_summary = preservedCaseSummary;
+                          }
+                        } catch (e) {
+                          console.warn('Could not restore case_summary after broadcast:', e);
+                        }
+                      }, 300);
+                    };
+                    
+                    // Restore original function after 5 seconds
+                    setTimeout(() => {
+                      window.broadcastHelperUpdate = originalBroadcastHelperUpdate;
+                    }, 5000);
+                    
+                    return helper.parts_search.case_summary;
+                    
+                  } catch (error) {
+                    console.warn('Could not update case_summary:', error);
+                    return null;
+                  }
+                }
+                
+                // Call the function
+                updateCaseSummaryInWizard();
+                
+              } catch (updateError) {
+                console.warn('Could not update case_summary from wizard:', updateError);
+              }
+              
+            } catch (error) {
+              console.warn('Failed to register parts in parts_search:', error);
+            }
             
             console.log('✅ Step 5 - Parts required data saved to current_damage_center.Parts');
             showUserNotification(`חלקים נדרשים נוספו למוקד ${damageCenterData.number}`, 'success', 2000);
