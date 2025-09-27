@@ -550,10 +550,50 @@
       }
     };
     
+    // Initiate case deletion with prompt
+    window.initiateCaseDeletion = async function() {
+      const plateNumber = document.getElementById('deleteCasePlate').value.trim();
+      const statusDiv = document.getElementById('deleteCaseStatus');
+      
+      // Get selected deletion source
+      const deleteSource = document.querySelector('input[name="deleteSource"]:checked')?.value || 'both';
+      
+      // Validation
+      if (!plateNumber) {
+        statusDiv.style.display = 'block';
+        statusDiv.innerHTML = `
+          <div style="color: #dc3545; padding: 15px; background: #2d1a1a; border: 1px solid #dc3545; border-radius: 6px;">
+            <strong>❌ שגיאה:</strong> יש להכניס מספר רכב למחיקה
+          </div>
+        `;
+        return;
+      }
+      
+      // Prompt for DELETE confirmation
+      const deleteConfirmation = prompt('הקלד "DELETE" באנגלית כדי לאשר מחיקה:');
+      
+      if (!deleteConfirmation || deleteConfirmation !== 'DELETE') {
+        statusDiv.style.display = 'block';
+        statusDiv.innerHTML = `
+          <div style="color: #dc3545; padding: 15px; background: #2d1a1a; border: 1px solid #dc3545; border-radius: 6px;">
+            <strong>❌ שגיאה:</strong> יש להקליד "DELETE" באנגלית בדיוק
+          </div>
+        `;
+        return;
+      }
+      
+      // Set the values for backward compatibility with performCaseDeletion
+      document.getElementById('deleteAuth1').value = 'admin';
+      document.getElementById('deleteAuth2').value = deleteConfirmation;
+      
+      // Call the actual deletion function
+      await performCaseDeletion();
+    };
+    
     // Delete case function with double authentication - defined early for immediate availability
     window.performCaseDeletion = async function() {
       const plateNumber = document.getElementById('deleteCasePlate').value.trim();
-      const auth1 = document.getElementById('deleteAuth1').value.trim();
+      const auth1 = document.getElementById('deleteAuth1').value.trim() || 'admin';
       const auth2 = document.getElementById('deleteAuth2').value.trim();
       const statusDiv = document.getElementById('deleteCaseStatus');
       
@@ -591,40 +631,7 @@
         return;
       }
       
-      // Validate admin password against stored credentials
-      try {
-        const encryptedPassword = sessionStorage.getItem("auth");
-        if (encryptedPassword) {
-          const { decryptPassword } = await import('./auth.js');
-          const storedPassword = await decryptPassword(encryptedPassword);
-          if (auth1 !== storedPassword) {
-            statusDiv.style.display = 'block';
-            statusDiv.innerHTML = `
-              <div style="color: #dc3545; padding: 15px; background: #2d1a1a; border: 1px solid #dc3545; border-radius: 6px;">
-                <strong>❌ שגיאה:</strong> סיסמת מנהל שגויה
-              </div>
-            `;
-            return;
-          }
-        } else {
-          statusDiv.style.display = 'block';
-          statusDiv.innerHTML = `
-            <div style="color: #dc3545; padding: 15px; background: #2d1a1a; border: 1px solid #dc3545; border-radius: 6px;">
-              <strong>❌ שגיאה:</strong> אין אימות זמין במערכת
-            </div>
-          `;
-          return;
-        }
-      } catch (error) {
-        console.error('Error validating admin password:', error);
-        statusDiv.style.display = 'block';
-        statusDiv.innerHTML = `
-          <div style="color: #dc3545; padding: 15px; background: #2d1a1a; border: 1px solid #dc3545; border-radius: 6px;">
-            <strong>❌ שגיאה:</strong> שגיאה באימות סיסמה
-          </div>
-        `;
-        return;
-      }
+      // Admin password validation removed - using DELETE confirmation only
       
       // Final confirmation with source info
       let confirmMessage = '';
@@ -917,19 +924,16 @@
               </div>
               
               <div style="margin: 20px 0;">
-                <label style="display: block; margin-bottom: 8px; font-weight: bold; color: #ffc107;">אימות ראשון - סיסמת מנהל:</label>
-                <input type="password" id="deleteAuth1" placeholder="הכנס סיסמת מנהל" 
-                       style="width: 100%; padding: 10px; background: #3a3a3a; color: #e0e0e0; border: 1px solid #555; border-radius: 4px; margin-bottom: 15px;">
-              </div>
-              
-              <div style="margin: 20px 0;">
-                <label style="display: block; margin-bottom: 8px; font-weight: bold; color: #ffc107;">אימות שני - הקלד "DELETE" באנגלית:</label>
-                <input type="text" id="deleteAuth2" placeholder="הקלד DELETE באנגלית" 
-                       style="width: 100%; padding: 10px; background: #3a3a3a; color: #e0e0e0; border: 1px solid #555; border-radius: 4px; margin-bottom: 15px;">
+                <p style="color: #ffc107; margin-bottom: 15px;">
+                  <strong>שלב 1:</strong> לחץ על כפתור המחיקה<br>
+                  <strong>שלב 2:</strong> הקלד "DELETE" בחלון שיופיע
+                </p>
+                <input type="hidden" id="deleteAuth1" value="">
+                <input type="hidden" id="deleteAuth2" value="">
               </div>
               
               <div style="text-align: center; margin-top: 25px;">
-                <button onclick="performCaseDeletion()" 
+                <button onclick="initiateCaseDeletion()" 
                         style="padding: 12px 24px; background: #e74c3c; color: white; border: none; border-radius: 6px; font-size: 16px; font-weight: bold; cursor: pointer; margin-right: 10px;"
                         onmouseover="this.style.background='#c0392b'" 
                         onmouseout="this.style.background='#e74c3c'">
@@ -1907,19 +1911,16 @@
               </div>
               
               <div style="margin: 20px 0;">
-                <label style="display: block; margin-bottom: 8px; font-weight: bold; color: #ffc107;">אימות ראשון - סיסמת מנהל:</label>
-                <input type="password" id="deleteAuth1" placeholder="הכנס סיסמת מנהל" 
-                       style="width: 100%; padding: 10px; background: #3a3a3a; color: #e0e0e0; border: 1px solid #555; border-radius: 4px; margin-bottom: 15px;">
-              </div>
-              
-              <div style="margin: 20px 0;">
-                <label style="display: block; margin-bottom: 8px; font-weight: bold; color: #ffc107;">אימות שני - הקלד "DELETE" באנגלית:</label>
-                <input type="text" id="deleteAuth2" placeholder="הקלד DELETE באנגלית" 
-                       style="width: 100%; padding: 10px; background: #3a3a3a; color: #e0e0e0; border: 1px solid #555; border-radius: 4px; margin-bottom: 15px;">
+                <p style="color: #ffc107; margin-bottom: 15px;">
+                  <strong>שלב 1:</strong> לחץ על כפתור המחיקה<br>
+                  <strong>שלב 2:</strong> הקלד "DELETE" בחלון שיופיע
+                </p>
+                <input type="hidden" id="deleteAuth1" value="">
+                <input type="hidden" id="deleteAuth2" value="">
               </div>
               
               <div style="text-align: center; margin-top: 25px;">
-                <button onclick="performCaseDeletion()" 
+                <button onclick="initiateCaseDeletion()" 
                         style="padding: 12px 24px; background: #e74c3c; color: white; border: none; border-radius: 6px; font-size: 16px; font-weight: bold; cursor: pointer; margin-right: 10px;"
                         onmouseover="this.style.background='#c0392b'" 
                         onmouseout="this.style.background='#e74c3c'">
