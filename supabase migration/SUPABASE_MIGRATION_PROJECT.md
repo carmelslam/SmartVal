@@ -368,11 +368,11 @@ INSERT INTO storage.buckets (id, name, public) VALUES
 4. Test multi-user scenarios
 5. Add real-time notifications
 
-### Phase 4: Helper Retrieval & Recovery (NEXT)
+### Phase 4: Helper Retrieval & Recovery (NEXT) **PARTIALY COMPLETED**
 1. Implement helper load from Supabase
 2. Create helper import/export functionality
 3. Add case resume capability
-4. Build admin recovery tools
+4. Build admin recovery tools -**NEEDS VARIFICATION**
 5. Test data integrity
 6. change the window that opens in the selction page when retrieving a case to match the details window in the admin : 
 📋 פרטי התיק
@@ -383,12 +383,13 @@ INSERT INTO storage.buckets (id, name, public) VALUES
 עדכון אחרון:  dd/mm/yyyy
 סה"כ גיבויים: n
 7. in admin hub add delete case from supabase (שרת) and give 2 step confirmation
-8. helper is not creating another version , its staying on v1 in supabase 
+8. helper is not creating another version , its staying on v1 in supabase -**not fixed**
+9. admin hub preview version history status showing wrong information -**not fixed**
 
 
 
 ### Phase 5: New Modules (Parts & Invoices)
-1. Build parts search UI with Supabase - use the current parts search module - parts search.html and use the parts search results json : read the following architecture first:
+1. based on parts Catalog and search UI in Supabase - use the current parts search module - parts search.html and use the parts search results json : read the following architecture first:
     1. Read the parts module logic.md in documentation - pay attention to the differences brought in this updated version 
 2. Architecture: 
     1. Locate parts : using the paths :
@@ -407,12 +408,27 @@ INSERT INTO storage.buckets (id, name, public) VALUES
     11. supabase tables for search results / selected are associated to car plate , for general search that is not associated to a car plate we need to think if we include in the table with plate numbers or create a new table for general (unassociated) search results and selected 
     12. Rethink the function buttons on the UI and rebuild the parts search module to be compatible with the architecture. 
      13. Support high volume search 
-2. Implement invoice management - use the current invoices modul module and use the invoice json structure 
+
+**FIX AND Integrate with existing helper structure rpoblems with parts_search:**
+  Parts required problems :
+    The page doesn’t populate from helper when helper is restore, 
+    2. The total cost is not detected 
+    3. Second damage center handled - shows no parts at all - while helper shows the parts 
+    4. Page is unstable 
+    5. parts_search.selected_parts is registering doubles for each row in the UI in a damage center flow , THE SECTION NEEDS TO REGISTER EACH ROW ONE TIME - ONE PART CAN BE USED IN SEVERAL DAMAGE CENTERS - the  parts_search.selected_parts needs to accumulate all the parts selected infall damage centers in a running list .
+  Helper.parts search: 
+    1. selected parts per damage center disappeared from helper 
+    2. Second damage center if modified overwrites the parts_search.selected_parts and deletes the parts from the first damage center 
+    3. Non of the sections is actually registering correct data 
+ **Read documentation on BUILDERS DATA_FLOW AND CALCULATIONS INSTRUCTIONS folder before doing or planning anything** 
+     
+2. Implement **invoice management** - use the current invoices modul module and use the invoice json structure 
 3. connect to invoice floating screen and to invoice module.
 4. suggestive logic for diffrentials option fields in the final report 
 5. Create search functionality
 6. Test new module workflows
-7. Integrate with existing helper structure
+7. Integrate with existing helper structure 
+   
 
 ### Phase 6: User Management & Authentication
 1. Set up Supabase Auth (magic link/OTP)
