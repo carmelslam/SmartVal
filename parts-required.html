@@ -2345,6 +2345,19 @@ function savePartsData() {
     } catch (e) {
       console.warn('Module import not supported');
     }
+    
+    // ✅ CRITICAL FIX: Add Supabase integration for proper versioning
+    try {
+      import('./services/supabaseHelperService.js').then(serviceModule => {
+        import('./lib/supabaseClient.js').then(clientModule => {
+          window.supabaseHelperService = serviceModule.supabaseHelperService;
+          window.supabase = clientModule.supabase;
+          console.log('✅ Supabase services loaded for versioning integration');
+        }).catch(e => console.warn('Could not load Supabase client:', e));
+      }).catch(e => console.warn('Could not load Supabase service:', e));
+    } catch (e) {
+      console.warn('Supabase integration failed:', e);
+    }
   </script>
 </body>
 </html>

@@ -4087,8 +4087,19 @@ function deepMerge(target, source) {
 // Centralized storage save using the new storage manager
 function saveHelperToAllStorageLocations() {
   try {
-    const helperString = JSON.stringify(window.helper);
+    // ✅ CRITICAL FIX: Add Supabase versioning integration
     const timestamp = new Date().toISOString();
+    
+    // Get current version and increment
+    const currentVersion = window.helper.meta?.version || 1;
+    const newVersion = parseInt(currentVersion) + 1;
+    
+    // Update helper with new version
+    window.helper.meta = window.helper.meta || {};
+    window.helper.meta.version = newVersion;
+    window.helper.meta.last_saved = timestamp;
+    
+    const helperString = JSON.stringify(window.helper);
     
     // Primary storage
     sessionStorage.setItem('helper', helperString);
@@ -4101,7 +4112,35 @@ function saveHelperToAllStorageLocations() {
     localStorage.setItem('helper_data', helperString);
     localStorage.setItem('helper_last_save', timestamp);
     
-    console.log('✅ Helper saved to all storage locations (fallback method)');
+    // ✅ CRITICAL FIX: Save to Supabase with proper versioning
+    const plate = window.helper.vehicle?.plate || window.helper.meta?.plate;
+    if (plate) {
+      const helperName = `${plate}_helper_v${newVersion}`;
+      
+      // Save to Supabase asynchronously (don't block UI)
+      if (typeof window.supabaseHelperService !== 'undefined') {
+        window.supabaseHelperService.saveHelper({
+          plate: plate,
+          helperData: window.helper,
+          helperName: helperName,
+          timestamp: timestamp
+        }).then(result => {
+          if (result.success) {
+            console.log(`✅ Helper v${newVersion} saved to Supabase successfully`);
+          } else {
+            console.warn('⚠️ Supabase save failed, but local storage succeeded:', result.error);
+          }
+        }).catch(error => {
+          console.warn('⚠️ Supabase save error, but local storage succeeded:', error);
+        });
+      } else {
+        console.warn('⚠️ Supabase service not available, saved to local storage only');
+      }
+    } else {
+      console.warn('⚠️ No plate found, saved to local storage only (no Supabase sync)');
+    }
+    
+    console.log(`✅ Helper v${newVersion} saved to all storage locations`);
     return true;
     
   } catch (error) {
