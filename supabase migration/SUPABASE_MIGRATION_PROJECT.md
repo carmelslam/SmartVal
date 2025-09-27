@@ -383,7 +383,6 @@ INSERT INTO storage.buckets (id, name, public) VALUES
 עדכון אחרון:  dd/mm/yyyy
 סה"כ גיבויים: n
 7. in admin hub add delete case from supabase (שרת) and give 2 step confirmation
-8. modify the button לוח בקרת אימות in admin hub, to give a health cases check of all teh cases in supabase, think of a smart way to display health and statistics - this is a cretive task that you need to think about before making . unlink the file validation-dashboard.html and create a new health file , also change teh button name to sth that is compitable with the funtion 
 
 
 ### Phase 5: New Modules (Parts & Invoices)
@@ -441,6 +440,8 @@ INSERT INTO storage.buckets (id, name, public) VALUES
 רשימת תזכורות
 שינוי נתונים
 יומן פעולות
+2. modify the button לוח בקרת אימות in admin hub, to give a health cases check of all teh cases in supabase, think of a smart way to display health and statistics - this is a cretive task that you need to think about before making . unlink the file validation-dashboard.html and create a new health file , also change teh button name to sth that is compitable with the funtion 
+
 
 ### Phase 10 : connect the load report on modules to supabase
 1. final report builder and estimate builder have reload case, ourpose : to reload existing reports.
