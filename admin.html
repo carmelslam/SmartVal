@@ -7336,7 +7336,12 @@ function checkVehicleValidation(helper) {
 
 // New validation check functions for additional workflow stages
 function checkLeviValidation(helper) {
-  return !!(helper.levi_summary && Object.keys(helper.levi_summary).length > 0);
+  // Levi is validated if we have levi_summary with data OR levi_data exists
+  const hasLeviSummary = !!(helper.levi_summary && Object.keys(helper.levi_summary).length > 0);
+  const hasLeviData = !!(helper.levi_data && Object.keys(helper.levi_data).length > 0);
+  const hasLeviInExpertise = !!(helper.expertise?.levi_report);
+  
+  return hasLeviSummary || hasLeviData || hasLeviInExpertise;
 }
 
 function checkLeviStarted(helper) {
@@ -7382,8 +7387,13 @@ function getDepreciationValidationDetails(helper) {
 }
 
 function checkInitialEstimateValidation(helper) {
-  // Check if estimate has been validated
-  return !!(helper.estimate?.validation?.validated_at || (helper.estimate && helper.estimate.totals));
+  // Initial estimate is validated if we have totals with actual numbers
+  const hasEstimateTotals = !!(helper.estimate?.totals && 
+                               typeof helper.estimate.totals === 'object' && 
+                               Object.keys(helper.estimate.totals).length > 0);
+  const hasValidation = !!(helper.estimate?.validation?.validated_at);
+  
+  return hasEstimateTotals || hasValidation;
 }
 
 function checkInitialEstimateStarted(helper) {
@@ -7398,9 +7408,18 @@ function getInitialEstimateValidationDetails(helper) {
 }
 
 function checkDamageValidation(helper) {
-  // Damage validation is typically stored in validation_progress.damage
-  const damageValidated = helper.validation_progress?.damage === true;
-  console.log('🔧 DAMAGE VALIDATION:', damageValidated, helper.validation_progress?.damage);
+  // Damage is validated if we have damage centers with data
+  const hasDamageCenters = !!(helper.damage_assessment?.centers?.length > 0);
+  const hasDamageValidation = helper.validation_progress?.damage === true;
+  const hasDamageTotals = !!(helper.damage_assessment?.totals && Object.keys(helper.damage_assessment.totals).length > 0);
+  
+  // If we have damage centers and totals, it's validated
+  const damageValidated = hasDamageCenters && hasDamageTotals;
+  console.log('🔧 DAMAGE VALIDATION:', damageValidated, {
+    centers: hasDamageCenters,
+    totals: hasDamageTotals,
+    validation_progress: hasDamageValidation
+  });
   return damageValidated;
 }
 
@@ -7426,11 +7445,17 @@ function checkEstimateStarted(helper) {
 }
 
 function checkExpertiseValidation(helper) {
-  // Check expertise validation - it's validated if expertise exists with data
-  const hasExpertise = !!(helper.expertise && Object.keys(helper.expertise).length > 0);
-  const hasExpertiseValidation = !!(helper.expertise?.validation?.validated_at || helper.expertise_summary);
-  const expertiseValidated = hasExpertise && (hasExpertiseValidation || helper.expertise?.summary);
-  console.log('🔧 EXPERTISE VALIDATION:', expertiseValidated, helper.expertise);
+  // Expertise is NOT validated unless we have actual expertise data
+  // Just having an expertise object doesn't mean it's validated
+  const hasExpertiseData = !!(helper.expertise && Object.keys(helper.expertise).length > 0 && 
+                             (helper.expertise.findings || helper.expertise.report || helper.expertise.summary));
+  const hasExpertiseSummary = !!(helper.expertise_summary && Object.keys(helper.expertise_summary).length > 0);
+  
+  const expertiseValidated = hasExpertiseData || hasExpertiseSummary;
+  console.log('🔧 EXPERTISE VALIDATION:', expertiseValidated, {
+    expertise: helper.expertise,
+    expertise_summary: helper.expertise_summary
+  });
   return expertiseValidated;
 }
 
@@ -7608,20 +7633,30 @@ function calculateHealthAssessment(workflowStatus, helper) {
   // Factor 2: Critical stages with specific details
   const hasVehicleData = workflowStatus.stages.find(s => s.name === 'פרטי רכב')?.validated;
   const hasDamageData = workflowStatus.stages.find(s => s.name === 'הערכת נזקים')?.validated;
-  const hasFinalReport = workflowStatus.stages.find(s => s.name === 'חוות דעת')?.validated;
+  const hasLeviData = workflowStatus.stages.find(s => s.name === 'נתוני לוי יצחק')?.validated;
+  const hasInitialEstimate = workflowStatus.stages.find(s => s.name === 'אומדן ראשוני')?.validated;
   const hasExpertise = workflowStatus.stages.find(s => s.name === 'אקספרטיזה')?.validated;
   
+  const criticalStages = [];
   const missingCritical = [];
-  if (!hasVehicleData) missingCritical.push('פרטי רכב');
-  if (!hasDamageData) missingCritical.push('הערכת נזקים');
-  if (!hasExpertise) missingCritical.push('אקספרטיזה');
   
-  if (hasVehicleData && hasDamageData && hasFinalReport) {
+  // Check which critical stages are complete/missing
+  if (hasVehicleData) criticalStages.push('פרטי רכב'); else missingCritical.push('פרטי רכב');
+  if (hasDamageData) criticalStages.push('הערכת נזקים'); else missingCritical.push('הערכת נזקים');
+  if (hasLeviData) criticalStages.push('נתוני לוי'); else missingCritical.push('נתוני לוי');
+  if (hasInitialEstimate) criticalStages.push('אומדן ראשוני'); else missingCritical.push('אומדן ראשוני');
+  
+  // Expertise is optional - only show if missing and expected
+  if (!hasExpertise && helper.expertise) {
+    missingCritical.push('אקספרטיזה');
+  }
+  
+  if (criticalStages.length >= 4) {
     factors.push('✅ כל השלבים הקריטיים הושלמו');
-  } else if (hasVehicleData && hasDamageData) {
-    factors.push('🟡 שלבים קריטיים בהתקדמות');
+  } else if (criticalStages.length >= 2) {
+    factors.push(`🟡 ${criticalStages.length} מתוך 4 שלבים קריטיים הושלמו`);
   } else {
-    factors.push(`🔴 חסרים שלבים קריטיים: ${missingCritical.join(', ')}`);
+    factors.push(`🔴 רק ${criticalStages.length} שלבים קריטיים הושלמו`);
   }
   
   // Factor 3: Data quality
