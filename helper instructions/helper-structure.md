@@ -503,6 +503,7 @@ parts search results json structure from teh webhook response :
           "זמינות": "בהזמנה מיוחדת",
           "מחיר": "₪485",
           "מספר OEM": "68950-F4010",
+         "code": "7J0945095CG",
           "הערות": "המחיר ליחידה אחת. מומלץ להחליף בזוגות."
         },
         {
@@ -513,6 +514,7 @@ parts search results json structure from teh webhook response :
           "זמינות": "זמין במלאי",
           "מחיר": "₪260",
           "מספר OEM": "68950-F4010",
+          "code": "7J0945095CG",
           "הערות": "אחריות לשנה, מתאים למקור"
         },
         {
@@ -523,6 +525,7 @@ parts search results json structure from teh webhook response :
           "זמינות": "במלאי",
           "מחיר": "₪180",
           "מספר OEM": "68950-F4010",
+          "code": "7J0945095CG",
           "הערות": "החלק נבדק ותקין. אחריות התקנה ל-14 יום."
         },
         {
@@ -533,6 +536,7 @@ parts search results json structure from teh webhook response :
           "זמינות": "זמין",
           "מחיר": "₪195 (לפני משלוח ומסים)",
           "מספר OEM": "68950-F4010",
+          "code": "7J0945095CG",
           "הערות": "מחיר ליחידה, זמן אספקה 10-14 ימי עסקים"
         },
         {
@@ -543,6 +547,7 @@ parts search results json structure from teh webhook response :
           "זמינות": "זמין",
           "מחיר": "₪220 (לזוג)",
           "מספר OEM": "68950-F4010",
+          "code": "7J0945095CG",
           "הערות": "מחיר לזוג. יש לבדוק עלויות משלוח ומיסים. מצב הפריט משתנה."
         }
       ],
@@ -560,6 +565,7 @@ parts search results json structure from teh webhook response :
           "זמינות": "במלאי",
           "מחיר": "₪1,850",
           "מספר OEM": "87050-F2050",
+          "code": "7J0945095CG",
           "הערות": "מומלץ לוודא התאמה עם מספר שלדה"
         },
         {
@@ -570,6 +576,7 @@ parts search results json structure from teh webhook response :
           "זמינות": "במלאי",
           "מחיר": "₪2,100",
           "מספר OEM": "87050-F2050",
+          "code": "7J0945095CG",
           "הערות": "נבדק ונמצא תקין. לא כולל התקנה"
         },
         {
@@ -580,6 +587,7 @@ parts search results json structure from teh webhook response :
           "זמינות": "במלאי מוגבל",
           "מחיר": "₪2,500",
           "מספר OEM": "87050-F2050",
+          "code": "7J0945095CG",
           "הערות": "כולל אחריות ל-3 חודשים. דורש החזרת החלק הישן"
         },
         {
@@ -590,6 +598,7 @@ parts search results json structure from teh webhook response :
           "זמינות": "בהזמנה מיוחדת",
           "מחיר": "₪5,400",
           "מספר OEM": "87050-F2050",
+          "code": "7J0945095CG",
           "הערות": "14 ימי עסקים. כולל מע\"מ."
         },
         {
@@ -600,6 +609,7 @@ parts search results json structure from teh webhook response :
           "זמינות": "זמין",
           "מחיר": "₪2,750",
           "מספר OEM": "87050-F2050",
+          "code": "7J0945095CG",
           "הערות": "מחיר משוער כולל משלוח, ייתכנו מיסים נוספים"
         }
       ],

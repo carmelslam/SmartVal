@@ -797,16 +797,21 @@
     <div class="footer">All rights reserved © Carmel Cayouf</div>
   </div>
   
-  <script type="module">
-    import { sendToWebhook } from './webhook.js';
-    
-    // Global state management
-    let validationState = {
+  <script>
+    // Global state management - needs to be in global scope
+    window.validationState = {
       vehicle: { status: 'pending', approved: false },
       levi: { status: 'pending', approved: false },
       damage: { status: 'pending', approved: false },
       summary: { status: 'pending', approved: false }
     };
+  </script>
+  
+  <script type="module">
+    import { sendToWebhook } from './webhook.js';
+    
+    // Access global validation state
+    const validationState = window.validationState;
     
     // Helper data loading
     function loadExpertiseData() {
@@ -1911,22 +1916,63 @@
     
     window.saveValidationData = function() {
       try {
-        // Save validation state to sessionStorage
-        const validationData = {
-          validationState,
-          timestamp: new Date().toISOString(),
-          plate: (window.helper || JSON.parse(sessionStorage.getItem('helper') || '{}'))?.vehicle?.plate || 'לא ידוע'
-        };
+        console.log('🔄 Starting saveValidationData...');
         
-        sessionStorage.setItem('validationData', JSON.stringify(validationData));
+        // Get the current helper
+        const helper = window.helper || JSON.parse(sessionStorage.getItem('helper') || '{}');
+        console.log('📋 Current helper:', helper);
         
-        // Also ensure helper is saved
-        if (window.helper) {
-          sessionStorage.setItem('helper', JSON.stringify(window.helper));
+        // Ensure expertise object exists
+        if (!helper.expertise) {
+          helper.expertise = {};
+          console.log('📝 Created expertise object');
         }
         
+        // Create/update validation structure - similar to final_report.validation
+        helper.expertise.validation = {
+          validated_at: new Date().toISOString(),
+          validated_by: 'expertise_user',
+          workflow_type: 'expertise',
+          completed_sections: Object.keys(window.validationState).filter(key => window.validationState[key].status === 'approved'),
+          validation_state: window.validationState,
+          vehicle_validated: window.validationState.vehicle?.approved || false,
+          levi_validated: window.validationState.levi?.approved || false,
+          damage_validated: window.validationState.damage?.approved || false,
+          summary_validated: window.validationState.summary?.approved || false,
+          all_sections_validated: Object.values(window.validationState).every(section => section.approved),
+          validation_timestamp: Date.now(),
+          plate: helper?.vehicle?.plate || 'לא ידוע',
+          saved_at: new Date().toISOString(),
+          is_complete: false // Mark as incomplete when just saving
+        };
+        
+        console.log('💾 Created expertise.validation:', helper.expertise.validation);
+        
+        // Update window.helper
+        window.helper = helper;
+        
+        // Save helper to sessionStorage - this persists the validation
+        sessionStorage.setItem('helper', JSON.stringify(helper));
+        console.log('✅ Helper saved to sessionStorage');
+        
+        // Verify it was saved
+        const savedHelper = JSON.parse(sessionStorage.getItem('helper'));
+        if (savedHelper.expertise?.validation) {
+          console.log('✅ Verified: expertise.validation exists in saved helper');
+        } else {
+          console.error('❌ ERROR: expertise.validation missing from saved helper!');
+        }
+        
+        // Also save validation data separately for backward compatibility
+        const validationData = {
+          validationState: window.validationState,
+          timestamp: new Date().toISOString(),
+          plate: helper?.vehicle?.plate || 'לא ידוע'
+        };
+        sessionStorage.setItem('validationData', JSON.stringify(validationData));
+        
         showAlert('נתוני האימות נשמרו בהצלחה', 'success');
-        console.log('✅ Validation data saved locally:', validationData);
+        console.log('✅ Validation data saved to helper.expertise.validation');
       } catch (error) {
         console.error('❌ Error saving validation data:', error);
         showAlert('שגיאה בשמירת נתוני האימות', 'error');
