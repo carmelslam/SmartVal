@@ -6469,36 +6469,48 @@ window.previewVersionForUser = async function(versionId, dayName, versionDate) {
     
     if (caseId) {
       try {
-        // Check for parts
+        // Check for parts - handle 404 gracefully
         const partsResponse = await fetch(`${SUPABASE_URL}/rest/v1/selected_parts?case_id=eq.${caseId}&limit=1`, {
           headers: {
             'apikey': SUPABASE_ANON_KEY,
             'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
           }
         });
-        const partsData = await partsResponse.json();
-        supabaseData.hasParts = partsData && partsData.length > 0;
+        if (partsResponse.status === 404) {
+          console.log('Parts table not found - feature not yet implemented');
+        } else if (partsResponse.ok) {
+          const partsData = await partsResponse.json();
+          supabaseData.hasParts = partsData && partsData.length > 0;
+        }
         
-        // Check for invoice
+        // Check for invoice - handle 404 gracefully
         const invoiceResponse = await fetch(`${SUPABASE_URL}/rest/v1/invoices?case_id=eq.${caseId}&limit=1`, {
           headers: {
             'apikey': SUPABASE_ANON_KEY,
             'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
           }
         });
-        const invoiceData = await invoiceResponse.json();
-        supabaseData.hasInvoice = invoiceData && invoiceData.length > 0;
+        if (invoiceResponse.status === 404) {
+          console.log('Invoices table not found - feature not yet implemented');
+        } else if (invoiceResponse.ok) {
+          const invoiceData = await invoiceResponse.json();
+          supabaseData.hasInvoice = invoiceData && invoiceData.length > 0;
+        }
         
-        // Check for fee payment status
+        // Check for fee payment status - handle 404 gracefully
         const feeResponse = await fetch(`${SUPABASE_URL}/rest/v1/fees?case_id=eq.${caseId}&select=payment_status&limit=1`, {
           headers: {
             'apikey': SUPABASE_ANON_KEY,
             'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
           }
         });
-        const feeData = await feeResponse.json();
-        if (feeData && feeData.length > 0) {
-          supabaseData.feeStatus = feeData[0].payment_status === 'paid' ? 'שולם' : 'לא שולם';
+        if (feeResponse.status === 404) {
+          console.log('Fees table not found - feature not yet implemented');
+        } else if (feeResponse.ok) {
+          const feeData = await feeResponse.json();
+          if (feeData && feeData.length > 0) {
+            supabaseData.feeStatus = feeData[0].payment_status === 'paid' ? 'שולם' : 'לא שולם';
+          }
         }
       } catch (error) {
         console.error('Error fetching Supabase data:', error);
