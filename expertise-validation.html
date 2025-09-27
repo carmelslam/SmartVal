@@ -1855,17 +1855,40 @@
         finalBtn.disabled = true;
         finalBtn.textContent = 'מכין אקספרטיזה...';
         
-        // Save final validation data with completion timestamp
-        const finalValidationData = {
-          validationState,
-          completedAt: new Date().toISOString(),
-          plate: (window.helper || JSON.parse(sessionStorage.getItem('helper') || '{}'))?.vehicle?.plate || 'לא ידוע',
+        // Get the helper
+        const helper = window.helper || JSON.parse(sessionStorage.getItem('helper') || '{}');
+        
+        // Ensure expertise object exists
+        if (!helper.expertise) {
+          helper.expertise = {};
+        }
+        
+        // Create FINAL validation structure similar to final_report.validation
+        helper.expertise.validation = {
+          validated_at: new Date().toISOString(),
+          validated_by: 'expertise_user',
+          workflow_type: 'expertise',
+          completed_sections: Object.keys(validationState).filter(key => validationState[key].status === 'approved'),
+          validation_state: validationState,
+          vehicle_validated: validationState.vehicle?.approved || false,
+          levi_validated: validationState.levi?.approved || false,
+          damage_validated: validationState.damage?.approved || false,
+          summary_validated: validationState.summary?.approved || false,
+          all_sections_validated: Object.values(validationState).every(section => section.approved),
+          validation_timestamp: Date.now(),
+          plate: helper?.vehicle?.plate || 'לא ידוע',
+          completed_at: new Date().toISOString(),
+          is_complete: true,
           status: 'validation_completed'
         };
         
-        // Save to sessionStorage
-        sessionStorage.setItem('validationData', JSON.stringify(finalValidationData));
-        sessionStorage.setItem('helper', JSON.stringify(window.helper || {}));
+        console.log('📝 FINAL expertise validation structure created:', helper.expertise.validation);
+        
+        // Update window.helper
+        window.helper = helper;
+        
+        // Save updated helper to sessionStorage - THIS IS CRITICAL
+        sessionStorage.setItem('helper', JSON.stringify(helper));
         
         showAlert('האימות הושלם - מעבר לבניית האקספרטיזה', 'success');
         
