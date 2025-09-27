@@ -467,6 +467,10 @@
       // This will be overridden by the full implementation later
     };
     
+    // Cache-busting mechanism to force reload
+    window.VALIDATION_VERSION = 'v2.0.' + Date.now();
+    console.log('🔄 Validation functions version:', window.VALIDATION_VERSION);
+    
     // Clear system data function - defined early for immediate availability
     window.confirmSystemClear = function() {
       if (!confirm('⚠️ אתה בטוח שברצונך למחוק את כל הנתונים?\n\nפעולה זו תמחק לצמיתות:\n• כל פרטי הרכב\n• נתוני הנזק\n• אומדנים\n• חלקי חילוף\n• כל המידע השמור\n\nלחץ OK למחיקה או Cancel לביטול')) {
@@ -7320,10 +7324,7 @@ function analyzeWorkflowValidations(helper, caseId) {
 
 // Validation check functions - read from ACTUAL validation locations
 
-function checkVehicleStarted(helper) {
-  return !!(helper.car_details || helper.vehicle || helper.general_info || helper.case_info?.vehicle_info);
-}
-
+// Define validation functions BEFORE they are used
 function checkVehicleValidation(helper) {
   // Check if we have complete vehicle data
   const hasPlate = !!(helper.vehicle?.plate || helper.car_details?.plate || helper.case_info?.plate);
@@ -7331,7 +7332,13 @@ function checkVehicleValidation(helper) {
   const hasModel = !!(helper.vehicle?.model || helper.car_details?.model || helper.case_info?.vehicle_model);
   const hasYear = !!(helper.vehicle?.year || helper.car_details?.year || helper.case_info?.vehicle_year);
   
-  return hasPlate && hasMake && hasModel && hasYear;
+  const isValidated = hasPlate && hasMake && hasModel && hasYear;
+  console.log('🔧 VEHICLE VALIDATION CHECK:', { hasPlate, hasMake, hasModel, hasYear, isValidated });
+  return isValidated;
+}
+
+function checkVehicleStarted(helper) {
+  return !!(helper.car_details || helper.vehicle || helper.general_info || helper.case_info?.vehicle_info);
 }
 
 // New validation check functions for additional workflow stages

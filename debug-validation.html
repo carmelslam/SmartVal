@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debug Validation Structure</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #1a1a1a;
+            color: #e0e0e0;
+            padding: 20px;
+            direction: rtl;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        h1 {
+            color: #6f42c1;
+            text-align: center;
+        }
+        .debug-section {
+            background: #2a2a2a;
+            border: 1px solid #444;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        .debug-section h2 {
+            color: #17a2b8;
+            margin-top: 0;
+        }
+        pre {
+            background: #1a1a1a;
+            padding: 15px;
+            border-radius: 4px;
+            overflow-x: auto;
+            font-size: 12px;
+            line-height: 1.5;
+            border: 1px solid #333;
+        }
+        .status-badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 14px;
+            margin: 2px;
+        }
+        .status-valid {
+            background: #28a745;
+            color: white;
+        }
+        .status-invalid {
+            background: #dc3545;
+            color: white;
+        }
+        .status-partial {
+            background: #ffc107;
+            color: black;
+        }
+        button {
+            background: #6f42c1;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px 5px;
+        }
+        button:hover {
+            background: #5a35a3;
+        }
+        .input-section {
+            background: #2a2a2a;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #444;
+            background: #1a1a1a;
+            color: #e0e0e0;
+            border-radius: 4px;
+            font-size: 16px;
+        }
+        .validation-result {
+            margin: 10px 0;
+            padding: 10px;
+            background: #333;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 כלי אבחון מבנה נתונים - SmartVal</h1>
+        
+        <div class="input-section">
+            <h2>טען נתוני Helper</h2>
+            <p>העתק את נתוני ה-Helper מהדפדפן (window.helper) או מהמסד נתונים</p>
+            <textarea id="helperInput" style="width: 100%; height: 200px; padding: 10px; border: 1px solid #444; background: #1a1a1a; color: #e0e0e0; border-radius: 4px; font-family: monospace;" placeholder="הדבק כאן את נתוני ה-Helper בפורמט JSON..."></textarea>
+            <button onclick="analyzeHelper()">🔍 נתח מבנה נתונים</button>
+            <button onclick="loadFromWindow()">📥 טען מ-window.helper</button>
+            <button onclick="loadSampleData()">📋 טען נתונים לדוגמה</button>
+        </div>
+
+        <div id="results"></div>
+    </div>
+
+    <script>
+        function loadFromWindow() {
+            if (window.helper) {
+                document.getElementById('helperInput').value = JSON.stringify(window.helper, null, 2);
+                analyzeHelper();
+            } else {
+                alert('לא נמצא window.helper בדף זה');
+            }
+        }
+
+        function loadSampleData() {
+            // Sample data with various validation states
+            const sampleHelper = {
+                plate: "12345678",
+                case_info: {
+                    plate: "12345678",
+                    vehicle_make: "טויוטה",
+                    vehicle_model: "קורולה",
+                    vehicle_year: "2020",
+                    owner_name: "ישראל ישראלי",
+                    insurance_company: "הפניקס",
+                    agent_name: "משה כהן",
+                    inspection_date: "2025-01-15"
+                },
+                vehicle: {
+                    plate: "12345678",
+                    make: "טויוטה",
+                    model: "קורולה",
+                    year: 2020
+                },
+                levi_summary: {
+                    report_date: "2025-01-10",
+                    depreciation: 15,
+                    market_value: 120000
+                },
+                damage_assessment: {
+                    centers: [
+                        { name: "חזית", parts: 5, labor_hours: 3 }
+                    ],
+                    totals: {
+                        total_parts: 5,
+                        total_labor: 8,
+                        total_cost: 15000
+                    }
+                },
+                expertise: {
+                    expert_name: "ד\"ר דוד לוי",
+                    report_date: "2025-01-12",
+                    findings: "נזק בינוני לחזית הרכב"
+                },
+                estimate: {
+                    totals: {
+                        parts_total: 8000,
+                        labor_total: 3000,
+                        other_total: 1000,
+                        grand_total: 12000
+                    },
+                    validation: {
+                        validated_at: "2025-01-13T10:00:00Z"
+                    }
+                },
+                validation_progress: {
+                    vehicle: true,
+                    damage: true,
+                    expertise: false,
+                    fees: false
+                },
+                depreciation: {
+                    globalDep1: 15,
+                    globalDep2: 10
+                },
+                meta: {
+                    created_at: "2025-01-01",
+                    updated_at: "2025-01-15"
+                }
+            };
+            
+            document.getElementById('helperInput').value = JSON.stringify(sampleHelper, null, 2);
+            analyzeHelper();
+        }
+
+        function analyzeHelper() {
+            const input = document.getElementById('helperInput').value;
+            if (!input.trim()) {
+                alert('אנא הדבק נתוני Helper תחילה');
+                return;
+            }
+
+            let helper;
+            try {
+                helper = JSON.parse(input);
+            } catch (e) {
+                alert('שגיאה בפענוח JSON: ' + e.message);
+                return;
+            }
+
+            // Check if data is wrapped
+            if (helper && helper.helper_data) {
+                console.log('🔧 Unwrapping helper_data structure');
+                helper = helper.helper_data;
+            }
+
+            const results = document.getElementById('results');
+            results.innerHTML = '';
+
+            // Analyze structure
+            analyzeStructure(helper, results);
+            
+            // Test validation functions
+            testValidationFunctions(helper, results);
+            
+            // Show data paths
+            showDataPaths(helper, results);
+            
+            // Show validation recommendations
+            showRecommendations(helper, results);
+        }
+
+        function analyzeStructure(helper, container) {
+            const section = createSection('מבנה נתונים כללי');
+            
+            const structure = {
+                'מפתחות ראשיים': Object.keys(helper || {}),
+                'האם יש helper_data wrapper?': !!(helper && helper.helper_data),
+                'האם יש נתוני רכב?': !!(helper.vehicle || helper.car_details || helper.case_info),
+                'האם יש נתוני לוי?': !!(helper.levi_summary || helper.levi_data || helper.expertise?.levi_report),
+                'האם יש הערכת נזקים?': !!(helper.damage_assessment || helper.damages),
+                'האם יש אומדן?': !!(helper.estimate || helper.initial_estimate),
+                'האם יש validation_progress?': !!(helper.validation_progress),
+                'האם יש meta data?': !!(helper.meta || helper.metadata)
+            };
+
+            section.innerHTML += '<pre>' + JSON.stringify(structure, null, 2) + '</pre>';
+            container.appendChild(section);
+        }
+
+        function testValidationFunctions(helper, container) {
+            const section = createSection('בדיקת פונקציות אימות');
+            
+            // Copy validation functions from admin.html
+            const validationTests = [
+                {
+                    name: 'פרטי רכב',
+                    check: () => {
+                        const hasPlate = !!(helper.vehicle?.plate || helper.car_details?.plate || helper.case_info?.plate);
+                        const hasMake = !!(helper.vehicle?.make || helper.car_details?.manufacturer || helper.case_info?.vehicle_make);
+                        const hasModel = !!(helper.vehicle?.model || helper.car_details?.model || helper.case_info?.vehicle_model);
+                        const hasYear = !!(helper.vehicle?.year || helper.car_details?.year || helper.case_info?.vehicle_year);
+                        
+                        return {
+                            validated: hasPlate && hasMake && hasModel && hasYear,
+                            details: {
+                                'מספר רכב': hasPlate ? '✅' : '❌',
+                                'יצרן': hasMake ? '✅' : '❌',
+                                'דגם': hasModel ? '✅' : '❌',
+                                'שנה': hasYear ? '✅' : '❌'
+                            },
+                            paths: {
+                                plate: findDataPath(helper, ['vehicle.plate', 'car_details.plate', 'case_info.plate']),
+                                make: findDataPath(helper, ['vehicle.make', 'car_details.manufacturer', 'case_info.vehicle_make']),
+                                model: findDataPath(helper, ['vehicle.model', 'car_details.model', 'case_info.vehicle_model']),
+                                year: findDataPath(helper, ['vehicle.year', 'car_details.year', 'case_info.vehicle_year'])
+                            }
+                        };
+                    }
+                },
+                {
+                    name: 'נתוני לוי יצחק',
+                    check: () => {
+                        const hasLevi = !!(helper.levi_summary && Object.keys(helper.levi_summary).length > 0);
+                        const started = !!(helper.levi_summary || helper.levi_data || helper.leviData || helper.expertise?.levi_report);
+                        
+                        return {
+                            validated: hasLevi,
+                            started: started,
+                            details: {
+                                'levi_summary': helper.levi_summary ? '✅' : '❌',
+                                'levi_data': helper.levi_data ? '✅' : '❌',
+                                'leviData': helper.leviData ? '✅' : '❌',
+                                'expertise.levi_report': helper.expertise?.levi_report ? '✅' : '❌'
+                            },
+                            data: helper.levi_summary || helper.levi_data || helper.leviData || {}
+                        };
+                    }
+                },
+                {
+                    name: 'הערכת נזקים',
+                    check: () => {
+                        const damageValidated = helper.validation_progress?.damage === true;
+                        const hasData = !!(helper.damage_assessment?.centers?.length || helper.damage_centers?.length);
+                        
+                        return {
+                            validated: damageValidated,
+                            started: hasData,
+                            details: {
+                                'validation_progress.damage': damageValidated ? '✅' : '❌',
+                                'damage_assessment.centers': helper.damage_assessment?.centers?.length ? `✅ (${helper.damage_assessment.centers.length})` : '❌',
+                                'damage_centers': helper.damage_centers?.length ? `✅ (${helper.damage_centers.length})` : '❌'
+                            }
+                        };
+                    }
+                },
+                {
+                    name: 'אקספרטיזה',
+                    check: () => {
+                        const hasExpertise = !!(helper.expertise && Object.keys(helper.expertise).length > 0);
+                        const hasValidation = !!(helper.expertise?.validation?.validated_at || helper.expertise_summary);
+                        const validated = hasExpertise && (hasValidation || helper.expertise?.summary);
+                        
+                        return {
+                            validated: validated,
+                            hasData: hasExpertise,
+                            hasValidation: hasValidation,
+                            details: {
+                                'expertise exists': hasExpertise ? '✅' : '❌',
+                                'expertise.validation.validated_at': helper.expertise?.validation?.validated_at ? '✅' : '❌',
+                                'expertise_summary': helper.expertise_summary ? '✅' : '❌',
+                                'expertise.summary': helper.expertise?.summary ? '✅' : '❌'
+                            },
+                            data: helper.expertise || {}
+                        };
+                    }
+                },
+                {
+                    name: 'אומדן ראשוני',
+                    check: () => {
+                        const hasEstimate = !!(helper.estimate?.validation?.validated_at || (helper.estimate && helper.estimate.totals));
+                        const started = !!(helper.estimate || helper.initial_estimate || helper.estimate_totals);
+                        
+                        return {
+                            validated: hasEstimate,
+                            started: started,
+                            details: {
+                                'estimate.validation.validated_at': helper.estimate?.validation?.validated_at ? '✅' : '❌',
+                                'estimate.totals': helper.estimate?.totals ? '✅' : '❌',
+                                'initial_estimate': helper.initial_estimate ? '✅' : '❌',
+                                'estimate_totals': helper.estimate_totals ? '✅' : '❌'
+                            },
+                            totals: helper.estimate?.totals || helper.estimate_totals || {}
+                        };
+                    }
+                }
+            ];
+
+            validationTests.forEach(test => {
+                const result = test.check();
+                const div = document.createElement('div');
+                div.className = 'validation-result';
+                
+                let statusBadge = '';
+                if (result.validated) {
+                    statusBadge = '<span class="status-badge status-valid">✅ מאומת</span>';
+                } else if (result.started || result.hasData) {
+                    statusBadge = '<span class="status-badge status-partial">🔄 בתהליך</span>';
+                } else {
+                    statusBadge = '<span class="status-badge status-invalid">❌ לא התחיל</span>';
+                }
+                
+                div.innerHTML = `
+                    <h3>${test.name} ${statusBadge}</h3>
+                    <pre>${JSON.stringify(result, null, 2)}</pre>
+                `;
+                
+                section.appendChild(div);
+            });
+            
+            container.appendChild(section);
+        }
+
+        function showDataPaths(helper, container) {
+            const section = createSection('נתיבי נתונים שנמצאו');
+            
+            const paths = {
+                'Vehicle Data': findAllPaths(helper, 'plate'),
+                'Levi Data': findAllPaths(helper, 'levi'),
+                'Damage Data': findAllPaths(helper, 'damage'),
+                'Estimate Data': findAllPaths(helper, 'estimate'),
+                'Validation Data': findAllPaths(helper, 'validation')
+            };
+            
+            section.innerHTML += '<pre>' + JSON.stringify(paths, null, 2) + '</pre>';
+            container.appendChild(section);
+        }
+
+        function showRecommendations(helper, container) {
+            const section = createSection('המלצות לתיקון');
+            
+            const recommendations = [];
+            
+            // Check vehicle data
+            if (!helper.vehicle?.plate && helper.case_info?.plate) {
+                recommendations.push('נתוני הרכב נמצאים ב-case_info במקום ב-vehicle - וודא שהפונקציות בודקות את שני המיקומים');
+            }
+            
+            // Check Levi data
+            if (!helper.levi_summary && (helper.levi_data || helper.leviData)) {
+                recommendations.push('נתוני לוי נמצאים ב-levi_data/leviData במקום ב-levi_summary - עדכן את הבדיקות');
+            }
+            
+            // Check validation structure
+            if (!helper.validation_progress) {
+                recommendations.push('חסר validation_progress - זה השדה העיקרי לבדיקת אימותים');
+            }
+            
+            // Check expertise
+            if (helper.expertise && !helper.expertise.validation && !helper.expertise.summary) {
+                recommendations.push('נתוני expertise קיימים אך ללא validation או summary - בדוק אם יש שדות אחרים לאימות');
+            }
+            
+            if (recommendations.length === 0) {
+                recommendations.push('המבנה נראה תקין - וודא שהדפדפן טוען את הגרסה המעודכנת של הקוד');
+            }
+            
+            const ul = document.createElement('ul');
+            recommendations.forEach(rec => {
+                const li = document.createElement('li');
+                li.textContent = rec;
+                ul.appendChild(li);
+            });
+            
+            section.appendChild(ul);
+            container.appendChild(section);
+        }
+
+        function createSection(title) {
+            const section = document.createElement('div');
+            section.className = 'debug-section';
+            const h2 = document.createElement('h2');
+            h2.textContent = title;
+            section.appendChild(h2);
+            return section;
+        }
+
+        function findDataPath(obj, paths) {
+            for (let path of paths) {
+                const parts = path.split('.');
+                let current = obj;
+                let found = true;
+                
+                for (let part of parts) {
+                    if (current && current[part] !== undefined) {
+                        current = current[part];
+                    } else {
+                        found = false;
+                        break;
+                    }
+                }
+                
+                if (found && current) {
+                    return { path: path, value: current };
+                }
+            }
+            return null;
+        }
+
+        function findAllPaths(obj, keyword, currentPath = '', results = []) {
+            if (!obj || typeof obj !== 'object') return results;
+            
+            for (let key in obj) {
+                const newPath = currentPath ? `${currentPath}.${key}` : key;
+                
+                if (key.toLowerCase().includes(keyword.toLowerCase())) {
+                    results.push({
+                        path: newPath,
+                        value: obj[key]
+                    });
+                }
+                
+                if (typeof obj[key] === 'object' && obj[key] !== null) {
+                    findAllPaths(obj[key], keyword, newPath, results);
+                }
+            }
+            
+            return results;
+        }
+    </script>
+</body>
+</html>
