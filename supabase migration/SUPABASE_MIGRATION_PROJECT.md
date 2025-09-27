@@ -385,11 +385,31 @@ INSERT INTO storage.buckets (id, name, public) VALUES
 
 
 ### Phase 5: New Modules (Parts & Invoices)
-1. Build parts search UI with Supabase - use the current parts search module and use the parts search results json 
+1. Build parts search UI with Supabase - use the current parts search module - parts search.html and use the parts search results json : read the following architecture first:
+    1. Read the parts module logic.md in documentation - pay attention to the differences brought in this updated version 
+2. Architecture: 
+    1. Locate parts : using the paths :
+        1. suppose table that hosts catalogs from known suppliers = main search source, 
+        2. make.com conducts web search ( name nd image based), 
+        3. car-part.co.il done on frame in the system , returns a pdf that goes to make.com OCR - search results then behave like web search .  We need to upgrade the system/ parts search module  form creation and the export to car part site .
+    2. Select parts - Catalog results and search will show in a UI with checklist- checked items will go to selected parts table and from there will be assigned to damage centers ( option ) or sent for print/ one drive save.
+    3. Capture search results  from all paths in supabase table - search results parts . 
+    4. Capture selected parts in selected table in supabase per plate
+    5. Capture selected parts in selected parts in helper . 
+    6. Connect suggestive logic to supabase instead of helper search results -
+    7. Suggestive logic combines all paths results for suggestions.
+    8. Then part selection create the list for the specific case and assigns to damage centers.
+    9. Parts floating screen: has to tabs : selected parts search results tab - search result tab has a field for part name - filtered search results from search results table. 
+    10. All identifications are plate number associated - so the tables display the parts search results and selected for the specific car only. There is an option of general search that doesn’t  associate with plate.
+    11. supabase tables for search results / selected are associated to car plate , for general search that is not associated to a car plate we need to think if we include in the table with plate numbers or create a new table for general (unassociated) search results and selected 
+    12. Rethink the function buttons on the UI and rebuild the parts search module to be compatible with the architecture. 
+     13. Support high volume search 
 2. Implement invoice management - use the current invoices modul module and use the invoice json structure 
-3. Create search functionality
-4. Test new module workflows
-5. Integrate with existing helper structure
+3. connect to invoice floating screen and to invoice module.
+4. suggestive logic for diffrentials option fields in the final report 
+5. Create search functionality
+6. Test new module workflows
+7. Integrate with existing helper structure
 
 ### Phase 6: User Management & Authentication
 1. Set up Supabase Auth (magic link/OTP)
