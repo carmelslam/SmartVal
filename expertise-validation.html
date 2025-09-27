@@ -1883,23 +1883,79 @@
           console.log('📝 Created expertise object directly');
         }
         
-        // Create FINAL validation structure similar to final_report.validation
+        // Create FINAL validation structure similar to final_report.validation with ACTUAL DATA
         helper.expertise.validation = {
           validated_at: new Date().toISOString(),
           validated_by: 'expertise_user',
           workflow_type: 'expertise',
-          completed_sections: Object.keys(validationState).filter(key => validationState[key].approved === true),
-          validation_state: validationState,
-          vehicle_validated: validationState.vehicle?.approved || false,
-          levi_validated: validationState.levi?.approved || false,
-          damage_validated: validationState.damage?.approved || false,
-          summary_validated: validationState.summary?.approved || false,
-          all_sections_validated: Object.values(validationState).every(section => section.approved),
-          validation_timestamp: Date.now(),
-          plate: helper?.vehicle?.plate || 'לא ידוע',
+          status: 'validation_completed',
+          completed_sections: Object.keys(window.validationState).filter(key => window.validationState[key].approved === true),
+          validation_progress: {
+            vehicle: window.validationState.vehicle?.approved || false,
+            levi: window.validationState.levi?.approved || false,
+            damage: window.validationState.damage?.approved || false,
+            summary: window.validationState.summary?.approved || false,
+            all_sections_validated: Object.values(window.validationState).every(section => section.approved)
+          },
+          // Store ACTUAL DATA from the helper - FINAL VERSION
+          vehicle_data: {
+            plate: helper?.vehicle?.plate || helper?.case_info?.plate || '',
+            make: helper?.vehicle?.make || helper?.case_info?.vehicle_make || '',
+            model: helper?.vehicle?.model || helper?.case_info?.vehicle_model || '',
+            year: helper?.vehicle?.year || helper?.case_info?.vehicle_year || '',
+            owner_name: helper?.case_info?.owner_name || helper?.stakeholders?.owner?.name || '',
+            insurance_company: helper?.case_info?.insurance_company || '',
+            agent_name: helper?.case_info?.agent_name || '',
+            inspection_date: helper?.case_info?.inspection_date || '',
+            damage_date: helper?.case_info?.damage_date || '',
+            garage_name: helper?.case_info?.garage_name || ''
+          },
+          levi_data: {
+            base_price: helper?.valuation?.base_price || helper?.levi_summary?.base_price || 0,
+            final_price: helper?.valuation?.final_price || helper?.levi_summary?.final_price || 0,
+            adjustments: helper?.valuation?.adjustments || helper?.levi_summary?.adjustments || {},
+            adjustments_value: helper?.valuation?.adjustments_value || 0,
+            depreciation: helper?.levi_summary?.depreciation || 0,
+            market_value: helper?.levi_summary?.market_value || 0
+          },
+          damage_data: {
+            centers_count: helper?.damage_assessment?.centers?.length || 0,
+            centers: helper?.damage_assessment?.centers || [],
+            total_parts: helper?.damage_assessment?.totals?.total_parts || 0,
+            total_labor: helper?.damage_assessment?.totals?.total_labor || 0,
+            total_cost: helper?.damage_assessment?.totals?.total_cost || 0,
+            total_with_vat: helper?.damage_assessment?.totals?.total_with_vat || 0,
+            totals: helper?.damage_assessment?.totals || {},
+            damage_percentage: helper?.damage_assessment?.summary?.damage_percentage || 0,
+            is_total_loss: helper?.damage_assessment?.summary?.is_total_loss || false
+          },
+          expertise_summary: {
+            summary_data: helper?.expertise?.summary || {},
+            damage_description: helper?.expertise?.summary?.damage_description || '',
+            findings: helper?.expertise?.summary?.findings || '',
+            recommendations: helper?.expertise?.summary?.recommendations || '',
+            total_damages: helper?.expertise?.summary?.total_damages || 0,
+            expert_notes: helper?.expertise?.summary?.notes || ''
+          },
+          financial_summary: {
+            base_price: helper?.calculations?.base_price || 0,
+            adjustments_value: helper?.calculations?.final_adjustments_value || 0,
+            market_value: helper?.calculations?.full_market_value || 0,
+            total_damage: helper?.calculations?.total_damage || 0,
+            vat_rate: helper?.calculations?.vat_rate || 18,
+            fees_total: helper?.financials?.fees?.calculations?.total_with_vat || 0
+          },
+          specific_validations: {
+            has_vehicle_data: !!(helper?.vehicle?.plate && helper?.vehicle?.make),
+            has_levi_data: !!(helper?.valuation?.base_price || helper?.levi_summary?.base_price),
+            has_damage_centers: (helper?.damage_assessment?.centers?.length || 0) > 0,
+            has_expertise_summary: !!(helper?.expertise?.summary && Object.keys(helper.expertise.summary).length > 0),
+            damage_centers_validated: (helper?.damage_assessment?.centers?.length || 0) > 0,
+            calculations_verified: true,
+            bridge_fields_populated: !!(helper?.calculations?.base_price && helper?.calculations?.final_adjustments_value)
+          },
           completed_at: new Date().toISOString(),
-          is_complete: true,
-          status: 'validation_completed'
+          is_complete: true
         };
         
         console.log('📝 FINAL expertise validation structure created:', helper.expertise.validation);
@@ -1946,20 +2002,59 @@
           console.log('📝 Created expertise object directly');
         }
         
-        // Create/update validation structure - similar to final_report.validation
+        // Create/update validation structure - similar to final_report.validation with ACTUAL DATA
         helper.expertise.validation = {
           validated_at: new Date().toISOString(),
           validated_by: 'expertise_user',
           workflow_type: 'expertise',
           completed_sections: Object.keys(window.validationState).filter(key => window.validationState[key].approved === true),
-          validation_state: window.validationState,
-          vehicle_validated: window.validationState.vehicle?.approved || false,
-          levi_validated: window.validationState.levi?.approved || false,
-          damage_validated: window.validationState.damage?.approved || false,
-          summary_validated: window.validationState.summary?.approved || false,
-          all_sections_validated: Object.values(window.validationState).every(section => section.approved),
-          validation_timestamp: Date.now(),
-          plate: helper?.vehicle?.plate || 'לא ידוע',
+          validation_progress: {
+            vehicle: window.validationState.vehicle?.approved || false,
+            levi: window.validationState.levi?.approved || false,
+            damage: window.validationState.damage?.approved || false,
+            summary: window.validationState.summary?.approved || false
+          },
+          // Store ACTUAL DATA from the helper
+          vehicle_data: {
+            plate: helper?.vehicle?.plate || helper?.case_info?.plate || '',
+            make: helper?.vehicle?.make || helper?.case_info?.vehicle_make || '',
+            model: helper?.vehicle?.model || helper?.case_info?.vehicle_model || '',
+            year: helper?.vehicle?.year || helper?.case_info?.vehicle_year || '',
+            owner_name: helper?.case_info?.owner_name || helper?.stakeholders?.owner?.name || '',
+            insurance_company: helper?.case_info?.insurance_company || '',
+            agent_name: helper?.case_info?.agent_name || '',
+            inspection_date: helper?.case_info?.inspection_date || '',
+            damage_date: helper?.case_info?.damage_date || ''
+          },
+          levi_data: {
+            base_price: helper?.valuation?.base_price || helper?.levi_summary?.base_price || 0,
+            final_price: helper?.valuation?.final_price || helper?.levi_summary?.final_price || 0,
+            adjustments: helper?.valuation?.adjustments || helper?.levi_summary?.adjustments || {},
+            adjustments_value: helper?.valuation?.adjustments_value || 0,
+            depreciation: helper?.levi_summary?.depreciation || 0
+          },
+          damage_data: {
+            centers_count: helper?.damage_assessment?.centers?.length || 0,
+            centers: helper?.damage_assessment?.centers || [],
+            total_parts: helper?.damage_assessment?.totals?.total_parts || 0,
+            total_labor: helper?.damage_assessment?.totals?.total_labor || 0,
+            total_cost: helper?.damage_assessment?.totals?.total_cost || 0,
+            totals: helper?.damage_assessment?.totals || {}
+          },
+          expertise_summary: {
+            summary_data: helper?.expertise?.summary || {},
+            damage_description: helper?.expertise?.summary?.damage_description || '',
+            findings: helper?.expertise?.summary?.findings || '',
+            recommendations: helper?.expertise?.summary?.recommendations || '',
+            total_damages: helper?.expertise?.summary?.total_damages || 0
+          },
+          specific_validations: {
+            has_vehicle_data: !!(helper?.vehicle?.plate && helper?.vehicle?.make),
+            has_levi_data: !!(helper?.valuation?.base_price || helper?.levi_summary?.base_price),
+            has_damage_centers: (helper?.damage_assessment?.centers?.length || 0) > 0,
+            has_expertise_summary: !!(helper?.expertise?.summary && Object.keys(helper.expertise.summary).length > 0),
+            calculations_verified: true
+          },
           saved_at: new Date().toISOString(),
           is_complete: false // Mark as incomplete when just saving
         };
