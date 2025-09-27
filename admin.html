@@ -7408,18 +7408,35 @@ function getInitialEstimateValidationDetails(helper) {
 }
 
 function checkDamageValidation(helper) {
-  // Damage is validated if we have damage centers with data
-  const hasDamageCenters = !!(helper.damage_assessment?.centers?.length > 0);
-  const hasDamageValidation = helper.validation_progress?.damage === true;
-  const hasDamageTotals = !!(helper.damage_assessment?.totals && Object.keys(helper.damage_assessment.totals).length > 0);
+  // Damage is validated if we have damage centers with ACTUAL CONTENT
+  const centers = helper.damage_assessment?.centers || [];
   
-  // If we have damage centers and totals, it's validated
-  const damageValidated = hasDamageCenters && hasDamageTotals;
-  console.log('🔧 DAMAGE VALIDATION:', damageValidated, {
-    centers: hasDamageCenters,
-    totals: hasDamageTotals,
-    validation_progress: hasDamageValidation
+  // Check if centers have real content, not just empty objects
+  const hasValidCenters = centers.length > 0 && centers.every(center => {
+    // Check for required fields with actual values
+    const hasName = !!(center.name && center.name.trim());
+    const hasParts = (center.parts > 0) || (center.parts_count > 0) || (center.partsCount > 0);
+    const hasLabor = (center.labor_hours > 0) || (center.work_hours > 0) || (center.laborHours > 0) || (center.workHours > 0);
+    
+    // A center is valid if it has a name and either parts or labor
+    return hasName && (hasParts || hasLabor);
   });
+  
+  // Also check if we have valid totals
+  const totals = helper.damage_assessment?.totals || {};
+  const hasValidTotals = (totals.total_cost > 0) || (totals.totalCost > 0) || 
+                        (totals.total_parts > 0) || (totals.total_labor > 0);
+  
+  // Damage is validated if we have valid centers AND valid totals
+  const damageValidated = hasValidCenters && hasValidTotals;
+  
+  console.log('🔧 DAMAGE VALIDATION:', damageValidated, {
+    centers_count: centers.length,
+    valid_centers: hasValidCenters,
+    valid_totals: hasValidTotals,
+    totals: totals
+  });
+  
   return damageValidated;
 }
 
