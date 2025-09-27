@@ -1493,29 +1493,8 @@
     </div>
   </div>
   
-  <!-- ✅ CRITICAL FIX: Load Supabase BEFORE helper.js to ensure availability -->
-  <script type="module">
-    import { supabaseHelperService } from './services/supabaseHelperService.js';
-    import { supabase } from './lib/supabaseClient.js';
-    
-    // Make Supabase service globally available BEFORE helper.js loads
-    window.supabaseHelperService = supabaseHelperService;
-    window.supabase = supabase;
-    
-    console.log('✅ Supabase services loaded BEFORE helper.js');
-    
-    // Now load helper.js after Supabase is ready
-    const helperScript = document.createElement('script');
-    helperScript.src = 'helper.js';
-    helperScript.type = 'module';
-    document.head.appendChild(helperScript);
-    
-    // Load parts.js as well
-    const partsScript = document.createElement('script');
-    partsScript.src = 'parts.js';
-    partsScript.type = 'module';
-    document.head.appendChild(partsScript);
-  </script>
+  <script src="helper.js" type="module"></script>
+  <script type="module" src="parts.js"></script>
   
   <script>
     // Global wizard state and module data storage
@@ -6307,8 +6286,25 @@
         let helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
         
         if (helper.parts_search) {
-          helper.parts_search.selected_parts = data.selectedParts || [];
+          // ✅ CRITICAL FIX: Use accumulation logic instead of overwriting
+          const currentCenterId = moduleData.current_damage_center?.id || 'unknown_center';
+          
+          // Keep parts from other damage centers and add new parts for current center
+          const partsFromOtherCenters = (helper.parts_search.selected_parts || []).filter(part => 
+            part.damage_center_id !== currentCenterId
+          );
+          
+          // Ensure new parts have damage center ID
+          const newPartsWithCenterId = (data.selectedParts || []).map(part => ({
+            ...part,
+            damage_center_id: currentCenterId
+          }));
+          
+          // Combine: parts from other centers + new parts for current center
+          helper.parts_search.selected_parts = [...partsFromOtherCenters, ...newPartsWithCenterId];
           helper.parts_search.unselected_parts = data.unselectedParts || [];
+          
+          console.log(`✅ Updated parts_search: ${partsFromOtherCenters.length} from other centers + ${newPartsWithCenterId.length} from current center`);
         }
         
         sessionStorage.setItem('helper', JSON.stringify(helper));
