@@ -383,7 +383,7 @@ INSERT INTO storage.buckets (id, name, public) VALUES
 עדכון אחרון:  dd/mm/yyyy
 סה"כ גיבויים: n
 7. in admin hub add delete case from supabase (שרת) and give 2 step confirmation
-8. helper is not creating another version , its staying on v1 in supabase -**not fixed**
+8. helper is not creating another version , its staying on v1 in supabase - NEW VERSIONS ARE NOT BEING SAVED AND ARE REVERTED TO V1 -**not fixed**
 9. admin hub preview version history status showing wrong information -**not fixed**
 
 
