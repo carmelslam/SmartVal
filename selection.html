@@ -12,8 +12,12 @@
     import { sendToWebhook } from './webhook.js';
 
     // Load actual backup count from Supabase
-    async function loadBackupCount(caseId, plateNumber) {
-      if (!caseId) return;
+    window.loadBackupCount = async function(caseId, plateNumber) {
+      console.log('Loading backup count for case:', caseId);
+      if (!caseId) {
+        console.log('No case ID provided for backup count');
+        return;
+      }
       
       try {
         // Import Supabase client
@@ -25,13 +29,20 @@
           .select('*', { count: 'exact', head: true })
           .eq('case_id', caseId);
         
+        console.log('Backup count result:', { count, error });
+        
         if (!error && count !== null) {
           document.getElementById('caseBackups').textContent = 
             count > 1 ? `${count} גיבויים` : `${count} גיבוי`;
+        } else if (error) {
+          console.error('Error loading backup count:', error);
+          // Fallback - just show we have at least one backup
+          document.getElementById('caseBackups').textContent = '1 גיבוי לפחות';
         }
       } catch (err) {
-        console.log('Could not load backup count:', err);
+        console.error('Could not load backup count:', err);
         // Keep the version text as fallback
+        document.getElementById('caseBackups').textContent = '1 גיבוי לפחות';
       }
     }
     
@@ -274,13 +285,14 @@
           const versionText = metadata.version ? `גרסה ${metadata.version}` : 'בודק...';
           document.getElementById('caseBackups').textContent = versionText;
           
-          // Async load actual backup count
-          loadBackupCount(result.case?.id, plateNumber);
+          // Async load actual backup count - make it available globally
+          window.loadBackupCount(result.case?.id, plateNumber);
           
-          // Legacy fields for compatibility
+          // Legacy fields for compatibility - use same created date
+          const inspectionDate = result.case?.created_at || helper.case_info?.created_at || helper.case_info?.inspection_date;
           document.getElementById('caseDate').textContent = 
-            helper.case_info?.created_at ? 
-            new Date(helper.case_info.created_at).toLocaleDateString('he-IL') : 'לא זמין';
+            inspectionDate ? 
+            new Date(inspectionDate).toLocaleDateString('he-IL') : 'לא זמין';
             
           document.getElementById('caseVehicle').textContent = 
             `${helper.vehicle?.make || ''} ${helper.vehicle?.model || ''}`.trim() || 'לא זמין';
