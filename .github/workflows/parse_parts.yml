@@ -1,4 +1,37 @@
-# Commit the workflow
-git add .github/workflows/parse_parts.yml
-git commit -m "Add GitHub Action for automated PDF parsing"
-git push origin main
+name: Parse Parts Catalog
+on:
+  workflow_dispatch:
+    inputs:
+      supplier_slug:
+        description: 'Supplier slug'
+        required: true
+        default: 'm-pines'
+      signed_url:
+        description: 'Signed URL to PDF'
+        required: true
+        default: 'https://m-pines.com/wp-content/uploads/2025/06/מחירון-06-25.pdf'
+      version_date:
+        description: 'Version date'
+        required: true
+        default: '2025-01-27'
+      source_path:
+        description: 'Source path'
+        required: true
+        default: 'm-pines-2025-06'
+jobs:
+  parse:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+      - run: pip install requests beautifulsoup4 pdfplumber supabase
+      - run: python parser.py
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          SUPPLIER_SLUG: ${{ github.event.inputs.supplier_slug }}
+          VERSION_DATE: ${{ github.event.inputs.version_date }}
+          SIGNED_URL: ${{ github.event.inputs.signed_url }}
+          SOURCE_PATH: ${{ github.event.inputs.source_path }}
