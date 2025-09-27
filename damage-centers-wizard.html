@@ -3566,6 +3566,21 @@
           break;
           
         case 5:
+          // ✅ IDEMPOTENT SAVE: Check if this exact operation was recently performed
+          const now = Date.now();
+          const lastSaveKey = `damage_center_save_${helper.current_damage_center?.Id || helper.current_damage_center?.id}_step5`;
+          const lastSaveTime = parseInt(sessionStorage.getItem(lastSaveKey) || '0');
+          const timeSinceLastSave = now - lastSaveTime;
+          
+          // If the same operation was performed less than 2 seconds ago, skip to prevent duplicates
+          if (timeSinceLastSave < 2000) {
+            console.log('⏭️ IDEMPOTENT SAVE: Skipping duplicate save operation for step 5 (last save was', timeSinceLastSave, 'ms ago)');
+            break;
+          }
+          
+          // Record this save operation timestamp
+          sessionStorage.setItem(lastSaveKey, now.toString());
+          
           // Save parts required data to current_damage_center
           const partsData = moduleData.parts || [];
           
@@ -3583,7 +3598,8 @@
               'מספר OEM': part.part_number || '',
               מיקום: part.location || 'ישראל',
               הערות: part.notes || '',
-              זמינות: part.availability || 'זמין'
+              זמינות: part.availability || 'זמין',
+              code: part.code || '' // Add code field for parts search compatibility
             }));
             helper.current_damage_center.Parts.parts_meta = {
               total_items: partsData.length,
