@@ -6467,46 +6467,45 @@ window.previewVersionForUser = async function(versionId, dayName, versionDate) {
       feeStatus: 'לא זמין'
     };
     
+    // Skip Supabase queries for now since these tables don't exist yet
+    // This prevents 404 errors in the console
+    // TODO: Enable these queries when Phase 5 tables are created
+    
+    /*
     if (caseId) {
       try {
-        // Check for parts - handle 404 gracefully
+        // Check for parts - will be enabled when selected_parts table is created
         const partsResponse = await fetch(`${SUPABASE_URL}/rest/v1/selected_parts?case_id=eq.${caseId}&limit=1`, {
           headers: {
             'apikey': SUPABASE_ANON_KEY,
             'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
           }
         });
-        if (partsResponse.status === 404) {
-          console.log('Parts table not found - feature not yet implemented');
-        } else if (partsResponse.ok) {
+        if (partsResponse.ok) {
           const partsData = await partsResponse.json();
           supabaseData.hasParts = partsData && partsData.length > 0;
         }
         
-        // Check for invoice - handle 404 gracefully
+        // Check for invoice - will be enabled when invoices table is created
         const invoiceResponse = await fetch(`${SUPABASE_URL}/rest/v1/invoices?case_id=eq.${caseId}&limit=1`, {
           headers: {
             'apikey': SUPABASE_ANON_KEY,
             'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
           }
         });
-        if (invoiceResponse.status === 404) {
-          console.log('Invoices table not found - feature not yet implemented');
-        } else if (invoiceResponse.ok) {
+        if (invoiceResponse.ok) {
           const invoiceData = await invoiceResponse.json();
           supabaseData.hasInvoice = invoiceData && invoiceData.length > 0;
         }
         
-        // Check for fee payment status - handle 404 gracefully
+        // Check for fee payment status - will be enabled when fees table is created
         const feeResponse = await fetch(`${SUPABASE_URL}/rest/v1/fees?case_id=eq.${caseId}&select=payment_status&limit=1`, {
           headers: {
             'apikey': SUPABASE_ANON_KEY,
             'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
           }
         });
-        if (feeResponse.status === 404) {
-          console.log('Fees table not found - feature not yet implemented');
-        } else if (feeResponse.ok) {
+        if (feeResponse.ok) {
           const feeData = await feeResponse.json();
           if (feeData && feeData.length > 0) {
             supabaseData.feeStatus = feeData[0].payment_status === 'paid' ? 'שולם' : 'לא שולם';
@@ -6516,6 +6515,7 @@ window.previewVersionForUser = async function(versionId, dayName, versionDate) {
         console.error('Error fetching Supabase data:', error);
       }
     }
+    */
     
     const readableContent = generateUserFriendlyReport(version.helper_json, supabaseData);
     
