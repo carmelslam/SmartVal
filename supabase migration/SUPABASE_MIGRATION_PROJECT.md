@@ -465,6 +465,9 @@ INSERT INTO storage.buckets (id, name, public) VALUES
 1. final report builder and estimate builder have reload case, ourpose : to reload existing reports.
 2. Restored case on selection page P populates the plate window in estimator builder and the fina report builder in the window טען תיק קיים
 3. The buttons of the report retrieval will call the actual report of the plate from supabase buckets
+
+**finish**
+delete all test pages and debugs used in teh migration process - just what is not neccessary anymore .
 ---
 
 ## Implementation Log
