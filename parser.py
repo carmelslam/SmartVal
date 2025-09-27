@@ -26,21 +26,27 @@ def main():
     supplier = client.table("suppliers").select("id").eq("slug", supplier_slug).single().execute()
     supplier_id = supplier.data["id"]
     
-    # DELETE old catalog items for this supplier only
+    # DELETE old catalog items for this supplier only - PUT IT HERE
     print(f"Deleting old catalog for {supplier_slug}...")
-    client.table("catalog_items").delete().eq("supplier_id", supplier_id).execute()
-    print("Old catalog deleted")
+    delete_result = client.table("catalog_items").delete().eq("supplier_id", supplier_id).execute()
+    print(f"Deleted {len(delete_result.data) if delete_result.data else 'unknown number of'} old rows")
     
     # Download and parse new catalog
+    print(f"Downloading from {signed_url}...")
     pdf_bytes = download_signed(signed_url)
+    print(f"Downloaded {len(pdf_bytes)} bytes")
+    
+    print(f"Parsing with {supplier_slug} parser...")
     rows = parser.parse(pdf_bytes, supplier_slug, version_date, source_path)
     
-    # Upload new catalog
-    total = 0
-    for batch in chunked(rows, 800):
-        total += upsert_rows("catalog_items", batch)
-    
-    print({"supplier": supplier_slug, "version_date": version_date, "parsed": len(rows), "upserted": total})
+    # Upload new catalog (this might be empty if parser already uploaded in chunks)
+    if rows:
+        total = 0
+        for batch in chunked(rows, 800):
+            total += upsert_rows("catalog_items", batch)
+        print({"supplier": supplier_slug, "version_date": version_date, "parsed": len(rows), "upserted": total})
+    else:
+        print(f"Parser handled uploading internally for {supplier_slug}")
 
 if __name__ == "__main__":
     main()
