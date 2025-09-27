@@ -19,17 +19,24 @@ def main():
     source_path   = os.environ["SOURCE_PATH"]
 
     parser = SUPPLIER_MAP[supplier_slug]
-    
+
     # Get supplier
     client = get_client()
     upsert_supplier(supplier_slug, name=supplier_slug)
     supplier = client.table("suppliers").select("id").eq("slug", supplier_slug).single().execute()
     supplier_id = supplier.data["id"]
+
+    # DELETE old catalog items
+    print(f"Checking for old catalog items for supplier: {supplier_slug}")
+    count_before = client.table("catalog_items").select("count", count="exact").eq("supplier_id", supplier_id).execute()
+    print(f"Found {count_before.count} existing items")
     
-    # DELETE old catalog items for this supplier only - PUT IT HERE
-    print(f"Deleting old catalog for {supplier_slug}...")
-    delete_result = client.table("catalog_items").delete().eq("supplier_id", supplier_id).execute()
-    print(f"Deleted {len(delete_result.data) if delete_result.data else 'unknown number of'} old rows")
+    if count_before.count > 0:
+        print(f"Deleting old catalog...")
+        delete_result = client.table("catalog_items").delete().eq("supplier_id", supplier_id).execute()
+        print(f"Delete completed")
+    else:
+        print("No old items to delete")
     
     # Download and parse new catalog
     print(f"Downloading from {signed_url}...")
@@ -39,14 +46,14 @@ def main():
     print(f"Parsing with {supplier_slug} parser...")
     rows = parser.parse(pdf_bytes, supplier_slug, version_date, source_path)
     
-    # Upload new catalog (this might be empty if parser already uploaded in chunks)
+    # Upload new catalog (might be empty if parser uploaded in chunks)
     if rows:
         total = 0
         for batch in chunked(rows, 800):
             total += upsert_rows("catalog_items", batch)
-        print({"supplier": supplier_slug, "version_date": version_date, "parsed": len(rows), "upserted": total})
+        print(f"Uploaded {total} rows")
     else:
-        print(f"Parser handled uploading internally for {supplier_slug}")
+        print("Parser handled uploading internally")
 
 if __name__ == "__main__":
     main()
