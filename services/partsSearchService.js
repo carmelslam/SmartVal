@@ -244,6 +244,7 @@ class PartsSearchService {
 
   /**
    * Free text search across multiple fields
+   * Using multiple queries since custom client doesn't support .or()
    */
   async searchByFreeQuery(params) {
     if (!params.free_query) return [];
@@ -252,24 +253,50 @@ class PartsSearchService {
     
     try {
       const query = `%${params.free_query}%`;
+      const allResults = [];
+      const seenIds = new Set();
       
-      const { data, error } = await supabase
-        .from('catalog_items')
-        .select(`
-          id, supplier_name, pcode, cat_num_desc, price, oem,
-          availability, location, comments, make, model, trim,
-          engine_volume, part_family, source
-        `)
-        .or(`cat_num_desc.ilike.${query},oem.ilike.${query},make.ilike.${query},model.ilike.${query},part_family.ilike.${query},supplier_name.ilike.${query}`)
-        .limit(100);
+      // Search across different fields separately
+      const searchFields = [
+        'cat_num_desc',
+        'oem', 
+        'make',
+        'model',
+        'part_family',
+        'supplier_name',
+        'pcode'
+      ];
+      
+      for (const field of searchFields) {
+        try {
+          const { data, error } = await supabase
+            .from('catalog_items')
+            .select(`
+              id, supplier_name, pcode, cat_num_desc, price, oem,
+              availability, location, comments, make, model, trim,
+              engine_volume, part_family, source, year_from, year_to,
+              version_date
+            `)
+            .ilike(field, query)
+            .limit(50);
 
-      if (error) {
-        console.error('❌ Free query search error:', error);
-        return [];
+          if (!error && data) {
+            // Add unique results
+            data.forEach(item => {
+              if (!seenIds.has(item.id)) {
+                seenIds.add(item.id);
+                allResults.push(item);
+              }
+            });
+          }
+        } catch (fieldError) {
+          console.warn(`⚠️ Error searching field ${field}:`, fieldError);
+          continue; // Continue with other fields
+        }
       }
 
-      console.log(`✅ Free query search found ${data?.length || 0} results`);
-      return data || [];
+      console.log(`✅ Free query search found ${allResults.length} unique results`);
+      return allResults.slice(0, 100); // Limit total results
       
     } catch (error) {
       console.error('❌ Free query search error:', error);

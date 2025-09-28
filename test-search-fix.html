@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Test Search Fix - SmartVal</title>
+  <style>
+    body {
+      font-family: 'Arial Hebrew', Arial, sans-serif;
+      background: #f0f2f5;
+      margin: 0;
+      padding: 20px;
+      direction: rtl;
+    }
+    .container {
+      max-width: 600px;
+      background: white;
+      padding: 30px;
+      border-radius: 12px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      margin: 0 auto;
+    }
+    .btn {
+      background: #3b82f6;
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 8px;
+      cursor: pointer;
+      margin: 10px 5px;
+      font-size: 16px;
+    }
+    .btn:hover { background: #2563eb; }
+    .log {
+      background: #f8f9fa;
+      border: 1px solid #e9ecef;
+      border-radius: 8px;
+      padding: 15px;
+      margin-top: 20px;
+      max-height: 400px;
+      overflow-y: auto;
+      font-family: monospace;
+      font-size: 13px;
+      white-space: pre-wrap;
+    }
+    input {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      margin-bottom: 10px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🔧 Test Search Fix</h1>
+    <p>בדיקת תיקון שגיאת ה-.or() במודול החיפוש</p>
+    
+    <input type="text" id="search-query" placeholder="חיפוש חופשי - נסה: פנס, כנף, דלת" value="test">
+    
+    <div style="text-align: center; margin: 20px 0;">
+      <button class="btn" onclick="testFreeQuery()">🔍 בדוק חיפוש חופשי</button>
+      <button class="btn" onclick="testBasicSearch()">📋 בדוק חיפוש בסיסי</button>
+      <button class="btn" onclick="clearLog()" style="background: #dc3545;">🧹 נקה</button>
+    </div>
+    
+    <div id="log" class="log">בדיקת תיקון שגיאת .or() method...
+</div>
+  </div>
+
+  <script type="module">
+    import { partsSearchService } from './services/partsSearchService.js';
+    
+    window.log = function(message, type = 'info') {
+      const logElement = document.getElementById('log');
+      const timestamp = new Date().toLocaleTimeString('he-IL');
+      const icon = type === 'error' ? '❌' : type === 'success' ? '✅' : type === 'warning' ? '⚠️' : 'ℹ️';
+      
+      logElement.textContent += `\n${timestamp} ${icon} ${message}`;
+      logElement.scrollTop = logElement.scrollHeight;
+    };
+    
+    window.clearLog = function() {
+      document.getElementById('log').textContent = 'לוג נוקה...\n';
+    };
+    
+    window.testFreeQuery = async function() {
+      const query = document.getElementById('search-query').value;
+      log(`🔍 Testing free query search with: "${query}"`);
+      
+      try {
+        const searchParams = {
+          free_query: query,
+          manufacturer: 'Toyota'
+        };
+        
+        log('📋 Calling partsSearchService.searchParts()...');
+        const result = await partsSearchService.searchParts(searchParams);
+        
+        if (result.success) {
+          log(`✅ Search successful! Found ${result.results.length} results`, 'success');
+          if (result.results.length > 0) {
+            log(`📄 First result: ${JSON.stringify(result.results[0], null, 2)}`);
+          }
+        } else {
+          log(`❌ Search failed: ${result.error}`, 'error');
+        }
+        
+      } catch (error) {
+        log(`❌ Test failed: ${error.message}`, 'error');
+        log(`Stack: ${error.stack}`);
+      }
+    };
+    
+    window.testBasicSearch = async function() {
+      log('🔍 Testing basic catalog search...');
+      
+      try {
+        const searchParams = {
+          manufacturer: 'Toyota',
+          model: 'Corolla'
+        };
+        
+        log('📋 Calling basic search...');
+        const result = await partsSearchService.searchParts(searchParams);
+        
+        if (result.success) {
+          log(`✅ Basic search successful! Found ${result.results.length} results`, 'success');
+          if (result.results.length > 0) {
+            log(`📄 First result: ${JSON.stringify(result.results[0], null, 2)}`);
+          }
+        } else {
+          log(`❌ Basic search failed: ${result.error}`, 'error');
+        }
+        
+      } catch (error) {
+        log(`❌ Basic test failed: ${error.message}`, 'error');
+      }
+    };
+    
+    // Auto-run test
+    document.addEventListener('DOMContentLoaded', () => {
+      log('🚀 Test page loaded');
+      log('✅ partsSearchService imported successfully', 'success');
+    });
+  </script>
+</body>
+</html>
