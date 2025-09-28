@@ -96,6 +96,7 @@ ALTER TABLE parts_required ADD COLUMN IF NOT EXISTS supplier_name TEXT;
 
 -- Drop existing function first to avoid return type conflicts
 DROP FUNCTION IF EXISTS search_parts_comprehensive(text,text,text,text,text,text,text,text,text,text,text,text);
+DROP FUNCTION IF EXISTS search_parts_comprehensive(text,text,text,text,text,text,text,text,text,text,text,text,text);
 
 CREATE OR REPLACE FUNCTION search_parts_comprehensive(
   p_plate TEXT DEFAULT NULL,
@@ -107,6 +108,7 @@ CREATE OR REPLACE FUNCTION search_parts_comprehensive(
   p_engine_code TEXT DEFAULT NULL,
   p_engine_type TEXT DEFAULT NULL,
   p_vin TEXT DEFAULT NULL,
+  p_oem TEXT DEFAULT NULL,
   p_part_family TEXT DEFAULT NULL,
   p_part_name TEXT DEFAULT NULL,
   p_free_query TEXT DEFAULT NULL
@@ -161,6 +163,8 @@ BEGIN
     
     -- Part matching (if provided)
     AND (p_part_family IS NULL OR ci.part_family ILIKE '%' || p_part_family || '%')
+    -- OEM search (specific field)
+    AND (p_oem IS NULL OR ci.oem ILIKE '%' || p_oem || '%')
     AND (
       -- Free query search (most flexible)
       p_free_query IS NULL 

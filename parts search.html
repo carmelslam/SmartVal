@@ -118,6 +118,7 @@
     <input type="text" id="engine_code" name="engine_code" placeholder="דגם מנוע">
     <input type="text" id="engine_type" name="engine_type" placeholder="סוג מנוע">
     <input type="text" id="vin" name="vin" placeholder="מספר שלדה">
+    <input type="text" id="oem" name="oem" placeholder="מספר OEM">
  <input type="text" id="free_query" name="free_query" placeholder="חיפוש חופשי">
 <h2 class="right-small-heading">העלה/צלם תמונה לחיפוש (אופציונלי)</h2>
     <input type="file" id="part_image" accept="image/*" capture="environment" placeholder="תמונת חלק (אופציונלי)">
@@ -233,7 +234,8 @@
           'engine_volume': helper.vehicle?.engine_volume,
           'engine_code': helper.vehicle?.model_code,
           'engine_type': helper.vehicle?.engine_model,
-          'vin': helper.vehicle?.chassis
+          'vin': helper.vehicle?.chassis,
+          'oem': helper.vehicle?.oem || ''
         };
         
         // Apply the mappings
@@ -741,10 +743,86 @@ ${part.supplier ? `   ספק: ${part.supplier}` : ''}
     return true;
   }
   
+  // ✅ NEW: Comprehensive search function with Supabase + Make.com fallback
+  async function searchWithSupabaseFallback(payload) {
+    console.log('🔍 Starting comprehensive search with Supabase + Make.com fallback');
+    
+    try {
+      // Step 1: Try Supabase search first
+      console.log('1️⃣ Attempting Supabase search...');
+      const supabaseResults = await partsSearchService.searchParts(payload);
+      
+      if (supabaseResults.success && supabaseResults.results && supabaseResults.results.length > 0) {
+        console.log(`✅ Supabase search successful: ${supabaseResults.results.length} results`);
+        
+        // Convert Supabase results to Make.com compatible format
+        const convertedResults = {
+          success: true,
+          results: [{
+            group: 'תוצאות קטלוג Supabase',
+            name: 'חיפוש במאגר',
+            search_results: supabaseResults.results.map(item => ({
+              id: item.id,
+              תיאור: item.cat_num_desc || 'ללא תיאור',
+              מחיר: item.price ? `₪${item.price}` : 'לא צוין',
+              ספק: item.supplier_name || 'לא צוין',
+              מיקום: item.location || 'לא צוין',
+              זמינות: item.availability || 'לא צוין',
+              'מספר OEM': item.oem || '',
+              'סוג חלק': item.source || 'לא צוין',
+              הערות: item.comments || '',
+              // Keep original data for selection
+              _original: item
+            }))
+          }],
+          plate: payload.plate,
+          date: new Date().toISOString(),
+          source: 'supabase_catalog'
+        };
+        
+        return convertedResults;
+      } else {
+        console.log('ℹ️ Supabase search returned no results, trying Make.com fallback...');
+      }
+      
+    } catch (error) {
+      console.error('❌ Supabase search error:', error);
+      console.log('🔄 Falling back to Make.com webhook...');
+    }
+    
+    // Step 2: Fallback to Make.com webhook
+    console.log('2️⃣ Using Make.com webhook fallback...');
+    try {
+      const makecomResults = await sendPartSearch(payload);
+      
+      if (makecomResults) {
+        console.log('✅ Make.com webhook returned results');
+        return {
+          ...makecomResults,
+          source: 'makecom_webhook',
+          fallback_used: true
+        };
+      }
+      
+    } catch (webhookError) {
+      console.error('❌ Make.com webhook also failed:', webhookError);
+    }
+    
+    // Step 3: Return empty results if all methods fail
+    console.log('⚠️ All search methods failed, returning empty results');
+    return {
+      success: false,
+      results: [],
+      error: 'כל שיטות החיפוש נכשלו. אנא נסה שוב מאוחר יותר.',
+      no_results: true
+    };
+  }
+  
   // Make functions globally available
   window.exportSelectedParts = exportSelectedParts;
   window.updateHelperWithPartsSearch = updateHelperWithPartsSearch;
   window.validateSearchForm = validateSearchForm;
+  window.searchWithSupabaseFallback = searchWithSupabaseFallback;
   
 </script>
 
@@ -773,6 +851,7 @@ ${part.supplier ? `   ספק: ${part.supplier}` : ''}
       engine_code: engine_code.value.trim(),
       engine_type: engine_type.value.trim(),
       vin: vin.value.trim(),
+      oem: oem.value.trim(),
       part_group: part_group.value,
       part_name: part_name.value,
       free_query: free_query.value.trim(),
@@ -783,7 +862,8 @@ ${part.supplier ? `   ספק: ${part.supplier}` : ''}
       parts_list: selectedParts || []
     };
     
-    sendPartSearch(payload).then(results => {
+    // ✅ ENHANCED: Try Supabase search first, fallback to Make.com webhook
+    searchWithSupabaseFallback(payload).then(results => {
       console.log('📥 Parts search response received:', results);
       
       // Fix: Handle actual webhook structure {plate, date, results}
@@ -795,7 +875,9 @@ ${part.supplier ? `   ספק: ${part.supplier}` : ''}
           return sum + (group.search_results ? group.search_results.length : 0);
         }, 0);
         
-        alert(`✅ נמצאו ${results.results.length} קבוצות חלקים עם סה"כ ${totalParts} אפשרויות!`);
+        const sourceMsg = results.source === 'supabase_catalog' ? '(מקטלוג Supabase)' : 
+                         results.fallback_used ? '(דרך Make.com)' : '';
+        alert(`✅ נמצאו ${results.results.length} קבוצות חלקים עם סה"כ ${totalParts} אפשרויות! ${sourceMsg}`);
         
         // Forward webhook results to damage centers wizard
         if (window.parent !== window && window.parent.postMessage) {
@@ -1010,6 +1092,7 @@ document.getElementById('sendResultToOCRBtn').addEventListener('click', function
     }
   }
   import { dev_credentials } from './credentials-vault.js';
+  import { partsSearchService } from './services/partsSearchService.js';
 
   window.sendPartSearch = sendPartSearch;
   window.sendSearchResultFile = sendSearchResultFile;
@@ -1786,7 +1869,7 @@ document.getElementById('sendResultToOCRBtn').addEventListener('click', function
 
   const autofillFields = [
     'plate', 'manufacturer', 'model', 'trim', 'year',
-    'engine_volume', 'engine_code', 'engine_type', 'vin'
+    'engine_volume', 'engine_code', 'engine_type', 'vin', 'oem'
   ];
   autofillFields.forEach(key => {
     const val = sessionStorage.getItem(key);
