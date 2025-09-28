@@ -84,7 +84,7 @@ Technical requirements :
 3. Pcode and OEM - Pcode or OEM populate code cell in results sheet / 
 
 
-**how the esearch resukts are cpayured and handled in teh UI**
+**how the search resukts are cpayured and handled in teh UI**
 Perfect! Here's the updated prompt with the correct catalog structure and implementation instructions:
 
 Prompt for Claude on Cursor:
