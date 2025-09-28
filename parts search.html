@@ -596,6 +596,7 @@ ${part.supplier ? `   ספק: ${part.supplier}` : ''}
   // ✅ NEW: Supabase Search Function for PiP Integration
   async function searchSupabase() {
     console.log('🔍 Starting Supabase search...');
+    alert('🔍 Starting Supabase search (debug)'); // Debug alert
     
     // Get button reference outside try block
     const supabaseBtn = document.querySelector('button[onclick="searchSupabase()"]');
@@ -628,36 +629,45 @@ ${part.supplier ? `   ספק: ${part.supplier}` : ''}
       };
       
       // Import and use the parts search service
+      console.log('📦 Attempting to import partsSearchService...');
       const { partsSearchService } = await import('./services/partsSearchService.js');
+      console.log('✅ partsSearchService imported:', partsSearchService);
       
       // Show loading notification
       if (typeof showNotification === 'function') {
         showNotification('מחפש בקטלוג...', 'info');
       }
+      console.log('🔄 About to call searchParts...');
       
       // Perform search
       const result = await partsSearchService.searchParts(searchParams);
+      
+      console.log('🔍 Search result:', result);
       
       if (result.success && result.results && result.results.length > 0) {
         console.log('✅ Supabase search successful:', result.results.length, 'results');
         
         // Show PiP window with results
+        console.log('🪟 Checking PiP component:', window.partsResultsPiP);
         if (window.partsResultsPiP) {
+          console.log('📋 Showing PiP with results...');
           await window.partsResultsPiP.showResults(result.results, {
             plate: searchParams.plate,
             sessionId: result.sessionId,
             searchType: result.searchType
           });
+          console.log('✅ PiP showResults completed');
         } else {
           console.error('❌ PiP component not available');
-          alert('שגיאה: רכיב התוצאות לא זמין');
+          alert('שגיאה: רכיב התוצאות לא זמין - window.partsResultsPiP = ' + typeof window.partsResultsPiP);
         }
         
         if (typeof showNotification === 'function') {
           showNotification(`נמצאו ${result.results.length} תוצאות`, 'success');
         }
       } else {
-        console.log('⚠️ No results found in Supabase');
+        console.log('⚠️ No results found in Supabase. Result details:', result);
+        alert('⚠️ No results found - check console for details');
         if (typeof showNotification === 'function') {
           showNotification('לא נמצאו תוצאות', 'warning');
         }
