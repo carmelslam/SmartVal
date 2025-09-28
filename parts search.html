@@ -139,6 +139,9 @@
 </select>
 <input type="number" id="part_quantity" placeholder="כמות" min="1" value="1">
 
+<!-- Supabase Search Button -->
+<button class="btn" type="button" onclick="searchSupabase()" style="background: #10b981; width: 100%; margin: 10px 0;">🔍 חפש ב-Supabase</button>
+
 <button type="button" class="btn" onclick="addFullPart()">הוסף חלק לרשימה</button>
 
 <!-- Selected Parts List Header and Display (matching screenshot design) -->
@@ -171,8 +174,8 @@
  <label for="resultFileUpload">העלה תוצאת חיפוש (PDF/תמונה)</label>
 <input type="file" id="resultFileUpload" accept=".pdf,.png,.jpg,.jpeg,.html">
 <button type="button" class="btn" id="sendResultToOCRBtn">שלח תוצאת חיפוש לניתוח</button>
-<h2 style="text-align: right; font-size: 18px;">חיפוש חלפים במערכת</h2>
-     <button class="btn" type="submit">🔍 חפש חלקים</button>
+<h2 style="text-align: right; font-size: 18px;">חיפוש חלפים במערכת חיצונית</h2>
+<button class="btn" type="submit" style="background: #007bff; width: 100%; margin: 10px 0;">🔍 חפש במערכת חיצונית (Make.com)</button>
 
 <!-- Enhanced Part Management -->
 <div style="margin-top: 20px;">
@@ -818,6 +821,111 @@ ${part.supplier ? `   ספק: ${part.supplier}` : ''}
       error: 'כל שיטות החיפוש נכשלו. אנא נסה שוב מאוחר יותר.',
       no_results: true
     };
+  }
+  
+  // ✅ NEW: Dedicated Supabase search function
+  async function searchSupabase() {
+    console.log('🔍 Starting dedicated Supabase search...');
+    
+    // Collect car details - mapping to match car_details and vehicle structures
+    const carDetails = {
+      plate: document.getElementById('plate').value.trim(),
+      manufacturer: document.getElementById('manufacturer').value.trim(),
+      model: document.getElementById('model').value.trim(),
+      vehicle_model_code: document.getElementById('model_code').value.trim(), // car_details.vehicle_model_code
+      model_code: document.getElementById('model_code').value.trim(), // Also keep for compatibility
+      trim: document.getElementById('trim').value.trim(),
+      year: document.getElementById('year').value.trim(),
+      engine_volume: document.getElementById('engine_volume').value.trim(), // car_details.engine_volume
+      engine_model: document.getElementById('engine_code').value.trim(), // car_details.engine_model (דגם מנוע)
+      engine_code: document.getElementById('engine_code').value.trim(), // Also keep for compatibility
+      fuel_type: document.getElementById('engine_type').value.trim(), // car_details.fuel_type (סוג מנוע)
+      engine_type: document.getElementById('engine_type').value.trim(), // Also keep for compatibility
+      vin: document.getElementById('vin').value.trim(),
+      oem: document.getElementById('oem').value.trim(),
+      free_query: document.getElementById('free_query').value.trim()
+    };
+    
+    // Collect part selection (NOT quantity or image)
+    const partGroup = document.getElementById('part_group').value;
+    const partName = document.getElementById('part_name').value;
+    
+    // Build search payload (exclude quantity and image)
+    const searchPayload = {
+      ...carDetails,
+      part_group: partGroup,
+      part_name: partName,
+      search_type: 'supabase_only'
+    };
+    
+    // Remove empty fields
+    Object.keys(searchPayload).forEach(key => {
+      if (!searchPayload[key]) {
+        delete searchPayload[key];
+      }
+    });
+    
+    console.log('📋 Supabase search payload:', searchPayload);
+    
+    try {
+      // Show loading state
+      const supabaseBtn = document.querySelector('button[onclick="searchSupabase()"]');
+      const originalText = supabaseBtn.innerHTML;
+      supabaseBtn.innerHTML = '⏳ מחפש ב-Supabase...';
+      supabaseBtn.disabled = true;
+      
+      // Search only in Supabase (no fallback to Make.com)
+      const results = await partsSearchService.searchParts(searchPayload);
+      
+      if (results.success && results.results && results.results.length > 0) {
+        console.log(`✅ Supabase search found ${results.results.length} results`);
+        
+        // Display results in the existing results area
+        displaySearchResults({
+          success: true,
+          results: [{
+            group: 'תוצאות חיפוש Supabase',
+            name: 'חיפוש מקומי במאגר',
+            search_results: results.results.map(item => ({
+              id: item.id,
+              תיאור: item.cat_num_desc || 'ללא תיאור',
+              מחיר: item.price ? `₪${item.price}` : 'לא צוין',
+              ספק: item.supplier_name || 'לא צוין',
+              'מספר OEM': item.oem || '',
+              'משפחת חלק': item.part_family || '',
+              'קוד דגם': item.model_code || '',
+              צד: item.side_position || '',
+              _original: item
+            }))
+          }],
+          source: 'supabase_direct'
+        });
+        
+        // Update helper with search results
+        updateHelperWithPartsSearch(results.results, searchPayload);
+        
+      } else {
+        console.log('ℹ️ No results found in Supabase');
+        displaySearchResults({
+          success: false,
+          results: [],
+          message: 'לא נמצאו תוצאות במאגר Supabase'
+        });
+      }
+      
+    } catch (error) {
+      console.error('❌ Supabase search error:', error);
+      displaySearchResults({
+        success: false,
+        results: [],
+        error: 'שגיאה בחיפוש Supabase: ' + error.message
+      });
+      
+    } finally {
+      // Restore button state
+      supabaseBtn.innerHTML = originalText;
+      supabaseBtn.disabled = false;
+    }
   }
   
   // Make functions globally available
