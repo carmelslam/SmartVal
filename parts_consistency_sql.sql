@@ -32,7 +32,7 @@ ALTER TABLE parts_search_results ADD COLUMN IF NOT EXISTS availability TEXT;
 ALTER TABLE parts_search_results ADD COLUMN IF NOT EXISTS location TEXT;
 ALTER TABLE parts_search_results ADD COLUMN IF NOT EXISTS comments TEXT;
 ALTER TABLE parts_search_results ADD COLUMN IF NOT EXISTS model TEXT;
-ALTER TABLE parts_search_results ADD COLUMN IF NOT EXISTS trim TEXT;
+ALTER TABLE parts_search_results ADD COLUMN IF NOT EXISTS "trim" TEXT;
 ALTER TABLE parts_search_results ADD COLUMN IF NOT EXISTS year TEXT;
 ALTER TABLE parts_search_results ADD COLUMN IF NOT EXISTS engine_volume TEXT;
 ALTER TABLE parts_search_results ADD COLUMN IF NOT EXISTS engine_code TEXT;
@@ -98,7 +98,7 @@ CREATE OR REPLACE FUNCTION search_parts_comprehensive(
   p_plate TEXT DEFAULT NULL,
   p_make TEXT DEFAULT NULL,
   p_model TEXT DEFAULT NULL,
-  p_trim TEXT DEFAULT NULL,
+  p_trim_level TEXT DEFAULT NULL,
   p_year TEXT DEFAULT NULL,
   p_engine_volume TEXT DEFAULT NULL,
   p_engine_code TEXT DEFAULT NULL,
@@ -120,7 +120,7 @@ RETURNS TABLE (
   comments TEXT,
   make TEXT,
   model TEXT,
-  trim TEXT,
+  "trim" TEXT,
   year TEXT,
   engine_volume TEXT,
   part_family TEXT,
@@ -152,7 +152,7 @@ BEGIN
     -- Vehicle matching (if provided)
     (p_make IS NULL OR ci.make ILIKE '%' || p_make || '%')
     AND (p_model IS NULL OR ci.model ILIKE '%' || p_model || '%')
-    AND (p_trim IS NULL OR ci.trim ILIKE '%' || p_trim || '%')
+    AND (p_trim_level IS NULL OR ci.trim ILIKE '%' || p_trim_level || '%')
     AND (p_engine_volume IS NULL OR ci.engine_volume ILIKE '%' || p_engine_volume || '%')
     AND (p_engine_code IS NULL OR ci.engine_code ILIKE '%' || p_engine_code || '%')
     
