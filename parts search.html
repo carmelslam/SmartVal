@@ -6,6 +6,9 @@
   <title>ירון כיוף שמאות - פורטל - חיפוש חלפים</title>
   <script type="module" src="./parts.js"></script>
   <script type="module" src="./webhook.js"></script>
+  <script type="module" src="./parts-search-results-pip.js"></script>
+  <script type="module" src="./selected-parts-list.js"></script>
+  <script type="module" src="./parts-helper-utils.js"></script>
   <script src="./internal-browser.js"></script>
 
   <link rel="icon" type="image/webp" href="https://carmelcayouf.com/wp-content/uploads/2025/06/g.webp">
@@ -590,6 +593,86 @@ ${part.supplier ? `   ספק: ${part.supplier}` : ''}
   
   // ✅ NEW: Send current parts list to Make.com for processing
   
+  // ✅ NEW: Supabase Search Function for PiP Integration
+  async function searchSupabase() {
+    console.log('🔍 Starting Supabase search...');
+    
+    try {
+      // Get form data
+      const searchParams = {
+        plate: document.getElementById('plate').value,
+        manufacturer: document.getElementById('manufacturer').value,
+        model: document.getElementById('model').value,
+        model_code: document.getElementById('model_code').value,
+        trim: document.getElementById('trim').value,
+        year: document.getElementById('year').value,
+        engine_volume: document.getElementById('engine_volume').value,
+        engine_code: document.getElementById('engine_code').value,
+        engine_type: document.getElementById('engine_type').value,
+        vin: document.getElementById('vin').value,
+        oem: document.getElementById('oem').value,
+        part_group: document.getElementById('part_group').value,
+        part_name: document.getElementById('part_name').value,
+        free_query: document.getElementById('free_query').value,
+        selectedParts: selectedParts
+      };
+      
+      // Import and use the parts search service
+      const { partsSearchService } = await import('./services/partsSearchService.js');
+      
+      // Show loading notification
+      if (typeof showNotification === 'function') {
+        showNotification('מחפש בקטלוג...', 'info');
+      }
+      
+      // Perform search
+      const result = await partsSearchService.searchParts(searchParams);
+      
+      if (result.success && result.results.length > 0) {
+        console.log('✅ Supabase search successful:', result.results.length, 'results');
+        
+        // Show PiP window with results
+        if (window.partsResultsPiP) {
+          await window.partsResultsPiP.showResults(result.results, {
+            plate: searchParams.plate,
+            sessionId: result.sessionId,
+            searchType: result.searchType
+          });
+        } else {
+          console.error('❌ PiP component not available');
+          alert('שגיאה: רכיב התוצאות לא זמין');
+        }
+        
+        if (typeof showNotification === 'function') {
+          showNotification(`נמצאו ${result.results.length} תוצאות`, 'success');
+        }
+      } else {
+        console.log('⚠️ No results found in Supabase');
+        if (typeof showNotification === 'function') {
+          showNotification('לא נמצאו תוצאות', 'warning');
+        }
+        
+        // Optionally fallback to Make.com search
+        if (result.fallbackToMakecom) {
+          if (confirm('לא נמצאו תוצאות בקטלוג. האם לחפש במערכת החיצונית?')) {
+            document.getElementById('partSearchForm').dispatchEvent(new Event('submit'));
+          }
+        }
+      }
+      
+    } catch (error) {
+      console.error('❌ Supabase search error:', error);
+      if (typeof showNotification === 'function') {
+        showNotification('שגיאה בחיפוש: ' + error.message, 'error');
+      }
+      
+      // Fallback to Make.com on error
+      if (confirm('שגיאה בחיפוש בקטלוג. האם לנסות במערכת החיצונית?')) {
+        document.getElementById('partSearchForm').dispatchEvent(new Event('submit'));
+      }
+    }
+  }
+
   // ✅ FIX 1: Implement missing exportSelectedParts function
   function exportSelectedParts() {
     console.log('📄 Exporting selected parts to Excel...');
