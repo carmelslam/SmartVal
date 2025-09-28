@@ -8,6 +8,7 @@
 
 DROP FUNCTION IF EXISTS search_parts_comprehensive(text,text,text,text,text,text,text,text,text,text,text,text);
 DROP FUNCTION IF EXISTS search_parts_comprehensive(text,text,text,text,text,text,text,text,text,text,text,text,text);
+DROP FUNCTION IF EXISTS search_parts_comprehensive(text,text,text,text,text,text,text,text,text,text,text,text,text,text);
 DROP FUNCTION IF EXISTS search_parts_for_plate(text,text,text,text,int);
 
 -- ============================================================================
@@ -50,6 +51,7 @@ END $$;
 
 -- Add fields that are definitely needed
 ALTER TABLE catalog_items ADD COLUMN IF NOT EXISTS model TEXT;
+ALTER TABLE catalog_items ADD COLUMN IF NOT EXISTS model_code TEXT;
 ALTER TABLE catalog_items ADD COLUMN IF NOT EXISTS "trim" TEXT;
 ALTER TABLE catalog_items ADD COLUMN IF NOT EXISTS vin TEXT;
 ALTER TABLE catalog_items ADD COLUMN IF NOT EXISTS engine_volume TEXT;
@@ -183,6 +185,7 @@ CREATE OR REPLACE FUNCTION search_parts_comprehensive(
   p_plate TEXT DEFAULT NULL,
   p_make TEXT DEFAULT NULL,
   p_model TEXT DEFAULT NULL,
+  p_model_code TEXT DEFAULT NULL,
   p_trim_level TEXT DEFAULT NULL,
   p_year TEXT DEFAULT NULL,
   p_engine_volume TEXT DEFAULT NULL,
@@ -206,6 +209,7 @@ RETURNS TABLE (
   comments TEXT,
   make TEXT,
   model TEXT,
+  model_code TEXT,
   "trim" TEXT,
   year TEXT,
   engine_volume TEXT,
@@ -228,6 +232,7 @@ BEGIN
     ci.comments,
     ci.make,
     ci.model,
+    ci.model_code,
     ci.trim,
     CAST(ci.version_date AS TEXT) as year, -- Use version_date as year equivalent
     ci.engine_volume,
@@ -238,6 +243,7 @@ BEGIN
     -- Vehicle matching (Level 1 filters)
     (p_make IS NULL OR ci.make ILIKE '%' || p_make || '%')
     AND (p_model IS NULL OR ci.model ILIKE '%' || p_model || '%')
+    AND (p_model_code IS NULL OR ci.model_code ILIKE '%' || p_model_code || '%')
     AND (p_trim_level IS NULL OR ci.trim ILIKE '%' || p_trim_level || '%')
     AND (p_engine_volume IS NULL OR ci.engine_volume ILIKE '%' || p_engine_volume || '%')
     AND (p_engine_code IS NULL OR ci.engine_code ILIKE '%' || p_engine_code || '%')
@@ -267,6 +273,7 @@ BEGIN
     -- Prioritize exact matches
     CASE WHEN ci.make ILIKE p_make THEN 1 ELSE 2 END,
     CASE WHEN ci.model ILIKE p_model THEN 1 ELSE 2 END,
+    CASE WHEN ci.model_code ILIKE p_model_code THEN 1 ELSE 2 END,
     CASE WHEN ci.oem ILIKE p_oem THEN 1 ELSE 2 END,
     -- Then by price (lowest first)
     ci.price ASC NULLS LAST,
