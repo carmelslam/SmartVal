@@ -597,7 +597,17 @@ ${part.supplier ? `   ספק: ${part.supplier}` : ''}
   async function searchSupabase() {
     console.log('🔍 Starting Supabase search...');
     
+    // Get button reference outside try block
+    const supabaseBtn = document.querySelector('button[onclick="searchSupabase()"]');
+    const originalText = supabaseBtn ? supabaseBtn.innerHTML : '';
+    
     try {
+      // Show loading state
+      if (supabaseBtn) {
+        supabaseBtn.innerHTML = '⏳ מחפש ב-Supabase...';
+        supabaseBtn.disabled = true;
+      }
+      
       // Get form data
       const searchParams = {
         plate: document.getElementById('plate').value,
@@ -628,7 +638,7 @@ ${part.supplier ? `   ספק: ${part.supplier}` : ''}
       // Perform search
       const result = await partsSearchService.searchParts(searchParams);
       
-      if (result.success && result.results.length > 0) {
+      if (result.success && result.results && result.results.length > 0) {
         console.log('✅ Supabase search successful:', result.results.length, 'results');
         
         // Show PiP window with results
@@ -669,6 +679,12 @@ ${part.supplier ? `   ספק: ${part.supplier}` : ''}
       // Fallback to Make.com on error
       if (confirm('שגיאה בחיפוש בקטלוג. האם לנסות במערכת החיצונית?')) {
         document.getElementById('partSearchForm').dispatchEvent(new Event('submit'));
+      }
+    } finally {
+      // Restore button state
+      if (supabaseBtn) {
+        supabaseBtn.innerHTML = originalText;
+        supabaseBtn.disabled = false;
       }
     }
   }

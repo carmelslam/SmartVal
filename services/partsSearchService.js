@@ -123,43 +123,90 @@ class PartsSearchService {
   }
 
   /**
-   * Search using the comprehensive PostgreSQL function
+   * Search using the catalog_items table directly
    */
   async searchByCatalog(params) {
-    console.log('📊 Searching catalog using comprehensive function');
+    console.log('📊 Searching catalog using direct table queries');
     
     try {
-      // Call the PostgreSQL function directly
+      // Start with basic query
       const { data, error } = await supabase
-        .rpc('search_parts_comprehensive', {
-          p_plate: params.plate,
-          p_make: params.make,
-          p_model: params.model,
-          p_model_code: params.model_code,
-          p_trim_level: params.trim,
-          p_year: params.year,
-          p_engine_volume: params.engine_volume,
-          p_engine_code: params.engine_code,
-          p_engine_type: params.engine_type,
-          p_vin: params.vin,
-          p_oem: params.oem,
-          p_part_family: params.part_family,
-          p_part_name: params.part_name,
-          p_free_query: params.free_query
-        });
+        .from('catalog_items')
+        .select(`
+          id, supplier_name, pcode, cat_num_desc, price, oem,
+          availability, location, comments, make, model, trim,
+          engine_volume, part_family, source, year_from, year_to,
+          version_date
+        `)
+        .limit(100);
 
       if (error) {
-        console.error('❌ Catalog search function error:', error);
+        console.error('❌ Catalog search error:', error);
         return [];
       }
 
-      console.log(`✅ Catalog search found ${data?.length || 0} results`);
-      return data || [];
+      let results = data || [];
+      
+      // Apply client-side filtering for more complex searches
+      if (results.length > 0) {
+        results = this.applyClientSideFilters(results, params);
+      }
+
+      console.log(`✅ Catalog search found ${results.length} results`);
+      return results;
       
     } catch (error) {
       console.error('❌ Catalog search error:', error);
       return [];
     }
+  }
+
+  /**
+   * Apply client-side filtering to results
+   */
+  applyClientSideFilters(results, params) {
+    let filtered = results;
+
+    // Filter by make
+    if (params.make) {
+      filtered = filtered.filter(item => 
+        item.make && item.make.toLowerCase().includes(params.make.toLowerCase())
+      );
+    }
+
+    // Filter by model
+    if (params.model) {
+      filtered = filtered.filter(item => 
+        item.model && item.model.toLowerCase().includes(params.model.toLowerCase())
+      );
+    }
+
+    // Filter by OEM
+    if (params.oem) {
+      filtered = filtered.filter(item => 
+        item.oem && item.oem.toLowerCase().includes(params.oem.toLowerCase())
+      );
+    }
+
+    // Filter by part family
+    if (params.part_family) {
+      filtered = filtered.filter(item => 
+        item.part_family && item.part_family.toLowerCase().includes(params.part_family.toLowerCase())
+      );
+    }
+
+    // Filter by free query (search across multiple fields)
+    if (params.free_query) {
+      const query = params.free_query.toLowerCase();
+      filtered = filtered.filter(item => 
+        (item.cat_num_desc && item.cat_num_desc.toLowerCase().includes(query)) ||
+        (item.oem && item.oem.toLowerCase().includes(query)) ||
+        (item.pcode && item.pcode.toLowerCase().includes(query)) ||
+        (item.supplier_name && item.supplier_name.toLowerCase().includes(query))
+      );
+    }
+
+    return filtered;
   }
 
   /**
@@ -278,11 +325,11 @@ class PartsSearchService {
     try {
       const sessionData = {
         plate: params.plate,
-        search_context: {
+        search_context: JSON.stringify({
           query: params,
           timestamp: params.timestamp,
           search_type: 'supabase_comprehensive'
-        }
+        })
       };
 
       // Add vehicle data if available
@@ -299,17 +346,17 @@ class PartsSearchService {
 
       const { data, error } = await supabase
         .from('parts_search_sessions')
-        .insert(sessionData)
-        .select('id')
-        .single();
+        .insert(sessionData);
 
       if (error) {
         console.error('❌ Failed to create search session:', error);
         return null;
       }
 
-      console.log('✅ Created search session:', data.id);
-      return data.id;
+      // Generate a simple session ID since we can't get the inserted ID easily
+      const sessionId = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      console.log('✅ Created search session:', sessionId);
+      return sessionId;
       
     } catch (error) {
       console.error('❌ Search session creation error:', error);
@@ -354,20 +401,36 @@ class PartsSearchService {
    */
   async saveSelectedPart(partData, plate, damageCenterId = null) {
     try {
+      const selectedPartData = {
+        catalog_item_id: partData.id,
+        plate_number: plate,
+        pcode: partData.pcode,
+        cat_num_desc: partData.cat_num_desc,
+        supplier_name: partData.supplier_name,
+        price: partData.price,
+        oem: partData.oem,
+        availability: partData.availability,
+        part_family: partData.part_family,
+        make: partData.make,
+        model: partData.model,
+        year_from: partData.year_from,
+        year_to: partData.year_to,
+        quantity: 1,
+        damage_center_id: damageCenterId,
+        selected_at: new Date().toISOString()
+      };
+
       const { data, error } = await supabase
-        .rpc('save_selected_part_complete', {
-          p_plate: plate,
-          p_part_data: partData,
-          p_damage_center_id: damageCenterId
-        });
+        .from('selected_parts')
+        .insert(selectedPartData);
 
       if (error) {
         console.error('❌ Failed to save selected part:', error);
         return { success: false, error: error.message };
       }
 
-      console.log('✅ Saved selected part:', data);
-      return { success: true, partId: data };
+      console.log('✅ Saved selected part to database');
+      return { success: true, partId: partData.id };
       
     } catch (error) {
       console.error('❌ Save selected part error:', error);

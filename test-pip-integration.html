@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Test PiP Integration - SmartVal</title>
+  <style>
+    body {
+      font-family: 'Arial Hebrew', Arial, sans-serif;
+      background: linear-gradient(135deg, #1e3a8a 0%, #64748b 100%);
+      margin: 0;
+      padding: 20px;
+      direction: rtl;
+    }
+    .container {
+      max-width: 600px;
+      background: white;
+      padding: 30px;
+      border-radius: 16px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      margin: 0 auto;
+    }
+    .btn {
+      background: #3b82f6;
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 8px;
+      cursor: pointer;
+      margin: 10px 5px;
+      font-size: 16px;
+    }
+    .btn:hover {
+      background: #2563eb;
+    }
+    .btn:disabled {
+      background: #9ca3af;
+      cursor: not-allowed;
+    }
+    .success {
+      background: #10b981;
+    }
+    .warning {
+      background: #f59e0b;
+    }
+    .error {
+      background: #ef4444;
+    }
+    .form-group {
+      margin-bottom: 15px;
+    }
+    input, select {
+      width: 100%;
+      padding: 8px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      font-size: 14px;
+    }
+    label {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: bold;
+    }
+    .log {
+      background: #f3f4f6;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      padding: 15px;
+      margin-top: 20px;
+      max-height: 300px;
+      overflow-y: auto;
+      font-family: monospace;
+      font-size: 12px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🧪 Test PiP Integration</h1>
+    <p>בדיקת רכיב חלון התוצאות הצף (PiP) של מודול חיפוש החלקים</p>
+    
+    <div class="form-group">
+      <label for="test-plate">מספר רכב לבדיקה:</label>
+      <input type="text" id="test-plate" value="12345678" placeholder="מספר רישוי">
+    </div>
+    
+    <div class="form-group">
+      <label for="test-make">יצרן:</label>
+      <input type="text" id="test-make" value="Toyota" placeholder="יצרן">
+    </div>
+    
+    <div class="form-group">
+      <label for="test-model">דגם:</label>
+      <input type="text" id="test-model" value="Corolla" placeholder="דגם">
+    </div>
+    
+    <div class="form-group">
+      <label for="test-query">חיפוש חופשי:</label>
+      <input type="text" id="test-query" value="פנס" placeholder="כנף, פנס, דלת...">
+    </div>
+    
+    <div style="text-align: center; margin: 20px 0;">
+      <button class="btn" onclick="testPiPComponent()">🔍 בדוק רכיב PiP</button>
+      <button class="btn success" onclick="testWithMockData()">📋 בדוק עם נתוני דמה</button>
+      <button class="btn warning" onclick="testSupabaseConnection()">🔗 בדוק חיבור Supabase</button>
+      <button class="btn error" onclick="clearLog()">🧹 נקה לוג</button>
+    </div>
+    
+    <div id="log" class="log">
+      <div>📋 Test Log initialized...</div>
+    </div>
+  </div>
+
+  <!-- Include the PiP component -->
+  <script type="module" src="./parts-search-results-pip.js"></script>
+  <script type="module" src="./services/partsSearchService.js"></script>
+
+  <script>
+    // Helper functions for testing
+    function log(message, type = 'info') {
+      const logElement = document.getElementById('log');
+      const timestamp = new Date().toLocaleTimeString('he-IL');
+      const icon = type === 'error' ? '❌' : type === 'success' ? '✅' : type === 'warning' ? '⚠️' : 'ℹ️';
+      
+      const logEntry = document.createElement('div');
+      logEntry.innerHTML = `${timestamp} ${icon} ${message}`;
+      logElement.appendChild(logEntry);
+      logElement.scrollTop = logElement.scrollHeight;
+    }
+
+    function clearLog() {
+      document.getElementById('log').innerHTML = '<div>📋 Test Log cleared...</div>';
+    }
+
+    // Test 1: PiP Component availability
+    async function testPiPComponent() {
+      log('Testing PiP component availability...');
+      
+      try {
+        if (window.partsResultsPiP) {
+          log('✅ PiP component is available', 'success');
+          log(`PiP component type: ${typeof window.partsResultsPiP}`);
+          
+          // Test if we can call its methods
+          if (typeof window.partsResultsPiP.showResults === 'function') {
+            log('✅ showResults method is available', 'success');
+          } else {
+            log('❌ showResults method not found', 'error');
+          }
+          
+        } else {
+          log('❌ PiP component not found in window object', 'error');
+          log('Available window objects:', Object.keys(window).filter(k => k.includes('parts') || k.includes('pip') || k.includes('Pip')).join(', '));
+        }
+      } catch (error) {
+        log(`❌ Error testing PiP component: ${error.message}`, 'error');
+      }
+    }
+
+    // Test 2: Mock data test
+    async function testWithMockData() {
+      log('Testing PiP with mock data...');
+      
+      const mockResults = [
+        {
+          id: 'mock-1',
+          pcode: 'TY12345',
+          cat_num_desc: 'פנס קדמי ימין טויוטה קורולה',
+          supplier_name: 'חלקי טויוטה ישראל',
+          price: 450,
+          oem: 'TY-FL-R-001',
+          availability: 'מקורי',
+          part_family: 'lighting',
+          make: 'Toyota',
+          model: 'Corolla',
+          year_from: 2018,
+          year_to: 2023,
+          version_date: '2025-01-01'
+        },
+        {
+          id: 'mock-2',
+          pcode: 'TY12346',
+          cat_num_desc: 'פנס קדמי שמאל טויוטה קורולה',
+          supplier_name: 'חלקי טויוטה ישראל',
+          price: 450,
+          oem: 'TY-FL-L-001',
+          availability: 'מקורי',
+          part_family: 'lighting',
+          make: 'Toyota',
+          model: 'Corolla',
+          year_from: 2018,
+          year_to: 2023,
+          version_date: '2025-01-01'
+        },
+        {
+          id: 'mock-3',
+          pcode: 'TY54321',
+          cat_num_desc: 'כנף קדמית ימין טויוטה קורולה',
+          supplier_name: 'פריסמן חלפים',
+          price: 890,
+          oem: 'TY-WG-R-001',
+          availability: 'תחליפי',
+          part_family: 'body',
+          make: 'Toyota',
+          model: 'Corolla',
+          year_from: 2018,
+          year_to: 2023,
+          version_date: '2025-01-01'
+        }
+      ];
+      
+      try {
+        if (window.partsResultsPiP) {
+          log(`📋 Showing PiP with ${mockResults.length} mock results...`);
+          
+          await window.partsResultsPiP.showResults(mockResults, {
+            plate: document.getElementById('test-plate').value,
+            sessionId: 'test-session-123',
+            searchType: 'mock_test'
+          });
+          
+          log('✅ PiP window displayed successfully with mock data', 'success');
+        } else {
+          log('❌ PiP component not available for mock test', 'error');
+        }
+      } catch (error) {
+        log(`❌ Error testing with mock data: ${error.message}`, 'error');
+      }
+    }
+
+    // Test 3: Supabase connection
+    async function testSupabaseConnection() {
+      log('Testing Supabase connection...');
+      
+      try {
+        // Import the service
+        const { partsSearchService } = await import('./services/partsSearchService.js');
+        log('✅ Parts search service imported successfully', 'success');
+        
+        // Test search with form data
+        const searchParams = {
+          plate: document.getElementById('test-plate').value,
+          manufacturer: document.getElementById('test-make').value,
+          model: document.getElementById('test-model').value,
+          free_query: document.getElementById('test-query').value
+        };
+        
+        log(`🔍 Searching with params: ${JSON.stringify(searchParams)}`);
+        
+        const result = await partsSearchService.searchParts(searchParams);
+        
+        if (result.success && result.results && result.results.length > 0) {
+          log(`✅ Search successful! Found ${result.results.length} results`, 'success');
+          log(`📋 Sample result: ${JSON.stringify(result.results[0], null, 2)}`);
+          
+          // Show results in PiP
+          if (window.partsResultsPiP) {
+            await window.partsResultsPiP.showResults(result.results, {
+              plate: searchParams.plate,
+              sessionId: result.sessionId,
+              searchType: result.searchType
+            });
+            log('✅ PiP displayed with real Supabase results', 'success');
+          }
+        } else {
+          log(`⚠️ Search returned no results or failed`, 'warning');
+          log(`Result: ${JSON.stringify(result)}`);
+        }
+        
+      } catch (error) {
+        log(`❌ Supabase connection test failed: ${error.message}`, 'error');
+        console.error('Supabase test error:', error);
+      }
+    }
+
+    // Initialize mock helper data for testing
+    window.helper = {
+      plate: '12345678',
+      parts_search: {
+        selected_parts: []
+      }
+    };
+
+    // Auto-run basic tests on load
+    document.addEventListener('DOMContentLoaded', () => {
+      log('🚀 Test page loaded');
+      log('Testing environment initialized');
+      
+      // Auto-test component availability
+      setTimeout(testPiPComponent, 1000);
+    });
+  </script>
+</body>
+</html>
