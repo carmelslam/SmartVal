@@ -15,7 +15,7 @@ Purpose: shrink the dataset before any part search.
 * User picks “2010”.
 * Filter to rows where year_from ≤ 2010 ≤ year_to.
 * If you haven’t split years yet, temporarily match the catnumdesc year pattern; long-term store year_from/year_to.
-Result of Level 1: a subset of rows relevant to Audi A6 (2010). (You can display how many rows remain and offer quick facets like “סוג חלק” (part family), “צד” (ימין/שמאל), etc.)
+Result of Level 1: a subset of rows relevant to Audi A6 (2010).(You can display how many rows remain and offer quick facets like “סוג חלק” (part family), “צד” (ימין/שמאל), etc.)
 Level 2 — Part filters (name/type/side/position)
 Purpose: find the exact part(s) within the Level-1 subset.
 1. Part name / intuitive text (e.g., “כנף שמאל”, “איתות מראה”, “פנס אחורי”)
@@ -63,7 +63,7 @@ What the UI actually “sends”
 * Step 1 (Make): { make: "Audi" }
 * Step 2 (Model): { make: "Audi", model: "A6" }
 * Step 3 (Year): { make: "Audi", model: "A6", year: 2010 }
-* Step 4 (Part text + facets): { make: "Audi", model: "A6", year: 2010, q: "כנף שמאל", side: "שמאל", position: "כנף" }
+* Step 4 (Part text + facets):{ make: "Audi", model: "A6", year: 2010, q: "כנף שמאל", side: "שמאל", position: "כנף" }
 The UI doesn’t translate anything. The DB normalization ensures these simple parameters hit the right rows.
 If you want, I can outline the exact normalized fields and facet values (Hebrew labels + canonical tokens) so your parser and dictionaries are aligned from day one.
 
@@ -499,11 +499,11 @@ List of parts (merged across suppliers), ranked, paginated:
 Decisions to Lock (you/PM)
 1. Deduping across suppliers:
     * Default: no dedupe, show all offers.
-    * Optional: group by {oem, make, model, year_range, side, position} and show “best price” + “N offers”. → Pick one (you can add the other later).
+    * Optional: group by {oem, make, model, year_range, side, position} and show “best price” + “N offers”.→ Pick one (you can add the other later).
 2. Refresh model for normalization:
-    * Trigger on insert/update or nightly job. → Pick one (my default: nightly batch; triggers only if you need near-real-time).
+    * Trigger on insert/update or nightly job.→ Pick one (my default: nightly batch; triggers only if you need near-real-time).
 3. Partitioning:
-    * Start non-partitioned; switch to LIST partitioning by supplier_id if total rows > 5–10M or autovacuum lags. → Accept this threshold.
+    * Start non-partitioned; switch to LIST partitioning by supplier_id if total rows > 5–10M or autovacuum lags.→ Accept this threshold.
 If you accept the defaults above, no blocker remains.
 
 Completions : 
