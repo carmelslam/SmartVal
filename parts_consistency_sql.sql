@@ -94,6 +94,9 @@ ALTER TABLE parts_required ADD COLUMN IF NOT EXISTS supplier_name TEXT;
 -- 4. UPDATE SEARCH FUNCTION TO USE CONSISTENT FIELDS
 -- ============================================================================
 
+-- Drop existing function first to avoid return type conflicts
+DROP FUNCTION IF EXISTS search_parts_comprehensive(text,text,text,text,text,text,text,text,text,text,text,text);
+
 CREATE OR REPLACE FUNCTION search_parts_comprehensive(
   p_plate TEXT DEFAULT NULL,
   p_make TEXT DEFAULT NULL,
