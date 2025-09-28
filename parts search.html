@@ -596,7 +596,6 @@ ${part.supplier ? `   ספק: ${part.supplier}` : ''}
   // ✅ NEW: Supabase Search Function for PiP Integration
   async function searchSupabase() {
     console.log('🔍 Starting Supabase search...');
-    alert('🔍 Starting Supabase search (debug)'); // Debug alert
     
     // Get button reference outside try block
     const supabaseBtn = document.querySelector('button[onclick="searchSupabase()"]');
@@ -644,23 +643,27 @@ ${part.supplier ? `   ספק: ${part.supplier}` : ''}
       
       console.log('🔍 Search result:', result);
       
+      // Always show PiP window regardless of results
+      console.log('🪟 Checking PiP component:', window.partsResultsPiP);
+      if (window.partsResultsPiP) {
+        const resultsToShow = (result.success && result.results) ? result.results : [];
+        console.log(`📋 Showing PiP with ${resultsToShow.length} results...`);
+        
+        await window.partsResultsPiP.showResults(resultsToShow, {
+          plate: searchParams.plate,
+          sessionId: result.sessionId || 'no-session',
+          searchType: result.searchType || 'general',
+          searchSuccess: result.success,
+          errorMessage: result.success ? null : (result.error || 'חיפוש נכשל')
+        });
+        console.log('✅ PiP showResults completed');
+      } else {
+        console.error('❌ PiP component not available');
+        alert('שגיאה: רכיב התוצאות לא זמין - window.partsResultsPiP = ' + typeof window.partsResultsPiP);
+      }
+      
       if (result.success && result.results && result.results.length > 0) {
         console.log('✅ Supabase search successful:', result.results.length, 'results');
-        
-        // Show PiP window with results
-        console.log('🪟 Checking PiP component:', window.partsResultsPiP);
-        if (window.partsResultsPiP) {
-          console.log('📋 Showing PiP with results...');
-          await window.partsResultsPiP.showResults(result.results, {
-            plate: searchParams.plate,
-            sessionId: result.sessionId,
-            searchType: result.searchType
-          });
-          console.log('✅ PiP showResults completed');
-        } else {
-          console.error('❌ PiP component not available');
-          alert('שגיאה: רכיב התוצאות לא זמין - window.partsResultsPiP = ' + typeof window.partsResultsPiP);
-        }
         
         if (typeof showNotification === 'function') {
           showNotification(`נמצאו ${result.results.length} תוצאות`, 'success');

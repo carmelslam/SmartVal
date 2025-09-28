@@ -29,6 +29,8 @@ class PartsSearchResultsPiP {
     this.searchResults = searchResults || [];
     this.currentPlateNumber = searchContext.plate || window.helper?.plate || null;
     this.currentSessionId = searchContext.sessionId || null;
+    this.searchSuccess = searchContext.searchSuccess !== false; // Default to true unless explicitly false
+    this.errorMessage = searchContext.errorMessage || null;
     
     if (this.isVisible) {
       this.updateResults();
@@ -148,12 +150,26 @@ class PartsSearchResultsPiP {
    * Generate results table HTML
    */
   generateResultsTableHTML() {
+    // Show error message if search failed
+    if (!this.searchSuccess && this.errorMessage) {
+      return `
+        <div class="no-results error-state">
+          <div class="no-results-icon">❌</div>
+          <div class="no-results-text">שגיאה בחיפוש</div>
+          <div class="no-results-subtitle">${this.errorMessage}</div>
+          <div class="retry-hint">נסה לחפש שוב או בדוק את החיבור</div>
+        </div>
+      `;
+    }
+    
+    // Show empty results message if no results found
     if (!this.searchResults.length) {
       return `
         <div class="no-results">
           <div class="no-results-icon">🔍</div>
           <div class="no-results-text">לא נמצאו תוצאות</div>
           <div class="no-results-subtitle">נסה לשנות את פרמטרי החיפוש</div>
+          <div class="retry-hint">בדוק את היצרן, דגם או מילות חיפוש אחרות</div>
         </div>
       `;
     }
@@ -820,6 +836,21 @@ class PartsSearchResultsPiP {
 
       .no-results-subtitle {
         font-size: 14px;
+        margin-bottom: 12px;
+      }
+
+      .retry-hint {
+        font-size: 12px;
+        color: #9ca3af;
+        font-style: italic;
+      }
+
+      .no-results.error-state {
+        color: #dc2626;
+      }
+
+      .error-state .retry-hint {
+        color: #f87171;
       }
 
       .pip-footer {
