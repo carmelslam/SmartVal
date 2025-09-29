@@ -194,7 +194,6 @@ class PartsSearchResultsPiP {
           <th class="col-catalog">מספר קטלוגי</th>
           <th class="col-description">תיאור</th>
           <th class="col-family">משפחת חלק</th>
-          <th class="col-oem">מספר OEM</th>
           <th class="col-type">סוג</th>
           <th class="col-price">מחיר</th>
           <th class="col-date">תאריך</th>
@@ -223,7 +222,6 @@ class PartsSearchResultsPiP {
           <td class="col-catalog catalog-number" title="${item.pcode || ''}">${item.pcode || 'לא זמין'}</td>
           <td class="col-description part-description" title="${item.cat_num_desc || ''}">${item.cat_num_desc || 'לא זמין'}</td>
           <td class="col-family" title="${item.part_family || ''}">${item.part_family || 'לא זמין'}</td>
-          <td class="col-oem" title="${item.oem || ''}">${item.oem || 'לא זמין'}</td>
           <td class="col-type">${item.availability || 'מקורי'}</td>
           <td class="col-price price-cell" title="${formattedPrice}">${formattedPrice}</td>
           <td class="col-date">${versionDate}</td>

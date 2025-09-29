@@ -122,18 +122,8 @@ class SmartPartsSearchService {
             if (result.data && result.data.length > 0) {
               allResults.push(...result.data);
               console.log(`✅ Free query search found ${result.data.length} total results`);
-            } else if (isHebrewQuery) {
-              // Fallback: search PARTS_BANK for Hebrew free query
-              console.log(`🏦 No results in catalog_items, trying PARTS_BANK fallback for Hebrew query...`);
-              try {
-                const partsFieldResults = this.searchPartsFieldInFreeQuery(cleanParams.free_query);
-                if (partsFieldResults.length > 0) {
-                  allResults.push(...partsFieldResults);
-                  console.log(`✅ PARTS_BANK fallback found ${partsFieldResults.length} results`);
-                }
-              } catch (fallbackError) {
-                console.warn('⚠️ PARTS_BANK fallback failed:', fallbackError.message);
-              }
+            } else {
+              console.log(`❌ No results found for free query: "${cleanParams.free_query}"`);
             }
           } catch (err) {
             console.warn(`⚠️ Free query search failed:`, err.message);
@@ -141,17 +131,38 @@ class SmartPartsSearchService {
           searchPerformed = true;
         }
         
-        // Search by part_group and part_name (use local PARTS_BANK)
+        // Search by part_group and part_name in Supabase only
         if (cleanParams.part_group || cleanParams.part_name) {
-          console.log('🏦 Searching in local PARTS_BANK for part_group/part_name...');
+          console.log('🔍 Searching Supabase for part_group/part_name...');
           try {
-            const localResults = this.searchPartsBank(cleanParams.part_group, cleanParams.part_name);
-            if (localResults.length > 0) {
-              allResults.push(...localResults);
-              console.log(`✅ Found ${localResults.length} results in PARTS_BANK`);
+            // Search in catalog_items table using part_family field
+            let query = this.supabase.from('catalog_items').select('*');
+            
+            if (cleanParams.part_group) {
+              query = query.ilike('part_family', `%${cleanParams.part_group}%`);
+            }
+            
+            if (cleanParams.part_name) {
+              query = query.ilike('cat_num_desc', `%${cleanParams.part_name}%`);
+            }
+            
+            // Apply make/model filters if provided
+            if (cleanParams.make) {
+              query = query.ilike('make', `%${cleanParams.make}%`);
+            }
+            
+            if (cleanParams.model) {
+              query = query.ilike('model', `%${cleanParams.model}%`);
+            }
+            
+            const result = await query.limit(30);
+            
+            if (result.data && result.data.length > 0) {
+              allResults.push(...result.data);
+              console.log(`✅ Found ${result.data.length} results in catalog_items`);
             }
           } catch (err) {
-            console.warn(`⚠️ PARTS_BANK search failed:`, err.message);
+            console.warn(`⚠️ Catalog items search failed:`, err.message);
           }
           searchPerformed = true;
         }
