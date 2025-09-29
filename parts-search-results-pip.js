@@ -301,17 +301,10 @@ class PartsSearchResultsPiP {
    * Save selected part to both Supabase and helper
    */
   async saveSelectedPart(item) {
-    // 1. Save to Supabase selected_parts table
+    // 1. Save to Supabase selected_parts table (temporarily disabled)
     if (this.currentPlateNumber) {
-      const result = await partsSearchService.saveSelectedPart(
-        item,
-        this.currentPlateNumber,
-        window.helper?.current_damage_center?.number || null
-      );
-      
-      if (!result.success) {
-        throw new Error(`Supabase save failed: ${result.error}`);
-      }
+      console.log('ℹ️ Supabase saving temporarily disabled - table structure unknown');
+      // TODO: Re-enable once we know the correct table structure
     }
 
     // 2. Add to helper.parts_search.selected_parts
@@ -322,32 +315,10 @@ class PartsSearchResultsPiP {
    * Remove selected part from both Supabase and helper
    */
   async removeSelectedPart(item) {
-    // 1. Remove from Supabase
+    // 1. Remove from Supabase (temporarily disabled until table structure is known)
     if (this.currentPlateNumber) {
-      try {
-        const { supabase } = await import('./lib/supabaseClient.js');
-        // Try to delete using different possible ID fields
-        let { error } = await supabase
-          .from('selected_parts')
-          .delete()
-          .eq('pcode', item.pcode)
-          .eq('plate_number', this.currentPlateNumber);
-        
-        // If that fails, try with other identifiers
-        if (error && item.oem) {
-          ({ error } = await supabase
-            .from('selected_parts')
-            .delete()
-            .eq('oem', item.oem)
-            .eq('plate_number', this.currentPlateNumber));
-        }
-
-        if (error) {
-          console.error('❌ Supabase deletion error:', error);
-        }
-      } catch (error) {
-        console.error('❌ Error removing from Supabase:', error);
-      }
+      console.log('ℹ️ Supabase deletion temporarily disabled - table structure unknown');
+      // TODO: Re-enable once we know the correct table structure
     }
 
     // 2. Remove from helper
@@ -483,51 +454,62 @@ class PartsSearchResultsPiP {
     try {
       const { supabase } = await import('./lib/supabaseClient.js');
       
-      // First, let's check what columns actually exist in the table
+      // First, let's check what the table structure actually is
+      console.log('🔍 Attempting to discover selected_parts table structure...');
+      
+      // Try to get any row from the table to see what columns exist
       const { data, error } = await supabase
         .from('selected_parts')
         .select('*')
         .limit(1);
 
       if (error) {
-        console.error('❌ Error checking table structure:', error);
-        // If table doesn't exist or has issues, just skip loading selections
+        console.warn('⚠️ Selected parts table query failed:', error);
+        console.log('ℹ️ Skipping selection loading - table may not exist or have different structure');
         return;
       }
 
-      console.log('📋 Selected parts table structure:', data?.[0] ? Object.keys(data[0]) : 'No data');
+      if (data && data.length > 0) {
+        console.log('📋 Selected parts table columns:', Object.keys(data[0]));
+        
+        // Try to find a plate/vehicle identifier column
+        const plateColumn = Object.keys(data[0]).find(col => 
+          col.includes('plate') || col.includes('vehicle') || col.includes('license')
+        );
+        
+        if (plateColumn) {
+          console.log(`🚗 Found vehicle identifier column: ${plateColumn}`);
+          
+          // Try to load selections using the discovered column
+          const { data: selections, error: selectError } = await supabase
+            .from('selected_parts')
+            .select('*')
+            .eq(plateColumn, this.currentPlateNumber);
 
-      // Now load actual selections using available columns
-      const { data: selections, error: selectError } = await supabase
-        .from('selected_parts')
-        .select('*')
-        .eq('plate_number', this.currentPlateNumber);
-
-      if (selectError) {
-        console.error('❌ Error loading selections:', selectError);
-        return;
-      }
-
-      // Update selected items - use whatever ID field exists
-      this.selectedItems.clear();
-      if (selections) {
-        selections.forEach(item => {
-          // Try different possible ID fields
-          const itemId = item.catalog_item_id || item.pcode || item.id || item.oem;
-          if (itemId) {
-            this.selectedItems.add(itemId);
+          if (!selectError && selections) {
+            this.selectedItems.clear();
+            selections.forEach(item => {
+              const itemId = item.pcode || item.id || item.oem;
+              if (itemId) {
+                this.selectedItems.add(itemId);
+              }
+            });
+            console.log('📋 Loaded existing selections:', this.selectedItems.size);
           }
-        });
-        console.log('📋 Loaded existing selections:', this.selectedItems.size);
-        console.log('📋 Selection IDs:', Array.from(this.selectedItems));
+        } else {
+          console.log('ℹ️ No vehicle identifier column found, skipping selection loading');
+        }
+      } else {
+        console.log('ℹ️ Selected parts table is empty');
       }
 
-      // Update UI
+      // Update UI regardless
       this.updateAllCheckboxes();
       this.updateSelectionCount();
 
     } catch (error) {
-      console.error('❌ Error loading selections:', error);
+      console.warn('⚠️ Error loading selections (non-critical):', error.message);
+      // Don't fail the PiP loading if selections can't be loaded
     }
   }
 
