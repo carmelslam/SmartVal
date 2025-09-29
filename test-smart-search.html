@@ -227,23 +227,42 @@
             resultText += `   ספק ID: ${item.supplier_id || 'ריק'}\n`;
           });
           
-          // Test with actual visible data from the screenshot
-          const { data: exactDescData, error: exactDescError } = await window.supabase
+          // Test Hebrew encoding specifically
+          const hebrewTerm = 'יוליק';
+          const englishTerm = 'A6';
+          
+          resultText += `\n\n🔤 בדיקת קידוד עברית:\n`;
+          resultText += `מונח עברי: "${hebrewTerm}"\n`;
+          resultText += `מונח אנגלי: "${englishTerm}"\n`;
+          resultText += `קידוד עברי: ${encodeURIComponent(hebrewTerm)}\n`;
+          resultText += `קידוד אנגלי: ${encodeURIComponent(englishTerm)}\n\n`;
+          
+          // Test Hebrew search
+          const { data: hebrewData, error: hebrewError } = await window.supabase
             .from('catalog_items')
             .select('*')
-            .ilike('cat_num_desc', '%T5 08%')
-            .limit(5);
+            .ilike('make', `%${hebrewTerm}%`)
+            .limit(3);
 
-          resultText += `\n\n🚗 חיפוש T5 08 (מהנתונים שנראים):\n`;
-          if (exactDescError) {
-            resultText += `❌ שגיאה: ${exactDescError.message}`;
+          resultText += `🔍 חיפוש עברי "${hebrewTerm}": `;
+          if (hebrewError) {
+            resultText += `❌ שגיאה: ${hebrewError.message}\n`;
           } else {
-            resultText += `נמצאו ${exactDescData.length} תוצאות לחיפוש T5 08\n`;
-            if (exactDescData.length > 0) {
-              exactDescData.forEach((item, index) => {
-                resultText += `${index + 1}. ${item.cat_num_desc}\n`;
-              });
-            }
+            resultText += `${hebrewData.length} תוצאות\n`;
+          }
+          
+          // Test English search  
+          const { data: englishData, error: englishError } = await window.supabase
+            .from('catalog_items')
+            .select('*')
+            .ilike('cat_num_desc', `%${englishTerm}%`)
+            .limit(3);
+
+          resultText += `🔍 חיפוש אנגלי "${englishTerm}": `;
+          if (englishError) {
+            resultText += `❌ שגיאה: ${englishError.message}\n`;
+          } else {
+            resultText += `${englishData.length} תוצאות\n`;
           }
 
           // Test the most basic possible query - just get first record

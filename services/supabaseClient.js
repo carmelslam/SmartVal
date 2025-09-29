@@ -29,9 +29,12 @@ class SupabaseQueryBuilder {
     // Don't encode the % wildcards, only encode the inner content
     if (value.startsWith('%') && value.endsWith('%')) {
       const innerValue = value.slice(1, -1);
-      this.filters.push(`${column}=ilike.%${encodeURIComponent(innerValue)}%`);
+      // For Hebrew text, we need to ensure proper UTF-8 encoding
+      const encodedInner = encodeURIComponent(innerValue);
+      this.filters.push(`${column}=ilike.%${encodedInner}%`);
     } else {
-      this.filters.push(`${column}=ilike.${encodeURIComponent(value)}`);
+      const encodedValue = encodeURIComponent(value);
+      this.filters.push(`${column}=ilike.${encodedValue}`);
     }
     return this;
   }
@@ -121,7 +124,9 @@ class SupabaseQueryBuilder {
       headers: {
         'apikey': supabaseAnonKey,
         'Authorization': `Bearer ${supabaseAnonKey}`,
-        'Content-Type': 'application/json',
+        'Content-Type': 'application/json; charset=utf-8',
+        'Accept': 'application/json',
+        'Accept-Charset': 'utf-8',
         'Prefer': 'return=representation'
       }
     };
