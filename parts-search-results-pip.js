@@ -113,6 +113,18 @@ class PartsSearchResultsPiP {
             <button class="pip-close-btn" onclick="window.partsResultsPiP?.hidePiP()">×</button>
           </div>
 
+          <!-- Action Buttons -->
+          <div class="pip-actions">
+            <button class="action-btn print-btn" onclick="window.partsResultsPiP?.printResults()">
+              <span class="btn-icon">🖨️</span>
+              הדפסה
+            </button>
+            <button class="action-btn review-btn" onclick="window.partsResultsPiP?.openReviewWindow()">
+              <span class="btn-icon">🔍</span>
+              סקירה
+            </button>
+          </div>
+
           <!-- Title -->
           <h2 class="pip-title">תוצאות חיפוש חלקים</h2>
           
@@ -617,6 +629,123 @@ class PartsSearchResultsPiP {
   }
 
   /**
+   * Print the current PiP content
+   */
+  printResults() {
+    // Create a new window for printing
+    const printWindow = window.open('', '_blank');
+    
+    // Get the current PiP content
+    const pipContent = this.pipWindow.innerHTML;
+    
+    // Create a styled print version
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html dir="rtl">
+        <head>
+          <title>תוצאות חיפוש חלקים</title>
+          <style>
+            ${this.getStyles()}
+            @media print {
+              .pip-close-btn, .pip-actions { display: none !important; }
+              .pip-window { 
+                box-shadow: none !important;
+                position: static !important;
+                transform: none !important;
+                width: 100% !important;
+                height: auto !important;
+              }
+            }
+          </style>
+        </head>
+        <body>
+          ${pipContent}
+        </body>
+      </html>
+    `);
+    
+    printWindow.document.close();
+    
+    // Wait for images to load before printing
+    setTimeout(() => {
+      printWindow.print();
+    }, 500);
+  }
+
+  /**
+   * Open a new window with a detailed view of the results
+   */
+  openReviewWindow() {
+    // Create a new window for detailed review
+    const reviewWindow = window.open('', '_blank', 'width=1200,height=800');
+    
+    // Create a more detailed view of the results
+    reviewWindow.document.write(`
+      <!DOCTYPE html>
+      <html dir="rtl">
+        <head>
+          <title>סקירת תוצאות חיפוש חלקים</title>
+          <style>
+            ${this.getStyles()}
+            body { 
+              margin: 0;
+              padding: 20px;
+              background: #f3f4f6;
+            }
+            .review-container {
+              max-width: 1400px;
+              margin: 0 auto;
+              background: white;
+              padding: 20px;
+              border-radius: 8px;
+              box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            }
+            .pip-window {
+              position: static;
+              transform: none;
+              width: 100%;
+              height: auto;
+              box-shadow: none;
+            }
+            .pip-close-btn, .pip-actions { display: none; }
+          </style>
+        </head>
+        <body>
+          <div class="review-container">
+            ${this.pipWindow.innerHTML}
+          </div>
+        </body>
+      </html>
+    `);
+    
+    reviewWindow.document.close();
+  }
+
+  /**
+   * Get all relevant styles for the PiP window
+   */
+  getStyles() {
+    // Get all stylesheet rules that apply to the PiP
+    const styles = [];
+    for (const sheet of document.styleSheets) {
+      try {
+        const rules = sheet.cssRules || sheet.rules;
+        for (const rule of rules) {
+          if (rule.selectorText && 
+              (rule.selectorText.includes('pip-') || 
+               rule.selectorText.includes('results-') ||
+               rule.selectorText.includes('action-'))) {
+            styles.push(rule.cssText);
+          }
+        }
+      } catch (e) {
+        console.warn('Could not read styles from sheet', e);
+      }
+    }
+    return styles.join('\n');
+  }
+
+  /**
    * Create CSS styles for PiP window
    */
   createPiPStyles() {
@@ -835,6 +964,47 @@ class PartsSearchResultsPiP {
         text-align: center !important;
         direction: ltr !important;
         display: table-cell !important;
+      }
+
+      .pip-actions {
+        display: flex;
+        gap: 10px;
+        padding: 0 20px;
+        margin-bottom: 15px;
+      }
+
+      .action-btn {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        padding: 8px 16px;
+        border: none;
+        border-radius: 6px;
+        font-size: 14px;
+        cursor: pointer;
+        transition: background-color 0.2s;
+      }
+
+      .print-btn {
+        background-color: #4f46e5;
+        color: white;
+      }
+
+      .print-btn:hover {
+        background-color: #4338ca;
+      }
+
+      .review-btn {
+        background-color: #10b981;
+        color: white;
+      }
+
+      .review-btn:hover {
+        background-color: #059669;
+      }
+
+      .btn-icon {
+        font-size: 16px;
       }
       
       /* Additional fix for price alignment */
