@@ -785,16 +785,52 @@ class PartsSearchResultsPiP {
           <script>
             // Create a bridge to the parent window's functions
             const parentPiP = window.opener.partsResultsPiP;
+
+            // Create and style notification element
+            const notificationDiv = document.createElement('div');
+            Object.assign(notificationDiv.style, {
+              position: 'fixed',
+              top: '20px',
+              left: '50%',
+              transform: 'translateX(-50%)',
+              background: '#10b981',
+              color: 'white',
+              padding: '12px 24px',
+              borderRadius: '6px',
+              fontSize: '14px',
+              zIndex: '1000',
+              display: 'none',
+              boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+              direction: 'rtl'
+            });
+            document.body.appendChild(notificationDiv);
+
+            function showNotification(message, type = 'success') {
+              notificationDiv.style.background = type === 'success' ? '#10b981' : '#ef4444';
+              notificationDiv.textContent = message;
+              notificationDiv.style.display = 'block';
+              setTimeout(() => {
+                notificationDiv.style.display = 'none';
+              }, 3000);
+            }
             
             async function clearSelections() {
               await parentPiP.clearSelections();
+              showNotification('הבחירות נוקו בהצלחה');
               updateUI();
               // Also update the parent window's UI
               parentPiP.updateResults();
             }
             
             async function saveAllSelections() {
+              const selectedCount = parentPiP.selectedItems.size;
+              if (selectedCount === 0) {
+                showNotification('לא נבחרו חלקים לשמירה', 'error');
+                return;
+              }
+
               await parentPiP.saveAllSelections();
+              showNotification(selectedCount + ' חלקים נשמרו בהצלחה');
               // Update both windows
               updateUI();
               parentPiP.updateResults();
@@ -804,13 +840,17 @@ class PartsSearchResultsPiP {
               window.close();
             }
 
-            function updateUI() {
-              // Update checkboxes to match parent window
+            function syncWithParentSelections() {
+              // Sync the selected items from parent
               const checkboxes = document.querySelectorAll('.part-checkbox');
               checkboxes.forEach(cb => {
                 const partId = cb.getAttribute('data-part-id');
                 cb.checked = parentPiP.selectedItems.has(partId);
               });
+            }
+
+            function updateUI() {
+              syncWithParentSelections();
               
               // Update selection count
               const countElement = document.querySelector('.selected-count');
@@ -840,11 +880,16 @@ class PartsSearchResultsPiP {
               };
             });
 
-            // Set up event listener for parent window updates
-            window.addEventListener('storage', function(e) {
-              if (e.key === 'pip_selections_updated') {
-                updateUI();
-              }
+            // Poll for changes in parent window selections
+            setInterval(() => {
+              syncWithParentSelections();
+            }, 500);
+
+            // Initial state setup
+            document.addEventListener('DOMContentLoaded', () => {
+              updateUI();
+              // Ensure initial selections are reflected
+              syncWithParentSelections();
             });
 
             // Initial UI update
