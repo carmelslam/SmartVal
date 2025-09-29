@@ -307,6 +307,11 @@ async function executeQuery(builder) {
     const options = builder.buildRequestOptions();
     
     console.log(`🔍 Supabase ${builder.method} request:`, url);
+    console.log(`🔍 Request URL breakdown:`, {
+      table: builder.table,
+      filters: builder.filters,
+      selectFields: builder.selectFields
+    });
     
     const response = await fetch(url, options);
     

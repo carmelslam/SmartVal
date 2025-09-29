@@ -59,24 +59,44 @@ encodeURIComponent: ${encodeURIComponent('VAG')}
             result.innerHTML = 'Testing direct REST API...';
 
             try {
-                // Test 1: Direct REST API call with Hebrew
-                const hebrewTerm = 'יוליק';
-                const encodedHebrew = encodeURIComponent(hebrewTerm);
-                
-                const url1 = `${testSupabaseUrl}/rest/v1/catalog_items?make=ilike.%25${encodedHebrew}%25&limit=3`;
-                
-                const response1 = await fetch(url1, {
+                // Test 1: Get actual Hebrew data to see encoding
+                const url0 = `${testSupabaseUrl}/rest/v1/catalog_items?select=make,cat_num_desc&make=not.is.null&limit=10`;
+                const response0 = await fetch(url0, {
                     headers: {
                         'apikey': testSupabaseKey,
                         'Authorization': `Bearer ${testSupabaseKey}`,
-                        'Accept': 'application/json',
-                        'Content-Type': 'application/json; charset=utf-8'
+                        'Accept': 'application/json'
                     }
                 });
-
-                const data1 = await response1.json();
+                const data0 = await response0.json();
                 
-                // Test 2: Direct REST API call with English
+                // Find actual Hebrew text in database
+                let actualHebrewText = '';
+                for (const item of data0) {
+                    if (item.make && /[\u0590-\u05FF]/.test(item.make)) {
+                        actualHebrewText = item.make;
+                        break;
+                    }
+                }
+                
+                // Test 2: Search with actual Hebrew from database
+                let hebrewResults = 0;
+                if (actualHebrewText) {
+                    const encodedActual = encodeURIComponent(actualHebrewText);
+                    const url1 = `${testSupabaseUrl}/rest/v1/catalog_items?make=ilike.%25${encodedActual}%25&limit=3`;
+                    
+                    const response1 = await fetch(url1, {
+                        headers: {
+                            'apikey': testSupabaseKey,
+                            'Authorization': `Bearer ${testSupabaseKey}`,
+                            'Accept': 'application/json'
+                        }
+                    });
+                    const data1 = await response1.json();
+                    hebrewResults = Array.isArray(data1) ? data1.length : 0;
+                }
+                
+                // Test 3: Direct REST API call with English
                 const englishTerm = 'VAG';
                 const url2 = `${testSupabaseUrl}/rest/v1/catalog_items?make=ilike.%25${englishTerm}%25&limit=3`;
                 
@@ -93,16 +113,18 @@ encodeURIComponent: ${encodeURIComponent('VAG')}
                 result.innerHTML = `
 Direct API Results:
 
-Hebrew search "${hebrewTerm}":
-URL: ${url1}
-Status: ${response1.status}
-Results: ${Array.isArray(data1) ? data1.length : 'Error'}
-${!Array.isArray(data1) ? 'Error: ' + JSON.stringify(data1) : ''}
+Sample data (first 3 make values):
+${data0.slice(0, 3).map(item => `"${item.make}"`).join(', ')}
+
+Found Hebrew text in DB: "${actualHebrewText}"
+Hebrew search results: ${hebrewResults}
 
 English search "${englishTerm}":
 URL: ${url2}  
 Status: ${response2.status}
 Results: ${Array.isArray(data2) ? data2.length : 'Error'}
+
+Database encoding issue: Hebrew ILIKE searches return 0 even with exact text
                 `;
 
             } catch (error) {
