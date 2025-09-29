@@ -49,6 +49,11 @@ class SupabaseQueryBuilder {
     return this;
   }
 
+  not(column, operator, value) {
+    this.filters.push(`${column}=not.${operator}.${encodeURIComponent(value)}`);
+    return this;
+  }
+
   order(column, options = {}) {
     const direction = options.ascending === false ? 'desc' : 'asc';
     this.orderBy = `${column}.${direction}`;
@@ -162,6 +167,10 @@ const supabase = {
           },
           lte: (column, value) => {
             builder.lte(column, value);
+            return createQueryMethods(builder);
+          },
+          not: (column, operator, value) => {
+            builder.not(column, operator, value);
             return createQueryMethods(builder);
           },
           order: (column, options) => {
@@ -280,6 +289,10 @@ function createQueryMethods(builder) {
     },
     lte: (column, value) => {
       builder.lte(column, value);
+      return createQueryMethods(builder);
+    },
+    not: (column, operator, value) => {
+      builder.not(column, operator, value);
       return createQueryMethods(builder);
     },
     order: (column, options) => {
