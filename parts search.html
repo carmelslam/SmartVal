@@ -599,6 +599,10 @@ ${part.supplier ? `   ספק: ${part.supplier}` : ''}
   // ✅ NEW: Supabase Search Function for PiP Integration
   async function searchSupabase() {
     console.log('🔍 Starting Supabase search...');
+    console.log('🔍 DEBUG: Checking dependencies at search start...');
+    console.log('  - window.SmartPartsSearchService:', typeof window.SmartPartsSearchService);
+    console.log('  - window.partsResultsPiP:', typeof window.partsResultsPiP);
+    console.log('  - window.supabase:', typeof window.supabase);
     
     // Get button reference outside try block
     const supabaseBtn = document.querySelector('button[onclick="searchSupabase()"]');
@@ -609,6 +613,15 @@ ${part.supplier ? `   ספק: ${part.supplier}` : ''}
       if (supabaseBtn) {
         supabaseBtn.innerHTML = '⏳ מחפש ב-Supabase...';
         supabaseBtn.disabled = true;
+      }
+      
+      // Critical dependency check
+      if (typeof window.SmartPartsSearchService === 'undefined') {
+        throw new Error('SmartPartsSearchService not loaded - check script include');
+      }
+      
+      if (typeof window.partsResultsPiP === 'undefined') {
+        throw new Error('PartsResultsPiP not loaded - check script include');
       }
       
       // Get form data
@@ -630,6 +643,8 @@ ${part.supplier ? `   ספק: ${part.supplier}` : ''}
         selectedParts: selectedParts
       };
       
+      console.log('📋 Search params:', searchParams);
+      
       // Use new simplified search service
       console.log('📦 Initializing SmartPartsSearchService...');
       const searchService = new window.SmartPartsSearchService();
@@ -645,64 +660,95 @@ ${part.supplier ? `   ספק: ${part.supplier}` : ''}
       const result = await searchService.searchParts(searchParams);
       
       console.log('🔍 Search result:', result);
+      console.log('  - Error:', result.error);
+      console.log('  - Data length:', result.data ? result.data.length : 'null');
+      console.log('  - Search time:', result.searchTime);
       
       // Always show PiP window regardless of results
-      console.log('🪟 Checking PiP component:', window.partsResultsPiP);
+      console.log('🪟 About to show PiP window...');
+      console.log('  - PiP component available:', !!window.partsResultsPiP);
+      
       if (window.partsResultsPiP) {
         const resultsToShow = result.data || [];
         const searchSuccess = !result.error && resultsToShow.length >= 0;
         console.log(`📋 Showing PiP with ${resultsToShow.length} results...`);
+        console.log('  - Search success:', searchSuccess);
+        console.log('  - Error message:', result.error ? result.error.message : 'None');
         
-        await window.partsResultsPiP.showResults(resultsToShow, {
+        const pipContext = {
           plate: searchParams.plate,
           sessionId: searchService.getSessionId() || 'no-session',
           searchType: 'smart_search',
           searchSuccess: searchSuccess,
           errorMessage: result.error ? result.error.message : null,
           searchTime: result.searchTime || 0
-        });
-        console.log('✅ PiP showResults completed');
+        };
+        
+        console.log('📋 PiP context:', pipContext);
+        
+        await window.partsResultsPiP.showResults(resultsToShow, pipContext);
+        console.log('✅ PiP showResults completed successfully');
+        
+        // Success feedback
+        if (!result.error && result.data && result.data.length > 0) {
+          console.log('✅ Smart search successful:', result.data.length, 'results');
+          
+          if (typeof showNotification === 'function') {
+            showNotification(`נמצאו ${result.data.length} תוצאות`, 'success');
+          }
+        } else if (result.error) {
+          console.log('⚠️ Search completed with error:', result.error.message);
+          if (typeof showNotification === 'function') {
+            showNotification(`שגיאה: ${result.error.message}`, 'error');
+          }
+        } else {
+          console.log('ℹ️ Search completed with no results');
+          if (typeof showNotification === 'function') {
+            showNotification('לא נמצאו תוצאות', 'warning');
+        }
+        
       } else {
         console.error('❌ PiP component not available');
-        alert('שגיאה: רכיב התוצאות לא זמין - window.partsResultsPiP = ' + typeof window.partsResultsPiP);
-      }
-      
-      if (!result.error && result.data && result.data.length > 0) {
-        console.log('✅ Smart search successful:', result.data.length, 'results');
-        
-        if (typeof showNotification === 'function') {
-          showNotification(`נמצאו ${result.data.length} תוצאות`, 'success');
-        }
-      } else {
-        console.log('⚠️ No results found in Supabase. Result details:', result);
-        alert('⚠️ No results found - check console for details');
-        if (typeof showNotification === 'function') {
-          showNotification('לא נמצאו תוצאות', 'warning');
-        }
-        
-        // Optionally fallback to Make.com search
-        if (result.fallbackToMakecom) {
-          if (confirm('לא נמצאו תוצאות בקטלוג. האם לחפש במערכת החיצונית?')) {
-            document.getElementById('partSearchForm').dispatchEvent(new Event('submit'));
-          }
-        }
+        throw new Error('רכיב התוצאות לא זמין - בדוק טעינת הסקריפטים');
       }
       
     } catch (error) {
-      console.error('❌ Supabase search error:', error);
-      if (typeof showNotification === 'function') {
-        showNotification('שגיאה בחיפוש: ' + error.message, 'error');
-      }
+      console.error('❌ Critical search error:', error);
+      console.error('  - Error stack:', error.stack);
       
-      // Fallback to Make.com on error
+      // Detailed error reporting
+      const errorDetails = {
+        message: error.message,
+        stack: error.stack,
+        dependencies: {
+          SmartPartsSearchService: typeof window.SmartPartsSearchService,
+          partsResultsPiP: typeof window.partsResultsPiP,
+          supabase: typeof window.supabase
+        },
+        timestamp: new Date().toISOString()
+      };
+      
+      console.error('📊 Error details:', errorDetails);
+      
+      // User-friendly error message
+      alert(`שגיאה בחיפוש: ${error.message}\n\nפרטים נוספים בקונסול הדפדפן (F12)`);
+      
+      // Fallback option
       if (confirm('שגיאה בחיפוש בקטלוג. האם לנסות במערכת החיצונית?')) {
-        document.getElementById('partSearchForm').dispatchEvent(new Event('submit'));
+        try {
+          document.getElementById('partSearchForm').dispatchEvent(new Event('submit'));
+        } catch (fallbackError) {
+          console.error('❌ Fallback also failed:', fallbackError);
+          alert('גם המערכת החיצונית נכשלה. נסה לרענן את הדף.');
+        }
       }
     } finally {
       // Restore button state
+      console.log('🔄 Restoring button state...');
       if (supabaseBtn) {
         supabaseBtn.innerHTML = originalText;
         supabaseBtn.disabled = false;
+        console.log('✅ Button state restored');
       }
     }
   }

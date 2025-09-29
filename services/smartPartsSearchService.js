@@ -80,16 +80,27 @@ class SmartPartsSearchService {
         const allResults = [];
         let searchPerformed = false;
         
-        // Search by free query with multiple variations
+        // Search by free query with Hebrew-aware logic
         if (cleanParams.free_query) {
           const variations = this.generateSearchVariations(cleanParams.free_query);
-          for (const variation of variations.slice(0, 3)) { // Limit to 3 variations
+          const isHebrewQuery = this.isHebrewText(cleanParams.free_query);
+          
+          for (const variation of variations.slice(0, 5)) { // Increased to 5 variations for Hebrew
             try {
-              const result = await this.supabase
-                .from('catalog_items')
-                .select('*')
-                .ilike('cat_num_desc', `%${variation}%`)
-                .limit(20);
+              let result;
+              
+              if (isHebrewQuery || this.isHebrewText(variation)) {
+                // For Hebrew text, use exact matching approach
+                console.log(`🔍 Hebrew search for: "${variation}"`);
+                result = await this.performHebrewSearch('cat_num_desc', variation, 20);
+              } else {
+                // For English text, use standard ILIKE
+                result = await this.supabase
+                  .from('catalog_items')
+                  .select('*')
+                  .ilike('cat_num_desc', `%${variation}%`)
+                  .limit(20);
+              }
               
               if (result.data && result.data.length > 0) {
                 allResults.push(...result.data);
@@ -102,16 +113,27 @@ class SmartPartsSearchService {
           searchPerformed = true;
         }
         
-        // Search by make with variations
+        // Search by make with Hebrew-aware logic
         if (cleanParams.make) {
           const makeVariations = this.generateSearchVariations(cleanParams.make);
-          for (const variation of makeVariations.slice(0, 3)) { // Limit to 3 variations
+          const isHebrewMake = this.isHebrewText(cleanParams.make);
+          
+          for (const variation of makeVariations.slice(0, 5)) {
             try {
-              const result = await this.supabase
-                .from('catalog_items')
-                .select('*')
-                .ilike('make', `%${variation}%`)
-                .limit(20);
+              let result;
+              
+              if (isHebrewMake || this.isHebrewText(variation)) {
+                // For Hebrew manufacturers, use Hebrew search
+                console.log(`🔍 Hebrew make search for: "${variation}"`);
+                result = await this.performHebrewSearch('make', variation, 20);
+              } else {
+                // For English manufacturers, use standard ILIKE
+                result = await this.supabase
+                  .from('catalog_items')
+                  .select('*')
+                  .ilike('make', `%${variation}%`)
+                  .limit(20);
+              }
               
               if (result.data && result.data.length > 0) {
                 allResults.push(...result.data);
@@ -238,21 +260,123 @@ class SmartPartsSearchService {
   }
 
   /**
+   * Check if text contains Hebrew characters
+   */
+  isHebrewText(text) {
+    if (!text) return false;
+    return /[\u0590-\u05FF]/.test(text);
+  }
+
+  /**
+   * Perform Hebrew-aware search using alternative strategies since ILIKE fails
+   */
+  async performHebrewSearch(column, searchTerm, limit = 20) {
+    try {
+      // Strategy 1: Try exact match first
+      let result = await this.supabase
+        .from('catalog_items')
+        .select('*')
+        .eq(column, searchTerm)
+        .limit(limit);
+        
+      if (result.data && result.data.length > 0) {
+        console.log(`✅ Hebrew exact match found: ${result.data.length} results`);
+        return result;
+      }
+
+      // Strategy 2: Get all records and filter client-side
+      // This is less efficient but works around PostgreSQL Hebrew ILIKE issue
+      console.log(`🔍 Performing client-side Hebrew search for "${searchTerm}"`);
+      
+      const allDataResult = await this.supabase
+        .from('catalog_items')
+        .select('*')
+        .not(column, 'is', null)
+        .limit(1000); // Limit to prevent huge downloads
+        
+      if (!allDataResult.data) {
+        return { data: [], error: allDataResult.error };
+      }
+      
+      // Filter results client-side with Hebrew-aware matching
+      const normalizedSearch = this.normalizeHebrewText(searchTerm.toLowerCase());
+      const filteredResults = allDataResult.data.filter(item => {
+        const fieldValue = item[column];
+        if (!fieldValue) return false;
+        
+        const normalizedField = this.normalizeHebrewText(fieldValue.toLowerCase());
+        
+        // Check if search term is contained in the field
+        return normalizedField.includes(normalizedSearch) || 
+               normalizedField.includes(searchTerm.toLowerCase()) ||
+               fieldValue.toLowerCase().includes(searchTerm.toLowerCase());
+      }).slice(0, limit);
+      
+      console.log(`✅ Client-side Hebrew search found: ${filteredResults.length} results`);
+      return { data: filteredResults, error: null };
+      
+    } catch (error) {
+      console.error('❌ Hebrew search error:', error);
+      return { data: [], error };
+    }
+  }
+
+  /**
+   * Normalize Hebrew text for better matching
+   */
+  normalizeHebrewText(text) {
+    if (!text || !this.isHebrewText(text)) return text;
+    
+    // Remove Hebrew vowels (nikud) and special characters
+    let normalized = text
+      .replace(/[\u05B0-\u05BD\u05BF\u05C1-\u05C2\u05C4-\u05C5\u05C7]/g, '') // Remove nikud
+      .replace(/[\u200E\u200F\u202A-\u202E]/g, '') // Remove RTL/LTR marks
+      .trim();
+    
+    // Handle common Hebrew character variations
+    const characterVariations = {
+      'ך': 'כ', 'ם': 'מ', 'ן': 'נ', 'ף': 'פ', 'ץ': 'צ', // Final forms to regular
+    };
+    
+    for (const [final, regular] of Object.entries(characterVariations)) {
+      normalized = normalized.replace(new RegExp(final, 'g'), regular);
+    }
+    
+    return normalized;
+  }
+
+  /**
    * Generate multiple search variations for better matching
    */
   generateSearchVariations(searchTerm) {
     if (!searchTerm) return [searchTerm];
     
     const variations = [searchTerm];
+    const isHebrew = this.isHebrewText(searchTerm);
+    
+    // If Hebrew, add normalized version
+    if (isHebrew) {
+      const normalized = this.normalizeHebrewText(searchTerm);
+      if (normalized !== searchTerm) {
+        variations.push(normalized);
+      }
+    }
     
     // Hebrew/English make variations
     const makeVariations = {
-      'טויוטה': ['toyota', 'TOYOTA', 'Toyota'],
-      'פולקסווגן': ['volkswagen', 'vw', 'VW', 'Volkswagen'],
+      'טויוטה': ['toyota', 'TOYOTA', 'Toyota', 'TOYOT'],
+      'יוליק': ['ULIK', 'ulik', 'Ulik'],
+      'פולקסווגן': ['volkswagen', 'vw', 'VW', 'Volkswagen', 'VAG'],
       'פורד': ['ford', 'FORD', 'Ford'],
       'רנו': ['renault', 'RENAULT', 'Renault'],
       'ב.מ.וו': ['bmw', 'BMW'],
-      'מרצדס': ['mercedes', 'MERCEDES', 'Mercedes']
+      'מרצדס': ['mercedes', 'MERCEDES', 'Mercedes'],
+      // Reverse mappings for English to Hebrew
+      'toyota': ['טויוטה', 'TOYOT'],
+      'vag': ['פולקסווגן', 'VAG'],
+      'ford': ['פורד', 'FORD'],
+      'bmw': ['ב.מ.וו', 'BMW'],
+      'mercedes': ['מרצדס', 'MERCEDES']
     };
     
     // Part name variations  
@@ -264,19 +388,20 @@ class SmartPartsSearchService {
       'פגוש': ['bumper', 'פגושים']
     };
     
-    // Add variations
+    // Add variations based on search term
+    const searchKey = searchTerm.toLowerCase();
+    if (makeVariations[searchKey]) {
+      variations.push(...makeVariations[searchKey]);
+    }
     if (makeVariations[searchTerm]) {
       variations.push(...makeVariations[searchTerm]);
     }
     
+    if (partVariations[searchKey]) {
+      variations.push(...partVariations[searchKey]);
+    }
     if (partVariations[searchTerm]) {
       variations.push(...partVariations[searchTerm]);
-    }
-    
-    // Also try the reversed version (in case database has reversed Hebrew)
-    const reversed = searchTerm.split('').reverse().join('');
-    if (reversed !== searchTerm) {
-      variations.push(reversed);
     }
     
     console.log(`🔍 Search variations for "${searchTerm}":`, variations);
