@@ -227,41 +227,53 @@
             resultText += `   ספק ID: ${item.supplier_id || 'ריק'}\n`;
           });
           
-          // Test search with actual Hebrew make value from the data
-          const { data: hebrewMakeData, error: hebrewMakeError } = await window.supabase
+          // Test with actual visible data from the screenshot
+          const { data: exactDescData, error: exactDescError } = await window.supabase
             .from('catalog_items')
             .select('*')
-            .ilike('make', '%ימ%')
+            .ilike('cat_num_desc', '%T5 08%')
             .limit(5);
 
-          resultText += `\n\n🚗 חיפוש יצרן עברי (make field):\n`;
-          if (hebrewMakeError) {
-            resultText += `❌ שגיאה: ${hebrewMakeError.message}`;
+          resultText += `\n\n🚗 חיפוש T5 08 (מהנתונים שנראים):\n`;
+          if (exactDescError) {
+            resultText += `❌ שגיאה: ${exactDescError.message}`;
           } else {
-            resultText += `נמצאו ${hebrewMakeData.length} תוצאות לחיפוש יצרן עברי\n`;
-            if (hebrewMakeData.length > 0) {
-              hebrewMakeData.forEach((item, index) => {
-                resultText += `${index + 1}. ${item.cat_num_desc} (יצרן: ${item.make})\n`;
+            resultText += `נמצאו ${exactDescData.length} תוצאות לחיפוש T5 08\n`;
+            if (exactDescData.length > 0) {
+              exactDescData.forEach((item, index) => {
+                resultText += `${index + 1}. ${item.cat_num_desc}\n`;
               });
             }
           }
 
-          // Test search with actual pcode from the data
-          const { data: pcodeData, error: pcodeError } = await window.supabase
+          // Test the most basic possible query - just get first record
+          const { data: firstRecord, error: firstError } = await window.supabase
             .from('catalog_items')
-            .select('*')
-            .ilike('pcode', '%7J09450956G%')
-            .limit(5);
+            .select('cat_num_desc, pcode, make')
+            .limit(1);
 
-          resultText += `\n\n🔍 חיפוש pcode ממשי:\n`;
-          if (pcodeError) {
-            resultText += `❌ שגיאה: ${pcodeError.message}`;
+          resultText += `\n\n🔍 רשומה ראשונה (בדיקת base):\n`;
+          if (firstError) {
+            resultText += `❌ שגיאה: ${firstError.message}`;
           } else {
-            resultText += `נמצאו ${pcodeData.length} תוצאות לחיפוש pcode\n`;
-            if (pcodeData.length > 0) {
-              pcodeData.forEach((item, index) => {
-                resultText += `${index + 1}. pcode: ${item.pcode} - ${item.cat_num_desc}\n`;
-              });
+            resultText += `מספר רשומות: ${firstRecord.length}\n`;
+            if (firstRecord.length > 0) {
+              const record = firstRecord[0];
+              resultText += `תיאור: "${record.cat_num_desc}"\n`;
+              resultText += `pcode: "${record.pcode}"\n`;  
+              resultText += `make: "${record.make}"\n`;
+              
+              // Now test exact match with this data
+              if (record.cat_num_desc) {
+                const searchTerm = record.cat_num_desc.substring(0, 5);
+                const { data: matchData, error: matchError } = await window.supabase
+                  .from('catalog_items')
+                  .select('cat_num_desc')
+                  .ilike('cat_num_desc', `%${searchTerm}%`)
+                  .limit(3);
+                
+                resultText += `\nבדיקת התאמה עם "${searchTerm}": ${matchData?.length || 0} תוצאות\n`;
+              }
             }
           }
 
