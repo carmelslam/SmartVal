@@ -707,7 +707,12 @@ class PartsSearchResultsPiP {
               height: auto;
               box-shadow: none;
             }
-            .pip-close-btn { display: none; }
+            /* Hide original PiP buttons and elements not needed in review */
+            .pip-close-btn,
+            .pip-actions,
+            .pip-footer { 
+              display: none !important; 
+            }
             
             /* Ensure price alignment in review window */
             .results-table td.price-cell,
@@ -781,13 +786,18 @@ class PartsSearchResultsPiP {
             // Create a bridge to the parent window's functions
             const parentPiP = window.opener.partsResultsPiP;
             
-            function clearSelections() {
-              parentPiP.clearSelections();
+            async function clearSelections() {
+              await parentPiP.clearSelections();
               updateUI();
+              // Also update the parent window's UI
+              parentPiP.updateResults();
             }
             
-            function saveAllSelections() {
-              parentPiP.saveAllSelections();
+            async function saveAllSelections() {
+              await parentPiP.saveAllSelections();
+              // Update both windows
+              updateUI();
+              parentPiP.updateResults();
             }
             
             function closeWindow() {
@@ -811,15 +821,30 @@ class PartsSearchResultsPiP {
 
             // Add click handlers to checkboxes
             document.querySelectorAll('.part-checkbox').forEach(cb => {
-              cb.onclick = function(e) {
+              cb.onclick = async function(e) {
                 const partId = this.getAttribute('data-part-id');
+                const catalogItem = parentPiP.searchResults.find(item => item.id === partId);
+                
                 if (this.checked) {
                   parentPiP.selectedItems.add(partId);
+                  if (catalogItem) {
+                    await parentPiP.saveSelectedPart(catalogItem);
+                  }
                 } else {
                   parentPiP.selectedItems.delete(partId);
                 }
+                
+                // Update both windows
                 updateUI();
+                parentPiP.updateResults();
               };
+            });
+
+            // Set up event listener for parent window updates
+            window.addEventListener('storage', function(e) {
+              if (e.key === 'pip_selections_updated') {
+                updateUI();
+              }
             });
 
             // Initial UI update
