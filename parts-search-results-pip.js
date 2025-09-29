@@ -95,8 +95,7 @@ class PartsSearchResultsPiP {
           <!-- Header -->
           <div class="pip-header">
             <div class="header-left">
-              <span class="date-label">תאריך: </span>
-              <span class="date-value">${new Date().toLocaleDateString('he-IL')}</span>
+              <img src="https://carmelcayouf.com/wp-content/uploads/2025/06/g.webp" alt="SmartVal Logo" class="pip-logo" />
             </div>
             
             <div class="header-middle">
@@ -107,7 +106,8 @@ class PartsSearchResultsPiP {
             </div>
             
             <div class="header-right">
-              <img src="./assets/Logo smartval.PNG" alt="SmartVal Logo" class="pip-logo" />
+              <span class="date-label">تاريخ: </span>
+              <span class="date-value">${new Date().toLocaleDateString('he-IL')}</span>
             </div>
             
             <button class="pip-close-btn" onclick="window.partsResultsPiP?.hidePiP()">×</button>
@@ -832,7 +832,7 @@ class PartsSearchResultsPiP {
       .price-cell {
         font-weight: bold;
         color: #059669;
-        text-align: left !important;
+        text-align: center !important;
       }
 
       .part-checkbox {
