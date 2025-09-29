@@ -1001,6 +1001,6 @@ window.testPiPWindow = function() {
   });
 };
 
-// Export for module usage
-export { PartsSearchResultsPiP };
-export default PartsSearchResultsPiP;
+// Export for module usage (commented out for global script usage)
+// export { PartsSearchResultsPiP };
+// export default PartsSearchResultsPiP;

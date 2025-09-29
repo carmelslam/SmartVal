@@ -54,6 +54,12 @@ class SupabaseQueryBuilder {
     return this;
   }
 
+  or(conditions) {
+    // Handle OR conditions like: "col1.ilike.%term%,col2.ilike.%term%"
+    this.filters.push(`or=(${conditions})`);
+    return this;
+  }
+
   order(column, options = {}) {
     const direction = options.ascending === false ? 'desc' : 'asc';
     this.orderBy = `${column}.${direction}`;
@@ -171,6 +177,10 @@ const supabase = {
           },
           not: (column, operator, value) => {
             builder.not(column, operator, value);
+            return createQueryMethods(builder);
+          },
+          or: (conditions) => {
+            builder.or(conditions);
             return createQueryMethods(builder);
           },
           order: (column, options) => {
@@ -293,6 +303,10 @@ function createQueryMethods(builder) {
     },
     not: (column, operator, value) => {
       builder.not(column, operator, value);
+      return createQueryMethods(builder);
+    },
+    or: (conditions) => {
+      builder.or(conditions);
       return createQueryMethods(builder);
     },
     order: (column, options) => {

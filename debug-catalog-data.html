@@ -37,16 +37,22 @@
             results.innerHTML = 'בודק סה"כ פריטים...';
             
             try {
+                // Use a simple select with limit to estimate total items
                 const { data, error } = await window.supabase
                     .from('catalog_items')
-                    .select('count(*)', { count: 'exact' });
+                    .select('id')
+                    .limit(1000);
                 
                 if (error) {
                     results.innerHTML = `שגיאה: ${error.message}`;
                     return;
                 }
                 
-                results.innerHTML = `סה"כ פריטים בקטלוג: ${data[0]?.count || 'לא זמין'}`;
+                if (data.length === 1000) {
+                    results.innerHTML = `יש לפחות 1000+ פריטים בקטלוג`;
+                } else {
+                    results.innerHTML = `סה"כ פריטים בקטלוג: ${data.length}`;
+                }
                 
             } catch (error) {
                 results.innerHTML = `שגיאה: ${error.message}`;
@@ -192,6 +198,53 @@
                 
             } catch (error) {
                 results.innerHTML = `שגיאה: ${error.message}`;
+            }
+        }
+
+        // Test PiP window function
+        function testPiPWindow() {
+            console.log('🧪 Testing PiP window visibility...');
+            results.innerHTML = 'בודק חלון PiP...';
+            
+            const sampleResults = [
+                {
+                    id: 'test-1',
+                    pcode: 'TEST123',
+                    cat_num_desc: 'Test Part Description - תיאור חלק לבדיקה',
+                    part_family: 'Test Family - משפחת בדיקה',
+                    make: 'Toyota - טויוטה',
+                    model: 'Corolla',
+                    price: 150,
+                    oem: 'TEST-OEM-123',
+                    supplier_name: 'Test Supplier - ספק בדיקה',
+                    availability: 'Available - זמין'
+                },
+                {
+                    id: 'test-2',
+                    pcode: 'TEST456',
+                    cat_num_desc: 'Another Test Part - חלק נוסף לבדיקה',
+                    part_family: 'Another Family - משפחה אחרת',
+                    make: 'Honda - הונדה',
+                    model: 'Civic',
+                    price: 200,
+                    oem: 'TEST-OEM-456',
+                    supplier_name: 'Another Supplier - ספק אחר',
+                    availability: 'Available - זמין'
+                }
+            ];
+            
+            if (window.partsResultsPiP) {
+                window.partsResultsPiP.showResults(sampleResults, {
+                    plate: 'TEST-123-456',
+                    sessionId: 'debug-test-session',
+                    searchType: 'debug_test',
+                    searchSuccess: true,
+                    errorMessage: null,
+                    searchTime: 100
+                });
+                results.innerHTML = 'חלון PiP הופעל עם נתוני בדיקה - בדוק אם הוא נראה על המסך';
+            } else {
+                results.innerHTML = 'שגיאה: window.partsResultsPiP לא זמין';
             }
         }
     </script>
