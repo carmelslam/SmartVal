@@ -24,8 +24,8 @@ CREATE OR REPLACE FUNCTION smart_parts_search(
     quantity_param INTEGER DEFAULT 1,
     limit_results INTEGER DEFAULT 50
 )
-RETURNS TABLE(
-    id BIGINT,
+RETURNS TABLE( 
+    id UUID,
     cat_num_desc TEXT,
     supplier_name TEXT,
     pcode TEXT,
@@ -62,14 +62,10 @@ BEGIN
         1 as relevance_score
     FROM catalog_items ci 
     WHERE 
-        -- If no filters provided, return some results
-        (make_param IS NULL OR make_param = '' OR 
-         ci.make ILIKE '%' || make_param || '%' OR
-         ci.cat_num_desc ILIKE '%' || make_param || '%')
+        -- If filters provided, they must match exactly
+        (make_param IS NULL OR make_param = '' OR ci.make = make_param)
         
-        AND (model_param IS NULL OR model_param = '' OR 
-             ci.model ILIKE '%' || model_param || '%' OR
-             ci.cat_num_desc ILIKE '%' || model_param || '%')
+        AND (model_param IS NULL OR model_param = '' OR ci.model ILIKE '%' || model_param || '%')
              
         AND (free_query_param IS NULL OR free_query_param = '' OR 
              ci.cat_num_desc ILIKE '%' || free_query_param || '%' OR
