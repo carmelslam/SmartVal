@@ -80,68 +80,101 @@ class SmartPartsSearchService {
         const allResults = [];
         let searchPerformed = false;
         
-        // Search by free query with Hebrew-aware logic
+        // Search by free query with enhanced Hebrew RPC support
         if (cleanParams.free_query) {
-          const variations = this.generateSearchVariations(cleanParams.free_query);
           const isHebrewQuery = this.isHebrewText(cleanParams.free_query);
           
-          for (const variation of variations.slice(0, 5)) { // Increased to 5 variations for Hebrew
-            try {
-              let result;
+          try {
+            let result;
+            
+            if (isHebrewQuery) {
+              // For Hebrew text, use the new RPC function
+              console.log(`🔍 Hebrew RPC search for: "${cleanParams.free_query}"`);
+              result = await this.performHebrewSearch(
+                cleanParams.free_query, 
+                cleanParams.make, 
+                cleanParams.model, 
+                30
+              );
+            } else {
+              // For English text, use standard search with multiple variations
+              const variations = this.generateSearchVariations(cleanParams.free_query);
+              result = { data: [], error: null };
               
-              if (isHebrewQuery || this.isHebrewText(variation)) {
-                // For Hebrew text, use exact matching approach
-                console.log(`🔍 Hebrew search for: "${variation}"`);
-                result = await this.performHebrewSearch('cat_num_desc', variation, 20);
-              } else {
-                // For English text, use standard ILIKE
-                result = await this.supabase
-                  .from('catalog_items')
-                  .select('*')
-                  .ilike('cat_num_desc', `%${variation}%`)
-                  .limit(20);
+              for (const variation of variations.slice(0, 3)) {
+                try {
+                  const varResult = await this.supabase
+                    .from('catalog_items')
+                    .select('*')
+                    .ilike('cat_num_desc', `%${variation}%`)
+                    .limit(15);
+                  
+                  if (varResult.data && varResult.data.length > 0) {
+                    result.data.push(...varResult.data);
+                    console.log(`✅ Found ${varResult.data.length} results for: "${variation}"`);
+                  }
+                } catch (err) {
+                  console.warn(`⚠️ Search failed for variation "${variation}":`, err.message);
+                }
               }
-              
-              if (result.data && result.data.length > 0) {
-                allResults.push(...result.data);
-                console.log(`✅ Found ${result.data.length} results for variation: "${variation}"`);
-              }
-            } catch (err) {
-              console.warn(`⚠️ Search failed for variation "${variation}":`, err.message);
             }
+            
+            if (result.data && result.data.length > 0) {
+              allResults.push(...result.data);
+              console.log(`✅ Free query search found ${result.data.length} total results`);
+            }
+          } catch (err) {
+            console.warn(`⚠️ Free query search failed:`, err.message);
           }
           searchPerformed = true;
         }
         
-        // Search by make with Hebrew-aware logic
-        if (cleanParams.make) {
-          const makeVariations = this.generateSearchVariations(cleanParams.make);
+        // Search by make with enhanced Hebrew RPC support
+        if (cleanParams.make && !cleanParams.free_query) {
+          // Only search by make if we haven't already done a comprehensive free query search
           const isHebrewMake = this.isHebrewText(cleanParams.make);
           
-          for (const variation of makeVariations.slice(0, 5)) {
-            try {
-              let result;
+          try {
+            let result;
+            
+            if (isHebrewMake) {
+              // For Hebrew manufacturers, use RPC search
+              console.log(`🔍 Hebrew make RPC search for: "${cleanParams.make}"`);
+              result = await this.performHebrewSearch(
+                cleanParams.make, 
+                null, // Don't filter by make since we're searching for make
+                cleanParams.model, 
+                25
+              );
+            } else {
+              // For English manufacturers, use standard ILIKE with variations
+              const makeVariations = this.generateSearchVariations(cleanParams.make);
+              result = { data: [], error: null };
               
-              if (isHebrewMake || this.isHebrewText(variation)) {
-                // For Hebrew manufacturers, use Hebrew search
-                console.log(`🔍 Hebrew make search for: "${variation}"`);
-                result = await this.performHebrewSearch('make', variation, 20);
-              } else {
-                // For English manufacturers, use standard ILIKE
-                result = await this.supabase
-                  .from('catalog_items')
-                  .select('*')
-                  .ilike('make', `%${variation}%`)
-                  .limit(20);
+              for (const variation of makeVariations.slice(0, 3)) {
+                try {
+                  const varResult = await this.supabase
+                    .from('catalog_items')
+                    .select('*')
+                    .ilike('make', `%${variation}%`)
+                    .limit(15);
+                  
+                  if (varResult.data && varResult.data.length > 0) {
+                    result.data.push(...varResult.data);
+                    console.log(`✅ Found ${varResult.data.length} results for make: "${variation}"`);
+                  }
+                } catch (err) {
+                  console.warn(`⚠️ Make search failed for "${variation}":`, err.message);
+                }
               }
-              
-              if (result.data && result.data.length > 0) {
-                allResults.push(...result.data);
-                console.log(`✅ Found ${result.data.length} results for make: "${variation}"`);
-              }
-            } catch (err) {
-              console.warn(`⚠️ Make search failed for "${variation}":`, err.message);
             }
+            
+            if (result.data && result.data.length > 0) {
+              allResults.push(...result.data);
+              console.log(`✅ Make search found ${result.data.length} total results`);
+            }
+          } catch (err) {
+            console.warn(`⚠️ Make search failed:`, err.message);
           }
           searchPerformed = true;
         }
@@ -268,30 +301,60 @@ class SmartPartsSearchService {
   }
 
   /**
-   * Perform Hebrew-aware search using alternative strategies since ILIKE fails
+   * Enhanced Hebrew search using Supabase RPC function
    */
-  async performHebrewSearch(column, searchTerm, limit = 20) {
+  async performHebrewSearch(searchTerm, make = null, model = null, limit = 50) {
     try {
-      // Strategy 1: Try exact match first
-      let result = await this.supabase
-        .from('catalog_items')
-        .select('*')
-        .eq(column, searchTerm)
-        .limit(limit);
-        
+      console.log(`🔍 Using Hebrew RPC search for: "${searchTerm}"`);
+      
+      // Strategy 1: Use the comprehensive Hebrew RPC function
+      const result = await this.supabase.rpc('search_catalog_hebrew_filtered', {
+        search_term: searchTerm,
+        filter_make: make,
+        filter_model: model,
+        max_results: limit
+      });
+      
       if (result.data && result.data.length > 0) {
-        console.log(`✅ Hebrew exact match found: ${result.data.length} results`);
+        console.log(`✅ Hebrew RPC search found: ${result.data.length} results`);
         return result;
       }
+      
+      // Strategy 2: Fallback to basic RPC if filtered search returns nothing
+      if (make || model) {
+        console.log(`🔄 Trying Hebrew RPC without filters...`);
+        const fallbackResult = await this.supabase.rpc('search_catalog_hebrew', {
+          search_term: searchTerm
+        });
+        
+        if (fallbackResult.data && fallbackResult.data.length > 0) {
+          console.log(`✅ Hebrew RPC fallback found: ${fallbackResult.data.length} results`);
+          return fallbackResult;
+        }
+      }
 
-      // Strategy 2: Get all records and filter client-side
-      // This is less efficient but works around PostgreSQL Hebrew ILIKE issue
-      console.log(`🔍 Performing client-side Hebrew search for "${searchTerm}"`);
+      // Strategy 3: Client-side Hebrew search as final fallback
+      console.log(`🔄 Using client-side Hebrew search fallback for "${searchTerm}"`);
+      return await this.performClientSideHebrewSearch(searchTerm, limit);
+      
+    } catch (error) {
+      console.error('❌ Hebrew RPC search error:', error);
+      // Fallback to client-side search
+      console.log('🔄 Falling back to client-side Hebrew search...');
+      return await this.performClientSideHebrewSearch(searchTerm, limit);
+    }
+  }
+
+  /**
+   * Client-side Hebrew search fallback
+   */
+  async performClientSideHebrewSearch(searchTerm, limit = 20) {
+    try {
+      console.log(`🔍 Client-side Hebrew search for: "${searchTerm}"`);
       
       const allDataResult = await this.supabase
         .from('catalog_items')
         .select('*')
-        .not(column, 'is', null)
         .limit(1000); // Limit to prevent huge downloads
         
       if (!allDataResult.data) {
@@ -301,48 +364,99 @@ class SmartPartsSearchService {
       // Filter results client-side with Hebrew-aware matching
       const normalizedSearch = this.normalizeHebrewText(searchTerm.toLowerCase());
       const filteredResults = allDataResult.data.filter(item => {
-        const fieldValue = item[column];
-        if (!fieldValue) return false;
+        // Check multiple fields for Hebrew text
+        const fields = [
+          item.cat_num_desc, item.part_family, item.make, 
+          item.model, item.supplier_name, item.oem, item.pcode
+        ];
         
-        const normalizedField = this.normalizeHebrewText(fieldValue.toLowerCase());
-        
-        // Check if search term is contained in the field
-        return normalizedField.includes(normalizedSearch) || 
-               normalizedField.includes(searchTerm.toLowerCase()) ||
-               fieldValue.toLowerCase().includes(searchTerm.toLowerCase());
+        return fields.some(fieldValue => {
+          if (!fieldValue) return false;
+          
+          const normalizedField = this.normalizeHebrewText(fieldValue.toLowerCase());
+          
+          // Multiple matching strategies
+          return normalizedField.includes(normalizedSearch) || 
+                 normalizedField.includes(searchTerm.toLowerCase()) ||
+                 fieldValue.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                 fieldValue === searchTerm; // Exact match
+        });
       }).slice(0, limit);
       
       console.log(`✅ Client-side Hebrew search found: ${filteredResults.length} results`);
       return { data: filteredResults, error: null };
       
     } catch (error) {
-      console.error('❌ Hebrew search error:', error);
+      console.error('❌ Client-side Hebrew search error:', error);
       return { data: [], error };
     }
   }
 
   /**
-   * Normalize Hebrew text for better matching
+   * Enhanced Hebrew text normalization for better matching
    */
   normalizeHebrewText(text) {
-    if (!text || !this.isHebrewText(text)) return text;
+    if (!text) return text;
+    
+    // Convert to string if needed and trim
+    let normalized = String(text).trim();
     
     // Remove Hebrew vowels (nikud) and special characters
-    let normalized = text
-      .replace(/[\u05B0-\u05BD\u05BF\u05C1-\u05C2\u05C4-\u05C5\u05C7]/g, '') // Remove nikud
+    normalized = normalized
+      .replace(/[\u0591-\u05C7]/g, '') // Remove all Hebrew vowel points (niqqud)
       .replace(/[\u200E\u200F\u202A-\u202E]/g, '') // Remove RTL/LTR marks
+      .replace(/[\u05BE\u05C0\u05C3]/g, '') // Remove Hebrew punctuation
       .trim();
     
-    // Handle common Hebrew character variations
+    // Handle common Hebrew character variations (final forms to regular)
     const characterVariations = {
-      'ך': 'כ', 'ם': 'מ', 'ן': 'נ', 'ף': 'פ', 'ץ': 'צ', // Final forms to regular
+      'ך': 'כ', 'ם': 'מ', 'ן': 'נ', 'ף': 'פ', 'ץ': 'צ'
     };
     
     for (const [final, regular] of Object.entries(characterVariations)) {
       normalized = normalized.replace(new RegExp(final, 'g'), regular);
     }
     
+    // Normalize Unicode (NFC normalization)
+    try {
+      normalized = normalized.normalize('NFC');
+    } catch (error) {
+      console.warn('Unicode normalization failed:', error);
+    }
+    
     return normalized;
+  }
+
+  /**
+   * Create multiple search variations for Hebrew text
+   */
+  createHebrewSearchVariations(searchTerm) {
+    if (!searchTerm) return [searchTerm];
+    
+    const variations = new Set([searchTerm]);
+    
+    // Add normalized version
+    const normalized = this.normalizeHebrewText(searchTerm);
+    if (normalized !== searchTerm) {
+      variations.add(normalized);
+    }
+    
+    // Add lowercase version
+    variations.add(searchTerm.toLowerCase());
+    variations.add(normalized.toLowerCase());
+    
+    // Add variations without spaces
+    if (searchTerm.includes(' ')) {
+      variations.add(searchTerm.replace(/\s+/g, ''));
+      variations.add(normalized.replace(/\s+/g, ''));
+    }
+    
+    // Add variations with different spacing
+    if (searchTerm.length > 3) {
+      variations.add(searchTerm.replace(/\s+/g, ' ')); // Normalize spaces
+    }
+    
+    return Array.from(variations).filter(v => v && v.length > 0);
   }
 
   /**
