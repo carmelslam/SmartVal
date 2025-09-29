@@ -76,36 +76,34 @@ class SmartPartsSearchService {
       let data, error;
       
       try {
-        // Build query using existing table structure
+        // Simple search using basic Supabase methods
         let query = this.supabase.from('catalog_items').select('*');
         
-        // Apply filters based on available parameters
+        // Find the primary search term
+        let primarySearchTerm = null;
         if (cleanParams.free_query) {
-          // Hebrew-aware free text search
-          const searchTerm = this.processHebrewSearch(cleanParams.free_query);
-          query = query.or(`cat_num_desc.ilike.%${searchTerm}%,oem.ilike.%${searchTerm}%,supplier_name.ilike.%${searchTerm}%`);
-        }
-        
-        if (cleanParams.make) {
-          query = query.or(`make.ilike.%${cleanParams.make}%,cat_num_desc.ilike.%${cleanParams.make}%`);
-        }
-        
-        if (cleanParams.oem) {
+          primarySearchTerm = this.processHebrewSearch(cleanParams.free_query);
+          query = query.ilike('cat_num_desc', `%${primarySearchTerm}%`);
+        } else if (cleanParams.oem) {
           query = query.ilike('oem', `%${cleanParams.oem}%`);
-        }
-        
-        if (cleanParams.year) {
-          query = query.or(`year_range.ilike.%${cleanParams.year}%,cat_num_desc.ilike.%${cleanParams.year}%`);
+        } else if (cleanParams.make) {
+          query = query.ilike('make', `%${cleanParams.make}%`);
+        } else {
+          // Default search - get recent items
+          query = query.limit(cleanParams.limit || 20);
         }
         
         // Add ordering and limit
-        query = query.order('id', { ascending: true }).limit(cleanParams.limit || 50);
+        if (primarySearchTerm || cleanParams.oem || cleanParams.make) {
+          query = query.limit(cleanParams.limit || 50);
+        }
+        query = query.order('id', { ascending: false });
         
         const result = await query;
-        data = result.data;
+        data = result.data || [];
         error = result.error;
         
-        console.log('✅ Using direct table queries (no custom functions needed)');
+        console.log('✅ Using simple table query (compatible with all Supabase clients)');
         
       } catch (queryError) {
         console.error('❌ Direct query failed:', queryError);
