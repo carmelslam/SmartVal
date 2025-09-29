@@ -707,7 +707,7 @@ class PartsSearchResultsPiP {
               height: auto;
               box-shadow: none;
             }
-            .pip-close-btn, .pip-actions { display: none; }
+            .pip-close-btn { display: none; }
             
             /* Ensure price alignment in review window */
             .results-table td.price-cell,
@@ -722,11 +722,129 @@ class PartsSearchResultsPiP {
             .results-table td.col-price * {
               text-align: center !important;
             }
+
+            /* Footer styles for review window */
+            .review-footer {
+              position: sticky;
+              bottom: 0;
+              background: white;
+              padding: 15px;
+              border-top: 1px solid #e5e7eb;
+              display: flex;
+              justify-content: space-between;
+              align-items: center;
+              margin-top: 20px;
+            }
+
+            .footer-buttons {
+              display: flex;
+              gap: 10px;
+            }
+
+            .btn-primary, .btn-secondary, .btn-close {
+              padding: 8px 16px;
+              border-radius: 6px;
+              border: none;
+              cursor: pointer;
+              font-size: 14px;
+              transition: background-color 0.2s;
+            }
+
+            .btn-primary {
+              background: #4f46e5;
+              color: white;
+            }
+
+            .btn-primary:hover {
+              background: #4338ca;
+            }
+
+            .btn-secondary {
+              background: #9ca3af;
+              color: white;
+            }
+
+            .btn-secondary:hover {
+              background: #6b7280;
+            }
+
+            .btn-close {
+              background: #ef4444;
+              color: white;
+            }
+
+            .btn-close:hover {
+              background: #dc2626;
+            }
           </style>
+          <script>
+            // Create a bridge to the parent window's functions
+            const parentPiP = window.opener.partsResultsPiP;
+            
+            function clearSelections() {
+              parentPiP.clearSelections();
+              updateUI();
+            }
+            
+            function saveAllSelections() {
+              parentPiP.saveAllSelections();
+            }
+            
+            function closeWindow() {
+              window.close();
+            }
+
+            function updateUI() {
+              // Update checkboxes to match parent window
+              const checkboxes = document.querySelectorAll('.part-checkbox');
+              checkboxes.forEach(cb => {
+                const partId = cb.getAttribute('data-part-id');
+                cb.checked = parentPiP.selectedItems.has(partId);
+              });
+              
+              // Update selection count
+              const countElement = document.querySelector('.selected-count');
+              if (countElement) {
+                countElement.textContent = parentPiP.selectedItems.size;
+              }
+            }
+
+            // Add click handlers to checkboxes
+            document.querySelectorAll('.part-checkbox').forEach(cb => {
+              cb.onclick = function(e) {
+                const partId = this.getAttribute('data-part-id');
+                if (this.checked) {
+                  parentPiP.selectedItems.add(partId);
+                } else {
+                  parentPiP.selectedItems.delete(partId);
+                }
+                updateUI();
+              };
+            });
+
+            // Initial UI update
+            updateUI();
+          </script>
         </head>
         <body>
           <div class="review-container">
             ${this.pipWindow.innerHTML}
+            <div class="review-footer">
+              <div class="selection-summary">
+                נבחרו: <span class="selected-count">0</span> חלקים
+              </div>
+              <div class="footer-buttons">
+                <button class="btn-secondary" onclick="clearSelections()">
+                  נקה בחירה
+                </button>
+                <button class="btn-primary" onclick="saveAllSelections()">
+                  שמור נבחרים
+                </button>
+                <button class="btn-close" onclick="closeWindow()">
+                  סגור
+                </button>
+              </div>
+            </div>
           </div>
         </body>
       </html>
