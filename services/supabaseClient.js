@@ -26,7 +26,13 @@ class SupabaseQueryBuilder {
   }
 
   ilike(column, value) {
-    this.filters.push(`${column}=ilike.${encodeURIComponent(value)}`);
+    // Don't encode the % wildcards, only encode the inner content
+    if (value.startsWith('%') && value.endsWith('%')) {
+      const innerValue = value.slice(1, -1);
+      this.filters.push(`${column}=ilike.%${encodeURIComponent(innerValue)}%`);
+    } else {
+      this.filters.push(`${column}=ilike.${encodeURIComponent(value)}`);
+    }
     return this;
   }
 
