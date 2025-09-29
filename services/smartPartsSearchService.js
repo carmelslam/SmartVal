@@ -87,7 +87,7 @@ class SmartPartsSearchService {
             try {
               const result = await this.supabase
                 .from('catalog_items')
-                .select('id, cat_num_desc, pcode, price, make, availability, supplier_id')
+                .select('*')
                 .ilike('cat_num_desc', `%${variation}%`)
                 .limit(20);
               
@@ -109,7 +109,7 @@ class SmartPartsSearchService {
             try {
               const result = await this.supabase
                 .from('catalog_items')
-                .select('id, cat_num_desc, pcode, price, make, availability, supplier_id')
+                .select('*')
                 .ilike('make', `%${variation}%`)
                 .limit(20);
               
@@ -129,7 +129,7 @@ class SmartPartsSearchService {
           try {
             const result = await this.supabase
               .from('catalog_items')
-              .select('id, cat_num_desc, pcode, price, make, availability, supplier_id')
+              .select('*')
               .ilike('pcode', `%${cleanParams.oem}%`)
               .limit(30);
             
@@ -148,7 +148,7 @@ class SmartPartsSearchService {
           try {
             const result = await this.supabase
               .from('catalog_items')
-              .select('id, cat_num_desc, pcode, price, make, availability, supplier_id')
+              .select('*')
               .order('created_at', { ascending: false })
               .limit(20);
             
