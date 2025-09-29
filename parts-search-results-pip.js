@@ -95,19 +95,19 @@ class PartsSearchResultsPiP {
           <!-- Header -->
           <div class="pip-header">
             <div class="header-left">
-              <img src="https://carmelcayouf.com/wp-content/uploads/2025/06/g.webp" alt="SmartVal Logo" class="pip-logo" />
+              <span class="date-label">תאריך: </span>
+              <span class="date-value">${new Date().toLocaleDateString('he-IL')}</span>
             </div>
             
             <div class="header-middle">
+              <img src="https://carmelcayouf.com/wp-content/uploads/2025/06/g.webp" alt="SmartVal Logo" class="pip-logo" />
+            </div>
+            
+            <div class="header-right">
               <div class="user-info-box">
                 <div class="user-title">בעל הרשומה</div>
                 <div class="user-name">${userName}</div>
               </div>
-            </div>
-            
-            <div class="header-right">
-              <span class="date-label">تاريخ: </span>
-              <span class="date-value">${new Date().toLocaleDateString('he-IL')}</span>
             </div>
             
             <button class="pip-close-btn" onclick="window.partsResultsPiP?.hidePiP()">×</button>
