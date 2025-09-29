@@ -129,7 +129,7 @@ class SupabaseQueryBuilder {
 }
 
 // Simple Supabase client that mimics the official API
-export const supabase = {
+const supabase = {
   from(table) {
     return {
       select: (fields = '*') => {

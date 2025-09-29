@@ -17,6 +17,7 @@ Your new search architecture is complete and organized:
 **Client Code:**
 - `parts search.html` ✅ Updated to use new service
 - `services/smartPartsSearchService.js` ✅ Fixed initialization
+- `services/supabaseClient.js` ✅ Fixed syntax error and added RPC support
 - `test-smart-search.html` ✅ Ready for testing
 
 ## 🚀 **Next Steps:**
