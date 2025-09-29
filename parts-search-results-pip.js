@@ -94,7 +94,7 @@ class PartsSearchResultsPiP {
         <div class="pip-window" dir="rtl">
           <!-- Header -->
           <div class="pip-header">
-            <div class="header-right">
+            <div class="header-left">
               <span class="date-label">תאריך: </span>
               <span class="date-value">${new Date().toLocaleDateString('he-IL')}</span>
             </div>
@@ -103,7 +103,7 @@ class PartsSearchResultsPiP {
               <img src="https://carmelcayouf.com/wp-content/uploads/2025/06/g.webp" alt="SmartVal Logo" class="pip-logo" />
             </div>
             
-            <div class="header-left">
+            <div class="header-right">
               <div class="user-info-box">
                 <div class="user-title">בעל הרשומה</div>
                 <div class="user-name">${userName}</div>
