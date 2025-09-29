@@ -781,6 +781,28 @@ class PartsSearchResultsPiP {
             .btn-close:hover {
               background: #dc2626;
             }
+
+            .btn-print {
+              background: #6366f1;
+              color: white;
+            }
+
+            .btn-print:hover {
+              background: #4f46e5;
+            }
+
+            @media print {
+              .review-footer, #notification {
+                display: none !important;
+              }
+              .review-container {
+                padding: 0;
+                margin: 0;
+              }
+              .pip-window {
+                box-shadow: none;
+              }
+            }
           </style>
           <script>
             // Create a bridge to the parent window's functions
@@ -898,24 +920,173 @@ class PartsSearchResultsPiP {
         </head>
         <body>
           <div class="review-container">
-            ${this.pipWindow.innerHTML}
+            <div class="pip-window" dir="rtl">
+              <!-- Header -->
+              <div class="pip-header">
+                <div class="header-left">
+                  <div class="user-info-box">
+                    <div class="user-title">בעל הרשומה</div>
+                    <div class="user-name">${this.userName}</div>
+                  </div>
+                </div>
+                
+                <div class="header-middle">
+                  <img src="https://carmelcayouf.com/wp-content/uploads/2025/06/g.webp" alt="SmartVal Logo" class="pip-logo" />
+                </div>
+                
+                <div class="header-right">
+                  <span class="date-label">תאריך: </span>
+                  <span class="date-value">${new Date().toLocaleDateString('he-IL')}</span>
+                </div>
+              </div>
+
+              <!-- Title -->
+              <h2 class="pip-title">תוצאות חיפוש חלקים</h2>
+              
+              <!-- Results Table -->
+              <div class="results-container">
+                <div class="table-wrapper">
+                  <table class="results-table">
+                    ${this.generateResultsTableHTML()}
+                  </table>
+                </div>
+              </div>
+            </div>
+
             <div class="review-footer">
               <div class="selection-summary">
                 נבחרו: <span class="selected-count">0</span> חלקים
               </div>
               <div class="footer-buttons">
-                <button class="btn-secondary" onclick="clearSelections()">
+                <button class="btn-secondary" onclick="window.reviewFunctions.clearSelections()">
                   נקה בחירה
                 </button>
-                <button class="btn-primary" onclick="saveAllSelections()">
+                <button class="btn-primary" onclick="window.reviewFunctions.saveAllSelections()">
                   שמור נבחרים
                 </button>
-                <button class="btn-close" onclick="closeWindow()">
+                <button class="btn-print" onclick="window.reviewFunctions.printWindow()">
+                  הדפסה
+                </button>
+                <button class="btn-close" onclick="window.reviewFunctions.closeWindow()">
                   סגור
                 </button>
               </div>
             </div>
           </div>
+
+          <script>
+            window.reviewFunctions = {
+              parentPiP: window.opener.partsResultsPiP,
+
+              clearSelections: async function() {
+                await this.parentPiP.clearSelections();
+                this.showNotification('הבחירות נוקו בהצלחה');
+                this.updateUI();
+              },
+
+              saveAllSelections: async function() {
+                const selectedCount = this.parentPiP.selectedItems.size;
+                if (selectedCount === 0) {
+                  this.showNotification('לא נבחרו חלקים לשמירה', 'error');
+                  return;
+                }
+
+                await this.parentPiP.saveAllSelections();
+                this.showNotification(selectedCount + ' חלקים נשמרו בהצלחה');
+                this.updateUI();
+              },
+
+              printWindow: function() {
+                window.print();
+              },
+
+              closeWindow: function() {
+                window.close();
+              },
+
+              showNotification: function(message, type = 'success') {
+                const notificationDiv = document.getElementById('notification') || this.createNotificationElement();
+                notificationDiv.style.background = type === 'success' ? '#10b981' : '#ef4444';
+                notificationDiv.textContent = message;
+                notificationDiv.style.display = 'block';
+                setTimeout(() => {
+                  notificationDiv.style.display = 'none';
+                }, 3000);
+              },
+
+              createNotificationElement: function() {
+                const div = document.createElement('div');
+                div.id = 'notification';
+                Object.assign(div.style, {
+                  position: 'fixed',
+                  top: '20px',
+                  left: '50%',
+                  transform: 'translateX(-50%)',
+                  background: '#10b981',
+                  color: 'white',
+                  padding: '12px 24px',
+                  borderRadius: '6px',
+                  fontSize: '14px',
+                  zIndex: '1000',
+                  display: 'none',
+                  boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+                  direction: 'rtl'
+                });
+                document.body.appendChild(div);
+                return div;
+              },
+
+              updateUI: function() {
+                // Update checkboxes
+                const checkboxes = document.querySelectorAll('.part-checkbox');
+                checkboxes.forEach(cb => {
+                  const partId = cb.getAttribute('data-part-id');
+                  cb.checked = this.parentPiP.selectedItems.has(partId);
+                });
+
+                // Update count
+                const countElement = document.querySelector('.selected-count');
+                if (countElement) {
+                  countElement.textContent = this.parentPiP.selectedItems.size;
+                }
+
+                // Update parent window
+                this.parentPiP.updateResults();
+              },
+
+              setupCheckboxHandlers: function() {
+                const self = this;
+                document.querySelectorAll('.part-checkbox').forEach(cb => {
+                  cb.onclick = async function(e) {
+                    const partId = this.getAttribute('data-part-id');
+                    const catalogItem = self.parentPiP.searchResults.find(item => item.id === partId);
+                    
+                    if (this.checked) {
+                      self.parentPiP.selectedItems.add(partId);
+                      if (catalogItem) {
+                        await self.parentPiP.saveSelectedPart(catalogItem);
+                      }
+                    } else {
+                      self.parentPiP.selectedItems.delete(partId);
+                    }
+                    
+                    self.updateUI();
+                  };
+                });
+              },
+
+              init: function() {
+                this.setupCheckboxHandlers();
+                this.updateUI();
+                
+                // Set up polling for parent window changes
+                setInterval(() => this.updateUI(), 500);
+              }
+            };
+
+            // Initialize the review window functionality
+            window.reviewFunctions.init();
+          </script>
         </body>
       </html>
     `);
