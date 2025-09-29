@@ -100,14 +100,14 @@ class PartsSearchResultsPiP {
             </div>
             
             <div class="header-middle">
-              <img src="./assets/Logo smartval.PNG" alt="SmartVal Logo" class="pip-logo" />
-            </div>
-            
-            <div class="header-right">
               <div class="user-info-box">
                 <div class="user-title">בעל הרשומה</div>
                 <div class="user-name">${userName}</div>
               </div>
+            </div>
+            
+            <div class="header-right">
+              <img src="./assets/Logo smartval.PNG" alt="SmartVal Logo" class="pip-logo" />
             </div>
             
             <button class="pip-close-btn" onclick="window.partsResultsPiP?.hidePiP()">×</button>
