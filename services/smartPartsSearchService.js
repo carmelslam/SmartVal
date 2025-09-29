@@ -87,7 +87,7 @@ class SmartPartsSearchService {
             try {
               const result = await this.supabase
                 .from('catalog_items')
-                .select('*')
+                .select('id, cat_num_desc, pcode, price, make, availability, supplier_id')
                 .ilike('cat_num_desc', `%${variation}%`)
                 .limit(20);
               
@@ -109,7 +109,7 @@ class SmartPartsSearchService {
             try {
               const result = await this.supabase
                 .from('catalog_items')
-                .select('*')
+                .select('id, cat_num_desc, pcode, price, make, availability, supplier_id')
                 .ilike('make', `%${variation}%`)
                 .limit(20);
               
@@ -124,21 +124,21 @@ class SmartPartsSearchService {
           searchPerformed = true;
         }
         
-        // Search by OEM (exact)
+        // Search by PCODE (exact)
         if (cleanParams.oem) {
           try {
             const result = await this.supabase
               .from('catalog_items')
-              .select('*')
-              .ilike('oem', `%${cleanParams.oem}%`)
+              .select('id, cat_num_desc, pcode, price, make, availability, supplier_id')
+              .ilike('pcode', `%${cleanParams.oem}%`)
               .limit(30);
             
             if (result.data && result.data.length > 0) {
               allResults.push(...result.data);
-              console.log(`✅ Found ${result.data.length} results for OEM: "${cleanParams.oem}"`);
+              console.log(`✅ Found ${result.data.length} results for PCODE: "${cleanParams.oem}"`);
             }
           } catch (err) {
-            console.warn(`⚠️ OEM search failed:`, err.message);
+            console.warn(`⚠️ PCODE search failed:`, err.message);
           }
           searchPerformed = true;
         }
@@ -148,8 +148,8 @@ class SmartPartsSearchService {
           try {
             const result = await this.supabase
               .from('catalog_items')
-              .select('*')
-              .order('id', { ascending: false })
+              .select('id, cat_num_desc, pcode, price, make, availability, supplier_id')
+              .order('created_at', { ascending: false })
               .limit(20);
             
             if (result.data) {

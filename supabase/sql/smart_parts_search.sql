@@ -5,6 +5,9 @@
 -- 1. CREATE SMART SEARCH FUNCTION
 -- ============================================================================
 
+-- Drop existing function first (required when changing return type)
+DROP FUNCTION IF EXISTS smart_parts_search(text,text,text,text,text,text,text,text,text,text,text,text,text,text,text,integer,integer);
+
 CREATE OR REPLACE FUNCTION smart_parts_search(
     car_plate TEXT DEFAULT NULL,
     make_param TEXT DEFAULT NULL,
@@ -25,7 +28,7 @@ CREATE OR REPLACE FUNCTION smart_parts_search(
     limit_results INTEGER DEFAULT 50
 )
 RETURNS TABLE(
-    id BIGINT,
+    id UUID,
     cat_num_desc TEXT,
     supplier_name TEXT,
     pcode TEXT,
@@ -189,7 +192,7 @@ CREATE INDEX IF NOT EXISTS idx_catalog_part_family ON catalog_items(part_family)
 
 CREATE OR REPLACE FUNCTION simple_parts_search(search_params JSONB)
 RETURNS TABLE(
-    id BIGINT,
+    id UUID,
     cat_num_desc TEXT,
     supplier_name TEXT,
     pcode TEXT,
