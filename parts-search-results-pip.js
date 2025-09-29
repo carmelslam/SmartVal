@@ -708,6 +708,20 @@ class PartsSearchResultsPiP {
               box-shadow: none;
             }
             .pip-close-btn, .pip-actions { display: none; }
+            
+            /* Ensure price alignment in review window */
+            .results-table td.price-cell,
+            .results-table td.col-price {
+              text-align: center !important;
+              direction: ltr !important;
+              display: table-cell !important;
+            }
+            
+            /* Override any RTL text alignment for price cells */
+            .results-table td.price-cell *,
+            .results-table td.col-price * {
+              text-align: center !important;
+            }
           </style>
         </head>
         <body>

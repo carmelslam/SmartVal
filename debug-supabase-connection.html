@@ -127,33 +127,52 @@
 
         async function testToyotaSearch() {
             try {
-                // Test specific Toyota search
-                const { data, error } = await window.supabase
+                // Test Hebrew Toyota search first
+                let { data, error } = await window.supabase
+                    .rpc('smart_parts_search', {
+                        make_param: 'טויוטה',
+                        limit_results: 10
+                    });
+
+                let result = '';
+                
+                if (error) {
+                    result += `Hebrew Toyota search failed: ${error.message}\n\n`;
+                } else if (!data || data.length === 0) {
+                    result += '⚠️ No Hebrew Toyota (טויוטה) parts found\n\n';
+                } else {
+                    result += `✅ Found ${data.length} Hebrew Toyota (טויוטה) parts!\n\n`;
+                    data.slice(0, 3).forEach((item, i) => {
+                        result += `Hebrew Toyota Part ${i + 1}:\n`;
+                        result += `  Make: ${item.make}\n`;
+                        result += `  Model: ${item.model}\n`;
+                        result += `  Description: ${item.cat_num_desc}\n\n`;
+                    });
+                }
+
+                // Test English Toyota search
+                const englishResult = await window.supabase
                     .rpc('smart_parts_search', {
                         make_param: 'Toyota',
                         limit_results: 10
                     });
 
-                if (error) {
-                    addResult('❌ Toyota Search Test', `Toyota search failed: ${error.message}`, true);
-                    return;
+                if (englishResult.error) {
+                    result += `English Toyota search failed: ${englishResult.error.message}\n`;
+                } else if (!englishResult.data || englishResult.data.length === 0) {
+                    result += '⚠️ No English Toyota parts found\n';
+                } else {
+                    result += `✅ Found ${englishResult.data.length} English Toyota parts!\n\n`;
+                    englishResult.data.slice(0, 3).forEach((item, i) => {
+                        result += `English Toyota Part ${i + 1}:\n`;
+                        result += `  Make: ${item.make}\n`;
+                        result += `  Model: ${item.model}\n`;
+                        result += `  Description: ${item.cat_num_desc}\n\n`;
+                    });
                 }
 
-                if (!data || data.length === 0) {
-                    addResult('⚠️ Toyota Search Test', 'No Toyota parts found in database');
-                    return;
-                }
-
-                let result = `Found ${data.length} Toyota parts!\n\n`;
-                data.forEach((item, i) => {
-                    result += `Toyota Part ${i + 1}:\n`;
-                    result += `  Make: ${item.make}\n`;
-                    result += `  Model: ${item.model}\n`;
-                    result += `  Description: ${item.cat_num_desc}\n`;
-                    result += `  PCODE: ${item.pcode}\n\n`;
-                });
-
-                addResult('✅ Toyota Search Test', result);
+                const isSuccess = (data && data.length > 0) || (englishResult.data && englishResult.data.length > 0);
+                addResult(isSuccess ? '✅ Toyota Search Test' : '⚠️ Toyota Search Test', result, !isSuccess);
             } catch (err) {
                 addResult('❌ Toyota Search Test', `Exception: ${err.message}`, true);
             }
