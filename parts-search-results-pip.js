@@ -1,7 +1,9 @@
 // parts-search-results-pip.js - PiP Search Results Window Component
 // Phase 5: Parts Search Module - Supabase Integration
 
-import { partsSearchService } from './services/partsSearchService.js';
+// Import new simplified search service
+// import { partsSearchService } from './services/partsSearchService.js';
+import './services/smartPartsSearchService.js';
 
 class PartsSearchResultsPiP {
   constructor() {

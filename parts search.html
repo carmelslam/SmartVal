@@ -7,6 +7,7 @@
   <script type="module" src="./parts.js"></script>
   <script type="module" src="./webhook.js"></script>
   <script src="./hebrew-text-normalizer.js"></script>
+  <script src="./services/smartPartsSearchService.js"></script>
   <script type="module" src="./parts-search-results-pip.js"></script>
   <script type="module" src="./selected-parts-list.js"></script>
   <script type="module" src="./parts-helper-utils.js"></script>
@@ -628,34 +629,36 @@ ${part.supplier ? `   ספק: ${part.supplier}` : ''}
         selectedParts: selectedParts
       };
       
-      // Import and use the parts search service
-      console.log('📦 Attempting to import partsSearchService...');
-      const { partsSearchService } = await import('./services/partsSearchService.js');
-      console.log('✅ partsSearchService imported:', partsSearchService);
+      // Use new simplified search service
+      console.log('📦 Initializing SmartPartsSearchService...');
+      const searchService = new window.SmartPartsSearchService();
+      console.log('✅ SmartPartsSearchService initialized');
       
       // Show loading notification
       if (typeof showNotification === 'function') {
         showNotification('מחפש בקטלוג...', 'info');
       }
-      console.log('🔄 About to call searchParts...');
+      console.log('🔄 About to call smart search...');
       
-      // Perform search
-      const result = await partsSearchService.searchParts(searchParams);
+      // Perform search with new service
+      const result = await searchService.searchParts(searchParams);
       
       console.log('🔍 Search result:', result);
       
       // Always show PiP window regardless of results
       console.log('🪟 Checking PiP component:', window.partsResultsPiP);
       if (window.partsResultsPiP) {
-        const resultsToShow = (result.success && result.results) ? result.results : [];
+        const resultsToShow = result.data || [];
+        const searchSuccess = !result.error && resultsToShow.length >= 0;
         console.log(`📋 Showing PiP with ${resultsToShow.length} results...`);
         
         await window.partsResultsPiP.showResults(resultsToShow, {
           plate: searchParams.plate,
-          sessionId: result.sessionId || 'no-session',
-          searchType: result.searchType || 'general',
-          searchSuccess: result.success,
-          errorMessage: result.success ? null : (result.error || 'חיפוש נכשל')
+          sessionId: searchService.getSessionId() || 'no-session',
+          searchType: 'smart_search',
+          searchSuccess: searchSuccess,
+          errorMessage: result.error ? result.error.message : null,
+          searchTime: result.searchTime || 0
         });
         console.log('✅ PiP showResults completed');
       } else {
@@ -663,11 +666,11 @@ ${part.supplier ? `   ספק: ${part.supplier}` : ''}
         alert('שגיאה: רכיב התוצאות לא זמין - window.partsResultsPiP = ' + typeof window.partsResultsPiP);
       }
       
-      if (result.success && result.results && result.results.length > 0) {
-        console.log('✅ Supabase search successful:', result.results.length, 'results');
+      if (!result.error && result.data && result.data.length > 0) {
+        console.log('✅ Smart search successful:', result.data.length, 'results');
         
         if (typeof showNotification === 'function') {
-          showNotification(`נמצאו ${result.results.length} תוצאות`, 'success');
+          showNotification(`נמצאו ${result.data.length} תוצאות`, 'success');
         }
       } else {
         console.log('⚠️ No results found in Supabase. Result details:', result);
@@ -868,10 +871,11 @@ ${part.supplier ? `   ספק: ${part.supplier}` : ''}
     try {
       // Step 1: Try Supabase search first
       console.log('1️⃣ Attempting Supabase search...');
-      const supabaseResults = await partsSearchService.searchParts(payload);
+      const smartService = new window.SmartPartsSearchService();
+      const supabaseResults = await smartService.searchParts(payload);
       
-      if (supabaseResults.success && supabaseResults.results && supabaseResults.results.length > 0) {
-        console.log(`✅ Supabase search successful: ${supabaseResults.results.length} results`);
+      if (!supabaseResults.error && supabaseResults.data && supabaseResults.data.length > 0) {
+        console.log(`✅ Smart search successful: ${supabaseResults.data.length} results`);
         
         // Convert Supabase results to Make.com compatible format
         const convertedResults = {
@@ -879,7 +883,7 @@ ${part.supplier ? `   ספק: ${part.supplier}` : ''}
           results: [{
             group: 'תוצאות קטלוג Supabase',
             name: 'חיפוש במאגר',
-            search_results: supabaseResults.results.map(item => ({
+            search_results: supabaseResults.data.map(item => ({
               id: item.id,
               תיאור: item.cat_num_desc || 'ללא תיאור',
               מחיר: item.price ? `₪${item.price}` : 'לא צוין',
@@ -1212,7 +1216,8 @@ document.getElementById('sendResultToOCRBtn').addEventListener('click', function
     }
   }
   import { dev_credentials } from './credentials-vault.js';
-  import { partsSearchService } from './services/partsSearchService.js';
+  // import { partsSearchService } from './services/partsSearchService.js';
+  // Using new SmartPartsSearchService loaded via script tag
 
   window.sendPartSearch = sendPartSearch;
   window.sendSearchResultFile = sendSearchResultFile;

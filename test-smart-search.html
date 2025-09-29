@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SmartVal - בדיקת חיפוש מתקדם</title>
+  <script src="./services/supabaseClient.js"></script>
+  <script src="./services/smartPartsSearchService.js"></script>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #1e3a8a 0%, #64748b 100%);
+      margin: 0;
+      padding: 20px;
+      color: white;
+    }
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      background: rgba(255, 255, 255, 0.1);
+      padding: 30px;
+      border-radius: 16px;
+      backdrop-filter: blur(10px);
+    }
+    .test-section {
+      background: rgba(255, 255, 255, 0.1);
+      margin: 20px 0;
+      padding: 20px;
+      border-radius: 8px;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+    button {
+      background: #3b82f6;
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 16px;
+      margin: 10px 5px;
+    }
+    button:hover {
+      background: #2563eb;
+    }
+    button:disabled {
+      background: #6b7280;
+      cursor: not-allowed;
+    }
+    input, textarea {
+      width: 100%;
+      padding: 12px;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      font-size: 16px;
+      margin: 5px 0;
+      box-sizing: border-box;
+    }
+    .result {
+      background: rgba(0, 0, 0, 0.2);
+      padding: 15px;
+      border-radius: 8px;
+      margin: 10px 0;
+      font-family: monospace;
+      white-space: pre-wrap;
+      overflow-x: auto;
+    }
+    .success { border-left: 4px solid #10b981; }
+    .error { border-left: 4px solid #ef4444; }
+    .warning { border-left: 4px solid #f59e0b; }
+    .info { border-left: 4px solid #3b82f6; }
+    h1, h2, h3 { color: white; }
+    .performance {
+      background: rgba(16, 185, 129, 0.1);
+      padding: 10px;
+      border-radius: 4px;
+      margin: 10px 0;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🚀 SmartVal - בדיקת מערכת חיפוש מתקדמת</h1>
+    <p>בדיקה של הארכיטקטורה החדשה לחיפוש חלפים עם תמיכה בעברית</p>
+
+    <!-- Test 1: Basic Connectivity -->
+    <div class="test-section">
+      <h3>🔧 בדיקה 1: חיבור למסד נתונים</h3>
+      <button onclick="testDatabaseConnection()">בדוק חיבור למסד נתונים</button>
+      <div id="db-test-result" class="result" style="display: none;"></div>
+    </div>
+
+    <!-- Test 2: Database Function Test -->
+    <div class="test-section">
+      <h3>🔍 בדיקה 2: פונקציית החיפוש במסד נתונים</h3>
+      <button onclick="testDatabaseFunction()">בדוק פונקציית smart_parts_search</button>
+      <div id="function-test-result" class="result" style="display: none;"></div>
+    </div>
+
+    <!-- Test 3: Simple Hebrew Search -->
+    <div class="test-section">
+      <h3>🔤 בדיקה 3: חיפוש עברית פשוט</h3>
+      <input type="text" id="hebrew-search" placeholder="הכנס מונח חיפוש בעברית (למשל: פנס)" value="פנס">
+      <button onclick="testHebrewSearch()">חפש בעברית</button>
+      <div id="hebrew-test-result" class="result" style="display: none;"></div>
+    </div>
+
+    <!-- Test 4: Complex Search -->
+    <div class="test-section">
+      <h3>🎯 בדיקה 4: חיפוש מורכב</h3>
+      <input type="text" id="make-search" placeholder="יצרן (למשל: טויוטה)" value="טויוטה">
+      <input type="text" id="year-search" placeholder="שנה (למשל: 2022)" value="2022">
+      <input type="text" id="free-search" placeholder="חיפוש חופשי" value="פנס">
+      <button onclick="testComplexSearch()">חיפוש מורכב</button>
+      <div id="complex-test-result" class="result" style="display: none;"></div>
+    </div>
+
+    <!-- Test 5: Performance Test -->
+    <div class="test-section">
+      <h3>⚡ בדיקה 5: ביצועים</h3>
+      <button onclick="testPerformance()">בדיקת ביצועים (10 חיפושים)</button>
+      <div id="performance-test-result" class="result" style="display: none;"></div>
+    </div>
+
+    <!-- Test 6: Service Integration -->
+    <div class="test-section">
+      <h3>🔗 בדיקה 6: שירות החיפוש המתקדם</h3>
+      <button onclick="testSmartService()">בדוק SmartPartsSearchService</button>
+      <div id="service-test-result" class="result" style="display: none;"></div>
+    </div>
+  </div>
+
+  <script>
+    let searchService;
+
+    // Initialize search service when page loads
+    window.addEventListener('load', () => {
+      try {
+        searchService = new window.SmartPartsSearchService();
+        console.log('✅ SmartPartsSearchService initialized');
+      } catch (error) {
+        console.error('❌ Failed to initialize search service:', error);
+      }
+    });
+
+    function showResult(elementId, content, type = 'info') {
+      const element = document.getElementById(elementId);
+      element.className = `result ${type}`;
+      element.textContent = content;
+      element.style.display = 'block';
+    }
+
+    async function testDatabaseConnection() {
+      try {
+        showResult('db-test-result', '🔄 בודק חיבור למסד נתונים...', 'info');
+        
+        const { data, error } = await window.supabase
+          .from('catalog_items')
+          .select('count')
+          .limit(1);
+
+        if (error) {
+          showResult('db-test-result', `❌ שגיאת חיבור: ${error.message}`, 'error');
+        } else {
+          showResult('db-test-result', '✅ חיבור למסד נתונים תקין!', 'success');
+        }
+      } catch (error) {
+        showResult('db-test-result', `❌ שגיאה: ${error.message}`, 'error');
+      }
+    }
+
+    async function testDatabaseFunction() {
+      try {
+        showResult('function-test-result', '🔄 בודק פונקציית חיפוש במסד נתונים...', 'info');
+        
+        const { data, error } = await window.supabase
+          .rpc('smart_parts_search', { 
+            free_query_param: 'test',
+            limit_results: 5
+          });
+
+        if (error) {
+          showResult('function-test-result', `❌ שגיאת פונקציה: ${error.message}`, 'error');
+        } else {
+          showResult('function-test-result', `✅ פונקציית החיפוש פועלת!\nנמצאו ${data.length} תוצאות\n\nדוגמה:\n${JSON.stringify(data[0] || {}, null, 2)}`, 'success');
+        }
+      } catch (error) {
+        showResult('function-test-result', `❌ שגיאה: ${error.message}`, 'error');
+      }
+    }
+
+    async function testHebrewSearch() {
+      try {
+        const searchTerm = document.getElementById('hebrew-search').value;
+        showResult('hebrew-test-result', `🔄 מחפש: ${searchTerm}...`, 'info');
+        
+        const startTime = Date.now();
+        const result = await searchService.quickSearch(searchTerm);
+        const searchTime = Date.now() - startTime;
+
+        if (result.error) {
+          showResult('hebrew-test-result', `❌ שגיאת חיפוש: ${result.error.message}`, 'error');
+        } else {
+          const results = result.data || [];
+          showResult('hebrew-test-result', 
+            `✅ חיפוש עברית הצליח!\n` +
+            `⏱️ זמן חיפוש: ${searchTime}ms\n` +
+            `📊 תוצאות: ${results.length}\n\n` +
+            `דוגמה לתוצאה:\n${JSON.stringify(results[0] || {}, null, 2)}`, 
+            'success');
+        }
+      } catch (error) {
+        showResult('hebrew-test-result', `❌ שגיאה: ${error.message}`, 'error');
+      }
+    }
+
+    async function testComplexSearch() {
+      try {
+        const searchParams = {
+          make: document.getElementById('make-search').value,
+          year: document.getElementById('year-search').value,
+          free_query: document.getElementById('free-search').value
+        };
+        
+        showResult('complex-test-result', `🔄 מבצע חיפוש מורכב...`, 'info');
+        
+        const startTime = Date.now();
+        const result = await searchService.searchParts(searchParams);
+        const searchTime = Date.now() - startTime;
+
+        if (result.error) {
+          showResult('complex-test-result', `❌ שגיאת חיפוש: ${result.error.message}`, 'error');
+        } else {
+          const results = result.data || [];
+          showResult('complex-test-result', 
+            `✅ חיפוש מורכב הצליח!\n` +
+            `⏱️ זמן חיפוש: ${searchTime}ms\n` +
+            `📊 תוצאות: ${results.length}\n` +
+            `🎯 פרמטרים: ${JSON.stringify(searchParams, null, 2)}\n\n` +
+            `דוגמה לתוצאה:\n${JSON.stringify(results[0] || {}, null, 2)}`, 
+            'success');
+        }
+      } catch (error) {
+        showResult('complex-test-result', `❌ שגיאה: ${error.message}`, 'error');
+      }
+    }
+
+    async function testPerformance() {
+      try {
+        showResult('performance-test-result', '🔄 מבצע בדיקת ביצועים...', 'info');
+        
+        const searchTerms = ['פנס', 'כנף', 'טויוטה', 'מראה', 'דלת'];
+        const times = [];
+        
+        for (let i = 0; i < 10; i++) {
+          const searchTerm = searchTerms[i % searchTerms.length];
+          const startTime = Date.now();
+          
+          await searchService.quickSearch(searchTerm);
+          
+          const endTime = Date.now();
+          times.push(endTime - startTime);
+        }
+        
+        const avgTime = times.reduce((a, b) => a + b, 0) / times.length;
+        const maxTime = Math.max(...times);
+        const minTime = Math.min(...times);
+        
+        showResult('performance-test-result', 
+          `✅ בדיקת ביצועים הושלמה!\n` +
+          `📊 10 חיפושים:\n` +
+          `⏱️ זמן ממוצע: ${avgTime.toFixed(1)}ms\n` +
+          `🚀 זמן מינימלי: ${minTime}ms\n` +
+          `🐌 זמן מקסימלי: ${maxTime}ms\n` +
+          `📈 כל הזמנים: [${times.join(', ')}]ms`, 
+          avgTime < 2000 ? 'success' : avgTime < 5000 ? 'warning' : 'error');
+      } catch (error) {
+        showResult('performance-test-result', `❌ שגיאה: ${error.message}`, 'error');
+      }
+    }
+
+    async function testSmartService() {
+      try {
+        showResult('service-test-result', '🔄 בודק שירות החיפוש המתקדם...', 'info');
+        
+        // Test service initialization
+        if (!searchService) {
+          throw new Error('שירות החיפוש לא אותחל');
+        }
+        
+        // Test session creation
+        const sessionId = searchService.getSessionId();
+        
+        // Test different search methods
+        const quickResult = await searchService.quickSearch('פנס');
+        const advancedResult = await searchService.advancedSearch({
+          make: 'טויוטה',
+          free_query: 'פנס'
+        });
+        
+        showResult('service-test-result', 
+          `✅ שירות החיפוש המתקדם פועל!\n` +
+          `🆔 מזהה סשן: ${sessionId}\n` +
+          `🔍 חיפוש מהיר: ${quickResult.data?.length || 0} תוצאות\n` +
+          `🎯 חיפוש מתקדם: ${advancedResult.data?.length || 0} תוצאות\n` +
+          `⚡ זמן חיפוש מהיר: ${quickResult.searchTime || 0}ms\n` +
+          `⚡ זמן חיפוש מתקדם: ${advancedResult.searchTime || 0}ms`, 
+          'success');
+      } catch (error) {
+        showResult('service-test-result', `❌ שגיאה: ${error.message}`, 'error');
+      }
+    }
+  </script>
+</body>
+</html>
