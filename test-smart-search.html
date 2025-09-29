@@ -160,18 +160,50 @@
       try {
         showResult('db-test-result', '🔄 בודק חיבור למסד נתונים...', 'info');
         
-        const { data, error } = await window.supabase
+        // Test 1: Simple count query
+        const { data: countData, error: countError } = await window.supabase
           .from('catalog_items')
           .select('count')
           .limit(1);
 
-        if (error) {
-          showResult('db-test-result', `❌ שגיאת חיבור: ${error.message}`, 'error');
+        let resultText = '';
+        
+        if (countError) {
+          resultText += `❌ שגיאת count: ${countError.message}\n\n`;
         } else {
-          showResult('db-test-result', '✅ חיבור למסד נתונים תקין!', 'success');
+          resultText += `✅ Count query עבד\n\n`;
         }
+
+        // Test 2: Check if table exists and is accessible
+        const { data: tableData, error: tableError } = await window.supabase
+          .from('catalog_items')
+          .select('id')
+          .limit(1);
+
+        if (tableError) {
+          resultText += `❌ שגיאת גישה לטבלה: ${tableError.message}\n`;
+          resultText += `קוד שגיאה: ${tableError.code}\n`;
+          resultText += `פרטים: ${JSON.stringify(tableError.details)}\n\n`;
+        } else {
+          resultText += `✅ גישה לטבלה תקינה\n\n`;
+        }
+
+        // Test 3: Check authentication status
+        const { data: { user }, error: authError } = await window.supabase.auth.getUser();
+        
+        if (authError) {
+          resultText += `❌ שגיאת אימות: ${authError.message}\n`;
+        } else if (user) {
+          resultText += `👤 מחובר כ: ${user.email}\n`;
+        } else {
+          resultText += `🔓 לא מחובר (אנונימי)\n`;
+        }
+
+        const isError = countError || tableError || authError;
+        showResult('db-test-result', resultText, isError ? 'error' : 'success');
+        
       } catch (error) {
-        showResult('db-test-result', `❌ שגיאה: ${error.message}`, 'error');
+        showResult('db-test-result', `❌ שגיאה כללית: ${error.message}`, 'error');
       }
     }
 
