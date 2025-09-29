@@ -95,10 +95,8 @@ class PartsSearchResultsPiP {
           <!-- Header -->
           <div class="pip-header">
             <div class="header-left">
-              <div class="user-info-box">
-                <div class="user-title">בעל הרשומה</div>
-                <div class="user-name">${userName}</div>
-              </div>
+              <span class="date-label">תאריך: </span>
+              <span class="date-value">${new Date().toLocaleDateString('he-IL')}</span>
             </div>
             
             <div class="header-middle">
@@ -106,8 +104,10 @@ class PartsSearchResultsPiP {
             </div>
             
             <div class="header-right">
-              <span class="date-label">תאריך: </span>
-              <span class="date-value">${new Date().toLocaleDateString('he-IL')}</span>
+              <div class="user-info-box">
+                <div class="user-title">בעל הרשומה</div>
+                <div class="user-name">${userName}</div>
+              </div>
             </div>
             </div>
             
@@ -830,7 +830,7 @@ class PartsSearchResultsPiP {
         color: #1e40af;
       }
 
-      .price-cell {
+      .results-table td.price-cell {
         font-weight: bold;
         color: #059669;
         text-align: center !important;
