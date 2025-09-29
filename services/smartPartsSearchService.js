@@ -333,6 +333,18 @@ class SmartPartsSearchService {
         }
       }
 
+      // Strategy 2.5: Try the simple Hebrew search function
+      console.log(`🔄 Trying simple Hebrew RPC search...`);
+      const simpleResult = await this.supabase.rpc('search_catalog_hebrew_simple', {
+        search_term: searchTerm,
+        max_results: limit
+      });
+      
+      if (simpleResult.data && simpleResult.data.length > 0) {
+        console.log(`✅ Simple Hebrew RPC found: ${simpleResult.data.length} results`);
+        return simpleResult;
+      }
+
       // Strategy 3: Client-side Hebrew search as final fallback
       console.log(`🔄 Using client-side Hebrew search fallback for "${searchTerm}"`);
       return await this.performClientSideHebrewSearch(searchTerm, limit);

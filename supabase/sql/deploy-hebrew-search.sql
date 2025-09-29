@@ -18,8 +18,8 @@ RETURNS TABLE (
   availability TEXT,
   location TEXT,
   comments TEXT,
-  version_date TIMESTAMP,
-  created_at TIMESTAMP,
+  version_date DATE,
+  created_at TIMESTAMPTZ,
   source TEXT
 ) AS $$
 BEGIN
@@ -94,8 +94,8 @@ RETURNS TABLE (
   availability TEXT,
   location TEXT,
   comments TEXT,
-  version_date TIMESTAMP,
-  created_at TIMESTAMP,
+  version_date DATE,
+  created_at TIMESTAMPTZ,
   source TEXT,
   relevance_score INTEGER
 ) AS $$
