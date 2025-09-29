@@ -59,6 +59,14 @@ class PartsSearchResultsPiP {
     
     document.body.appendChild(this.pipWindow);
     
+    console.log('🪟 PiP DOM element created and appended:', {
+      element: this.pipWindow,
+      className: this.pipWindow.className,
+      innerHTML_length: this.pipWindow.innerHTML.length,
+      isConnected: this.pipWindow.isConnected,
+      parentNode: this.pipWindow.parentNode
+    });
+    
     // Add event listeners
     this.attachEventListeners();
     
@@ -67,6 +75,11 @@ class PartsSearchResultsPiP {
     // Animate in
     setTimeout(() => {
       this.pipWindow.classList.add('pip-visible');
+      console.log('🎬 PiP animation class added:', {
+        hasVisibleClass: this.pipWindow.classList.contains('pip-visible'),
+        computedStyle: window.getComputedStyle(this.pipWindow).opacity,
+        display: window.getComputedStyle(this.pipWindow).display
+      });
     }, 10);
   }
 
@@ -78,7 +91,6 @@ class PartsSearchResultsPiP {
     const userName = 'ירון כיוף - שמאות וייעוץ';
     
     return `
-      <div class="pip-overlay">
         <div class="pip-window" dir="rtl">
           <!-- Header -->
           <div class="pip-header">
@@ -143,7 +155,6 @@ class PartsSearchResultsPiP {
             </div>
           </div>
         </div>
-      </div>
     `;
   }
 
@@ -961,6 +972,34 @@ class PartsSearchResultsPiP {
 
 // Create global instance
 window.partsResultsPiP = new PartsSearchResultsPiP();
+
+// Debug function to test PiP visibility
+window.testPiPWindow = function() {
+  console.log('🧪 Testing PiP window visibility...');
+  const sampleResults = [
+    {
+      id: 'test-1',
+      pcode: 'TEST123',
+      cat_num_desc: 'Test Part Description',
+      part_family: 'Test Family',
+      make: 'Test Make',
+      model: 'Test Model',
+      price: 100,
+      oem: 'TEST-OEM-123',
+      supplier_name: 'Test Supplier',
+      availability: 'Available'
+    }
+  ];
+  
+  window.partsResultsPiP.showResults(sampleResults, {
+    plate: 'TEST-123',
+    sessionId: 'test-session',
+    searchType: 'test',
+    searchSuccess: true,
+    errorMessage: null,
+    searchTime: 100
+  });
+};
 
 // Export for module usage
 export { PartsSearchResultsPiP };
