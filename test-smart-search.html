@@ -183,7 +183,14 @@
         if (tableError) {
           resultText += `❌ שגיאת גישה לטבלה: ${tableError.message}\n`;
           resultText += `קוד שגיאה: ${tableError.code}\n`;
-          resultText += `פרטים: ${JSON.stringify(tableError.details)}\n\n`;
+          resultText += `פרטים: ${JSON.stringify(tableError.details)}\n`;
+          
+          // Check if it's an RLS permissions issue
+          if (tableError.code === '42501' || tableError.message.includes('policy')) {
+            resultText += `🔒 זהו כנראה בעיית RLS permissions\n`;
+            resultText += `צריך להפעיל: fix-rls-policies.sql\n`;
+          }
+          resultText += `\n`;
         } else {
           resultText += `✅ גישה לטבלה תקינה\n\n`;
         }
