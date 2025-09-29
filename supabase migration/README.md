@@ -9,8 +9,10 @@ Comprehensive reports on system architecture, performance, and implementation de
 
 **Current Reports:**
 - `NEW_SEARCH_ARCHITECTURE.md` - Complete new search system documentation
+- `DEPLOYMENT_INSTRUCTIONS.md` ⭐ - Step-by-step deployment guide
 - `HEBREW-TEXT-PROCESSING-REPORT.md` - Hebrew text handling analysis  
 - `WEBHOOK-DATA-CONCATENATION-ANALYSIS.md` - Data flow analysis
+- `PHONE_FIELD_CONTAMINATION_ANALYSIS.md` - Field analysis report
 
 ### `/activities/` - Project Activities & Logs
 Task tracking, implementation logs, and activity summaries.

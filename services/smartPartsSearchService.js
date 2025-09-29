@@ -3,9 +3,32 @@
 
 class SmartPartsSearchService {
   constructor() {
-    this.supabase = window.supabase;
+    this.supabase = null;
     this.sessionId = null;
     this.isSearching = false;
+    this.initializeSupabase();
+  }
+
+  /**
+   * Initialize Supabase client with retry logic
+   */
+  initializeSupabase() {
+    // Try to get supabase from window
+    if (window.supabase) {
+      this.supabase = window.supabase;
+      console.log('✅ Supabase client initialized from window.supabase');
+      return;
+    }
+
+    // If not available, wait a bit and try again
+    setTimeout(() => {
+      if (window.supabase) {
+        this.supabase = window.supabase;
+        console.log('✅ Supabase client initialized after delay');
+      } else {
+        console.error('❌ Supabase client not available after delay');
+      }
+    }, 100);
   }
 
   /**
@@ -38,14 +61,42 @@ class SmartPartsSearchService {
     const startTime = Date.now();
 
     try {
+      // Check if Supabase client is available
+      if (!this.supabase) {
+        console.error('❌ Supabase client not initialized');
+        return { data: [], error: new Error('Supabase client not available') };
+      }
+
       console.log('🔍 Starting smart search with params:', searchParams);
 
       // Clean and prepare search parameters
       const cleanParams = this.prepareSearchParams(searchParams);
       
       // Single database call using RPC
-      const { data, error } = await this.supabase
-        .rpc('simple_parts_search', { search_params: cleanParams });
+      let data, error;
+      
+      try {
+        // Try the new simple_parts_search function first
+        const result = await this.supabase
+          .rpc('simple_parts_search', { search_params: cleanParams });
+        data = result.data;
+        error = result.error;
+      } catch (rpcError) {
+        console.warn('⚠️ simple_parts_search function not found, trying direct smart_parts_search...');
+        
+        // Fallback to direct function call
+        const result = await this.supabase
+          .rpc('smart_parts_search', {
+            free_query_param: cleanParams.free_query || null,
+            make_param: cleanParams.make || null,
+            model_param: cleanParams.model || null,
+            year_param: cleanParams.year || null,
+            oem_param: cleanParams.oem || null,
+            limit_results: cleanParams.limit || 50
+          });
+        data = result.data;
+        error = result.error;
+      }
 
       const searchTime = Date.now() - startTime;
       console.log(`✅ Search completed in ${searchTime}ms, found ${data?.length || 0} results`);
@@ -165,7 +216,7 @@ class SmartPartsSearchService {
       // First, check what table structure exists
       try {
         // Try to get table structure by querying with limit 0
-        const { data: tableCheck, error: structureError } = await this.supabase
+        const { error: structureError } = await this.supabase
           .from('parts_search_results')
           .select('*')
           .limit(0);

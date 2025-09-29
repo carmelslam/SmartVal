@@ -8,6 +8,7 @@ This folder contains all SQL scripts, database functions, and migration files fo
 All PostgreSQL scripts for database setup, functions, and data processing.
 
 **Key Files:**
+- `DEPLOY_FUNCTIONS.sql` ⭐ - **READY TO DEPLOY** - Copy this to Supabase SQL Editor
 - `smart_parts_search.sql` - New optimized search function (MAIN)
 - `fix_reversed_hebrew.sql` - Hebrew text correction functions  
 - `simple_hebrew_extraction.sql` - Simplified extraction functions
@@ -37,8 +38,9 @@ Version-controlled database schema changes.
 
 ### 1. Deploy Core Search Function
 ```sql
--- Run this first for new search architecture
-\i sql/smart_parts_search.sql
+-- EASIEST: Copy and paste sql/DEPLOY_FUNCTIONS.sql into Supabase SQL Editor
+-- OR run this in psql:
+\i sql/DEPLOY_FUNCTIONS.sql
 ```
 
 ### 2. Setup Hebrew Processing
