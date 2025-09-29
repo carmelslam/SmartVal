@@ -429,7 +429,6 @@ class PartsSearchService {
   async saveSelectedPart(partData, plate, damageCenterId = null) {
     try {
       const selectedPartData = {
-        catalog_item_id: partData.id,
         plate_number: plate,
         pcode: partData.pcode,
         cat_num_desc: partData.cat_num_desc,

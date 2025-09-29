@@ -326,11 +326,21 @@ class PartsSearchResultsPiP {
     if (this.currentPlateNumber) {
       try {
         const { supabase } = await import('./lib/supabaseClient.js');
-        const { error } = await supabase
+        // Try to delete using different possible ID fields
+        let { error } = await supabase
           .from('selected_parts')
           .delete()
-          .eq('catalog_item_id', item.id)
+          .eq('pcode', item.pcode)
           .eq('plate_number', this.currentPlateNumber);
+        
+        // If that fails, try with other identifiers
+        if (error && item.oem) {
+          ({ error } = await supabase
+            .from('selected_parts')
+            .delete()
+            .eq('oem', item.oem)
+            .eq('plate_number', this.currentPlateNumber));
+        }
 
         if (error) {
           console.error('❌ Supabase deletion error:', error);
@@ -472,23 +482,44 @@ class PartsSearchResultsPiP {
 
     try {
       const { supabase } = await import('./lib/supabaseClient.js');
+      
+      // First, let's check what columns actually exist in the table
       const { data, error } = await supabase
         .from('selected_parts')
-        .select('catalog_item_id, id')
-        .eq('plate_number', this.currentPlateNumber);
+        .select('*')
+        .limit(1);
 
       if (error) {
-        console.error('❌ Error loading selections:', error);
+        console.error('❌ Error checking table structure:', error);
+        // If table doesn't exist or has issues, just skip loading selections
         return;
       }
 
-      // Update selected items
+      console.log('📋 Selected parts table structure:', data?.[0] ? Object.keys(data[0]) : 'No data');
+
+      // Now load actual selections using available columns
+      const { data: selections, error: selectError } = await supabase
+        .from('selected_parts')
+        .select('*')
+        .eq('plate_number', this.currentPlateNumber);
+
+      if (selectError) {
+        console.error('❌ Error loading selections:', selectError);
+        return;
+      }
+
+      // Update selected items - use whatever ID field exists
       this.selectedItems.clear();
-      if (data) {
-        data.forEach(item => {
-          this.selectedItems.add(item.catalog_item_id);
+      if (selections) {
+        selections.forEach(item => {
+          // Try different possible ID fields
+          const itemId = item.catalog_item_id || item.pcode || item.id || item.oem;
+          if (itemId) {
+            this.selectedItems.add(itemId);
+          }
         });
         console.log('📋 Loaded existing selections:', this.selectedItems.size);
+        console.log('📋 Selection IDs:', Array.from(this.selectedItems));
       }
 
       // Update UI
