@@ -109,7 +109,6 @@ class PartsSearchResultsPiP {
                 <div class="user-name">${userName}</div>
               </div>
             </div>
-            </div>
             
             <button class="pip-close-btn" onclick="window.partsResultsPiP?.hidePiP()">×</button>
           </div>
