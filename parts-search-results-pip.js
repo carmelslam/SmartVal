@@ -95,8 +95,10 @@ class PartsSearchResultsPiP {
           <!-- Header -->
           <div class="pip-header">
             <div class="header-left">
-              <span class="date-label">תאריך: </span>
-              <span class="date-value">${new Date().toLocaleDateString('he-IL')}</span>
+              <div class="user-info-box">
+                <div class="user-title">בעל הרשומה</div>
+                <div class="user-name">${userName}</div>
+              </div>
             </div>
             
             <div class="header-middle">
@@ -104,10 +106,9 @@ class PartsSearchResultsPiP {
             </div>
             
             <div class="header-right">
-              <div class="user-info-box">
-                <div class="user-title">בעל הרשומה</div>
-                <div class="user-name">${userName}</div>
-              </div>
+              <span class="date-label">תאריך: </span>
+              <span class="date-value">${new Date().toLocaleDateString('he-IL')}</span>
+            </div>
             </div>
             
             <button class="pip-close-btn" onclick="window.partsResultsPiP?.hidePiP()">×</button>
