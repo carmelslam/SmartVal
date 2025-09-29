@@ -7,6 +7,23 @@ class PartsSearchService {
   constructor() {
     this.sessionId = null;
     this.currentSearchContext = {};
+    this.hebrewNormalizer = null;
+    this.loadHebrewNormalizer();
+  }
+
+  async loadHebrewNormalizer() {
+    try {
+      if (typeof window !== 'undefined' && window.HebrewTextNormalizer) {
+        this.hebrewNormalizer = new window.HebrewTextNormalizer();
+      } else {
+        // Dynamically import if not available
+        const { default: HebrewTextNormalizer } = await import('../hebrew-text-normalizer.js');
+        this.hebrewNormalizer = new HebrewTextNormalizer();
+      }
+      console.log('✅ Hebrew text normalizer loaded');
+    } catch (error) {
+      console.warn('⚠️ Could not load Hebrew normalizer:', error);
+    }
   }
 
   /**
@@ -243,65 +260,146 @@ class PartsSearchService {
   }
 
   /**
-   * Free text search across multiple fields
+   * Free text search across multiple fields with Hebrew support and partial matching
    * Using multiple queries since custom client doesn't support .or()
    */
   async searchByFreeQuery(params) {
     if (!params.free_query) return [];
     
-    console.log('🔍 Free query search:', params.free_query);
+    console.log('🔍 Enhanced Hebrew search for:', params.free_query);
     
     try {
-      const query = `%${params.free_query}%`;
+      const searchTerm = params.free_query.trim();
       const allResults = [];
       const seenIds = new Set();
       
-      // Search across different fields separately
+      // Create multiple search variations for Hebrew partial matching
+      const searchVariations = [
+        searchTerm,                    // Original term
+        `%${searchTerm}%`,            // Wrapped in wildcards
+        `${searchTerm}%`,             // Starts with
+        `%${searchTerm}`,             // Ends with
+        ...this.generateHebrewVariations(searchTerm)
+      ];
+      
+      console.log('🔤 Search variations:', searchVariations);
+      
+      // Search across different fields with Hebrew-aware logic
       const searchFields = [
-        'cat_num_desc',
-        'oem', 
-        'make',
-        'model',
-        'part_family',
-        'supplier_name',
-        'pcode'
+        'cat_num_desc',    // Primary field with Hebrew descriptions
+        'part_family',     // Extracted part family
+        'side_position',   // Extracted side info  
+        'front_rear',      // Extracted position info
+        'actual_trim',     // Extracted trim info
+        'oem',            // OEM numbers
+        'make',           // Vehicle make
+        'model',          // Vehicle model
+        'supplier_name',   // Supplier name
+        'pcode'           // Part code
       ];
       
       for (const field of searchFields) {
-        try {
-          const { data, error } = await supabase
-            .from('catalog_items')
-            .select(`
-              id, supplier_name, pcode, cat_num_desc, price, oem,
-              availability, location, comments, make, model, trim,
-              engine_volume, part_family, source, year_from, year_to,
-              version_date
-            `)
-            .ilike(field, query)
-            .limit(50);
+        for (const variation of searchVariations) {
+          try {
+            const { data, error } = await supabase
+              .from('catalog_items')
+              .select(`
+                id, supplier_name, pcode, cat_num_desc, price, oem,
+                availability, location, comments, make, model, trim,
+                engine_volume, part_family, source, year_from, year_to,
+                version_date, side_position, front_rear, actual_trim
+              `)
+              .ilike(field, variation)
+              .limit(20); // Smaller limit per variation
 
-          if (!error && data) {
-            // Add unique results
-            data.forEach(item => {
-              if (!seenIds.has(item.id)) {
-                seenIds.add(item.id);
-                allResults.push(item);
-              }
-            });
+            if (!error && data && data.length > 0) {
+              console.log(`📋 Found ${data.length} results in ${field} with "${variation}"`);
+              
+              // Add unique results
+              data.forEach(item => {
+                if (!seenIds.has(item.id)) {
+                  seenIds.add(item.id);
+                  allResults.push(item);
+                }
+              });
+            }
+          } catch (fieldError) {
+            console.warn(`⚠️ Error searching ${field} with "${variation}":`, fieldError.message);
+            continue;
           }
-        } catch (fieldError) {
-          console.warn(`⚠️ Error searching field ${field}:`, fieldError);
-          continue; // Continue with other fields
+          
+          // Break if we found enough results
+          if (allResults.length >= 100) break;
         }
+        if (allResults.length >= 100) break;
       }
 
-      console.log(`✅ Free query search found ${allResults.length} unique results`);
-      return allResults.slice(0, 100); // Limit total results
+      console.log(`✅ Enhanced search found ${allResults.length} unique results`);
+      
+      // Sort by relevance (exact matches first)
+      return this.sortHebrewResults(allResults, searchTerm);
       
     } catch (error) {
-      console.error('❌ Free query search error:', error);
+      console.error('❌ Enhanced search error:', error);
       return [];
     }
+  }
+
+  /**
+   * Generate Hebrew search variations using the normalizer
+   */
+  generateHebrewVariations(term) {
+    if (this.hebrewNormalizer) {
+      return this.hebrewNormalizer.generateSearchVariations(term);
+    }
+    
+    // Fallback if normalizer not loaded
+    const variations = [];
+    variations.push(term);
+    variations.push(`%${term}%`);
+    
+    // Basic Hebrew term mapping as fallback
+    const basicMap = {
+      'פנס': ['light', 'פנס', 'פנסים'],
+      'כנף': ['wing', 'panel', 'כנף'],
+      'טויוטה': ['toyota', 'TOYOTA']
+    };
+    
+    for (const [key, values] of Object.entries(basicMap)) {
+      if (term.includes(key)) {
+        variations.push(...values.map(v => `%${v}%`));
+      }
+    }
+    
+    return [...new Set(variations)];
+  }
+
+  /**
+   * Sort results by Hebrew relevance using normalizer
+   */
+  sortHebrewResults(results, searchTerm) {
+    if (this.hebrewNormalizer) {
+      return results.sort((a, b) => {
+        const scoreA = this.hebrewNormalizer.scoreHebrewRelevance(a, searchTerm);
+        const scoreB = this.hebrewNormalizer.scoreHebrewRelevance(b, searchTerm);
+        return scoreB - scoreA;
+      }).slice(0, 100);
+    }
+    
+    // Fallback sorting
+    return results.sort((a, b) => {
+      let scoreA = 0;
+      let scoreB = 0;
+      
+      // Simple relevance scoring
+      if (a.cat_num_desc && a.cat_num_desc.includes(searchTerm)) scoreA += 100;
+      if (b.cat_num_desc && b.cat_num_desc.includes(searchTerm)) scoreB += 100;
+      
+      if (a.price && parseFloat(a.price) > 0) scoreA += 10;
+      if (b.price && parseFloat(b.price) > 0) scoreB += 10;
+      
+      return scoreB - scoreA;
+    }).slice(0, 100);
   }
 
   /**
