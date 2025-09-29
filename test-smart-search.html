@@ -203,21 +203,40 @@
             resultText += `   ספק ID: ${item.supplier_id || 'ריק'}\n`;
           });
           
-          // Test searches with actual field names
-          const { data: toyotaData, error: toyotaError } = await window.supabase
+          // Test search with actual Hebrew make value from the data
+          const { data: hebrewMakeData, error: hebrewMakeError } = await window.supabase
             .from('catalog_items')
             .select('*')
-            .ilike('make', '%toyota%')
+            .ilike('make', '%ימ%')
             .limit(5);
 
-          resultText += `\n\n🚗 חיפוש Toyota במעק (make field):\n`;
-          if (toyotaError) {
-            resultText += `❌ שגיאה: ${toyotaError.message}`;
+          resultText += `\n\n🚗 חיפוש יצרן עברי (make field):\n`;
+          if (hebrewMakeError) {
+            resultText += `❌ שגיאה: ${hebrewMakeError.message}`;
           } else {
-            resultText += `נמצאו ${toyotaData.length} תוצאות לחיפוש "toyota"\n`;
-            if (toyotaData.length > 0) {
-              toyotaData.forEach((item, index) => {
+            resultText += `נמצאו ${hebrewMakeData.length} תוצאות לחיפוש יצרן עברי\n`;
+            if (hebrewMakeData.length > 0) {
+              hebrewMakeData.forEach((item, index) => {
                 resultText += `${index + 1}. ${item.cat_num_desc} (יצרן: ${item.make})\n`;
+              });
+            }
+          }
+
+          // Test search with actual pcode from the data
+          const { data: pcodeData, error: pcodeError } = await window.supabase
+            .from('catalog_items')
+            .select('*')
+            .ilike('pcode', '%7J09450956G%')
+            .limit(5);
+
+          resultText += `\n\n🔍 חיפוש pcode ממשי:\n`;
+          if (pcodeError) {
+            resultText += `❌ שגיאה: ${pcodeError.message}`;
+          } else {
+            resultText += `נמצאו ${pcodeData.length} תוצאות לחיפוש pcode\n`;
+            if (pcodeData.length > 0) {
+              pcodeData.forEach((item, index) => {
+                resultText += `${index + 1}. pcode: ${item.pcode} - ${item.cat_num_desc}\n`;
               });
             }
           }
