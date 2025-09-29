@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Database Content Check</title>
+    <style>
+        body { font-family: Arial; margin: 20px; direction: rtl; }
+        .result { background: #f5f5f5; padding: 10px; margin: 10px 0; font-family: monospace; white-space: pre-wrap; }
+        button { padding: 10px 20px; margin: 5px; }
+    </style>
+</head>
+<body>
+    <h1>בדיקת תוכן מאגר הנתונים</h1>
+
+    <div>
+        <button onclick="checkCatalogItems()">בדוק catalog_items</button>
+        <button onclick="checkPartsBank()">בדוק PARTS_BANK</button>
+        <button onclick="compareDataSources()">השווה מקורות נתונים</button>
+    </div>
+
+    <div id="results" class="result"></div>
+
+    <script src="./services/supabaseClient.js"></script>
+    <script src="./parts.js"></script>
+
+    <script>
+        const results = document.getElementById('results');
+
+        async function checkCatalogItems() {
+            results.innerHTML = 'בודק catalog_items...';
+            
+            try {
+                // Check if table exists and has data
+                const { data, error } = await window.supabase
+                    .from('catalog_items')
+                    .select('*')
+                    .limit(5);
+                
+                if (error) {
+                    results.innerHTML = `❌ שגיאה בטבלת catalog_items:\n${error.message}\n${JSON.stringify(error, null, 2)}`;
+                    return;
+                }
+                
+                if (!data || data.length === 0) {
+                    results.innerHTML = `⚠️ טבלת catalog_items ריקה!\n\nהטבלה קיימת אבל אין בה נתונים.`;
+                    return;
+                }
+                
+                let report = `✅ נמצאו ${data.length} רשומות בטבלת catalog_items:\n\n`;
+                
+                // Show table structure
+                if (data[0]) {
+                    report += `🏗️ מבנה הטבלה:\n`;
+                    Object.keys(data[0]).forEach(key => {
+                        const value = data[0][key];
+                        const type = typeof value;
+                        report += `  ${key}: ${type} = "${value}"\n`;
+                    });
+                    report += `\n`;
+                }
+                
+                // Show sample data
+                report += `📋 דוגמאות נתונים:\n`;
+                data.forEach((item, index) => {
+                    report += `\n--- רשומה ${index + 1} ---\n`;
+                    report += `ID: ${item.id}\n`;
+                    report += `PCODE: ${item.pcode || 'לא זמין'}\n`;
+                    report += `תיאור: ${item.cat_num_desc || 'לא זמין'}\n`;
+                    report += `משפחת חלק: ${item.part_family || 'לא זמין'}\n`;
+                    report += `יצרן: ${item.make || 'לא זמין'}\n`;
+                    report += `דגם: ${item.model || 'לא זמין'}\n`;
+                    report += `מחיר: ${item.price || 'לא זמין'}\n`;
+                    report += `ספק: ${item.supplier_name || 'לא זמין'}\n`;
+                });
+                
+                results.innerHTML = report;
+                
+            } catch (error) {
+                results.innerHTML = `❌ שגיאה כללית:\n${error.message}\n${error.stack}`;
+            }
+        }
+
+        function checkPartsBank() {
+            results.innerHTML = 'בודק PARTS_BANK...';
+            
+            if (!window.PARTS_BANK) {
+                results.innerHTML = `❌ window.PARTS_BANK לא קיים!\n\nייתכן שקובץ parts.js לא נטען.`;
+                return;
+            }
+            
+            const categories = Object.keys(window.PARTS_BANK);
+            let totalParts = 0;
+            
+            let report = `✅ PARTS_BANK נטען בהצלחה!\n\n`;
+            report += `📊 סטטיסטיקות:\n`;
+            report += `  קטגוריות: ${categories.length}\n`;
+            
+            categories.forEach(category => {
+                const parts = window.PARTS_BANK[category];
+                totalParts += parts.length;
+                report += `  "${category}": ${parts.length} חלקים\n`;
+            });
+            
+            report += `  סה"כ חלקים: ${totalParts}\n\n`;
+            
+            // Show first few categories as examples
+            report += `🔍 דוגמאות קטגוריות וחלקים:\n\n`;
+            categories.slice(0, 3).forEach(category => {
+                report += `"${category}":\n`;
+                const parts = window.PARTS_BANK[category];
+                parts.slice(0, 5).forEach(part => {
+                    report += `  - ${part}\n`;
+                });
+                if (parts.length > 5) {
+                    report += `  ... ועוד ${parts.length - 5} חלקים\n`;
+                }
+                report += `\n`;
+            });
+            
+            results.innerHTML = report;
+        }
+
+        async function compareDataSources() {
+            results.innerHTML = 'משווה מקורות נתונים...';
+            
+            let report = `📊 השוואת מקורות נתונים:\n\n`;
+            
+            // Check PARTS_BANK
+            const partsBank = window.PARTS_BANK;
+            if (partsBank) {
+                const categories = Object.keys(partsBank);
+                let totalParts = 0;
+                categories.forEach(cat => totalParts += partsBank[cat].length);
+                
+                report += `🏦 PARTS_BANK (נתונים מקומיים):\n`;
+                report += `  ✅ זמין\n`;
+                report += `  📈 ${categories.length} קטגוריות\n`;
+                report += `  🔢 ${totalParts} חלקים בסך הכל\n`;
+                report += `  🎯 מקור: קובץ parts.js\n`;
+                report += `  🔤 שפה: עברית\n\n`;
+            } else {
+                report += `🏦 PARTS_BANK:\n  ❌ לא זמין\n\n`;
+            }
+            
+            // Check catalog_items
+            try {
+                const { data, error } = await window.supabase
+                    .from('catalog_items')
+                    .select('*')
+                    .limit(10);
+                
+                if (error) {
+                    report += `🗄️ catalog_items (מאגר נתונים):\n`;
+                    report += `  ❌ שגיאה: ${error.message}\n\n`;
+                } else if (!data || data.length === 0) {
+                    report += `🗄️ catalog_items (מאגר נתונים):\n`;
+                    report += `  ⚠️ טבלה ריקה\n`;
+                    report += `  🎯 מקור: Supabase\n`;
+                    report += `  📊 0 רשומות\n\n`;
+                } else {
+                    // Analyze content
+                    const sampleItem = data[0];
+                    const hasHebrew = Object.values(sampleItem).some(val => 
+                        val && typeof val === 'string' && /[\\u0590-\\u05FF]/.test(val)
+                    );
+                    
+                    report += `🗄️ catalog_items (מאגר נתונים):\n`;
+                    report += `  ✅ זמין\n`;
+                    report += `  📊 ${data.length}+ רשומות\n`;
+                    report += `  🎯 מקור: Supabase\n`;
+                    report += `  🔤 שפה: ${hasHebrew ? 'עברית + אנגלית' : 'אנגלית'}\n`;
+                    report += `  🏗️ עמודות: ${Object.keys(sampleItem).join(', ')}\n\n`;
+                }
+            } catch (error) {
+                report += `🗄️ catalog_items:\n  ❌ שגיאה בגישה: ${error.message}\n\n`;
+            }
+            
+            // Conclusion
+            report += `💡 מסקנות:\n`;
+            if (partsBank && (!window.supabase || totalParts > 0)) {
+                report += `  🎯 המערכת כרגע משתמשת ב-PARTS_BANK המקומי\n`;
+                report += `  🔄 החיפוש המתקדם עובד עם הנתונים המקומיים\n`;
+                report += `  ⚠️ החיפוש החופשי מנסה לחפש ב-catalog_items\n`;
+                report += `  🔧 דרוש תיאום בין שני מקורות הנתונים\n`;
+            }
+            
+            results.innerHTML = report;
+        }
+    </script>
+</body>
+</html>

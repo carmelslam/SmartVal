@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>בדיקת מערכת חיפוש דואלית</title>
+    <style>
+        body { font-family: Arial; margin: 20px; direction: rtl; }
+        .test-section { background: #f5f5f5; padding: 15px; margin: 15px 0; border-radius: 8px; }
+        .result { background: #e8f5e9; padding: 10px; margin: 10px 0; font-family: monospace; border-radius: 4px; }
+        .error { background: #ffebee; border-left: 4px solid #f44336; }
+        .success { background: #e8f5e9; border-left: 4px solid #4caf50; }
+        button { padding: 10px 20px; margin: 5px; border: none; border-radius: 4px; cursor: pointer; }
+        .test-btn { background: #2196F3; color: white; }
+        .clear-btn { background: #757575; color: white; }
+        table { width: 100%; border-collapse: collapse; margin: 10px 0; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: right; }
+        th { background: #f0f0f0; }
+        input[type="text"] { width: 200px; padding: 5px; margin: 5px; }
+    </style>
+</head>
+<body>
+    <h1>🧪 בדיקת מערכת החיפוש הדואלית</h1>
+    <p>בודק ש-PARTS_BANK (נתונים מקומיים) ו-catalog_items (Supabase) עובדים נכון</p>
+
+    <!-- Test Section 1: Free Text Search -->
+    <div class="test-section">
+        <h3>🔍 1. בדיקת חיפוש חופשי (Free Text Search)</h3>
+        <p>צריך לחפש ב-catalog_items קודם, ואם לא נמצא - ל-PARTS_BANK</p>
+        
+        <input type="text" id="freeTextInput" placeholder="הקלד טקסט לחיפוש (למשל: טויוטה, פנס, כנף)" value="פנס">
+        <button class="test-btn" onclick="testFreeTextSearch()">🔍 בדוק חיפוש חופשי</button>
+        <button class="clear-btn" onclick="clearResults('freeTextResults')">נקה תוצאות</button>
+        
+        <div id="freeTextResults" class="result"></div>
+    </div>
+
+    <!-- Test Section 2: Advanced Search -->
+    <div class="test-section">
+        <h3>🎯 2. בדיקת חיפוש מתקדם (Advanced Search)</h3>
+        <p>צריך לחפש ב-PARTS_BANK עבור part_group/part_name</p>
+        
+        <select id="partGroupSelect">
+            <option value="">בחר משפחת חלק...</option>
+            <option value="פנסים">פנסים</option>
+            <option value="דלתות">דלתות</option>
+            <option value="פגושים">פגושים</option>
+            <option value="מראות">מראות</option>
+            <option value="זכוכיות">זכוכיות</option>
+            <option value="ברזלים">ברזלים</option>
+        </select>
+        
+        <input type="text" id="partNameInput" placeholder="שם חלק (אופציונלי)" value="">
+        <button class="test-btn" onclick="testAdvancedSearch()">🎯 בדוק חיפוש מתקדם</button>
+        <button class="clear-btn" onclick="clearResults('advancedResults')">נקה תוצאות</button>
+        
+        <div id="advancedResults" class="result"></div>
+    </div>
+
+    <!-- Test Section 3: Data Source Verification -->
+    <div class="test-section">
+        <h3>🏦 3. בדיקת מקורות נתונים</h3>
+        <p>בודק שמידע מ-PARTS_BANK ומ-catalog_items מובחן בבירור</p>
+        
+        <button class="test-btn" onclick="testDataSources()">🏦 בדוק מקורות נתונים</button>
+        <button class="clear-btn" onclick="clearResults('dataSourceResults')">נקה תוצאות</button>
+        
+        <div id="dataSourceResults" class="result"></div>
+    </div>
+
+    <!-- Test Section 4: PiP Integration -->
+    <div class="test-section">
+        <h3>🪟 4. בדיקת אינטגרציה עם PiP</h3>
+        <p>בודק שתוצאות החיפוש מוצגות נכון ב-PiP</p>
+        
+        <button class="test-btn" onclick="testPiPIntegration()">🪟 בדוק PiP</button>
+        <button class="clear-btn" onclick="clearResults('pipResults')">נקה תוצאות</button>
+        
+        <div id="pipResults" class="result"></div>
+    </div>
+
+    <!-- Load Dependencies -->
+    <script src="./services/supabaseClient.js"></script>
+    <script src="./parts.js"></script>
+    <script src="./services/smartPartsSearchService.js"></script>
+    <script src="./parts-search-results-pip.js"></script>
+
+    <script>
+        // Test utilities
+        function clearResults(elementId) {
+            document.getElementById(elementId).innerHTML = '';
+        }
+
+        function formatResult(title, content, isError = false) {
+            const className = isError ? 'result error' : 'result success';
+            return `<div class="${className}"><h4>${title}</h4><pre>${content}</pre></div>`;
+        }
+
+        function formatTable(data, title) {
+            if (!data || data.length === 0) return `<p>${title}: אין נתונים</p>`;
+            
+            let html = `<h4>${title} (${data.length} תוצאות):</h4><table>`;
+            
+            // Header
+            const keys = Object.keys(data[0]);
+            html += '<tr>';
+            keys.forEach(key => html += `<th>${key}</th>`);
+            html += '</tr>';
+            
+            // Rows (show first 5)
+            data.slice(0, 5).forEach(row => {
+                html += '<tr>';
+                keys.forEach(key => {
+                    const value = row[key] || '';
+                    const displayValue = String(value).length > 30 ? String(value).substring(0, 30) + '...' : value;
+                    html += `<td>${displayValue}</td>`;
+                });
+                html += '</tr>';
+            });
+            
+            html += '</table>';
+            if (data.length > 5) {
+                html += `<p>...ועוד ${data.length - 5} תוצאות</p>`;
+            }
+            return html;
+        }
+
+        // Test 1: Free Text Search
+        async function testFreeTextSearch() {
+            const resultsDiv = document.getElementById('freeTextResults');
+            const searchTerm = document.getElementById('freeTextInput').value.trim();
+            
+            if (!searchTerm) {
+                resultsDiv.innerHTML = formatResult('שגיאה', 'נא להקליד טקסט לחיפוש', true);
+                return;
+            }
+
+            resultsDiv.innerHTML = '<p>⏳ מבצע חיפוש חופשי...</p>';
+
+            try {
+                // Initialize service
+                const searchService = new window.SmartPartsSearchService();
+                
+                // Test free text search
+                const result = await searchService.searchParts({
+                    free_query: searchTerm
+                });
+
+                let report = `🔍 חיפוש חופשי עבור: "${searchTerm}"\n\n`;
+                report += `⏱️ זמן חיפוש: ${result.searchTime || 'לא זמין'} ms\n`;
+                report += `❌ שגיאות: ${result.error ? result.error.message : 'אין'}\n`;
+                report += `📊 תוצאות: ${result.data ? result.data.length : 0}\n\n`;
+
+                if (result.data && result.data.length > 0) {
+                    // Analyze data sources
+                    const sourceAnalysis = {
+                        'PARTS_BANK': result.data.filter(item => item.source === 'PARTS_BANK').length,
+                        'catalog_items': result.data.filter(item => item.source !== 'PARTS_BANK').length
+                    };
+                    
+                    report += `📈 ניתוח מקורות:\n`;
+                    report += `  - PARTS_BANK: ${sourceAnalysis.PARTS_BANK} תוצאות\n`;
+                    report += `  - catalog_items: ${sourceAnalysis.catalog_items} תוצאות\n\n`;
+                }
+
+                let html = formatResult('תוצאות חיפוש חופשי', report);
+                
+                if (result.data && result.data.length > 0) {
+                    html += formatTable(result.data, 'נתונים מפורטים');
+                }
+
+                resultsDiv.innerHTML = html;
+
+            } catch (error) {
+                resultsDiv.innerHTML = formatResult('שגיאה', `שגיאה בחיפוש: ${error.message}`, true);
+            }
+        }
+
+        // Test 2: Advanced Search
+        async function testAdvancedSearch() {
+            const resultsDiv = document.getElementById('advancedResults');
+            const partGroup = document.getElementById('partGroupSelect').value;
+            const partName = document.getElementById('partNameInput').value.trim();
+            
+            if (!partGroup && !partName) {
+                resultsDiv.innerHTML = formatResult('שגיאה', 'נא לבחור משפחת חלק או להקליד שם חלק', true);
+                return;
+            }
+
+            resultsDiv.innerHTML = '<p>⏳ מבצע חיפוש מתקדם...</p>';
+
+            try {
+                // Initialize service
+                const searchService = new window.SmartPartsSearchService();
+                
+                // Test advanced search
+                const result = await searchService.searchParts({
+                    part_group: partGroup,
+                    part_name: partName
+                });
+
+                let report = `🎯 חיפוש מתקדם\n`;
+                report += `  - משפחת חלק: ${partGroup || 'לא צוין'}\n`;
+                report += `  - שם חלק: ${partName || 'לא צוין'}\n\n`;
+                report += `⏱️ זמן חיפוש: ${result.searchTime || 'לא זמין'} ms\n`;
+                report += `❌ שגיאות: ${result.error ? result.error.message : 'אין'}\n`;
+                report += `📊 תוצאות: ${result.data ? result.data.length : 0}\n\n`;
+
+                if (result.data && result.data.length > 0) {
+                    // Should be mostly from PARTS_BANK for advanced search
+                    const fromPartsBank = result.data.filter(item => item.source === 'PARTS_BANK').length;
+                    report += `📈 מקור נתונים:\n`;
+                    report += `  - PARTS_BANK: ${fromPartsBank} תוצאות (צפוי להיות הרוב)\n`;
+                    report += `  - אחר: ${result.data.length - fromPartsBank} תוצאות\n\n`;
+                }
+
+                let html = formatResult('תוצאות חיפוש מתקדם', report);
+                
+                if (result.data && result.data.length > 0) {
+                    html += formatTable(result.data, 'נתונים מפורטים');
+                }
+
+                resultsDiv.innerHTML = html;
+
+            } catch (error) {
+                resultsDiv.innerHTML = formatResult('שגיאה', `שגיאה בחיפוש: ${error.message}`, true);
+            }
+        }
+
+        // Test 3: Data Sources
+        async function testDataSources() {
+            const resultsDiv = document.getElementById('dataSourceResults');
+            resultsDiv.innerHTML = '<p>⏳ בודק מקורות נתונים...</p>';
+
+            try {
+                let report = '🏦 בדיקת מקורות נתונים:\n\n';
+
+                // Check PARTS_BANK
+                if (window.PARTS_BANK) {
+                    const categories = Object.keys(window.PARTS_BANK);
+                    let totalParts = 0;
+                    categories.forEach(cat => totalParts += window.PARTS_BANK[cat].length);
+                    
+                    report += `✅ PARTS_BANK זמין:\n`;
+                    report += `  - ${categories.length} קטגוריות\n`;
+                    report += `  - ${totalParts} חלקים בסך הכל\n`;
+                    report += `  - דוגמאות קטגוריות: ${categories.slice(0, 3).join(', ')}\n\n`;
+                } else {
+                    report += `❌ PARTS_BANK לא זמין\n\n`;
+                }
+
+                // Check Supabase connection
+                if (window.supabase) {
+                    report += `✅ Supabase client זמין\n`;
+                    
+                    try {
+                        const { data, error } = await window.supabase
+                            .from('catalog_items')
+                            .select('id')
+                            .limit(1);
+                        
+                        if (error) {
+                            report += `  ❌ שגיאת חיבור: ${error.message}\n\n`;
+                        } else {
+                            report += `  ✅ חיבור תקין למאגר הנתונים\n`;
+                            report += `  📊 catalog_items נגיש\n\n`;
+                        }
+                    } catch (dbError) {
+                        report += `  ❌ שגיאת מאגר נתונים: ${dbError.message}\n\n`;
+                    }
+                } else {
+                    report += `❌ Supabase client לא זמין\n\n`;
+                }
+
+                // Check SmartPartsSearchService
+                if (window.SmartPartsSearchService) {
+                    report += `✅ SmartPartsSearchService זמין\n`;
+                    const service = new window.SmartPartsSearchService();
+                    report += `  - Session ID: ${service.getSessionId() || 'לא הוגדר'}\n\n`;
+                } else {
+                    report += `❌ SmartPartsSearchService לא זמין\n\n`;
+                }
+
+                resultsDiv.innerHTML = formatResult('בדיקת מקורות נתונים', report);
+
+            } catch (error) {
+                resultsDiv.innerHTML = formatResult('שגיאה', `שגיאה בבדיקת מקורות: ${error.message}`, true);
+            }
+        }
+
+        // Test 4: PiP Integration
+        async function testPiPIntegration() {
+            const resultsDiv = document.getElementById('pipResults');
+            resultsDiv.innerHTML = '<p>⏳ בודק אינטגרציה עם PiP...</p>';
+
+            try {
+                let report = '🪟 בדיקת PiP:\n\n';
+
+                // Check if PiP is available
+                if (window.partsResultsPiP) {
+                    report += `✅ PiP component זמין\n`;
+                    
+                    // Create test data mixing both sources
+                    const testResults = [
+                        {
+                            id: 'test-parts-bank-1',
+                            pcode: 'PB-TEST123',
+                            cat_num_desc: 'פנס קדמי ימין',
+                            part_family: 'פנסים',
+                            make: 'כללי',
+                            model: 'רב דגמים',
+                            price: 350,
+                            source: 'PARTS_BANK',
+                            match_type: 'exact_match'
+                        },
+                        {
+                            id: 'test-catalog-1',
+                            pcode: 'CAT-456789',
+                            cat_num_desc: 'Toyota Corolla Headlight',
+                            part_family: 'Lights',
+                            make: 'Toyota',
+                            model: 'Corolla',
+                            price: 280,
+                            source: 'catalog_items',
+                            supplier_name: 'AutoParts Ltd'
+                        }
+                    ];
+
+                    // Show test results in PiP
+                    await window.partsResultsPiP.showResults(testResults, {
+                        plate: 'TEST-PiP-123',
+                        sessionId: 'dual-search-test',
+                        searchType: 'dual_system_test',
+                        searchSuccess: true,
+                        errorMessage: null,
+                        searchTime: 150
+                    });
+
+                    report += `✅ PiP נפתח בהצלחה עם נתוני בדיקה\n`;
+                    report += `📊 הוצגו ${testResults.length} תוצאות מבדיקה\n`;
+                    report += `  - 1 מתוך PARTS_BANK\n`;
+                    report += `  - 1 מתוך catalog_items\n\n`;
+                    report += `👀 בדוק שהחלון PiP נראה על המסך\n`;
+                    
+                } else {
+                    report += `❌ PiP component לא זמין\n`;
+                    report += `🔧 נדרש לטעון את parts-search-results-pip.js\n\n`;
+                }
+
+                resultsDiv.innerHTML = formatResult('בדיקת PiP', report);
+
+            } catch (error) {
+                resultsDiv.innerHTML = formatResult('שגיאה', `שגיאה בבדיקת PiP: ${error.message}`, true);
+            }
+        }
+
+        // Initialize page
+        window.addEventListener('load', () => {
+            console.log('🧪 Test page loaded');
+            console.log('📦 Available components:');
+            console.log('  - PARTS_BANK:', !!window.PARTS_BANK);
+            console.log('  - supabase:', !!window.supabase);
+            console.log('  - SmartPartsSearchService:', !!window.SmartPartsSearchService);
+            console.log('  - partsResultsPiP:', !!window.partsResultsPiP);
+        });
+    </script>
+</body>
+</html>

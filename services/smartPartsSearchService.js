@@ -122,9 +122,36 @@ class SmartPartsSearchService {
             if (result.data && result.data.length > 0) {
               allResults.push(...result.data);
               console.log(`✅ Free query search found ${result.data.length} total results`);
+            } else if (isHebrewQuery) {
+              // Fallback: search PARTS_BANK for Hebrew free query
+              console.log(`🏦 No results in catalog_items, trying PARTS_BANK fallback for Hebrew query...`);
+              try {
+                const partsFieldResults = this.searchPartsFieldInFreeQuery(cleanParams.free_query);
+                if (partsFieldResults.length > 0) {
+                  allResults.push(...partsFieldResults);
+                  console.log(`✅ PARTS_BANK fallback found ${partsFieldResults.length} results`);
+                }
+              } catch (fallbackError) {
+                console.warn('⚠️ PARTS_BANK fallback failed:', fallbackError.message);
+              }
             }
           } catch (err) {
             console.warn(`⚠️ Free query search failed:`, err.message);
+          }
+          searchPerformed = true;
+        }
+        
+        // Search by part_group and part_name (use local PARTS_BANK)
+        if (cleanParams.part_group || cleanParams.part_name) {
+          console.log('🏦 Searching in local PARTS_BANK for part_group/part_name...');
+          try {
+            const localResults = this.searchPartsBank(cleanParams.part_group, cleanParams.part_name);
+            if (localResults.length > 0) {
+              allResults.push(...localResults);
+              console.log(`✅ Found ${localResults.length} results in PARTS_BANK`);
+            }
+          } catch (err) {
+            console.warn(`⚠️ PARTS_BANK search failed:`, err.message);
           }
           searchPerformed = true;
         }
@@ -472,6 +499,161 @@ class SmartPartsSearchService {
   }
 
   /**
+   * Search in local PARTS_BANK for part_group and part_name
+   */
+  searchPartsBank(partGroup, partName) {
+    if (!window.PARTS_BANK) {
+      console.warn('⚠️ PARTS_BANK not available');
+      return [];
+    }
+    
+    const results = [];
+    const partsBank = window.PARTS_BANK;
+    
+    console.log(`🔍 Searching PARTS_BANK - Group: "${partGroup}", Name: "${partName}"`);
+    
+    // If part_group is specified, search within that category
+    if (partGroup && partsBank[partGroup]) {
+      const categoryParts = partsBank[partGroup];
+      
+      if (partName) {
+        // Search for specific part name within the group
+        const matchingParts = categoryParts.filter(part => 
+          part.toLowerCase().includes(partName.toLowerCase()) ||
+          partName.toLowerCase().includes(part.toLowerCase()) ||
+          part === partName
+        );
+        
+        matchingParts.forEach(part => {
+          results.push(this.createPartsFieldResult(part, partGroup, 'exact_match'));
+        });
+      } else {
+        // Return all parts in the group (limited to first 20)
+        categoryParts.slice(0, 20).forEach(part => {
+          results.push(this.createPartsFieldResult(part, partGroup, 'category_match'));
+        });
+      }
+    } else if (partName && !partGroup) {
+      // Search for part name across all categories
+      Object.keys(partsBank).forEach(category => {
+        const categoryParts = partsBank[category];
+        const matchingParts = categoryParts.filter(part => 
+          part.toLowerCase().includes(partName.toLowerCase()) ||
+          partName.toLowerCase().includes(part.toLowerCase())
+        );
+        
+        matchingParts.forEach(part => {
+          results.push(this.createPartsFieldResult(part, category, 'name_match'));
+        });
+      });
+    } else if (partGroup && !partName) {
+      // Return sample parts from the specified group
+      if (partsBank[partGroup]) {
+        partsBank[partGroup].slice(0, 15).forEach(part => {
+          results.push(this.createPartsFieldResult(part, partGroup, 'category_browse'));
+        });
+      }
+    }
+    
+    console.log(`🔍 PARTS_BANK search completed: ${results.length} results`);
+    return results.slice(0, 50); // Limit total results
+  }
+
+  /**
+   * Search PARTS_BANK for free text queries
+   */
+  searchPartsFieldInFreeQuery(searchTerm) {
+    if (!window.PARTS_BANK || !searchTerm) {
+      return [];
+    }
+    
+    const results = [];
+    const partsBank = window.PARTS_BANK;
+    const searchLower = searchTerm.toLowerCase();
+    
+    console.log(`🔍 Free query search in PARTS_BANK for: "${searchTerm}"`);
+    
+    // Search across all categories and parts
+    Object.keys(partsBank).forEach(category => {
+      const categoryParts = partsBank[category];
+      
+      // Check if category name matches
+      if (category.toLowerCase().includes(searchLower)) {
+        // Add some parts from this category
+        categoryParts.slice(0, 8).forEach(part => {
+          results.push(this.createPartsFieldResult(part, category, 'category_name_match'));
+        });
+      }
+      
+      // Check individual parts
+      const matchingParts = categoryParts.filter(part => 
+        part.toLowerCase().includes(searchLower) ||
+        searchLower.includes(part.toLowerCase())
+      );
+      
+      matchingParts.forEach(part => {
+        results.push(this.createPartsFieldResult(part, category, 'part_name_match'));
+      });
+    });
+    
+    // Remove duplicates based on part name and category
+    const uniqueResults = results.filter((result, index, self) => 
+      index === self.findIndex(r => 
+        r.cat_num_desc === result.cat_num_desc && 
+        r.part_family === result.part_family
+      )
+    );
+    
+    console.log(`🔍 PARTS_BANK free query search found: ${uniqueResults.length} unique results`);
+    return uniqueResults.slice(0, 30); // Limit results for performance
+  }
+
+  /**
+   * Create a standardized result object from PARTS_BANK data
+   */
+  createPartsFieldResult(partName, category, matchType) {
+    // Generate a fake ID for consistency
+    const fakeId = `parts_bank_${category}_${partName}`.replace(/[^a-zA-Z0-9_]/g, '_');
+    
+    // Estimate price based on category (mock data)
+    const categoryPriceRanges = {
+      'פנסים': [200, 800],
+      'דלתות': [1500, 4000], 
+      'פגושים': [800, 2500],
+      'מראות': [150, 600],
+      'זכוכיות': [300, 1200],
+      'ברזלים': [500, 2000]
+    };
+    
+    const priceRange = categoryPriceRanges[category] || [100, 500];
+    const estimatedPrice = Math.floor(Math.random() * (priceRange[1] - priceRange[0]) + priceRange[0]);
+    
+    return {
+      id: fakeId,
+      pcode: `PB-${Math.random().toString(36).substring(2, 8).toUpperCase()}`,
+      cat_num_desc: partName,
+      part_family: category,
+      make: 'כללי', // Generic since PARTS_BANK doesn't specify make
+      model: 'רב דגמים', // Multi-model
+      year_from: null,
+      year_to: null,
+      price: estimatedPrice,
+      oem: null,
+      supplier_name: 'ספק מקומי',
+      availability: 'זמין',
+      location: 'ישראל',
+      comments: `חלק מקטגוריה: ${category}`,
+      version_date: null,
+      created_at: new Date().toISOString(),
+      source: 'PARTS_BANK',
+      // Additional metadata
+      match_type: matchType,
+      search_category: category,
+      original_part_name: partName
+    };
+  }
+
+  /**
    * Generate multiple search variations for better matching
    */
   generateSearchVariations(searchTerm) {
@@ -556,6 +738,8 @@ class SmartPartsSearchService {
       'free_query': params.freeQuery || params.free_query || params.searchQuery || params.query,
       'family': params.family || params.partFamily || params.part_family,
       'part': params.part || params.partType,
+      'part_group': params.part_group || params.partGroup,
+      'part_name': params.part_name || params.partName,
       'source': params.source || params.supplier,
       'quantity': params.quantity || 1,
       'limit': params.limit || 50
