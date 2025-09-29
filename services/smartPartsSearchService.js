@@ -76,37 +76,103 @@ class SmartPartsSearchService {
       let data, error;
       
       try {
-        // Simple search using basic Supabase methods
-        let query = this.supabase.from('catalog_items').select('*');
+        // Multiple search queries to find matches with different variations
+        const allResults = [];
+        let searchPerformed = false;
         
-        // Find the primary search term
-        let primarySearchTerm = null;
+        // Search by free query with multiple variations
         if (cleanParams.free_query) {
-          primarySearchTerm = this.processHebrewSearch(cleanParams.free_query);
-          query = query.ilike('cat_num_desc', `%${primarySearchTerm}%`);
-        } else if (cleanParams.oem) {
-          query = query.ilike('oem', `%${cleanParams.oem}%`);
-        } else if (cleanParams.make) {
-          query = query.ilike('make', `%${cleanParams.make}%`);
-        } else {
-          // Default search - get recent items
-          query = query.limit(cleanParams.limit || 20);
+          const variations = this.generateSearchVariations(cleanParams.free_query);
+          for (const variation of variations.slice(0, 3)) { // Limit to 3 variations
+            try {
+              const result = await this.supabase
+                .from('catalog_items')
+                .select('*')
+                .ilike('cat_num_desc', `%${variation}%`)
+                .limit(20);
+              
+              if (result.data && result.data.length > 0) {
+                allResults.push(...result.data);
+                console.log(`✅ Found ${result.data.length} results for variation: "${variation}"`);
+              }
+            } catch (err) {
+              console.warn(`⚠️ Search failed for variation "${variation}":`, err.message);
+            }
+          }
+          searchPerformed = true;
         }
         
-        // Add ordering and limit
-        if (primarySearchTerm || cleanParams.oem || cleanParams.make) {
-          query = query.limit(cleanParams.limit || 50);
+        // Search by make with variations
+        if (cleanParams.make) {
+          const makeVariations = this.generateSearchVariations(cleanParams.make);
+          for (const variation of makeVariations.slice(0, 3)) { // Limit to 3 variations
+            try {
+              const result = await this.supabase
+                .from('catalog_items')
+                .select('*')
+                .ilike('make', `%${variation}%`)
+                .limit(20);
+              
+              if (result.data && result.data.length > 0) {
+                allResults.push(...result.data);
+                console.log(`✅ Found ${result.data.length} results for make: "${variation}"`);
+              }
+            } catch (err) {
+              console.warn(`⚠️ Make search failed for "${variation}":`, err.message);
+            }
+          }
+          searchPerformed = true;
         }
-        query = query.order('id', { ascending: false });
         
-        const result = await query;
-        data = result.data || [];
-        error = result.error;
+        // Search by OEM (exact)
+        if (cleanParams.oem) {
+          try {
+            const result = await this.supabase
+              .from('catalog_items')
+              .select('*')
+              .ilike('oem', `%${cleanParams.oem}%`)
+              .limit(30);
+            
+            if (result.data && result.data.length > 0) {
+              allResults.push(...result.data);
+              console.log(`✅ Found ${result.data.length} results for OEM: "${cleanParams.oem}"`);
+            }
+          } catch (err) {
+            console.warn(`⚠️ OEM search failed:`, err.message);
+          }
+          searchPerformed = true;
+        }
         
-        console.log('✅ Using simple table query (compatible with all Supabase clients)');
+        // If no specific search was performed, get recent items
+        if (!searchPerformed) {
+          try {
+            const result = await this.supabase
+              .from('catalog_items')
+              .select('*')
+              .order('id', { ascending: false })
+              .limit(20);
+            
+            if (result.data) {
+              allResults.push(...result.data);
+              console.log(`✅ Retrieved ${result.data.length} recent items`);
+            }
+          } catch (err) {
+            console.warn(`⚠️ Default search failed:`, err.message);
+          }
+        }
+        
+        // Remove duplicates and limit results
+        const uniqueResults = allResults.filter((item, index, self) => 
+          index === self.findIndex(t => t.id === item.id)
+        );
+        
+        data = uniqueResults.slice(0, cleanParams.limit || 50);
+        error = null;
+        
+        console.log('✅ Multi-variation search completed - compatible with all Supabase clients');
         
       } catch (queryError) {
-        console.error('❌ Direct query failed:', queryError);
+        console.error('❌ Multi-search failed:', queryError);
         data = [];
         error = queryError;
       }
@@ -143,7 +209,7 @@ class SmartPartsSearchService {
   }
 
   /**
-   * Process Hebrew search terms with automatic corrections
+   * Process Hebrew search terms with automatic corrections and variations
    */
   processHebrewSearch(searchTerm) {
     if (!searchTerm) return searchTerm;
@@ -169,6 +235,52 @@ class SmartPartsSearchService {
     }
     
     return processed;
+  }
+
+  /**
+   * Generate multiple search variations for better matching
+   */
+  generateSearchVariations(searchTerm) {
+    if (!searchTerm) return [searchTerm];
+    
+    const variations = [searchTerm];
+    
+    // Hebrew/English make variations
+    const makeVariations = {
+      'טויוטה': ['toyota', 'TOYOTA', 'Toyota'],
+      'פולקסווגן': ['volkswagen', 'vw', 'VW', 'Volkswagen'],
+      'פורד': ['ford', 'FORD', 'Ford'],
+      'רנו': ['renault', 'RENAULT', 'Renault'],
+      'ב.מ.וו': ['bmw', 'BMW'],
+      'מרצדס': ['mercedes', 'MERCEDES', 'Mercedes']
+    };
+    
+    // Part name variations  
+    const partVariations = {
+      'פנס': ['light', 'headlight', 'lamp', 'פנסים'],
+      'כנף': ['wing', 'panel', 'fender'],
+      'מראה': ['mirror', 'מראות'],
+      'דלת': ['door', 'דלתות'],
+      'פגוש': ['bumper', 'פגושים']
+    };
+    
+    // Add variations
+    if (makeVariations[searchTerm]) {
+      variations.push(...makeVariations[searchTerm]);
+    }
+    
+    if (partVariations[searchTerm]) {
+      variations.push(...partVariations[searchTerm]);
+    }
+    
+    // Also try the reversed version (in case database has reversed Hebrew)
+    const reversed = searchTerm.split('').reverse().join('');
+    if (reversed !== searchTerm) {
+      variations.push(reversed);
+    }
+    
+    console.log(`🔍 Search variations for "${searchTerm}":`, variations);
+    return variations;
   }
 
   /**
