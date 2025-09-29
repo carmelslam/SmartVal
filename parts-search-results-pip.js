@@ -1041,7 +1041,26 @@ class PartsSearchResultsPiP {
               },
 
               closeWindow: function() {
-                window.close();
+                try {
+                  // First try to remove any event listeners
+                  document.querySelectorAll('.part-checkbox').forEach(cb => {
+                    cb.onclick = null;
+                    const clone = cb.cloneNode(true);
+                    cb.parentNode.replaceChild(clone, cb);
+                  });
+                  
+                  // Remove polling interval
+                  if (this.pollInterval) {
+                    clearInterval(this.pollInterval);
+                  }
+                  
+                  // Close the window
+                  window.close();
+                } catch (e) {
+                  console.error('Error closing window:', e);
+                  // Fallback close attempt
+                  window.open('', '_self').close();
+                }
               },
 
               showNotification: function(message, type = 'success') {
@@ -1128,8 +1147,38 @@ class PartsSearchResultsPiP {
                 this.setupCheckboxHandlers();
                 this.updateUI();
                 
-                // Set up polling for parent window changes
-                setInterval(() => this.updateUI(), 500);
+                // Store the polling interval reference
+                this.pollInterval = setInterval(() => this.updateUI(), 500);
+
+                // Add window unload handler
+                window.addEventListener('unload', () => {
+                  if (this.pollInterval) {
+                    clearInterval(this.pollInterval);
+                  }
+                });
+
+                // Ensure close button works by adding direct event listener
+                const closeBtn = document.querySelector('.btn-close');
+                if (closeBtn) {
+                  closeBtn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    this.closeWindow();
+                  });
+                }
+
+                // Add row click handler that won't interfere with close button
+                document.querySelectorAll('.result-row').forEach(row => {
+                  row.addEventListener('click', (e) => {
+                    if (e.target.closest('.btn-close')) {
+                      return; // Don't handle row click if clicking close button
+                    }
+                    const checkbox = row.querySelector('.part-checkbox');
+                    if (checkbox && e.target !== checkbox) {
+                      checkbox.click();
+                    }
+                  });
+                });
               }
             };
 
