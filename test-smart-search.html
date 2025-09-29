@@ -89,6 +89,13 @@
       <div id="db-test-result" class="result" style="display: none;"></div>
     </div>
 
+    <!-- Test 1.5: See what's actually in the database -->
+    <div class="test-section">
+      <h3>👁️ בדיקה 1.5: מה יש במסד הנתונים</h3>
+      <button onclick="testDatabaseContent()">הצג דוגמאות מהמסד</button>
+      <div id="content-test-result" class="result" style="display: none;"></div>
+    </div>
+
     <!-- Test 2: Database Function Test -->
     <div class="test-section">
       <h3>🔍 בדיקה 2: פונקציית החיפוש במסד נתונים</h3>
@@ -165,6 +172,83 @@
         }
       } catch (error) {
         showResult('db-test-result', `❌ שגיאה: ${error.message}`, 'error');
+      }
+    }
+
+    async function testDatabaseContent() {
+      try {
+        showResult('content-test-result', '🔄 בודק תוכן מסד נתונים...', 'info');
+        
+        // First, let's see the actual table structure and data
+        const { data: allData, error: allError } = await window.supabase
+          .from('catalog_items')
+          .select('id, cat_num_desc, make, pcode, price, supplier_id')
+          .limit(10);
+
+        if (allError) {
+          showResult('content-test-result', `❌ שגיאה בקריאת נתונים: ${allError.message}`, 'error');
+          return;
+        }
+
+        let resultText = `📊 סה"כ נמצאו ${allData.length} רשומות (מתוך 10 הראשונות)\n\n`;
+        
+        if (allData.length > 0) {
+          resultText += '🔍 דוגמאות (שדות אמיתיים):\n';
+          allData.slice(0, 3).forEach((item, index) => {
+            resultText += `\n${index + 1}. ID: ${item.id}\n`;
+            resultText += `   תיאור: ${item.cat_num_desc || 'ריק'}\n`;
+            resultText += `   יצרן: ${item.make || 'ריק'}\n`;
+            resultText += `   קוד חלק: ${item.pcode || 'ריק'}\n`;
+            resultText += `   מחיר: ${item.price || 'ריק'}\n`;
+            resultText += `   ספק ID: ${item.supplier_id || 'ריק'}\n`;
+          });
+          
+          // Test searches with actual field names
+          const { data: toyotaData, error: toyotaError } = await window.supabase
+            .from('catalog_items')
+            .select('*')
+            .ilike('make', '%toyota%')
+            .limit(5);
+
+          resultText += `\n\n🚗 חיפוש Toyota במעק (make field):\n`;
+          if (toyotaError) {
+            resultText += `❌ שגיאה: ${toyotaError.message}`;
+          } else {
+            resultText += `נמצאו ${toyotaData.length} תוצאות לחיפוש "toyota"\n`;
+            if (toyotaData.length > 0) {
+              toyotaData.forEach((item, index) => {
+                resultText += `${index + 1}. ${item.cat_num_desc} (יצרן: ${item.make})\n`;
+              });
+            }
+          }
+
+          // Test exact search from your screenshot
+          const { data: exactData, error: exactError } = await window.supabase
+            .from('catalog_items')
+            .select('*')
+            .ilike('cat_num_desc', '%022- רובינגר - ג\' האג הטיב%')
+            .limit(5);
+
+          resultText += `\n\n🎯 חיפוש מדויק (הטקסט שהעתקת):\n`;
+          if (exactError) {
+            resultText += `❌ שגיאה: ${exactError.message}`;
+          } else {
+            resultText += `נמצאו ${exactData.length} תוצאות לחיפוש מדויק\n`;
+            if (exactData.length > 0) {
+              exactData.forEach((item, index) => {
+                resultText += `${index + 1}. ${item.cat_num_desc}\n`;
+              });
+            }
+          }
+          
+        } else {
+          resultText += '❌ לא נמצאו נתונים בטבלה!';
+        }
+
+        showResult('content-test-result', resultText, allData.length > 0 ? 'success' : 'warning');
+        
+      } catch (error) {
+        showResult('content-test-result', `❌ שגיאה: ${error.message}`, 'error');
       }
     }
 

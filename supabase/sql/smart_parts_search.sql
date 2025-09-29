@@ -53,29 +53,30 @@ BEGIN
     base_query := 'SELECT 
         ci.id,
         ci.cat_num_desc,
-        ci.supplier_name,
+        s.name as supplier_name,
         ci.pcode,
         ci.price,
-        ci.oem,
+        ci.pcode as oem,
         ci.make,
-        ci.model,
-        ci.part_family,
-        ci.side_position,
-        ci.front_rear,
-        ci.year_range,
+        null as model,
+        null as part_family,
+        null as side_position,
+        null as front_rear,
+        null as year_range,
         ci.availability,
         0 as relevance_score
     FROM catalog_items ci 
+    LEFT JOIN suppliers s ON s.id = ci.supplier_id
     WHERE 1=1';
 
     -- ========================================================================
     -- BUILD WHERE CONDITIONS BASED ON AVAILABLE PARAMETERS
     -- ========================================================================
     
-    -- OEM search (high priority)
+    -- PCODE search (high priority)
     IF oem_param IS NOT NULL AND oem_param != '' THEN
         where_conditions := array_append(where_conditions, 
-            format('ci.oem ILIKE %L', '%' || oem_param || '%'));
+            format('ci.pcode ILIKE %L', '%' || oem_param || '%'));
     END IF;
     
     -- Make search (supports Hebrew)
@@ -134,11 +135,9 @@ BEGIN
         -- Search in multiple fields for free query
         where_conditions := array_append(where_conditions, 
             format('(ci.cat_num_desc ILIKE %L OR ci.cat_num_desc ILIKE %L OR 
-                     ci.oem ILIKE %L OR ci.supplier_name ILIKE %L OR 
-                     ci.part_family ILIKE %L)', 
+                     ci.pcode ILIKE %L OR s.name ILIKE %L)', 
                    '%' || free_query_param || '%', '%' || hebrew_corrected || '%',
-                   '%' || free_query_param || '%', '%' || free_query_param || '%',
-                   '%' || free_query_param || '%'));
+                   '%' || free_query_param || '%', '%' || free_query_param || '%'));
     END IF;
     
     -- ========================================================================
@@ -155,7 +154,7 @@ BEGIN
     -- Add ordering and limit
     final_query := final_query || format(' ORDER BY 
         CASE 
-            WHEN ci.oem IS NOT NULL AND ci.oem != '''' THEN 10
+            WHEN ci.pcode IS NOT NULL AND ci.pcode != '''' THEN 10
             WHEN ci.price > 0 THEN 5
             ELSE 0
         END DESC,
