@@ -947,7 +947,47 @@ class PartsSearchResultsPiP {
               <div class="results-container">
                 <div class="table-wrapper">
                   <table class="results-table">
-                    ${this.generateResultsTableHTML()}
+                    <thead>
+                      <tr>
+                        <th class="col-select">בחר</th>
+                        <th class="col-supplier">ספק</th>
+                        <th class="col-catalog">מספר קטלוגי</th>
+                        <th class="col-description">תיאור</th>
+                        <th class="col-family">משפחת חלק</th>
+                        <th class="col-type">סוג</th>
+                        <th class="col-price">מחיר</th>
+                        <th class="col-date">תאריך</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      ${this.searchResults.map((item, index) => {
+                        const isSelected = this.selectedItems.has(item.id);
+                        const price = item.price ? parseFloat(item.price) : null;
+                        const formattedPrice = price ? `₪${price.toLocaleString('he-IL')}` : 'לא זמין';
+                        const versionDate = item.version_date ? new Date(item.version_date).toLocaleDateString('he-IL') : '';
+                        
+                        return `
+                          <tr class="result-row ${isSelected ? 'selected' : ''}" data-part-id="${item.id}">
+                            <td class="col-select">
+                              <input 
+                                type="checkbox" 
+                                class="part-checkbox" 
+                                data-part-id="${item.id}"
+                                data-index="${index}"
+                                ${isSelected ? 'checked' : ''}
+                              />
+                            </td>
+                            <td class="col-supplier" title="${item.supplier_name || ''}">${item.supplier_name || 'לא זמין'}</td>
+                            <td class="col-catalog catalog-number" title="${item.pcode || ''}">${item.pcode || 'לא זמין'}</td>
+                            <td class="col-description part-description" title="${item.cat_num_desc || ''}">${item.cat_num_desc || 'לא זמין'}</td>
+                            <td class="col-family" title="${item.part_family || ''}">${item.part_family || 'לא זמין'}</td>
+                            <td class="col-type">${item.availability || 'מקורי'}</td>
+                            <td class="col-price price-cell" title="${formattedPrice}">${formattedPrice}</td>
+                            <td class="col-date">${versionDate}</td>
+                          </tr>
+                        `;
+                      }).join('')}
+                    </tbody>
                   </table>
                 </div>
               </div>
@@ -1058,20 +1098,29 @@ class PartsSearchResultsPiP {
                 const self = this;
                 document.querySelectorAll('.part-checkbox').forEach(cb => {
                   cb.onclick = async function(e) {
+                    e.stopPropagation(); // Prevent event bubbling
                     const partId = this.getAttribute('data-part-id');
+                    const row = this.closest('tr');
                     const catalogItem = self.parentPiP.searchResults.find(item => item.id === partId);
                     
                     if (this.checked) {
                       self.parentPiP.selectedItems.add(partId);
+                      row.classList.add('selected');
                       if (catalogItem) {
                         await self.parentPiP.saveSelectedPart(catalogItem);
                       }
                     } else {
                       self.parentPiP.selectedItems.delete(partId);
+                      row.classList.remove('selected');
                     }
                     
                     self.updateUI();
                   };
+
+                  // Prevent checkbox from triggering row click
+                  cb.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                  });
                 });
               },
 
