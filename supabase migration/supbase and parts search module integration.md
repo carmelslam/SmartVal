@@ -535,7 +535,7 @@ create index IF not exists idx_search_results_oem on public.parts_search_results
 
 create index IF not exists idx_search_results_pcode on public.parts_search_results using btree (pcode) TABLESPACE pg_default;
 
-10. 
+10. THIS TABLE CAPTURES THE QUERY FROM THE UI :
 create table public.parts_search_sessions (
   id uuid not null default gen_random_uuid (),
   case_id uuid null,
