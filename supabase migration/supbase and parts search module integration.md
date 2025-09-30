@@ -124,7 +124,7 @@ What the UI actually “sends”
 * Step 1 (Make): { make: "Audi" }
 * Step 2 (Model): { make: "Audi", model: "A6" }
 * Step 3 (Year): { make: "Audi", model: "A6", year: 2010 }
-* Step 4 (Part text + facets): { make: "Audi", model: "A6", year: 2010, q: "כנף שמאל", side: "שמאל", position: "כנף" }
+* Step 4 (Part text + facets):{ make: "Audi", model: "A6", year: 2010, q: "כנף שמאל", side: "שמאל", position: "כנף" }
 The UI doesn’t translate anything. The DB normalization ensures these simple parameters hit the right rows.
 
 
