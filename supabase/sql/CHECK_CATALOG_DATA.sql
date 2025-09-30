@@ -78,15 +78,12 @@ SELECT
     'Has Hebrew data',
     EXISTS(SELECT 1 FROM catalog_items WHERE cat_num_desc ~ '[א-ת]' LIMIT 1);
 
--- 8. Check catalogs table (parent table)
-SELECT '=== CATALOGS TABLE CHECK ===' as status;
+-- 8. Final summary
+SELECT '=== FINAL SUMMARY ===' as status;
 SELECT 
-    id,
-    supplier_id,
-    file_name,
-    status,
-    created_at,
-    record_count
-FROM catalogs
-ORDER BY created_at DESC
-LIMIT 5;
+    CASE 
+        WHEN COUNT(*) = 0 THEN '❌ NO DATA IN CATALOG_ITEMS!'
+        WHEN COUNT(*) < 100 THEN '⚠️ Only ' || COUNT(*) || ' records found'
+        ELSE '✅ ' || COUNT(*) || ' records in catalog_items'
+    END as summary
+FROM catalog_items;
