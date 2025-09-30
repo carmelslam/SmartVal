@@ -423,6 +423,7 @@ INSERT INTO storage.buckets (id, name, public) VALUES
     3. Non of the sections is actually registering correct data 
  **Read documentation on BUILDERS DATA_FLOW AND CALCULATIONS INSTRUCTIONS folder before doing or planning anything** 
      
+ ### Phase 5a: invoice managemnt integration:     
 2. Implement **invoice management** - use the current invoices modul module and use the invoice json structure 
 3. connect to invoice floating screen and to invoice module.
 4. suggestive logic for diffrentials option fields in the final report 
