@@ -1,67 +1,92 @@
--- CHECK CATALOG DATA AND TEST SEARCH
--- Run this in Supabase SQL Editor to diagnose the issue
+-- CHECK IF CATALOG ITEMS DATA WAS DELETED
+-- Run this in Supabase SQL Editor to verify data existence
 
--- 1. Check if catalog_items table has data
-SELECT 'Checking catalog_items table...' as check_step;
-SELECT COUNT(*) as total_records FROM catalog_items;
-
--- 2. Check sample data structure
-SELECT 'Sample catalog items:' as check_step;
-SELECT id, supplier_name, pcode, cat_num_desc, price, make, model, part_family
-FROM catalog_items 
-LIMIT 5;
-
--- 3. Check if Hebrew text exists and how it's stored
-SELECT 'Checking Hebrew text in cat_num_desc:' as check_step;
-SELECT id, cat_num_desc, supplier_name
-FROM catalog_items 
-WHERE cat_num_desc IS NOT NULL
-LIMIT 10;
-
--- 4. Test search for common Hebrew words
-SELECT 'Testing Hebrew search for פנס:' as check_step;
-SELECT id, cat_num_desc, supplier_name, pcode, price
-FROM catalog_items
-WHERE cat_num_desc ILIKE '%פנס%'
-LIMIT 5;
-
--- 5. Test reverse Hebrew (in case text is reversed)
-SELECT 'Testing reverse Hebrew search for סנפ:' as check_step;
-SELECT id, cat_num_desc, supplier_name, pcode, price
-FROM catalog_items
-WHERE cat_num_desc ILIKE '%סנפ%'
-LIMIT 5;
-
--- 6. Check if make/model fields are populated
-SELECT 'Checking make/model fields:' as check_step;
-SELECT DISTINCT make, COUNT(*) as count
-FROM catalog_items
-WHERE make IS NOT NULL
-GROUP BY make
-LIMIT 10;
-
--- 7. Test the actual search function with debug
-SELECT 'Testing smart_parts_search function:' as check_step;
-SELECT * FROM smart_parts_search(
-    free_query_param := 'test',
-    limit_results := 5
-);
-
--- 8. Test with Hebrew
-SELECT 'Testing smart_parts_search with Hebrew:' as check_step;
-SELECT * FROM smart_parts_search(
-    free_query_param := 'פנס',
-    limit_results := 5
-);
-
--- 9. Check if any field has non-null data
-SELECT 'Fields with data:' as check_step;
-SELECT 
-    COUNT(*) FILTER (WHERE cat_num_desc IS NOT NULL) as has_cat_num_desc,
-    COUNT(*) FILTER (WHERE make IS NOT NULL) as has_make,
-    COUNT(*) FILTER (WHERE model IS NOT NULL) as has_model,
-    COUNT(*) FILTER (WHERE supplier_name IS NOT NULL) as has_supplier_name,
-    COUNT(*) FILTER (WHERE pcode IS NOT NULL) as has_pcode,
-    COUNT(*) FILTER (WHERE price IS NOT NULL) as has_price,
-    COUNT(*) FILTER (WHERE part_family IS NOT NULL) as has_part_family
+-- 1. CRITICAL: Check total row count
+SELECT '=== CHECKING IF DATA EXISTS ===' as status;
+SELECT COUNT(*) as total_records, 
+       CASE 
+           WHEN COUNT(*) = 0 THEN '❌ NO DATA! TABLE IS EMPTY!'
+           WHEN COUNT(*) < 100 THEN '⚠️ Very few records'
+           ELSE '✅ Data exists'
+       END as status
 FROM catalog_items;
+
+-- 2. Check data by date to see when it was added
+SELECT '=== DATA BY DATE ===' as status;
+SELECT 
+    DATE(created_at) as date_added,
+    COUNT(*) as records_count,
+    MIN(created_at) as earliest,
+    MAX(created_at) as latest
+FROM catalog_items
+GROUP BY DATE(created_at)
+ORDER BY date_added DESC;
+
+-- 3. Check if we have any supplier data
+SELECT '=== SUPPLIERS IN DATA ===' as status;
+SELECT 
+    supplier_name,
+    COUNT(*) as item_count,
+    MIN(created_at) as first_added,
+    MAX(created_at) as last_added
+FROM catalog_items
+GROUP BY supplier_name
+ORDER BY item_count DESC;
+
+-- 4. Quick data sample (if exists)
+SELECT '=== SAMPLE DATA (IF EXISTS) ===' as status;
+SELECT 
+    id,
+    supplier_name,
+    cat_num_desc,
+    make,
+    model,
+    price,
+    created_at
+FROM catalog_items
+LIMIT 10;
+
+-- 5. Check catalog versions/dates
+SELECT '=== VERSION DATES ===' as status;
+SELECT 
+    version_date,
+    COUNT(*) as records,
+    supplier_name
+FROM catalog_items
+GROUP BY version_date, supplier_name
+ORDER BY version_date DESC;
+
+-- 6. Check if part_name column was populated
+SELECT '=== PART NAME POPULATION ===' as status;
+SELECT 
+    COUNT(*) as total,
+    COUNT(part_name) as has_part_name,
+    COUNT(part_name) * 100.0 / NULLIF(COUNT(*), 0) as percent_with_part_name
+FROM catalog_items;
+
+-- 7. Emergency check - look for ANY data
+SELECT '=== EMERGENCY DATA CHECK ===' as status;
+SELECT 
+    'Table exists' as check_item,
+    EXISTS(SELECT 1 FROM information_schema.tables WHERE table_name = 'catalog_items') as result
+UNION ALL
+SELECT 
+    'Has any rows',
+    EXISTS(SELECT 1 FROM catalog_items LIMIT 1)
+UNION ALL
+SELECT 
+    'Has Hebrew data',
+    EXISTS(SELECT 1 FROM catalog_items WHERE cat_num_desc ~ '[א-ת]' LIMIT 1);
+
+-- 8. Check catalogs table (parent table)
+SELECT '=== CATALOGS TABLE CHECK ===' as status;
+SELECT 
+    id,
+    supplier_id,
+    file_name,
+    status,
+    created_at,
+    record_count
+FROM catalogs
+ORDER BY created_at DESC
+LIMIT 5;
