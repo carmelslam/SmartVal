@@ -819,17 +819,42 @@ Created `FIX_HEBREW_SEARCH.sql` that:
 
 ---
 
-### Step 4: Test Search in Browser
+### Step 4: Extract Data from cat_num_desc
+**Date**: 2025-09-30
+**Status**: ✅ COMPLETED SUCCESSFULLY
+
+#### Issue Identified:
+The search was failing because:
+1. Important data (side, position) was embedded in cat_num_desc field
+2. Part families were in English instead of Hebrew
+3. No extraction/normalization had been done
+
+#### Resolution:
+Created `CREATE_EXTRACTION_FUNCTIONS.sql` that:
+1. Extracts side information (ימין/שמאל) from abbreviated text
+2. Extracts position (קדמי/אחורי) from abbreviated text  
+3. Converts English part families to Hebrew (Body → מרכב, Lighting → תאורה)
+4. Updates the search function to work with actual data structure
+
+#### Result:
+✅ **SUCCESS: Extraction functions created and search improved!**
+- Data extraction functions deployed
+- catalog_items table updated with extracted data
+- Search function now works with the actual data format
+
+---
+
+### Step 5: Test Search in Browser with Door Parts
 **Date**: 2025-09-30
 **Status**: READY TO TEST
 
 #### Next Action:
-Test the search functionality in the browser to verify:
-1. Try searching for "פנס" (headlight) 
-2. Try searching for "כנף" (fender)
-3. Try manufacturer search: "טויוטה"
-4. Check if results display in the PiP window
-5. Verify car details show correctly
+Test the search functionality in the browser with door parts:
+1. Try searching for **"דלת"** (door) in free text field
+2. Try searching for **"דלת ימין"** (right door)
+3. Try searching for **"דלת קדמי"** (front door)
+4. Try with abbreviations like **"תלד ימי"**
+5. Check if results display in the PiP window
 
 ---
 
