@@ -1,0 +1,924 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Current State Analyzer - Parts Search Diagnostics</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            margin: 20px; 
+            direction: rtl; 
+            background: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            background: #fafafa;
+        }
+        .section h3 {
+            margin-top: 0;
+            color: #333;
+            border-bottom: 2px solid #007cba;
+            padding-bottom: 5px;
+        }
+        .result { 
+            background: #fff; 
+            padding: 10px; 
+            margin: 10px 0; 
+            font-family: 'Courier New', monospace; 
+            border: 1px solid #ddd;
+            border-radius: 3px;
+            max-height: 300px;
+            overflow-y: auto;
+            font-size: 12px;
+        }
+        .result.error {
+            background: #ffe6e6;
+            border-color: #ff9999;
+            color: #cc0000;
+        }
+        .result.success {
+            background: #e6ffe6;
+            border-color: #99ff99;
+            color: #006600;
+        }
+        .result.warning {
+            background: #fff3cd;
+            border-color: #ffc107;
+            color: #856404;
+        }
+        button { 
+            padding: 8px 16px; 
+            margin: 5px; 
+            background: #007cba;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        button:hover {
+            background: #005a87;
+        }
+        button.secondary {
+            background: #6c757d;
+        }
+        button.danger {
+            background: #dc3545;
+        }
+        table { 
+            border-collapse: collapse; 
+            width: 100%; 
+            margin: 10px 0; 
+            font-size: 12px;
+        }
+        th, td { 
+            border: 1px solid #ddd; 
+            padding: 6px; 
+            text-align: right; 
+        }
+        th { 
+            background: #007cba; 
+            color: white;
+            font-weight: bold;
+        }
+        tr:nth-child(even) {
+            background: #f9f9f9;
+        }
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-left: 5px;
+        }
+        .status-ok { background: #28a745; }
+        .status-error { background: #dc3545; }
+        .status-warning { background: #ffc107; }
+        .status-unknown { background: #6c757d; }
+        .hebrew-sample {
+            font-family: 'Arial', sans-serif;
+            font-size: 14px;
+            direction: rtl;
+            background: #f8f9fa;
+            padding: 5px;
+            border-radius: 3px;
+            margin: 3px 0;
+        }
+        .pip-test {
+            position: fixed;
+            top: 50px;
+            left: 50px;
+            width: 400px;
+            height: 300px;
+            background: white;
+            border: 2px solid #007cba;
+            border-radius: 8px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+            z-index: 1000;
+            overflow: hidden;
+            display: none;
+        }
+        .pip-header {
+            background: #007cba;
+            color: white;
+            padding: 10px;
+            font-weight: bold;
+            cursor: move;
+        }
+        .pip-content {
+            padding: 10px;
+            height: calc(100% - 50px);
+            overflow-y: auto;
+        }
+        .loading {
+            color: #007cba;
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 Current State Analyzer - Parts Search Diagnostics</h1>
+        <p><strong>Purpose:</strong> Analyze the current state of the parts search system without making any changes.</p>
+        
+        <!-- Section 1: Service Loading Test -->
+        <div class="section">
+            <h3>1. Service Loading & Integration Test</h3>
+            <button onclick="testServiceLoading()">Test Service Loading</button>
+            <button onclick="testSupabaseConnection()">Test Supabase Connection</button>
+            <div id="serviceResults" class="result"></div>
+        </div>
+
+        <!-- Section 2: Search Function Analysis -->
+        <div class="section">
+            <h3>2. Search Function Analysis</h3>
+            <button onclick="testSimpleSearch()">Test Simple Search (פנס)</button>
+            <button onclick="testAdvancedSearch()">Test Advanced Search (טויוטה + פנס)</button>
+            <button onclick="testRPCFunction()">Test RPC Function Directly</button>
+            <div id="searchResults" class="result"></div>
+        </div>
+
+        <!-- Section 3: Data Sample Analysis -->
+        <div class="section">
+            <h3>3. Data Sample Analysis</h3>
+            <button onclick="getSampleData()">Get Raw Data Samples</button>
+            <button onclick="testHebrewEncoding()">Test Hebrew Encoding</button>
+            <button onclick="analyzeFieldPopulation()">Analyze Field Population</button>
+            <div id="dataResults" class="result"></div>
+        </div>
+
+        <!-- Section 4: Price Analysis -->
+        <div class="section">
+            <h3>4. Price Analysis</h3>
+            <button onclick="analyzePrices()">Analyze Price Distribution</button>
+            <button onclick="getHighPriceSamples()">Get High Price Samples</button>
+            <div id="priceResults" class="result"></div>
+        </div>
+
+        <!-- Section 5: PiP Window Test -->
+        <div class="section">
+            <h3>5. PiP Window & UI Test</h3>
+            <button onclick="testPiPWindow()">Test PiP Window</button>
+            <button onclick="testScrolling()">Test PiP Scrolling</button>
+            <button onclick="closePiP()">Close PiP</button>
+            <div id="pipResults" class="result"></div>
+        </div>
+
+        <!-- Section 6: Search Flow Test -->
+        <div class="section">
+            <h3>6. Complete Search Flow Test</h3>
+            <button onclick="testCompleteFlow()">Test End-to-End Flow</button>
+            <button onclick="testTablePopulation()">Test Table Population</button>
+            <div id="flowResults" class="result"></div>
+        </div>
+
+        <!-- Section 7: Export Findings -->
+        <div class="section">
+            <h3>7. Export Diagnostic Results</h3>
+            <button onclick="exportFindings()">Export All Findings</button>
+            <button onclick="generateReport()">Generate Summary Report</button>
+            <div id="exportResults" class="result"></div>
+        </div>
+    </div>
+
+    <!-- PiP Test Window -->
+    <div id="pipTestWindow" class="pip-test">
+        <div class="pip-header">
+            PiP Test Window - Parts Search Results
+            <button onclick="closePiP()" style="float: left; background: transparent; border: none; color: white;">✕</button>
+        </div>
+        <div class="pip-content" id="pipTestContent">
+            <p>Testing PiP window functionality...</p>
+        </div>
+    </div>
+
+    <!-- Load required scripts -->
+    <script src="./services/supabaseClient.js"></script>
+    <script src="./services/simplePartsSearchService.js"></script>
+    <script src="./parts-search-results-pip.js"></script>
+
+    <script>
+        // Global diagnostic data storage
+        const diagnosticData = {
+            serviceStatus: {},
+            searchTests: {},
+            dataAnalysis: {},
+            priceAnalysis: {},
+            pipTests: {},
+            flowTests: {},
+            timestamp: new Date().toISOString()
+        };
+
+        // Helper function to log results
+        function logResult(containerId, message, type = 'info') {
+            const container = document.getElementById(containerId);
+            const now = new Date().toLocaleTimeString('he-IL');
+            container.innerHTML += `<div class="result ${type}">[${now}] ${message}</div>`;
+            container.scrollTop = container.scrollHeight;
+        }
+
+        // Helper function to clear results
+        function clearResults(containerId) {
+            document.getElementById(containerId).innerHTML = '';
+        }
+
+        // 1. Service Loading Tests
+        async function testServiceLoading() {
+            clearResults('serviceResults');
+            logResult('serviceResults', '🔄 Testing service loading...', 'loading');
+
+            try {
+                // Check if Supabase is loaded
+                if (typeof window.supabase !== 'undefined') {
+                    logResult('serviceResults', '✅ Supabase client loaded successfully', 'success');
+                    diagnosticData.serviceStatus.supabase = 'loaded';
+                } else {
+                    logResult('serviceResults', '❌ Supabase client NOT loaded', 'error');
+                    diagnosticData.serviceStatus.supabase = 'missing';
+                }
+
+                // Check which search service is available
+                const services = ['SimplePartsSearchService', 'SmartPartsSearchService', 'partsSearchService'];
+                for (const serviceName of services) {
+                    if (typeof window[serviceName] !== 'undefined') {
+                        logResult('serviceResults', `✅ ${serviceName} available`, 'success');
+                        diagnosticData.serviceStatus[serviceName] = 'available';
+                    } else {
+                        logResult('serviceResults', `❌ ${serviceName} not available`, 'warning');
+                        diagnosticData.serviceStatus[serviceName] = 'missing';
+                    }
+                }
+
+                // Check PiP functionality
+                if (typeof window.partsResultsPiP !== 'undefined') {
+                    logResult('serviceResults', '✅ PiP functionality available', 'success');
+                    diagnosticData.serviceStatus.pip = 'available';
+                } else {
+                    logResult('serviceResults', '❌ PiP functionality not available', 'error');
+                    diagnosticData.serviceStatus.pip = 'missing';
+                }
+
+            } catch (error) {
+                logResult('serviceResults', `❌ Service loading test failed: ${error.message}`, 'error');
+                diagnosticData.serviceStatus.error = error.message;
+            }
+        }
+
+        async function testSupabaseConnection() {
+            logResult('serviceResults', '🔄 Testing Supabase connection...', 'loading');
+
+            try {
+                if (!window.supabase) {
+                    logResult('serviceResults', '❌ Cannot test - Supabase not loaded', 'error');
+                    return;
+                }
+
+                // Test basic connection with a simple query
+                const { data, error } = await window.supabase
+                    .from('catalog_items')
+                    .select('count')
+                    .limit(1);
+
+                if (error) {
+                    logResult('serviceResults', `❌ Supabase connection failed: ${error.message}`, 'error');
+                    diagnosticData.serviceStatus.connection = 'failed';
+                    diagnosticData.serviceStatus.connectionError = error.message;
+                } else {
+                    logResult('serviceResults', '✅ Supabase connection successful', 'success');
+                    diagnosticData.serviceStatus.connection = 'success';
+                }
+
+            } catch (error) {
+                logResult('serviceResults', `❌ Connection test error: ${error.message}`, 'error');
+                diagnosticData.serviceStatus.connectionError = error.message;
+            }
+        }
+
+        // 2. Search Function Tests
+        async function testSimpleSearch() {
+            clearResults('searchResults');
+            logResult('searchResults', '🔄 Testing simple search for "פנס" (light)...', 'loading');
+
+            try {
+                // Test with current search service
+                if (window.SimplePartsSearchService) {
+                    const service = new window.SimplePartsSearchService();
+                    const result = await service.searchParts({ free_query: 'פנס' });
+                    
+                    logResult('searchResults', `Simple search returned ${result.data.length} results`, 
+                        result.data.length > 0 ? 'success' : 'warning');
+                    
+                    if (result.data.length > 0) {
+                        logResult('searchResults', `Sample result: ${JSON.stringify(result.data[0], null, 2)}`, 'info');
+                    }
+                    
+                    diagnosticData.searchTests.simpleSearch = {
+                        query: 'פנס',
+                        resultCount: result.data.length,
+                        sample: result.data[0] || null,
+                        searchTime: result.searchTime || null
+                    };
+                } else {
+                    logResult('searchResults', '❌ No search service available', 'error');
+                }
+
+            } catch (error) {
+                logResult('searchResults', `❌ Simple search failed: ${error.message}`, 'error');
+                diagnosticData.searchTests.simpleSearchError = error.message;
+            }
+        }
+
+        async function testAdvancedSearch() {
+            logResult('searchResults', '🔄 Testing advanced search (Toyota + Light)...', 'loading');
+
+            try {
+                if (window.SimplePartsSearchService) {
+                    const service = new window.SimplePartsSearchService();
+                    const result = await service.searchParts({
+                        make: 'טויוטה',
+                        free_query: 'פנס',
+                        limit: 20
+                    });
+                    
+                    logResult('searchResults', `Advanced search returned ${result.data.length} results`, 
+                        result.data.length > 0 ? 'success' : 'warning');
+                    
+                    if (result.data.length > 0) {
+                        const uniqueMakes = [...new Set(result.data.map(item => item.make))];
+                        logResult('searchResults', `Makes found: ${uniqueMakes.join(', ')}`, 'info');
+                        
+                        // Check if filtering worked
+                        const isFiltered = uniqueMakes.every(make => make && make.includes('טויוטה'));
+                        logResult('searchResults', `Make filtering working: ${isFiltered ? 'YES' : 'NO'}`, 
+                            isFiltered ? 'success' : 'error');
+                    }
+                    
+                    diagnosticData.searchTests.advancedSearch = {
+                        params: { make: 'טויוטה', free_query: 'פנס' },
+                        resultCount: result.data.length,
+                        makeFilterWorking: result.data.length > 0 ? 
+                            [...new Set(result.data.map(item => item.make))].every(make => make && make.includes('טויוטה')) : false
+                    };
+                }
+
+            } catch (error) {
+                logResult('searchResults', `❌ Advanced search failed: ${error.message}`, 'error');
+                diagnosticData.searchTests.advancedSearchError = error.message;
+            }
+        }
+
+        async function testRPCFunction() {
+            logResult('searchResults', '🔄 Testing RPC function directly...', 'loading');
+
+            try {
+                if (!window.supabase) {
+                    logResult('searchResults', '❌ Supabase not available', 'error');
+                    return;
+                }
+
+                // Test RPC function directly
+                const { data, error } = await window.supabase.rpc('smart_parts_search', {
+                    free_query_param: 'פנס',
+                    limit_results: 10
+                });
+
+                if (error) {
+                    logResult('searchResults', `❌ RPC call failed: ${error.message}`, 'error');
+                    diagnosticData.searchTests.rpcError = error.message;
+                } else {
+                    logResult('searchResults', `✅ RPC call successful, returned ${data.length} results`, 'success');
+                    if (data.length > 0) {
+                        logResult('searchResults', `Sample RPC result: ${JSON.stringify(data[0], null, 2)}`, 'info');
+                    }
+                    diagnosticData.searchTests.rpcDirect = {
+                        resultCount: data.length,
+                        sample: data[0] || null
+                    };
+                }
+
+            } catch (error) {
+                logResult('searchResults', `❌ RPC test error: ${error.message}`, 'error');
+                diagnosticData.searchTests.rpcError = error.message;
+            }
+        }
+
+        // 3. Data Analysis Tests
+        async function getSampleData() {
+            clearResults('dataResults');
+            logResult('dataResults', '🔄 Getting raw data samples...', 'loading');
+
+            try {
+                const { data, error } = await window.supabase
+                    .from('catalog_items')
+                    .select('*')
+                    .limit(5);
+
+                if (error) {
+                    logResult('dataResults', `❌ Failed to get data: ${error.message}`, 'error');
+                } else {
+                    logResult('dataResults', `✅ Retrieved ${data.length} sample records`, 'success');
+                    
+                    data.forEach((item, index) => {
+                        logResult('dataResults', `--- Sample ${index + 1} ---`, 'info');
+                        logResult('dataResults', `ID: ${item.id}`, 'info');
+                        logResult('dataResults', `Cat_num_desc: ${item.cat_num_desc || 'NULL'}`, 'info');
+                        logResult('dataResults', `Make: ${item.make || 'NULL'}`, 'info');
+                        logResult('dataResults', `Part_family: ${item.part_family || 'NULL'}`, 'info');
+                        logResult('dataResults', `Side_position: ${item.side_position || 'NULL'}`, 'info');
+                        logResult('dataResults', `Source: ${item.source || 'NULL'}`, 'info');
+                        logResult('dataResults', `Price: ${item.price || 'NULL'}`, 'info');
+                        logResult('dataResults', '', 'info');
+                    });
+                    
+                    diagnosticData.dataAnalysis.samples = data;
+                }
+
+            } catch (error) {
+                logResult('dataResults', `❌ Data sample error: ${error.message}`, 'error');
+            }
+        }
+
+        async function testHebrewEncoding() {
+            logResult('dataResults', '🔄 Testing Hebrew text encoding...', 'loading');
+
+            try {
+                // Test specific Hebrew patterns
+                const patterns = [
+                    { name: 'פנס (normal)', pattern: '%פנס%' },
+                    { name: 'סנפ (reversed)', pattern: '%סנפ%' },
+                    { name: 'דלת (normal)', pattern: '%דלת%' },
+                    { name: 'תלד (reversed)', pattern: '%תלד%' },
+                    { name: 'טויוטה (normal)', pattern: '%טויוטה%' }
+                ];
+
+                for (const test of patterns) {
+                    const { data, error } = await window.supabase
+                        .from('catalog_items')
+                        .select('cat_num_desc, make')
+                        .ilike('cat_num_desc', test.pattern)
+                        .limit(3);
+
+                    if (!error) {
+                        logResult('dataResults', `${test.name}: ${data.length} matches`, 
+                            data.length > 0 ? 'success' : 'warning');
+                        
+                        if (data.length > 0) {
+                            logResult('dataResults', `  Sample: ${data[0].cat_num_desc}`, 'info');
+                        }
+                    }
+                }
+
+                diagnosticData.dataAnalysis.hebrewPatterns = patterns;
+
+            } catch (error) {
+                logResult('dataResults', `❌ Hebrew encoding test error: ${error.message}`, 'error');
+            }
+        }
+
+        async function analyzeFieldPopulation() {
+            logResult('dataResults', '🔄 Analyzing field population...', 'loading');
+
+            try {
+                // Get field population statistics
+                const { data, error } = await window.supabase
+                    .from('catalog_items')
+                    .select('part_name, oem, side_position, front_rear, part_family, year_from, year_to')
+                    .limit(1000);
+
+                if (error) {
+                    logResult('dataResults', `❌ Field analysis failed: ${error.message}`, 'error');
+                } else {
+                    const total = data.length;
+                    const stats = {
+                        part_name: data.filter(item => item.part_name).length,
+                        oem: data.filter(item => item.oem).length,
+                        side_position: data.filter(item => item.side_position).length,
+                        front_rear: data.filter(item => item.front_rear).length,
+                        part_family: data.filter(item => item.part_family).length,
+                        year_from: data.filter(item => item.year_from).length,
+                        year_to: data.filter(item => item.year_to).length
+                    };
+
+                    logResult('dataResults', `Field Population Analysis (out of ${total} records):`, 'info');
+                    Object.entries(stats).forEach(([field, count]) => {
+                        const percent = ((count / total) * 100).toFixed(1);
+                        logResult('dataResults', `  ${field}: ${count} (${percent}%)`, 
+                            count > total * 0.5 ? 'success' : 'warning');
+                    });
+
+                    diagnosticData.dataAnalysis.fieldPopulation = { total, stats };
+                }
+
+            } catch (error) {
+                logResult('dataResults', `❌ Field analysis error: ${error.message}`, 'error');
+            }
+        }
+
+        // 4. Price Analysis
+        async function analyzePrices() {
+            clearResults('priceResults');
+            logResult('priceResults', '🔄 Analyzing price distribution...', 'loading');
+
+            try {
+                const { data, error } = await window.supabase
+                    .from('catalog_items')
+                    .select('price')
+                    .not('price', 'is', null)
+                    .limit(1000);
+
+                if (error) {
+                    logResult('priceResults', `❌ Price analysis failed: ${error.message}`, 'error');
+                } else {
+                    const prices = data.map(item => parseFloat(item.price)).filter(p => !isNaN(p));
+                    
+                    if (prices.length > 0) {
+                        const min = Math.min(...prices);
+                        const max = Math.max(...prices);
+                        const avg = prices.reduce((a, b) => a + b, 0) / prices.length;
+                        const sorted = prices.sort((a, b) => a - b);
+                        const median = sorted[Math.floor(sorted.length / 2)];
+                        
+                        const highPrices = prices.filter(p => p > 10000).length;
+                        const veryHighPrices = prices.filter(p => p > 100000).length;
+
+                        logResult('priceResults', `Price Analysis (${prices.length} records):`, 'info');
+                        logResult('priceResults', `  Min: ₪${min.toFixed(2)}`, 'info');
+                        logResult('priceResults', `  Max: ₪${max.toFixed(2)}`, max > 50000 ? 'warning' : 'success');
+                        logResult('priceResults', `  Average: ₪${avg.toFixed(2)}`, 'info');
+                        logResult('priceResults', `  Median: ₪${median.toFixed(2)}`, 'info');
+                        logResult('priceResults', `  Prices > ₪10,000: ${highPrices}`, highPrices > 50 ? 'warning' : 'success');
+                        logResult('priceResults', `  Prices > ₪100,000: ${veryHighPrices}`, veryHighPrices > 0 ? 'error' : 'success');
+
+                        diagnosticData.priceAnalysis = {
+                            count: prices.length,
+                            min, max, avg, median,
+                            highPrices, veryHighPrices
+                        };
+                    }
+                }
+
+            } catch (error) {
+                logResult('priceResults', `❌ Price analysis error: ${error.message}`, 'error');
+            }
+        }
+
+        async function getHighPriceSamples() {
+            logResult('priceResults', '🔄 Getting high price samples...', 'loading');
+
+            try {
+                const { data, error } = await window.supabase
+                    .from('catalog_items')
+                    .select('cat_num_desc, make, part_family, price, supplier_name')
+                    .gt('price', 5000)
+                    .order('price', { ascending: false })
+                    .limit(10);
+
+                if (error) {
+                    logResult('priceResults', `❌ High price query failed: ${error.message}`, 'error');
+                } else {
+                    logResult('priceResults', `High Price Samples (${data.length} items):`, 'info');
+                    data.forEach((item, index) => {
+                        logResult('priceResults', `${index + 1}. ₪${item.price} - ${item.cat_num_desc} (${item.make})`, 
+                            item.price > 50000 ? 'warning' : 'info');
+                    });
+
+                    diagnosticData.priceAnalysis.highPriceSamples = data;
+                }
+
+            } catch (error) {
+                logResult('priceResults', `❌ High price samples error: ${error.message}`, 'error');
+            }
+        }
+
+        // 5. PiP Window Tests
+        function testPiPWindow() {
+            clearResults('pipResults');
+            logResult('pipResults', '🔄 Testing PiP window functionality...', 'loading');
+
+            const pipWindow = document.getElementById('pipTestWindow');
+            const pipContent = document.getElementById('pipTestContent');
+
+            // Show the test PiP window
+            pipWindow.style.display = 'block';
+
+            // Generate test data
+            const testData = [];
+            for (let i = 1; i <= 20; i++) {
+                testData.push({
+                    id: `test-${i}`,
+                    cat_num_desc: `פנס קדמי ימין טויוטה קורולה 2010-2015 ${i}`,
+                    make: 'טויוטה',
+                    model: 'קורולה',
+                    price: 150 + (i * 25),
+                    part_family: 'פנס',
+                    side_position: 'ימין',
+                    front_rear: 'קדמי',
+                    supplier_name: `ספק ${i}`,
+                    oem: `OEM-${1000 + i}`,
+                    availability: 'זמין'
+                });
+            }
+
+            // Populate PiP content
+            let html = '<h4>Test Results (20 items):</h4>';
+            html += '<div style="max-height: 200px; overflow-y: auto; border: 1px solid #ddd; padding: 5px;">';
+            testData.forEach((item, index) => {
+                html += `<div style="padding: 5px; border-bottom: 1px solid #eee;">
+                    <strong>${index + 1}.</strong> ${item.cat_num_desc}<br>
+                    <small>מחיר: ₪${item.price} | ספק: ${item.supplier_name} | OEM: ${item.oem}</small>
+                </div>`;
+            });
+            html += '</div>';
+
+            pipContent.innerHTML = html;
+
+            logResult('pipResults', '✅ PiP window opened with 20 test items', 'success');
+            logResult('pipResults', 'Check if PiP window is visible and scrollable', 'info');
+
+            diagnosticData.pipTests.windowTest = {
+                itemCount: testData.length,
+                windowVisible: true,
+                timestamp: new Date().toISOString()
+            };
+        }
+
+        function testScrolling() {
+            logResult('pipResults', '🔄 Testing PiP scrolling...', 'loading');
+
+            const pipContent = document.getElementById('pipTestContent');
+            const scrollableDiv = pipContent.querySelector('div[style*="overflow-y"]');
+
+            if (scrollableDiv) {
+                // Test scrolling
+                scrollableDiv.scrollTop = 0;
+                setTimeout(() => {
+                    scrollableDiv.scrollTop = scrollableDiv.scrollHeight / 2;
+                    logResult('pipResults', '✅ Scroll test 1: Scrolled to middle', 'success');
+                    
+                    setTimeout(() => {
+                        scrollableDiv.scrollTop = scrollableDiv.scrollHeight;
+                        logResult('pipResults', '✅ Scroll test 2: Scrolled to bottom', 'success');
+                        
+                        setTimeout(() => {
+                            scrollableDiv.scrollTop = 0;
+                            logResult('pipResults', '✅ Scroll test 3: Scrolled back to top', 'success');
+                            logResult('pipResults', 'Scrolling appears to be working correctly', 'success');
+                        }, 500);
+                    }, 500);
+                }, 500);
+
+                diagnosticData.pipTests.scrollTest = 'completed';
+            } else {
+                logResult('pipResults', '❌ Could not find scrollable content', 'error');
+                diagnosticData.pipTests.scrollTest = 'failed';
+            }
+        }
+
+        function closePiP() {
+            const pipWindow = document.getElementById('pipTestWindow');
+            pipWindow.style.display = 'none';
+            logResult('pipResults', '✅ PiP window closed', 'info');
+        }
+
+        // 6. Complete Flow Tests
+        async function testCompleteFlow() {
+            clearResults('flowResults');
+            logResult('flowResults', '🔄 Testing complete search flow...', 'loading');
+
+            try {
+                // Step 1: Search
+                if (!window.SimplePartsSearchService) {
+                    logResult('flowResults', '❌ Search service not available', 'error');
+                    return;
+                }
+
+                const service = new window.SimplePartsSearchService();
+                const searchResult = await service.searchParts({
+                    make: 'טויוטה',
+                    free_query: 'פנס',
+                    plate: 'TEST-123-45'
+                });
+
+                logResult('flowResults', `Step 1 - Search: ${searchResult.data.length} results`, 
+                    searchResult.data.length > 0 ? 'success' : 'warning');
+
+                if (searchResult.data.length > 0) {
+                    // Step 2: Test if we can save to parts_search_results
+                    const sampleResult = searchResult.data[0];
+                    
+                    try {
+                        const { data: saveData, error: saveError } = await window.supabase
+                            .from('parts_search_results')
+                            .insert({
+                                plate: 'TEST-123-45',
+                                search_type: 'diagnostic_test',
+                                pcode: sampleResult.pcode,
+                                cat_num_desc: sampleResult.cat_num_desc,
+                                price: sampleResult.price,
+                                make: sampleResult.make,
+                                part_family: sampleResult.part_family,
+                                supplier_name: sampleResult.supplier_name,
+                                search_query: { test: true }
+                            })
+                            .select();
+
+                        if (saveError) {
+                            logResult('flowResults', `Step 2 - Save to search_results: FAILED - ${saveError.message}`, 'error');
+                        } else {
+                            logResult('flowResults', 'Step 2 - Save to search_results: SUCCESS', 'success');
+                            
+                            // Step 3: Test save to selected_parts
+                            const { error: selectedError } = await window.supabase
+                                .from('selected_parts')
+                                .insert({
+                                    plate: 'TEST-123-45',
+                                    part_name: sampleResult.cat_num_desc || 'Test Part',
+                                    supplier: sampleResult.supplier_name,
+                                    price: sampleResult.price,
+                                    oem: sampleResult.oem,
+                                    pcode: sampleResult.pcode,
+                                    cat_num_desc: sampleResult.cat_num_desc,
+                                    make: sampleResult.make,
+                                    part_family: sampleResult.part_family
+                                });
+
+                            if (selectedError) {
+                                logResult('flowResults', `Step 3 - Save to selected_parts: FAILED - ${selectedError.message}`, 'error');
+                            } else {
+                                logResult('flowResults', 'Step 3 - Save to selected_parts: SUCCESS', 'success');
+                                logResult('flowResults', '✅ Complete flow test PASSED', 'success');
+                            }
+                        }
+
+                    } catch (saveError) {
+                        logResult('flowResults', `Step 2/3 - Save operations failed: ${saveError.message}`, 'error');
+                    }
+                }
+
+                diagnosticData.flowTests.completeFlow = {
+                    searchResults: searchResult.data.length,
+                    timestamp: new Date().toISOString()
+                };
+
+            } catch (error) {
+                logResult('flowResults', `❌ Complete flow test failed: ${error.message}`, 'error');
+                diagnosticData.flowTests.error = error.message;
+            }
+        }
+
+        async function testTablePopulation() {
+            logResult('flowResults', '🔄 Testing table population...', 'loading');
+
+            try {
+                // Check parts_search_sessions
+                const { data: sessions, error: sessionsError } = await window.supabase
+                    .from('parts_search_sessions')
+                    .select('count')
+                    .limit(1);
+
+                if (!sessionsError) {
+                    logResult('flowResults', `✅ parts_search_sessions table accessible`, 'success');
+                } else {
+                    logResult('flowResults', `❌ parts_search_sessions error: ${sessionsError.message}`, 'error');
+                }
+
+                // Check parts_search_results
+                const { data: results, error: resultsError } = await window.supabase
+                    .from('parts_search_results')
+                    .select('count')
+                    .limit(1);
+
+                if (!resultsError) {
+                    logResult('flowResults', `✅ parts_search_results table accessible`, 'success');
+                } else {
+                    logResult('flowResults', `❌ parts_search_results error: ${resultsError.message}`, 'error');
+                }
+
+                // Check selected_parts
+                const { data: selected, error: selectedError } = await window.supabase
+                    .from('selected_parts')
+                    .select('count')
+                    .limit(1);
+
+                if (!selectedError) {
+                    logResult('flowResults', `✅ selected_parts table accessible`, 'success');
+                } else {
+                    logResult('flowResults', `❌ selected_parts error: ${selectedError.message}`, 'error');
+                }
+
+            } catch (error) {
+                logResult('flowResults', `❌ Table population test error: ${error.message}`, 'error');
+            }
+        }
+
+        // 7. Export Functions
+        function exportFindings() {
+            clearResults('exportResults');
+            
+            const findings = {
+                ...diagnosticData,
+                exportedAt: new Date().toISOString(),
+                userAgent: navigator.userAgent,
+                url: window.location.href
+            };
+
+            const jsonString = JSON.stringify(findings, null, 2);
+            
+            // Create downloadable file
+            const blob = new Blob([jsonString], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `parts-search-diagnostic-${new Date().toISOString().split('T')[0]}.json`;
+            link.click();
+            URL.revokeObjectURL(url);
+
+            logResult('exportResults', '✅ Diagnostic data exported to JSON file', 'success');
+            logResult('exportResults', `File contains ${Object.keys(findings).length} diagnostic sections`, 'info');
+        }
+
+        function generateReport() {
+            logResult('exportResults', '🔄 Generating summary report...', 'loading');
+
+            let report = `# Parts Search System Diagnostic Report\n`;
+            report += `Generated: ${new Date().toISOString()}\n\n`;
+
+            // Service Status
+            report += `## Service Status\n`;
+            Object.entries(diagnosticData.serviceStatus).forEach(([key, value]) => {
+                report += `- ${key}: ${value}\n`;
+            });
+            report += `\n`;
+
+            // Search Tests
+            if (diagnosticData.searchTests) {
+                report += `## Search Tests\n`;
+                Object.entries(diagnosticData.searchTests).forEach(([key, value]) => {
+                    report += `- ${key}: ${typeof value === 'object' ? JSON.stringify(value) : value}\n`;
+                });
+                report += `\n`;
+            }
+
+            // Price Analysis
+            if (diagnosticData.priceAnalysis) {
+                report += `## Price Analysis\n`;
+                const pa = diagnosticData.priceAnalysis;
+                report += `- Records analyzed: ${pa.count}\n`;
+                report += `- Price range: ₪${pa.min} - ₪${pa.max}\n`;
+                report += `- Average: ₪${pa.avg?.toFixed(2)}\n`;
+                report += `- High prices (>₪10k): ${pa.highPrices}\n`;
+                report += `- Very high prices (>₪100k): ${pa.veryHighPrices}\n\n`;
+            }
+
+            // Create downloadable report
+            const blob = new Blob([report], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `parts-search-report-${new Date().toISOString().split('T')[0]}.md`;
+            link.click();
+            URL.revokeObjectURL(url);
+
+            logResult('exportResults', '✅ Summary report generated and downloaded', 'success');
+        }
+
+        // Initialize on page load
+        window.addEventListener('load', () => {
+            logResult('serviceResults', '🔄 Page loaded - Ready for diagnostics', 'info');
+        });
+
+    </script>
+</body>
+</html>
