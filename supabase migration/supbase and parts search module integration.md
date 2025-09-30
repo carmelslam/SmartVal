@@ -700,8 +700,60 @@ CURRENT PROBLEMS AND FIXES NEEDED:
 11. Reconfirm and deploy ALL the needed sql s for the needed functions, most of the sql are logged in the sql folder in repo.
 
 Bottom line :
-The parts search system for now is broken and not functional at all and it doesn’t work .
+The parts search system for now is broken and not functional at all and it doesn't work .
 
+---
 
+## Activity Logs - Parts Search Integration Fix
 
+### Step 1: Analysis and Service Loading Fix
+**Date**: 2025-09-30
+**Status**: COMPLETED - AWAITING TEST
+
+#### Issues Identified:
+1. **Service Loading Mismatch**: The HTML loads `simplePartsSearchService.js` but `searchSupabase()` tries to use `SmartPartsSearchService`
+2. **Working RPC Function**: `smart_parts_search` in WORKING_SEARCH_FIX.sql appears to be the correct function
+3. **Multiple Service Files**: Three different services causing confusion (partsSearchService, smartPartsSearchService, simplePartsSearchService)
+
+#### Fix Applied:
+✅ Updated searchSupabase() function to use SimplePartsSearchService instead of SmartPartsSearchService to match what's loaded.
+
+#### Changes Made:
+1. File: `parts search.html`
+2. Line 650 changed from:
+   ```javascript
+   const searchService = new window.SmartPartsSearchService();
+   ```
+   To:
+   ```javascript
+   const searchService = new window.SimplePartsSearchService();
+   ```
+3. Also updated console log messages to reflect the correct service name
+
+#### Expected Result:
+- The search should now properly instantiate the SimplePartsSearchService
+- The `smart_parts_search` RPC function should be called correctly
+- Results should be returned and displayed in the PiP window
+
+#### Test Instructions:
+1. Open parts search page in browser
+2. Fill in at least one field:
+   - Try manufacturer: "טויוטה" 
+   - Or free query: "כנף" or "פנס"
+3. Click the green "חפש ב-Supabase" button
+4. Check browser console (F12) for:
+   - "📦 Initializing SimplePartsSearchService..." message
+   - "✅ SimplePartsSearchService initialized" confirmation
+   - Search parameters being sent
+   - Response from Supabase
+   - Any error messages
+
+#### What to Look For:
+- If you see "SimplePartsSearchService is not defined" - the service file isn't loading properly
+- If you see search parameters but no results - the RPC function might need adjustment
+- If you get results - check if they match your search criteria
+
+#### Status: AWAITING TEST RESULTS
+
+---
 
