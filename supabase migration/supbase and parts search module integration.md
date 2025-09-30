@@ -785,6 +785,91 @@ The parts search system for now is broken and not functional at all and it doesn
 
 ---
 
+### CRITICAL FAILURE - DATA LOSS AND FUNCTION DEPLOYMENT
+**Date**: 2025-09-30 Evening
+**Status**: MAJOR ISSUES - RECOVERY NEEDED
+
+#### What Went Wrong:
+1. **Multiple SQL files with DELETE statements** deleted catalog data during testing
+2. **No automatic deployment** was set up initially despite clear documentation requirements
+3. **Wrong function versions deployed** - basic search instead of flexible search
+4. **Data re-uploaded without triggers** - resulted in:
+   - All Hebrew text reversed (מ. פינס → סניפ .מ)
+   - Make names reversed with country suffixes (טויוטה → הטויוט ןפי)
+   - NO extraction happened (all fields empty: OEM, year, side, position, part family)
+   - Search returns 0 results
+
+#### Functions We Developed (Lost/Not Deployed Properly):
+
+1. **`reverse_hebrew()`** - Reverses Hebrew text for proper display
+2. **`normalize_make()`** - Removes country suffixes, standardizes makes
+3. **`extract_core_part_term()`** - Extracts part name from variations (דלת ימין → דלת)
+4. **`auto_extract_catalog_data()`** - Trigger function that extracts:
+   - OEM numbers (8-14 alphanumeric)
+   - Year ranges (09-13, 2009-2013)
+   - Side position (ימין/שמאל)
+   - Front/rear (קדמי/אחורי)
+   - Part family (פנס, מראה, פגוש, פח)
+   - Model codes (E70, F26)
+   - Engine type (דיזל, בנזין)
+5. **`smart_parts_search()`** - Flexible search with core term extraction
+
+#### Current State:
+- ❌ Data is completely reversed
+- ❌ No extraction done
+- ❌ Search returns 0 results
+- ❌ Wrong function versions deployed
+- ✅ Data exists (217,208 records) but unusable
+
+---
+
+### RECOVERY PLAN
+**Status**: NOT STARTED
+
+#### Essential SQL Files Needed:
+
+1. **SAFE FILES TO USE:**
+   - `CHECK_CATALOG_DATA.sql` - Check data status
+   - `SMART_FLEXIBLE_SEARCH.sql` - Has correct search function
+   - `DEPLOY_REMAINING_ESSENTIALS.sql` - Has auto-extract triggers
+
+2. **DANGEROUS FILES (CONTAIN DELETE - DO NOT RUN):**
+   - `simple_batch_process.sql`
+   - `fix_trigger_test.sql`
+   - `reinstall_automatic_triggers.sql`
+   - `batch_process_fixed.sql`
+   - `automatic_extraction_trigger.sql`
+
+#### Recovery Steps:
+
+1. **Fix Reversed Data:**
+```sql
+-- Fix makes
+UPDATE catalog_items
+SET make = CASE
+    WHEN make = 'הטויוט' THEN 'טויוטה'
+    WHEN make = 'הטויוט ןפי' THEN 'טויוטה'
+    -- etc for all makes
+END;
+```
+
+2. **Deploy Correct Functions:**
+   - Run `SMART_FLEXIBLE_SEARCH.sql` for search
+   - Run `DEPLOY_REMAINING_ESSENTIALS.sql` for triggers
+
+3. **Process Existing Data:**
+   - Trigger will process new uploads
+   - Need UPDATE statement to process existing 217k records
+
+#### Lessons Learned:
+1. **ALWAYS check SQL files for DELETE statements**
+2. **Set up automatic deployment FIRST** as documentation requires
+3. **Test with small data samples** before bulk operations
+4. **Keep backups** before running any SQL
+5. **Document which functions are deployed** in production
+
+---
+
 ### Step 1: Analysis and Service Loading Fix
 **Date**: 2025-09-30
 **Status**: COMPLETED
