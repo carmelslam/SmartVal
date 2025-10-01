@@ -250,4 +250,25 @@ Test 8 :
 ]
 
 
+**OBSERVATIONS FROM UI BEHAVIOR**
+
+1. the make name being toyota japan doesnt pose a problem - search finds toyota even with a toyota japan query.
+2. non of the query fields is being proccesed / ignored, if i clear all teh parameters and leave just teh make and part name a list of that part for ALL make models will show 
+3. the simple search work, even with 2 words , as long as they match teh exact same xpression in teh table, if there is a mismatch like query is ימין but table doesnt have the side field filled or teh catnumdesc has ימ' then the search breaks , 
+4. MOST likely those are teh causes :
+the  table is not searching all fields to rely on extracted fields as main source and catnymdesc as fallback but it relies just on catnymdesc.
+or/and
+the extracted fields are empty 
+or/and 
+extraction doesnt work good 
+5. from teh same previous reason , advanced search doesnt work , since the list is defined in a dropdown.
+
+obvious problems:
+not a reliable search- brings a lot of results with no model or year filter
+names are never the same - user and automated systems cannot anticipate each naming for each part - we are talking about millions of parts .
+other paramaters are important but are also less common they have to use fallback to ignore if they dont exist.
+teh search cannot rely on make and part name only - not effiecient and time waste.
+
+PiP RESULTS:
+the siurce is nit correct and it fallsback to original whike teh table has no original sources just after market or original compatibale sources.
 
