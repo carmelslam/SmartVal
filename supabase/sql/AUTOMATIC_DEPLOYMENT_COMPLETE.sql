@@ -155,7 +155,7 @@ DROP FUNCTION IF EXISTS smart_parts_search(TEXT, TEXT, TEXT, TEXT, TEXT) CASCADE
 DROP FUNCTION IF EXISTS smart_parts_search(TEXT, TEXT, TEXT, TEXT, TEXT, TEXT) CASCADE;
 DROP FUNCTION IF EXISTS smart_parts_search(TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, INTEGER) CASCADE;
 
--- Create enhanced search with multi-word support
+-- Create enhanced search with multi-word support (compatible with JavaScript calls)
 CREATE OR REPLACE FUNCTION smart_parts_search(
     make_param TEXT DEFAULT NULL,
     model_param TEXT DEFAULT NULL,
@@ -163,7 +163,17 @@ CREATE OR REPLACE FUNCTION smart_parts_search(
     part_param TEXT DEFAULT NULL,
     oem_param TEXT DEFAULT NULL,
     family_param TEXT DEFAULT NULL,
-    limit_results INTEGER DEFAULT 50
+    limit_results INTEGER DEFAULT 50,
+    car_plate TEXT DEFAULT NULL,
+    engine_code_param TEXT DEFAULT NULL,
+    engine_type_param TEXT DEFAULT NULL,
+    engine_volume_param TEXT DEFAULT NULL,
+    model_code_param TEXT DEFAULT NULL,
+    quantity_param INTEGER DEFAULT NULL,
+    source_param TEXT DEFAULT NULL,
+    trim_param TEXT DEFAULT NULL,
+    vin_number_param TEXT DEFAULT NULL,
+    year_param TEXT DEFAULT NULL
 )
 RETURNS TABLE (
     id UUID,
@@ -262,6 +272,32 @@ BEGIN
         where_clause := where_clause || 
             CASE WHEN where_clause != '' THEN ' AND ' ELSE '' END ||
             format('ci.part_family ILIKE %L', '%' || family_param || '%');
+    END IF;
+    
+    -- Additional filters for extended parameters
+    IF model_code_param IS NOT NULL AND model_code_param != '' THEN
+        where_clause := where_clause || 
+            CASE WHEN where_clause != '' THEN ' AND ' ELSE '' END ||
+            format('ci.model_code ILIKE %L', '%' || model_code_param || '%');
+    END IF;
+    
+    IF year_param IS NOT NULL AND year_param != '' THEN
+        where_clause := where_clause || 
+            CASE WHEN where_clause != '' THEN ' AND ' ELSE '' END ||
+            format('(ci.extracted_year ILIKE %L OR ci.year_range ILIKE %L)', 
+                   '%' || year_param || '%', '%' || year_param || '%');
+    END IF;
+    
+    IF engine_code_param IS NOT NULL AND engine_code_param != '' THEN
+        where_clause := where_clause || 
+            CASE WHEN where_clause != '' THEN ' AND ' ELSE '' END ||
+            format('ci.engine_code ILIKE %L', '%' || engine_code_param || '%');
+    END IF;
+    
+    IF trim_param IS NOT NULL AND trim_param != '' THEN
+        where_clause := where_clause || 
+            CASE WHEN where_clause != '' THEN ' AND ' ELSE '' END ||
+            format('ci.trim ILIKE %L', '%' || trim_param || '%');
     END IF;
     
     -- Build final query with Hebrew fix and scoring
