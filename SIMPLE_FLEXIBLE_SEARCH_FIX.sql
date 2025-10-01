@@ -3,6 +3,9 @@
 
 SELECT '=== SIMPLE FLEXIBLE SEARCH FIX ===' as section;
 
+-- Drop all existing smart_parts_search functions first
+DROP FUNCTION IF EXISTS smart_parts_search CASCADE;
+
 -- Replace the existing search function with a simpler one that handles multiple terms
 CREATE OR REPLACE FUNCTION smart_parts_search(
     make_param TEXT DEFAULT NULL,
