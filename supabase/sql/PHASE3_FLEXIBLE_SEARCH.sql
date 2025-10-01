@@ -11,7 +11,7 @@ SELECT '=== PHASE 3: FLEXIBLE SEARCH IMPLEMENTATION ===' as section;
 -- Drop existing to avoid conflicts
 DROP FUNCTION IF EXISTS smart_parts_search CASCADE;
 
--- Create enhanced search with multi-word support and scoring
+-- Create enhanced search with multi-word support and intelligent flexible matching
 CREATE OR REPLACE FUNCTION smart_parts_search(
     make_param TEXT DEFAULT NULL,
     model_param TEXT DEFAULT NULL,
@@ -19,7 +19,17 @@ CREATE OR REPLACE FUNCTION smart_parts_search(
     part_param TEXT DEFAULT NULL,
     oem_param TEXT DEFAULT NULL,
     family_param TEXT DEFAULT NULL,
-    limit_results INTEGER DEFAULT 50
+    limit_results INTEGER DEFAULT 50,
+    car_plate TEXT DEFAULT NULL,
+    engine_code_param TEXT DEFAULT NULL,
+    engine_type_param TEXT DEFAULT NULL,
+    engine_volume_param TEXT DEFAULT NULL,
+    model_code_param TEXT DEFAULT NULL,
+    quantity_param INTEGER DEFAULT NULL,
+    source_param TEXT DEFAULT NULL,
+    trim_param TEXT DEFAULT NULL,
+    vin_number_param TEXT DEFAULT NULL,
+    year_param TEXT DEFAULT NULL
 )
 RETURNS TABLE (
     id UUID,
@@ -80,18 +90,57 @@ BEGIN
         free_terms := string_to_array(trim(free_query_param), ' ');
         free_conditions := ARRAY[]::TEXT[];
         
-        -- Each term can match in any field
+        -- INTELLIGENT FLEXIBLE MATCHING - Each term searches ALL relevant fields with priority
         FOR i IN 1..array_length(free_terms, 1) LOOP
             IF trim(free_terms[i]) != '' THEN
                 free_conditions := array_append(free_conditions,
-                    format('(ci.cat_num_desc ILIKE %L OR ci.part_name ILIKE %L OR ci.part_family ILIKE %L OR ci.make ILIKE %L OR ci.model ILIKE %L OR ci.supplier_name ILIKE %L OR ci.oem ILIKE %L)', 
-                           '%' || trim(free_terms[i]) || '%',
-                           '%' || trim(free_terms[i]) || '%',
-                           '%' || trim(free_terms[i]) || '%',
-                           '%' || trim(free_terms[i]) || '%',
-                           '%' || trim(free_terms[i]) || '%',
-                           '%' || trim(free_terms[i]) || '%',
-                           '%' || trim(free_terms[i]) || '%'));
+                    format('(
+                        -- PRIORITY 1: Extracted structured fields (best matches)
+                        ci.part_name ILIKE %L OR 
+                        ci.part_family ILIKE %L OR
+                        ci.side_position ILIKE %L OR
+                        ci.extracted_year ILIKE %L OR
+                        ci.model_display ILIKE %L OR
+                        
+                        -- PRIORITY 2: Core identification fields
+                        ci.make ILIKE %L OR 
+                        ci.model ILIKE %L OR 
+                        ci.supplier_name ILIKE %L OR 
+                        ci.oem ILIKE %L OR
+                        ci.pcode ILIKE %L OR
+                        
+                        -- PRIORITY 3: Additional descriptive fields
+                        ci.model_code ILIKE %L OR
+                        ci.year_range ILIKE %L OR
+                        ci.engine_code ILIKE %L OR
+                        ci.trim ILIKE %L OR
+                        
+                        -- FALLBACK: Raw description (lowest priority)
+                        ci.cat_num_desc ILIKE %L
+                    )', 
+                           -- PRIORITY 1 fields
+                           '%' || trim(free_terms[i]) || '%',  -- part_name
+                           '%' || trim(free_terms[i]) || '%',  -- part_family
+                           '%' || trim(free_terms[i]) || '%',  -- side_position
+                           '%' || trim(free_terms[i]) || '%',  -- extracted_year
+                           '%' || trim(free_terms[i]) || '%',  -- model_display
+                           
+                           -- PRIORITY 2 fields
+                           '%' || trim(free_terms[i]) || '%',  -- make
+                           '%' || trim(free_terms[i]) || '%',  -- model
+                           '%' || trim(free_terms[i]) || '%',  -- supplier_name
+                           '%' || trim(free_terms[i]) || '%',  -- oem
+                           '%' || trim(free_terms[i]) || '%',  -- pcode
+                           
+                           -- PRIORITY 3 fields
+                           '%' || trim(free_terms[i]) || '%',  -- model_code
+                           '%' || trim(free_terms[i]) || '%',  -- year_range
+                           '%' || trim(free_terms[i]) || '%',  -- engine_code
+                           '%' || trim(free_terms[i]) || '%',  -- trim
+                           
+                           -- FALLBACK
+                           '%' || trim(free_terms[i]) || '%'   -- cat_num_desc
+                          ));
             END IF;
         END LOOP;
         
@@ -137,6 +186,32 @@ BEGIN
             format('ci.part_family ILIKE %L', '%' || family_param || '%');
     END IF;
     
+    -- Additional parameter filters
+    IF model_code_param IS NOT NULL AND model_code_param != '' THEN
+        where_clause := where_clause || 
+            CASE WHEN where_clause != '' THEN ' AND ' ELSE '' END ||
+            format('ci.model_code ILIKE %L', '%' || model_code_param || '%');
+    END IF;
+    
+    IF year_param IS NOT NULL AND year_param != '' THEN
+        where_clause := where_clause || 
+            CASE WHEN where_clause != '' THEN ' AND ' ELSE '' END ||
+            format('(ci.extracted_year ILIKE %L OR ci.year_range ILIKE %L)', 
+                   '%' || year_param || '%', '%' || year_param || '%');
+    END IF;
+    
+    IF engine_code_param IS NOT NULL AND engine_code_param != '' THEN
+        where_clause := where_clause || 
+            CASE WHEN where_clause != '' THEN ' AND ' ELSE '' END ||
+            format('ci.engine_code ILIKE %L', '%' || engine_code_param || '%');
+    END IF;
+    
+    IF trim_param IS NOT NULL AND trim_param != '' THEN
+        where_clause := where_clause || 
+            CASE WHEN where_clause != '' THEN ' AND ' ELSE '' END ||
+            format('ci.trim ILIKE %L', '%' || trim_param || '%');
+    END IF;
+    
     -- ========================================================================
     -- BUILD AND EXECUTE FINAL QUERY WITH SCORING
     -- ========================================================================
@@ -156,11 +231,24 @@ BEGIN
         COALESCE(ci.availability, ''מקורי'') as availability,
         ci.extracted_year,
         COALESCE(ci.model_display, ci.model, ''לא מוגדר'') as model_display,
-        -- Calculate match score
-        (CASE WHEN ci.part_name IS NOT NULL THEN 10 ELSE 0 END +
-         CASE WHEN ci.price IS NOT NULL AND ci.price > 0 THEN 5 ELSE 0 END +
-         CASE WHEN ci.extracted_year IS NOT NULL THEN 3 ELSE 0 END +
-         CASE WHEN ci.model IS NOT NULL THEN 2 ELSE 0 END) as match_score
+        -- INTELLIGENT SCORING - REWARDS STRUCTURED DATA
+        (
+         -- Structured field bonuses (high priority)
+         CASE WHEN ci.part_name IS NOT NULL AND ci.part_name != '''' AND ci.part_name != ci.cat_num_desc THEN 30 ELSE 0 END +
+         CASE WHEN ci.part_family IS NOT NULL AND ci.part_family != ''לא מוגדר'' THEN 25 ELSE 0 END +
+         CASE WHEN ci.extracted_year IS NOT NULL AND ci.extracted_year != '''' THEN 20 ELSE 0 END +
+         CASE WHEN ci.model_display IS NOT NULL AND ci.model_display != ''לא מוגדר'' THEN 15 ELSE 0 END +
+         CASE WHEN ci.side_position IS NOT NULL AND ci.side_position != '''' THEN 12 ELSE 0 END +
+         
+         -- Basic data bonuses (medium priority)  
+         CASE WHEN ci.price IS NOT NULL AND ci.price > 0 THEN 10 ELSE 0 END +
+         CASE WHEN ci.model IS NOT NULL AND ci.model != '''' THEN 8 ELSE 0 END +
+         CASE WHEN ci.oem IS NOT NULL AND ci.oem != '''' THEN 6 ELSE 0 END +
+         CASE WHEN ci.model_code IS NOT NULL AND ci.model_code != '''' THEN 4 ELSE 0 END +
+         
+         -- Availability bonus (low priority)
+         CASE WHEN ci.availability IS NOT NULL AND ci.availability != '''' THEN 2 ELSE 0 END
+        ) as match_score
     FROM catalog_items ci';
     
     -- Add WHERE clause if conditions exist
@@ -168,12 +256,18 @@ BEGIN
         final_query := final_query || ' WHERE ' || where_clause;
     END IF;
     
-    -- Add ordering by score and price
+    -- INTELLIGENT ORDERING - STRUCTURED DATA FIRST
     final_query := final_query || ' ORDER BY 
         match_score DESC,
+        -- Prioritize records with extracted structured data
+        CASE WHEN ci.part_name IS NOT NULL AND ci.part_name != '''' AND ci.part_name != ci.cat_num_desc THEN 0 ELSE 1 END,
+        CASE WHEN ci.part_family IS NOT NULL AND ci.part_family != ''לא מוגדר'' THEN 0 ELSE 1 END,
+        CASE WHEN ci.extracted_year IS NOT NULL THEN 0 ELSE 1 END,
+        -- Then by price and alphabetical
         CASE WHEN ci.price IS NOT NULL AND ci.price > 0 THEN 0 ELSE 1 END,
         ci.price ASC,
         ci.make,
+        ci.part_name,
         ci.cat_num_desc
     LIMIT ' || limit_results;
     
