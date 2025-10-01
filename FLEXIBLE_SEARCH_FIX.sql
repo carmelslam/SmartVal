@@ -14,7 +14,7 @@ CREATE OR REPLACE FUNCTION enhanced_smart_parts_search(
     limit_results INTEGER DEFAULT 50
 )
 RETURNS TABLE (
-    id INTEGER,
+    id UUID,
     cat_num_desc TEXT,
     supplier_name TEXT,
     pcode TEXT,
@@ -148,7 +148,7 @@ CREATE OR REPLACE FUNCTION smart_parts_search(
     limit_results INTEGER DEFAULT 50
 )
 RETURNS TABLE (
-    id INTEGER,
+    id UUID,
     cat_num_desc TEXT,
     supplier_name TEXT,
     pcode TEXT,
