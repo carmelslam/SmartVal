@@ -910,3 +910,140 @@ END;
 
 ---
 
+## COMPREHENSIVE DIAGNOSTIC FINDINGS & ANALYSIS
+**Date**: 2025-10-01
+**Status**: DIAGNOSTIC COMPLETE - TARGETED FIXES NEEDED
+
+### DIAGNOSTIC METHODOLOGY
+Executed comprehensive diagnostic protocol using:
+1. **MASTER_DIAGNOSTIC.sql** - Complete database state analysis
+2. **current-state-analyzer.html** - UI integration testing
+3. **FUNCTION_AUDIT.sql** - Function existence verification
+
+### KEY FINDINGS SUMMARY
+
+#### ✅ **WORKING COMPONENTS**
+1. **Core Search Function**: `smart_parts_search` exists and returns results
+2. **UI Integration**: Services load correctly, Supabase connection established
+3. **Make Filtering**: Level 1 filtering works (Toyota search returns only Toyota)
+4. **PiP Window**: Scrolling functionality works correctly
+5. **Data Volume**: 48,272 records from single supplier (מ.פינס בע"מ)
+6. **Basic Extraction**: part_name (100%), part_family (64.8%) populated
+
+#### 🚨 **CRITICAL ISSUES IDENTIFIED**
+
+##### **1. ASTRONOMICAL PRICES (PRIMARY ISSUE)**
+- **Evidence**: ₪939,000,103 for simple parts, ₪234,678,011 for brackets
+- **Sample**: Land Rover bumper showing ₪939M instead of reasonable ₪900
+- **Impact**: Users see "unrelated results with astronomical prices"
+- **Root Cause**: Data parsing error during catalog import - decimal point misplacement
+- **Records Affected**: 13 items > ₪10k, 5 items > ₪100k in sample of 1000
+
+##### **2. SOURCE FIELD CORRUPTION**
+- **Evidence**: "יפילח" (47,176 records) instead of "חלופי" (aftermarket)
+- **Evidence**: "ירוקמ םאות" (1,041 records) instead of "מקורי תואם" (original matching)
+- **Impact**: "Source shows original but data is all aftermarket"
+- **Root Cause**: Character encoding corruption during import
+
+##### **3. PARTIAL FIELD EXTRACTION**
+- **OEM Extraction**: Only 0.3% (121/48,272) - CRITICAL for parts identification
+- **Year Extraction**: Only 28.6% (13,828/48,272) - Affects filtering
+- **Side Position**: Only 4.1% (2,002/48,272) - Affects part matching
+- **Model Extraction**: Only 14.1% (6,810/48,272) - Affects Level 1 filtering
+
+##### **4. HEBREW TEXT DISPLAY CONFUSION**
+- **Finding**: Hebrew text IS correctly stored and displayed
+- **User Confusion**: Complex patterns like "06- טפיוס - 'מש 'דק ףנכ" appear confusing
+- **Real Issue**: Mixed Hebrew/English/numeric patterns, not reversal
+
+##### **5. FUNCTION AUDIT INCOMPLETE**
+- **Error**: PostgreSQL ROUND function incompatibility
+- **Impact**: Cannot complete function existence verification
+- **Need**: Fix audit script to run completely
+
+### DETAILED ANALYSIS
+
+#### **Data Quality Assessment**
+```
+Total Records: 48,272
+Field Population:
+├── part_name: 100.0% ✅
+├── part_family: 64.8% ⚠️
+├── year_from/to: 28.6% ❌
+├── side_position: 4.1% ❌
+└── oem: 0.3% ❌ CRITICAL
+
+Price Distribution:
+├── Normal Range: ₪15-₪5,000 (majority)
+├── High Prices: 13 items > ₪10,000 ⚠️
+└── Astronomical: 5 items > ₪100,000 ❌ CRITICAL
+```
+
+#### **Search Behavior Analysis**
+- **Simple Search**: Returns 50 results but includes astronomical prices
+- **Advanced Search**: Make filtering works correctly (Toyota only)
+- **Performance**: 200-400ms response time ✅
+- **Results Relevance**: Good part matching, wrong prices displayed
+
+#### **Root Cause Analysis**
+
+##### **Price Corruption**
+- **Theory**: Decimal point shifted during import (₪9.39 → ₪939,000,103)
+- **Evidence**: Pattern shows consistent magnitude errors
+- **Solution**: Price normalization algorithm needed
+
+##### **Source Field Corruption** 
+- **Theory**: UTF-8 encoding issue during import
+- **Evidence**: "יפילח" is scrambled "חלופי"
+- **Solution**: Character mapping correction needed
+
+##### **Extraction Incompleteness**
+- **Theory**: Existing triggers work but patterns incomplete
+- **Evidence**: Triggers exist but low extraction rates
+- **Solution**: Enhanced regex patterns needed
+
+### TARGETED SOLUTION PLAN
+
+#### **Phase 1: Price Normalization (URGENT)**
+**Objective**: Fix astronomical prices to realistic values
+**Method**: Identify price patterns and apply correction algorithm
+**Success Criteria**: Prices in range ₪10-₪10,000 for 95% of parts
+
+#### **Phase 2: Source Field Correction**
+**Objective**: Fix corrupted source values
+**Method**: Map "יפילח" → "חלופי", "ירוקמ םאות" → "מקורי תואם"
+**Success Criteria**: Clean source field values in Hebrew
+
+#### **Phase 3: Enhanced Field Extraction**
+**Objective**: Improve OEM, year, model extraction rates
+**Method**: Enhanced regex patterns for cat_num_desc parsing
+**Success Criteria**: OEM >30%, year >60%, side >20%
+
+#### **Phase 4: Function Audit Completion**
+**Objective**: Complete function existence verification
+**Method**: Fix ROUND function error in audit script
+**Success Criteria**: Complete function status report
+
+### IMPLEMENTATION STRATEGY
+
+1. **One Task Execution**: Complete each phase before proceeding
+2. **Validation**: Test each fix on small sample before full deployment
+3. **Automatic Deployment**: Ensure all fixes deploy via triggers
+4. **Regression Testing**: Verify fixes don't break existing functionality
+
+### SUCCESS METRICS
+
+**Before Fix**:
+- Prices: 5 items > ₪100k (astronomical)
+- Source: 97% corrupted values
+- OEM: 0.3% extracted
+- User Experience: "Unrelated results with astronomical prices"
+
+**After Fix Target**:
+- Prices: 0 items > ₪50k (realistic range)
+- Source: 100% clean Hebrew values
+- OEM: >30% extracted
+- User Experience: "Relevant results with realistic prices"
+
+---
+
