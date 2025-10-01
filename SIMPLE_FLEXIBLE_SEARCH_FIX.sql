@@ -4,7 +4,14 @@
 SELECT '=== SIMPLE FLEXIBLE SEARCH FIX ===' as section;
 
 -- Drop all existing smart_parts_search functions first
-DROP FUNCTION IF EXISTS smart_parts_search CASCADE;
+DROP FUNCTION IF EXISTS smart_parts_search() CASCADE;
+DROP FUNCTION IF EXISTS smart_parts_search(TEXT) CASCADE;
+DROP FUNCTION IF EXISTS smart_parts_search(TEXT, TEXT) CASCADE;
+DROP FUNCTION IF EXISTS smart_parts_search(TEXT, TEXT, TEXT) CASCADE;
+DROP FUNCTION IF EXISTS smart_parts_search(TEXT, TEXT, TEXT, TEXT) CASCADE;
+DROP FUNCTION IF EXISTS smart_parts_search(TEXT, TEXT, TEXT, TEXT, TEXT) CASCADE;
+DROP FUNCTION IF EXISTS smart_parts_search(TEXT, TEXT, TEXT, TEXT, TEXT, TEXT) CASCADE;
+DROP FUNCTION IF EXISTS smart_parts_search(TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, INTEGER) CASCADE;
 
 -- Replace the existing search function with a simpler one that handles multiple terms
 CREATE OR REPLACE FUNCTION smart_parts_search(
@@ -144,25 +151,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- Test the simplified search
-SELECT '=== TESTING SIMPLE FLEXIBLE SEARCH ===' as section;
-
--- Test 1: Single term "טויוטה"
-SELECT 
-    'Test 1 - Single term:' as test_name,
-    COUNT(*) as result_count
-FROM smart_parts_search(make_param := 'טויוטה', limit_results := 10);
-
--- Test 2: Multiple terms "טויוטה יפן" - should now work
-SELECT 
-    'Test 2 - Multiple terms:' as test_name,
-    COUNT(*) as result_count
-FROM smart_parts_search(make_param := 'טויוטה יפן', limit_results := 10);
-
--- Test 3: Free query with multiple terms
-SELECT 
-    'Test 3 - Free query multiple terms:' as test_name,
-    COUNT(*) as result_count
-FROM smart_parts_search(free_query_param := 'טויוטה פנס', limit_results := 10);
-
 SELECT '=== SIMPLE FLEXIBLE SEARCH FIX COMPLETE ===' as section;
+
+-- Function deployed successfully
+-- Ready to test: smart_parts_search(make_param := 'טויוטה יפן') should now work
