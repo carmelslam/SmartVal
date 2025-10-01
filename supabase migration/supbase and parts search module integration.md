@@ -1209,23 +1209,121 @@ Test Query: Toyota + Wing parts
 
 ---
 
-## 🔧 **CURRENT INVESTIGATION: SOURCE COLUMN MAPPING**
+## 🚨 **CRITICAL ISSUES DISCOVERED AFTER TESTING**
 **Date:** October 1, 2025  
-**Status:** 🔄 IN PROGRESS - Investigating column mapping issue
+**Status:** ❌ FUNDAMENTAL SEARCH PROBLEMS - URGENT FIX NEEDED
 
-### **Issue Identified:**
-Search functions returning `availability: null` instead of actual source values. Need to determine if:
-1. Search function incorrectly maps to availability column instead of source column
-2. Source column has correct data (`חליפי`, `מקורי תואם`) but search function ignores it
-3. Need to update search function logic to return proper source values
+### **UI DISPLAY ISSUES (PiP Window):**
+1. ❌ **Query identification wrong** - Shows family instead of part name in query
+2. ❌ **Missing year column** - Year data not displayed 
+3. ❌ **Reversed family names** - משפחת חלק text completely reversed
+4. ❌ **Part descriptions broken** - Text not reversed but words are backwards
+5. ❌ **Wrong source display** - Shows "מקורי" when table only has "חליפי" data
+6. ❌ **Family section** - Shows family names when this section shouldn't show families
 
-### **Investigation Steps:**
-✅ Fixed remaining source field corruption (`יפילח` patterns cleaned)  
-🔄 Running `CHECK_SEARCH_COLUMN_MAPPING.sql` to diagnose root cause  
-⏳ Will update search function based on diagnostic results
+### **SEARCH FUNCTIONALITY COMPLETELY BROKEN:**
+1. ❌ **Cascading logic doesn't work** - CASCADING_SEARCH_DEPLOYMENT.sql failed
+2. ❌ **PHASE3 filtering broken** - PHASE3_FLEXIBLE_SEARCH.sql not working
+3. ❌ **Make/Model only partially work** - Only simple exact matches
+4. ❌ **Full model names break search** - "קורולה קרוס" fails, only "קורולה" works
+5. ❌ **Year format breaks search** - 2011 fails, 011 works (inconsistent database format)
+6. ❌ **All other fields break search** - Any additional field causes 0 results
+7. ❌ **Advanced search returns 0** - Same part that works in simple search fails in advanced
 
-### **Expected Outcome:**
-Search results should show:
-- `availability: "חליפי"` for aftermarket parts (47,176 records)
-- `availability: "מקורי תואם"` for original compatible parts (1,041 records)
-- NO `availability: null` values when source data exists
+### **ROOT CAUSE ANALYSIS:**
+1. **Database normalization failed** - Data not normalized for flexible searching
+2. **Search logic too rigid** - Exact match only, no flexibility for variations
+3. **Both search systems broken** - Neither PHASE3 nor Cascading logic working
+4. **UI integration broken** - Column mapping and display issues throughout
+
+### **URGENT ACTIONS NEEDED:**
+1. **Fix search flexibility** - Enable partial matching for model names
+2. **Normalize year formats** - Handle 2011/011/11 variations automatically  
+3. **Fix Hebrew text display** - Complete reversal issues in UI
+4. **Rebuild search logic** - Both systems need fundamental fixes
+5. **Test with real user scenarios** - Not just technical queries
+
+Phase 1: Diagnostic Analysis (30 min)       │ │
+│ │                                             │ │
+│ │ 1. Test current search behavior with real   │ │
+│ │ user scenarios:                             │ │
+│ │   - Simple: "טויוטה" + "כנף"                │ │
+│ │   - Complex: "טויוטה" + "קורולה קרוס" +     │ │
+│ │ "2011" + "כנף"                              │ │
+│ │   - Document exactly what breaks and why    │ │
+│ │ 2. Analyze database structure for           │ │
+│ │ normalization needs:                        │ │
+│ │   - Check year format variations            │ │
+│ │ (2011/011/11)                               │ │
+│ │   - Check model name patterns               │ │
+│ │   - Identify fields that need flexible      │ │
+│ │ matching                                    │ │
+│ │                                             │ │
+│ │ Phase 2: Search Logic Rebuild (2 hours)     │ │
+│ │                                             │ │
+│ │ 1. Create new flexible search function      │ │
+│ │ with:                                       │ │
+│ │   - Partial model matching (model ILIKE     │ │
+│ │ '%קורולה%')                                 │ │
+│ │   - Year normalization (2011 → 011, 11)     │ │
+│ │   - Multiple term handling for model names  │ │
+│ │   - Fallback logic when exact match fails   │ │
+│ │ 2. Fix Hebrew text handling:                │ │
+│ │   - Ensure consistent character direction   │ │
+│ │   - Fix word order in descriptions          │ │
+│ │   - Proper family name display              │ │
+│ │                                             │ │
+│ │ Phase 3: UI Integration Fix (1 hour)        │ │
+│ │                                             │ │
+│ │ 1. Fix column mapping:                      │ │
+│ │   - Return correct fields (source not       │ │
+│ │ availability)                               │ │
+│ │   - Add missing year column                 │ │
+│ │   - Proper part name vs family              │ │
+│ │ identification                              │ │
+│ │ 2. Test UI display:                         │ │
+│ │   - Verify Hebrew text displays correctly   │ │
+│ │   - Check all columns show proper data      │ │
+│ │   - Ensure PiP window works correctly       │ │
+│ │                                             │ │
+│ │ Phase 4: Validation (30 min)                │ │
+│ │                                             │ │
+│ │ 1. Test real user scenarios:                │ │
+│ │   - Full model names work                   │ │
+│ │   - Year variations work                    │ │
+│ │   - Advanced search matches simple search   │ │
+│ │   - All fields can be used together         │ │
+│ │                                             │ │
+│ │ This plan focuses on the fundamental issues │ │
+│ │  rather than minor fixes.  
+
+☐ Phase 1: Diagnostic Analysis - Test     
+      current search behavior
+    ☐ Test simple search: טויוטה + כנף
+    ☐ Test complex search: טויוטה + קורולה
+      קרוס + 2011 + כנף
+    ☐ Analyze database structure for
+      normalization needs
+    ☐ Phase 2: Create new flexible search
+      function
+    ☐ Phase 3: Fix UI integration and column
+      mapping
+    ☐ Phase 4: Validate with real user
+      scenarios
+
+      logic needed EXAMPLE ;
+      plate  = '221-84-003    - always accept 
+ make = 'טויוטה יפן'  if just טויוטה  exist show טויוטה 
+model = 'COROLLA CROSS' - if doesn’t  exist show טויוטה  
+ model_code = 'ZVG12L-KHXGBW' = if doesn’t  exist show COROLLA CROSS' or/ and טויוטה 
+actual_trim = 'ADVENTURE' =  if doesn’t  exist show or/and ZVG12L-KHXGBW or/and COROLLA CROSS' or/ and טויוטה 
+year_from = 2022 if doesn’t  exist show  טויוטה 
+engine_code = '2ZR' = if doesn’t  exist ignore 
+engine_type = 'בנזין' = if doesn’t  exist ignore 
+vin = 'JTNADACB20J001538' = if doesn’t  exist ignore 
+Parts simple  search parameters 
+Part name : כנף =  if doesn’t  exist show variants of the name 
+Parts advanced   search parameters :
+Family : if doesn’t  exist show part (the next one not the simple search) = דלת
+Part name  : דלת= if doesn’t  exist show variants of the name 
+Source : if doesn’t  exist show all 
