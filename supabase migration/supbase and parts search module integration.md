@@ -1297,21 +1297,24 @@ Phase 1: Diagnostic Analysis (30 min)       │ │
 │ │ This plan focuses on the fundamental issues │ │
 │ │  rather than minor fixes.  
 
-☐ Phase 1: Diagnostic Analysis - Test     
-      current search behavior
-    ☐ Test simple search: טויוטה + כנף
-    ☐ Test complex search: טויוטה + קורולה
-      קרוס + 2011 + כנף
-    ☐ Analyze database structure for
-      normalization needs
-    ☐ Phase 2: Create new flexible search
-      function
+    ☐ Phase 1: Diagnostic Analysis with real  
+      cascading scenarios
+    ☐ Test cascading fallback: make טויוטה
+      יפן → טויוטה
+    ☐ Test cascading fallback: model COROLLA
+      CROSS → טויוטה
+    ☐ Test cascading fallback: model_code →
+      COROLLA CROSS → טויוטה
+    ☐ Test part name variants: כנף →
+      variations
+    ☐ Phase 2: Build cascading search
+      function with proper fallback logic
     ☐ Phase 3: Fix UI integration and column
       mapping
     ☐ Phase 4: Validate with real user
       scenarios
 
-      logic needed EXAMPLE ;
+  **logic needed EXAMPLE**
       plate  = '221-84-003    - always accept 
  make = 'טויוטה יפן'  if just טויוטה  exist show טויוטה 
 model = 'COROLLA CROSS' - if doesn’t  exist show טויוטה  
