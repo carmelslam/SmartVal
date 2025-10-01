@@ -1330,3 +1330,140 @@ Parts advanced   search parameters :
 Family : if doesn’t  exist show part (the next one not the simple search) = דלת
 Part name  : דלת= if doesn’t  exist show variants of the name 
 Source : if doesn’t  exist show all 
+
+
+problems :
+the search results   │
+│   now are worse, if i had sy=uccess with full   │
+│   prt nem esrier now its breking , all teh      │
+│   otehr commentsabout full model name, otehr    │
+│   quiry fields teh proboem with teh year        │
+│   normailzation teh advanced search that        │
+│   doesnt work because fof teh same problem      │
+│   that supabase expects the same exact          │
+│   expresiion instead of knowing how to          │
+│   normailze for example קורולה קרוס to קורולה,  │
+│   and 2011 for exam-le to 011 or 11, supabase   │
+│   needs to cascade also te fields themselves    │
+│   if teh exact expresion for example כנף        │
+│   אחורית שמאלית                                 │
+│    doesnt exusist then כנף אחורית if this       │
+│   doesnt exust then כנף if this doesnt exist    │
+│   then 0 , each fiktered version will have a    │
+│   nalert that explains what was ignored or      │
+│   wasnt foungd and what are the actula resukts  │
+│   displayed all this i said for the 3000        │
+│   times laready its getting tiring really .     │
+╰─────────────────────────────────────────────────╯
+  Current Issues Analysis                     │ │
+│ │                                             │ │
+│ │ 1. FINAL_CASCADING_SEARCH.sql has           │ │
+│ │ PostgreSQL column ambiguity errors -        │ │
+│ │ function parameters conflict with table     │ │
+│ │ columns                                     │ │
+│ │ 2. No field-level cascading - search fails  │ │
+│ │ if exact "קורולה קרוס" doesn't exist        │ │
+│ │ instead of falling back to "קורולה"         │ │
+│ │ 3. No year normalization - 2011 should try  │ │
+│ │ 011, then 11 variations                     │ │
+│ │ 4. No part name cascading - "כנף אחורית     │ │
+│ │ שמאלית" should fall back to "כנף אחורית"    │ │
+│ │ then "כנף"                                  │ │
+│ │ 5. Missing Hebrew field fixes - part_family │ │
+│ │  and side_position still reversed           │ │
+│ │ 6. Wrong column mapping - returns           │ │
+│ │ availability (null) instead of source       │ │
+│ │ (actual data)                               │ │
+│ │                                             │ │
+│ │ Phase 1: Fix Column Ambiguity Errors (30    │ │
+│ │ min)                                        │ │
+│ │                                             │ │
+│ │ - Fix all PostgreSQL column references in   │ │
+│ │ FINAL_CASCADING_SEARCH.sql                  │ │
+│ │ - Add proper table aliases (ci.) to all     │ │
+│ │ WHERE clauses                               │ │
+│ │ - Test deployment without errors            │ │
+│ │                                             │ │
+│ │ Phase 2: Implement True Field Cascading (2  │ │
+│ │ hours)                                      │ │
+│ │                                             │ │
+│ │ 2A: Car Parameter Cascading                 │ │
+│ │                                             │ │
+│ │ - Make: 'טויוטה יפן' → 'טויוטה' (remove     │ │
+│ │ country)                                    │ │
+│ │ - Model: 'COROLLA CROSS' → 'COROLLA' (first │ │
+│ │  word only)                                 │ │
+│ │ - Year: 2011 → 011 → 11 (multiple format    │ │
+│ │ attempts)                                   │ │
+│ │ - Trim: Full trim → partial → ignore if not │ │
+│ │  found                                      │ │
+│ │                                             │ │
+│ │ 2B: Part Parameter Cascading                │ │
+│ │                                             │ │
+│ │ - Part Name: 'כנף אחורית שמאלית' → 'כנף     │ │
+│ │ אחורית' → 'כנף'                             │ │
+│ │ - Part Family: If family not found, fall    │ │
+│ │ back to part name search                    │ │
+│ │ - Core Term Extraction: Extract base terms  │ │
+│ │ (דלת, כנף, פנס) for final fallback          │ │
+│ │                                             │ │
+│ │ 2C: Search Message System                   │ │
+│ │                                             │ │
+│ │ - Each cascade level returns descriptive    │ │
+│ │ Hebrew message                              │ │
+│ │ - "לא נמצא קורולה קרוס, מציג קורולה"        │ │
+│ │ - "לא נמצא כנף אחורית שמאלית, מציג כנף"     │ │
+│ │                                             │ │
+│ │ Phase 3: Complete Hebrew Field Fixes (45    │ │
+│ │ min)                                        │ │
+│ │                                             │ │
+│ │ - Fix remaining reversed fields:            │ │
+│ │ part_family, side_position                  │ │
+│ │ - Fix source field corruption: יפילח →      │ │
+│ │ חלופי                                       │ │
+│ │ - Update search functions to return source  │ │
+│ │ column not availability                     │ │
+│ │                                             │ │
+│ │ Phase 4: Advanced Search Integration (45    │ │
+│ │ min)                                        │ │
+│ │                                             │ │
+│ │ - Ensure advanced search uses same          │ │
+│ │ cascading logic as simple search            │ │
+│ │ - Fix parameter mapping compatibility       │ │
+│ │ between UI and search function              │ │
+│ │ - Test that advanced search doesn't break   │ │
+│ │ with multiple parameters                    │ │
+│ │                                             │ │
+│ │ Phase 5: Validation Testing (30 min)        │ │
+│ │                                             │ │
+│ │ - Test real user scenarios:                 │ │
+│ │   - "טויוטה יפן" + "קורולה קרוס" + "2011" + │ │
+│ │  "כנף אחורית שמאלית"                        │ │
+│ │   - Verify each cascade level works and     │ │
+│ │ returns appropriate messages                │ │
+│ │   - Confirm search doesn't break when       │ │
+│ │ adding multiple filters                     │ │
+│ │   - Validate that results are relevant and  │ │
+│ │ prices are reasonable                       │ │
+│ │                                             │ │
+│ │ Success Criteria                            │ │
+│ │                                             │ │
+│ │ ✅ Search works with full model names        │ │
+│ │ (קורולה קרוס)                               │ │
+│ │ ✅ Search works with any year format         │ │
+│ │ (2011/011/11)✅ Search cascades gracefully   │ │
+│ │ when exact matches fail                     │ │
+│ │ ✅ Hebrew text displays correctly            │ │
+│ │ throughout                                  │ │
+│ │ ✅ Advanced search works as reliably as      │ │
+│ │ simple search                               │ │
+│ │ ✅ Search returns source column with         │ │
+│ │ correct Hebrew values                       │ │
+│ │ ✅ Each search result includes clear         │ │
+│ │ message about what was found/ignored        │ │
+│ │                                             │ │
+│ │ This plan addresses the fundamental issue:  │ │
+│ │ the search system needs intelligent         │ │
+│ │ normalization and cascading, not just exact │ │
+│ │  matching.                                  │ │
+│ ╰──────────────────────     
