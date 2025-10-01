@@ -206,6 +206,8 @@ class PartsSearchResultsPiP {
           <th class="col-catalog">מספר קטלוגי</th>
           <th class="col-description">תיאור</th>
           <th class="col-family">משפחת חלק</th>
+          <th class="col-model">דגם</th>
+          <th class="col-year">שנה</th>
           <th class="col-type">סוג</th>
           <th class="col-price">מחיר</th>
           <th class="col-date">תאריך</th>
@@ -218,6 +220,11 @@ class PartsSearchResultsPiP {
       const price = item.price ? parseFloat(item.price) : null;
       const formattedPrice = price ? `₪${price.toLocaleString('he-IL')}` : 'לא זמין';
       const versionDate = item.version_date ? new Date(item.version_date).toLocaleDateString('he-IL') : '';
+      
+      // Extract new fields for better identification
+      const modelDisplay = item.model_display || item.model || 'לא מוגדר';
+      const extractedYear = item.extracted_year || 'לא מוגדר';
+      const partFamily = item.part_family || 'לא מוגדר';
       
       return `
         <tr class="result-row ${isSelected ? 'selected' : ''}" data-item-id="${item.id}">
@@ -233,7 +240,9 @@ class PartsSearchResultsPiP {
           <td class="col-supplier" title="${item.supplier_name || ''}">${item.supplier_name || 'לא זמין'}</td>
           <td class="col-catalog catalog-number" title="${item.pcode || ''}">${item.pcode || 'לא זמין'}</td>
           <td class="col-description part-description" title="${item.cat_num_desc || ''}">${item.cat_num_desc || 'לא זמין'}</td>
-          <td class="col-family" title="${item.part_family || ''}">${item.part_family || 'לא זמין'}</td>
+          <td class="col-family" title="${partFamily}">${partFamily}</td>
+          <td class="col-model" title="${modelDisplay}">${modelDisplay}</td>
+          <td class="col-year" title="${extractedYear}">${extractedYear}</td>
           <td class="col-type">${item.availability || 'מקורי'}</td>
           <td class="col-price price-cell" title="${formattedPrice}">${formattedPrice}</td>
           <td class="col-date">${versionDate}</td>
@@ -1416,8 +1425,10 @@ class PartsSearchResultsPiP {
 
       .col-supplier { width: 120px; }
       .col-catalog { width: 120px; }
-      .col-description { width: 200px; }
-      .col-family { width: 100px; }
+      .col-description { width: 180px; }
+      .col-family { width: 120px; }
+      .col-model { width: 120px; }
+      .col-year { width: 80px; }
       .col-oem { width: 120px; }
       .col-type { width: 80px; }
       .col-price { width: 100px; }
