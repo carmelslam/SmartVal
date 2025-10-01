@@ -7,11 +7,24 @@
 SELECT '=== FINAL CASCADING SEARCH DEPLOYMENT ===' as section;
 
 -- ============================================================================
--- DROP EXISTING FUNCTIONS
+-- DROP EXISTING FUNCTIONS (ALL OVERLOADS)
 -- ============================================================================
-DROP FUNCTION IF EXISTS cascading_parts_search CASCADE;
-DROP FUNCTION IF EXISTS simple_parts_search CASCADE;
-DROP FUNCTION IF EXISTS advanced_parts_search CASCADE;
+
+-- Drop all cascading function overloads
+DO $$
+DECLARE
+    func_record RECORD;
+BEGIN
+    FOR func_record IN 
+        SELECT proname, pg_get_function_identity_arguments(oid) as args
+        FROM pg_proc 
+        WHERE proname IN ('cascading_parts_search', 'simple_parts_search', 'advanced_parts_search', 'smart_parts_search')
+          AND pronamespace = (SELECT oid FROM pg_namespace WHERE nspname = 'public')
+    LOOP
+        EXECUTE 'DROP FUNCTION IF EXISTS ' || func_record.proname || '(' || func_record.args || ') CASCADE';
+        RAISE NOTICE 'Dropped function: %(%)', func_record.proname, func_record.args;
+    END LOOP;
+END $$;
 
 -- ============================================================================
 -- MAIN CASCADING SEARCH FUNCTION
