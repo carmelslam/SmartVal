@@ -188,9 +188,9 @@ $$ LANGUAGE plpgsql;
 
 -- Simple vehicle search
 CREATE OR REPLACE FUNCTION search_by_vehicle(
-    make TEXT,
-    model TEXT DEFAULT NULL,
-    year TEXT DEFAULT NULL
+    vehicle_make TEXT,
+    vehicle_model TEXT DEFAULT NULL,
+    vehicle_year TEXT DEFAULT NULL
 )
 RETURNS TABLE (
     id UUID, cat_num_desc TEXT, supplier_name TEXT, pcode TEXT, price NUMERIC,
@@ -200,17 +200,17 @@ RETURNS TABLE (
 ) AS $$
 BEGIN
     RETURN QUERY SELECT * FROM smart_parts_search(
-        make_param := make,
-        model_param := model,
-        free_query_param := year
+        make_param := vehicle_make,
+        model_param := vehicle_model,
+        free_query_param := vehicle_year
     );
 END;
 $$ LANGUAGE plpgsql;
 
 -- Simple part search
 CREATE OR REPLACE FUNCTION search_by_part(
-    part_name TEXT,
-    make TEXT DEFAULT NULL
+    search_part_name TEXT,
+    search_make TEXT DEFAULT NULL
 )
 RETURNS TABLE (
     id UUID, cat_num_desc TEXT, supplier_name TEXT, pcode TEXT, price NUMERIC,
@@ -220,8 +220,8 @@ RETURNS TABLE (
 ) AS $$
 BEGIN
     RETURN QUERY SELECT * FROM smart_parts_search(
-        make_param := make,
-        free_query_param := part_name
+        make_param := search_make,
+        free_query_param := search_part_name
     );
 END;
 $$ LANGUAGE plpgsql;
