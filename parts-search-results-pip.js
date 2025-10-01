@@ -1360,7 +1360,7 @@ class PartsSearchResultsPiP {
 
       .results-container {
         flex: 1;
-        overflow: hidden;
+        overflow: auto;
         padding: 0 20px;
       }
 
