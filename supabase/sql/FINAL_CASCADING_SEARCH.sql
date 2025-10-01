@@ -100,8 +100,8 @@ BEGIN
     IF make_param IS NOT NULL AND make_param != '' THEN
         -- First try exact match
         SELECT COUNT(*) INTO results_count 
-        FROM catalog_items 
-        WHERE make = make_param;
+        FROM catalog_items ci
+        WHERE ci.make = make_param;
         
         IF results_count = 0 THEN
             -- Try removing country suffix (יפן, גרמניה, etc.)
@@ -109,8 +109,8 @@ BEGIN
             
             -- Check if fallback make exists
             SELECT COUNT(*) INTO results_count 
-            FROM catalog_items 
-            WHERE make = actual_make;
+            FROM catalog_items ci
+            WHERE ci.make = actual_make;
             
             IF results_count > 0 THEN
                 current_level := 'MAKE_FALLBACK';
@@ -132,16 +132,16 @@ BEGIN
     -- Handle model fallback: 'COROLLA CROSS' → partial match
     IF model_param IS NOT NULL AND model_param != '' AND actual_make IS NOT NULL THEN
         SELECT COUNT(*) INTO results_count 
-        FROM catalog_items 
-        WHERE make = actual_make AND model = model_param;
+        FROM catalog_items ci
+        WHERE ci.make = actual_make AND ci.model = model_param;
         
         IF results_count = 0 THEN
             -- Try partial model match (first word)
             actual_model := SPLIT_PART(model_param, ' ', 1);
             
             SELECT COUNT(*) INTO results_count 
-            FROM catalog_items 
-            WHERE make = actual_make AND model ILIKE '%' || actual_model || '%';
+            FROM catalog_items ci
+            WHERE ci.make = actual_make AND ci.model ILIKE '%' || actual_model || '%';
             
             IF results_count = 0 THEN
                 current_level := 'MODEL_FALLBACK_TO_MAKE';
@@ -225,9 +225,9 @@ BEGIN
     IF part_family_param IS NOT NULL AND part_family_param != '' THEN
         -- Check if family exists, fallback to part name if not
         SELECT COUNT(*) INTO results_count 
-        FROM catalog_items 
+        FROM catalog_items ci
         WHERE (car_filters = '' OR (car_filters != '' AND actual_make IS NOT NULL))
-          AND part_family ILIKE '%' || part_family_param || '%';
+          AND ci.part_family ILIKE '%' || part_family_param || '%';
         
         IF results_count = 0 AND part_name_param IS NOT NULL THEN
             current_level := 'FAMILY_FALLBACK_TO_PART';
