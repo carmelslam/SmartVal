@@ -1467,3 +1467,21 @@ the search results   │
 │ │ normalization and cascading, not just exact │ │
 │ │  matching.                                  │ │
 │ ╰──────────────────────     
+
+⏺ Update Todos
+  ⎿ ☐ Phase 1: Fix PostgreSQL column          
+      ambiguity errors in 
+      FINAL_CASCADING_SEARCH.sql
+    ☐ Phase 2A: Implement car parameter
+      cascading (make, model, year, trim)
+    ☐ Phase 2B: Implement part parameter
+      cascading (כנף אחורית שמאלית → כנף
+      אחורית → כנף)
+    ☐ Phase 2C: Add cascading search messages
+      in Hebrew
+    ☐ Phase 3: Fix remaining Hebrew fields
+      and source column mapping
+    ☐ Phase 4: Ensure advanced search uses
+      same cascading logic
+    ☐ Phase 5: Test real user scenarios with
+      full cascading
