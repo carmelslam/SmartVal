@@ -87,6 +87,24 @@ Part name
 Source 
 Quantity 
 
+parts seacrh structure and hirerchy :
+plate  = '221-84-003    - always accept 
+make = 'טויוטה יפן'  if just טויוטה  exist show טויוטה  
+model = 'COROLLA CROSS' - if doesn’t  exist show טויוטה  
+model_code = 'ZVG12L-KHXGBW' = if doesn’t  exist show COROLLA CROSS' or/ and טויוטה 
+actual_trim = 'ADVENTURE' =  if doesn’t  exist show or/and ZVG12L-KHXGBW or/and COROLLA CROSS' or/ and טויוטה 
+year_from = 2022 if doesn’t  exist show  טויוטה 
+engine_code = '2ZR' = if doesn’t  exist ignore 
+engine_type = 'בנזין' = if doesn’t  exist ignore 
+vin = 'JTNADACB20J001538' = if doesn’t  exist ignore 
+Parts simple  search parameters 
+Part name : כנף =  if doesn’t  exist show variants of the name 
+Parts advanced   search parameters :
+Family : if doesn’t  exist show part (the next one not the simple search) = דלת
+Part name  : דלת= if doesn’t  exist show variants of the name 
+Source : if doesn’t  exist show all 
+
+
 
 NOTE - not all fields are mandatory, supabase needs to process what it actually gets and not what it expects 
        The pact number when in workflow is a mandatory field for the query , its purpose is to assign search and selected and required to plate number, supabase needs to accept this   
@@ -1243,251 +1261,155 @@ Test Query: Toyota + Wing parts
 4. **Rebuild search logic** - Both systems need fundamental fixes
 5. **Test with real user scenarios** - Not just technical queries
 
-Phase 1: Diagnostic Analysis (30 min)       │ │
-│ │                                             │ │
-│ │ 1. Test current search behavior with real   │ │
-│ │ user scenarios:                             │ │
-│ │   - Simple: "טויוטה" + "כנף"                │ │
-│ │   - Complex: "טויוטה" + "קורולה קרוס" +     │ │
-│ │ "2011" + "כנף"                              │ │
-│ │   - Document exactly what breaks and why    │ │
-│ │ 2. Analyze database structure for           │ │
-│ │ normalization needs:                        │ │
-│ │   - Check year format variations            │ │
-│ │ (2011/011/11)                               │ │
-│ │   - Check model name patterns               │ │
-│ │   - Identify fields that need flexible      │ │
-│ │ matching                                    │ │
-│ │                                             │ │
-│ │ Phase 2: Search Logic Rebuild (2 hours)     │ │
-│ │                                             │ │
-│ │ 1. Create new flexible search function      │ │
-│ │ with:                                       │ │
-│ │   - Partial model matching (model ILIKE     │ │
-│ │ '%קורולה%')                                 │ │
-│ │   - Year normalization (2011 → 011, 11)     │ │
-│ │   - Multiple term handling for model names  │ │
-│ │   - Fallback logic when exact match fails   │ │
-│ │ 2. Fix Hebrew text handling:                │ │
-│ │   - Ensure consistent character direction   │ │
-│ │   - Fix word order in descriptions          │ │
-│ │   - Proper family name display              │ │
-│ │                                             │ │
-│ │ Phase 3: UI Integration Fix (1 hour)        │ │
-│ │                                             │ │
-│ │ 1. Fix column mapping:                      │ │
-│ │   - Return correct fields (source not       │ │
-│ │ availability)                               │ │
-│ │   - Add missing year column                 │ │
-│ │   - Proper part name vs family              │ │
-│ │ identification                              │ │
-│ │ 2. Test UI display:                         │ │
-│ │   - Verify Hebrew text displays correctly   │ │
-│ │   - Check all columns show proper data      │ │
-│ │   - Ensure PiP window works correctly       │ │
-│ │                                             │ │
-│ │ Phase 4: Validation (30 min)                │ │
-│ │                                             │ │
-│ │ 1. Test real user scenarios:                │ │
-│ │   - Full model names work                   │ │
-│ │   - Year variations work                    │ │
-│ │   - Advanced search matches simple search   │ │
-│ │   - All fields can be used together         │ │
-│ │                                             │ │
-│ │ This plan focuses on the fundamental issues │ │
-│ │  rather than minor fixes.  
-
-    ☐ Phase 1: Diagnostic Analysis with real  
-      cascading scenarios
-    ☐ Test cascading fallback: make טויוטה
-      יפן → טויוטה
-    ☐ Test cascading fallback: model COROLLA
-      CROSS → טויוטה
-    ☐ Test cascading fallback: model_code →
-      COROLLA CROSS → טויוטה
-    ☐ Test part name variants: כנף →
-      variations
-    ☐ Phase 2: Build cascading search
-      function with proper fallback logic
-    ☐ Phase 3: Fix UI integration and column
-      mapping
-    ☐ Phase 4: Validate with real user
-      scenarios
+Diagnostic Report & Action Plan: Search System
+Objective:
+Identify why current search queries fail, rebuild the logic to support normalization and cascading, and validate results in real user scenarios.
+Phase 1: Diagnostic Analysis (30 min)
+Tasks:
+Test Current Search Behavior
+Run simple search: "טויוטה" + "כנף".
+Run complex search: "טויוטה" + "קורולה קרוס" + "2011" + "כנף".
+Document exactly where and why the queries fail (e.g., year mismatch, no fallback, Hebrew direction issues).
+Analyze Database Normalization Needs
+Review year formats stored vs. user inputs: 2011 / 011 / 11.
+Identify variations in model names: full vs partial (e.g., "קורולה קרוס" vs "קורולה").
+Check which fields must support flexible / fuzzy matching rather than exact equality.
+Phase 2: Search Logic Rebuild (2 hours)
+Tasks:
+Create Flexible Search Function with:
+Partial model matching: support ILIKE '%קורולה%'.
+Year normalization: input 2011 should automatically test 011 and 11.
+Multiple-term handling: "COROLLA CROSS" should match "COROLLA" when full string fails.
+Cascading fallback logic: if exact match fails, fall back to reduced forms instead of returning empty.
+Fix Hebrew Text Handling
+Ensure consistent direction (RTL/LTR).
+Correct reversed words in descriptions.
+Ensure family names display in proper Hebrew order.
+Phase 3: UI Integration Fix (1 hour)
+Tasks:
+Correct Column Mapping
+Ensure source column is returned instead of empty availability.
+Add missing year column for filtering and display.
+Distinguish between part name and part family clearly.
+Test UI Display
+Verify all Hebrew text is shown in the correct order.
+Confirm all columns display the right values.
+Ensure PiP (picture-in-picture) search results display correctly.
+Phase 4: Validation (30 min)
+Tasks:
+Run End-to-End Tests with Real Scenarios
+Confirm full model names ("קורולה קרוס") produce results.
+Confirm year inputs in any format (2011, 011, 11) produce results.
+Verify advanced search cascades the same way as simple search.
+Confirm multiple filters (make + model + year + part) work together without breaking.
+Success Criteria
+✅ Normalization works for years, models, and trims.
+✅ Cascading search logic provides results instead of failing.
+✅ Hebrew fields display correctly without reversal.
+✅ Correct data columns are returned and mapped to UI.
+✅ Advanced and simple search behave consistently.
+✅ Clear results for users, even when fallbacks are applied.
+🔹 Todo Checklist
+ Phase 1: Run diagnostic analysis with cascading scenarios
+ Test fallback: "טויוטה יפן" → "טויוטה"
+ Test fallback: "COROLLA CROSS" → "COROLLA"
+ Test fallback: model code → model → make
+ Test part name cascading: "כנף אחורית שמאלית" → "כנף אחורית" → "כנף"
+ Phase 2: Build cascading search function with fallback logic
+ Phase 3: Fix UI integration and column mapping
+ Phase 4: Validate with real user scenarios
 
   **logic needed EXAMPLE**
-      plate  = '221-84-003    - always accept 
- make = 'טויוטה יפן'  if just טויוטה  exist show טויוטה 
-model = 'COROLLA CROSS' - if doesn’t  exist show טויוטה  
- model_code = 'ZVG12L-KHXGBW' = if doesn’t  exist show COROLLA CROSS' or/ and טויוטה 
-actual_trim = 'ADVENTURE' =  if doesn’t  exist show or/and ZVG12L-KHXGBW or/and COROLLA CROSS' or/ and טויוטה 
-year_from = 2022 if doesn’t  exist show  טויוטה 
+  the search fiktering in supabase is a cascaded lodgic - the cascade logic is between paramaters (year, model and so on) and inside teh paramter itself (כנף אחורית שמאלית) full query -> ignore last word->ignore second word ->...if the main word כנף doesnt exist return "not found: if results were filtered and terms ignored , return alert that couldnt find for example  שמאלית and desplaying כנף אחורית 
+plate  = '221-84-003    - always accept 
+ make = 'טויוטה יפן'  if just טויוטה  exist show טויוטה  (return any resuts that include one or more of the query text ) if make is not found return 0 
+model = 'COROLLA CROSS' - if doesn’t  exist show טויוטה   (return any resuts that include one or more of the query text )
+ model_code = 'ZVG12L-KHXGBW' = if doesn’t  exist show COROLLA CROSS' or/ and טויוטה (return any resuts that include full code or everything before -)
+actual_trim = 'ADVENTURE' =  if doesn’t  exist show or/and ZVG12L-KHXGBW or/and COROLLA CROSS' or/ and טויוטה (return any resuts that include one or more of the query text )
+year_from = 2022 if doesn’t  exist show  טויוטה (normalize : If the year is before 2010 → take only the last two digits (no leading 0).
+1989 → 89
+2005 → 05
+2009 → 09
+If the year is 2010 or later → prefix a 0 + last two digits (so token is 3 chars).
+2010 → 010
+2013 → 013
+2022 → 022
+2025 → 025)
 engine_code = '2ZR' = if doesn’t  exist ignore 
 engine_type = 'בנזין' = if doesn’t  exist ignore 
 vin = 'JTNADACB20J001538' = if doesn’t  exist ignore 
+
+the parts search :
 Parts simple  search parameters 
-Part name : כנף =  if doesn’t  exist show variants of the name 
-Parts advanced   search parameters :
-Family : if doesn’t  exist show part (the next one not the simple search) = דלת
-Part name  : דלת= if doesn’t  exist show variants of the name 
-Source : if doesn’t  exist show all 
+Part name : כנף =  if doesn’t  exist show variants of the name (return any resuts that include one or more of the query text )
+
+Parts advanced search parameters :
+Family : if doesn’t  exist show part (the next one not the simple search) = דלת (return any resuts that include one or more of the query text )
+Part name  : דלת= if doesn’t  exist show variants of the name (return any resuts that include one or more of the query text )
+Source : if doesn’t  exist show all (return any resuts that include one or more of the query text )
 
 
-problems :
-the search results   │
-│   now are worse, if i had sy=uccess with full   │
-│   prt nem esrier now its breking , all teh      │
-│   otehr commentsabout full model name, otehr    │
-│   quiry fields teh proboem with teh year        │
-│   normailzation teh advanced search that        │
-│   doesnt work because fof teh same problem      │
-│   that supabase expects the same exact          │
-│   expresiion instead of knowing how to          │
-│   normailze for example קורולה קרוס to קורולה,  │
-│   and 2011 for exam-le to 011 or 11, supabase   │
-│   needs to cascade also te fields themselves    │
-│   if teh exact expresion for example כנף        │
-│   אחורית שמאלית                                 │
-│    doesnt exusist then כנף אחורית if this       │
-│   doesnt exust then כנף if this doesnt exist    │
-│   then 0 , each fiktered version will have a    │
-│   nalert that explains what was ignored or      │
-│   wasnt foungd and what are the actula resukts  │
-│   displayed all this i said for the 3000        │
-│   times laready its getting tiring really .     │
-╰─────────────────────────────────────────────────╯
-  Current Issues Analysis                     │ │
-│ │                                             │ │
-│ │ 1. FINAL_CASCADING_SEARCH.sql has           │ │
-│ │ PostgreSQL column ambiguity errors -        │ │
-│ │ function parameters conflict with table     │ │
-│ │ columns                                     │ │
-│ │ 2. No field-level cascading - search fails  │ │
-│ │ if exact "קורולה קרוס" doesn't exist        │ │
-│ │ instead of falling back to "קורולה"         │ │
-│ │ 3. No year normalization - 2011 should try  │ │
-│ │ 011, then 11 variations                     │ │
-│ │ 4. No part name cascading - "כנף אחורית     │ │
-│ │ שמאלית" should fall back to "כנף אחורית"    │ │
-│ │ then "כנף"                                  │ │
-│ │ 5. Missing Hebrew field fixes - part_family │ │
-│ │  and side_position still reversed           │ │
-│ │ 6. Wrong column mapping - returns           │ │
-│ │ availability (null) instead of source       │ │
-│ │ (actual data)                               │ │
-│ │                                             │ │
-│ │ Phase 1: Fix Column Ambiguity Errors (30    │ │
-│ │ min)                                        │ │
-│ │                                             │ │
-│ │ - Fix all PostgreSQL column references in   │ │
-│ │ FINAL_CASCADING_SEARCH.sql                  │ │
-│ │ - Add proper table aliases (ci.) to all     │ │
-│ │ WHERE clauses                               │ │
-│ │ - Test deployment without errors            │ │
-│ │                                             │ │
-│ │ Phase 2: Implement True Field Cascading (2  │ │
-│ │ hours)                                      │ │
-│ │                                             │ │
-│ │ 2A: Car Parameter Cascading                 │ │
-│ │                                             │ │
-│ │ - Make: 'טויוטה יפן' → 'טויוטה' (remove     │ │
-│ │ country)                                    │ │
-│ │ - Model: 'COROLLA CROSS' → 'COROLLA' (first │ │
-│ │  word only)                                 │ │
-│ │ - Year: 2011 → 011 → 11 (multiple format    │ │
-│ │ attempts)                                   │ │
-│ │ - Trim: Full trim → partial → ignore if not │ │
-│ │  found                                      │ │
-│ │                                             │ │
-│ │ 2B: Part Parameter Cascading                │ │
-│ │                                             │ │
-│ │ - Part Name: 'כנף אחורית שמאלית' → 'כנף     │ │
-│ │ אחורית' → 'כנף'                             │ │
-│ │ - Part Family: If family not found, fall    │ │
-│ │ back to part name search                    │ │
-│ │ - Core Term Extraction: Extract base terms  │ │
-│ │ (דלת, כנף, פנס) for final fallback          │ │
-│ │                                             │ │
-│ │ 2C: Search Message System                   │ │
-│ │                                             │ │
-│ │ - Each cascade level returns descriptive    │ │
-│ │ Hebrew message                              │ │
-│ │ - "לא נמצא קורולה קרוס, מציג קורולה"        │ │
-│ │ - "לא נמצא כנף אחורית שמאלית, מציג כנף"     │ │
-│ │                                             │ │
-│ │ Phase 3: Complete Hebrew Field Fixes (45    │ │
-│ │ min)                                        │ │
-│ │                                             │ │
-│ │ - Fix remaining reversed fields:            │ │
-│ │ part_family, side_position                  │ │
-│ │ - Fix source field corruption: יפילח →      │ │
-│ │ חלופי                                       │ │
-│ │ - Update search functions to return source  │ │
-│ │ column not availability                     │ │
-│ │                                             │ │
-│ │ Phase 4: Advanced Search Integration (45    │ │
-│ │ min)                                        │ │
-│ │                                             │ │
-│ │ - Ensure advanced search uses same          │ │
-│ │ cascading logic as simple search            │ │
-│ │ - Fix parameter mapping compatibility       │ │
-│ │ between UI and search function              │ │
-│ │ - Test that advanced search doesn't break   │ │
-│ │ with multiple parameters                    │ │
-│ │                                             │ │
-│ │ Phase 5: Validation Testing (30 min)        │ │
-│ │                                             │ │
-│ │ - Test real user scenarios:                 │ │
-│ │   - "טויוטה יפן" + "קורולה קרוס" + "2011" + │ │
-│ │  "כנף אחורית שמאלית"                        │ │
-│ │   - Verify each cascade level works and     │ │
-│ │ returns appropriate messages                │ │
-│ │   - Confirm search doesn't break when       │ │
-│ │ adding multiple filters                     │ │
-│ │   - Validate that results are relevant and  │ │
-│ │ prices are reasonable                       │ │
-│ │                                             │ │
-│ │ Success Criteria                            │ │
-│ │                                             │ │
-│ │ ✅ Search works with full model names        │ │
-│ │ (קורולה קרוס)                               │ │
-│ │ ✅ Search works with any year format         │ │
-│ │ (2011/011/11)✅ Search cascades gracefully   │ │
-│ │ when exact matches fail                     │ │
-│ │ ✅ Hebrew text displays correctly            │ │
-│ │ throughout                                  │ │
-│ │ ✅ Advanced search works as reliably as      │ │
-│ │ simple search                               │ │
-│ │ ✅ Search returns source column with         │ │
-│ │ correct Hebrew values                       │ │
-│ │ ✅ Each search result includes clear         │ │
-│ │ message about what was found/ignored        │ │
-│ │                                             │ │
-│ │ This plan addresses the fundamental issue:  │ │
-│ │ the search system needs intelligent         │ │
-│ │ normalization and cascading, not just exact │ │
-│ │  matching.                                  │ │
-│ ╰──────────────────────     
-
-⏺ Update Todos
-  ⎿ ☐ Phase 1: Fix PostgreSQL column          
-      ambiguity errors in 
-      FINAL_CASCADING_SEARCH.sql
-    ☐ Phase 2A: Implement car parameter
-      cascading (make, model, year, trim)
-    ☐ Phase 2B: Implement part parameter
-      cascading (כנף אחורית שמאלית → כנף
-      אחורית → כנף)
-    ☐ Phase 2C: Add cascading search messages
-      in Hebrew
-    ☐ Phase 3: Fix remaining Hebrew fields
-      and source column mapping
-    ☐ Phase 4: Ensure advanced search uses
-      same cascading logic
-    ☐ Phase 5: Test real user scenarios with
-      full cascading
-
----
-
+Cascading Search Fixes & Normalization
+Problem Summary:
+The search system currently produces poor results. Queries that used to succeed with full part names or model names now fail because the system only supports exact matches. Supabase is expecting exact string equality instead of normalizing or cascading through alternative expressions.
+Key Issues to Solve:
+Column Ambiguity Errors
+FINAL_CASCADING_SEARCH.sql has PostgreSQL errors because function parameters and table columns share the same names.
+Table aliases are missing, leading to ambiguity in WHERE clauses.
+Missing Field-Level Cascading
+Searches break if the exact model string is not found.
+Example: searching for “קורולה קרוס” should fall back to “קורולה” if the full expression isn’t present.
+No fallback exists for trim or other details.
+Year Normalization Fails
+Input year formats like 2011 aren’t matched to 011 or 11 as used in the catalog.
+Need a normalization layer that automatically tries all valid formats.
+Part Name Cascading
+Example: “כנף אחורית שמאלית” should cascade:
+Full expression → כנף אחורית שמאלית
+If no match → כנף אחורית
+If still no match → כנף
+If nothing found → return no results with explanation.
+Hebrew Field Issues
+Certain fields (part_family, side_position) are reversed or corrupted.
+The source column is ignored, and null availability is being returned instead.
+Advanced Search Broken
+Advanced search does not reuse the same cascading and normalization logic as the simple search.
+Multiple filters together often break results.
+What the Agent Must Implement:
+Phase 1: Fix column ambiguity
+Add proper table aliases to every SQL reference.
+Ensure function parameters don’t conflict with column names.
+Phase 2: True Cascading Logic
+Car parameters:
+Make: “טויוטה יפן” → “טויוטה”
+Model: “COROLLA CROSS” → “COROLLA”
+Year: 2011 → 011 → 11
+Trim: try full → partial → ignore
+Part parameters:
+Part Name cascade: “כנף אחורית שמאלית” → “כנף אחורית” → “כנף”
+Part Family fallback: if missing, fallback to part name search
+Core term extraction for last-resort matches (דלת, כנף, פנס).
+Phase 3: Normalization & Fixes
+Normalize Hebrew text so direction and spelling are consistent.
+Correct reversed or corrupted fields (חליפי etc.).
+Ensure source column is returned, not null availability.
+Phase 4: Advanced Search Integration
+Apply the same cascading and normalization rules to advanced search as to simple search.
+Ensure multiple filters work together without breaking.
+Phase 5: Testing & Messages
+Every fallback step should show a clear Hebrew message:
+“לא נמצא קורולה קרוס, מציג קורולה”
+“לא נמצא כנף אחורית שמאלית, מציג כנף אחורית”
+Test realistic multi-filter searches (make + model + year + part).
+Validate that results are relevant, and prices make sense.
+Success Criteria:
+✅ Full model names (“קורולה קרוס”) return results.
+✅ Any year input (2011 / 011 / 11) works.
+✅ Search cascades intelligently instead of failing on exact match.
+✅ Hebrew fields are displayed correctly.
+✅ Advanced search behaves consistently with simple search.
+✅ Each result shows what was matched and what was ignored.
+✅ System returns source data fields, not null placeholders.
 # COMPREHENSIVE HANDOVER SUMMARY FOR NEXT AGENT
 ## SmartVal Parts Search System - Complete Status Report
 
@@ -1917,3 +1839,4 @@ Test: All parameters can be used together without breaking search
 *End of Comprehensive Handover Summary*
 *Date: October 1, 2025*
 *Agent: Claude (reached capacity limit)*
+
