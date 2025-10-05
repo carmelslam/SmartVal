@@ -24,18 +24,25 @@ BEGIN
     END IF;
     
     -- Detect patterns that indicate FULL string reversal
-    -- These patterns have Hebrew at END and punctuation/numbers at START (backwards)
+    -- Look for reversed patterns that appear at START of string
     RETURN (
-        -- Pattern: starts with quote/apostrophe followed by Hebrew letters
-        (input_text ~ '^[''"`][\u0590-\u05FF]') OR
-        -- Pattern: Has " - מ" or " - ימ" or " - שמ" at start (reversed directional indicators)
-        (input_text LIKE '%" - מ%' AND position('" - מ' IN input_text) < 20) OR
-        (input_text LIKE '%" - ימ%' AND position('" - ימ' IN input_text) < 20) OR
-        (input_text LIKE '%" - שמ%' AND position('" - שמ' IN input_text) < 20) OR
-        -- Pattern: Ends with dash-space-year (e.g., "- 98-00") which should be at start
-        (input_text ~ '- \d{2}-\d{2}[\u0590-\u05FF]') OR
-        -- Pattern: Hebrew word followed by apostrophe-space-Hebrew (backwards)
-        (input_text ~ '[\u0590-\u05FF]+'' [\u0590-\u05FF]+')
+        -- Pattern 1: Starts with reversed "גריל" = "לירג"
+        input_text LIKE 'לירג %' OR
+        -- Pattern 2: Starts with reversed "תומך" = "ךמות"
+        input_text LIKE 'ךמות %' OR
+        -- Pattern 3: Starts with reversed common words
+        input_text LIKE 'ריצ %' OR        -- reversed "ציר"
+        input_text LIKE 'טושיק %' OR      -- reversed "קישוט"
+        input_text LIKE 'הסכמ %' OR       -- reversed "מכסה"
+        -- Pattern 4: Has year at END (wrong - should be at start after model)
+        input_text ~ '\d{2}-\d{2}$' OR
+        -- Pattern 5: Ends with model name (wrong - model should be in middle)
+        input_text ~ 'הלורוק \d{2}-\d{2}$' OR
+        -- Pattern 6: Has "(reversed parentheses)" like "(םלשומ)" 
+        input_text LIKE '%(םלשומ)%' OR     -- reversed "(מושלם)"
+        input_text LIKE '%(ראופמ)%' OR     -- reversed "(מפואר)"
+        -- Pattern 7: Contains reversed "ניקלים" = "םילקינ"
+        input_text LIKE '%םילקינ%'
     );
 END;
 $$;
