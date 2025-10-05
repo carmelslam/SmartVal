@@ -1,4 +1,5 @@
 Date of original document : 30.9.2025
+Last Updated: 5.10.2025 - Session 5 Recovery & Diagnostics
 
 Description of required functionality:
 The system has a parts search module . This module has multiple search options paths. 
@@ -3690,3 +3691,269 @@ Total:     16 SQL files
 
 ---
 *Status: 90% Complete*
+---
+---
+
+## SESSION 5: RECOVERY & SYSTEMATIC DIAGNOSTICS
+**Date**: October 5, 2025  
+**Agent**: Claude (Sonnet 4.5)  
+**Status**: IN PROGRESS  
+**Purpose**: Identify what's WORKING vs BROKEN, organize SQL by phase, fix critical issues
+
+### CONTEXT AT SESSION START
+
+**User Report - Critical Issues**:
+1. Part description showing **backwards word order** (words, not characters)
+2. Year showing reversed (810 instead of 018)
+3. Year range not showing in UI (displays 2020 instead of 018-020)
+4. Source field sometimes showing reversed Hebrew
+5. Advanced search not working properly
+6. Search expects exact UI expressions (doesn't handle synonyms/abbreviations)
+
+**Discovery - Documentation vs Reality Gap**:
+- Session 4 documentation claimed work was "completed" 
+- Reality: SQL files for Session 4 fixes DO NOT EXIST
+- Synonym search SQL: ❌ Never created
+- Year reversal fix SQL: ❌ Never created
+- System is actually at Session 3 state, not Session 4
+
+**SQL Organization Crisis**:
+- 200+ SQL files in single folder
+- ALL files are deployed to Supabase
+- UNKNOWN which are working, broken, obsolete, or overwritten
+- No version control or phase tracking
+- Cannot determine actual system state
+
+### TASK 1: DIAGNOSTIC & ORGANIZATION (IN PROGRESS)
+
+**Actions Taken**:
+
+1. **Created Phase-Based Folder Structure**:
+   ```
+   /supabase/sql/
+   ├── Phase1_Foundation/
+   ├── Phase2_DualWrite/
+   ├── Phase3_Realtime/
+   ├── Phase4_Parts_Search_2025-10-05/  ← Current work
+   └── Obsolete_Archive/
+   ```
+
+2. **Created Comprehensive Diagnostic SQL**:
+   - File: `Phase4_Parts_Search_2025-10-05/DIAGNOSTIC_COMPLETE_STATE_2025-10-05.sql`
+   - Version: Enhanced from previous diagnostic
+   - Purpose: Test ALL reported issues systematically
+   
+   **Diagnostic Sections**:
+   - Section 1: Search function signature check
+   - Section 2: Triggers on catalog_items
+   - Section 3: Data quality metrics
+   - Section 4: **Word order check** (20 sample records)
+   - Section 5: **Year reversal check** (pattern analysis)
+   - Section 6: **Source field check** (reversed Hebrew detection)
+   - Section 7: Search functionality tests (simple, advanced, cascade)
+   - Section 8: Sample actual results for UI inspection
+
+**Next Steps**:
+- User deploys diagnostic SQL in Supabase
+- User sends back ALL results
+- Agent analyzes results to identify root causes
+- Agent creates targeted fix SQL for each issue
+- One issue at a time: deploy → test → confirm → document → next
+
+**Documentation Approach**:
+- Each fix attempt logged here with:
+  - Date & version
+  - What was the issue
+  - What logic/principle was used
+  - SQL file name
+  - Actual result from user testing
+  - Whether it WORKED or BROKE
+
+**SQL File Lifecycle**:
+- Working SQL → stays in Phase folder
+- Obsolete SQL → moved to Obsolete_Archive/
+- Each phase has its own folder for tracking
+
+---
+
+### WAITING FOR USER: Diagnostic Results
+
+**Action Required**: 
+Run `DIAGNOSTIC_COMPLETE_STATE_2025-10-05.sql` in Supabase SQL Editor and send back ALL results (all 8 sections).
+
+---
+
+*Session Status: Diagnostic stage - awaiting results*  
+*SQL Files Created This Session: 1 (diagnostic)*  
+*Issues Identified: 6*  
+*Issues Fixed: 0 (waiting for diagnostic results)*
+
+
+---
+
+### TASK 1.1: SQL Organization Setup
+**Date**: October 5, 2025  
+**Version**: v1  
+**SQL Files**: N/A (folder organization)
+
+**Task Purpose**:
+Organize 215 SQL files into phase-based structure to track which SQL belongs to which phase, what's working, and what's obsolete. This prevents confusion about deployed state.
+
+**What Was Done**:
+1. Created folder structure:
+   - `/supabase/sql/Phase1_Foundation/` - Phase 1 SQL files
+   - `/supabase/sql/Phase2_DualWrite/` - Phase 2 SQL files  
+   - `/supabase/sql/Phase3_Realtime/` - Phase 3 SQL files
+   - `/supabase/sql/Phase4_Parts_Search_2025-10-05/` - Current phase work
+   - `/supabase/sql/Unassigned_SQL/` - All 215 existing SQL files (starting point)
+   - `/supabase/sql/Obsolete_Archive/` - Broken/obsolete SQL
+
+2. Moved all 215 SQL files to `Unassigned_SQL/` folder
+
+**Logic & Principles**:
+- All SQL are already deployed to Supabase
+- Need to identify which are WORKING vs BROKEN vs OBSOLETE
+- As we work on issues, we'll move relevant SQL to appropriate phase folder
+- Obsolete SQL moves to archive
+- This prevents losing track of working state
+
+**Result**: ✅ **COMPLETED**
+- 215 SQL files organized in Unassigned_SQL folder
+- Clean phase-based structure ready for gradual migration
+- No SQL lost, all preserved
+
+---
+
+### TASK 1.2: Comprehensive Diagnostic Creation
+**Date**: October 5, 2025  
+**Version**: v1  
+**SQL File**: `Phase4_Parts_Search_2025-10-05/DIAGNOSTIC_COMPLETE_STATE_2025-10-05.sql`
+
+**Task Purpose**:
+Create comprehensive diagnostic to identify root causes of all 6 reported issues:
+1. Part description showing backwards word order
+2. Year showing reversed (810 instead of 018)
+3. Year range not showing in UI (2020 instead of 018-020)
+4. Source field sometimes reversed Hebrew
+5. Advanced search not working properly
+6. Search doesn't handle synonyms/abbreviations
+
+**What Was Done**:
+Created diagnostic SQL with 8 sections:
+- Section 1: Search function signature verification
+- Section 2: Triggers on catalog_items table
+- Section 3: Data quality metrics
+- Section 4: Word order check (20 sample records)
+- Section 5: Year reversal pattern analysis
+- Section 6: Source field Hebrew reversal detection
+- Section 7: Search functionality tests (simple/advanced/cascade)
+- Section 8: Sample actual results for UI inspection
+
+**Logic & Principles**:
+- Test ACTUAL deployed state, not assumptions
+- Sample real data to see patterns
+- Test search function behavior with various parameters
+- Check data quality metrics for extraction success rates
+- Identify if issues are in data storage or display logic
+
+**Result**: ⏳ **WAITING FOR USER**
+- SQL file created and ready
+- User needs to run diagnostic in Supabase
+- User will send back ALL results for analysis
+
+**Next Step**: 
+Once diagnostic results received, create targeted fix SQL for each identified issue.
+
+---
+
+
+### FINDING 1: Function Parameter Mismatch
+**Date**: October 5, 2025  
+**During**: Running diagnostics
+
+**Issue Found**:
+Diagnostic SQL failed with error: `function smart_parts_search(year_from_param := integer) does not exist`
+
+**What This Means**:
+The deployed `smart_parts_search` function does NOT have a `year_from_param` parameter. This could explain why year filtering isn't working.
+
+**Action Taken**:
+1. Created `CHECK_FUNCTION_SIGNATURE.sql` to inspect actual function parameters
+2. Fixed diagnostic SQL Test 2 to remove `year_from_param` 
+
+**Next Step**:
+User needs to run `CHECK_FUNCTION_SIGNATURE.sql` to see actual parameters, then re-run fixed diagnostic.
+
+---
+
+
+### CRITICAL FINDING 2: Wrong Function Parameter Order Deployed
+**Date**: October 5, 2025  
+**Severity**: CRITICAL - This breaks cascading search logic
+
+**What Was Discovered**:
+From function source preview, the deployed `smart_parts_search` starts with:
+- `STEP 1: FAMILY FIRST (Primary filter if provided)`
+
+This is **WRONG**. The correct order should be:
+- `STEP 1: MAKE (Manufacturer filter)`
+
+**Why This Breaks Everything**:
+The cascading search logic REQUIRES this order:
+1. MAKE (Toyota) → narrows to manufacturer
+2. MODEL (Corolla Cross) → if not found, stays at Toyota level  
+3. YEAR → filters by year
+4. FAMILY/PART → finds specific parts
+
+If FAMILY is first, the cascade breaks because it filters by part type BEFORE filtering by car\!
+
+**Evidence**:
+- Found correct function in `Unassigned_SQL/COMPLETE_SEARCH_ALL_PARAMS.sql`
+- Correct signature has 17 parameters with make_param FIRST
+- Deployed version appears to have family_param FIRST (wrong order)
+
+**Impact**:
+- Explains why advanced search doesn't work
+- Explains why year filtering fails
+- Explains why cascade isn't working properly
+
+**Next Action**:
+Need to verify deployed parameter order, then redeploy correct function.
+
+**SQL Files Involved**:
+- CORRECT: `COMPLETE_SEARCH_ALL_PARAMS.sql` (in Unassigned_SQL)
+- Need to check: What's actually deployed
+
+---
+
+
+### CORRECTION: Search Filter Order Clarification
+**Date**: October 5, 2025  
+**User Clarification**: The deployed order IS correct
+
+**CORRECT Search Filtering Order** (as specified by user):
+1. FAMILY (part family)
+2. PART (from simple and advanced fields)
+3. MAKE (manufacturer)
+4. MODEL
+5. YEAR (after model)
+6. TRIM
+7. MODEL_CODE
+8. VIN number
+9. Engine code
+10. ENGINE params
+11. Engine volume
+12. OEM number
+
+**Note**: Plate number is for association, NOT filtering
+
+**Conclusion**: 
+The deployed function with "FAMILY FIRST" is CORRECT. Previous assumption about Make being first was wrong. The search prioritizes part type/family BEFORE car details.
+
+**Updated Understanding**:
+- Family → Part → Make → Model → Year is the intended cascade
+- This means: "Find this type of part (family), then narrow by car details"
+- Previous documentation about "Make first" was incorrect
+
+---
+
