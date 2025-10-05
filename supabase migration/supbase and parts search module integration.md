@@ -4528,3 +4528,126 @@ FROM catalog_items;
 **Status**: READY FOR IMPORT FIX  
 **Next Agent**: Fix Python, then re-import
 
+
+---
+
+## 🚨 CRITICAL: CLEANUP AFTER PYTHON FIX
+
+### IF Python Import is Fixed Successfully:
+
+**MUST DELETE ALL REVERSAL FUNCTIONS** - They will BREAK correct data\!
+
+#### Functions to DROP (remove from Supabase):
+```sql
+DROP FUNCTION IF EXISTS reverse_hebrew() CASCADE;
+DROP FUNCTION IF EXISTS reverse_hebrew_smart() CASCADE;
+DROP FUNCTION IF EXISTS reverse_hebrew_text() CASCADE;
+DROP FUNCTION IF EXISTS fix_hebrew_if_reversed() CASCADE;
+DROP FUNCTION IF EXISTS is_hebrew_reversed() CASCADE;
+DROP FUNCTION IF EXISTS is_full_string_reversed() CASCADE;
+DROP FUNCTION IF EXISTS auto_fix_hebrew_reversal() CASCADE;
+DROP FUNCTION IF EXISTS process_hebrew_before_insert() CASCADE;
+DROP FUNCTION IF EXISTS reverse_full_string() CASCADE;
+DROP FUNCTION IF EXISTS reverse_slash_separated() CASCADE;
+-- Add any other reversal-related functions found
+```
+
+#### Triggers to DROP:
+```sql
+DROP TRIGGER IF EXISTS hebrew_reversal_trigger ON catalog_items;
+DROP TRIGGER IF EXISTS trigger_00_auto_fix_hebrew_reversal ON catalog_items;
+DROP TRIGGER IF EXISTS trigger_auto_fix_and_extract ON catalog_items;
+-- Keep only: trigger_01_set_supplier_name, trigger_extract_model_and_year
+```
+
+#### SQL Files to DELETE from Unassigned_SQL:
+Move to `Obsolete_Archive/`:
+- All files with "REVERSE" in name
+- All files with "HEBREW_FIX" in name  
+- All files with "FIX_FULL_STRING" in name
+- FIX_1_SOURCE_FIELD_REVERSAL.sql (won't be needed)
+- FIX_1B_SOURCE_CLEANUP.sql (won't be needed)
+- FIX_3_CAT_NUM_DESC_FULL_REVERSAL.sql (won't be needed)
+- FIX_3B_REVERSE_REMAINING.sql (won't be needed)
+
+#### What to KEEP:
+```sql
+-- Keep these - they work on CORRECT data:
+- extract_model_and_year()
+- extract_year_range_from_desc()
+- extract_part_family_from_desc()
+- extract_side_from_desc()
+- extract_position_from_desc()
+- smart_parts_search()
+```
+
+---
+
+### VERIFICATION AFTER CLEANUP
+
+After deleting reversal functions and re-importing clean data:
+
+```sql
+-- 1. Verify NO reversal functions exist
+SELECT proname FROM pg_proc 
+WHERE proname LIKE '%reverse%' 
+   OR proname LIKE '%hebrew%fix%';
+-- Should return: 0 rows
+
+-- 2. Verify data is correct
+SELECT cat_num_desc FROM catalog_items 
+WHERE cat_num_desc LIKE '%עונמ%'  -- reversed "מנוע"
+   OR cat_num_desc LIKE '%יפילח%'  -- reversed "חליפי"
+   OR cat_num_desc LIKE '%ןגמ%';   -- reversed "מגן"
+-- Should return: 0 rows
+
+-- 3. Verify year extraction works
+SELECT 
+    COUNT(*) as total,
+    COUNT(year_from) as has_years,
+    ROUND(COUNT(year_from)::NUMERIC / COUNT(*) * 100, 1) as success_rate
+FROM catalog_items;
+-- Should show: 90%+ success rate
+```
+
+---
+
+### WHY THIS MATTERS
+
+**The Reversal Functions are WORKAROUNDS for broken import\!**
+
+If import is fixed:
+- ✅ Data comes in correct
+- ✅ No reversal needed
+- ❌ Reversal functions will BREAK correct data (reverse it backwards\!)
+
+**Example of disaster if you keep them**:
+```
+Clean import: cat_num_desc = "מכסה מנוע"  ✅ Correct
+Reversal trigger runs: "עונמ הסכמ"  ❌ NOW IT'S BROKEN\!
+```
+
+**CRITICAL**: Test Python fix on ONE page first, verify data is correct, THEN delete all reversal functions before full re-import\!
+
+---
+
+### CLEANUP CHECKLIST
+
+After Python import is confirmed fixed:
+
+- [ ] Test import with 1 PDF page
+- [ ] Verify Hebrew is NOT reversed in database
+- [ ] DROP all reversal functions (list above)
+- [ ] DROP all reversal triggers (list above)
+- [ ] Move obsolete SQL to archive
+- [ ] TRUNCATE catalog_items table
+- [ ] Re-import full catalog with clean script
+- [ ] Run verification queries (above)
+- [ ] Confirm 90%+ year extraction
+- [ ] Test search functionality
+- [ ] Document what was deleted (for future reference)
+
+---
+
+**REMEMBER**: The reversal functions were a band-aid for broken import. Once import is fixed, remove the band-aid or it will cause NEW problems\!
+
