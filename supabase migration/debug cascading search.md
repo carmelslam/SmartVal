@@ -3984,3 +3984,291 @@ TEST 6 :
     "section": "=== ANALYSIS COMPLETE ==="
   }
 ]
+
+**DIAGNOSTICS 2 - 5.10:**
+
+Check 1 :
+
+[
+  {
+    "info": "Sample of full-string reversed records:",
+    "reversed_display": "גריל קד' מושלם!!! פביה 05-08",
+    "would_be_corrected": "80-50 היבפ !!!םלשומ 'דק לירג",
+    "pcode": "VB62252511"
+  },
+  {
+    "info": "Sample of full-string reversed records:",
+    "reversed_display": "ראי שמ'+3 כבל לצבע כיסוי גדול- פולו 01-02",
+    "would_be_corrected": "20-10 ולופ -לודג יוסיכ עבצל לבכ 3+'מש יאר",
+    "pcode": "VM192AL"
+  },
+  {
+    "info": "Sample of full-string reversed records:",
+    "reversed_display": "ראי ימ' חש' חמ'+פנס לצבע פאסאט 03-05",
+    "would_be_corrected": "50-30 טאסאפ עבצל סנפ+'מח 'שח 'מי יאר",
+    "pcode": "VM199EHPR"
+  },
+  {
+    "info": "Sample of full-string reversed records:",
+    "reversed_display": "ראי ימ' חש' חמ' לצבע קורסה 01-06",
+    "would_be_corrected": "60-10 הסרוק עבצל 'מח 'שח 'מי יאר",
+    "pcode": "VM200EHPR"
+  },
+  {
+    "info": "Sample of full-string reversed records:",
+    "reversed_display": "ראי ימ'+3 כבל שחור - קורסה 01-06",
+    "would_be_corrected": "60-10 הסרוק - רוחש לבכ 3+'מי יאר",
+    "pcode": "VM200R"
+  },
+  {
+    "info": "Sample of full-string reversed records:",
+    "reversed_display": "ראי ימ'+3 כבל כיסוי קטן - איביזה 00-02",
+    "would_be_corrected": "20-00 הזיביא - ןטק יוסיכ לבכ 3+'מי יאר",
+    "pcode": "VM359R"
+  },
+  {
+    "info": "Sample of full-string reversed records:",
+    "reversed_display": "ראי ימ'+3 כבל כיסוי קטן - איביזה 00-02",
+    "would_be_corrected": "20-00 הזיביא - ןטק יוסיכ לבכ 3+'מי יאר",
+    "pcode": "VM359R"
+  },
+  {
+    "info": "Sample of full-string reversed records:",
+    "reversed_display": "ראי שמ'+3 כבל - אקסנט 94-99",
+    "would_be_corrected": "99-49 טנסקא - לבכ 3+'מש יאר",
+    "pcode": "VM441L"
+  },
+  {
+    "info": "Sample of full-string reversed records:",
+    "reversed_display": "ראי ימ' חשמלי אלנטרה 01-07",
+    "would_be_corrected": "70-10 הרטנלא ילמשח 'מי יאר",
+    "pcode": "VM458ER"
+  },
+  {
+    "info": "Sample of full-string reversed records:",
+    "reversed_display": "סורג קד' - ריאו 05-09",
+    "would_be_corrected": "90-50 ואיר - 'דק גרוס",
+    "pcode": "VB6575353"
+  }
+]
+
+Check 2 :
+
+[
+  {
+    "info": "Sample of reversed years:",
+    "cat_num_desc": "מגן מנוע ימ' -310 02I",
+    "current_wrong": "310",
+    "would_be_correct": "013",
+    "year_from": null,
+    "year_to": null
+  },
+  {
+    "info": "Sample of reversed years:",
+    "cat_num_desc": "גריל תח' במגן קד' - (02G) סדרה 3 -810",
+    "current_wrong": "810",
+    "would_be_correct": "018",
+    "year_from": null,
+    "year_to": null
+  },
+  {
+    "info": "Sample of reversed years:",
+    "cat_num_desc": "סט פחיות למגן אח' C-אליזה -310",
+    "current_wrong": "310",
+    "would_be_correct": "013",
+    "year_from": null,
+    "year_to": null
+  },
+  {
+    "info": "Sample of reversed years:",
+    "cat_num_desc": "גריל במגן קד' מרכזי -310 3C",
+    "current_wrong": "310",
+    "would_be_correct": "013",
+    "year_from": null,
+    "year_to": null
+  },
+  {
+    "info": "Sample of reversed years:",
+    "cat_num_desc": "כיסוי תח' ימ' למגן אח' - ספורטאג' -910",
+    "current_wrong": "910",
+    "would_be_correct": "019",
+    "year_from": null,
+    "year_to": null
+  },
+  {
+    "info": "Sample of reversed years:",
+    "cat_num_desc": "רשת לגריל קד'-שירוקי -110",
+    "current_wrong": "110",
+    "would_be_correct": "011",
+    "year_from": null,
+    "year_to": null
+  },
+  {
+    "info": "Sample of reversed years:",
+    "cat_num_desc": "משולש תח' קד' שמ' - מודל 3 -610",
+    "current_wrong": "610",
+    "would_be_correct": "016",
+    "year_from": null,
+    "year_to": null
+  },
+  {
+    "info": "Sample of reversed years:",
+    "cat_num_desc": "זרוע מייצב אח' שמ' פאסאט -510",
+    "current_wrong": "510",
+    "would_be_correct": "015",
+    "year_from": null,
+    "year_to": null
+  },
+  {
+    "info": "Sample of reversed years:",
+    "cat_num_desc": "זרוע מייצב אח' שמ' פאסאט -510",
+    "current_wrong": "510",
+    "would_be_correct": "015",
+    "year_from": null,
+    "year_to": null
+  },
+  {
+    "info": "Sample of reversed years:",
+    "cat_num_desc": "זרוע מייצב אח' ימ' פאסאט -510",
+    "current_wrong": "510",
+    "would_be_correct": "015",
+    "year_from": null,
+    "year_to": null
+  }
+]
+
+Check 3 :
+
+[
+  {
+    "info": "Sample variations in database:",
+    "cat_num_desc": "כנף קד' שמאל 310- VX ללא חור",
+    "format_used": "Other format"
+  },
+  {
+    "info": "Sample variations in database:",
+    "cat_num_desc": "קשת כנף קד ימין 810- GM",
+    "format_used": "Other format"
+  },
+  {
+    "info": "Sample variations in database:",
+    "cat_num_desc": "כנף קד' שמאל פאסאט 510- 8B",
+    "format_used": "Other format"
+  },
+  {
+    "info": "Sample variations in database:",
+    "cat_num_desc": "כנף קד' ימין 410- 04-V",
+    "format_used": "Other format"
+  },
+  {
+    "info": "Sample variations in database:",
+    "cat_num_desc": "קשת כנף שמאל - 810- 09CX",
+    "format_used": "Other format"
+  },
+  {
+    "info": "Sample variations in database:",
+    "cat_num_desc": "קשת כנף קד' שמאל 710- XSA",
+    "format_used": "Other format"
+  },
+  {
+    "info": "Sample variations in database:",
+    "cat_num_desc": "ביטנה כנף אחורי ימ' -710- XSA",
+    "format_used": "Other format"
+  },
+  {
+    "info": "Sample variations in database:",
+    "cat_num_desc": "ביטנה כנף אחורי שמ' -710- XSA",
+    "format_used": "Uses: שמ'"
+  },
+  {
+    "info": "Sample variations in database:",
+    "cat_num_desc": "קשת כנף קדמי ימין (שחור) - טראוורס 120-8",
+    "format_used": "Other format"
+  },
+  {
+    "info": "Sample variations in database:",
+    "cat_num_desc": "קשת כנף אח' שמאל 610- RH-C",
+    "format_used": "Other format"
+  },
+  {
+    "info": "Sample variations in database:",
+    "cat_num_desc": "כנף קד' שמאל פאסאט 510- 8B",
+    "format_used": "Other format"
+  },
+  {
+    "info": "Sample variations in database:",
+    "cat_num_desc": "כנף קדמי שמ' -710- 5Q",
+    "format_used": "Uses: שמ'"
+  },
+  {
+    "info": "Sample variations in database:",
+    "cat_num_desc": "כנף קדמי שמ' -710- 5Q",
+    "format_used": "Uses: שמ'"
+  },
+  {
+    "info": "Sample variations in database:",
+    "cat_num_desc": "קישוט כנף קדמי ימ' - 110- 52F 3X",
+    "format_used": "Other format"
+  },
+  {
+    "info": "Sample variations in database:",
+    "cat_num_desc": "כנף קדמי ימ' עם חור לגלגל 710- 3C",
+    "format_used": "Other format"
+  }
+]
+
+Check 4 :
+
+[
+  {
+    "category": "Position variations:",
+    "קדמי_count": 856,
+    "קידמי_count": 24,
+    "קדמית_count": 18,
+    "קדא_abbrev_count": 9810,
+    "אחורי_count": 650,
+    "אחורית_count": 24,
+    "אחא_abbrev_count": 4614
+  }
+]
+
+Check 5 :
+
+[
+  {
+    "test": "Test: smart_parts_search with just כנף",
+    "result_count": 50
+  }
+] the כנף was just an example
+
+Check  6:
+
+[
+  {
+    "test": "Advanced test: Make + Model + Part",
+    "result_count": 33
+  }
+]
+
+Check 7 :
+
+[
+  {
+    "metric": "Data quality metrics:",
+    "total_records": 48276,
+    "has_part_name": 30889,
+    "has_part_family": 48276,
+    "has_year": 40531,
+    "has_model": 12959,
+    "part_name_pct": "63.98",
+    "year_pct": "83.96"
+  }
+]
+
+Check 8 :
+
+[
+  {
+    "section": "=== DIAGNOSTIC COMPLETE ==="
+  }
+]
