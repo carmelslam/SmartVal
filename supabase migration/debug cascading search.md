@@ -3309,3 +3309,291 @@ CREATE TRIGGER trigger_extract_model_and_year
  
 
 THERE ARE MORE EXTRACTION LOGICS DEPLOYED - I CANNOT TRACK THEM ALL 
+
+
+**5.10 DIGNOSIS**
+
+Section 1 :
+[
+  {
+    "info": "Function source (first 2000 chars):",
+    "source_preview": "\nDECLARE\n    result_count INT := 0;\n    where_parts TEXT[] := ARRAY[]::TEXT[];\n    final_where TEXT;\n    final_query TEXT;\n    \n    make_terms TEXT[];\n    model_terms TEXT[];\n    part_terms TEXT[];\n    free_terms TEXT[];\n    year_formats TEXT[];\n    \n    current_search TEXT;\n    i INT;\nBEGIN\n    -- ============================================================================\n    -- STEP 1: FAMILY FIRST (Primary filter if provided)\n    -- ============================================================================\n    \n    IF family_param IS NOT NULL AND family_param != '' THEN\n        where_parts := array_append(where_parts,\n            format('ci.part_family ILIKE %L', '%' || family_param || '%'));\n        \n        EXECUTE 'SELECT COUNT(*) FROM catalog_items ci WHERE ' || array_to_string(where_parts, ' AND ') INTO result_count;\n        \n        IF result_count = 0 THEN RETURN; END IF;\n    END IF;\n    \n    -- ============================================================================\n    -- STEP 2: PART SECOND (Required - must match)\n    -- ============================================================================\n    \n    IF part_param IS NOT NULL AND part_param != '' THEN\n        part_terms := string_to_array(part_param, ' ');\n        \n        FOR i IN REVERSE array_length(part_terms, 1)..1 LOOP\n            current_search := array_to_string(part_terms[1:i], ' ');\n            \n            where_parts := array_append(where_parts,\n                format('(ci.cat_num_desc ILIKE %L OR ci.part_family ILIKE %L)',\n                    '%' || current_search || '%', '%' || current_search || '%'));\n            \n            EXECUTE 'SELECT COUNT(*) FROM catalog_items ci WHERE ' || array_to_string(where_parts, ' AND ') INTO result_count;\n            \n            IF result_count > 0 THEN EXIT; END IF;\n            where_parts := where_parts[1:array_length(where_parts,1)-1];\n        END LOOP;\n        \n        IF result_count = 0 THEN RETURN; END IF;\n        \n    ELSIF free_query..."
+  }
+] 
+
+Section 2 :
+
+[
+  {
+    "trigger_name": "RI_ConstraintTrigger_c_53849",
+    "status": "✅ ENABLED",
+    "execution_order": "UNKNOWN ORDER",
+    "trigger_definition": "CREATE CONSTRAINT TRIGGER \"RI_ConstraintTrigger_c_53849\" AFTER INSERT ON public.catalog_items FROM suppliers NOT DEFERRABLE INITIALLY IMMEDIATE FOR EACH ROW EXECUTE FUNCTION \"RI_FKey_check_ins\"()"
+  },
+  {
+    "trigger_name": "RI_ConstraintTrigger_c_53850",
+    "status": "✅ ENABLED",
+    "execution_order": "UNKNOWN ORDER",
+    "trigger_definition": "CREATE CONSTRAINT TRIGGER \"RI_ConstraintTrigger_c_53850\" AFTER UPDATE ON public.catalog_items FROM suppliers NOT DEFERRABLE INITIALLY IMMEDIATE FOR EACH ROW EXECUTE FUNCTION \"RI_FKey_check_upd\"()"
+  },
+  {
+    "trigger_name": "RI_ConstraintTrigger_c_59807",
+    "status": "✅ ENABLED",
+    "execution_order": "UNKNOWN ORDER",
+    "trigger_definition": "CREATE CONSTRAINT TRIGGER \"RI_ConstraintTrigger_c_59807\" AFTER INSERT ON public.catalog_items FROM catalogs NOT DEFERRABLE INITIALLY IMMEDIATE FOR EACH ROW EXECUTE FUNCTION \"RI_FKey_check_ins\"()"
+  },
+  {
+    "trigger_name": "RI_ConstraintTrigger_c_59808",
+    "status": "✅ ENABLED",
+    "execution_order": "UNKNOWN ORDER",
+    "trigger_definition": "CREATE CONSTRAINT TRIGGER \"RI_ConstraintTrigger_c_59808\" AFTER UPDATE ON public.catalog_items FROM catalogs NOT DEFERRABLE INITIALLY IMMEDIATE FOR EACH ROW EXECUTE FUNCTION \"RI_FKey_check_upd\"()"
+  },
+  {
+    "trigger_name": "hebrew_reversal_trigger",
+    "status": "✅ ENABLED",
+    "execution_order": "UNKNOWN ORDER",
+    "trigger_definition": "CREATE TRIGGER hebrew_reversal_trigger BEFORE INSERT OR UPDATE ON public.catalog_items FOR EACH ROW EXECUTE FUNCTION process_hebrew_before_insert()"
+  },
+  {
+    "trigger_name": "trigger_00_auto_fix_and_extract",
+    "status": "✅ ENABLED",
+    "execution_order": "0 - FIRST",
+    "trigger_definition": "CREATE TRIGGER trigger_00_auto_fix_and_extract BEFORE INSERT OR UPDATE ON public.catalog_items FOR EACH ROW EXECUTE FUNCTION auto_fix_and_extract()"
+  },
+  {
+    "trigger_name": "trigger_00_auto_fix_hebrew_reversal",
+    "status": "✅ ENABLED",
+    "execution_order": "0 - FIRST",
+    "trigger_definition": "CREATE TRIGGER trigger_00_auto_fix_hebrew_reversal BEFORE INSERT OR UPDATE ON public.catalog_items FOR EACH ROW EXECUTE FUNCTION auto_fix_hebrew_reversal()"
+  },
+  {
+    "trigger_name": "trigger_01_set_supplier_name",
+    "status": "✅ ENABLED",
+    "execution_order": "1 - SECOND",
+    "trigger_definition": "CREATE TRIGGER trigger_01_set_supplier_name BEFORE INSERT OR UPDATE ON public.catalog_items FOR EACH ROW EXECUTE FUNCTION _set_supplier_name()"
+  },
+  {
+    "trigger_name": "trigger_extract_model_and_year",
+    "status": "✅ ENABLED",
+    "execution_order": "UNKNOWN ORDER",
+    "trigger_definition": "CREATE TRIGGER trigger_extract_model_and_year BEFORE INSERT OR UPDATE OF cat_num_desc, make ON public.catalog_items FOR EACH ROW EXECUTE FUNCTION extract_model_and_year()"
+  }
+]
+
+Section 3 :
+
+[
+  {
+    "function_name": "auto_fix_hebrew_reversal",
+    "status": "✅ EXISTS"
+  },
+  {
+    "function_name": "reverse_hebrew",
+    "status": "✅ EXISTS"
+  },
+  {
+    "function_name": "fix_hebrew_text",
+    "status": "✅ EXISTS"
+  },
+  {
+    "function_name": "process_catalog_item_complete",
+    "status": "✅ EXISTS"
+  },
+  {
+    "function_name": "auto_fix_and_extract",
+    "status": "✅ EXISTS"
+  }
+]
+
+Section 4 :
+
+[
+  {
+    "total_records": 48276,
+    "has_part_name": 27041,
+    "has_model": 11822,
+    "has_year_from": 12581,
+    "has_extracted_year": 40531,
+    "has_part_family": 48276,
+    "categorized_family": 48276,
+    "part_name_pct": "56.0",
+    "model_pct": "24.5",
+    "year_pct": "26.1",
+    "family_pct": "100.0"
+  }
+]
+
+Section 5 :
+
+[
+  {
+    "check_type": "Hebrew Text Status:",
+    "reversed_count": 11590,
+    "correct_count": 11295,
+    "total_checked": 48276
+  }
+]
+
+Section 6 :
+Test 1: 
+
+[
+  {
+    "test_name": "Test 1: Simple Toyota search",
+    "result_count": 50
+  }
+]
+
+Test 2 :
+
+[
+  {
+    "test_name": "Test 2: Multi-word Toyota Japan search",
+    "result_count": 50
+  }
+]
+
+Test 3:
+[
+  {
+    "test_name": "Test 3: Corolla model search",
+    "result_count": 20
+  }
+]
+
+Test 4 :
+[
+  {
+    "test_name": "Test 4: Corolla Cross cascade test (CRITICAL)",
+    "result_count": 50,
+    "cascade_status": "✅ CASCADE WORKING"
+  }
+]
+
+Test 5 :
+[
+  {
+    "info": "Sample results from Corolla Cross cascade test:",
+    "cat_num_desc": "20-89 הלורוק 'מי 'דק ךמות",
+    "model": "קורולה",
+    "make": "טויוטה"
+  },
+  {
+    "info": "Sample results from Corolla Cross cascade test:",
+    "cat_num_desc": "70-30 הלורוק -'מי עונמ הסכמ ריצ",
+    "model": "קורולה",
+    "make": "טויוטה"
+  },
+  {
+    "info": "Sample results from Corolla Cross cascade test:",
+    "cat_num_desc": "00-89 הלורוק - 'מי עונמ הסכמ ריצ",
+    "model": "קורולה",
+    "make": "טויוטה"
+  },
+  {
+    "info": "Sample results from Corolla Cross cascade test:",
+    "cat_num_desc": "20-89 הלורוק - 'מי 'ציח 'דק תידי",
+    "model": "קורולה",
+    "make": "טויוטה"
+  },
+  {
+    "info": "Sample results from Corolla Cross cascade test:",
+    "cat_num_desc": "10-89 הלורוק ןגמב 'מי לירג",
+    "model": "קורולה",
+    "make": "טויוטה"
+  }
+]
+
+Section 7 :
+
+[
+  {
+    "cat_num_desc": "פח חזית מושלם - קורולה -910",
+    "year_from": null,
+    "year_to": null,
+    "extracted_year": "910",
+    "year_range": null
+  },
+  {
+    "cat_num_desc": "מגן קד' - אוואלון -810",
+    "year_from": null,
+    "year_to": null,
+    "extracted_year": "810",
+    "year_range": null
+  },
+  {
+    "cat_num_desc": "כיסוי שמ' לגריל תח' במגן קד' - קורולה -910",
+    "year_from": null,
+    "year_to": null,
+    "extracted_year": "910",
+    "year_range": null
+  },
+  {
+    "cat_num_desc": "כיסוי וו גרירה במגן קד' - קורולה -910",
+    "year_from": null,
+    "year_to": null,
+    "extracted_year": "910",
+    "year_range": null
+  },
+  {
+    "cat_num_desc": "מגן מצננים תח' סטלביו -810",
+    "year_from": null,
+    "year_to": null,
+    "extracted_year": "810",
+    "year_range": null
+  },
+  {
+    "cat_num_desc": "גריל שמ' למגן קד' - סטלביו -810",
+    "year_from": null,
+    "year_to": null,
+    "extracted_year": "810",
+    "year_range": null
+  },
+  {
+    "cat_num_desc": "תומך מגן קד' ימ' - קורולה -910",
+    "year_from": null,
+    "year_to": null,
+    "extracted_year": "910",
+    "year_range": null
+  },
+  {
+    "cat_num_desc": "ניקל גריל ימ' במגן פאסאט -510",
+    "year_from": null,
+    "year_to": null,
+    "extracted_year": "510",
+    "year_range": null
+  },
+  {
+    "cat_num_desc": "מגן קד' חיצ' - קורולה -120",
+    "year_from": null,
+    "year_to": null,
+    "extracted_year": "120",
+    "year_range": null
+  },
+  {
+    "cat_num_desc": "קלקר תח' למגן קד' - קורולה -910",
+    "year_from": null,
+    "year_to": null,
+    "extracted_year": "910",
+    "year_range": null
+  }
+].  YEAR EXTRACTION IS REVERSED :810 ISTEAD OF 018
+
+Section 8 :
+
+[
+  {
+    "info": "Checking parameter order in function body...",
+    "parameter_order_status": "✅ CORRECT ORDER: MODEL before MODEL_CODE"
+  }
+] THE ORDER IS : FAMILY, MAKE ,MODEL, PART 
+
+DIAGNOSTIC SUMMARY:
+
+[
+  {
+    "section": "=== DIAGNOSTIC COMPLETE ==="
+  }
+]
+
+
