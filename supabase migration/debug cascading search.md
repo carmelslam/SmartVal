@@ -3765,3 +3765,222 @@ TEST 6 :
     "section": "=== VERIFICATION COMPLETE ==="
   }
 ]
+
+**Analyze Remaining Pattern**
+
+1.:
+[
+  {
+    "pcode": "VB1099210",
+    "cat_num_desc": "הסכמ עונמ יטויד -110",
+    "make": "פורד",
+    "model": null,
+    "part_family": "חלקי מרכב"
+  },
+  {
+    "pcode": "VB65609961",
+    "cat_num_desc": "ריצ מי' הסכמל עונמ - גאטרופס' -220",
+    "make": "קיה",
+    "model": null,
+    "part_family": "חלקי מרכב"
+  },
+  {
+    "pcode": "VB65609962",
+    "cat_num_desc": "ריצ מש' הסכמל עונמ - גאטרופס' -220",
+    "make": "קיה",
+    "model": null,
+    "part_family": "חלקי מרכב"
+  },
+  {
+    "pcode": "VB5251795",
+    "cat_num_desc": "6T -61 שפריצר מיכל צינור",
+    "make": "פולקסווגן",
+    "model": null,
+    "part_family": "חלקי מרכב"
+  },
+  {
+    "pcode": "VB5251795",
+    "cat_num_desc": "6T -61 שפריצר מיכל צינור",
+    "make": "VAG",
+    "model": null,
+    "part_family": "חלקי מרכב"
+  },
+  {
+    "pcode": "VB1651810",
+    "cat_num_desc": "הסכמ עונמ הסרוק -51",
+    "make": "אופל (לובינס",
+    "model": null,
+    "part_family": "חלקי מרכב"
+  },
+  {
+    "pcode": "VB2345210",
+    "cat_num_desc": "הסכמ עונמ -60 06S",
+    "make": "וולוו",
+    "model": null,
+    "part_family": "חלקי מרכב"
+  },
+  {
+    "pcode": "VB5233449",
+    "cat_num_desc": "הסכמ ןעטמ - ג'הט -210",
+    "make": "פולקסווגן",
+    "model": null,
+    "part_family": "חלקי מרכב"
+  },
+  {
+    "pcode": "VBP23252803",
+    "cat_num_desc": "ספת ןוחטב הסכמ עונמ-06X",
+    "make": "וולוו",
+    "model": null,
+    "part_family": "חלקי מרכב"
+  },
+  {
+    "pcode": "VB4512710T",
+    "cat_num_desc": "הסכמ עונמ D5/D4 -310 3M",
+    "make": "מזדה",
+    "model": null,
+    "part_family": "חלקי מרכב"
+  },
+  {
+    "pcode": "VB51901961G",
+    "cat_num_desc": "ריצ הסכמ עונמ מי' -ג'הילו -710",
+    "make": "אימור אפלא",
+    "model": null,
+    "part_family": "חלקי מרכב"
+  },
+  {
+    "pcode": "VB51901962G",
+    "cat_num_desc": "ריצ הסכמ עונמ מש' -ג'הילו -710",
+    "make": "אימור אפלא",
+    "model": null,
+    "part_family": "חלקי מרכב"
+  },
+  {
+    "pcode": "VB5295272",
+    "cat_num_desc": "70 ארג'טו-שפריצר כיסוי",
+    "make": "VAG",
+    "model": null,
+    "part_family": "חלקי מרכב"
+  },
+  {
+    "pcode": "VB52952918",
+    "cat_num_desc": "0102 טוארג במגן 'ימ שפריצר כיסוי",
+    "make": "ןגווסקלופ",
+    "model": null,
+    "part_family": "מגנים ופגושים"
+  },
+  {
+    "pcode": "VB53155814",
+    "cat_num_desc": "4-A -08-חיישן.ח עם שפריצר.ח עם 'קד מגן",
+    "make": "אודי",
+    "model": null,
+    "part_family": "מגנים ופגושים"
+  },
+  {
+    "pcode": "VB53155814",
+    "cat_num_desc": "4-A -08-חיישן.ח עם שפריצר.ח עם 'קד מגן",
+    "make": "VAG",
+    "model": null,
+    "part_family": "מגנים ופגושים"
+  },
+  {
+    "pcode": "VB53155813",
+    "cat_num_desc": "4A -80 - חיישן.ח בלי שפריצר.ח עם 'קד מגן",
+    "make": "VAG",
+    "model": null,
+    "part_family": "מגנים ופגושים"
+  },
+  {
+    "pcode": "VB4281810",
+    "cat_num_desc": "הסכמ עונמ - וגיו -120",
+    "make": "הטויוט",
+    "model": null,
+    "part_family": "חלקי מרכב"
+  },
+  {
+    "pcode": "VB43023961",
+    "cat_num_desc": "ריצ הסכמ עונמ מי' -410 052 SI",
+    "make": "סוסקל",
+    "model": "SI",
+    "part_family": "חלקי מרכב"
+  },
+  {
+    "pcode": "VB5319171",
+    "cat_num_desc": "7-A 41 'קד למגן ימין שפריצר כיסוי",
+    "make": "ידוא",
+    "model": null,
+    "part_family": "מגנים ופגושים"
+  }
+]
+
+2.:
+
+[
+  {
+    "pattern_sample": "ריצ הסכמ עונמ מש' - ",
+    "occurrence_count": 42
+  },
+  {
+    "pattern_sample": "ריצ הסכמ עונמ מי' - ",
+    "occurrence_count": 34
+  },
+  {
+    "pattern_sample": "ריצ מש' הסכמל עונמ -",
+    "occurrence_count": 28
+  },
+  {
+    "pattern_sample": "ריצ מי' הסכמל עונמ -",
+    "occurrence_count": 25
+  },
+  {
+    "pattern_sample": ")ושפריצר חיישנים ללא",
+    "occurrence_count": 8
+  },
+  {
+    "pattern_sample": "הסכמ עונמ - אוקטביה ",
+    "occurrence_count": 8
+  },
+  {
+    "pattern_sample": "טושיק מי' לירגל דק' ",
+    "occurrence_count": 7
+  },
+  {
+    "pattern_sample": "תידי דק' ציח' מי' - ",
+    "occurrence_count": 6
+  },
+  {
+    "pattern_sample": "טושיק לע' לירגל דק' ",
+    "occurrence_count": 6
+  },
+  {
+    "pattern_sample": "A1 -011 חיישן+שפריצר",
+    "occurrence_count": 6
+  },
+  {
+    "pattern_sample": "ךמות מי' חפל תיזח - ",
+    "occurrence_count": 6
+  },
+  {
+    "pattern_sample": "הסכמ עונמ םוינימולא ",
+    "occurrence_count": 6
+  },
+  {
+    "pattern_sample": "טושיק מש' לירגל דק' ",
+    "occurrence_count": 6
+  },
+  {
+    "pattern_sample": "לירג דק' מי' - 510- ",
+    "occurrence_count": 5
+  },
+  {
+    "pattern_sample": "לקינ חת' לירגל דק' -",
+    "occurrence_count": 5
+  }
+]
+
+3,:
+
+[
+  {
+    "section": "=== ANALYSIS COMPLETE ==="
+  }
+]
