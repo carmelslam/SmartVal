@@ -104,7 +104,7 @@ Family : if doesn’t  exist show part (the next one not the simple search) = ד
 Part name  : דלת= if doesn’t  exist show variants of the name 
 Source : if doesn’t  exist show all 
 
-
+**NOTE : THE ORDER IS NOT CORRECT THERE IS A FUNCTION FOR REORDERING THE FITERS** 
 
 NOTE - not all fields are mandatory, supabase needs to process what it actually gets and not what it expects 
        The pact number when in workflow is a mandatory field for the query , its purpose is to assign search and selected and required to plate number, supabase needs to accept this   
