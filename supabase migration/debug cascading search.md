@@ -3596,4 +3596,172 @@ DIAGNOSTIC SUMMARY:
   }
 ]
 
+**VARIFICATION**
 
+TEST 1 :
+[
+  {
+    "reversed_count": 2700,
+    "has_hebrew_total": 48276,
+    "total_records": 48276,
+    "reversed_percentage": "5.59",
+    "status": "❌ STILL HAS ISSUES"
+  }
+]
+
+TETS 2 :
+
+[
+  {
+    "pcode": "VB42111000",
+    "cat_num_desc": "-910 קורולה - םלשומ תיזח חפ",
+    "make": "טויוטה",
+    "model": "קורולה",
+    "part_family": "חלקי מרכב",
+    "hebrew_status": "UNKNOWN"
+  },
+  {
+    "pcode": "VB4216281",
+    "cat_num_desc": "מגן קד' - אוואלון -810",
+    "make": "טויוטה",
+    "model": null,
+    "part_family": "מגנים ופגושים",
+    "hebrew_status": "✅ CORRECT"
+  },
+  {
+    "pcode": "VB421110524",
+    "cat_num_desc": "כיסוי שמ' לגריל תח' במגן קד' - קורולה -910",
+    "make": "טויוטה",
+    "model": "קורולה",
+    "part_family": "מגנים ופגושים",
+    "hebrew_status": "✅ CORRECT"
+  },
+  {
+    "pcode": "VB42111068",
+    "cat_num_desc": "כיסוי וו גרירה במגן קד' - קורולה -910",
+    "make": "טויוטה",
+    "model": "קורולה",
+    "part_family": "אביזרים נלווים",
+    "hebrew_status": "✅ CORRECT"
+  },
+  {
+    "pcode": "VB5118173G",
+    "cat_num_desc": "מגן מצננים תח' סטלביו -810",
+    "make": "אלפא רומיא",
+    "model": null,
+    "part_family": "מגנים ופגושים",
+    "hebrew_status": "✅ CORRECT"
+  },
+  {
+    "pcode": "VB51181782G",
+    "cat_num_desc": "גריל שמ' למגן קד' - סטלביו -810",
+    "make": "אלפא רומיא",
+    "model": null,
+    "part_family": "חלקי מרכב",
+    "hebrew_status": "✅ CORRECT"
+  },
+  {
+    "pcode": "VB421110791",
+    "cat_num_desc": "תומך מגן קד' ימ' - קורולה -910",
+    "make": "טויוטה",
+    "model": "קורולה",
+    "part_family": "חלקי מרכב",
+    "hebrew_status": "✅ CORRECT"
+  },
+  {
+    "pcode": "VB52349777",
+    "cat_num_desc": "ניקל גריל ימ' במגן פאסאט -510",
+    "make": "פולקסווגן",
+    "model": "פאסאת",
+    "part_family": "חלקי מרכב",
+    "hebrew_status": "✅ CORRECT"
+  },
+  {
+    "pcode": "VB4211107741",
+    "cat_num_desc": "קישוט לכיסוי ערפל קד' ימ' (שחור) - קורולה -",
+    "make": "הטויוט",
+    "model": "קורולה",
+    "part_family": "חלקי מרכב",
+    "hebrew_status": "UNKNOWN"
+  },
+  {
+    "pcode": "VB42111081T",
+    "cat_num_desc": "מגן קד' חיצ' - קורולה -120",
+    "make": "טויוטה",
+    "model": "קורולה",
+    "part_family": "מגנים ופגושים",
+    "hebrew_status": "✅ CORRECT"
+  }
+]
+
+TEST 3 :
+
+[
+  {
+    "cat_num_desc": "98-01 קורולה במגן 'ימ גריל",
+    "make": "טויוטה",
+    "model": "קורולה",
+    "part_family": "חלקי מרכב",
+    "price": "84.21"
+  },
+  {
+    "cat_num_desc": "93-97 קורולה שמ במגן-איתות פנס",
+    "make": "טויוטה",
+    "model": "קורולה",
+    "part_family": "פנסים",
+    "price": "91.35"
+  },
+  {
+    "cat_num_desc": "חיזוק מגן אח' - קורולה 79-39",
+    "make": "טויוטה",
+    "model": "קורולה",
+    "part_family": "םישוגפו םינגמ",
+    "price": "104.69"
+  },
+  {
+    "cat_num_desc": "4D -019 קורולה - 'קד למגן גרירה וו כיסוי",
+    "make": "טויוטה",
+    "model": "קורולה",
+    "part_family": "םיוולנ םירזיבא",
+    "price": "118.56"
+  },
+  {
+    "cat_num_desc": "07-010 קורולה דל5 חור+'שמ במגן גריל",
+    "make": "טויוטה",
+    "model": "קורולה",
+    "part_family": "חלקי מרכב",
+    "price": "124.24"
+  }
+]
+
+TEST 4 :
+
+[
+  {
+    "info": "Common Hebrew words check:",
+    "has_magen_correct": 13987,
+    "has_magen_reversed": 0,
+    "has_panas_correct": 7131,
+    "has_panas_reversed": 0,
+    "has_delet_correct": 2051,
+    "has_delet_reversed": 0
+  }
+]
+
+TEST 5 :
+
+[
+  {
+    "before_state": "Previous state had 11,590 reversed records (24%)",
+    "after_state": "Current state:",
+    "current_reversed": 2700
+  }
+]
+
+TEST 6 :
+
+[
+  {
+    "section": "=== VERIFICATION COMPLETE ==="
+  }
+]
