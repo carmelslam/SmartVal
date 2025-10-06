@@ -38,15 +38,19 @@ class PartsSearchResultsPiP {
       hasPlateNumber: !!this.currentPlateNumber,
       plateNumber: this.currentPlateNumber,
       hasSessionId: !!this.currentSessionId,
-      resultsCount: this.searchResults.length
+      resultsCount: this.searchResults.length,
+      serviceAvailable: !!window.partsSearchSupabaseService
     });
     
     if (this.currentPlateNumber && !this.currentSessionId) {
       console.log('✅ SESSION 9: Conditions met, starting Supabase save...');
       try {
-        console.log('📦 SESSION 9: Importing service...');
-        const { default: partsSearchService } = await import('./services/partsSearchSupabaseService.js');
-        console.log('✅ SESSION 9: Service imported successfully');
+        console.log('📦 SESSION 9: Getting global service...');
+        const partsSearchService = window.partsSearchSupabaseService;
+        if (!partsSearchService) {
+          throw new Error('partsSearchSupabaseService not available on window');
+        }
+        console.log('✅ SESSION 9: Service available');
         
         // Create search session
         console.log('💾 SESSION 9: Creating search session...');
@@ -379,7 +383,10 @@ class PartsSearchResultsPiP {
     // SESSION 9: 1. Save to Supabase selected_parts table
     if (this.currentPlateNumber) {
       try {
-        const { default: partsSearchService } = await import('./services/partsSearchSupabaseService.js');
+        const partsSearchService = window.partsSearchSupabaseService;
+        if (!partsSearchService) {
+          throw new Error('partsSearchSupabaseService not available');
+        }
         
         const partId = await partsSearchService.saveSelectedPart(
           this.currentPlateNumber,
@@ -406,7 +413,10 @@ class PartsSearchResultsPiP {
     // SESSION 9: 1. Remove from Supabase
     if (this.currentPlateNumber) {
       try {
-        const { default: partsSearchService } = await import('./services/partsSearchSupabaseService.js');
+        const partsSearchService = window.partsSearchSupabaseService;
+        if (!partsSearchService) {
+          throw new Error('partsSearchSupabaseService not available');
+        }
         
         const success = await partsSearchService.deleteSelectedPart(
           item.pcode || item.id,
