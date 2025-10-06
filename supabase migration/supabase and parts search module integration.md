@@ -6099,3 +6099,464 @@ Row 2:
 **Critical Success**: UI full words now match database abbreviations
 
 ---
+
+---
+
+# SESSION 9 SUMMARY - October 6, 2025
+## Save Search Sessions and Selected Parts to Supabase
+
+---
+
+## 🎯 SESSION OBJECTIVES
+
+1. ✅ Save every search session to `parts_search_sessions` table (OPTION 1 - complete audit trail)
+2. ✅ Save all search results to `parts_search_results` table
+3. ✅ Save selected parts (checked checkboxes) to `selected_parts` table
+4. ✅ Sync selected parts with `helper.parts_search.selected_parts`
+5. ⚠️ Display selected parts in "רשימת חלקים נבחרים" UI
+
+---
+
+## 📊 CURRENT STATUS: PARTIAL SUCCESS (10%)
+
+### ✅ WORKING:
+- **`selected_parts` table** → Saving correctly when checkbox checked
+- Duplicate prevention working
+- Service layer infrastructure complete
+
+### ❌ NOT WORKING (90%):
+- **`parts_search_sessions` table** → Empty (not saving search sessions)
+- **`parts_search_results` table** → Empty (not saving search results)
+- **"רשימת חלקים נבחרים" UI** → Shows 0 items (not displaying)
+- **`helper.parts_search.selected_parts`** → User reports empty (contradicts console logs showing updates)
+
+---
+
+## 🛠 IMPLEMENTATION COMPLETED
+
+### STEP 1: Create Service Layer ✅
+**File Created**: `/services/partsSearchSupabaseService.js` (267 lines)
+
+**Purpose**: Centralized service for all Supabase operations
+
+**Functions Implemented**:
+```javascript
+- createSearchSession(plate, searchContext) → returns session_id
+- saveSearchResults(sessionId, results, query) → saves results array as JSONB
+- saveSelectedPart(plate, partData) → saves checked part (with duplicate check)
+- getSelectedParts(plate) → retrieves selected parts for plate
+- deleteSelectedPart(partId, plate) → removes selected part
+```
+
+**Technical Approach**:
+- Browser-compatible IIFE (no ES6 imports)
+- Exposes as `window.partsSearchSupabaseService`
+- Uses `window.supabase` client directly
+- Compatible with older Supabase API (no `.select()` chaining, uses `data[0]` pattern)
+
+**API Compatibility Fixes**:
+```javascript
+// ISSUE: Older Supabase doesn't support:
+// - .maybeSingle() method
+// - .select() chaining after .insert()
+
+// FIX: 
+const { data, error } = await supabase
+  .from('table')
+  .insert({...});
+  
+const id = data && data[0] ? data[0].id : null;
+```
+
+### STEP 2: Load Service Globally ✅
+**File Modified**: `/parts search.html` (line 12)
+
+**Change**:
+```html
+<script src="./services/simplePartsSearchService.js"></script>
+<script src="./services/partsSearchSupabaseService.js"></script>
+<script type="module" src="./parts-search-results-pip.js"></script>
+```
+
+**Logic**: Service loads before PiP, available as global `window.partsSearchSupabaseService`
+
+### STEP 3: Integrate Session Save in showResults() ⚠️
+**File Modified**: `/parts-search-results-pip.js` (lines 36-78)
+
+**Method**: `showResults(searchResults, searchContext)`
+
+**Code Added**:
+```javascript
+// SESSION 9: Save search session to Supabase (OPTION 1 - every search)
+console.log('🔍 SESSION 9 DEBUG: Check conditions:', {
+  hasPlateNumber: \!\!this.currentPlateNumber,
+  plateNumber: this.currentPlateNumber,
+  hasSessionId: \!\!this.currentSessionId,
+  resultsCount: this.searchResults.length,
+  serviceAvailable: \!\!window.partsSearchSupabaseService
+});
+
+if (this.currentPlateNumber && \!this.currentSessionId) {
+  try {
+    const partsSearchService = window.partsSearchSupabaseService;
+    
+    // Create search session
+    this.currentSessionId = await partsSearchService.createSearchSession(
+      this.currentPlateNumber,
+      searchContext
+    );
+    console.log('✅ SESSION 9: Search session saved to Supabase:', this.currentSessionId);
+    
+    // Save search results
+    if (this.currentSessionId) {
+      await partsSearchService.saveSearchResults(
+        this.currentSessionId,
+        this.searchResults,
+        searchContext
+      );
+      console.log('✅ SESSION 9: Search results saved to Supabase');
+    }
+  } catch (error) {
+    console.error('❌ SESSION 9: Error saving to Supabase:', error);
+  }
+}
+```
+
+**Logic**: When PiP displays search results, save session and results to Supabase BEFORE showing UI
+
+**Status**: ⚠️ Code present but NOT executing (tables empty)
+
+**Hypothesis**: Condition `if (this.currentPlateNumber && \!this.currentSessionId)` failing
+- Either `currentPlateNumber` is null/undefined
+- Or `currentSessionId` already set from previous search
+
+### STEP 4: Integrate Checkbox Save ✅
+**File Modified**: `/parts-search-results-pip.js` (lines 362-383)
+
+**Method**: `saveSelectedPart(item)`
+
+**Code Added**:
+```javascript
+async saveSelectedPart(item) {
+  // SESSION 9: 1. Save to Supabase selected_parts table
+  if (this.currentPlateNumber) {
+    try {
+      const partsSearchService = window.partsSearchSupabaseService;
+      
+      const partId = await partsSearchService.saveSelectedPart(
+        this.currentPlateNumber,
+        item
+      );
+      
+      if (partId) {
+        console.log('✅ SESSION 9: Part saved to Supabase selected_parts:', partId);
+      }
+    } catch (error) {
+      console.error('❌ SESSION 9: Error saving part to Supabase:', error);
+    }
+  }
+  
+  // 2. Add to helper.parts_search.selected_parts
+  this.addToHelper(item);
+}
+```
+
+**Status**: ✅ WORKING - Parts save to `selected_parts` table correctly
+
+**Console Evidence**:
+```
+💾 Saving selected part for plate: 221-84-003
+✅ Selected part saved: [uuid]
+✅ Added new part to helper
+📋 Helper updated, total parts: 1
+✅ Part selected: VB1002118
+```
+
+### STEP 5: Integrate Checkbox Uncheck ✅
+**File Modified**: `/parts-search-results-pip.js` (lines 389-410)
+
+**Method**: `removeSelectedPart(item)`
+
+**Code Added**:
+```javascript
+async removeSelectedPart(item) {
+  // SESSION 9: 1. Remove from Supabase
+  if (this.currentPlateNumber) {
+    try {
+      const partsSearchService = window.partsSearchSupabaseService;
+      
+      const success = await partsSearchService.deleteSelectedPart(
+        item.pcode || item.id,
+        this.currentPlateNumber
+      );
+      
+      if (success) {
+        console.log('✅ SESSION 9: Part removed from Supabase');
+      }
+    } catch (error) {
+      console.error('❌ SESSION 9: Error removing part from Supabase:', error);
+    }
+  }
+  // 2. Remove from helper
+  this.removeFromHelper(item);
+}
+```
+
+**Status**: ✅ Code complete (not tested by user)
+
+---
+
+## 🐛 CRITICAL ISSUES REMAINING
+
+### ISSUE 1: Search Sessions Not Saving
+**Table**: `parts_search_sessions`  
+**Status**: Empty  
+**Expected**: 1 record per search with plate and search_context  
+**Actual**: No records created
+
+**Root Cause**: Unknown - requires console logs to diagnose
+
+**Possible Causes**:
+1. `this.currentPlateNumber` is null/undefined when `showResults()` called
+2. `this.currentSessionId` already set from previous operation
+3. Condition `if (this.currentPlateNumber && \!this.currentSessionId)` failing
+4. Silent error caught by try-catch
+
+**Evidence Needed**:
+- Console log showing "🔍 SESSION 9 DEBUG: Check conditions" output
+- Values of `hasPlateNumber`, `plateNumber`, `hasSessionId`
+
+**Quick Fix to Test**:
+```javascript
+// Change condition from:
+if (this.currentPlateNumber && \!this.currentSessionId) {
+
+// To:
+if (\!this.currentSessionId) {
+  const plate = this.currentPlateNumber || searchContext.plate || window.helper?.plate;
+  if (plate) {
+```
+
+### ISSUE 2: Search Results Not Saving
+**Table**: `parts_search_results`  
+**Status**: Empty  
+**Expected**: 1 record per search with results JSONB array  
+**Actual**: No records created
+
+**Root Cause**: Dependent on ISSUE 1 - if session not created, session_id is null, results save skipped
+
+**Fix**: Resolve ISSUE 1 first
+
+### ISSUE 3: Selected Parts UI Not Displaying
+**Component**: "רשימת חלקים נבחרים" window  
+**File**: `selected-parts-list.js` (NOT modified in this session)  
+**Status**: Shows 0 items  
+**Expected**: Display parts from `helper.parts_search.selected_parts`  
+**Actual**: Empty despite helper being updated
+
+**Root Cause**: UI component not reading helper correctly OR not refreshing
+
+**Console Evidence Contradiction**:
+```
+✅ Added new part to helper
+📋 Helper updated, total parts: 1
+```
+BUT user says helper empty
+
+**Analysis**:
+- Helper IS being updated (logs confirm)
+- UI component (`selected-parts-list.js`) not reading updates
+- Possible causes:
+  1. Component loads before helper populated
+  2. Component not watching for helper changes
+  3. Component reading wrong helper path
+  4. Component has internal error
+
+**NOT Modified in Session 9**: This component was NOT touched, so issue pre-existing or needs separate fix
+
+### ISSUE 4: Helper Persistence Question
+**User Reports**: `helper.parts_search.selected_parts` is empty  
+**Console Shows**: "📋 Helper updated, total parts: 1"  
+
+**Contradiction Analysis**:
+- Either user checking wrong time (after refresh = memory cleared)
+- Or user checking wrong helper instance
+- Or helper cleared by another part of code
+
+**Verification Needed**: User to run in console:
+```javascript
+window.helper.parts_search.selected_parts
+```
+
+---
+
+## 📁 FILES CREATED/MODIFIED THIS SESSION
+
+### Created:
+1. `/services/partsSearchSupabaseService.js` (267 lines) ✅
+2. `/supabase/sql/Phase5_Parts_Search_2025-10-05/SESSION_9_COMPLETE_LOG_2025-10-06.md` (detailed log) ✅
+
+### Modified:
+1. `/parts search.html` (line 12) - Added service script ✅
+2. `/parts-search-results-pip.js`:
+   - Lines 36-78: Session/results save ⚠️
+   - Lines 362-383: Selected part save ✅
+   - Lines 389-410: Selected part delete ✅
+
+### SQL Files (Not Used - Tables Already Exist):
+- `CREATE_PARTS_SEARCH_TABLES_2025-10-06.sql` (verification only)
+- `SESSION_9_DIAGNOSTIC_TABLES_2025-10-06.sql` (diagnostic queries)
+
+---
+
+## 🔑 KEY LEARNINGS
+
+1. **ES6 Imports Don't Work in Browser** without bundler
+   - Solution: Use IIFE and global `window` objects
+   - Pattern: `(function() { ... window.service = ... })()`
+
+2. **Supabase API Versions Differ Significantly**
+   - Older versions: no `.maybeSingle()`, no `.select()` after `.insert()`
+   - Solution: Use `.limit(1)` and `data[0]` pattern
+
+3. **Partial Success Indicates Flow Break**
+   - Checkbox save works = infrastructure good
+   - Session save doesn't work = condition logic issue
+
+4. **Console Logs Critical for Async Debugging**
+   - Added comprehensive DEBUG logs
+   - Need user to provide full console output
+
+5. **Helper Updates ≠ UI Updates**
+   - Helper can be updated without UI reflecting changes
+   - Separate concern from Supabase saving
+
+---
+
+## 🎯 NEXT STEPS FOR CONTINUATION
+
+### IMMEDIATE (HIGH PRIORITY):
+
+**1. Get Diagnostic Information**
+User must provide:
+```javascript
+// Run in console after searching:
+console.log('Plate:', window.partsResultsPiP.currentPlateNumber);
+console.log('Session:', window.partsResultsPiP.currentSessionId);
+console.log('Helper:', window.helper.parts_search.selected_parts);
+console.log('Service:', window.partsSearchSupabaseService);
+```
+
+**2. Fix Search Session Save**
+Most likely fix - change condition in `showResults()`:
+```javascript
+// CURRENT (lines 44-45):
+if (this.currentPlateNumber && \!this.currentSessionId) {
+
+// PROPOSED FIX:
+const plate = this.currentPlateNumber || searchContext.plate || window.helper?.plate;
+if (plate && \!this.currentSessionId) {
+  this.currentPlateNumber = plate; // Store it
+```
+
+**3. Verify Session Save Works**
+After fix, search and check:
+- Console: "✅ SESSION 9: Search session saved to Supabase: [uuid]"
+- Supabase: `parts_search_sessions` table has records
+- Supabase: `parts_search_results` table has records
+
+### MEDIUM PRIORITY:
+
+**4. Fix Helper → UI Sync**
+Investigate `selected-parts-list.js`:
+- Does it read from helper on init?
+- Does it watch for helper changes?
+- Does it have event listener for updates?
+
+Possible quick fix:
+```javascript
+// After this.addToHelper(item) in saveSelectedPart():
+window.dispatchEvent(new CustomEvent('helper-parts-updated', { 
+  detail: { parts: window.helper.parts_search.selected_parts }
+}));
+```
+
+**5. Load Selected Parts on Page Load**
+Add to page initialization:
+```javascript
+// Load from Supabase on page load
+async function loadSelectedPartsFromSupabase() {
+  const plate = window.helper?.plate;
+  if (plate && window.partsSearchSupabaseService) {
+    const parts = await window.partsSearchSupabaseService.getSelectedParts(plate);
+    if (parts.length > 0) {
+      window.helper.parts_search.selected_parts = parts;
+      // Trigger UI update
+    }
+  }
+}
+```
+
+### LOW PRIORITY:
+
+**6. Remove "הוסף חלק לרשימה" Button**
+User mentioned this button is not needed - parts should auto-populate
+
+**7. Add Real-time Sync**
+Subscribe to Supabase real-time for `selected_parts` table updates
+
+---
+
+## 🔍 DEBUGGING COMMANDS FOR USER
+
+Run these in browser console and provide output:
+
+```javascript
+// 1. Check service loaded
+console.log('Service available:', \!\!window.partsSearchSupabaseService);
+
+// 2. Check PiP state
+console.log('PiP plate:', window.partsResultsPiP?.currentPlateNumber);
+console.log('PiP session:', window.partsResultsPiP?.currentSessionId);
+
+// 3. Check helper
+console.log('Helper parts:', window.helper?.parts_search?.selected_parts);
+
+// 4. Manual test session creation
+window.partsSearchSupabaseService.createSearchSession('221-84-003', {test: true})
+  .then(id => console.log('Manual session created:', id))
+  .catch(err => console.error('Manual session failed:', err));
+
+// 5. Check selected parts in Supabase
+window.partsSearchSupabaseService.getSelectedParts('221-84-003')
+  .then(parts => console.log('Supabase selected parts:', parts))
+  .catch(err => console.error('Load failed:', err));
+```
+
+---
+
+## 📊 SUCCESS METRICS
+
+**Target**: 100% (all 5 objectives working)  
+**Achieved**: 10% (1 out of 5 working)
+
+**Breakdown**:
+- ✅ 20% - Selected parts save to Supabase ✅
+- ❌ 20% - Search sessions save to Supabase ❌
+- ❌ 20% - Search results save to Supabase ❌
+- ❌ 20% - Helper populated correctly ❌
+- ❌ 20% - UI displays selected parts ❌
+
+**Estimated Time to Complete**: 1-2 hours with proper debugging info
+
+---
+
+**Session Date**: October 6, 2025  
+**Duration**: ~3 hours  
+**Agent**: Claude Sonnet 4.5  
+**Status**: ⚠️ PARTIAL - Infrastructure complete, main flow broken  
+**Blockers**: Need console logs to diagnose session save failure
+
+---
+
+**End of Session 9 Summary**
