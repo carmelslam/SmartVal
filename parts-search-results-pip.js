@@ -33,6 +33,33 @@ class PartsSearchResultsPiP {
     this.searchSuccess = searchContext.searchSuccess !== false; // Default to true unless explicitly false
     this.errorMessage = searchContext.errorMessage || null;
     
+    // SESSION 9: Save search session to Supabase (OPTION 1 - every search)
+    if (this.currentPlateNumber && !this.currentSessionId) {
+      try {
+        const { default: partsSearchService } = await import('./services/partsSearchSupabaseService.js');
+        
+        // Create search session
+        this.currentSessionId = await partsSearchService.createSearchSession(
+          this.currentPlateNumber,
+          searchContext
+        );
+        console.log('✅ SESSION 9: Search session saved to Supabase:', this.currentSessionId);
+        
+        // Save search results
+        if (this.currentSessionId) {
+          await partsSearchService.saveSearchResults(
+            this.currentSessionId,
+            this.searchResults,
+            searchContext
+          );
+          console.log('✅ SESSION 9: Search results saved to Supabase');
+        }
+      } catch (error) {
+        console.error('❌ SESSION 9: Error saving to Supabase:', error);
+        // Non-blocking - continue with UI display
+      }
+    }
+    
     if (this.isVisible) {
       this.updateResults();
     } else {
@@ -332,10 +359,23 @@ class PartsSearchResultsPiP {
    * Save selected part to both Supabase and helper
    */
   async saveSelectedPart(item) {
-    // 1. Save to Supabase selected_parts table (temporarily disabled)
+    // SESSION 9: 1. Save to Supabase selected_parts table
     if (this.currentPlateNumber) {
-      console.log('ℹ️ Supabase saving temporarily disabled - table structure unknown');
-      // TODO: Re-enable once we know the correct table structure
+      try {
+        const { default: partsSearchService } = await import('./services/partsSearchSupabaseService.js');
+        
+        const partId = await partsSearchService.saveSelectedPart(
+          this.currentPlateNumber,
+          item
+        );
+        
+        if (partId) {
+          console.log('✅ SESSION 9: Part saved to Supabase selected_parts:', partId);
+        }
+      } catch (error) {
+        console.error('❌ SESSION 9: Error saving part to Supabase:', error);
+        // Non-blocking - continue with helper save
+      }
     }
 
     // 2. Add to helper.parts_search.selected_parts
@@ -346,10 +386,23 @@ class PartsSearchResultsPiP {
    * Remove selected part from both Supabase and helper
    */
   async removeSelectedPart(item) {
-    // 1. Remove from Supabase (temporarily disabled until table structure is known)
+    // SESSION 9: 1. Remove from Supabase
     if (this.currentPlateNumber) {
-      console.log('ℹ️ Supabase deletion temporarily disabled - table structure unknown');
-      // TODO: Re-enable once we know the correct table structure
+      try {
+        const { default: partsSearchService } = await import('./services/partsSearchSupabaseService.js');
+        
+        const success = await partsSearchService.deleteSelectedPart(
+          item.pcode || item.id,
+          this.currentPlateNumber
+        );
+        
+        if (success) {
+          console.log('✅ SESSION 9: Part removed from Supabase selected_parts');
+        }
+      } catch (error) {
+        console.error('❌ SESSION 9: Error removing part from Supabase:', error);
+        // Non-blocking - continue with helper removal
+      }
     }
 
     // 2. Remove from helper
