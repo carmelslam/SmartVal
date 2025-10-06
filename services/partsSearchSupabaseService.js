@@ -125,16 +125,16 @@
         const supabase = this.getSupabase();
 
         // Check for duplicates (same plate + pcode)
-        const { data: existing } = await supabase
+        const { data: existingParts, error: checkError } = await supabase
           .from('selected_parts')
           .select('id')
           .eq('plate', plate)
           .eq('pcode', partData.pcode || partData.catalog_number)
-          .maybeSingle();
+          .limit(1);
 
-        if (existing) {
-          console.log('ℹ️ Part already selected, skipping duplicate:', existing.id);
-          return existing.id;
+        if (!checkError && existingParts && existingParts.length > 0) {
+          console.log('ℹ️ Part already selected, skipping duplicate:', existingParts[0].id);
+          return existingParts[0].id;
         }
 
         // Insert new selected part
