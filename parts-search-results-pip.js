@@ -34,11 +34,22 @@ class PartsSearchResultsPiP {
     this.errorMessage = searchContext.errorMessage || null;
     
     // SESSION 9: Save search session to Supabase (OPTION 1 - every search)
+    console.log('🔍 SESSION 9 DEBUG: Check conditions:', {
+      hasPlateNumber: !!this.currentPlateNumber,
+      plateNumber: this.currentPlateNumber,
+      hasSessionId: !!this.currentSessionId,
+      resultsCount: this.searchResults.length
+    });
+    
     if (this.currentPlateNumber && !this.currentSessionId) {
+      console.log('✅ SESSION 9: Conditions met, starting Supabase save...');
       try {
+        console.log('📦 SESSION 9: Importing service...');
         const { default: partsSearchService } = await import('./services/partsSearchSupabaseService.js');
+        console.log('✅ SESSION 9: Service imported successfully');
         
         // Create search session
+        console.log('💾 SESSION 9: Creating search session...');
         this.currentSessionId = await partsSearchService.createSearchSession(
           this.currentPlateNumber,
           searchContext
@@ -47,17 +58,23 @@ class PartsSearchResultsPiP {
         
         // Save search results
         if (this.currentSessionId) {
+          console.log('💾 SESSION 9: Saving search results...');
           await partsSearchService.saveSearchResults(
             this.currentSessionId,
             this.searchResults,
             searchContext
           );
           console.log('✅ SESSION 9: Search results saved to Supabase');
+        } else {
+          console.warn('⚠️ SESSION 9: No session ID returned, skipping results save');
         }
       } catch (error) {
         console.error('❌ SESSION 9: Error saving to Supabase:', error);
+        console.error('❌ SESSION 9: Error stack:', error.stack);
         // Non-blocking - continue with UI display
       }
+    } else {
+      console.log('⏭️ SESSION 9: Skipping Supabase save (conditions not met)');
     }
     
     if (this.isVisible) {
