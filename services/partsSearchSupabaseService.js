@@ -42,17 +42,17 @@
             plate: plate,
             search_context: searchContext,
             created_at: new Date().toISOString()
-          })
-          .select('id')
-          .single();
+          });
 
         if (error) {
           console.error('❌ Error creating search session:', error);
           return null;
         }
 
-        console.log('✅ Search session created:', data.id);
-        return data.id;
+        // For older Supabase: data is array, get first item
+        const sessionId = data && data[0] ? data[0].id : null;
+        console.log('✅ Search session created:', sessionId);
+        return sessionId;
 
       } catch (error) {
         console.error('❌ Exception creating search session:', error);
@@ -88,16 +88,15 @@
             results: results, // Store entire results array as JSONB
             response_time_ms: query.response_time_ms || null,
             created_at: new Date().toISOString()
-          })
-          .select('id')
-          .single();
+          });
 
         if (error) {
           console.error('❌ Error saving search results:', error);
           return false;
         }
 
-        console.log('✅ Search results saved:', data.id);
+        const resultId = data && data[0] ? data[0].id : 'unknown';
+        console.log('✅ Search results saved:', resultId);
         return true;
 
       } catch (error) {
@@ -156,17 +155,16 @@
             quantity: partData.quantity || 1,
             raw_data: partData, // Store complete original data
             selected_at: new Date().toISOString()
-          })
-          .select('id')
-          .single();
+          });
 
         if (error) {
           console.error('❌ Error saving selected part:', error);
           return null;
         }
 
-        console.log('✅ Selected part saved:', data.id);
-        return data.id;
+        const partId = data && data[0] ? data[0].id : null;
+        console.log('✅ Selected part saved:', partId);
+        return partId;
 
       } catch (error) {
         console.error('❌ Exception saving selected part:', error);
