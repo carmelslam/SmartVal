@@ -121,7 +121,7 @@
         const sourcesConcat = uniqueSources.join(', ');
         console.log('  - Unique sources found:', sourcesConcat);
         
-        // Build the insert object with individual fields populated
+        // OPTION A: Clean structure - only search params + full results
         const insertData = {
           session_id: sessionId,
           // Search parameters (what user searched for)
@@ -134,22 +134,13 @@
           engine_code: searchParams.engine_code || null,
           engine_type: searchParams.engine_type || null,
           vin: searchParams.vin || null,
-          // ISSUE #1: Part name from simple OR advanced search
           part_family: searchParams.partGroup || searchParams.part_group || null,
-          // Summary from results (not specific to one part)
-          supplier_name: null, // Multiple suppliers in results
-          supplier: null, // Multiple suppliers
-          pcode: null, // Multiple pcodes - can't associate one
-          cat_num_desc: null, // Multiple parts - can't associate one
-          price: null, // Multiple prices - can't associate one
-          source: sourcesConcat, // ISSUE #6: All sources concatenated
-          oem: searchParams.oem || searchParams.oemNumber || null, // From search if provided
-          availability: null, // Multiple availability statuses
-          location: null, // Multiple locations
-          search_type: searchType, // ISSUE #4: Fixed detection
-          // Store complete data
-          search_query: searchParams, // ISSUE #1: ACTUAL search parameters including freeQuery
-          results: results, // Full results array as JSONB
+          search_type: searchType,
+          // REMOVED individual part fields (pcode, cat_num_desc, price, supplier_name, supplier, oem, availability, location)
+          // Those can't represent entire search - use results JSONB instead
+          // Store complete data only
+          search_query: searchParams, // Full search parameters as JSONB
+          results: results, // Full results array as JSONB (50 parts with all details)
           response_time_ms: query.searchTime || null,
           created_at: new Date().toISOString()
         };
