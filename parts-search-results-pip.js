@@ -95,6 +95,7 @@ class PartsSearchResultsPiP {
           );
           console.log('✅ SESSION 9: Search results saved to Supabase');
           this.currentSearchResultId = searchResultId; // SESSION 11: Store parts_search_results.id for selected parts
+          console.log('📋 SESSION 11: Stored search result ID for FK:', searchResultId);
         } else {
           console.warn('⚠️ SESSION 9: No session ID returned from Supabase, skipping results save');
         }
@@ -415,12 +416,12 @@ class PartsSearchResultsPiP {
           throw new Error('partsSearchSupabaseService not available');
         }
         
-        // SESSION 11: Pass search context with vehicle data and session ID
+        // SESSION 11: Pass search context with vehicle data and result ID
         const partId = await partsSearchService.saveSelectedPart(
           this.currentPlateNumber,
           item,
           {
-            searchSessionId: this.currentSupabaseSessionId,
+            searchResultId: this.currentSearchResultId,
             searchContext: this.currentSearchContext
           }
         );
@@ -685,7 +686,7 @@ class PartsSearchResultsPiP {
           await supabase
             .from('selected_parts')
             .delete()
-            .eq('plate_number', this.currentPlateNumber);
+            .eq('plate', this.currentPlateNumber);
         } catch (error) {
           console.error('❌ Error clearing selections:', error);
         }

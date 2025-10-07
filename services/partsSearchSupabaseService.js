@@ -258,9 +258,9 @@
           return false;
         }
 
-        const resultId = data && data[0] ? data[0].id : 'unknown';
+        const resultId = data && data[0] ? data[0].id : null;
         console.log('✅ SESSION 9 TASK 3: Search results saved with populated fields:', resultId);
-        return true;
+        return resultId;
 
       } catch (error) {
         console.error('❌ SESSION 9 TASK 3: Exception saving search results:', error);
@@ -308,7 +308,7 @@
           .from('selected_parts')
           .insert({
             // Link to search result
-            search_result_id: context.searchSessionId || null, // SESSION 11: Link to search session
+            search_result_id: context.searchResultId || null, // SESSION 11: Link to parts_search_results.id
             // Plate
             plate: plate,
             // Part details
@@ -347,7 +347,7 @@
         }
 
         const partId = data && data[0] ? data[0].id : null;
-        console.log('✅ SESSION 11: Selected part saved:', partId, '| search_session_id:', context.searchSessionId || 'NULL');
+        console.log('✅ SESSION 11: Selected part saved:', partId, '| search_result_id:', context.searchResultId || 'NULL');
         return partId;
 
       } catch (error) {
