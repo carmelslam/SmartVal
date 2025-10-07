@@ -27,8 +27,26 @@ class PartsSearchResultsPiP {
   async showResults(searchResults, searchContext = {}) {
     console.log('📋 Showing PiP results:', searchResults.length, 'items');
     
+    // SESSION 9 TASK 1: Enhanced plate number extraction with debugging
+    console.log('🔍 SESSION 9 TASK 1: Plate number extraction...');
+    console.log('  - searchContext:', JSON.stringify(searchContext, null, 2));
+    console.log('  - searchContext.plate:', searchContext.plate);
+    console.log('  - window.helper exists:', !!window.helper);
+    console.log('  - window.helper?.plate:', window.helper?.plate);
+    
     this.searchResults = searchResults || [];
-    this.currentPlateNumber = searchContext.plate || window.helper?.plate || null;
+    
+    // Try multiple sources for plate number
+    this.currentPlateNumber = searchContext.plate 
+      || searchContext.car_plate 
+      || searchContext.plateNumber 
+      || window.helper?.plate 
+      || window.helper?.vehicle?.plate 
+      || null;
+    
+    console.log('  - RESOLVED plate number:', this.currentPlateNumber);
+    console.log('  - Extraction strategy used:', this.currentPlateNumber ? 'SUCCESS' : 'FAILED');
+    
     this.currentSessionId = searchContext.sessionId || null;
     this.searchSuccess = searchContext.searchSuccess !== false; // Default to true unless explicitly false
     this.errorMessage = searchContext.errorMessage || null;
