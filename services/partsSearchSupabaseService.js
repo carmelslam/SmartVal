@@ -140,10 +140,10 @@
         // SESSION 11: Get current user ID for tracking
         const userId = await this.getCurrentUserId();
         
-        // SESSION 12: Determine data source
-        // Default: 'catalog' (Supabase catalog_items search)
-        // Future: 'web' (external API search), 'other' (direct external site)
-        const dataSource = searchContext.dataSource || searchParams.dataSource || 'catalog';
+        // SESSION 12: Determine data source (Hebrew values)
+        // Default: 'קטלוג' (Supabase catalog_items search)
+        // Future: 'אינטרנט' (external API search), 'אחר' (OCR, direct external site)
+        const dataSource = searchContext.dataSource || searchParams.dataSource || 'קטלוג';
         
         const { data, error } = await supabase
           .from('parts_search_sessions')
@@ -229,10 +229,10 @@
         const sourcesConcat = uniqueSources.join(', ');
         console.log('  - Unique sources found:', sourcesConcat);
         
-        // SESSION 12: Determine data source
-        // Default: 'catalog' (Supabase catalog_items search)
-        // 'web' (external Make.com API), 'other' (OCR results from Make.com)
-        const dataSource = query.dataSource || searchParams.dataSource || 'catalog';
+        // SESSION 12: Determine data source (Hebrew values)
+        // Default: 'קטלוג' (Supabase catalog_items search)
+        // 'אינטרנט' (external Make.com API), 'אחר' (OCR results from Make.com)
+        const dataSource = query.dataSource || searchParams.dataSource || 'קטלוג';
         
         // OPTION A: Clean structure - only search params + full results
         const insertData = {
@@ -301,6 +301,9 @@
         
         // SESSION 11: Extract vehicle data from search context
         const searchParams = context.searchContext?.searchParams || {};
+        
+        // SESSION 12: Get data_source from search context (Hebrew value)
+        const dataSource = context.searchContext?.dataSource || 'קטלוג';
 
         // Check for duplicates (same plate + pcode)
         const { data: existingParts, error: checkError } = await supabase
@@ -347,6 +350,7 @@
             vin: searchParams.vin || null,
             // Metadata
             status: 'selected',
+            data_source: dataSource, // SESSION 12: Track WHERE part came from
             raw_data: partData, // Store complete original data
             selected_at: new Date().toISOString()
           });

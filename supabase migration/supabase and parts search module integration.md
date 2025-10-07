@@ -7387,10 +7387,10 @@ const dataSource = query.dataSource || searchParams.dataSource || 'catalog';
 data_source: dataSource, // SESSION 12: Track WHERE data came from
 ```
 
-**Data Source Mapping:**
-- `'catalog'` = 🔍 חפש ב-Supabase (Search Database) - Supabase catalog_items
-- `'web'` = 🔍 חפש במערכת חיצונית (Search Web) - Make.com external API
-- `'other'` = שלח תוצאת חיפוש לניתוח (OCR PDF) - OCR results from Make.com
+**Data Source Mapping (Hebrew Values):**
+- `'קטלוג'` (catalog) = 🔍 חפש ב-Supabase (Search Database) - Supabase catalog_items
+- `'אינטרנט'` (web) = 🔍 חפש במערכת חיצונית (Search Web) - Make.com external API
+- `'אחר'` (other) = שלח תוצאת חיפוש לניתוח (OCR PDF) - OCR results from Make.com
 
 ---
 
@@ -7439,20 +7439,72 @@ data_source: dataSource, // SESSION 12: Track WHERE data came from
 7. **Legacy Table Cleanup** - SQL created to drop search_results
 
 ### ⏳ FUTURE IMPLEMENTATION:
-- Add `dataSource: 'web'` when Make.com external search is used
-- Add `dataSource: 'other'` when OCR results come back from Make.com
+- Add `dataSource: 'אינטרנט'` when Make.com external search is used
+- Add `dataSource: 'אחר'` when OCR results come back from Make.com
+
+---
+
+### **TASK 8: Hebrew Data Source Values** ✅
+
+**Change:** Use Hebrew labels instead of English for data_source values
+
+**Updated Values:**
+- `'catalog'` → `'קטלוג'` (Catalog)
+- `'web'` → `'אינטרנט'` (Internet/Web)
+- `'other'` → `'אחר'` (Other)
+
+**Files Updated:**
+1. **SESSION_12_DROP_UNUSED_SEARCH_RESULTS_TABLE.sql**:
+   - All 3 tables use Hebrew check constraints
+   - Default: `'קטלוג'`
+
+2. **parts search.html:685**:
+   ```javascript
+   dataSource: 'קטלוג', // Hebrew value
+   ```
+
+3. **partsSearchSupabaseService.js:146, 235**:
+   ```javascript
+   const dataSource = context.dataSource || 'קטלוג';
+   ```
+
+4. **partsSearchSupabaseService.js:306, 353**:
+   ```javascript
+   data_source: dataSource, // Hebrew value saved to selected_parts
+   ```
+
+---
+
+### **TASK 9: Add data_source to selected_parts** ✅
+
+**Added:** `data_source` column to `selected_parts` table
+
+**Purpose:** Track WHERE the selected part originally came from
+
+**SQL:**
+```sql
+ALTER TABLE public.selected_parts
+  ADD COLUMN IF NOT EXISTS data_source TEXT DEFAULT 'קטלוג',
+  ADD CONSTRAINT selected_parts_data_source_check 
+    CHECK (data_source IN ('קטלוג', 'אינטרנט', 'אחר'));
+```
+
+**Code:** `partsSearchSupabaseService.js:353`
+```javascript
+data_source: dataSource, // SESSION 12: Track WHERE part came from
+```
 
 ---
 
 ## STATISTICS (SESSION 12 FINAL)
 
-- **Session Duration:** ~90 minutes
+- **Session Duration:** ~120 minutes
 - **Files Modified:** 3 JS files, 1 HTML file
-- **SQL Files Created:** 2 (drop columns + add data_source)
-- **Lines Changed:** ~35 lines
-- **Tasks Completed:** 7 out of 7
+- **SQL Files Created:** 2 (drop duplicate columns + add data_source to 3 tables)
+- **Lines Changed:** ~45 lines
+- **Tasks Completed:** 9 out of 9
 - **Completion:** 100% ✅
-- **Blockers Resolved:** All issues fixed + enhancement added
+- **Blockers Resolved:** All issues fixed + 2 enhancements added (Hebrew values + selected_parts tracking)
 
 ---
 
