@@ -50,6 +50,8 @@ class PartsSearchResultsPiP {
     this.currentSessionId = searchContext.sessionId || null;
     this.searchSuccess = searchContext.searchSuccess !== false; // Default to true unless explicitly false
     this.errorMessage = searchContext.errorMessage || null;
+    this.currentSearchContext = searchContext; // SESSION 11: Store for selected parts save
+    this.currentSupabaseSessionId = null; // SESSION 11: Will be populated after search session save
     
     // SESSION 9: Save search session to Supabase (OPTION 1 - every search)
     console.log('🔍 SESSION 9 DEBUG: Check conditions:', {
@@ -81,6 +83,7 @@ class PartsSearchResultsPiP {
           searchContext
         );
         console.log('✅ SESSION 9: Search session saved to Supabase:', supabaseSessionId);
+        this.currentSupabaseSessionId = supabaseSessionId; // SESSION 11: Store for selected parts save
         
         // Save search results
         if (supabaseSessionId) {
@@ -403,7 +406,7 @@ class PartsSearchResultsPiP {
    * Save selected part to both Supabase and helper
    */
   async saveSelectedPart(item) {
-    // SESSION 9: 1. Save to Supabase selected_parts table
+    // SESSION 11: 1. Save to Supabase selected_parts table with full context
     if (this.currentPlateNumber) {
       try {
         const partsSearchService = window.partsSearchSupabaseService;
@@ -411,16 +414,21 @@ class PartsSearchResultsPiP {
           throw new Error('partsSearchSupabaseService not available');
         }
         
+        // SESSION 11: Pass search context with vehicle data and session ID
         const partId = await partsSearchService.saveSelectedPart(
           this.currentPlateNumber,
-          item
+          item,
+          {
+            searchSessionId: this.currentSupabaseSessionId,
+            searchContext: this.currentSearchContext
+          }
         );
         
         if (partId) {
-          console.log('✅ SESSION 9: Part saved to Supabase selected_parts:', partId);
+          console.log('✅ SESSION 11: Part saved to Supabase selected_parts:', partId);
         }
       } catch (error) {
-        console.error('❌ SESSION 9: Error saving part to Supabase:', error);
+        console.error('❌ SESSION 11: Error saving part to Supabase:', error);
         // Non-blocking - continue with helper save
       }
     }

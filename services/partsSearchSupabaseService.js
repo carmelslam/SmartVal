@@ -274,17 +274,21 @@
      * 
      * @param {string} plate - Plate number
      * @param {object} partData - Part data from search results
+     * @param {object} context - Additional context (searchSessionId, searchContext)
      * @returns {Promise<string|null>} - Part ID or null if failed
      */
-    async saveSelectedPart(plate, partData) {
+    async saveSelectedPart(plate, partData, context = {}) {
       try {
         if (!plate || !partData) {
           console.warn('⚠️ Missing plate or partData');
           return null;
         }
 
-        console.log('💾 Saving selected part for plate:', plate);
+        console.log('💾 SESSION 11: Saving selected part for plate:', plate);
         const supabase = this.getSupabase();
+        
+        // SESSION 11: Extract vehicle data from search context
+        const searchParams = context.searchContext?.searchParams || {};
 
         // Check for duplicates (same plate + pcode)
         const { data: existingParts, error: checkError } = await supabase
@@ -299,11 +303,15 @@
           return existingParts[0].id;
         }
 
-        // Insert new selected part
+        // SESSION 11: Insert new selected part with full data
         const { data, error } = await supabase
           .from('selected_parts')
           .insert({
+            // Link to search result
+            search_result_id: context.searchSessionId || null, // SESSION 11: Link to search session
+            // Plate
             plate: plate,
+            // Part details
             part_name: partData.name || partData.part_name || partData.cat_num_desc,
             pcode: partData.pcode || partData.catalog_number,
             cat_num_desc: partData.cat_num_desc || partData.description,
@@ -315,22 +323,35 @@
             part_family: partData.part_family,
             availability: partData.availability,
             location: partData.location,
+            comments: partData.comments || null,
             quantity: partData.quantity || 1,
+            // SESSION 11: Vehicle data from search context
+            make: searchParams.manufacturer || searchParams.make || null,
+            model: searchParams.model || null,
+            trim: searchParams.trim || null,
+            year: searchParams.year || null,
+            engine_volume: searchParams.engine_volume || null,
+            engine_code: searchParams.engine_code || null,
+            engine_type: searchParams.engine_type || null,
+            vin: searchParams.vin || null,
+            part_group: searchParams.part_group || searchParams.partGroup || null,
+            // Metadata
+            status: 'selected',
             raw_data: partData, // Store complete original data
             selected_at: new Date().toISOString()
           });
 
         if (error) {
-          console.error('❌ Error saving selected part:', error);
+          console.error('❌ SESSION 11: Error saving selected part:', error);
           return null;
         }
 
         const partId = data && data[0] ? data[0].id : null;
-        console.log('✅ Selected part saved:', partId);
+        console.log('✅ SESSION 11: Selected part saved:', partId, '| search_session_id:', context.searchSessionId || 'NULL');
         return partId;
 
       } catch (error) {
-        console.error('❌ Exception saving selected part:', error);
+        console.error('❌ SESSION 11: Exception saving selected part:', error);
         return null;
       }
     }
