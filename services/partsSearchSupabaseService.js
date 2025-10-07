@@ -33,16 +33,36 @@
      */
     async createSearchSession(plate, searchContext = {}) {
       try {
-        console.log('💾 SESSION 9: Creating search session for plate:', plate);
+        console.log('💾 SESSION 10: Creating search session for plate:', plate);
         const supabase = this.getSupabase();
         
         // Extract actual search params from context
         const searchParams = searchContext.searchParams || {};
         console.log('  - Search params:', searchParams);
         
+        // SESSION 10: Look up case_id by plate number
+        let caseId = null;
+        if (plate) {
+          console.log('  - Looking up case_id for plate:', plate);
+          const { data: caseData, error: caseError } = await supabase
+            .from('cases')
+            .select('id')
+            .eq('plate', plate)
+            .eq('status', 'OPEN')
+            .limit(1);
+          
+          if (!caseError && caseData && caseData.length > 0) {
+            caseId = caseData[0].id;
+            console.log('  ✅ Found case_id:', caseId);
+          } else {
+            console.log('  ⚠️ No open case found for plate:', plate);
+          }
+        }
+        
         const { data, error } = await supabase
           .from('parts_search_sessions')
           .insert({
+            case_id: caseId, // SESSION 10: Link to case
             plate: plate,
             search_context: searchParams, // Store actual search params, not PiP metadata
             // Individual fields from search params
@@ -54,21 +74,22 @@
             engine_code: searchParams.engine_code || null,
             engine_type: searchParams.engine_type || null,
             vin: searchParams.vin || null,
+            created_by: null, // TODO: Add user when auth is implemented
             created_at: new Date().toISOString()
           });
 
         if (error) {
-          console.error('❌ SESSION 9: Error creating search session:', error);
+          console.error('❌ SESSION 10: Error creating search session:', error);
           return null;
         }
 
         // For older Supabase: data is array, get first item
         const sessionId = data && data[0] ? data[0].id : null;
-        console.log('✅ SESSION 9: Search session created:', sessionId);
+        console.log('✅ SESSION 10: Search session created:', sessionId);
         return sessionId;
 
       } catch (error) {
-        console.error('❌ SESSION 9: Exception creating search session:', error);
+        console.error('❌ SESSION 10: Exception creating search session:', error);
         return null;
       }
     }
