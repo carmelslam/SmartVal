@@ -40,22 +40,35 @@
         const searchParams = searchContext.searchParams || {};
         console.log('  - Search params:', searchParams);
         
-        // SESSION 10: Look up case_id by plate number
+        // SESSION 10: Get case_id from helper or look up by plate
         let caseId = null;
-        if (plate) {
-          console.log('  - Looking up case_id for plate:', plate);
+        
+        // Strategy 1: Try to get from window.helper (if working on active case)
+        if (window.helper?.case_info?.supabase_case_id) {
+          caseId = window.helper.case_info.supabase_case_id;
+          console.log('  ✅ Got case_id from helper:', caseId);
+        }
+        // Strategy 2: Look up in cases table by plate (for OPEN cases)
+        else if (plate) {
+          console.log('  - Helper not available, looking up case_id for plate:', plate);
+          
+          // Normalize plate: try both with dashes and without
+          const plateNoDashes = plate.replace(/-/g, ''); // "221-84-003" → "22184003"
+          console.log('  - Normalized plate (no dashes):', plateNoDashes);
+          
           const { data: caseData, error: caseError } = await supabase
             .from('cases')
             .select('id')
-            .eq('plate', plate)
+            .or(`plate.eq.${plate},plate.eq.${plateNoDashes}`) // Try both formats
             .eq('status', 'OPEN')
             .limit(1);
           
           if (!caseError && caseData && caseData.length > 0) {
             caseId = caseData[0].id;
-            console.log('  ✅ Found case_id:', caseId);
+            console.log('  ✅ Found case_id from cases table:', caseId);
           } else {
-            console.log('  ⚠️ No open case found for plate:', plate);
+            console.log('  ⚠️ No open case found for plates:', plate, 'or', plateNoDashes);
+            console.log('  ⚠️ Error:', caseError);
           }
         }
         
