@@ -316,12 +316,11 @@
             pcode: partData.pcode || partData.catalog_number,
             cat_num_desc: partData.cat_num_desc || partData.description,
             oem: partData.oem,
-            supplier: partData.supplier,
             supplier_name: partData.supplier_name,
             price: partData.price,
-            source: partData.source,
+            source: partData.availability || partData.source,
             part_family: partData.part_family,
-            availability: partData.availability,
+            availability: partData.location,
             location: partData.location,
             comments: partData.comments || null,
             quantity: partData.quantity || 1,
@@ -334,7 +333,6 @@
             engine_code: searchParams.engine_code || null,
             engine_type: searchParams.engine_type || null,
             vin: searchParams.vin || null,
-            part_group: searchParams.part_group || searchParams.partGroup || null,
             // Metadata
             status: 'selected',
             raw_data: partData, // Store complete original data
