@@ -89,6 +89,12 @@
           return false;
         }
 
+        // ISSUE #2: Don't save if 0 results
+        if (!results || results.length === 0) {
+          console.log('ℹ️ SESSION 9: No results found, skipping save to parts_search_results');
+          return false;
+        }
+
         console.log('💾 SESSION 9 TASK 3: Saving search results with individual fields...');
         console.log('  - Results count:', results.length);
         console.log('  - Query context:', query);
@@ -100,40 +106,49 @@
         console.log('  - First result sample:', firstResult);
         console.log('  - Search params:', searchParams);
         
-        // Determine search type based on what was searched
+        // ISSUE #4: Determine search type based on what was searched
         let searchType = 'simple_search'; // Default
         if (searchParams.partGroup || searchParams.partName || searchParams.part_group || searchParams.part_name) {
           searchType = 'advanced_search';
+        } else if (searchParams.freeQuery || searchParams.free_query || searchParams.query) {
+          searchType = 'simple_search'; // Free text only
         } else if (searchParams.manufacturer || searchParams.make || searchParams.model) {
-          searchType = 'smart_search';
+          searchType = 'smart_search'; // Car-based search
         }
+        
+        // ISSUE #6: Extract all unique sources from results
+        const uniqueSources = [...new Set(results.map(r => r.source).filter(Boolean))];
+        const sourcesConcat = uniqueSources.join(', ');
+        console.log('  - Unique sources found:', sourcesConcat);
         
         // Build the insert object with individual fields populated
         const insertData = {
           session_id: sessionId,
-          // From results (first result data)
-          plate: query.plate || searchParams.plate || firstResult.plate || null,
-          make: firstResult.make || searchParams.manufacturer || searchParams.make || null,
-          model: firstResult.model || searchParams.model || null,
-          trim: firstResult.trim || firstResult.actual_trim || searchParams.trim || null,
-          year: firstResult.year_from || firstResult.extracted_year || searchParams.year || null,
-          engine_volume: firstResult.engine_volume || searchParams.engine_volume || null,
-          engine_code: firstResult.engine_code || searchParams.engine_code || null,
-          engine_type: firstResult.engine_type || searchParams.engine_type || null,
-          vin: firstResult.vin || searchParams.vin || null,
-          part_family: firstResult.part_family || searchParams.partGroup || searchParams.part_group || null,
-          supplier_name: firstResult.supplier_name || null,
-          supplier: firstResult.supplier_name || searchParams.supplier || 'Unknown',
-          pcode: firstResult.pcode || null,
-          cat_num_desc: firstResult.cat_num_desc || null,
-          price: firstResult.price || null,
-          source: firstResult.source || null, // This is חליפי/מקורי
-          oem: firstResult.oem || searchParams.oem || searchParams.oemNumber || null,
-          availability: firstResult.availability || null, // זמין/לא זמין
-          location: firstResult.location || null,
-          search_type: searchType, // smart_search / advanced_search / simple_search
+          // Search parameters (what user searched for)
+          plate: query.plate || searchParams.plate || null,
+          make: searchParams.manufacturer || searchParams.make || null,
+          model: searchParams.model || null,
+          trim: searchParams.trim || null,
+          year: searchParams.year || null,
+          engine_volume: searchParams.engine_volume || null,
+          engine_code: searchParams.engine_code || null,
+          engine_type: searchParams.engine_type || null,
+          vin: searchParams.vin || null,
+          // ISSUE #1: Part name from simple OR advanced search
+          part_family: searchParams.partGroup || searchParams.part_group || null,
+          // Summary from results (not specific to one part)
+          supplier_name: null, // Multiple suppliers in results
+          supplier: null, // Multiple suppliers
+          pcode: null, // Multiple pcodes - can't associate one
+          cat_num_desc: null, // Multiple parts - can't associate one
+          price: null, // Multiple prices - can't associate one
+          source: sourcesConcat, // ISSUE #6: All sources concatenated
+          oem: searchParams.oem || searchParams.oemNumber || null, // From search if provided
+          availability: null, // Multiple availability statuses
+          location: null, // Multiple locations
+          search_type: searchType, // ISSUE #4: Fixed detection
           // Store complete data
-          search_query: searchParams, // ACTUAL search parameters (what user typed)
+          search_query: searchParams, // ISSUE #1: ACTUAL search parameters including freeQuery
           results: results, // Full results array as JSONB
           response_time_ms: query.searchTime || null,
           created_at: new Date().toISOString()
