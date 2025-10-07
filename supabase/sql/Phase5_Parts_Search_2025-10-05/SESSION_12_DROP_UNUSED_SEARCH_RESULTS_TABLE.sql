@@ -17,24 +17,81 @@
 
 -- STEP 1: Add data_source to parts_search_sessions
 -- Tracks WHERE the user intended to search
-ALTER TABLE public.parts_search_sessions
-  ADD COLUMN IF NOT EXISTS data_source TEXT DEFAULT 'קטלוג',
-  ADD CONSTRAINT parts_search_sessions_data_source_check 
+DO $$ 
+BEGIN
+  -- Add column if it doesn't exist
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_name = 'parts_search_sessions' AND column_name = 'data_source'
+  ) THEN
+    ALTER TABLE public.parts_search_sessions ADD COLUMN data_source TEXT DEFAULT 'קטלוג';
+  END IF;
+  
+  -- Drop constraint if it exists (to recreate with correct values)
+  IF EXISTS (
+    SELECT 1 FROM information_schema.table_constraints 
+    WHERE constraint_name = 'parts_search_sessions_data_source_check'
+  ) THEN
+    ALTER TABLE public.parts_search_sessions DROP CONSTRAINT parts_search_sessions_data_source_check;
+  END IF;
+  
+  -- Add constraint
+  ALTER TABLE public.parts_search_sessions 
+    ADD CONSTRAINT parts_search_sessions_data_source_check 
     CHECK (data_source IN ('קטלוג', 'אינטרנט', 'אחר'));
+END $$;
 
 -- STEP 2: Add data_source to parts_search_results
 -- Tracks WHERE the results actually came from
-ALTER TABLE public.parts_search_results
-  ADD COLUMN IF NOT EXISTS data_source TEXT DEFAULT 'קטלוג',
-  ADD CONSTRAINT parts_search_results_data_source_check 
+DO $$ 
+BEGIN
+  -- Add column if it doesn't exist
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_name = 'parts_search_results' AND column_name = 'data_source'
+  ) THEN
+    ALTER TABLE public.parts_search_results ADD COLUMN data_source TEXT DEFAULT 'קטלוג';
+  END IF;
+  
+  -- Drop constraint if it exists
+  IF EXISTS (
+    SELECT 1 FROM information_schema.table_constraints 
+    WHERE constraint_name = 'parts_search_results_data_source_check'
+  ) THEN
+    ALTER TABLE public.parts_search_results DROP CONSTRAINT parts_search_results_data_source_check;
+  END IF;
+  
+  -- Add constraint
+  ALTER TABLE public.parts_search_results 
+    ADD CONSTRAINT parts_search_results_data_source_check 
     CHECK (data_source IN ('קטלוג', 'אינטרנט', 'אחר'));
+END $$;
 
 -- STEP 3: Add data_source to selected_parts
 -- Tracks WHERE the selected part originally came from
-ALTER TABLE public.selected_parts
-  ADD COLUMN IF NOT EXISTS data_source TEXT DEFAULT 'קטלוג',
-  ADD CONSTRAINT selected_parts_data_source_check 
+DO $$ 
+BEGIN
+  -- Add column if it doesn't exist
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_name = 'selected_parts' AND column_name = 'data_source'
+  ) THEN
+    ALTER TABLE public.selected_parts ADD COLUMN data_source TEXT DEFAULT 'קטלוג';
+  END IF;
+  
+  -- Drop constraint if it exists
+  IF EXISTS (
+    SELECT 1 FROM information_schema.table_constraints 
+    WHERE constraint_name = 'selected_parts_data_source_check'
+  ) THEN
+    ALTER TABLE public.selected_parts DROP CONSTRAINT selected_parts_data_source_check;
+  END IF;
+  
+  -- Add constraint
+  ALTER TABLE public.selected_parts 
+    ADD CONSTRAINT selected_parts_data_source_check 
     CHECK (data_source IN ('קטלוג', 'אינטרנט', 'אחר'));
+END $$;
 
 -- STEP 4: Drop the legacy search_results table
 DROP TABLE IF EXISTS public.search_results CASCADE;
