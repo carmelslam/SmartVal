@@ -24,6 +24,100 @@
     }
 
     /**
+     * SESSION 11: 3-Tier Waterproof Case ID Lookup
+     * Handles multiple cases with same plate, version changes, active/closed cases
+     * 
+     * @param {string} plate - Plate number
+     * @param {object} searchContext - Search context (unused but kept for future)
+     * @returns {Promise<string|null>} - Case UUID or null
+     */
+    async getCaseId(plate, searchContext = {}) {
+      console.log('🔍 SESSION 11: Determining case_id for plate:', plate);
+      const supabase = this.getSupabase();
+      
+      // TIER 1: Direct UUID from helper (user is IN a case) - WATERPROOF
+      if (window.helper?.case_info?.supabase_case_id) {
+        console.log('  ✅ TIER 1: Got case_id from helper.case_info.supabase_case_id:', window.helper.case_info.supabase_case_id);
+        return window.helper.case_info.supabase_case_id;
+      }
+      
+      // TIER 2: Lookup by helper_name (most reliable) - WATERPROOF
+      if (window.helper?.helper_name) {
+        console.log('  🔍 TIER 2: Looking up by helper_name:', window.helper.helper_name);
+        try {
+          const { data, error } = await supabase
+            .from('case_helper')
+            .select('case_id')
+            .eq('helper_name', window.helper.helper_name)
+            .eq('is_current', true)
+            .limit(1);
+          
+          if (!error && data && data.length > 0) {
+            console.log('  ✅ TIER 2: Found case_id from helper_name:', data[0].case_id);
+            return data[0].case_id;
+          } else {
+            console.log('  ⚠️ TIER 2: No match found for helper_name');
+          }
+        } catch (err) {
+          console.log('  ⚠️ TIER 2 failed:', err.message);
+        }
+      }
+      
+      // TIER 3: Lookup by plate + active status (safe due to DB constraint) - WATERPROOF
+      if (plate) {
+        console.log('  🔍 TIER 3: Looking up by plate (active cases only)');
+        const plateNoDashes = plate.replace(/-/g, ''); // "221-84-003" → "22184003"
+        console.log('  - Normalized plate (no dashes):', plateNoDashes);
+        
+        try {
+          const { data, error } = await supabase
+            .from('cases')
+            .select('id')
+            .or(`plate.eq.${plate},plate.eq.${plateNoDashes}`)
+            .in('status', ['OPEN', 'IN_PROGRESS']) // DB constraint: max 1 active case per plate
+            .limit(1);
+          
+          if (!error && data && data.length > 0) {
+            console.log('  ✅ TIER 3: Found case_id from active case:', data[0].id);
+            return data[0].id;
+          } else {
+            console.log('  ⚠️ TIER 3: No active case found for plate');
+            if (error) console.log('  ⚠️ Error:', error);
+          }
+        } catch (err) {
+          console.log('  ⚠️ TIER 3 failed:', err.message);
+        }
+      }
+      
+      // TIER 4: NULL (orphan search - acceptable)
+      console.log('  ⚠️ TIER 4: All lookups failed, case_id will be NULL (orphan search)');
+      return null;
+    }
+
+    /**
+     * SESSION 11: Get Current User ID for Tracking
+     * 
+     * @returns {Promise<string|null>} - User UUID from auth or null
+     */
+    async getCurrentUserId() {
+      try {
+        const supabase = this.getSupabase();
+        const { data: { user }, error } = await supabase.auth.getUser();
+        
+        if (!error && user) {
+          console.log('  ✅ Authenticated user:', user.id);
+          return user.id;
+        } else {
+          console.log('  ⚠️ No authenticated user (auth not implemented yet)');
+          return null;
+        }
+      } catch (error) {
+        console.log('  ⚠️ Auth check failed:', error.message);
+        return null;
+      }
+    }
+
+    /**
      * Create a new search session
      * Called: Every time user clicks search (even if 0 results)
      * 
@@ -33,51 +127,25 @@
      */
     async createSearchSession(plate, searchContext = {}) {
       try {
-        console.log('💾 SESSION 10: Creating search session for plate:', plate);
+        console.log('💾 SESSION 11: Creating search session for plate:', plate);
         const supabase = this.getSupabase();
         
         // Extract actual search params from context
         const searchParams = searchContext.searchParams || {};
         console.log('  - Search params:', searchParams);
         
-        // SESSION 10: Get case_id from helper or look up by plate
-        let caseId = null;
+        // SESSION 11: Get case_id using 3-tier waterproof lookup
+        const caseId = await this.getCaseId(plate, searchContext);
         
-        // Strategy 1: Try to get from window.helper (if working on active case)
-        if (window.helper?.case_info?.supabase_case_id) {
-          caseId = window.helper.case_info.supabase_case_id;
-          console.log('  ✅ Got case_id from helper:', caseId);
-        }
-        // Strategy 2: Look up in cases table by plate (for OPEN cases)
-        else if (plate) {
-          console.log('  - Helper not available, looking up case_id for plate:', plate);
-          
-          // Normalize plate: try both with dashes and without
-          const plateNoDashes = plate.replace(/-/g, ''); // "221-84-003" → "22184003"
-          console.log('  - Normalized plate (no dashes):', plateNoDashes);
-          
-          const { data: caseData, error: caseError } = await supabase
-            .from('cases')
-            .select('id')
-            .or(`plate.eq.${plate},plate.eq.${plateNoDashes}`) // Try both formats
-            .eq('status', 'OPEN')
-            .limit(1);
-          
-          if (!caseError && caseData && caseData.length > 0) {
-            caseId = caseData[0].id;
-            console.log('  ✅ Found case_id from cases table:', caseId);
-          } else {
-            console.log('  ⚠️ No open case found for plates:', plate, 'or', plateNoDashes);
-            console.log('  ⚠️ Error:', caseError);
-          }
-        }
+        // SESSION 11: Get current user ID for tracking
+        const userId = await this.getCurrentUserId();
         
         const { data, error } = await supabase
           .from('parts_search_sessions')
           .insert({
-            case_id: caseId, // SESSION 10: Link to case
+            case_id: caseId, // SESSION 11: 3-tier waterproof lookup
             plate: plate,
-            search_context: searchParams, // Store actual search params, not PiP metadata
+            search_context: searchParams,
             // Individual fields from search params
             make: searchParams.manufacturer || searchParams.make || null,
             model: searchParams.model || null,
@@ -87,22 +155,22 @@
             engine_code: searchParams.engine_code || null,
             engine_type: searchParams.engine_type || null,
             vin: searchParams.vin || null,
-            created_by: null, // TODO: Add user when auth is implemented
+            created_by: userId, // SESSION 11: User tracking (null if no auth)
             created_at: new Date().toISOString()
           });
 
         if (error) {
-          console.error('❌ SESSION 10: Error creating search session:', error);
+          console.error('❌ SESSION 11: Error creating search session:', error);
           return null;
         }
 
         // For older Supabase: data is array, get first item
         const sessionId = data && data[0] ? data[0].id : null;
-        console.log('✅ SESSION 10: Search session created:', sessionId);
+        console.log('✅ SESSION 11: Search session created:', sessionId, '| case_id:', caseId || 'NULL', '| user:', userId || 'NULL');
         return sessionId;
 
       } catch (error) {
-        console.error('❌ SESSION 10: Exception creating search session:', error);
+        console.error('❌ SESSION 11: Exception creating search session:', error);
         return null;
       }
     }
