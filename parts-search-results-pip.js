@@ -62,11 +62,11 @@ class PartsSearchResultsPiP {
       serviceAvailable: !!window.partsSearchSupabaseService
     });
     
-    // SESSION 9 FIX: Always save session to Supabase (ignore temp sessionId from search service)
-    if (this.currentPlateNumber) {
-      console.log('✅ SESSION 9: Conditions met, starting Supabase save...');
+    // SESSION 12: Only save session to Supabase if there are results (0 results = no session)
+    if (this.currentPlateNumber && this.searchResults.length > 0) {
+      console.log('✅ SESSION 12: Conditions met, starting Supabase save...');
       console.log('  - Plate number:', this.currentPlateNumber);
-      console.log('  - Temp sessionId (ignored):', this.currentSessionId);
+      console.log('  - Results count:', this.searchResults.length);
       
       try {
         console.log('📦 SESSION 9: Getting global service...');
@@ -76,8 +76,8 @@ class PartsSearchResultsPiP {
         }
         console.log('✅ SESSION 9: Service available');
         
-        // Create search session in Supabase (ALWAYS - even if temp sessionId exists)
-        console.log('💾 SESSION 9: Creating search session in Supabase...');
+        // Create search session in Supabase (ONLY if results > 0)
+        console.log('💾 SESSION 12: Creating search session in Supabase...');
         const supabaseSessionId = await partsSearchService.createSearchSession(
           this.currentPlateNumber,
           searchContext
@@ -104,9 +104,11 @@ class PartsSearchResultsPiP {
         console.error('❌ SESSION 9: Error stack:', error.stack);
         // Non-blocking - continue with UI display
       }
-    } else {
+    } else if (!this.currentPlateNumber) {
       console.warn('⚠️ SESSION 9: No plate number available, skipping Supabase save');
       console.log('  - Check searchContext.plate or window.helper.plate');
+    } else {
+      console.log('ℹ️ SESSION 12: 0 results - skipping session save (no session created for empty searches)');
     }
     
     if (this.isVisible) {
