@@ -60,8 +60,12 @@ class PartsSearchResultsPiP {
       serviceAvailable: !!window.partsSearchSupabaseService
     });
     
-    if (this.currentPlateNumber && !this.currentSessionId) {
+    // SESSION 9 FIX: Always save session to Supabase (ignore temp sessionId from search service)
+    if (this.currentPlateNumber) {
       console.log('✅ SESSION 9: Conditions met, starting Supabase save...');
+      console.log('  - Plate number:', this.currentPlateNumber);
+      console.log('  - Temp sessionId (ignored):', this.currentSessionId);
+      
       try {
         console.log('📦 SESSION 9: Getting global service...');
         const partsSearchService = window.partsSearchSupabaseService;
@@ -70,25 +74,25 @@ class PartsSearchResultsPiP {
         }
         console.log('✅ SESSION 9: Service available');
         
-        // Create search session
-        console.log('💾 SESSION 9: Creating search session...');
-        this.currentSessionId = await partsSearchService.createSearchSession(
+        // Create search session in Supabase (ALWAYS - even if temp sessionId exists)
+        console.log('💾 SESSION 9: Creating search session in Supabase...');
+        const supabaseSessionId = await partsSearchService.createSearchSession(
           this.currentPlateNumber,
           searchContext
         );
-        console.log('✅ SESSION 9: Search session saved to Supabase:', this.currentSessionId);
+        console.log('✅ SESSION 9: Search session saved to Supabase:', supabaseSessionId);
         
         // Save search results
-        if (this.currentSessionId) {
+        if (supabaseSessionId) {
           console.log('💾 SESSION 9: Saving search results...');
           await partsSearchService.saveSearchResults(
-            this.currentSessionId,
+            supabaseSessionId,
             this.searchResults,
             searchContext
           );
           console.log('✅ SESSION 9: Search results saved to Supabase');
         } else {
-          console.warn('⚠️ SESSION 9: No session ID returned, skipping results save');
+          console.warn('⚠️ SESSION 9: No session ID returned from Supabase, skipping results save');
         }
       } catch (error) {
         console.error('❌ SESSION 9: Error saving to Supabase:', error);
@@ -96,7 +100,8 @@ class PartsSearchResultsPiP {
         // Non-blocking - continue with UI display
       }
     } else {
-      console.log('⏭️ SESSION 9: Skipping Supabase save (conditions not met)');
+      console.warn('⚠️ SESSION 9: No plate number available, skipping Supabase save');
+      console.log('  - Check searchContext.plate or window.helper.plate');
     }
     
     if (this.isVisible) {
