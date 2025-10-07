@@ -76,31 +76,63 @@
           return false;
         }
 
-        console.log('💾 Saving search results:', results.length, 'items for session:', sessionId);
+        console.log('💾 SESSION 9 TASK 3: Saving search results with individual fields...');
+        console.log('  - Results count:', results.length);
+        console.log('  - Query context:', query);
         const supabase = this.getSupabase();
+        
+        // Extract data from first result to populate individual columns
+        const firstResult = results[0] || {};
+        console.log('  - First result sample:', firstResult);
+        
+        // Build the insert object with individual fields populated
+        const insertData = {
+          session_id: sessionId,
+          // From results (if available)
+          plate: query.plate || firstResult.plate || null,
+          make: firstResult.make || null,
+          model: firstResult.model || null,
+          trim: firstResult.trim || firstResult.actual_trim || null,
+          year: firstResult.year_from || firstResult.extracted_year || null,
+          engine_volume: firstResult.engine_volume || null,
+          engine_code: firstResult.engine_code || null,
+          engine_type: firstResult.engine_type || null,
+          vin: firstResult.vin || null,
+          part_family: firstResult.part_family || null,
+          supplier_name: firstResult.supplier_name || null,
+          supplier: firstResult.supplier_name || 'Unknown',
+          pcode: firstResult.pcode || null,
+          cat_num_desc: firstResult.cat_num_desc || null,
+          price: firstResult.price || null,
+          source: firstResult.source || null,
+          oem: firstResult.oem || null,
+          availability: firstResult.availability || null,
+          location: firstResult.location || null,
+          search_type: query.searchType || 'smart_search',
+          // Store complete data
+          search_query: query, // PiP context for reference
+          results: results, // Full results array as JSONB
+          response_time_ms: query.searchTime || null,
+          created_at: new Date().toISOString()
+        };
+        
+        console.log('  - Insert data prepared:', Object.keys(insertData));
         
         const { data, error } = await supabase
           .from('parts_search_results')
-          .insert({
-            session_id: sessionId,
-            supplier: results[0]?.supplier_name || 'Unknown',
-            search_query: query,
-            results: results, // Store entire results array as JSONB
-            response_time_ms: query.response_time_ms || null,
-            created_at: new Date().toISOString()
-          });
+          .insert(insertData);
 
         if (error) {
-          console.error('❌ Error saving search results:', error);
+          console.error('❌ SESSION 9 TASK 3: Error saving search results:', error);
           return false;
         }
 
         const resultId = data && data[0] ? data[0].id : 'unknown';
-        console.log('✅ Search results saved:', resultId);
+        console.log('✅ SESSION 9 TASK 3: Search results saved with populated fields:', resultId);
         return true;
 
       } catch (error) {
-        console.error('❌ Exception saving search results:', error);
+        console.error('❌ SESSION 9 TASK 3: Exception saving search results:', error);
         return false;
       }
     }
