@@ -88,12 +88,13 @@ class PartsSearchResultsPiP {
         // Save search results
         if (supabaseSessionId) {
           console.log('💾 SESSION 9: Saving search results...');
-          await partsSearchService.saveSearchResults(
+          const searchResultId = await partsSearchService.saveSearchResults(
             supabaseSessionId,
             this.searchResults,
             searchContext
           );
           console.log('✅ SESSION 9: Search results saved to Supabase');
+          this.currentSearchResultId = searchResultId; // SESSION 11: Store parts_search_results.id for selected parts
         } else {
           console.warn('⚠️ SESSION 9: No session ID returned from Supabase, skipping results save');
         }
