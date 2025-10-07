@@ -140,12 +140,18 @@
         // SESSION 11: Get current user ID for tracking
         const userId = await this.getCurrentUserId();
         
+        // SESSION 12: Determine data source
+        // Default: 'catalog' (Supabase catalog_items search)
+        // Future: 'web' (external API search), 'other' (direct external site)
+        const dataSource = searchContext.dataSource || searchParams.dataSource || 'catalog';
+        
         const { data, error } = await supabase
           .from('parts_search_sessions')
           .insert({
             case_id: caseId, // SESSION 11: 3-tier waterproof lookup
             plate: plate,
             search_context: searchParams,
+            data_source: dataSource, // SESSION 12: Track WHERE user is searching
             // Individual fields from search params
             make: searchParams.manufacturer || searchParams.make || null,
             model: searchParams.model || null,
@@ -223,6 +229,11 @@
         const sourcesConcat = uniqueSources.join(', ');
         console.log('  - Unique sources found:', sourcesConcat);
         
+        // SESSION 12: Determine data source
+        // Default: 'catalog' (Supabase catalog_items search)
+        // 'web' (external Make.com API), 'other' (OCR results from Make.com)
+        const dataSource = query.dataSource || searchParams.dataSource || 'catalog';
+        
         // OPTION A: Clean structure - only search params + full results
         const insertData = {
           session_id: sessionId,
@@ -238,6 +249,7 @@
           vin: searchParams.vin || null,
           part_family: searchParams.partGroup || searchParams.part_group || null,
           search_type: searchType,
+          data_source: dataSource, // SESSION 12: Track WHERE data came from
           // REMOVED individual part fields (pcode, cat_num_desc, price, supplier_name, supplier, oem, availability, location)
           // Those can't represent entire search - use results JSONB instead
           // Store complete data only
