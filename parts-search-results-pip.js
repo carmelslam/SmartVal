@@ -702,8 +702,12 @@ class PartsSearchResultsPiP {
       return;
     }
 
-    console.log('💾 Saving all selections, count:', this.selectedItems.size);
-    alert(`נשמרו ${this.selectedItems.size} חלקים`);
+    // SESSION 9: Count both session selections and total for plate
+    const sessionCount = this.selectedItems.size;
+    const totalForPlate = window.helper?.parts_search?.selected_parts?.length || 0;
+    
+    console.log('💾 Saving all selections - Session:', sessionCount, 'Total for plate:', totalForPlate);
+    alert(`נשמרו ${sessionCount} חלקים בחיפוש זה\nסה"כ ${totalForPlate} חלקים נבחרו למספר רכב ${this.currentPlateNumber || ''}`);
     
     // Future: Add integration with parts required or other modules
   }
