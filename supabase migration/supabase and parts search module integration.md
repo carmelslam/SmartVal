@@ -7093,3 +7093,244 @@ Before continuing:
 
 **End of Session 11 Log**
 **Next Session:** Fix selected_parts FK error + test complete flow
+
+---
+
+# SESSION 12 - COMPLETE ACTIVITY LOG
+**Date**: October 7, 2025  
+**Agent**: Claude Sonnet 4.5  
+**Task**: Fix selected_parts FK violation + field mapping corrections  
+**Status**: ✅ COMPLETE
+
+---
+
+## SESSION 12 OBJECTIVES
+
+1. ✅ Fix Foreign Key violation (search_result_id pointing to wrong table)
+2. ✅ Fix field mapping (source vs availability confusion)
+3. ✅ Remove duplicate columns (supplier, part_group)
+4. ✅ Test complete flow
+
+---
+
+## WORK COMPLETED
+
+### **TASK 1: Fix Foreign Key Violation** ✅
+
+**Problem:** `selected_parts.search_result_id` was receiving `parts_search_sessions.id` instead of `parts_search_results.id`
+
+**Error:**
+```
+Key (search_result_id)=(34491aef-...) is not present in table "parts_search_results"
+```
+
+**Root Cause Analysis:**
+- Flow: Search → Session created → Results saved → Part selected
+- `saveSearchResults()` returned `true/false` instead of result ID
+- PiP stored session ID but not result ID
+- `saveSelectedPart()` received session ID instead of result ID
+
+**Solution Applied:**
+
+1. **partsSearchSupabaseService.js:261-263** - Return result ID:
+```javascript
+const resultId = data && data[0] ? data[0].id : null;
+console.log('✅ SESSION 9 TASK 3: Search results saved:', resultId);
+return resultId; // Changed from: return true;
+```
+
+2. **parts-search-results-pip.js:97-98** - Store result ID:
+```javascript
+this.currentSearchResultId = searchResultId;
+console.log('📋 SESSION 11: Stored search result ID for FK:', searchResultId);
+```
+
+3. **parts-search-results-pip.js:424** - Pass correct ID:
+```javascript
+searchResultId: this.currentSearchResultId, // Changed from: searchSessionId
+```
+
+4. **partsSearchSupabaseService.js:311** - Use correct ID:
+```javascript
+search_result_id: context.searchResultId || null, // Changed from: searchSessionId
+```
+
+**Result:** ✅ FK constraint satisfied, parts save successfully
+
+---
+
+### **TASK 2: Fix Field Mapping** ✅
+
+**Problem:** Supabase RPC returns `ci.source AS availability`, causing field confusion
+
+**Discovery:** SQL function `smart_parts_search()` has:
+```sql
+COALESCE(ci.source, 'חליפי') as availability
+```
+
+**Impact:**
+- Database column: `source` (contains "חליפי", "מקורי", etc.)
+- Query alias: `availability`
+- Result object: `partData.availability` contains what should be in `source`
+
+**Solution:**
+```javascript
+// partsSearchSupabaseService.js:321
+source: partData.availability || partData.source, // Map aliased field correctly
+```
+
+**Result:** ✅ `source` column now contains "חליפי" as expected
+
+---
+
+### **TASK 3: Remove Duplicate Columns** ✅
+
+**Problem:** Two pairs of duplicate columns in `selected_parts`:
+1. `supplier` AND `supplier_name` (only need `supplier_name`)
+2. `part_group` AND `part_family` (only need `part_family`)
+
+**Code Changes:**
+
+**partsSearchSupabaseService.js:315-335** - Removed from INSERT:
+```javascript
+// REMOVED: supplier: partData.supplier,
+supplier_name: partData.supplier_name, // KEPT
+
+// REMOVED: part_group: searchParams.part_group || searchParams.partGroup || null,
+part_family: partData.part_family, // KEPT
+```
+
+**Database Migration Created:**
+- File: `SESSION_11_DROP_DUPLICATE_COLUMNS_SELECTED_PARTS.sql`
+```sql
+ALTER TABLE public.selected_parts
+  DROP COLUMN IF EXISTS supplier,
+  DROP COLUMN IF EXISTS part_group;
+```
+
+**Result:** ✅ Only `supplier_name` and `part_family` remain
+
+---
+
+### **TASK 4: Fix clearSelections() Column Name** ✅
+
+**Problem:** `plate_number` column doesn't exist (should be `plate`)
+
+**Error:**
+```
+column selected_parts.plate_number does not exist
+```
+
+**Solution:**
+```javascript
+// parts-search-results-pip.js:689
+.eq('plate', this.currentPlateNumber) // Changed from: plate_number
+```
+
+**Result:** ✅ Clear selections works correctly
+
+---
+
+## FILES MODIFIED
+
+### Created:
+1. `SESSION_11_DROP_DUPLICATE_COLUMNS_SELECTED_PARTS.sql` ✅
+
+### Modified:
+1. **partsSearchSupabaseService.js**:
+   - Line 261-263: Return `resultId` instead of boolean ✅
+   - Line 311: Use `context.searchResultId` for FK ✅
+   - Line 319: Remove `supplier` column ✅
+   - Line 321: Fix `source` field mapping ✅
+   - Line 337: Remove `part_group` column ✅
+   - Line 350: Update console log to show `search_result_id` ✅
+
+2. **parts-search-results-pip.js**:
+   - Line 98: Add debug log for stored result ID ✅
+   - Line 424: Pass `searchResultId` instead of `searchSessionId` ✅
+   - Line 689: Fix column name `plate` ✅
+
+---
+
+## CURRENT STATUS
+
+### ✅ WORKING:
+1. **Foreign Key Constraint** - `search_result_id` correctly links to `parts_search_results.id`
+2. **Field Mapping** - `source` contains "חליפי", `supplier_name` populated
+3. **No Duplicates** - Only `supplier_name` and `part_family` stored
+4. **Clear Selections** - Works with correct column name
+5. **Complete Data Flow** - Session → Results → Selected parts all linked correctly
+
+### ✅ VERIFIED:
+- Search result ID properly stored and passed
+- All vehicle fields populated from search context
+- Part details correctly mapped from search results
+- FK relationships intact
+
+---
+
+## DATA FLOW (VERIFIED)
+
+```
+1. User searches → smart_parts_search RPC
+   ↓
+2. Create search session → parts_search_sessions
+   Returns: sessionId (UUID)
+   ↓
+3. Save search results → parts_search_results
+   Returns: resultId (UUID) ← FIXED
+   ↓
+4. User selects part → selected_parts
+   Uses: resultId as search_result_id ← FIXED
+   Maps: availability → source ← FIXED
+   Stores: supplier_name, part_family ← FIXED
+```
+
+---
+
+## KEY FIXES SUMMARY
+
+| Issue | Root Cause | Solution | Status |
+|-------|------------|----------|--------|
+| FK Violation | Wrong ID passed | Return & pass `resultId` | ✅ |
+| source NULL | Field aliasing | Map `availability → source` | ✅ |
+| Duplicate supplier | Two columns | Remove `supplier` | ✅ |
+| Duplicate part_group | Two columns | Remove `part_group` | ✅ |
+| clearSelections error | Wrong column name | Use `plate` not `plate_number` | ✅ |
+
+---
+
+## TESTING PERFORMED
+
+**Test Case:** Search for parts → Select part → Verify Supabase
+
+**Steps:**
+1. ✅ Search for plate "221-84-003"
+2. ✅ Select part with pcode "VB42072672"
+3. ✅ Verify console logs show result ID stored
+4. ✅ Verify no FK errors
+5. ✅ Check Supabase `selected_parts` table
+
+**Results:**
+- ✅ `search_result_id` populated with correct UUID
+- ✅ `source` = "חליפי" (not NULL)
+- ✅ `supplier_name` populated (no `supplier` column)
+- ✅ `part_family` populated (no `part_group` column)
+- ✅ All vehicle fields (make, model, year, etc.) populated
+
+---
+
+## STATISTICS
+
+- **Session Duration:** ~30 minutes
+- **Files Modified:** 2 JS files + 1 SQL file created
+- **Lines Changed:** ~15 lines
+- **Tasks Completed:** 4 out of 4
+- **Completion:** 100% ✅
+- **Blockers Resolved:** All 5 errors fixed
+
+---
+
+**End of Session 12 Log**
+**Status:** All selected_parts issues resolved ✅  
+**Next Session:** Test complete user workflow + helper sync (deferred from Session 9)
