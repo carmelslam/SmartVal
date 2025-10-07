@@ -33,29 +33,42 @@
      */
     async createSearchSession(plate, searchContext = {}) {
       try {
-        console.log('💾 Creating search session for plate:', plate);
+        console.log('💾 SESSION 9: Creating search session for plate:', plate);
         const supabase = this.getSupabase();
+        
+        // Extract actual search params from context
+        const searchParams = searchContext.searchParams || {};
+        console.log('  - Search params:', searchParams);
         
         const { data, error } = await supabase
           .from('parts_search_sessions')
           .insert({
             plate: plate,
-            search_context: searchContext,
+            search_context: searchParams, // Store actual search params, not PiP metadata
+            // Individual fields from search params
+            make: searchParams.manufacturer || searchParams.make || null,
+            model: searchParams.model || null,
+            trim: searchParams.trim || null,
+            year: searchParams.year || null,
+            engine_volume: searchParams.engine_volume || null,
+            engine_code: searchParams.engine_code || null,
+            engine_type: searchParams.engine_type || null,
+            vin: searchParams.vin || null,
             created_at: new Date().toISOString()
           });
 
         if (error) {
-          console.error('❌ Error creating search session:', error);
+          console.error('❌ SESSION 9: Error creating search session:', error);
           return null;
         }
 
         // For older Supabase: data is array, get first item
         const sessionId = data && data[0] ? data[0].id : null;
-        console.log('✅ Search session created:', sessionId);
+        console.log('✅ SESSION 9: Search session created:', sessionId);
         return sessionId;
 
       } catch (error) {
-        console.error('❌ Exception creating search session:', error);
+        console.error('❌ SESSION 9: Exception creating search session:', error);
         return null;
       }
     }
@@ -83,34 +96,44 @@
         
         // Extract data from first result to populate individual columns
         const firstResult = results[0] || {};
+        const searchParams = query.searchParams || {}; // Actual search parameters
         console.log('  - First result sample:', firstResult);
+        console.log('  - Search params:', searchParams);
+        
+        // Determine search type based on what was searched
+        let searchType = 'simple_search'; // Default
+        if (searchParams.partGroup || searchParams.partName || searchParams.part_group || searchParams.part_name) {
+          searchType = 'advanced_search';
+        } else if (searchParams.manufacturer || searchParams.make || searchParams.model) {
+          searchType = 'smart_search';
+        }
         
         // Build the insert object with individual fields populated
         const insertData = {
           session_id: sessionId,
-          // From results (if available)
-          plate: query.plate || firstResult.plate || null,
-          make: firstResult.make || null,
-          model: firstResult.model || null,
-          trim: firstResult.trim || firstResult.actual_trim || null,
-          year: firstResult.year_from || firstResult.extracted_year || null,
-          engine_volume: firstResult.engine_volume || null,
-          engine_code: firstResult.engine_code || null,
-          engine_type: firstResult.engine_type || null,
-          vin: firstResult.vin || null,
-          part_family: firstResult.part_family || null,
+          // From results (first result data)
+          plate: query.plate || searchParams.plate || firstResult.plate || null,
+          make: firstResult.make || searchParams.manufacturer || searchParams.make || null,
+          model: firstResult.model || searchParams.model || null,
+          trim: firstResult.trim || firstResult.actual_trim || searchParams.trim || null,
+          year: firstResult.year_from || firstResult.extracted_year || searchParams.year || null,
+          engine_volume: firstResult.engine_volume || searchParams.engine_volume || null,
+          engine_code: firstResult.engine_code || searchParams.engine_code || null,
+          engine_type: firstResult.engine_type || searchParams.engine_type || null,
+          vin: firstResult.vin || searchParams.vin || null,
+          part_family: firstResult.part_family || searchParams.partGroup || searchParams.part_group || null,
           supplier_name: firstResult.supplier_name || null,
-          supplier: firstResult.supplier_name || 'Unknown',
+          supplier: firstResult.supplier_name || searchParams.supplier || 'Unknown',
           pcode: firstResult.pcode || null,
           cat_num_desc: firstResult.cat_num_desc || null,
           price: firstResult.price || null,
-          source: firstResult.source || null,
-          oem: firstResult.oem || null,
-          availability: firstResult.availability || null,
+          source: firstResult.source || null, // This is חליפי/מקורי
+          oem: firstResult.oem || searchParams.oem || searchParams.oemNumber || null,
+          availability: firstResult.availability || null, // זמין/לא זמין
           location: firstResult.location || null,
-          search_type: query.searchType || 'smart_search',
+          search_type: searchType, // smart_search / advanced_search / simple_search
           // Store complete data
-          search_query: query, // PiP context for reference
+          search_query: searchParams, // ACTUAL search parameters (what user typed)
           results: results, // Full results array as JSONB
           response_time_ms: query.searchTime || null,
           created_at: new Date().toISOString()
