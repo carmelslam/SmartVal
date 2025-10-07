@@ -74,7 +74,7 @@
             .from('cases')
             .select('id')
             .or(`plate.eq.${plate},plate.eq.${plateNoDashes}`)
-            .in('status', ['OPEN', 'IN_PROGRESS']) // DB constraint: max 1 active case per plate
+            .or(`status.eq.OPEN,status.eq.IN_PROGRESS`) // DB constraint: max 1 active case per plate
             .limit(1);
           
           if (!error && data && data.length > 0) {
