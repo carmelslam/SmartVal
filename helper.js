@@ -2606,7 +2606,10 @@ window.helper = existingHelper || {
   
   parts_search: {
     // Case-specific selections (for dual-purpose functionality)
-    selected_parts: [],           // Parts chosen for THIS case
+    selected_parts: [],           // Parts chosen for THIS case (cumulative)
+    current_selected_list: [],    // Current session working list (SESSION 14)
+    required_parts: [],           // Parts required for case (future use)
+    current_list_saved: false,    // Track if current list was saved (SESSION 14)
     unselected_parts: [],         // Parts not chosen for this case
     case_search_history: [],      // Search history for this case
     

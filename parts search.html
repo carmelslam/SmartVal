@@ -163,10 +163,10 @@
 </div>
 
 <!-- Parts List Management Buttons -->
-<div id="parts_management_buttons" style="display: none; margin-top: 10px; text-align: center; gap: 10px;">
-  <button type="button" class="btn" onclick="saveCurrentToList()" style="background: #10b981; font-size: 14px; padding: 8px 16px;">💾 שמור לרשימה</button>
-  <button type="button" class="btn" onclick="handleClearAll()" style="background: #dc3545; font-size: 14px; padding: 8px 16px;">🗑️ נקה את כל הרשימה</button>
-  <button type="button" class="btn" onclick="duplicateSelectedPart()" style="background: #6c757d; font-size: 14px; padding: 8px 16px;">📄 שכפל חלק אחרון</button>
+<div id="parts_management_buttons" style="display: none; margin-top: 10px; text-align: center;">
+  <button type="button" class="btn" onclick="clearCurrentList()" style="background: #10b981; font-size: 14px; padding: 8px 16px; margin: 0 5px;">נקה רשימה</button>
+  <button type="button" class="btn" onclick="saveCurrentToList()" style="background: #3b82f6; font-size: 14px; padding: 8px 16px; margin: 0 5px;">💾 שמור לרשימה</button>
+  <button type="button" class="btn" onclick="handleClearAll()" style="background: #dc3545; font-size: 14px; padding: 8px 16px; margin: 0 5px;">🗑️ מחק הכל</button>
 </div>
 
 <!-- Enhanced Search Results Display -->
@@ -2079,9 +2079,16 @@ document.getElementById('sendResultToOCRBtn').addEventListener('click', function
   // SESSION 14 STEP 3: Save current session to cumulative list
   function saveCurrentToList() {
     const currentList = window.helper?.parts_search?.current_selected_list || [];
+    const alreadySaved = window.helper?.parts_search?.current_list_saved || false;
     
     if (currentList.length === 0) {
       alert('אין חלקים ברשימה הנוכחית לשמירה');
+      return;
+    }
+    
+    // SESSION 14 FIX 4: Check if already saved
+    if (alreadySaved) {
+      alert('הרשימה הנוכחית כבר נשמרה. נקה את הרשימה להתחיל חדש.');
       return;
     }
     
@@ -2097,11 +2104,11 @@ document.getElementById('sendResultToOCRBtn').addEventListener('click', function
         window.helper.parts_search.selected_parts.push(...currentList);
         console.log(`✅ SESSION 14: Appended ${currentList.length} parts to cumulative list`);
         
-        // Clear current list
-        window.helper.parts_search.current_selected_list = [];
-        console.log('✅ SESSION 14: Cleared current_selected_list');
+        // Set saved flag (DON'T clear list - user still needs to see it)
+        window.helper.parts_search.current_list_saved = true;
+        console.log('✅ SESSION 14: Set current_list_saved flag to true');
         
-        // Update UI
+        // Update UI (list remains visible)
         updateSelectedPartsList();
         
         // Show success message
@@ -2114,6 +2121,43 @@ document.getElementById('sendResultToOCRBtn').addEventListener('click', function
         console.error('❌ SESSION 14: Error in saveCurrentToList:', error);
         alert(`שגיאה בשמירה: ${error.message}`);
       }
+    }
+  }
+  
+  // SESSION 14 FIX 3: Clear current list with auto-save if not saved
+  function clearCurrentList() {
+    const currentList = window.helper?.parts_search?.current_selected_list || [];
+    const alreadySaved = window.helper?.parts_search?.current_list_saved || false;
+    
+    if (currentList.length === 0) {
+      alert('הרשימה כבר ריקה');
+      return;
+    }
+    
+    const confirmClear = confirm(`האם לנקות את הרשימה (${currentList.length} חלקים)?`);
+    
+    if (confirmClear) {
+      // If NOT already saved, save first
+      if (!alreadySaved && currentList.length > 0) {
+        if (!window.helper.parts_search.selected_parts) {
+          window.helper.parts_search.selected_parts = [];
+        }
+        window.helper.parts_search.selected_parts.push(...currentList);
+        console.log(`✅ SESSION 14: Auto-saved ${currentList.length} parts before clearing`);
+      }
+      
+      // Clear current list
+      window.helper.parts_search.current_selected_list = [];
+      window.helper.parts_search.current_list_saved = false;
+      
+      // Update UI
+      updateSelectedPartsList();
+      
+      if (typeof showNotification === 'function') {
+        showNotification('הרשימה נוקתה', 'success');
+      }
+      
+      console.log('✅ SESSION 14: Cleared current list and reset flag');
     }
   }
   

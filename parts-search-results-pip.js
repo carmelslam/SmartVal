@@ -522,6 +522,10 @@ class PartsSearchResultsPiP {
       window.helper.parts_search.current_selected_list.push(selectedPartEntry);
       console.log('✅ SESSION 14: Added new part to current_selected_list');
       
+      // SESSION 14 FIX 5: Reset saved flag (new part added)
+      window.helper.parts_search.current_list_saved = false;
+      console.log('✅ SESSION 14: Reset saved flag (new part added)');
+      
       // Also add to cumulative (for backward compatibility - can be removed later)
       window.helper.parts_search.selected_parts.push(selectedPartEntry);
       console.log('✅ Added new part to cumulative list (legacy)');
