@@ -1204,32 +1204,12 @@ document.getElementById('sendResultToOCRBtn').addEventListener('click', function
   // SESSION 14 TASK 3: Initialize selected parts list and load from Supabase
   console.log('🚀 SESSION 14: Page load code starting...');
   
-  loadSavedPartsFromHelper(); // Legacy - loads from sessionStorage
+  //loadSavedPartsFromHelper(); // SESSION 14: DISABLED - conflicts with Supabase load
   
-  // SESSION 14 TASK 3 FIX: Restore plate number from sessionStorage
-  const savedPlate = sessionStorage.getItem('lastSearchedPlate');
-  const plateInput = document.getElementById('plate');
-  
-  console.log('🔍 SESSION 14 DEBUG: Plate restore check:', {
-    savedPlate: savedPlate,
-    plateInputExists: !!plateInput,
-    currentPlateValue: plateInput?.value,
-    willRestore: !!(savedPlate && plateInput && !plateInput.value)
-  });
-  
-  if (savedPlate) {
-    if (plateInput && !plateInput.value) {
-      plateInput.value = savedPlate;
-      console.log('✅ SESSION 14: Restored plate number from session:', savedPlate);
-    } else if (plateInput && plateInput.value) {
-      console.log('ℹ️ SESSION 14: Plate input already has value:', plateInput.value);
-    }
-  } else {
-    console.log('⚠️ SESSION 14: No saved plate in sessionStorage');
-  }
-  
-  // SESSION 14 TASK 3: Wait for Supabase before loading data
-  (async () => {
+  // SESSION 14 TASK 3: Wait for Supabase AND plate to be ready, then load
+  setTimeout(async () => {
+    console.log('⏰ SESSION 14: Delayed load starting (1 second after page load)...');
+    
     // Wait for Supabase client to be ready (max 5 seconds)
     let attempts = 0;
     while (!window.supabase && attempts < 50) {
@@ -1242,13 +1222,30 @@ document.getElementById('sendResultToOCRBtn').addEventListener('click', function
       return;
     }
     
-    console.log('✅ SESSION 14: Supabase ready, loading selected parts...');
-    await loadSelectedPartsFromSupabase();
+    console.log('✅ SESSION 14: Supabase ready!');
     
-    if (typeof updateSelectedPartsList === 'function') {
-      updateSelectedPartsList();
+    // Check plate
+    const plateInput = document.getElementById('plate');
+    const plate = plateInput?.value?.trim();
+    
+    console.log('🔍 SESSION 14: Plate check:', {
+      plateInput: !!plateInput,
+      plateValue: plate,
+      hasPlate: !!plate
+    });
+    
+    if (plate) {
+      console.log('✅ SESSION 14: Plate found, loading selected parts...');
+      await loadSelectedPartsFromSupabase();
+      
+      if (typeof updateSelectedPartsList === 'function') {
+        updateSelectedPartsList();
+        console.log('✅ SESSION 14: UI updated');
+      }
+    } else {
+      console.log('⚠️ SESSION 14: No plate found, skipping load');
     }
-  })();
+  }, 1000); // Wait 1 second for page to fully load
 });
 
 </script>
