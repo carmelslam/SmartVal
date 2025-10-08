@@ -8073,23 +8073,234 @@ const totalForPlate = count || 0;
 
 ---
 
-## 🔧 TESTING CHECKLIST FOR USER
+## 🔧 TESTING RESULTS FROM USER
 
-Before closing Session 13, verify:
+**Test Status**: ⚠️ PARTIAL SUCCESS - UI works but Supabase deletes not working
+
+### ❌ **CRITICAL ISSUES FOUND**:
+
+**Issue 1: Edit Part Button (line 1800)**
+- ✅ Opens edit window without triggering search
+- ❌ Window doesn't show all correct part details from selected parts
+- ❌ Edits don't update UI selected parts list
+- ❌ Edits don't update `selected_parts` table in Supabase
+
+**Issue 2: Delete Part Button (line 1908)**
+- ✅ Deletes from UI list correctly
+- ✅ No search triggered
+- ❌ Does NOT delete from `selected_parts` table in Supabase
+
+**Issue 3: Clear All Button (line 1928)**
+- ✅ Deletes entire list from UI correctly
+- ❌ Does NOT delete from `selected_parts` table in Supabase
+
+**Issue 4: Page Refresh Persistence (line 2095)**
+- ❌ UI selected parts list clears out completely on page refresh
+- ❌ `loadSelectedPartsFromSupabase()` not working as expected
+
+---
+
+## 🔍 ROOT CAUSE ANALYSIS
+
+### **Why Supabase Deletes Failing**:
+
+**Potential Causes**:
+1. **Async functions not awaited**: HTML onclick handlers can't await async functions
+2. **Supabase client not initialized**: `window.supabase` might not be ready when functions called
+3. **Wrong query parameters**: plate/pcode values might be undefined or incorrect
+4. **Silent failures**: Errors caught but not visible to user
+
+**Evidence Needed**:
+- Check browser console for error messages during delete operations
+- Verify `window.supabase` exists when delete buttons clicked
+- Check if async/await working in onclick context
+
+### **Why Page Refresh Failing**:
+
+**Potential Causes**:
+1. **loadSelectedPartsFromSupabase() called too early**: Before `window.supabase` initialized
+2. **No plate number available**: `window.helper?.plate` is null at page load
+3. **Timing issue**: Function runs before Supabase client ready
+4. **SessionStorage interference**: Old `loadSavedPartsFromHelper()` might be clearing data
+
+---
+
+## 🛠️ FIXES REQUIRED FOR SESSION 14
+
+### **FIX 1: Make Delete Functions Work with Async** (HIGH PRIORITY)
+
+**Problem**: HTML onclick can't properly await async functions
+
+**Solution**: Wrap async calls in sync function:
+
+```javascript
+// Change from:
+onclick="deletePart(${index})"
+
+// Change to:
+onclick="handleDeletePart(${index})"
+
+// Add wrapper function:
+function handleDeletePart(index) {
+  deletePart(index).catch(error => {
+    console.error('Delete failed:', error);
+    alert('שגיאה במחיקת החלק');
+  });
+}
+```
+
+**Files to Modify**:
+- `parts search.html` - Lines 1780 (delete button), 167 (clear all button)
+- Add wrapper functions for: `handleDeletePart()`, `handleClearAll()`, `handleEditPart()`
+
+---
+
+### **FIX 2: Add Error Visibility** (HIGH PRIORITY)
+
+**Problem**: Errors might be happening silently
+
+**Solution**: Add visible error alerts:
+
+```javascript
+async function deletePart(index) {
+  try {
+    // ... existing code ...
+    
+    if (error) {
+      console.error('❌ SESSION 13: Error deleting from Supabase:', error);
+      alert(`שגיאה במחיקה מהשרת: ${error.message}`); // MAKE VISIBLE
+      return; // Don't delete from UI if Supabase failed
+    }
+  } catch (error) {
+    console.error('❌ SESSION 13: Error in deletePart:', error);
+    alert(`שגיאה: ${error.message}`); // MAKE VISIBLE
+    throw error; // Re-throw so wrapper can catch
+  }
+}
+```
+
+---
+
+### **FIX 3: Fix Page Load Timing** (HIGH PRIORITY)
+
+**Problem**: `loadSelectedPartsFromSupabase()` called before Supabase ready
+
+**Solution**: Add delay or wait for Supabase:
+
+```javascript
+document.addEventListener("DOMContentLoaded", async () => {
+  // Wait for Supabase to be ready
+  let attempts = 0;
+  while (!window.supabase && attempts < 50) {
+    await new Promise(resolve => setTimeout(resolve, 100));
+    attempts++;
+  }
+  
+  if (!window.supabase) {
+    console.error('❌ Supabase not loaded after 5 seconds');
+    return;
+  }
+  
+  console.log('✅ Supabase ready, loading selected parts...');
+  await loadSelectedPartsFromSupabase();
+  updateSelectedPartsList();
+});
+```
+
+**File to Modify**: `parts search.html` - Line 1196-1201
+
+---
+
+### **FIX 4: Fix Edit Part Data Loading** (MEDIUM PRIORITY)
+
+**Problem**: Edit window doesn't show correct part details
+
+**Solution**: Verify helper data structure matches modal fields:
+
+```javascript
+function editPart(index) {
+  const part = window.helper?.parts_search?.selected_parts[index];
+  
+  console.log('🔍 SESSION 14: Editing part:', part); // DEBUG
+  
+  // Ensure all fields mapped correctly
+  const group = part.group || part.part_family || part['משפחת חלק'] || '';
+  const name = part.name || part['תיאור'] || '';
+  const qty = part.qty || part.quantity || part['כמות'] || 1;
+  const source = part.source || part['סוג חלק'] || 'מקורי';
+  
+  // Create modal with correct values...
+}
+```
+
+---
+
+### **FIX 5: Implement Edit Save to Supabase** (MEDIUM PRIORITY)
+
+**Problem**: `saveEditedPart()` doesn't update Supabase
+
+**Solution**: Add Supabase update:
+
+```javascript
+async function saveEditedPart(index) {
+  const helperParts = window.helper?.parts_search?.selected_parts;
+  const part = helperParts[index];
+  
+  // Get updated values from modal
+  const updatedData = {
+    part_family: newGroup,
+    cat_num_desc: newName,
+    quantity: newQty,
+    source: newSource,
+    // ... other fields
+  };
+  
+  // Update Supabase
+  const { error } = await window.supabase
+    .from('selected_parts')
+    .update(updatedData)
+    .eq('plate', plate)
+    .eq('pcode', part.pcode);
+  
+  if (error) {
+    alert('שגיאה בעדכון בשרת');
+    return;
+  }
+  
+  // Update helper
+  Object.assign(part, updatedData);
+  
+  // Update UI
+  updateSelectedPartsList();
+}
+```
+
+---
+
+## 📋 REVISED TESTING CHECKLIST FOR SESSION 14
+
+After implementing fixes, verify:
 
 - [ ] Hard refresh browser (`Cmd+Shift+R`)
+- [ ] Check console for: `✅ Supabase ready, loading selected parts...`
+- [ ] Check console for: `✅ SESSION 13: Loaded X parts from Supabase`
+- [ ] Verify UI list shows previously selected parts (if any exist)
 - [ ] Search for parts (plate: 221-84-003)
 - [ ] Select 2-3 parts in PiP (checkbox)
-- [ ] Verify UI list shows: "רשימת חלקים נבחרים 3"
+- [ ] Verify UI list updates: "רשימת חלקים נבחרים X"
 - [ ] Click delete button on one part
-- [ ] Verify part deleted (no search triggered)
+- [ ] Verify console: `✅ SESSION 13: Part deleted from Supabase`
+- [ ] Open Supabase table editor → `selected_parts` → verify part deleted
 - [ ] Click "Clear All" button
-- [ ] Verify all parts cleared
-- [ ] Refresh page
-- [ ] Verify list starts empty (persistence working)
-- [ ] Select 2 new parts
-- [ ] Refresh page again
+- [ ] Verify console: `✅ SESSION 13: All parts deleted from Supabase`
+- [ ] Open Supabase table editor → verify all parts deleted
+- [ ] Search and select 2 new parts
+- [ ] Refresh page (`F5`)
 - [ ] Verify 2 parts reload from Supabase ✅
+- [ ] Click edit button on one part
+- [ ] Verify modal shows correct details
+- [ ] Edit and save
+- [ ] Verify UI updates and Supabase updates
 
 ---
 
