@@ -7663,15 +7663,52 @@ const partsToDisplay = window.helper?.parts_search?.selected_parts || selectedPa
 
 ---
 
-### **Status**: ⏳ AWAITING TESTING
+### **Status**: ✅ COMPLETED - UI Working, Discovered Session 12 SQL Not Applied
 
-**Test Steps**:
-1. Hard refresh browser (`Cmd+Shift+R`)
-2. Search for parts (plate: 221-84-003)
-3. Check a part checkbox in PiP
-4. Observe console for: `✅ SESSION 13: Triggered selected parts list UI update`
-5. Verify UI list updates from "0" to "1"
-6. Verify part displays correctly in list (name, qty, price, supplier)
+**Test Results**:
+1. ✅ Hard refresh completed
+2. ✅ Search performed (plate: 221-84-003)
+3. ✅ Parts selected in PiP
+4. ✅ Console shows: `✅ SESSION 13: Triggered selected parts list UI update`
+5. ✅ UI list updates correctly: "רשימת חלקים נבחרים 6" 
+6. ✅ Parts display correctly in list with name, qty, price, supplier
+
+**CRITICAL DISCOVERY** ⚠️:
+
+While testing, discovered that `parts_search_sessions` and `parts_search_results` tables are **NOT registering**:
+
+**Error in Console**:
+```
+❌ Supabase error 400: "new row for relation \"parts_search_sessions\" violates check constraint \"parts_search_sessions_data_source_check\""
+```
+
+**Root Cause**: Session 12 SQL migration file (`SESSION_12_DROP_UNUSED_SEARCH_RESULTS_TABLE.sql`) was **NEVER RUN** in Supabase!
+
+**Impact**:
+- ✅ `selected_parts` table: Working (FK fixed in Session 12)
+- ❌ `parts_search_sessions` table: Broken (missing `data_source` column)
+- ❌ `parts_search_results` table: Broken (missing `data_source` column)
+
+**Code sends**: `data_source: 'קטלוג'` (Hebrew)  
+**Database expects**: Column doesn't exist yet!
+
+---
+
+### **IMMEDIATE ACTION REQUIRED**:
+
+**Run SQL Migration**: `Phase5_Parts_Search_2025-10-05/SESSION_12_DROP_UNUSED_SEARCH_RESULTS_TABLE.sql`
+
+This SQL will:
+1. Add `data_source TEXT DEFAULT 'קטלוג'` to `parts_search_sessions`
+2. Add `data_source TEXT DEFAULT 'קטלוג'` to `parts_search_results`
+3. Add `data_source TEXT DEFAULT 'קטלוג'` to `selected_parts`
+4. Add check constraints: `CHECK (data_source IN ('קטלוג', 'אינטרנט', 'אחר'))`
+5. Drop legacy `search_results` table
+
+**After SQL Execution**:
+- Hard refresh browser
+- Perform new search
+- Verify all 3 tables register data
 
 ---
 
@@ -7681,10 +7718,12 @@ const partsToDisplay = window.helper?.parts_search?.selected_parts || selectedPa
 
 **Files Created**: None
 
+**SQL Required**: `SESSION_12_DROP_UNUSED_SEARCH_RESULTS_TABLE.sql` (from Session 12, not yet applied)
+
 ---
 
 **End of TASK 1**  
-**Next**: Test and confirm before proceeding to TASK 2
+**Status**: UI sync ✅ COMPLETE | Supabase tables ⏳ PENDING SQL MIGRATION
 
 ---
 
