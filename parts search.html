@@ -164,7 +164,7 @@
 
 <!-- Parts List Management Buttons -->
 <div id="parts_management_buttons" style="display: none; margin-top: 10px; text-align: center; gap: 10px;">
-  <button type="button" class="btn" onclick="clearAllParts()" style="background: #dc3545; font-size: 14px; padding: 8px 16px;">🗑️ נקה את כל הרשימה</button>
+  <button type="button" class="btn" onclick="handleClearAll()" style="background: #dc3545; font-size: 14px; padding: 8px 16px;">🗑️ נקה את כל הרשימה</button>
   <button type="button" class="btn" onclick="duplicateSelectedPart()" style="background: #6c757d; font-size: 14px; padding: 8px 16px;">📄 שכפל חלק אחרון</button>
 </div>
 
@@ -1778,7 +1778,7 @@ document.getElementById('sendResultToOCRBtn').addEventListener('click', function
                   title="ערוך חלק">
             ✏️
           </button>
-          <button type="button" onclick="deletePart(${index})" 
+          <button type="button" onclick="handleDeletePart(${index})" 
                   style="
                     background: #dc3545; 
                     color: white; 
@@ -2041,12 +2041,30 @@ document.getElementById('sendResultToOCRBtn').addEventListener('click', function
     console.log(`📄 Duplicated part: ${lastPart.group} - ${lastPart.name}`);
   }
   
+  // SESSION 14 TASK 1: Async wrapper functions for onclick handlers
+  // HTML onclick can't properly await async functions, so we wrap them
+  function handleDeletePart(index) {
+    deletePart(index).catch(error => {
+      console.error('❌ SESSION 14: Delete failed:', error);
+      alert('שגיאה במחיקת החלק: ' + error.message);
+    });
+  }
+  
+  function handleClearAll() {
+    clearAllParts().catch(error => {
+      console.error('❌ SESSION 14: Clear all failed:', error);
+      alert('שגיאה במחיקת הרשימה: ' + error.message);
+    });
+  }
+  
   // Make functions globally available
   window.editPart = editPart;
   window.saveEditedPart = saveEditedPart;
   window.deletePart = deletePart;
   window.clearAllParts = clearAllParts;
   window.duplicateSelectedPart = duplicateSelectedPart;
+  window.handleDeletePart = handleDeletePart; // SESSION 14: Wrapper function
+  window.handleClearAll = handleClearAll; // SESSION 14: Wrapper function
 
   // ✅ NEW: Load saved selected parts from helper on page initialization
   function loadSavedPartsFromHelper() {

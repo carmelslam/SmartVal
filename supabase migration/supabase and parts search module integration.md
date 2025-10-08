@@ -8324,3 +8324,106 @@ After implementing fixes, verify:
 
 ---
 
+## SESSION 14: FIX SELECTED PARTS LIST SUPABASE SYNC ISSUES
+
+**Date**: October 8, 2025  
+**Agent**: Claude Sonnet 4.5  
+**Status**: IN PROGRESS  
+**Continuation of**: SESSION 13
+
+---
+
+## 🎯 SESSION 14 OBJECTIVES
+
+Based on user testing of SESSION 13 changes, fix 4 critical issues:
+
+### **Problems Identified by User**:
+1. ❌ **Edit button**: Opens window but doesn't show correct details, doesn't save to Supabase
+2. ❌ **Delete button**: Deletes from UI but NOT from Supabase `selected_parts` table
+3. ❌ **Clear All button**: Deletes from UI but NOT from Supabase `selected_parts` table
+4. ❌ **Page refresh**: List clears completely instead of persisting from Supabase
+
+### **Root Cause** (from SESSION 13 analysis):
+- HTML `onclick` handlers cannot properly `await` async functions
+- Async Supabase operations complete AFTER UI updates run
+- Result: UI changes successfully, but database remains unchanged
+- Page load timing: `loadSelectedPartsFromSupabase()` called before Supabase client ready
+
+---
+
+## ✅ TASK 1: ADD ASYNC WRAPPER FUNCTIONS
+
+**Problem**: Direct async function calls in `onclick` handlers don't wait for Supabase operations
+
+**Solution**: Create sync wrapper functions that properly handle promises
+
+### **Changes Made**:
+
+**File**: `parts search.html`
+
+**Location 1**: Lines 2044-2067 (Added wrapper functions before window assignments)
+```javascript
+// SESSION 14 TASK 1: Async wrapper functions for onclick handlers
+// HTML onclick can't properly await async functions, so we wrap them
+function handleDeletePart(index) {
+  deletePart(index).catch(error => {
+    console.error('❌ SESSION 14: Delete failed:', error);
+    alert('שגיאה במחיקת החלק: ' + error.message);
+  });
+}
+
+function handleClearAll() {
+  clearAllParts().catch(error => {
+    console.error('❌ SESSION 14: Clear all failed:', error);
+    alert('שגיאה במחיקת הרשימה: ' + error.message);
+  });
+}
+
+// Make functions globally available
+window.handleDeletePart = handleDeletePart; // SESSION 14: Wrapper function
+window.handleClearAll = handleClearAll; // SESSION 14: Wrapper function
+```
+
+**Location 2**: Line 1781 (Updated delete button onclick)
+```javascript
+// BEFORE:
+onclick="deletePart(${index})"
+
+// AFTER:
+onclick="handleDeletePart(${index})"
+```
+
+**Location 3**: Line 167 (Updated Clear All button onclick)
+```javascript
+// BEFORE:
+onclick="clearAllParts()"
+
+// AFTER:
+onclick="handleClearAll()"
+```
+
+### **How It Works**:
+1. User clicks delete/clear button
+2. Onclick calls sync wrapper function (`handleDeletePart` or `handleClearAll`)
+3. Wrapper calls async function and waits for promise
+4. If error occurs, `.catch()` handles it and shows alert to user
+5. Supabase operations complete BEFORE UI updates
+
+### **Expected Result**:
+- ✅ Delete button will wait for Supabase delete to complete
+- ✅ Clear All button will wait for Supabase delete to complete
+- ✅ Errors will be visible to user with Hebrew alert messages
+- ✅ UI only updates after Supabase confirms deletion
+
+**Status**: ✅ IMPLEMENTED - Ready for testing
+
+**Testing Instructions**:
+1. Hard refresh page (Cmd+Shift+R)
+2. Search for parts (plate: 221-84-003) and select 2-3 parts
+3. Click delete button (🗑️) on one part
+4. Open Supabase → `selected_parts` table → Verify part is deleted
+5. Click "נקה את כל הרשימה" (Clear All) button
+6. Open Supabase → `selected_parts` table → Verify all parts deleted for this plate
+
+---
+
