@@ -7511,3 +7511,52 @@ data_source: dataSource, // SESSION 12: Track WHERE part came from
 **End of Session 12 Log**
 **Status:** All selected_parts issues resolved + data source tracking added ✅  
 **Next Session:** Implement web/other data_source values when external search is integrated
+
+
+**SESSION 13: PHASE  5 - UI AND HELPER ISUUES**
+Now we finished with the supabase registration - we move to the system registration : 
+First task , register the selected parts in helper.parts_search.selected_parts , you can return the supabase saved data in the selected_parts table or you can make the PiP WRITE ON parts_search.selected_parts ARRAY  on save section click in the PiP ,
+The parts_search.selected_parts is a nested array and you need to find the way to write on it . If you have a problem read the general_todo.md it has previous isights fro array handling .
+This is the array structure :
+* 		selected_parts: [,…]
+    * 		0: {name: "כנף אחורית שמאלית", תיאור: "AAQSW", כמות: 1, מחיר: "₪890", סוג חלק: "חליפי/משומש", ספק: "",…}
+        * 		entry_method: "manual_typed"fromSuggestion: falsename: "כנף אחורית שמאלית"price: 890quantity: 1source: "חליפי/משומש"הערות: ""זמינות: "זמין"כמות: 1מחיר: "₪890"מיקום: "ישראל"מספר OEM: ""סוג חלק: "חליפי/משומש"ספק: ""תיאור: "AAQSW"
+    * 		1: {name: "כנף אחורית שמאלית", תיאור: "AAQSW", כמות: 1, מחיר: "₪890", סוג חלק: "חליפי/משומש", ספק: "",…}
+        * 		assigned_to_center: truecase_context: {plate: "221-84-003", case_id: "YC-22184003-2025", step: 5, wizard_session: "2025-09-27T21:15:25.096Z"}damage_center_id: "dc_1758279411208_2"damage_center_location: "אחורי הרכב"damage_center_name: "מוקד נזק 2"damage_center_number: "2"entry_method: "manual_typed"entry_type: "manual_entry"fromSuggestion: falsename: "כנף אחורית שמאלית"price: 890quantity: 1selected_at: "2025-09-27T21:15:25.096Z"selected_in_module: "parts_required"selection_mode: "damage_center_integrated"source: "חליפי/משומש"usage_context: "damage_center_assignment"הערות: ""זמינות: "זמין"כמות: 1מחיר: "₪890"מיקום: "ישראל"מספר OEM: ""סוג חלק: "חליפי/משומש"ספק: ""תיאור: "AAQSW"
+
+———————————
+
+The selected parts list on the parts search Ui :
+The UI has a dynamic list called רשימת חלקים נבחרים 0  החלקים ישמרו נתונים לצורך חיפוש באתרים החיצוניים
+This is a dynamic list that adds a new entry  with each selected part.
+For now this feature works manually using the button הוסף חלק לרשימה - but this is a legacy design,
+For the current architecture - we don’t need this button and what will trigger to save the selected parts in the list is the save button in the PiP .
+We have two implementation options :
+1. The list populates from the helper.parts_search.selected_parts after ihelper.parts_search.selected_parts has been updated from the PiP selected parts 
+2. The save button in the PiP saves directly and independently in the selected parts list 
+The design and functionality of the list need to stay the same - I don’t want to change how the list looks .
+* 		
+
+——————————
+
+
+Other :
+
+Selected parts check in the PiP ;
+Current behavior : the checked boxes persist across searches .
+I don’t know if this is across case id s or just in the specific case id 
+We need to make sure that if a part is selected in a case id, when a search pops it again in a different search for the same case id it needs to stay checked - this is happening now
+But - if I start a new search for a different case id - the part that was selected in the first case id - SHOULD NOT be selected in the PiP automatically 
+It is very possible the system already works like this - you just need to confirm it 
+
+Parts count in the message when saving selected :
+The current count is wrong .
+The current count accumulate previous selected parts count into the message - “selected in this search”  - this is wrong , the count for this metric is just what was selected in the current PiP 
+On the other hand, the count for the “total selected for the plate xxxxx” needs to accumulate all the parts count from the selected_parts table including the current selected in the PiP 
+For now the counts are reversed . 
+Also the accumulated  count for a plate is being reset on refresh , this not good because like this we lose count of how many parts were actually selected IN ALL THE SEARCH SESSIONS for this plate till now 
+
+
+Match the main page f the search part and the PiP width , for now the PiP is sidling outside the main page form , its better to make the main page a bit wider to match rather than make the PiP narrower  
+
+
