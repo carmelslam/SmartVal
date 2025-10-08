@@ -1989,7 +1989,7 @@ document.getElementById('sendResultToOCRBtn').addEventListener('click', function
     }
   }
   
-  // SESSION 13 TASK 1C: Clear all parts functionality - work with helper + Supabase
+  // SESSION 14 TASK 2: Clear all parts functionality - MUST delete from Supabase first
   async function clearAllParts() {
     // Read from helper (source of truth)
     const partsCount = window.helper?.parts_search?.selected_parts?.length || 0;
@@ -2003,42 +2003,62 @@ document.getElementById('sendResultToOCRBtn').addEventListener('click', function
     
     if (confirmClear) {
       try {
-        // 1. Delete from Supabase selected_parts table
-        const plate = window.helper?.plate;
-        if (plate && window.supabase) {
-          console.log('🗑️ SESSION 13: Deleting all parts from Supabase for plate:', plate);
-          const { error } = await window.supabase
-            .from('selected_parts')
-            .delete()
-            .eq('plate', plate);
-          
-          if (error) {
-            console.error('❌ SESSION 13: Error deleting from Supabase:', error);
-          } else {
-            console.log('✅ SESSION 13: All parts deleted from Supabase');
-          }
+        // SESSION 14: FIRST check if Supabase is available
+        if (!window.supabase) {
+          console.error('❌ SESSION 14: Supabase not available');
+          alert('שגיאה: מערכת הנתונים לא זמינה. אנא רענן את הדף.');
+          return; // STOP - don't clear UI if Supabase not available
         }
         
-        // 2. Clear helper array
+        // SESSION 14: Get plate from input field (same as deletePart)
+        const plateInput = document.getElementById('plate');
+        const plate = plateInput?.value?.trim() || window.helper?.plate;
+        
+        if (!plate) {
+          console.error('❌ SESSION 14: No plate number available');
+          alert('שגיאה: לא נמצא מספר רישוי. אנא הזן מספר רישוי בשדה החיפוש.');
+          return; // STOP
+        }
+        
+        console.log('📋 SESSION 14: Using plate number:', plate);
+        
+        // SESSION 14: STEP 1 - Delete from Supabase FIRST
+        console.log('🗑️ SESSION 14: Deleting all parts from Supabase for plate:', plate);
+        const { error } = await window.supabase
+          .from('selected_parts')
+          .delete()
+          .eq('plate', plate);
+        
+        // SESSION 14: Check for errors - STOP if delete failed
+        if (error) {
+          console.error('❌ SESSION 14: Supabase delete all failed:', error);
+          alert(`שגיאה במחיקה מהשרת: ${error.message}\n\nהחלקים לא נמחקו.`);
+          return; // STOP - don't clear UI if Supabase failed
+        }
+        
+        console.log('✅ SESSION 14: All parts deleted from Supabase successfully');
+        
+        // SESSION 14: STEP 2 - Only now clear helper (after Supabase success)
         if (window.helper?.parts_search?.selected_parts) {
           window.helper.parts_search.selected_parts = [];
         }
+        console.log('✅ SESSION 14: Helper array cleared');
         
-        // 3. Clear local array (for backward compatibility)
+        // SESSION 14: STEP 3 - Clear local array (backward compatibility)
         selectedParts.length = 0;
         
-        // 4. Update UI
+        // SESSION 14: STEP 4 - Update UI
         updateSelectedPartsList();
         
-        // Show notification
+        // Show success notification
         if (typeof showNotification === 'function') {
           showNotification(`נמחקו ${partsCount} חלקים מהרשימה`, 'success');
         }
         
-        console.log(`🗑️ SESSION 13: Cleared all ${partsCount} parts from list`);
+        console.log(`✅ SESSION 14: Successfully cleared all ${partsCount} parts from list`);
       } catch (error) {
-        console.error('❌ SESSION 13: Error in clearAllParts:', error);
-        alert('שגיאה במחיקת החלקים');
+        console.error('❌ SESSION 14: Unexpected error in clearAllParts:', error);
+        alert(`שגיאה לא צפויה במחיקת החלקים: ${error.message}`);
       }
     }
   }

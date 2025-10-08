@@ -8463,3 +8463,95 @@ const plate = plateInput?.value?.trim() || window.helper?.plate;
 
 ---
 
+## ✅ TASK 2: FIX CLEAR ALL BUTTON TO ACTUALLY DELETE FROM SUPABASE
+
+**User Problem**: Clear All button deletes from UI list but NOT from Supabase `selected_parts` table
+
+**Root Cause**: Same as TASK 1 - old code cleared UI even if Supabase failed
+
+**Solution**: Rewrite `clearAllParts()` function with same pattern as `deletePart()`
+
+### **Changes Made**:
+
+**File**: `parts search.html`
+
+**Location**: Lines 1992-2064 (Completely rewrote `clearAllParts()` function)
+
+### **Key Fixes**:
+
+**FIX 1: Check Supabase availability FIRST** (Lines 2006-2011)
+```javascript
+if (!window.supabase) {
+  console.error('❌ SESSION 14: Supabase not available');
+  alert('שגיאה: מערכת הנתונים לא זמינה. אנא רענן את הדף.');
+  return; // STOP
+}
+```
+
+**FIX 2: Get plate from input field** (Lines 2013-2023)
+```javascript
+const plateInput = document.getElementById('plate');
+const plate = plateInput?.value?.trim() || window.helper?.plate;
+
+if (!plate) {
+  alert('שגיאה: לא נמצא מספר רישוי. אנא הזן מספר רישוי בשדה החיפוש.');
+  return; // STOP
+}
+```
+
+**FIX 3: Delete from Supabase FIRST, check for errors** (Lines 2025-2037)
+```javascript
+const { error } = await window.supabase
+  .from('selected_parts')
+  .delete()
+  .eq('plate', plate);
+
+if (error) {
+  console.error('❌ SESSION 14: Supabase delete all failed:', error);
+  alert(`שגיאה במחיקה מהשרת: ${error.message}\n\nהחלקים לא נמחקו.`);
+  return; // STOP - don't clear UI if Supabase failed
+}
+```
+
+**FIX 4: Only clear UI AFTER Supabase succeeds** (Lines 2039-2051)
+```javascript
+console.log('✅ SESSION 14: All parts deleted from Supabase successfully');
+
+// Only now clear helper and local arrays
+window.helper.parts_search.selected_parts = [];
+selectedParts.length = 0;
+updateSelectedPartsList();
+```
+
+### **How It Works Now**:
+1. ✅ User clicks "נקה את כל הרשימה" (Clear All) button
+2. ✅ Shows confirmation dialog with count
+3. ✅ Function checks Supabase is available
+4. ✅ Function validates plate number exists
+5. ✅ Function deletes ALL parts for plate from Supabase FIRST
+6. ✅ If Supabase error, shows Hebrew alert and STOPS
+7. ✅ Only if Supabase succeeds → clear helper → clear local array → update UI
+8. ✅ Result: UI and Supabase stay in sync
+
+### **Expected Result**:
+- ✅ Clear All button removes all parts from UI
+- ✅ Clear All button removes all parts from Supabase `selected_parts` table for this plate
+- ✅ If Supabase fails, user sees error message and parts stay in UI
+- ✅ Console logs show clear success/failure messages
+
+**Status**: ✅ IMPLEMENTED - Ready for testing
+
+**Testing Instructions**:
+1. Hard refresh page (Cmd+Shift+R)
+2. Open browser console (F12)
+3. **Ensure plate number is in the input field** (e.g., 221-84-003)
+4. Search for parts and select multiple parts (3-5)
+5. Click "נקה את כל הרשימה" (Clear All) button
+6. Confirm in dialog
+7. Watch console for: `✅ SESSION 14: All parts deleted from Supabase successfully`
+8. Verify all parts disappear from UI
+9. **Open Supabase → `selected_parts` table → Filter by plate → Verify NO parts remain for this plate**
+10. If any errors occur, you'll see Hebrew alert with error message
+
+---
+
