@@ -7560,3 +7560,131 @@ Also the accumulated  count for a plate is being reset on refresh , this not goo
 Match the main page f the search part and the PiP width , for now the PiP is sidling outside the main page form , its better to make the main page a bit wider to match rather than make the PiP narrower  
 
 
+---
+
+# SESSION 13 ACTIVITY LOG
+**Date**: October 8, 2025  
+**Agent**: Claude Sonnet 4.5  
+**Task**: Fix UI and Helper Registration Issues  
+**Status**: IN PROGRESS
+
+---
+
+## SESSION 13 OBJECTIVES
+
+1. ⏳ TASK 1: Fix helper registration - Make selected parts list UI update automatically when PiP saves
+2. ⏳ TASK 2: Fix selection count messages (reversed counts)
+3. ⏳ TASK 3: Verify checkbox persistence per case_id
+4. ⏳ TASK 4: Match main page and PiP width
+
+---
+
+## TASK 1: FIX HELPER → UI SYNC ⏳
+
+### **Problem Identified**:
+- PiP saves to `window.helper.parts_search.selected_parts` ✅
+- Supabase `selected_parts` table saves correctly ✅
+- BUT: UI list "רשימת חלקים נבחרים" shows **0** items ❌
+- Manual "הוסף חלק לרשימה" button works, but automatic save from PiP doesn't update UI
+
+**Root Cause**:
+1. PiP `addToHelper()` updates helper array but doesn't trigger UI refresh
+2. `updateSelectedPartsList()` function reads from local `selectedParts` array instead of `helper.parts_search.selected_parts`
+3. Helper format missing English keys (`qty`, `group`, `supplier`) that UI display expects
+
+---
+
+### **Solution Implemented**:
+
+**File 1: `parts-search-results-pip.js`** (3 changes)
+
+**Change 1** - Trigger UI update after adding to helper (line 503-508):
+```javascript
+console.log('📋 Helper updated, total parts:', window.helper.parts_search.selected_parts.length);
+
+// SESSION 13 TASK 1: Trigger UI update
+if (typeof window.updateSelectedPartsList === 'function') {
+  window.updateSelectedPartsList();
+  console.log('✅ SESSION 13: Triggered selected parts list UI update');
+}
+```
+
+**Change 2** - Trigger UI update after removing from helper (line 529-535):
+```javascript
+if (originalLength !== newLength) {
+  console.log('🗑️ Removed part from helper, remaining:', newLength);
+  
+  // SESSION 13 TASK 1: Trigger UI update
+  if (typeof window.updateSelectedPartsList === 'function') {
+    window.updateSelectedPartsList();
+    console.log('✅ SESSION 13: Triggered selected parts list UI update');
+  }
+}
+```
+
+**Change 3** - Add missing English keys to helper format (line 550-551, 555):
+```javascript
+"qty": 1, // SESSION 13 TASK 1: English key for UI display
+"group": catalogItem.part_family || "", // SESSION 13 TASK 1: Part family as group
+...
+"supplier": catalogItem.supplier_name || "", // SESSION 13 TASK 1: English key for UI display
+```
+
+---
+
+**File 2: `parts search.html`**
+
+**Change** - Read from helper instead of local array (line 1725-1726):
+```javascript
+// SESSION 13 TASK 1: Read from helper.parts_search.selected_parts (source of truth)
+const partsToDisplay = window.helper?.parts_search?.selected_parts || selectedParts || [];
+```
+
+**Logic**:
+- Prioritize `helper.parts_search.selected_parts` (updated by PiP)
+- Fallback to local `selectedParts` (manual button entries)
+- Empty array if neither exists
+
+---
+
+### **Expected Behavior After Fix**:
+
+**BEFORE**:
+1. User searches parts → Results in PiP
+2. User checks part checkbox → Saves to Supabase ✅, saves to helper ✅
+3. UI list shows: "רשימת חלקים נבחרים **0**" ❌
+
+**AFTER**:
+1. User searches parts → Results in PiP
+2. User checks part checkbox → Saves to Supabase ✅, saves to helper ✅
+3. `addToHelper()` calls `window.updateSelectedPartsList()` ✅
+4. UI list shows: "רשימת חלקים נבחרים **1**" ✅
+5. Part appears in list with correct format ✅
+
+---
+
+### **Status**: ⏳ AWAITING TESTING
+
+**Test Steps**:
+1. Hard refresh browser (`Cmd+Shift+R`)
+2. Search for parts (plate: 221-84-003)
+3. Check a part checkbox in PiP
+4. Observe console for: `✅ SESSION 13: Triggered selected parts list UI update`
+5. Verify UI list updates from "0" to "1"
+6. Verify part displays correctly in list (name, qty, price, supplier)
+
+---
+
+**Files Modified**:
+1. `parts-search-results-pip.js` - Lines 503-508, 529-535, 550-551, 555
+2. `parts search.html` - Lines 1725-1726
+
+**Files Created**: None
+
+---
+
+**End of TASK 1**  
+**Next**: Test and confirm before proceeding to TASK 2
+
+---
+

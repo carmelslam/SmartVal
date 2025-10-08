@@ -501,6 +501,12 @@ class PartsSearchResultsPiP {
     }
 
     console.log('📋 Helper updated, total parts:', window.helper.parts_search.selected_parts.length);
+    
+    // SESSION 13 TASK 1: Trigger UI update
+    if (typeof window.updateSelectedPartsList === 'function') {
+      window.updateSelectedPartsList();
+      console.log('✅ SESSION 13: Triggered selected parts list UI update');
+    }
   }
 
   /**
@@ -521,6 +527,12 @@ class PartsSearchResultsPiP {
     
     if (originalLength !== newLength) {
       console.log('🗑️ Removed part from helper, remaining:', newLength);
+      
+      // SESSION 13 TASK 1: Trigger UI update
+      if (typeof window.updateSelectedPartsList === 'function') {
+        window.updateSelectedPartsList();
+        console.log('✅ SESSION 13: Triggered selected parts list UI update');
+      }
     }
   }
 
@@ -535,9 +547,12 @@ class PartsSearchResultsPiP {
       "name": catalogItem.cat_num_desc || catalogItem.part_family || "",
       "תיאור": catalogItem.cat_num_desc || "",
       "כמות": 1,
+      "qty": 1, // SESSION 13 TASK 1: English key for UI display
+      "group": catalogItem.part_family || "", // SESSION 13 TASK 1: Part family as group
       "מחיר": `₪${price.toLocaleString('he-IL')}`,
       "סוג חלק": catalogItem.availability || "מקורי",
       "ספק": catalogItem.supplier_name || "",
+      "supplier": catalogItem.supplier_name || "", // SESSION 13 TASK 1: English key for UI display
       "fromSuggestion": false,
       "entry_method": "catalog_search",
       "מיקום": catalogItem.location || "ישראל",
