@@ -8439,15 +8439,27 @@ updateSelectedPartsList();
 
 **Status**: ✅ IMPLEMENTED - Ready for testing
 
+### **Issue Found During Testing**:
+**Error**: `❌ SESSION 14: No plate number available`  
+**Cause**: Code was looking for `window.helper.plate` which is never set  
+**Fix**: Changed to read from `document.getElementById('plate').value` (the actual input field)
+
+**Updated Code** (Line 1932-1933):
+```javascript
+const plateInput = document.getElementById('plate');
+const plate = plateInput?.value?.trim() || window.helper?.plate;
+```
+
 **Testing Instructions**:
 1. Hard refresh page (Cmd+Shift+R)
 2. Open browser console (F12)
-3. Search for parts (plate: 221-84-003) and select 2-3 parts
-4. Click delete button (🗑️) on one part
-5. Watch console for: `✅ SESSION 14: Part deleted from Supabase successfully`
-6. Verify part disappears from UI
-7. **Open Supabase → `selected_parts` table → Verify part is actually deleted**
-8. If any errors occur, you'll see Hebrew alert with error message
+3. **Ensure plate number is in the input field** (e.g., 221-84-003)
+4. Search for parts and select 2-3 parts
+5. Click delete button (🗑️) on one part
+6. Watch console for: `✅ SESSION 14: Part deleted from Supabase successfully`
+7. Verify part disappears from UI
+8. **Open Supabase → `selected_parts` table → Verify part is actually deleted**
+9. If any errors occur, you'll see Hebrew alert with error message
 
 ---
 
