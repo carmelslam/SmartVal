@@ -8659,20 +8659,404 @@ function autoSaveSearchProgress() {
 }
 ```
 
-**Status**: ✅ IMPLEMENTED - Ready for testing
+**Status**: ❌ APPROACH CHANGED - See TASK 3 REVISED below
 
-**Testing Instructions**:
-1. Search for parts (plate: 221-84-003) and select 2-3 parts
-2. **Verify parts are in the UI list**
-3. **Refresh page (F5)** or **Hard refresh (Cmd+Shift+R)**
-4. Open browser console (F12)
-5. Watch for these console messages:
-   - `✅ SESSION 14: Supabase ready, loading selected parts...`
-   - `📦 SESSION 14: Loading selected parts from Supabase...`
-   - `📋 SESSION 14: Loading parts for plate: 221-84-003`
-   - `✅ SESSION 14: Loaded X parts from Supabase for plate 221-84-003`
-6. **Verify the parts list reappears with all previously selected parts**
-7. Count should match before/after refresh
+**Issue Identified**: Loading from Supabase on refresh shows ALL parts ever selected for plate (50+ parts), not just current session's 3 parts. This breaks user workflow.
+
+**Root Cause**: Confusion between:
+- **Current session working list** (3 parts user just selected)
+- **Cumulative all-time list** (50 parts ever selected for this case)
+
+**Solution**: Implement separate `current_selected_list` object - see TASK 3 REVISED below.
+
+---
+
+## ⚠️ TASK 3 REVISED: IMPLEMENT CURRENT SESSION LIST ARCHITECTURE
+
+**Date**: October 8, 2025  
+**Status**: PLANNED - Awaiting implementation  
+**Priority**: HIGH
+
+### **Problem Statement**:
+
+The selected parts list was clearing on page refresh, but the attempted fix (loading from Supabase) created a WORSE problem:
+- User selects 3 parts in current session
+- Page refreshes
+- UI loads ALL 50 parts from Supabase `selected_parts` table
+- User loses focus on current work
+
+**Fundamental Issue**: Mixing "current session working list" with "cumulative all-time selected parts"
+
+---
+
+### **NEW ARCHITECTURE**:
+
+Create **THREE separate data layers** with clear boundaries:
+
+#### **Layer 1: Current Session Working List**
+- **Object**: `helper.parts_search.current_selected_list` (NEW)
+- **Purpose**: Parts selected in THIS session only
+- **Scope**: Temporary, resets when user clicks "Save" or "Clear Session"
+- **Persistence**: sessionStorage (via helper) - survives page refresh
+- **Example**: User selects 3 parts → list shows 3 parts
+
+#### **Layer 2: Cumulative Selected Parts**
+- **Object**: `helper.parts_search.selected_parts` (EXISTING - DO NOT RENAME)
+- **Purpose**: Historical accumulation of all saved parts for this case
+- **Scope**: Grows over time as user saves sessions
+- **Persistence**: sessionStorage (via helper) - survives page refresh
+- **Dependencies**: Many existing references, cannot rename
+- **Example**: After 10 work sessions → contains 50 parts
+- **Note**: Currently also populated from "Parts Required" page (legacy)
+
+#### **Layer 3: Permanent Database Storage**
+- **Table**: `supabase.selected_parts`
+- **Purpose**: Permanent record of all parts ever selected for case/plate
+- **Scope**: All-time history, never cleared
+- **Persistence**: PostgreSQL database
+- **Example**: Contains 50+ parts across all sessions
+
+---
+
+### **DATA FLOW LOGIC**:
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│ USER SELECTS PARTS IN PiP                                       │
+└────────────────────┬────────────────────────────────────────────┘
+                     ↓
+        ┌────────────────────────────┐
+        │ 1. UI List Updates         │
+        │    (reads from current_    │
+        │     selected_list)         │
+        └────────────┬───────────────┘
+                     ↓
+        ┌────────────────────────────┐
+        │ 2. Supabase Table Updated  │
+        │    (selected_parts table)  │
+        └────────────┬───────────────┘
+                     ↓
+        ┌────────────────────────────┐
+        │ 3. Current List Updated    │
+        │    (helper.parts_search.   │
+        │     current_selected_list) │
+        └────────────┬───────────────┘
+                     ↓
+        ┌────────────────────────────┐
+        │ USER CLICKS "SAVE" BUTTON  │
+        └────────────┬───────────────┘
+                     ↓
+        ┌────────────────────────────┐
+        │ 4. Append to Cumulative    │
+        │    current → selected_parts│
+        │    (NO duplicate filtering)│
+        └────────────┬───────────────┘
+                     ↓
+        ┌────────────────────────────┐
+        │ 5. Clear Current List      │
+        │    (current_selected_list  │
+        │     = [])                  │
+        └────────────┬───────────────┘
+                     ↓
+        ┌────────────────────────────┐
+        │ 6. UI Refreshes (0 parts)  │
+        └────────────────────────────┘
+
+ALTERNATIVE PATH: "CLEAR SESSION" BUTTON
+        ↓
+Same as "Save" (append → clear) but user-initiated
+```
+
+---
+
+### **KEY DESIGN DECISIONS**:
+
+#### **Decision 1: NO Duplicate Filtering**
+**Reason**: Same part can be needed multiple times for different locations
+**Example**: 
+- User selects "Front Fender Left" (pcode: ABC123, qty: 1)
+- Later selects "Front Fender Right" (pcode: ABC123, qty: 1)
+- Result: 2 entries in cumulative list, total qty = 2 ✅
+
+**Future Enhancement** (not now): Could merge quantities instead of separate entries
+
+#### **Decision 2: Keep `selected_parts` Name**
+**Reason**: Too many dependencies across codebase
+**Risk**: High chance of breaking existing functionality
+**Action**: Do NOT rename, add new object alongside
+
+#### **Decision 3: Page Refresh Loads Current Session Only**
+**Reason**: User needs to see what they're CURRENTLY working on, not 50 historical parts
+**Implementation**: Load `current_selected_list` from helper (sessionStorage)
+**Result**: Refresh shows 3 parts (current session), not 50 parts (all-time)
+
+---
+
+### **TECHNICAL IMPLEMENTATION PLAN**:
+
+#### **STEP 1: Create New Data Structure**
+**File**: `parts-search-results-pip.js` (addToHelper function)
+
+**Current Code**:
+```javascript
+window.helper.parts_search.selected_parts.push(newPart);
+```
+
+**New Code**:
+```javascript
+// Initialize current_selected_list if doesn't exist
+if (!window.helper.parts_search.current_selected_list) {
+  window.helper.parts_search.current_selected_list = [];
+}
+
+// Save to CURRENT list (not cumulative)
+window.helper.parts_search.current_selected_list.push(newPart);
+```
+
+**Why**: Separates current session from cumulative history
+
+---
+
+#### **STEP 2: Update UI to Read Current List**
+**File**: `parts search.html` (updateSelectedPartsList function)
+
+**Current Code** (line ~1725):
+```javascript
+const partsToDisplay = window.helper?.parts_search?.selected_parts || [];
+```
+
+**New Code**:
+```javascript
+const partsToDisplay = window.helper?.parts_search?.current_selected_list || [];
+```
+
+**Why**: UI shows only current session parts, not all-time cumulative
+
+---
+
+#### **STEP 3: Add "Save to List" Button**
+**File**: `parts search.html`
+
+**Location**: Next to existing "Clear All" button (line ~167)
+
+**New HTML**:
+```html
+<button type="button" class="btn" onclick="saveCurrentToList()" 
+        style="background: #10b981; font-size: 14px; padding: 8px 16px;">
+  💾 שמור לרשימה
+</button>
+```
+
+**New Function**:
+```javascript
+function saveCurrentToList() {
+  const currentList = window.helper?.parts_search?.current_selected_list || [];
+  
+  if (currentList.length === 0) {
+    alert('אין חלקים ברשימה הנוכחית לשמירה');
+    return;
+  }
+  
+  const confirmSave = confirm(`האם לשמור ${currentList.length} חלקים לרשימה המצטברת?`);
+  
+  if (confirmSave) {
+    // Append current to cumulative (NO duplicate filter)
+    if (!window.helper.parts_search.selected_parts) {
+      window.helper.parts_search.selected_parts = [];
+    }
+    
+    window.helper.parts_search.selected_parts.push(...currentList);
+    
+    // Clear current list
+    window.helper.parts_search.current_selected_list = [];
+    
+    // Update UI
+    updateSelectedPartsList();
+    
+    // Show success message
+    if (typeof showNotification === 'function') {
+      showNotification(`נשמרו ${currentList.length} חלקים לרשימה המצטברת`, 'success');
+    }
+    
+    console.log(`✅ SESSION 14: Saved ${currentList.length} parts to cumulative list`);
+  }
+}
+```
+
+**Why**: Gives user explicit control over when to commit current session to history
+
+---
+
+#### **STEP 4: Modify "Clear All" to "Clear Session"**
+**File**: `parts search.html`
+
+**Current Button** (line 167):
+```html
+<button onclick="clearAllParts()">🗑️ נקה את כל הרשימה</button>
+```
+
+**New Button**:
+```html
+<button onclick="clearCurrentSession()">🗑️ נקה סשן נוכחי</button>
+```
+
+**New Function**:
+```javascript
+function clearCurrentSession() {
+  const currentList = window.helper?.parts_search?.current_selected_list || [];
+  
+  if (currentList.length === 0) {
+    alert('אין חלקים ברשימה הנוכחית');
+    return;
+  }
+  
+  const confirmClear = confirm(`האם לשמור ${currentList.length} חלקים לרשימה המצטברת ולנקות את הסשן?`);
+  
+  if (confirmClear) {
+    // Append to cumulative
+    if (!window.helper.parts_search.selected_parts) {
+      window.helper.parts_search.selected_parts = [];
+    }
+    window.helper.parts_search.selected_parts.push(...currentList);
+    
+    // Clear current
+    window.helper.parts_search.current_selected_list = [];
+    
+    // Update UI
+    updateSelectedPartsList();
+    
+    if (typeof showNotification === 'function') {
+      showNotification('הסשן נשמר ונוקה', 'success');
+    }
+    
+    console.log(`✅ SESSION 14: Cleared session, saved ${currentList.length} parts`);
+  }
+}
+```
+
+**Why**: 
+- Prevents accidental data loss
+- Automatically saves before clearing
+- Clear naming ("session" not "all")
+
+---
+
+#### **STEP 5: Update Delete Single Part**
+**File**: `parts search.html` (deletePart function)
+
+**Current Code** (line 1965):
+```javascript
+helperParts.splice(index, 1); // Deletes from selected_parts
+```
+
+**New Code**:
+```javascript
+// Delete from CURRENT list (not cumulative)
+const currentList = window.helper?.parts_search?.current_selected_list || [];
+currentList.splice(index, 1);
+```
+
+**Why**: Single delete operates on current session, not cumulative history
+
+---
+
+#### **STEP 6: Fix Page Refresh Persistence**
+**File**: `parts search.html` (DOMContentLoaded)
+
+**Current Code** (line 1206):
+```javascript
+if (window.helper?.parts_search?.selected_parts) {
+  updateSelectedPartsList();
+}
+```
+
+**New Code**:
+```javascript
+if (window.helper?.parts_search?.current_selected_list) {
+  console.log('✅ SESSION 14: Loaded', window.helper.parts_search.current_selected_list.length, 'parts from current session');
+  updateSelectedPartsList();
+} else {
+  console.log('ℹ️ SESSION 14: No current session parts, starting fresh');
+  // Initialize empty current list
+  if (!window.helper) window.helper = {};
+  if (!window.helper.parts_search) window.helper.parts_search = {};
+  window.helper.parts_search.current_selected_list = [];
+}
+```
+
+**Why**: Loads ONLY current session parts on refresh (3 parts, not 50)
+
+---
+
+### **TESTING PLAN**:
+
+#### **Test 1: Basic Flow**
+1. Select 3 parts in PiP
+2. Verify UI shows 3 parts
+3. Verify Supabase `selected_parts` table has 3 new rows
+4. Verify `helper.parts_search.current_selected_list` has 3 parts
+5. Verify `helper.parts_search.selected_parts` is UNCHANGED
+
+#### **Test 2: Save to Cumulative**
+1. Select 3 parts
+2. Click "💾 שמור לרשימה" button
+3. Verify UI now shows 0 parts
+4. Verify `current_selected_list` is empty
+5. Verify `selected_parts` now has 3 parts
+
+#### **Test 3: Page Refresh Persistence**
+1. Select 3 parts
+2. Refresh page (F5)
+3. Verify UI still shows 3 parts
+4. Verify parts are from `current_selected_list`, not Supabase
+
+#### **Test 4: Clear Session**
+1. Select 3 parts
+2. Click "🗑️ נקה סשן נוכחי" button
+3. Verify UI shows 0 parts
+4. Verify `selected_parts` has 3 parts (saved before clear)
+
+#### **Test 5: Delete Single Part**
+1. Select 3 parts
+2. Delete 1 part
+3. Verify Supabase deletes the part
+4. Verify `current_selected_list` has 2 parts
+5. Verify `selected_parts` is unchanged
+
+#### **Test 6: Duplicate Parts Allowed**
+1. Select "Front Fender" (qty: 1)
+2. Select "Front Fender" again (qty: 1)
+3. Verify UI shows 2 separate entries
+4. Click "Save"
+5. Verify `selected_parts` has 2 separate entries (no merge)
+
+---
+
+### **FILES TO MODIFY**:
+
+1. **parts-search-results-pip.js** - Lines 500-510 (addToHelper)
+2. **parts search.html** - Line 1725 (updateSelectedPartsList)
+3. **parts search.html** - Line 167 (add Save button)
+4. **parts search.html** - Line 167 (modify Clear button)
+5. **parts search.html** - Line 1965 (deletePart)
+6. **parts search.html** - Line 1206 (page load)
+7. **parts search.html** - Add new functions: saveCurrentToList(), clearCurrentSession()
+
+---
+
+### **EXPECTED OUTCOME**:
+
+✅ User selects 3 parts → UI shows 3 parts  
+✅ User refreshes page → UI still shows 3 parts (not 50)  
+✅ User clicks "Save" → 3 parts move to cumulative list  
+✅ UI clears → ready for next session  
+✅ User can work on multiple part selections without mixing sessions  
+✅ All parts saved to Supabase for permanent record  
+✅ Duplicate parts allowed (different locations need same part)
+
+---
+
+**Next Step**: Implement STEP 1 (create current_selected_list structure)
 
 ---
 
