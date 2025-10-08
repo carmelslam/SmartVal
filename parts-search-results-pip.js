@@ -836,7 +836,7 @@ class PartsSearchResultsPiP {
               background: #f3f4f6;
             }
             .review-container {
-              max-width: 1400px;
+              max-width: 700px;
               margin: 0 auto;
               background: white;
               padding: 20px;

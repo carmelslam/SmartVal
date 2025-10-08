@@ -8632,7 +8632,32 @@ async function loadSelectedPartsFromSupabase() {
 - ✅ Console shows: `✅ SESSION 14: Loaded X parts from Supabase for plate Y`
 - ✅ Works as long as plate number is in the input field
 
-**Important Note**: This only works if the plate number is already in the input field when the page loads. If the user hasn't entered a plate number yet, the load is skipped (which is correct behavior).
+### **Issue Found During Testing**:
+**Error**: List still clears on page refresh  
+**Cause**: Plate input field is empty on page load, so load function can't find which plate to load from  
+**Fix**: Save plate to sessionStorage during search, restore on page load
+
+**Additional Changes** (Lines 1199-1207, 349-355):
+```javascript
+// On page load: Restore plate from sessionStorage
+const savedPlate = sessionStorage.getItem('lastSearchedPlate');
+if (savedPlate) {
+  const plateInput = document.getElementById('plate');
+  if (plateInput && !plateInput.value) {
+    plateInput.value = savedPlate;
+    console.log('✅ SESSION 14: Restored plate number from session:', savedPlate);
+  }
+}
+
+// During search: Save plate to sessionStorage
+function autoSaveSearchProgress() {
+  const plateValue = document.getElementById('plate').value;
+  if (plateValue) {
+    sessionStorage.setItem('lastSearchedPlate', plateValue);
+    console.log('💾 SESSION 14: Saved plate to session:', plateValue);
+  }
+}
+```
 
 **Status**: ✅ IMPLEMENTED - Ready for testing
 

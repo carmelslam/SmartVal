@@ -346,9 +346,17 @@
   
   // Auto-save search progress
   function autoSaveSearchProgress() {
+    const plateValue = document.getElementById('plate').value;
+    
+    // SESSION 14 TASK 3 FIX: Save plate to sessionStorage for page refresh persistence
+    if (plateValue) {
+      sessionStorage.setItem('lastSearchedPlate', plateValue);
+      console.log('💾 SESSION 14: Saved plate to session:', plateValue);
+    }
+    
     const searchData = {
       vehicle: {
-        plate: document.getElementById('plate').value,
+        plate: plateValue,
         manufacturer: document.getElementById('manufacturer').value,
         model: document.getElementById('model').value,
         year: document.getElementById('year').value,
@@ -1195,6 +1203,16 @@ document.getElementById('sendResultToOCRBtn').addEventListener('click', function
   
   // SESSION 14 TASK 3: Initialize selected parts list and load from Supabase
   loadSavedPartsFromHelper(); // Legacy - loads from sessionStorage
+  
+  // SESSION 14 TASK 3 FIX: Restore plate number from sessionStorage
+  const savedPlate = sessionStorage.getItem('lastSearchedPlate');
+  if (savedPlate) {
+    const plateInput = document.getElementById('plate');
+    if (plateInput && !plateInput.value) {
+      plateInput.value = savedPlate;
+      console.log('✅ SESSION 14: Restored plate number from session:', savedPlate);
+    }
+  }
   
   // SESSION 14 TASK 3: Wait for Supabase before loading data
   (async () => {
