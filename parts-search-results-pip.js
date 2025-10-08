@@ -492,15 +492,43 @@ class PartsSearchResultsPiP {
 
     if (existingIndex >= 0) {
       // Update existing entry
+      // SESSION 14 STEP 1: Save to CURRENT session list (not cumulative selected_parts)
+      // Initialize current_selected_list if doesn't exist
+      if (!window.helper.parts_search.current_selected_list) {
+        window.helper.parts_search.current_selected_list = [];
+        console.log('📋 SESSION 14: Initialized current_selected_list');
+      }
+      
+      // Update in cumulative (for backward compatibility)
       window.helper.parts_search.selected_parts[existingIndex] = selectedPartEntry;
-      console.log('🔄 Updated existing part in helper');
+      console.log('🔄 Updated existing part in cumulative list (legacy)');
+      
+      // Also update in current session list if exists
+      const currentIndex = window.helper.parts_search.current_selected_list.findIndex(p => 
+        (p.pcode || p['מספר קטלוגי']) === pcode
+      );
+      if (currentIndex !== -1) {
+        window.helper.parts_search.current_selected_list[currentIndex] = selectedPartEntry;
+        console.log('🔄 SESSION 14: Updated existing part in current_selected_list');
+      }
     } else {
-      // Add new entry
+      // SESSION 14 STEP 1: Initialize current_selected_list if doesn't exist
+      if (!window.helper.parts_search.current_selected_list) {
+        window.helper.parts_search.current_selected_list = [];
+        console.log('📋 SESSION 14: Initialized current_selected_list');
+      }
+      
+      // Add to CURRENT session list (primary)
+      window.helper.parts_search.current_selected_list.push(selectedPartEntry);
+      console.log('✅ SESSION 14: Added new part to current_selected_list');
+      
+      // Also add to cumulative (for backward compatibility - can be removed later)
       window.helper.parts_search.selected_parts.push(selectedPartEntry);
-      console.log('✅ Added new part to helper');
+      console.log('✅ Added new part to cumulative list (legacy)');
     }
 
-    console.log('📋 Helper updated, total parts:', window.helper.parts_search.selected_parts.length);
+    console.log('📋 SESSION 14: Current session parts:', window.helper.parts_search.current_selected_list?.length || 0);
+    console.log('📋 Cumulative parts:', window.helper.parts_search.selected_parts.length);
     
     // SESSION 13 TASK 1: Trigger UI update
     if (typeof window.updateSelectedPartsList === 'function') {

@@ -164,6 +164,7 @@
 
 <!-- Parts List Management Buttons -->
 <div id="parts_management_buttons" style="display: none; margin-top: 10px; text-align: center; gap: 10px;">
+  <button type="button" class="btn" onclick="saveCurrentToList()" style="background: #10b981; font-size: 14px; padding: 8px 16px;">💾 שמור לרשימה</button>
   <button type="button" class="btn" onclick="handleClearAll()" style="background: #dc3545; font-size: 14px; padding: 8px 16px;">🗑️ נקה את כל הרשימה</button>
   <button type="button" class="btn" onclick="duplicateSelectedPart()" style="background: #6c757d; font-size: 14px; padding: 8px 16px;">📄 שכפל חלק אחרון</button>
 </div>
@@ -1735,8 +1736,8 @@ document.getElementById('sendResultToOCRBtn').addEventListener('click', function
     const managementButtons = document.getElementById('parts_management_buttons');
     const countDisplay = document.getElementById('selected_parts_count');
     
-    // SESSION 13 TASK 1: Read from helper.parts_search.selected_parts (source of truth)
-    const partsToDisplay = window.helper?.parts_search?.selected_parts || selectedParts || [];
+    // SESSION 14 STEP 2: Read from current_selected_list (current session only)
+    const partsToDisplay = window.helper?.parts_search?.current_selected_list || [];
     
     // Update count display
     if (countDisplay) {
@@ -2075,6 +2076,47 @@ document.getElementById('sendResultToOCRBtn').addEventListener('click', function
     }
   }
   
+  // SESSION 14 STEP 3: Save current session to cumulative list
+  function saveCurrentToList() {
+    const currentList = window.helper?.parts_search?.current_selected_list || [];
+    
+    if (currentList.length === 0) {
+      alert('אין חלקים ברשימה הנוכחית לשמירה');
+      return;
+    }
+    
+    const confirmSave = confirm(`האם לשמור ${currentList.length} חלקים לרשימה המצטברת?`);
+    
+    if (confirmSave) {
+      try {
+        // Append current to cumulative (NO duplicate filter)
+        if (!window.helper.parts_search.selected_parts) {
+          window.helper.parts_search.selected_parts = [];
+        }
+        
+        window.helper.parts_search.selected_parts.push(...currentList);
+        console.log(`✅ SESSION 14: Appended ${currentList.length} parts to cumulative list`);
+        
+        // Clear current list
+        window.helper.parts_search.current_selected_list = [];
+        console.log('✅ SESSION 14: Cleared current_selected_list');
+        
+        // Update UI
+        updateSelectedPartsList();
+        
+        // Show success message
+        if (typeof showNotification === 'function') {
+          showNotification(`נשמרו ${currentList.length} חלקים לרשימה המצטברת`, 'success');
+        }
+        
+        console.log(`✅ SESSION 14: Saved ${currentList.length} parts to cumulative list, cleared current session`);
+      } catch (error) {
+        console.error('❌ SESSION 14: Error in saveCurrentToList:', error);
+        alert(`שגיאה בשמירה: ${error.message}`);
+      }
+    }
+  }
+  
   // ✅ NEW: Duplicate last part functionality
   function duplicateSelectedPart() {
     if (selectedParts.length === 0) {
@@ -2118,6 +2160,7 @@ document.getElementById('sendResultToOCRBtn').addEventListener('click', function
   }
   
   // Make functions globally available
+  window.saveCurrentToList = saveCurrentToList; // SESSION 14: Save button
   window.editPart = editPart;
   window.saveEditedPart = saveEditedPart;
   window.deletePart = deletePart;
