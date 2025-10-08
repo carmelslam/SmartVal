@@ -1907,56 +1907,81 @@ document.getElementById('sendResultToOCRBtn').addEventListener('click', function
     console.log(`✅ Edited part: ${group} - ${name} (${qty}x ${source})`);
   }
   
-  // SESSION 13 TASK 1C: Delete part functionality - work with helper + Supabase
+  // SESSION 14 TASK 1: Delete part functionality - MUST delete from Supabase first
   async function deletePart(index) {
     // Read from helper (source of truth)
     const helperParts = window.helper?.parts_search?.selected_parts || [];
     const part = helperParts[index];
-    if (!part) return;
+    if (!part) {
+      console.error('❌ SESSION 14: No part found at index', index);
+      return;
+    }
     
     const confirmDelete = confirm(`האם אתה בטוח שברצונך למחוק את החלק?\n\n${part.group || part.part_family} - ${part.name}\nכמות: ${part.qty || part.quantity} | מקור: ${part.source}`);
     
     if (confirmDelete) {
       try {
-        // 1. Delete from Supabase selected_parts table
+        // SESSION 14: FIRST check if Supabase is available
+        if (!window.supabase) {
+          console.error('❌ SESSION 14: Supabase not available');
+          alert('שגיאה: מערכת הנתונים לא זמינה. אנא רענן את הדף.');
+          return; // STOP - don't delete from UI if Supabase not available
+        }
+        
+        // SESSION 14: Get plate and pcode for Supabase query
         const plate = window.helper?.plate;
         const pcode = part.pcode || part['מספר קטלוגי'];
         
-        if (plate && pcode && window.supabase) {
-          console.log('🗑️ SESSION 13: Deleting part from Supabase:', { plate, pcode });
-          const { error } = await window.supabase
-            .from('selected_parts')
-            .delete()
-            .eq('plate', plate)
-            .eq('pcode', pcode);
-          
-          if (error) {
-            console.error('❌ SESSION 13: Error deleting from Supabase:', error);
-          } else {
-            console.log('✅ SESSION 13: Part deleted from Supabase');
-          }
+        if (!plate) {
+          console.error('❌ SESSION 14: No plate number available');
+          alert('שגיאה: לא נמצא מספר רישוי');
+          return; // STOP
         }
         
-        // 2. Remove from helper array
-        helperParts.splice(index, 1);
+        if (!pcode) {
+          console.error('❌ SESSION 14: No pcode available for part:', part);
+          alert('שגיאה: חסר מספר קטלוגי לחלק');
+          return; // STOP
+        }
         
-        // 3. Remove from local array (for backward compatibility)
+        // SESSION 14: STEP 1 - Delete from Supabase FIRST
+        console.log('🗑️ SESSION 14: Deleting part from Supabase:', { plate, pcode });
+        const { error } = await window.supabase
+          .from('selected_parts')
+          .delete()
+          .eq('plate', plate)
+          .eq('pcode', pcode);
+        
+        // SESSION 14: Check for errors - STOP if delete failed
+        if (error) {
+          console.error('❌ SESSION 14: Supabase delete failed:', error);
+          alert(`שגיאה במחיקה מהשרת: ${error.message}\n\nהחלק לא נמחק.`);
+          return; // STOP - don't delete from UI if Supabase failed
+        }
+        
+        console.log('✅ SESSION 14: Part deleted from Supabase successfully');
+        
+        // SESSION 14: STEP 2 - Only now delete from helper (after Supabase success)
+        helperParts.splice(index, 1);
+        console.log('✅ SESSION 14: Part removed from helper array');
+        
+        // SESSION 14: STEP 3 - Remove from local array (backward compatibility)
         if (selectedParts[index]) {
           selectedParts.splice(index, 1);
         }
         
-        // 4. Update UI
+        // SESSION 14: STEP 4 - Update UI
         updateSelectedPartsList();
         
-        // Show notification
+        // Show success notification
         if (typeof showNotification === 'function') {
           showNotification(`נמחק חלק: ${part.name}`, 'success');
         }
         
-        console.log(`🗑️ SESSION 13: Deleted part: ${part.group || part.part_family} - ${part.name}`);
+        console.log(`✅ SESSION 14: Successfully deleted part: ${part.group || part.part_family} - ${part.name}`);
       } catch (error) {
-        console.error('❌ SESSION 13: Error in deletePart:', error);
-        alert('שגיאה במחיקת החלק');
+        console.error('❌ SESSION 14: Unexpected error in deletePart:', error);
+        alert(`שגיאה לא צפויה במחיקת החלק: ${error.message}`);
       }
     }
   }

@@ -8351,79 +8351,103 @@ Based on user testing of SESSION 13 changes, fix 4 critical issues:
 
 ---
 
-## ✅ TASK 1: ADD ASYNC WRAPPER FUNCTIONS
+## ✅ TASK 1: FIX DELETE BUTTON TO ACTUALLY DELETE FROM SUPABASE
 
-**Problem**: Direct async function calls in `onclick` handlers don't wait for Supabase operations
+**User Problem**: Delete button deletes from UI list but NOT from Supabase `selected_parts` table
 
-**Solution**: Create sync wrapper functions that properly handle promises
+**Root Cause**: 
+1. Old code deleted from UI even if Supabase failed
+2. Errors were logged but not shown to user
+3. No validation that Supabase/plate/pcode exist before attempting delete
+
+**Solution**: Rewrite `deletePart()` function with proper error handling and blocking
 
 ### **Changes Made**:
 
 **File**: `parts search.html`
 
-**Location 1**: Lines 2044-2067 (Added wrapper functions before window assignments)
+**Location**: Lines 1910-1987 (Completely rewrote `deletePart()` function)
+
+### **Key Fixes**:
+
+**FIX 1: Check Supabase availability FIRST** (Lines 1924-1929)
 ```javascript
-// SESSION 14 TASK 1: Async wrapper functions for onclick handlers
-// HTML onclick can't properly await async functions, so we wrap them
-function handleDeletePart(index) {
-  deletePart(index).catch(error => {
-    console.error('❌ SESSION 14: Delete failed:', error);
-    alert('שגיאה במחיקת החלק: ' + error.message);
-  });
+if (!window.supabase) {
+  console.error('❌ SESSION 14: Supabase not available');
+  alert('שגיאה: מערכת הנתונים לא זמינה. אנא רענן את הדף.');
+  return; // STOP - don't delete from UI
 }
+```
 
-function handleClearAll() {
-  clearAllParts().catch(error => {
-    console.error('❌ SESSION 14: Clear all failed:', error);
-    alert('שגיאה במחיקת הרשימה: ' + error.message);
-  });
+**FIX 2: Validate plate and pcode exist** (Lines 1932-1945)
+```javascript
+if (!plate) {
+  alert('שגיאה: לא נמצא מספר רישוי');
+  return; // STOP
 }
-
-// Make functions globally available
-window.handleDeletePart = handleDeletePart; // SESSION 14: Wrapper function
-window.handleClearAll = handleClearAll; // SESSION 14: Wrapper function
+if (!pcode) {
+  alert('שגיאה: חסר מספר קטלוגי לחלק');
+  return; // STOP
+}
 ```
 
-**Location 2**: Line 1781 (Updated delete button onclick)
+**FIX 3: Delete from Supabase FIRST, check for errors** (Lines 1947-1960)
 ```javascript
-// BEFORE:
-onclick="deletePart(${index})"
+const { error } = await window.supabase
+  .from('selected_parts')
+  .delete()
+  .eq('plate', plate)
+  .eq('pcode', pcode);
 
-// AFTER:
-onclick="handleDeletePart(${index})"
+if (error) {
+  console.error('❌ SESSION 14: Supabase delete failed:', error);
+  alert(`שגיאה במחיקה מהשרת: ${error.message}\n\nהחלק לא נמחק.`);
+  return; // STOP - don't delete from UI if Supabase failed
+}
 ```
 
-**Location 3**: Line 167 (Updated Clear All button onclick)
+**FIX 4: Only delete from UI AFTER Supabase succeeds** (Lines 1962-1974)
 ```javascript
-// BEFORE:
-onclick="clearAllParts()"
+console.log('✅ SESSION 14: Part deleted from Supabase successfully');
 
-// AFTER:
-onclick="handleClearAll()"
+// Only now delete from helper (after Supabase success)
+helperParts.splice(index, 1);
+selectedParts.splice(index, 1);
+updateSelectedPartsList();
 ```
 
-### **How It Works**:
-1. User clicks delete/clear button
-2. Onclick calls sync wrapper function (`handleDeletePart` or `handleClearAll`)
-3. Wrapper calls async function and waits for promise
-4. If error occurs, `.catch()` handles it and shows alert to user
-5. Supabase operations complete BEFORE UI updates
+### **How It Works Now**:
+1. ✅ User clicks delete button (🗑️)
+2. ✅ Function checks Supabase is available (if not, shows error and STOPS)
+3. ✅ Function validates plate and pcode exist (if not, shows error and STOPS)
+4. ✅ Function deletes from Supabase FIRST (awaits response)
+5. ✅ If Supabase error, shows Hebrew alert to user and STOPS
+6. ✅ Only if Supabase succeeds → delete from helper → update UI
+7. ✅ Result: UI and Supabase stay in sync
+
+### **What Changed vs SESSION 13**:
+- **OLD**: Deleted from UI regardless of Supabase success/failure
+- **NEW**: Deletes from UI ONLY after Supabase confirms deletion
+- **OLD**: Errors only in console (user can't see)
+- **NEW**: Errors shown in Hebrew alerts (user can see and understand)
 
 ### **Expected Result**:
-- ✅ Delete button will wait for Supabase delete to complete
-- ✅ Clear All button will wait for Supabase delete to complete
-- ✅ Errors will be visible to user with Hebrew alert messages
-- ✅ UI only updates after Supabase confirms deletion
+- ✅ Delete button removes part from UI
+- ✅ Delete button removes part from Supabase `selected_parts` table
+- ✅ If Supabase fails, user sees error message and part stays in UI
+- ✅ Console logs show clear success/failure messages
 
 **Status**: ✅ IMPLEMENTED - Ready for testing
 
 **Testing Instructions**:
 1. Hard refresh page (Cmd+Shift+R)
-2. Search for parts (plate: 221-84-003) and select 2-3 parts
-3. Click delete button (🗑️) on one part
-4. Open Supabase → `selected_parts` table → Verify part is deleted
-5. Click "נקה את כל הרשימה" (Clear All) button
-6. Open Supabase → `selected_parts` table → Verify all parts deleted for this plate
+2. Open browser console (F12)
+3. Search for parts (plate: 221-84-003) and select 2-3 parts
+4. Click delete button (🗑️) on one part
+5. Watch console for: `✅ SESSION 14: Part deleted from Supabase successfully`
+6. Verify part disappears from UI
+7. **Open Supabase → `selected_parts` table → Verify part is actually deleted**
+8. If any errors occur, you'll see Hebrew alert with error message
 
 ---
 
