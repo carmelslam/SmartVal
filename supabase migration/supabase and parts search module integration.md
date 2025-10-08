@@ -7727,3 +7727,52 @@ This SQL will:
 
 ---
 
+## TASK 1C: FIX SELECTED PARTS LIST BUTTONS ⏳
+
+### **Problems Identified**:
+
+1. **Clear All button error**: Shows "no parts" when parts exist
+2. **Edit/Delete trigger searches**: Buttons start searches instead of editing/deleting
+3. **Buttons don't delete from Supabase**: Only work with local array
+4. **List clears on page refresh**: Doesn't persist across sessions
+
+---
+
+### **Solution Implemented**:
+
+**FIX 1**: Add `type="button"` to prevent form submission (lines 1766, 1780)
+```html
+<button type="button" onclick="editPart(${index})">
+<button type="button" onclick="deletePart(${index})">
+```
+
+**FIX 2**: Update `clearAllParts()` (line 1928)
+- Read count from `helper.parts_search.selected_parts`
+- Delete all from Supabase by plate
+- Clear helper array
+- Update UI
+
+**FIX 3**: Update `deletePart()` (line 1908)
+- Read from helper
+- Delete from Supabase by plate + pcode
+- Remove from helper
+- Update UI
+
+**FIX 4**: Update `editPart()` (line 1800)
+- Read from helper instead of local array
+
+**FIX 5**: Add `loadSelectedPartsFromSupabase()` (line 2095)
+- Loads all selected parts from Supabase on page load
+- Converts to helper format
+- Updates UI
+- Called on DOMContentLoaded
+
+---
+
+### **Files Modified**:
+- `parts search.html` - Lines 1766, 1780, 1800, 1908, 1928, 1198, 2095-2176
+
+**Status**: ✅ COMPLETE - Ready for testing
+
+---
+
