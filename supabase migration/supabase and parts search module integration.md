@@ -8555,3 +8555,99 @@ updateSelectedPartsList();
 
 ---
 
+## ✅ TASK 3: FIX PAGE REFRESH TO LOAD PARTS FROM SUPABASE
+
+**User Problem**: UI selected parts list clears completely on page refresh instead of persisting
+
+**Root Cause**: 
+1. `loadSelectedPartsFromSupabase()` was called immediately on page load, before Supabase client ready
+2. Function was looking for `window.helper.plate` which doesn't exist
+3. No timing mechanism to wait for Supabase initialization
+
+**Solution**: Add async wait loop for Supabase + get plate from input field
+
+### **Changes Made**:
+
+**File**: `parts search.html`
+
+**Location 1**: Lines 1196-1220 (Page load initialization with Supabase wait)
+```javascript
+// SESSION 14 TASK 3: Wait for Supabase before loading data
+(async () => {
+  // Wait for Supabase client to be ready (max 5 seconds)
+  let attempts = 0;
+  while (!window.supabase && attempts < 50) {
+    await new Promise(resolve => setTimeout(resolve, 100));
+    attempts++;
+  }
+  
+  if (!window.supabase) {
+    console.error('❌ SESSION 14: Supabase not loaded after 5 seconds');
+    return;
+  }
+  
+  console.log('✅ SESSION 14: Supabase ready, loading selected parts...');
+  await loadSelectedPartsFromSupabase();
+  
+  if (typeof updateSelectedPartsList === 'function') {
+    updateSelectedPartsList();
+  }
+})();
+```
+
+**Location 2**: Lines 2178-2191 (Get plate from input field in load function)
+```javascript
+async function loadSelectedPartsFromSupabase() {
+  console.log('📦 SESSION 14: Loading selected parts from Supabase...');
+  
+  // SESSION 14: Get plate from input field (same as delete/clear functions)
+  const plateInput = document.getElementById('plate');
+  const plate = plateInput?.value?.trim() || window.helper?.plate;
+  
+  if (!plate) {
+    console.log('⚠️ SESSION 14: No plate number in input field, skipping Supabase load');
+    return;
+  }
+  
+  console.log('📋 SESSION 14: Loading parts for plate:', plate);
+  // ... rest of function
+}
+```
+
+### **How It Works Now**:
+1. ✅ Page loads → `DOMContentLoaded` event fires
+2. ✅ Async function starts waiting for `window.supabase` to exist
+3. ✅ Checks every 100ms, up to 50 times (5 seconds total)
+4. ✅ Once Supabase ready, calls `loadSelectedPartsFromSupabase()`
+5. ✅ Function reads plate from `<input id="plate">` field
+6. ✅ Queries Supabase `selected_parts` table for that plate
+7. ✅ Converts Supabase data to helper format
+8. ✅ Updates `window.helper.parts_search.selected_parts`
+9. ✅ Calls `updateSelectedPartsList()` to refresh UI
+10. ✅ Result: List persists across page refreshes
+
+### **Expected Result**:
+- ✅ Selected parts persist across page refreshes
+- ✅ List loads from Supabase automatically when page loads
+- ✅ Console shows: `✅ SESSION 14: Loaded X parts from Supabase for plate Y`
+- ✅ Works as long as plate number is in the input field
+
+**Important Note**: This only works if the plate number is already in the input field when the page loads. If the user hasn't entered a plate number yet, the load is skipped (which is correct behavior).
+
+**Status**: ✅ IMPLEMENTED - Ready for testing
+
+**Testing Instructions**:
+1. Search for parts (plate: 221-84-003) and select 2-3 parts
+2. **Verify parts are in the UI list**
+3. **Refresh page (F5)** or **Hard refresh (Cmd+Shift+R)**
+4. Open browser console (F12)
+5. Watch for these console messages:
+   - `✅ SESSION 14: Supabase ready, loading selected parts...`
+   - `📦 SESSION 14: Loading selected parts from Supabase...`
+   - `📋 SESSION 14: Loading parts for plate: 221-84-003`
+   - `✅ SESSION 14: Loaded X parts from Supabase for plate 221-84-003`
+6. **Verify the parts list reappears with all previously selected parts**
+7. Count should match before/after refresh
+
+---
+

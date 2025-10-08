@@ -30,7 +30,7 @@
       min-height: 100vh;
     }
     .container {
-      max-width: 450px;
+      max-width: 720px;
       background: #fff;
       padding: 30px;
       border-radius: 16px;
@@ -1193,12 +1193,30 @@ document.getElementById('sendResultToOCRBtn').addEventListener('click', function
     btn.disabled = false;
   });
   
-  // SESSION 13 TASK 1C: Initialize selected parts list and load from Supabase
+  // SESSION 14 TASK 3: Initialize selected parts list and load from Supabase
   loadSavedPartsFromHelper(); // Legacy - loads from sessionStorage
-  loadSelectedPartsFromSupabase(); // SESSION 13: Load from Supabase on page refresh
-  if (typeof updateSelectedPartsList === 'function') {
-    updateSelectedPartsList();
-  }
+  
+  // SESSION 14 TASK 3: Wait for Supabase before loading data
+  (async () => {
+    // Wait for Supabase client to be ready (max 5 seconds)
+    let attempts = 0;
+    while (!window.supabase && attempts < 50) {
+      await new Promise(resolve => setTimeout(resolve, 100));
+      attempts++;
+    }
+    
+    if (!window.supabase) {
+      console.error('❌ SESSION 14: Supabase not loaded after 5 seconds');
+      return;
+    }
+    
+    console.log('✅ SESSION 14: Supabase ready, loading selected parts...');
+    await loadSelectedPartsFromSupabase();
+    
+    if (typeof updateSelectedPartsList === 'function') {
+      updateSelectedPartsList();
+    }
+  })();
 });
 
 </script>
@@ -2157,19 +2175,24 @@ document.getElementById('sendResultToOCRBtn').addEventListener('click', function
 
   window.loadSavedPartsFromHelper = loadSavedPartsFromHelper;
 
-  // SESSION 13 TASK 1C: Load selected parts from Supabase on page refresh
+  // SESSION 14 TASK 3: Load selected parts from Supabase on page refresh
   async function loadSelectedPartsFromSupabase() {
-    console.log('📦 SESSION 13: Loading selected parts from Supabase...');
+    console.log('📦 SESSION 14: Loading selected parts from Supabase...');
     
-    const plate = window.helper?.plate;
+    // SESSION 14: Get plate from input field (same as delete/clear functions)
+    const plateInput = document.getElementById('plate');
+    const plate = plateInput?.value?.trim() || window.helper?.plate;
+    
     if (!plate) {
-      console.log('⚠️ SESSION 13: No plate number available, skipping Supabase load');
+      console.log('⚠️ SESSION 14: No plate number in input field, skipping Supabase load');
       return;
     }
     
+    console.log('📋 SESSION 14: Loading parts for plate:', plate);
+    
     try {
       if (!window.supabase) {
-        console.log('⚠️ SESSION 13: Supabase not available yet, skipping load');
+        console.log('⚠️ SESSION 14: Supabase not available yet, skipping load');
         return;
       }
       
@@ -2180,12 +2203,12 @@ document.getElementById('sendResultToOCRBtn').addEventListener('click', function
         .order('selected_at', { ascending: false });
       
       if (error) {
-        console.error('❌ SESSION 13: Error loading from Supabase:', error);
+        console.error('❌ SESSION 14: Error loading from Supabase:', error);
         return;
       }
       
       if (data && data.length > 0) {
-        console.log(`✅ SESSION 13: Loaded ${data.length} parts from Supabase`);
+        console.log(`✅ SESSION 14: Loaded ${data.length} parts from Supabase for plate ${plate}`);
         
         // Convert Supabase data to helper format
         const helperParts = data.map(part => ({
@@ -2225,17 +2248,17 @@ document.getElementById('sendResultToOCRBtn').addEventListener('click', function
         if (!window.helper.parts_search) window.helper.parts_search = {};
         window.helper.parts_search.selected_parts = helperParts;
         
-        console.log('✅ SESSION 13: Updated helper with loaded parts');
+        console.log('✅ SESSION 14: Updated helper with loaded parts');
         
         // Update UI
         if (typeof updateSelectedPartsList === 'function') {
           updateSelectedPartsList();
         }
       } else {
-        console.log('ℹ️ SESSION 13: No selected parts found in Supabase for this plate');
+        console.log('ℹ️ SESSION 14: No selected parts found in Supabase for plate:', plate);
       }
     } catch (error) {
-      console.error('❌ SESSION 13: Error in loadSelectedPartsFromSupabase:', error);
+      console.error('❌ SESSION 14: Error in loadSelectedPartsFromSupabase:', error);
     }
   }
   
