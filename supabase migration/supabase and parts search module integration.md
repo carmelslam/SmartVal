@@ -9374,3 +9374,139 @@ User Flow:
 
 ---
 
+## 🚀 SESSION 15: OPENING & TASK BRIEFING
+
+**Date**: TBD  
+**Continuation of**: SESSION 14 - Current Session List Architecture  
+**Status**: Ready to implement  
+**Priority**: HIGH
+
+---
+
+### 📖 **CONTEXT FOR SESSION 15**:
+
+You are continuing work on **TASK 3: Implement Current Session List Architecture** from SESSION 14.
+
+**What happened in SESSION 14**:
+- Implemented initial structure for `current_selected_list` (current session working list)
+- Added "Save to List" button
+- Changed UI to read from `current_selected_list`
+- **BUT**: Testing revealed 7 critical issues that need fixing
+
+**The Problem We're Solving**:
+Users were losing their selected parts list on page refresh. The attempted fix (loading from Supabase) showed ALL 50 historical parts instead of just the 3 parts from the current session. This broke the workflow.
+
+**The Solution**:
+Separate "current session working list" from "cumulative all-time list" using a new `current_selected_list` object in helper.
+
+---
+
+### 📋 **YOUR TASK FOR SESSION 15**:
+
+Complete the implementation by applying **7 FIXES** detailed in SESSION 14 documentation (lines 9153-9292).
+
+**Quick Fix List**:
+1. ✅ **FIX 1**: Update `helper.js` - Add `current_selected_list`, `required_parts`, `current_list_saved` flag (5 min)
+2. ✅ **FIX 2**: Don't clear UI after "Save" - Keep list visible, just set flag (10 min)
+3. ✅ **FIX 3**: Add "Clear List" button with auto-save if not saved yet (15 min)
+4. ✅ **FIX 4**: Add duplicate save prevention - Can't save same list twice (10 min)
+5. ✅ **FIX 5**: Reset saved flag when adding new parts (5 min)
+6. ✅ **FIX 6**: Fix button layout - 3 buttons in row, not full width (5 min)
+7. ✅ **FIX 7**: Remove "שכפל חלק אחרון" button (1 min)
+
+**Total Time**: ~1 hour
+
+---
+
+### 📚 **REQUIRED READING BEFORE STARTING**:
+
+**MUST READ** these sections in this file:
+
+1. **Lines 8674-9060**: TASK 3 REVISED - Full architecture explanation
+   - Understand 3-layer data structure
+   - Review complete data flow diagram
+   - Read key design decisions
+
+2. **Lines 9063-9292**: SESSION 14 Current Status
+   - See what was already implemented
+   - Understand the 7 critical issues found
+   - Review detailed fix requirements with code examples
+
+3. **Lines 9295-9334**: Expected Behavior After Fixes
+   - Read complete user flow (steps 1-7)
+   - Understand what "success" looks like
+
+---
+
+### 🎯 **SUCCESS CRITERIA**:
+
+After completing all 7 fixes, the system should work exactly like this:
+
+```
+✅ User selects 3 parts → UI shows 3 parts
+✅ User refreshes page → UI STILL shows 3 parts (not 50 from Supabase)
+✅ User clicks "Save" → Parts move to cumulative, UI keeps showing 3 parts
+✅ User clicks "Save" again → Alert: "Already saved"
+✅ User clicks "Clear List" → Saves if needed, clears UI
+✅ User adds more parts → Flag resets, can save again
+✅ Page refresh → Current session persists from sessionStorage
+```
+
+---
+
+### 📂 **FILES YOU WILL MODIFY**:
+
+1. **helper.js** - Add new object structure (FIX 1)
+2. **parts search.html** - Fix save behavior, add clear button, fix layout (FIX 2, 3, 4, 6, 7)
+3. **parts-search-results-pip.js** - Reset flag when adding parts (FIX 5)
+
+---
+
+### ⚠️ **IMPORTANT REMINDERS**:
+
+1. **Duplicate Prevention Clarity**:
+   - NOT preventing duplicates between current and cumulative
+   - Preventing saving the SAME current list TWICE
+   - Example: Save [A,B,C] → can't save [A,B,C] again until Clear or add new part
+
+2. **"Save" Button Behavior**:
+   - OLD (wrong): Save to cumulative → clear UI
+   - NEW (correct): Save to cumulative → KEEP UI showing parts → set flag
+
+3. **"Clear List" Button Behavior**:
+   - Check saved flag
+   - If NOT saved → auto-save to cumulative first
+   - Then clear current_selected_list → clear UI → reset flag
+
+4. **Test After Each Fix**:
+   - Execute ONE fix at a time
+   - Test before moving to next
+   - User will confirm if working
+
+---
+
+### 🔗 **CROSS-REFERENCES**:
+
+- **Original Issue**: Lines 8662-8688 (Problem Statement)
+- **Architecture Design**: Lines 8692-8792 (NEW ARCHITECTURE + Design Decisions)
+- **Data Flow Diagram**: Lines 8721-8768 (Visual flow)
+- **Technical Implementation**: Lines 8795-8989 (Original 6-step plan)
+- **Current Issues**: Lines 9086-9150 (7 critical issues)
+- **Required Fixes**: Lines 9153-9292 (Detailed with code)
+- **Expected Behavior**: Lines 9295-9334 (Complete user flow)
+
+---
+
+### 🚦 **START HERE**:
+
+1. **Read lines 8674-9334** (full context)
+2. **Start with FIX 1** (helper.js structure)
+3. **Test after each fix**
+4. **Document any new issues found**
+
+---
+
+**Good luck! The architecture is solid, just needs these fixes to work properly.**
+
+---
+
