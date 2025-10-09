@@ -404,7 +404,7 @@ INSERT INTO storage.buckets (id, name, public) VALUES
     6. Connect suggestive logic to supabase instead of helper search results -
     7. Suggestive logic combines all paths results for suggestions.
     8. Then part selection create the list for the specific case and assigns to damage centers.
-    9. Parts floating screen: has to tabs : selected parts search results tab - search result tab has a field for part name - filtered search results from search results table. 
+    9. Parts floating screen: has two tabs : selected parts search results tab - search result tab has a field for part name - filtered search results from search results table. 
     10. All identifications are plate number associated - so the tables display the parts search results and selected for the specific car only. There is an option of general search that doesn’t  associate with plate.
     11. supabase tables for search results / selected are associated to car plate , for general search that is not associated to a car plate we need to think if we include in the table with plate numbers or create a new table for general (unassociated) search results and selected 
     12. Rethink the function buttons on the UI and rebuild the parts search module to be compatible with the architecture. 
