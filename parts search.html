@@ -1946,7 +1946,8 @@ document.getElementById('sendResultToOCRBtn').addEventListener('click', function
         const plate = plateInput?.value?.trim() || window.helper?.meta?.plate;
         const pcode = part.pcode || part['מספר קטלוגי'];
         const oem = part.oem || part['מספר OEM'];
-        const selectedAt = part.selected_at;
+        // SESSION 16: Decode timestamp if it's URL-encoded
+        const selectedAt = part.selected_at ? decodeURIComponent(part.selected_at) : null;
         
         if (plate && (pcode || oem)) {
           let updateQuery = window.supabase
@@ -1955,8 +1956,7 @@ document.getElementById('sendResultToOCRBtn').addEventListener('click', function
               part_family: group,
               part_name: name,
               quantity: parseInt(qty),
-              source,
-              modified_at: new Date().toISOString()
+              source
             })
             .eq('plate', plate);
           
@@ -2063,7 +2063,8 @@ document.getElementById('sendResultToOCRBtn').addEventListener('click', function
         const plate = plateInput?.value?.trim() || window.helper?.meta?.plate;
         const pcode = part.pcode || part['מספר קטלוגי'];
         const oem = part.oem || part['מספר OEM'];
-        const selectedAt = part.selected_at;
+        // SESSION 16: Decode timestamp if it's URL-encoded
+        const selectedAt = part.selected_at ? decodeURIComponent(part.selected_at) : null;
         
         if (!plate) {
           console.error('❌ SESSION 16: No plate number available');
