@@ -9546,6 +9546,12 @@ successes till now :
 3. the delete all list button was working good now it has a major problem
 Current status 
 
+not fixed:
+1. there is no creation ot the current_selected_parts in the helper.parts_search 
+2. there is no creation of required_parts in the helper.parts_search.
+3. the delete list buttons deletes the ui list but also all teh history in supabase . major problem 
+4. the ui selected list clears out on page refresh 
+
 Claude analysis :
   Root Causes
 
