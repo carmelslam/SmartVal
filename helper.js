@@ -3075,6 +3075,9 @@ if (window.helper.parts_search) {
     window.helper.parts_search = {
       // Case-specific selections (for dual-purpose functionality)
       selected_parts: [],
+      current_selected_list: [],    // SESSION 15: Current session working list
+      required_parts: [],           // SESSION 15: Parts required for case (future use)
+      current_list_saved: false,    // SESSION 15: Track if current list was saved
       unselected_parts: [],
       case_search_history: [],
       
@@ -3133,8 +3136,23 @@ if (window.helper.parts_search) {
     
     console.log('✅ MIGRATION: parts_search structure upgraded successfully in helper initialization');
   } else {
-    // Ensure all required fields exist for existing comprehensive structure
+    // SESSION 15: Ensure all required fields exist for existing comprehensive structure
     window.helper.parts_search.selected_parts = window.helper.parts_search.selected_parts || [];
+    
+    // SESSION 15: Add missing Session 14/15 fields if they don't exist
+    if (window.helper.parts_search.current_selected_list === undefined) {
+      window.helper.parts_search.current_selected_list = [];
+      console.log('🔧 SESSION 15: Added missing current_selected_list field');
+    }
+    if (window.helper.parts_search.required_parts === undefined) {
+      window.helper.parts_search.required_parts = [];
+      console.log('🔧 SESSION 15: Added missing required_parts field');
+    }
+    if (window.helper.parts_search.current_list_saved === undefined) {
+      window.helper.parts_search.current_list_saved = false;
+      console.log('🔧 SESSION 15: Added missing current_list_saved field');
+    }
+    
     window.helper.parts_search.global_parts_bank = window.helper.parts_search.global_parts_bank || {
       all_parts: [],
       suppliers: [],
@@ -3143,6 +3161,14 @@ if (window.helper.parts_search) {
       ocr_results: [],
       manual_additions: []
     };
+  }
+  
+  // SESSION 15: Save updated helper back to sessionStorage after migration
+  try {
+    sessionStorage.setItem('helper', JSON.stringify(window.helper));
+    console.log('✅ SESSION 15: Saved migrated helper to sessionStorage');
+  } catch (e) {
+    console.warn('⚠️ SESSION 15: Could not save migrated helper to sessionStorage:', e);
   }
 }
 
