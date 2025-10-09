@@ -166,7 +166,6 @@
 <div id="parts_management_buttons" style="display: none; margin-top: 10px; text-align: center;">
   <button type="button" class="btn" onclick="clearCurrentList()" style="background: #10b981; font-size: 14px; padding: 8px 16px; margin: 0 5px;">נקה רשימה</button>
   <button type="button" class="btn" onclick="saveCurrentToList()" style="background: #3b82f6; font-size: 14px; padding: 8px 16px; margin: 0 5px;">💾 שמור לרשימה</button>
-  <button type="button" class="btn" onclick="handleClearAll()" style="background: #dc3545; font-size: 14px; padding: 8px 16px; margin: 0 5px;">🗑️ מחק הכל</button>
 </div>
 
 <!-- Enhanced Search Results Display -->
@@ -1812,9 +1811,9 @@ document.getElementById('sendResultToOCRBtn').addEventListener('click', function
   
   // ✅ NEW: Edit part functionality
   function editPart(index) {
-    // SESSION 13 TASK 1C: Read from helper (source of truth)
-    const helperParts = window.helper?.parts_search?.selected_parts || [];
-    const part = helperParts[index] || selectedParts[index];
+    // SESSION 15: Read from current_selected_list
+    const currentList = window.helper?.parts_search?.current_selected_list || [];
+    const part = currentList[index];
     if (!part) return;
     
     // Create edit modal
@@ -1883,8 +1882,8 @@ document.getElementById('sendResultToOCRBtn').addEventListener('click', function
     }
   }
   
-  // ✅ NEW: Save edited part
-  function saveEditedPart(index) {
+  // SESSION 15: Save edited part - Updates current_selected_list, Supabase, sessionStorage
+  async function saveEditedPart(index) {
     const modal = document.querySelector('[style*="position: fixed"]');
     const group = modal.querySelector('#editPartGroup').value;
     const name = modal.querySelector('#editPartName').value;
@@ -1896,107 +1895,180 @@ document.getElementById('sendResultToOCRBtn').addEventListener('click', function
       return;
     }
     
-    // Update the part
-    selectedParts[index] = {
-      ...selectedParts[index],
-      group,
-      name,
-      qty: parseInt(qty),
-      source,
-      modified_at: new Date().toISOString()
-    };
-    
-    // Update the display
-    updateSelectedPartsList();
-    
-    // Close modal
-    modal.remove();
-    
-    // Show notification
-    if (typeof showNotification === 'function') {
-      showNotification(`עודכן חלק: ${name}`, 'success');
+    try {
+      // SESSION 15: Get current part
+      const currentList = window.helper?.parts_search?.current_selected_list || [];
+      const part = currentList[index];
+      if (!part) {
+        alert('שגיאה: לא נמצא חלק לעריכה');
+        return;
+      }
+      
+      // SESSION 15: Update Supabase first
+      if (window.supabase) {
+        const plateInput = document.getElementById('plate');
+        const plate = plateInput?.value?.trim() || window.helper?.meta?.plate;
+        const catalogCode = part.catalog_code || part.pcode || part['מספר קטלוגי'];
+        const selectedAt = part.selected_at;
+        
+        if (plate && catalogCode) {
+          let updateQuery = window.supabase
+            .from('selected_parts')
+            .update({
+              group,
+              name,
+              qty: parseInt(qty),
+              quantity: parseInt(qty),
+              source,
+              modified_at: new Date().toISOString()
+            })
+            .eq('plate', plate);
+          
+          if (part.catalog_code) {
+            updateQuery = updateQuery.eq('catalog_code', catalogCode);
+          } else {
+            updateQuery = updateQuery.eq('pcode', catalogCode);
+          }
+          
+          if (selectedAt) {
+            updateQuery = updateQuery.eq('selected_at', selectedAt);
+          }
+          
+          const { error } = await updateQuery;
+          
+          if (error) {
+            console.error('❌ SESSION 15: Supabase update failed:', error);
+            alert(`שגיאה בעדכון בשרת: ${error.message}`);
+            return;
+          }
+          
+          console.log('✅ SESSION 15: Part updated in Supabase');
+        }
+      }
+      
+      // SESSION 15: Update in current_selected_list
+      currentList[index] = {
+        ...part,
+        group,
+        name,
+        qty: parseInt(qty),
+        quantity: parseInt(qty),
+        source,
+        modified_at: new Date().toISOString()
+      };
+      
+      console.log('✅ SESSION 15: Part updated in current_selected_list');
+      
+      // SESSION 15: Save to sessionStorage
+      sessionStorage.setItem('helper', JSON.stringify(window.helper));
+      console.log('✅ SESSION 15: Saved helper to sessionStorage');
+      
+      // Update the display
+      updateSelectedPartsList();
+      
+      // Close modal
+      modal.remove();
+      
+      // Show notification
+      if (typeof showNotification === 'function') {
+        showNotification(`עודכן חלק: ${name}`, 'success');
+      }
+      
+      console.log(`✅ SESSION 15: Edited part: ${group} - ${name} (${qty}x ${source})`);
+    } catch (error) {
+      console.error('❌ SESSION 15: Error in saveEditedPart:', error);
+      alert(`שגיאה בשמירת עריכה: ${error.message}`);
     }
-    
-    console.log(`✅ Edited part: ${group} - ${name} (${qty}x ${source})`);
   }
   
-  // SESSION 14 TASK 1: Delete part functionality - MUST delete from Supabase first
+  // SESSION 15: Delete part functionality - Uses current_selected_list + timestamp
   async function deletePart(index) {
-    // Read from helper (source of truth)
-    const helperParts = window.helper?.parts_search?.selected_parts || [];
-    const part = helperParts[index];
+    // SESSION 15: Read from current_selected_list (not selected_parts)
+    const currentList = window.helper?.parts_search?.current_selected_list || [];
+    const part = currentList[index];
     if (!part) {
-      console.error('❌ SESSION 14: No part found at index', index);
+      console.error('❌ SESSION 15: No part found at index', index);
       return;
     }
     
-    const confirmDelete = confirm(`האם אתה בטוח שברצונך למחוק את החלק?\n\n${part.group || part.part_family} - ${part.name}\nכמות: ${part.qty || part.quantity} | מקור: ${part.source}`);
+    const confirmDelete = confirm(`האם אתה בטוח שברצונך למחוק את החלק?\n\n${part.group || part.part_family || part.name} - ${part.name || part['תיאור']}\nכמות: ${part.qty || part.quantity} | מקור: ${part.source || part['סוג חלק']}`);
     
     if (confirmDelete) {
       try {
-        // SESSION 14: FIRST check if Supabase is available
+        // SESSION 15: FIRST check if Supabase is available
         if (!window.supabase) {
-          console.error('❌ SESSION 14: Supabase not available');
+          console.error('❌ SESSION 15: Supabase not available');
           alert('שגיאה: מערכת הנתונים לא זמינה. אנא רענן את הדף.');
-          return; // STOP - don't delete from UI if Supabase not available
+          return;
         }
         
-        // SESSION 14: Get plate from input field (not from helper, it's not set there)
+        // SESSION 15: Get plate and identifiers
         const plateInput = document.getElementById('plate');
-        const plate = plateInput?.value?.trim() || window.helper?.plate;
-        const pcode = part.pcode || part['מספר קטלוגי'];
+        const plate = plateInput?.value?.trim() || window.helper?.meta?.plate;
+        const catalogCode = part.catalog_code || part.pcode || part['מספר קטלוגי'] || part.oem;
+        const selectedAt = part.selected_at;
         
         if (!plate) {
-          console.error('❌ SESSION 14: No plate number available');
+          console.error('❌ SESSION 15: No plate number available');
           alert('שגיאה: לא נמצא מספר רישוי. אנא הזן מספר רישוי בשדה החיפוש.');
-          return; // STOP
+          return;
         }
         
-        console.log('📋 SESSION 14: Using plate number:', plate);
-        
-        if (!pcode) {
-          console.error('❌ SESSION 14: No pcode available for part:', part);
+        if (!catalogCode) {
+          console.error('❌ SESSION 15: No catalog_code available for part:', part);
           alert('שגיאה: חסר מספר קטלוגי לחלק');
-          return; // STOP
+          return;
         }
         
-        // SESSION 14: STEP 1 - Delete from Supabase FIRST
-        console.log('🗑️ SESSION 14: Deleting part from Supabase:', { plate, pcode });
-        const { error } = await window.supabase
+        console.log('📋 SESSION 15: Deleting part:', { plate, catalogCode, selectedAt });
+        
+        // SESSION 15: STEP 1 - Delete from Supabase using plate + catalog_code + timestamp
+        let deleteQuery = window.supabase
           .from('selected_parts')
           .delete()
-          .eq('plate', plate)
-          .eq('pcode', pcode);
+          .eq('plate', plate);
         
-        // SESSION 14: Check for errors - STOP if delete failed
+        // Use catalog_code if available, otherwise pcode
+        if (part.catalog_code) {
+          deleteQuery = deleteQuery.eq('catalog_code', catalogCode);
+        } else {
+          deleteQuery = deleteQuery.eq('pcode', catalogCode);
+        }
+        
+        // Add timestamp for precision
+        if (selectedAt) {
+          deleteQuery = deleteQuery.eq('selected_at', selectedAt);
+        }
+        
+        const { error } = await deleteQuery;
+        
         if (error) {
-          console.error('❌ SESSION 14: Supabase delete failed:', error);
+          console.error('❌ SESSION 15: Supabase delete failed:', error);
           alert(`שגיאה במחיקה מהשרת: ${error.message}\n\nהחלק לא נמחק.`);
-          return; // STOP - don't delete from UI if Supabase failed
+          return;
         }
         
-        console.log('✅ SESSION 14: Part deleted from Supabase successfully');
+        console.log('✅ SESSION 15: Part deleted from Supabase successfully');
         
-        // SESSION 14: STEP 2 - Only now delete from helper (after Supabase success)
-        helperParts.splice(index, 1);
-        console.log('✅ SESSION 14: Part removed from helper array');
+        // SESSION 15: STEP 2 - Delete from current_selected_list
+        currentList.splice(index, 1);
+        console.log('✅ SESSION 15: Part removed from current_selected_list');
         
-        // SESSION 14: STEP 3 - Remove from local array (backward compatibility)
-        if (selectedParts[index]) {
-          selectedParts.splice(index, 1);
-        }
+        // SESSION 15: STEP 3 - Save to sessionStorage
+        sessionStorage.setItem('helper', JSON.stringify(window.helper));
+        console.log('✅ SESSION 15: Saved helper to sessionStorage');
         
-        // SESSION 14: STEP 4 - Update UI
+        // SESSION 15: STEP 4 - Update UI
         updateSelectedPartsList();
         
         // Show success notification
         if (typeof showNotification === 'function') {
-          showNotification(`נמחק חלק: ${part.name}`, 'success');
+          showNotification(`נמחק חלק: ${part.name || part['תיאור']}`, 'success');
         }
         
-        console.log(`✅ SESSION 14: Successfully deleted part: ${part.group || part.part_family} - ${part.name}`);
+        console.log(`✅ SESSION 15: Successfully deleted part from current session`);
       } catch (error) {
-        console.error('❌ SESSION 14: Unexpected error in deletePart:', error);
+        console.error('❌ SESSION 15: Unexpected error in deletePart:', error);
         alert(`שגיאה לא צפויה במחיקת החלק: ${error.message}`);
       }
     }
