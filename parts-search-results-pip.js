@@ -27,6 +27,11 @@ class PartsSearchResultsPiP {
   async showResults(searchResults, searchContext = {}) {
     console.log('📋 Showing PiP results:', searchResults.length, 'items');
     
+    // SESSION 17 TASK 4: Clear selectedItems for new search (track current search only)
+    console.log('🔄 SESSION 17: Clearing selectedItems for new search (was:', this.selectedItems.size, ')');
+    this.selectedItems.clear();
+    console.log('✅ SESSION 17: selectedItems cleared, starting fresh count');
+    
     // SESSION 9 TASK 1: Enhanced plate number extraction with debugging
     console.log('🔍 SESSION 9 TASK 1: Plate number extraction...');
     console.log('  - searchContext:', JSON.stringify(searchContext, null, 2));
@@ -410,6 +415,14 @@ class PartsSearchResultsPiP {
    * Save selected part to both Supabase and helper
    */
   async saveSelectedPart(item) {
+    // SESSION 17 TASK 3: First check if helper will accept this part
+    const helperAccepted = this.addToHelper(item);
+    
+    if (!helperAccepted) {
+      console.log('⚠️ SESSION 17: Helper rejected part (duplicate), skipping Supabase save');
+      return; // Don't save to Supabase if helper rejected
+    }
+    
     // SESSION 11: 1. Save to Supabase selected_parts table with full context
     if (this.currentPlateNumber) {
       try {
@@ -436,9 +449,6 @@ class PartsSearchResultsPiP {
         // Non-blocking - continue with helper save
       }
     }
-
-    // 2. Add to helper.parts_search.selected_parts
-    this.addToHelper(item);
   }
 
   /**
@@ -526,10 +536,10 @@ class PartsSearchResultsPiP {
       window.helper.parts_search.current_selected_list[currentIndex] = selectedPartEntry;
       console.log('🔄 SESSION 16: Updated existing part in current_selected_list');
     } else if (cumulativeIndex !== -1) {
-      // SESSION 16: Part exists in cumulative list - don't add to current
-      console.warn('⚠️ SESSION 16: Part already exists in cumulative selected_parts - not adding to current list');
+      // SESSION 17 TASK 3: Part exists in cumulative list - reject and return false
+      console.warn('⚠️ SESSION 17: Part already exists in cumulative selected_parts - rejecting');
       alert('⚠️ חלק כבר קיים ברשימה המצטברת');
-      return; // Don't add duplicate
+      return false; // SESSION 17: Return false to indicate rejection
     } else {
       // Add new part to CURRENT session list ONLY
       window.helper.parts_search.current_selected_list.push(selectedPartEntry);
@@ -556,6 +566,9 @@ class PartsSearchResultsPiP {
       window.updateSelectedPartsList();
       console.log('✅ SESSION 13: Triggered selected parts list UI update');
     }
+    
+    // SESSION 17 TASK 3: Return true to indicate success
+    return true;
   }
 
   /**
@@ -795,12 +808,36 @@ class PartsSearchResultsPiP {
       return;
     }
 
-    // SESSION 9: Count both session selections and total for plate
-    const sessionCount = this.selectedItems.size;
-    const totalForPlate = window.helper?.parts_search?.selected_parts?.length || 0;
+    // SESSION 17 TASK 5: Fix reversed counts - query Supabase for accurate total
+    const currentSearchCount = this.selectedItems.size; // Current PiP selections only
     
-    console.log('💾 Saving all selections - Session:', sessionCount, 'Total for plate:', totalForPlate);
-    alert(`נשמרו ${sessionCount} חלקים בחיפוש זה\nסה"כ ${totalForPlate} חלקים נבחרו למספר רכב ${this.currentPlateNumber || ''}`);
+    // Query Supabase for total parts selected for this plate
+    let totalForPlate = 0;
+    try {
+      if (window.supabase && this.currentPlateNumber) {
+        const { data, error } = await window.supabase
+          .from('selected_parts')
+          .select('id', { count: 'exact', head: false })
+          .eq('plate', this.currentPlateNumber);
+        
+        if (error) {
+          console.error('❌ SESSION 17: Error querying Supabase for total count:', error);
+          totalForPlate = window.helper?.parts_search?.selected_parts?.length || 0; // Fallback
+        } else {
+          totalForPlate = (data?.length || 0) + currentSearchCount; // DB count + current selections
+          console.log('✅ SESSION 17: Total from Supabase:', data?.length, '+ current:', currentSearchCount, '=', totalForPlate);
+        }
+      } else {
+        totalForPlate = window.helper?.parts_search?.selected_parts?.length || 0;
+        console.warn('⚠️ SESSION 17: Supabase not available, using helper count:', totalForPlate);
+      }
+    } catch (error) {
+      console.error('❌ SESSION 17: Error calculating total:', error);
+      totalForPlate = window.helper?.parts_search?.selected_parts?.length || 0;
+    }
+    
+    console.log('💾 SESSION 17: Saving selections - Current search:', currentSearchCount, 'Total for plate:', totalForPlate);
+    alert(`נשמרו ${currentSearchCount} חלקים בחיפוש זה\nסה"כ ${totalForPlate} חלקים נבחרו למספר רכב ${this.currentPlateNumber || ''}`);
     
     // Future: Add integration with parts required or other modules
   }

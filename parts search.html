@@ -307,11 +307,21 @@
   // Auto-populate on page load
   populateVehicleDataFromHelper();
   
+  // SESSION 17 TASK 2: Update selected parts list UI after helper loads
+  if (typeof updateSelectedPartsList === 'function') {
+    updateSelectedPartsList();
+    console.log('✅ SESSION 17: Updated selected parts list UI on page load');
+  }
+  
   // Listen for helper updates
   window.addEventListener('storage', (e) => {
     if (e.key === 'helper') {
       console.log('🔄 Helper data updated, re-populating parts search...');
       populateVehicleDataFromHelper();
+      // SESSION 17 TASK 2: Also update parts list when helper changes
+      if (typeof updateSelectedPartsList === 'function') {
+        updateSelectedPartsList();
+      }
     }
   });
 
@@ -1766,13 +1776,72 @@ document.getElementById('sendResultToOCRBtn').addEventListener('click', function
     ).join('\n');
   }
   
-  function updateSelectedPartsList() {
+  async function updateSelectedPartsList() {
     const listUI = document.getElementById('selected_parts_list');
     const managementButtons = document.getElementById('parts_management_buttons');
     const countDisplay = document.getElementById('selected_parts_count');
     
-    // SESSION 14 STEP 2: Read from current_selected_list (current session only)
-    const partsToDisplay = window.helper?.parts_search?.current_selected_list || [];
+    // SESSION 17 TASK 6: Load from Supabase FIRST (source of truth), then fallback to helper
+    let partsToDisplay = [];
+    
+    // Try to load from Supabase first
+    if (window.supabase) {
+      try {
+        const plateInput = document.getElementById('plate');
+        const plate = plateInput?.value?.trim() || window.helper?.meta?.plate || window.helper?.vehicle?.plate;
+        
+        if (plate) {
+          console.log('🔍 SESSION 17: Loading selected parts from Supabase for plate:', plate);
+          const { data, error } = await window.supabase
+            .from('selected_parts')
+            .select('*')
+            .eq('plate', plate)
+            .order('created_at', { ascending: false });
+          
+          if (error) {
+            console.error('❌ SESSION 17: Error loading from Supabase:', error);
+          } else if (data && data.length > 0) {
+            console.log('✅ SESSION 17: Loaded', data.length, 'parts from Supabase');
+            
+            // SESSION 17: Update helper.parts_search.selected_parts with Supabase data (source of truth)
+            if (!window.helper) window.helper = {};
+            if (!window.helper.parts_search) window.helper.parts_search = {};
+            
+            // Convert Supabase data to helper format
+            window.helper.parts_search.selected_parts = data.map(part => ({
+              name: part.part_name || part.pcode,
+              pcode: part.pcode,
+              oem: part.oem,
+              qty: part.quantity || 1,
+              quantity: part.quantity || 1,
+              group: part.part_family || '',
+              part_family: part.part_family || '',
+              source: part.source || 'מקורי',
+              supplier: part.supplier_name || '',
+              comments: part.comments || '',
+              הערות: part.comments || '',
+              catalog_code: part.pcode || part.oem || '',
+              selected_at: part.created_at
+            }));
+            
+            // Save updated helper to sessionStorage
+            try {
+              sessionStorage.setItem('helper', JSON.stringify(window.helper));
+              console.log('✅ SESSION 17: Updated helper with Supabase data and saved to sessionStorage');
+            } catch (e) {
+              console.error('❌ SESSION 17: Failed to save helper:', e);
+            }
+          }
+        } else {
+          console.log('ℹ️ SESSION 17: No plate number available for Supabase query');
+        }
+      } catch (error) {
+        console.error('❌ SESSION 17: Exception loading from Supabase:', error);
+      }
+    }
+    
+    // SESSION 14 STEP 2: Read from current_selected_list (current session only) for display
+    partsToDisplay = window.helper?.parts_search?.current_selected_list || [];
     
     // Update count display
     if (countDisplay) {
@@ -1910,16 +1979,28 @@ document.getElementById('sendResultToOCRBtn').addEventListener('click', function
     modal.onclick = (e) => e.target === modal && modal.remove();
     document.body.appendChild(modal);
     
-    // Populate categories
+    // SESSION 17 TASK 1: Populate categories with correct field matching
     const groupSelect = modal.querySelector('#editPartGroup');
+    const partGroup = part.group || part.part_family || part['קבוצה'] || '';
+    console.log('🔍 SESSION 17: Populating group dropdown, part group:', partGroup);
+    
     if (window.PARTS_BANK) {
       Object.keys(window.PARTS_BANK).forEach(category => {
         const option = document.createElement('option');
         option.value = category;
         option.textContent = category;
-        if (category === part.group) option.selected = true;
+        if (category === partGroup) option.selected = true;
         groupSelect.appendChild(option);
       });
+    }
+    
+    // SESSION 17: If no PARTS_BANK, add part's group as option
+    if (!window.PARTS_BANK && partGroup) {
+      const option = document.createElement('option');
+      option.value = partGroup;
+      option.textContent = partGroup;
+      option.selected = true;
+      groupSelect.appendChild(option);
     }
   }
   
