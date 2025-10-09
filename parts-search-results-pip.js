@@ -475,6 +475,8 @@ class PartsSearchResultsPiP {
    * Add part to helper structure with correct format
    */
   addToHelper(item) {
+    console.log('🔧 SESSION 15: addToHelper called with item:', item);
+    
     if (!window.helper) window.helper = {};
     if (!window.helper.parts_search) window.helper.parts_search = {};
     if (!window.helper.parts_search.selected_parts) {
@@ -483,6 +485,7 @@ class PartsSearchResultsPiP {
 
     // Convert catalog item to helper format
     const selectedPartEntry = this.convertCatalogToHelperFormat(item);
+    console.log('🔧 SESSION 15: Converted part entry:', selectedPartEntry);
 
     // SESSION 15: Check for duplicates using unified catalog_code
     const itemCatalogCode = item.pcode || item.oem || '';
