@@ -1881,7 +1881,7 @@ document.getElementById('sendResultToOCRBtn').addEventListener('click', function
           <input type="number" id="editPartQuantity" value="${part.qty}" min="1" style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 5px;">
         </div>
         
-        <div style="margin-bottom: 20px;">
+        <div style="margin-bottom: 15px;">
           <label style="display: block; font-weight: bold; margin-bottom: 5px;">מקור:</label>
           <select id="editPartSource" style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 5px;">
             <option value="מקורי" ${part.source === 'מקורי' ? 'selected' : ''}>מקורי</option>
@@ -1889,6 +1889,11 @@ document.getElementById('sendResultToOCRBtn').addEventListener('click', function
             <option value="משומש" ${part.source === 'משומש' ? 'selected' : ''}>משומש</option>
             <option value="הכל" ${part.source === 'הכל' ? 'selected' : ''}>הכל</option>
           </select>
+        </div>
+        
+        <div style="margin-bottom: 20px;">
+          <label style="display: block; font-weight: bold; margin-bottom: 5px;">הערות:</label>
+          <textarea id="editPartComments" rows="3" style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 5px; resize: vertical;">${part.comments || part['הערות'] || ''}</textarea>
         </div>
         
         <div style="display: flex; gap: 10px; justify-content: center;">
@@ -1918,13 +1923,14 @@ document.getElementById('sendResultToOCRBtn').addEventListener('click', function
     }
   }
   
-  // SESSION 15: Save edited part - Updates current_selected_list, Supabase, sessionStorage
+  // SESSION 16: Save edited part - Updates current_selected_list, Supabase, sessionStorage
   async function saveEditedPart(index) {
     const modal = document.querySelector('[style*="position: fixed"]');
     const group = modal.querySelector('#editPartGroup').value;
     const name = modal.querySelector('#editPartName').value;
     const qty = modal.querySelector('#editPartQuantity').value;
     const source = modal.querySelector('#editPartSource').value;
+    const comments = modal.querySelector('#editPartComments').value;
     
     if (!group || !name) {
       alert('יש למלא את כל השדות הנדרשים');
@@ -1940,13 +1946,15 @@ document.getElementById('sendResultToOCRBtn').addEventListener('click', function
         return;
       }
       
+      // SESSION 16: Extract identifiers (needed for Supabase AND helper operations)
+      const pcode = part.pcode || part['מספר קטלוגי'];
+      const oem = part.oem || part['מספר OEM'];
+      const selectedAt = part.selected_at;
+      
       // SESSION 16: Update Supabase first with correct field mappings
       if (window.supabase) {
         const plateInput = document.getElementById('plate');
         const plate = plateInput?.value?.trim() || window.helper?.meta?.plate;
-        const pcode = part.pcode || part['מספר קטלוגי'];
-        const oem = part.oem || part['מספר OEM'];
-        const selectedAt = part.selected_at;
         
         console.log('📋 SESSION 16: Edit part identifiers:', { plate, pcode, oem, selectedAt });
         
@@ -1957,7 +1965,8 @@ document.getElementById('sendResultToOCRBtn').addEventListener('click', function
               part_family: group,
               part_name: name,
               quantity: parseInt(qty),
-              source
+              source,
+              comments: comments || null
             })
             .eq('plate', plate);
           
@@ -1992,6 +2001,8 @@ document.getElementById('sendResultToOCRBtn').addEventListener('click', function
         qty: parseInt(qty),
         quantity: parseInt(qty),
         source,
+        comments: comments || '',
+        'הערות': comments || '',
         modified_at: new Date().toISOString()
       };
       
@@ -2013,6 +2024,8 @@ document.getElementById('sendResultToOCRBtn').addEventListener('click', function
           qty: parseInt(qty),
           quantity: parseInt(qty),
           source,
+          comments: comments || '',
+          'הערות': comments || '',
           modified_at: new Date().toISOString()
         };
         console.log('✅ SESSION 16: Also updated part in selected_parts cumulative array');
