@@ -10155,4 +10155,66 @@ window.helper.parts_search.current_list_saved = false;
 **Next Session**: SESSION 16 - Testing and refinement of current session architecture
 
 ---
+selected_parts table schema:
+create table public.selected_parts (
+  id uuid not null default extensions.uuid_generate_v4 (),
+  plate text null,
+  search_result_id uuid null,
+  part_name text not null,
+  price numeric null,
+  oem text null,
+  quantity integer null default 1,
+  damage_center_id text null,
+  status text null default 'selected'::text,
+  selected_by text null,
+  selected_at timestamp with time zone null default now(),
+  raw_data jsonb null,
+  make text null,
+  model text null,
+  trim text null,
+  year text null,
+  engine_volume text null,
+  pcode text null,
+  cat_num_desc text null,
+  source text null,
+  availability text null,
+  location text null,
+  comments text null,
+  vin text null,
+  engine_code text null,
+  engine_type text null,
+  supplier_name text null,
+  part_family text null,
+  data_source text null default 'קטלוג'::text,
+  constraint selected_parts_pkey primary key (id),
+  constraint selected_parts_search_result_id_fkey foreign KEY (search_result_id) references parts_search_results (id) on delete set null,
+  constraint selected_parts_data_source_check check (
+    (
+      data_source = any (
+        array['קטלוג'::text, 'אינטרנט'::text, 'אחר'::text]
+      )
+    )
+  ),
+  constraint selected_parts_status_check check (
+    (
+      status = any (
+        array[
+          'selected'::text,
+          'assigned'::text,
+          'ordered'::text,
+          'completed'::text
+        ]
+      )
+    )
+  )
+) TABLESPACE pg_default;
 
+create index IF not exists idx_selected_parts_oem on public.selected_parts using btree (oem) TABLESPACE pg_default;
+
+create index IF not exists idx_selected_parts_pcode on public.selected_parts using btree (pcode) TABLESPACE pg_default;
+
+create index IF not exists idx_selected_parts_make_model on public.selected_parts using btree (make, model) TABLESPACE pg_default;
+
+create index IF not exists idx_selected_parts_plate on public.selected_parts using btree (plate) TABLESPACE pg_default;
+
+create index IF not exists idx_selected_parts_damage_center on public.selected_parts using btree (damage_center_id) TABLESPACE pg_default;
