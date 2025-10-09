@@ -175,27 +175,49 @@
   </button>
 </div>
 <script>
-  window.TEMP_clearAllHistory = function() {
-    if (confirm('⚠️ TESTING ONLY: This will clear ALL selected_parts history!\n\nAre you sure?')) {
+  window.TEMP_clearAllHistory = async function() {
+    if (confirm('⚠️ TESTING ONLY: This will clear ALL selected_parts from helper AND Supabase!\n\nAre you sure?')) {
       try {
+        // Clear from helper
         if (window.helper?.parts_search) {
           window.helper.parts_search.selected_parts = [];
           window.helper.parts_search.current_selected_list = [];
           window.helper.parts_search.current_list_saved = false;
           sessionStorage.setItem('helper', JSON.stringify(window.helper));
-          console.log('🧪 TEST: Cleared selected_parts history');
-          
-          // Update UI if function exists
-          if (typeof updateSelectedPartsList === 'function') {
-            updateSelectedPartsList();
-          } else if (typeof window.updateSelectedPartsList === 'function') {
-            window.updateSelectedPartsList();
-          }
-          
-          alert('✅ Cleared all history from helper.parts_search.selected_parts\n\nRefresh the page to see changes.');
-        } else {
-          alert('❌ No helper found');
+          console.log('🧪 TEST: Cleared selected_parts from helper');
         }
+        
+        // Clear from Supabase
+        if (window.supabase) {
+          const plateInput = document.getElementById('plate');
+          const plate = plateInput?.value?.trim() || window.helper?.meta?.plate || window.helper?.vehicle?.plate;
+          
+          if (plate) {
+            console.log('🧪 TEST: Deleting all selected_parts from Supabase for plate:', plate);
+            const { error } = await window.supabase
+              .from('selected_parts')
+              .delete()
+              .eq('plate', plate);
+            
+            if (error) {
+              console.error('❌ TEST: Error deleting from Supabase:', error);
+              alert('⚠️ Cleared from helper but Supabase delete failed:\n' + error.message);
+            } else {
+              console.log('✅ TEST: Deleted all selected_parts from Supabase');
+            }
+          } else {
+            console.warn('⚠️ TEST: No plate number, skipping Supabase delete');
+          }
+        }
+        
+        // Update UI
+        if (typeof updateSelectedPartsList === 'function') {
+          updateSelectedPartsList();
+        } else if (typeof window.updateSelectedPartsList === 'function') {
+          window.updateSelectedPartsList();
+        }
+        
+        alert('✅ Cleared all history from:\n- helper.parts_search.selected_parts\n- Supabase selected_parts table\n\nRefresh to confirm.');
       } catch (error) {
         console.error('❌ Error clearing history:', error);
         alert('❌ Error: ' + error.message);
