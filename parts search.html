@@ -177,14 +177,28 @@
 <script>
   window.TEMP_clearAllHistory = function() {
     if (confirm('⚠️ TESTING ONLY: This will clear ALL selected_parts history!\n\nAre you sure?')) {
-      if (window.helper?.parts_search) {
-        window.helper.parts_search.selected_parts = [];
-        window.helper.parts_search.current_selected_list = [];
-        window.helper.parts_search.current_list_saved = false;
-        sessionStorage.setItem('helper', JSON.stringify(window.helper));
-        updateSelectedPartsList();
-        alert('✅ Cleared all history from helper.parts_search.selected_parts');
-        console.log('🧪 TEST: Cleared selected_parts history');
+      try {
+        if (window.helper?.parts_search) {
+          window.helper.parts_search.selected_parts = [];
+          window.helper.parts_search.current_selected_list = [];
+          window.helper.parts_search.current_list_saved = false;
+          sessionStorage.setItem('helper', JSON.stringify(window.helper));
+          console.log('🧪 TEST: Cleared selected_parts history');
+          
+          // Update UI if function exists
+          if (typeof updateSelectedPartsList === 'function') {
+            updateSelectedPartsList();
+          } else if (typeof window.updateSelectedPartsList === 'function') {
+            window.updateSelectedPartsList();
+          }
+          
+          alert('✅ Cleared all history from helper.parts_search.selected_parts\n\nRefresh the page to see changes.');
+        } else {
+          alert('❌ No helper found');
+        }
+      } catch (error) {
+        console.error('❌ Error clearing history:', error);
+        alert('❌ Error: ' + error.message);
       }
     }
   };
