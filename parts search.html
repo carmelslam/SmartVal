@@ -1946,9 +1946,9 @@ document.getElementById('sendResultToOCRBtn').addEventListener('click', function
         const plate = plateInput?.value?.trim() || window.helper?.meta?.plate;
         const pcode = part.pcode || part['מספר קטלוגי'];
         const oem = part.oem || part['מספר OEM'];
-        // SESSION 16: Check if timestamp is URL-encoded BEFORE decoding
-        const rawTimestamp = part.selected_at;
-        const isEncoded = rawTimestamp && rawTimestamp.includes('%');
+        const selectedAt = part.selected_at;
+        
+        console.log('📋 SESSION 16: Edit part identifiers:', { plate, pcode, oem, selectedAt });
         
         if (plate && (pcode || oem)) {
           let updateQuery = window.supabase
@@ -1961,19 +1961,15 @@ document.getElementById('sendResultToOCRBtn').addEventListener('click', function
             })
             .eq('plate', plate);
           
+          // SESSION 16: Match by pcode OR oem ONLY (no timestamp)
+          // Reason: Timestamp gets URL-encoded in helper causing Supabase 400 errors
+          // Trade-off: If user has same part multiple times, ALL instances will be updated
           if (pcode) {
             updateQuery = updateQuery.eq('pcode', pcode);
+            console.log('✅ SESSION 16: Matching by pcode:', pcode);
           } else if (oem) {
             updateQuery = updateQuery.eq('oem', oem);
-          }
-          
-          // SESSION 16: Only use timestamp if it's NOT URL-encoded (to avoid double-encoding error)
-          // If encoded, we skip timestamp matching and rely on pcode+plate only
-          if (rawTimestamp && !isEncoded) {
-            updateQuery = updateQuery.eq('selected_at', rawTimestamp);
-            console.log('✅ SESSION 16: Using timestamp for precision:', rawTimestamp);
-          } else if (isEncoded) {
-            console.log('⚠️ SESSION 16: Skipping timestamp (URL-encoded), matching by pcode+plate only');
+            console.log('✅ SESSION 16: Matching by oem:', oem);
           }
           
           const { error } = await updateQuery;
@@ -2002,9 +1998,10 @@ document.getElementById('sendResultToOCRBtn').addEventListener('click', function
       console.log('✅ SESSION 16: Part updated in current_selected_list');
       
       // SESSION 16: Also update in selected_parts cumulative array if present
+      // Match by pcode/oem + timestamp (timestamp safe here - not sent to Supabase)
       const selectedParts = window.helper?.parts_search?.selected_parts || [];
       const cumulativeIndex = selectedParts.findIndex(p => 
-        (!isEncoded && p.selected_at === rawTimestamp) && 
+        p.selected_at === selectedAt && 
         ((pcode && p.pcode === pcode) || (oem && p.oem === oem))
       );
       
@@ -2069,9 +2066,7 @@ document.getElementById('sendResultToOCRBtn').addEventListener('click', function
         const plate = plateInput?.value?.trim() || window.helper?.meta?.plate;
         const pcode = part.pcode || part['מספר קטלוגי'];
         const oem = part.oem || part['מספר OEM'];
-        // SESSION 16: Check if timestamp is URL-encoded BEFORE using it
-        const rawTimestamp = part.selected_at;
-        const isEncoded = rawTimestamp && rawTimestamp.includes('%');
+        const selectedAt = part.selected_at;
         
         if (!plate) {
           console.error('❌ SESSION 16: No plate number available');
@@ -2085,9 +2080,11 @@ document.getElementById('sendResultToOCRBtn').addEventListener('click', function
           return;
         }
         
-        console.log('📋 SESSION 16: Deleting part:', { plate, pcode, oem, rawTimestamp, isEncoded });
+        console.log('📋 SESSION 16: Deleting part:', { plate, pcode, oem, selectedAt });
         
-        // SESSION 16: STEP 1 - Delete from Supabase using plate + (pcode OR oem) + timestamp
+        // SESSION 16: STEP 1 - Delete from Supabase using plate + (pcode OR oem) ONLY
+        // Reason: Timestamp gets URL-encoded in helper causing Supabase 400 errors
+        // Trade-off: If user has same part multiple times, ALL instances will be deleted
         let deleteQuery = window.supabase
           .from('selected_parts')
           .delete()
@@ -2096,17 +2093,10 @@ document.getElementById('sendResultToOCRBtn').addEventListener('click', function
         // Use pcode (catalog code) if available, otherwise oem
         if (pcode) {
           deleteQuery = deleteQuery.eq('pcode', pcode);
+          console.log('✅ SESSION 16: Matching by pcode:', pcode);
         } else if (oem) {
           deleteQuery = deleteQuery.eq('oem', oem);
-        }
-        
-        // SESSION 16: Only use timestamp if it's NOT URL-encoded (to avoid double-encoding error)
-        // If encoded, we skip timestamp matching and rely on pcode+plate only
-        if (rawTimestamp && !isEncoded) {
-          deleteQuery = deleteQuery.eq('selected_at', rawTimestamp);
-          console.log('✅ SESSION 16: Using timestamp for precision:', rawTimestamp);
-        } else if (isEncoded) {
-          console.log('⚠️ SESSION 16: Skipping timestamp (URL-encoded), matching by pcode+plate only');
+          console.log('✅ SESSION 16: Matching by oem:', oem);
         }
         
         const { error } = await deleteQuery;
@@ -2124,9 +2114,10 @@ document.getElementById('sendResultToOCRBtn').addEventListener('click', function
         console.log('✅ SESSION 16: Part removed from current_selected_list');
         
         // SESSION 16: STEP 3 - Also delete from selected_parts cumulative array if present
+        // Match by pcode/oem + timestamp (timestamp safe here - not sent to Supabase)
         const selectedParts = window.helper?.parts_search?.selected_parts || [];
         const cumulativeIndex = selectedParts.findIndex(p => 
-          (!isEncoded && p.selected_at === rawTimestamp) && 
+          p.selected_at === selectedAt && 
           ((pcode && p.pcode === pcode) || (oem && p.oem === oem))
         );
         
