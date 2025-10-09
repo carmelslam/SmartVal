@@ -542,6 +542,12 @@ class PartsSearchResultsPiP {
     console.log('📋 SESSION 14: Current session parts:', window.helper.parts_search.current_selected_list?.length || 0);
     console.log('📋 Cumulative parts:', window.helper.parts_search.selected_parts.length);
     
+    // SESSION 15: Save helper using system's safe method
+    if (typeof window.saveHelperToAllStorageLocations === 'function') {
+      window.saveHelperToAllStorageLocations();
+      console.log('✅ SESSION 15: Saved helper using saveHelperToAllStorageLocations');
+    }
+    
     // SESSION 13 TASK 1: Trigger UI update
     if (typeof window.updateSelectedPartsList === 'function') {
       window.updateSelectedPartsList();
