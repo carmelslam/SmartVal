@@ -836,12 +836,10 @@ class PartsSearchResultsPiP {
       totalForPlate = window.helper?.parts_search?.selected_parts?.length || 0;
     }
     
-    console.log('💾 SESSION 17: Saving selections - Current search:', currentSearchCount, 'Cumulative total:', totalForPlate);
+    console.log('💾 SESSION 17: Saving selections - selectedItems.size:', this.selectedItems.size, 'Cumulative total:', totalForPlate);
+    console.log('💾 SESSION 17: selectedItems contents:', Array.from(this.selectedItems));
     
-    // Calculate count for THIS search only (from selectedItems Set, not cumulative)
-    const thisSearchCount = this.selectedItems.size;
-    
-    alert(`נשמרו ${thisSearchCount} חלקים בחיפוש זה\nסה"כ ${totalForPlate} חלקים נבחרו למספר רכב ${this.currentPlateNumber || ''}`);
+    alert(`נשמרו ${this.selectedItems.size} חלקים בחיפוש זה\nסה"כ ${totalForPlate} חלקים נבחרו למספר רכב ${this.currentPlateNumber || ''}`);
     
     // Future: Add integration with parts required or other modules
   }
