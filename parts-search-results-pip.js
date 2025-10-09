@@ -502,60 +502,34 @@ class PartsSearchResultsPiP {
     const selectedPartEntry = this.convertCatalogToHelperFormat(item);
     console.log('🔧 SESSION 15: Converted part entry:', selectedPartEntry);
 
-    // SESSION 15: Check for duplicates using unified catalog_code
+    // SESSION 15 FIX: Initialize current_selected_list if doesn't exist
+    if (!window.helper.parts_search.current_selected_list) {
+      window.helper.parts_search.current_selected_list = [];
+      console.log('📋 SESSION 15: Initialized current_selected_list');
+    }
+    
+    // SESSION 15 FIX: Check for duplicates ONLY in current_selected_list (not in selected_parts)
     const itemCatalogCode = item.pcode || item.oem || '';
-    const existingIndex = window.helper.parts_search.selected_parts.findIndex(
-      part => part.catalog_item_id === item.id || 
-             (part.catalog_code && part.catalog_code === itemCatalogCode)
+    const currentIndex = window.helper.parts_search.current_selected_list.findIndex(p => 
+      p.catalog_code === itemCatalogCode || p.catalog_item_id === item.id
     );
 
-    if (existingIndex >= 0) {
-      // Update existing entry
-      // SESSION 14 STEP 1: Save to CURRENT session list (not cumulative selected_parts)
-      // Initialize current_selected_list if doesn't exist
-      if (!window.helper.parts_search.current_selected_list) {
-        window.helper.parts_search.current_selected_list = [];
-        console.log('📋 SESSION 14: Initialized current_selected_list');
-      }
-      
-      // Update in cumulative (for backward compatibility)
-      window.helper.parts_search.selected_parts[existingIndex] = selectedPartEntry;
-      console.log('🔄 Updated existing part in cumulative list (legacy)');
-      
-      // SESSION 15 FIX: Also update in current session list if exists (using catalog_code)
-      const currentIndex = window.helper.parts_search.current_selected_list.findIndex(p => 
-        p.catalog_code === selectedPartEntry.catalog_code
-      );
-      if (currentIndex !== -1) {
-        window.helper.parts_search.current_selected_list[currentIndex] = selectedPartEntry;
-        console.log('🔄 SESSION 15: Updated existing part in current_selected_list');
-      } else {
-        // SESSION 15 FIX: If not in current list, add it (might be from page refresh)
-        window.helper.parts_search.current_selected_list.push(selectedPartEntry);
-        console.log('✅ SESSION 15: Added part to current_selected_list (was only in cumulative)');
-      }
+    if (currentIndex !== -1) {
+      // Update existing entry in current list
+      window.helper.parts_search.current_selected_list[currentIndex] = selectedPartEntry;
+      console.log('🔄 SESSION 15: Updated existing part in current_selected_list');
     } else {
-      // SESSION 14 STEP 1: Initialize current_selected_list if doesn't exist
-      if (!window.helper.parts_search.current_selected_list) {
-        window.helper.parts_search.current_selected_list = [];
-        console.log('📋 SESSION 14: Initialized current_selected_list');
-      }
-      
-      // Add to CURRENT session list (primary)
+      // Add new part to CURRENT session list ONLY
       window.helper.parts_search.current_selected_list.push(selectedPartEntry);
-      console.log('✅ SESSION 14: Added new part to current_selected_list');
+      console.log('✅ SESSION 15: Added new part to current_selected_list');
       
-      // SESSION 14 FIX 5: Reset saved flag (new part added)
+      // SESSION 15: Reset saved flag (new part added)
       window.helper.parts_search.current_list_saved = false;
-      console.log('✅ SESSION 14: Reset saved flag (new part added)');
-      
-      // Also add to cumulative (for backward compatibility - can be removed later)
-      window.helper.parts_search.selected_parts.push(selectedPartEntry);
-      console.log('✅ Added new part to cumulative list (legacy)');
+      console.log('✅ SESSION 15: Reset saved flag (new part added)');
     }
 
-    console.log('📋 SESSION 14: Current session parts:', window.helper.parts_search.current_selected_list?.length || 0);
-    console.log('📋 Cumulative parts:', window.helper.parts_search.selected_parts.length);
+    console.log('📋 SESSION 15: Current session parts:', window.helper.parts_search.current_selected_list?.length || 0);
+    console.log('📋 SESSION 15: Cumulative parts (NOT modified by PiP):', window.helper.parts_search.selected_parts?.length || 0);
     
     // SESSION 15: Save helper to sessionStorage (same pattern as parts-required.html line 938)
     try {
@@ -573,23 +547,32 @@ class PartsSearchResultsPiP {
   }
 
   /**
-   * Remove part from helper structure
+   * Remove part from helper structure (SESSION 15: ONLY removes from current_selected_list)
    */
   removeFromHelper(item) {
-    if (!window.helper?.parts_search?.selected_parts) return;
+    if (!window.helper?.parts_search?.current_selected_list) return;
 
-    const originalLength = window.helper.parts_search.selected_parts.length;
+    const originalLength = window.helper.parts_search.current_selected_list.length;
     
-    window.helper.parts_search.selected_parts = 
-      window.helper.parts_search.selected_parts.filter(
+    // SESSION 15: Remove from current_selected_list ONLY (not from selected_parts)
+    window.helper.parts_search.current_selected_list = 
+      window.helper.parts_search.current_selected_list.filter(
         part => part.catalog_item_id !== item.id && 
-               part.pcode !== item.pcode
+               part.catalog_code !== (item.pcode || item.oem)
       );
 
-    const newLength = window.helper.parts_search.selected_parts.length;
+    const newLength = window.helper.parts_search.current_selected_list.length;
     
     if (originalLength !== newLength) {
-      console.log('🗑️ Removed part from helper, remaining:', newLength);
+      console.log('🗑️ SESSION 15: Removed part from current_selected_list, remaining:', newLength);
+      
+      // SESSION 15: Save to sessionStorage
+      try {
+        sessionStorage.setItem('helper', JSON.stringify(window.helper));
+        console.log('✅ SESSION 15: Saved helper after removal');
+      } catch (e) {
+        console.error('❌ SESSION 15: Failed to save helper:', e);
+      }
       
       // SESSION 13 TASK 1: Trigger UI update
       if (typeof window.updateSelectedPartsList === 'function') {
