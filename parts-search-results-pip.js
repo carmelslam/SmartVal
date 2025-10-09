@@ -722,14 +722,12 @@ class PartsSearchResultsPiP {
             .eq(plateColumn, this.currentPlateNumber);
 
           if (!selectError && selections) {
-            this.selectedItems.clear();
-            selections.forEach(item => {
-              const itemId = item.pcode || item.id || item.oem;
-              if (itemId) {
-                this.selectedItems.add(itemId);
-              }
-            });
-            console.log('📋 Loaded existing selections:', this.selectedItems.size);
+            // SESSION 17: Store for visual checkbox state, but DON'T add to selectedItems
+            // selectedItems should only track CURRENT search selections
+            this.existingSelections = new Set(
+              selections.map(item => item.pcode || item.id || item.oem).filter(Boolean)
+            );
+            console.log('📋 Loaded existing selections (visual only):', this.existingSelections.size);
           }
         } else {
           console.log('ℹ️ No vehicle identifier column found, skipping selection loading');
@@ -756,7 +754,8 @@ class PartsSearchResultsPiP {
     if (checkboxes) {
       checkboxes.forEach(checkbox => {
         const itemId = checkbox.dataset.itemId;
-        const isSelected = this.selectedItems.has(itemId);
+        // SESSION 17: Check if in current search OR in existing selections (from previous searches)
+        const isSelected = this.selectedItems.has(itemId) || this.existingSelections?.has(itemId);
         checkbox.checked = isSelected;
         this.updateSelectionUI(itemId, isSelected);
       });
