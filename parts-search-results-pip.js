@@ -477,7 +477,22 @@ class PartsSearchResultsPiP {
   addToHelper(item) {
     console.log('🔧 SESSION 15: addToHelper called with item:', item);
     
-    if (!window.helper) window.helper = {};
+    // SESSION 15 FIX: Load helper from sessionStorage if window.helper doesn't exist
+    if (!window.helper) {
+      try {
+        const stored = sessionStorage.getItem('helper');
+        if (stored) {
+          window.helper = JSON.parse(stored);
+          console.log('✅ SESSION 15: Loaded helper from sessionStorage');
+        } else {
+          window.helper = {};
+        }
+      } catch (e) {
+        console.error('❌ SESSION 15: Failed to load helper from sessionStorage:', e);
+        window.helper = {};
+      }
+    }
+    
     if (!window.helper.parts_search) window.helper.parts_search = {};
     if (!window.helper.parts_search.selected_parts) {
       window.helper.parts_search.selected_parts = [];
@@ -542,10 +557,12 @@ class PartsSearchResultsPiP {
     console.log('📋 SESSION 14: Current session parts:', window.helper.parts_search.current_selected_list?.length || 0);
     console.log('📋 Cumulative parts:', window.helper.parts_search.selected_parts.length);
     
-    // SESSION 15: Save helper using system's safe method
-    if (typeof window.saveHelperToAllStorageLocations === 'function') {
-      window.saveHelperToAllStorageLocations();
-      console.log('✅ SESSION 15: Saved helper using saveHelperToAllStorageLocations');
+    // SESSION 15: Save helper to sessionStorage (same pattern as parts-required.html line 938)
+    try {
+      sessionStorage.setItem('helper', JSON.stringify(window.helper));
+      console.log('✅ SESSION 15: Saved helper to sessionStorage');
+    } catch (e) {
+      console.error('❌ SESSION 15: Failed to save helper:', e);
     }
     
     // SESSION 13 TASK 1: Trigger UI update
