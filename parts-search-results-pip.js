@@ -824,8 +824,8 @@ class PartsSearchResultsPiP {
           console.error('❌ SESSION 17: Error querying Supabase for total count:', error);
           totalForPlate = window.helper?.parts_search?.selected_parts?.length || 0; // Fallback
         } else {
-          totalForPlate = (data?.length || 0) + currentSearchCount; // DB count + current selections
-          console.log('✅ SESSION 17: Total from Supabase:', data?.length, '+ current:', currentSearchCount, '=', totalForPlate);
+          totalForPlate = data?.length || 0; // Parts already in DB (saved immediately on checkbox)
+          console.log('✅ SESSION 17: Total from Supabase:', totalForPlate, '(current search:', currentSearchCount, ')');
         }
       } else {
         totalForPlate = window.helper?.parts_search?.selected_parts?.length || 0;
