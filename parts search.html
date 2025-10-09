@@ -1940,30 +1940,30 @@ document.getElementById('sendResultToOCRBtn').addEventListener('click', function
         return;
       }
       
-      // SESSION 15: Update Supabase first
+      // SESSION 16: Update Supabase first with correct field mappings
       if (window.supabase) {
         const plateInput = document.getElementById('plate');
         const plate = plateInput?.value?.trim() || window.helper?.meta?.plate;
-        const catalogCode = part.catalog_code || part.pcode || part['מספר קטלוגי'];
+        const pcode = part.pcode || part['מספר קטלוגי'];
+        const oem = part.oem || part['מספר OEM'];
         const selectedAt = part.selected_at;
         
-        if (plate && catalogCode) {
+        if (plate && (pcode || oem)) {
           let updateQuery = window.supabase
             .from('selected_parts')
             .update({
-              group,
-              name,
-              qty: parseInt(qty),
+              part_family: group,
+              part_name: name,
               quantity: parseInt(qty),
               source,
               modified_at: new Date().toISOString()
             })
             .eq('plate', plate);
           
-          if (part.catalog_code) {
-            updateQuery = updateQuery.eq('catalog_code', catalogCode);
-          } else {
-            updateQuery = updateQuery.eq('pcode', catalogCode);
+          if (pcode) {
+            updateQuery = updateQuery.eq('pcode', pcode);
+          } else if (oem) {
+            updateQuery = updateQuery.eq('oem', oem);
           }
           
           if (selectedAt) {
@@ -1973,16 +1973,16 @@ document.getElementById('sendResultToOCRBtn').addEventListener('click', function
           const { error } = await updateQuery;
           
           if (error) {
-            console.error('❌ SESSION 15: Supabase update failed:', error);
+            console.error('❌ SESSION 16: Supabase update failed:', error);
             alert(`שגיאה בעדכון בשרת: ${error.message}`);
             return;
           }
           
-          console.log('✅ SESSION 15: Part updated in Supabase');
+          console.log('✅ SESSION 16: Part updated in Supabase');
         }
       }
       
-      // SESSION 15: Update in current_selected_list
+      // SESSION 16: Update in current_selected_list
       currentList[index] = {
         ...part,
         group,
@@ -1993,11 +1993,31 @@ document.getElementById('sendResultToOCRBtn').addEventListener('click', function
         modified_at: new Date().toISOString()
       };
       
-      console.log('✅ SESSION 15: Part updated in current_selected_list');
+      console.log('✅ SESSION 16: Part updated in current_selected_list');
       
-      // SESSION 15: Save to sessionStorage
+      // SESSION 16: Also update in selected_parts cumulative array if present
+      const selectedParts = window.helper?.parts_search?.selected_parts || [];
+      const cumulativeIndex = selectedParts.findIndex(p => 
+        p.selected_at === selectedAt && 
+        ((pcode && p.pcode === pcode) || (oem && p.oem === oem))
+      );
+      
+      if (cumulativeIndex !== -1) {
+        selectedParts[cumulativeIndex] = {
+          ...selectedParts[cumulativeIndex],
+          group,
+          name,
+          qty: parseInt(qty),
+          quantity: parseInt(qty),
+          source,
+          modified_at: new Date().toISOString()
+        };
+        console.log('✅ SESSION 16: Also updated part in selected_parts cumulative array');
+      }
+      
+      // SESSION 16: Save to sessionStorage
       sessionStorage.setItem('helper', JSON.stringify(window.helper));
-      console.log('✅ SESSION 15: Saved helper to sessionStorage');
+      console.log('✅ SESSION 16: Saved helper to sessionStorage');
       
       // Update the display
       updateSelectedPartsList();
@@ -2038,40 +2058,41 @@ document.getElementById('sendResultToOCRBtn').addEventListener('click', function
           return;
         }
         
-        // SESSION 15: Get plate and identifiers
+        // SESSION 16: Get plate and identifiers
         const plateInput = document.getElementById('plate');
         const plate = plateInput?.value?.trim() || window.helper?.meta?.plate;
-        const catalogCode = part.catalog_code || part.pcode || part['מספר קטלוגי'] || part.oem;
+        const pcode = part.pcode || part['מספר קטלוגי'];
+        const oem = part.oem || part['מספר OEM'];
         const selectedAt = part.selected_at;
         
         if (!plate) {
-          console.error('❌ SESSION 15: No plate number available');
+          console.error('❌ SESSION 16: No plate number available');
           alert('שגיאה: לא נמצא מספר רישוי. אנא הזן מספר רישוי בשדה החיפוש.');
           return;
         }
         
-        if (!catalogCode) {
-          console.error('❌ SESSION 15: No catalog_code available for part:', part);
-          alert('שגיאה: חסר מספר קטלוגי לחלק');
+        if (!pcode && !oem) {
+          console.error('❌ SESSION 16: No pcode or oem available for part:', part);
+          alert('שגיאה: חסר מספר קטלוגי או OEM לחלק');
           return;
         }
         
-        console.log('📋 SESSION 15: Deleting part:', { plate, catalogCode, selectedAt });
+        console.log('📋 SESSION 16: Deleting part:', { plate, pcode, oem, selectedAt });
         
-        // SESSION 15: STEP 1 - Delete from Supabase using plate + catalog_code + timestamp
+        // SESSION 16: STEP 1 - Delete from Supabase using plate + (pcode OR oem) + timestamp
         let deleteQuery = window.supabase
           .from('selected_parts')
           .delete()
           .eq('plate', plate);
         
-        // Use catalog_code if available, otherwise pcode
-        if (part.catalog_code) {
-          deleteQuery = deleteQuery.eq('catalog_code', catalogCode);
-        } else {
-          deleteQuery = deleteQuery.eq('pcode', catalogCode);
+        // Use pcode (catalog code) if available, otherwise oem
+        if (pcode) {
+          deleteQuery = deleteQuery.eq('pcode', pcode);
+        } else if (oem) {
+          deleteQuery = deleteQuery.eq('oem', oem);
         }
         
-        // Add timestamp for precision
+        // Add timestamp for precision (critical for identifying exact part instance)
         if (selectedAt) {
           deleteQuery = deleteQuery.eq('selected_at', selectedAt);
         }
@@ -2079,22 +2100,34 @@ document.getElementById('sendResultToOCRBtn').addEventListener('click', function
         const { error } = await deleteQuery;
         
         if (error) {
-          console.error('❌ SESSION 15: Supabase delete failed:', error);
+          console.error('❌ SESSION 16: Supabase delete failed:', error);
           alert(`שגיאה במחיקה מהשרת: ${error.message}\n\nהחלק לא נמחק.`);
           return;
         }
         
-        console.log('✅ SESSION 15: Part deleted from Supabase successfully');
+        console.log('✅ SESSION 16: Part deleted from Supabase successfully');
         
-        // SESSION 15: STEP 2 - Delete from current_selected_list
+        // SESSION 16: STEP 2 - Delete from current_selected_list
         currentList.splice(index, 1);
-        console.log('✅ SESSION 15: Part removed from current_selected_list');
+        console.log('✅ SESSION 16: Part removed from current_selected_list');
         
-        // SESSION 15: STEP 3 - Save to sessionStorage
+        // SESSION 16: STEP 3 - Also delete from selected_parts cumulative array if present
+        const selectedParts = window.helper?.parts_search?.selected_parts || [];
+        const cumulativeIndex = selectedParts.findIndex(p => 
+          p.selected_at === selectedAt && 
+          ((pcode && p.pcode === pcode) || (oem && p.oem === oem))
+        );
+        
+        if (cumulativeIndex !== -1) {
+          selectedParts.splice(cumulativeIndex, 1);
+          console.log('✅ SESSION 16: Also deleted part from selected_parts cumulative array');
+        }
+        
+        // SESSION 16: STEP 4 - Save to sessionStorage
         sessionStorage.setItem('helper', JSON.stringify(window.helper));
-        console.log('✅ SESSION 15: Saved helper to sessionStorage');
+        console.log('✅ SESSION 16: Saved helper to sessionStorage');
         
-        // SESSION 15: STEP 4 - Update UI
+        // SESSION 16: STEP 5 - Update UI
         updateSelectedPartsList();
         
         // Show success notification
@@ -2102,9 +2135,9 @@ document.getElementById('sendResultToOCRBtn').addEventListener('click', function
           showNotification(`נמחק חלק: ${part.name || part['תיאור']}`, 'success');
         }
         
-        console.log(`✅ SESSION 15: Successfully deleted part from current session`);
+        console.log(`✅ SESSION 16: Successfully deleted part from current session`);
       } catch (error) {
-        console.error('❌ SESSION 15: Unexpected error in deletePart:', error);
+        console.error('❌ SESSION 16: Unexpected error in deletePart:', error);
         alert(`שגיאה לא צפויה במחיקת החלק: ${error.message}`);
       }
     }
