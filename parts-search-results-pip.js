@@ -484,10 +484,11 @@ class PartsSearchResultsPiP {
     // Convert catalog item to helper format
     const selectedPartEntry = this.convertCatalogToHelperFormat(item);
 
-    // Check for duplicates (prevent double registration)
+    // SESSION 15: Check for duplicates using unified catalog_code
+    const itemCatalogCode = item.pcode || item.oem || '';
     const existingIndex = window.helper.parts_search.selected_parts.findIndex(
       part => part.catalog_item_id === item.id || 
-             (part.pcode && part.pcode === item.pcode)
+             (part.catalog_code && part.catalog_code === itemCatalogCode)
     );
 
     if (existingIndex >= 0) {
@@ -503,13 +504,17 @@ class PartsSearchResultsPiP {
       window.helper.parts_search.selected_parts[existingIndex] = selectedPartEntry;
       console.log('🔄 Updated existing part in cumulative list (legacy)');
       
-      // Also update in current session list if exists
+      // SESSION 15 FIX: Also update in current session list if exists (using catalog_code)
       const currentIndex = window.helper.parts_search.current_selected_list.findIndex(p => 
-        (p.pcode || p['מספר קטלוגי']) === pcode
+        p.catalog_code === selectedPartEntry.catalog_code
       );
       if (currentIndex !== -1) {
         window.helper.parts_search.current_selected_list[currentIndex] = selectedPartEntry;
-        console.log('🔄 SESSION 14: Updated existing part in current_selected_list');
+        console.log('🔄 SESSION 15: Updated existing part in current_selected_list');
+      } else {
+        // SESSION 15 FIX: If not in current list, add it (might be from page refresh)
+        window.helper.parts_search.current_selected_list.push(selectedPartEntry);
+        console.log('✅ SESSION 15: Added part to current_selected_list (was only in cumulative)');
       }
     } else {
       // SESSION 14 STEP 1: Initialize current_selected_list if doesn't exist
@@ -590,14 +595,17 @@ class PartsSearchResultsPiP {
       "מיקום": catalogItem.location || "ישראל",
       "זמינות": catalogItem.availability || "זמין",
       "מספר OEM": catalogItem.oem || "",
+      "oem": catalogItem.oem || "",  // SESSION 15: Keep OEM separate
       "הערות": catalogItem.comments || "",
       "price": price,
       "quantity": 1,
       "source": catalogItem.availability || "מקורי",
       
-      // NEW REQUIRED FIELDS
-      "מספר קטלוגי": catalogItem.pcode || "",
-      "pcode": catalogItem.pcode || "",
+      // SESSION 15: Store both codes + unified catalog_code for duplicate checking
+      "supplier_pcode": catalogItem.pcode || "",  // Supplier's part code
+      "pcode": catalogItem.pcode || "",  // Keep for backward compatibility
+      "catalog_code": catalogItem.pcode || catalogItem.oem || "",  // For duplicate checking (prefer pcode)
+      "מספר קטלוגי": catalogItem.pcode || "",  // Hebrew: Supplier code
       "משפחת חלק": catalogItem.part_family || "",
       "part_family": catalogItem.part_family || "",
       
