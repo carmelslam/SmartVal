@@ -824,8 +824,8 @@ class PartsSearchResultsPiP {
           console.error('❌ SESSION 17: Error querying Supabase for total count:', error);
           totalForPlate = window.helper?.parts_search?.selected_parts?.length || 0; // Fallback
         } else {
-          totalForPlate = data?.length || 0; // Parts already in DB (saved immediately on checkbox)
-          console.log('✅ SESSION 17: Total from Supabase:', totalForPlate, '(current search:', currentSearchCount, ')');
+          totalForPlate = data?.length || 0; // Cumulative total from DB
+          console.log('✅ SESSION 17: Cumulative total from Supabase:', totalForPlate);
         }
       } else {
         totalForPlate = window.helper?.parts_search?.selected_parts?.length || 0;
@@ -836,8 +836,12 @@ class PartsSearchResultsPiP {
       totalForPlate = window.helper?.parts_search?.selected_parts?.length || 0;
     }
     
-    console.log('💾 SESSION 17: Saving selections - Current search:', currentSearchCount, 'Total for plate:', totalForPlate);
-    alert(`נשמרו ${currentSearchCount} חלקים בחיפוש זה\nסה"כ ${totalForPlate} חלקים נבחרו למספר רכב ${this.currentPlateNumber || ''}`);
+    console.log('💾 SESSION 17: Saving selections - Current search:', currentSearchCount, 'Cumulative total:', totalForPlate);
+    
+    // Calculate count for THIS search only (from selectedItems Set, not cumulative)
+    const thisSearchCount = this.selectedItems.size;
+    
+    alert(`נשמרו ${thisSearchCount} חלקים בחיפוש זה\nסה"כ ${totalForPlate} חלקים נבחרו למספר רכב ${this.currentPlateNumber || ''}`);
     
     // Future: Add integration with parts required or other modules
   }
