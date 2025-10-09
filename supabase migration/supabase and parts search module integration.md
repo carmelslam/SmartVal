@@ -9505,6 +9505,148 @@ After completing all 7 fixes, the system should work exactly like this:
 4. **Document any new issues found**
 
 ---
+General  task requirements :
+We create a new object in the helper.parts_search called current selected list . this is how it will work :
+When the user selects and saves parts from the PiP:
+1. The seated list on UI is populated - currently works good
+2. The selected parts table is populated - currently work good 
+3. The selected parts in the last then get registered on helper.parts_search.current_selected_list
+All 3 steps are cumulative for the current session data .
+The selected parts table  in supabase is the only one of those 3 objects that has cumulative all time selected parts for this case id/plate number 
+4. When the user closes the list the helper.parts_search.current_selected_list is transferred and appended to helper.parts_search.selected_parts then this object in the helper becomes also a cumulative object like the  selected parts table - basically even if there is no direct sync between them both but the actual sync is performed by the selected parts list in the Ui . To make this happen we will need :
+    1. To add a see button to the list this will make sure the current list is added to the cumulative helper.parts_search.selected_parts.
+    2. We need another button that called clear list - this button doesn’t  delete the selected parts from the table - it just clears the current table to make it easier to work. Using this button will also force the current list to be  added to the cumulative helper.parts_search.selected_parts.
+    3. To make sure the helper.parts_search.selected_parts actually can read from the list 
+Warning :
+The helper.parts_search.selected_parts for now is populated from a page called parts required, this is a legacy link that we will change in the future by adding another object to helper.parts_search  called required_parts that will also feed other object - but this info just for context don’t do anything with it 
+
+
+status  1:
+
+The new current_selected _list object in the helper is not added at all , it needs to be added automatically from the PiP save selected button,
+You need to update helper.js to add this object 
+The save to cumulative DOESN’T  save to parts_search.selected_parts . 
+The save to cumulative list - clears the list from the UI - this is not the purpose - the idea that if the user wants he can see all the parts he is selecting now in front of him , and if he refreshes the page he doesn’t  lose the list in work 
+If a user wants to clear the UI list he need the missing clear list button that doesn’t  clear the supabase just the ui - using this button also  save the list to cumulative, however if a save was already used then we cant save the same part from the same list twice- this is a clarification for the duplication thing we talked about - if this was you intention from the beginning then I misunderstood and talked about the cumulative not the local current .
+While you are in the helper.js add a required parts object also that is consistent in the parts_search we will not use it now just prepare it 
+Also don’t make the button to the width of the page - under the list make the three buttons: clear list , save list , delete list 
+Delete the button 📄 שכפל חלק אחרון 
+
+
+
+Not a lot of change there is no current list object or  required parts object created  in the parts_search . the selected parts are
+not being saved nowhere in the helper since current list object doesnt exist , and the save to 
+cumulative list doesnt add to the parts_search.selected_parts properly for the same reason. 
+ the delete list button deletes the list from the UI  but also deletes the full and ALL the cumulative list from the selected_parts supabase table - WHICH IS A MAJOR ISSUE.
+Break to small tasks and execute one by one .
+
+successes till now :
+1. the selected parts are being written on the selected parts list on the UI 
+2. the delete part button and edit part button work 
+3. the delete all list button was working good now it has a major problem
+Current status 
+
+Claude analysis :
+  Root Causes
+
+    1. Helper loads from sessionStorage
+     - Old helper (without new fields) 
+    overwrites new structure
+    2. clearCurrentList function - Only
+     clears UI/helper, doesn't touch 
+    Supabase (correct behavior)
+    3. Delete All button confusion - 
+    User thinks "Clear List" deletes 
+    from Supabase, but it's actually 
+    the red "Delete All" button
+
+    3 Core Problems to Fix
+
+    PROBLEM 1: Helper structure missing
+     new fields
+    - When page loads, existingHelper 
+    from sessionStorage has old 
+    structure
+    - Line 2480: window.helper = 
+    existingHelper || {...} uses OLD 
+    data
+    - Our new fields 
+    (current_selected_list, 
+    required_parts, current_list_saved)
+     don't exist
+
+    PROBLEM 2: Parts not saving to 
+    current_selected_list
+    - Because field doesn't exist in 
+    runtime helper
+    - parts-search-results-pip.js line 
+    522 pushes to undefined array
+
+    PROBLEM 3: Save button not working
+    - Tries to read from non-existent 
+    current_selected_list
+    - Tries to push to selected_parts 
+    which might not have proper 
+    structure
+
+    Step-by-Step Fix Plan
+
+    TASK 1: Add migration logic to 
+    helper.js (10 min)
+    - After line 2480 where helper is 
+    created
+    - Check if helper.parts_search 
+    exists but missing new fields
+    - Add missing fields to existing 
+    structure:
+      - current_selected_list: []
+      - required_parts: []
+      - current_list_saved: false
+    - Save updated helper back to 
+    storage
+
+    TASK 2: Initialize fields in 
+    parts-search-results-pip.js (5 min)
+    - Before line 522 in addToHelper()
+    - Add defensive initialization:
+      - Check if parts_search exists
+      - Check if current_selected_list 
+    exists
+      - Initialize if missing
+
+    TASK 3: Test the "Clear List" 
+    button naming (2 min)
+    - Verify "נקה רשימה" (Clear List) 
+    only clears UI
+    - Verify "🗑️ מחק הכל" (Delete All) 
+    is the Supabase delete button
+    - Update button text if confusing
+
+    TASK 4: Test complete flow (10 min)
+    - Clear sessionStorage to force 
+    fresh helper creation
+    - Select 3 parts → verify they 
+    appear in UI
+    - Click Save → verify moved to 
+    cumulative
+    - Click Clear → verify UI clears
+    - Click Delete All → verify 
+    Supabase deletion
+
+    Files to Modify
+
+    1. helper.js - Add migration logic 
+    after line 2480
+    2. parts-search-results-pip.js - 
+    Add defensive initialization
+    3. parts search.html - Possibly 
+    clarify button text
+
+    Implementation Order
+
+    Execute ONE task at a time, test 
+    after each
+
 
 **Good luck! The architecture is solid, just needs these fixes to work properly.**
 
