@@ -508,24 +508,36 @@ class PartsSearchResultsPiP {
       console.log('📋 SESSION 15: Initialized current_selected_list');
     }
     
-    // SESSION 15 FIX: Check for duplicates ONLY in current_selected_list (not in selected_parts)
+    // SESSION 16: Check for duplicates in BOTH current_selected_list AND cumulative selected_parts
     const itemCatalogCode = item.pcode || item.oem || '';
+    
+    // Check current session list
     const currentIndex = window.helper.parts_search.current_selected_list.findIndex(p => 
       p.catalog_code === itemCatalogCode || p.catalog_item_id === item.id
+    );
+    
+    // SESSION 16: ALSO check cumulative list to prevent duplicates
+    const cumulativeIndex = window.helper.parts_search.selected_parts.findIndex(p => 
+      (p.pcode === item.pcode && item.pcode) || (p.oem === item.oem && item.oem)
     );
 
     if (currentIndex !== -1) {
       // Update existing entry in current list
       window.helper.parts_search.current_selected_list[currentIndex] = selectedPartEntry;
-      console.log('🔄 SESSION 15: Updated existing part in current_selected_list');
+      console.log('🔄 SESSION 16: Updated existing part in current_selected_list');
+    } else if (cumulativeIndex !== -1) {
+      // SESSION 16: Part exists in cumulative list - don't add to current
+      console.warn('⚠️ SESSION 16: Part already exists in cumulative selected_parts - not adding to current list');
+      alert('⚠️ חלק כבר קיים ברשימה המצטברת');
+      return; // Don't add duplicate
     } else {
       // Add new part to CURRENT session list ONLY
       window.helper.parts_search.current_selected_list.push(selectedPartEntry);
-      console.log('✅ SESSION 15: Added new part to current_selected_list');
+      console.log('✅ SESSION 16: Added new part to current_selected_list');
       
-      // SESSION 15: Reset saved flag (new part added)
+      // SESSION 16: Reset saved flag (new part added)
       window.helper.parts_search.current_list_saved = false;
-      console.log('✅ SESSION 15: Reset saved flag (new part added)');
+      console.log('✅ SESSION 16: Reset saved flag (new part added)');
     }
 
     console.log('📋 SESSION 15: Current session parts:', window.helper.parts_search.current_selected_list?.length || 0);

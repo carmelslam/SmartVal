@@ -10945,3 +10945,38 @@ window.helper.parts_search.current_selected_list.push(selectedPartEntry);
 - `parts search.html` - saveCurrentToList() function (add duplicate check before appending)
 
 ---
+
+## ✅ QUICK FIX IMPLEMENTED (Last 5% of Session 16)
+
+### **Fix: Prevent Helper Duplicates in addToHelper()**
+
+**File**: `parts-search-results-pip.js` (Lines 511-541)
+
+**Change**: Added cumulative list duplicate check BEFORE adding to current list
+
+**New Logic**:
+```javascript
+// SESSION 16: Check BOTH lists
+const currentIndex = current_selected_list.findIndex(...);  // Check current session
+const cumulativeIndex = selected_parts.findIndex(...);      // Check cumulative (NEW)
+
+if (currentIndex \!== -1) {
+  // Update existing in current list
+} else if (cumulativeIndex \!== -1) {
+  // SESSION 16: Already in cumulative - REJECT
+  alert('⚠️ חלק כבר קיים ברשימה המצטברת');
+  return; // Don't add
+} else {
+  // Add to current list (not a duplicate anywhere)
+}
+```
+
+**Result**:
+- ✅ Prevents duplicates in both current AND cumulative lists
+- ✅ Shows Hebrew alert if user tries to add duplicate
+- ✅ Returns early without saving if duplicate detected
+- ✅ Aligns helper behavior with Supabase (no duplicates)
+
+**Test**: Select same part twice → should show alert and reject second selection
+
+---
