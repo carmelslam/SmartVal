@@ -1800,36 +1800,120 @@ document.getElementById('sendResultToOCRBtn').addEventListener('click', function
           
           if (error) {
             console.error('❌ SESSION 17: Error loading from Supabase:', error);
-          } else if (data && data.length > 0) {
-            console.log('✅ SESSION 17: Loaded', data.length, 'parts from Supabase');
-            
-            // SESSION 17: Update helper.parts_search.selected_parts with Supabase data (source of truth)
-            if (!window.helper) window.helper = {};
-            if (!window.helper.parts_search) window.helper.parts_search = {};
-            
-            // Convert Supabase data to helper format
-            window.helper.parts_search.selected_parts = data.map(part => ({
-              name: part.part_name || part.pcode,
-              pcode: part.pcode,
-              oem: part.oem,
-              qty: part.quantity || 1,
-              quantity: part.quantity || 1,
-              group: part.part_family || '',
-              part_family: part.part_family || '',
-              source: part.source || 'מקורי',
-              supplier: part.supplier_name || '',
-              comments: part.comments || '',
-              הערות: part.comments || '',
-              catalog_code: part.pcode || part.oem || '',
-              selected_at: part.created_at
-            }));
-            
-            // Save updated helper to sessionStorage
-            try {
-              sessionStorage.setItem('helper', JSON.stringify(window.helper));
-              console.log('✅ SESSION 17: Updated helper with Supabase data and saved to sessionStorage');
-            } catch (e) {
-              console.error('❌ SESSION 17: Failed to save helper:', e);
+          } else if (data) {
+            // SESSION 17: Smart sync - validate and merge differences only
+            if (window.helper?.parts_search) {
+              const supabaseParts = data || [];
+              const helperParts = window.helper.parts_search.selected_parts || [];
+              
+              console.log('🔍 SESSION 17: Smart sync - Supabase:', supabaseParts.length, 'Helper:', helperParts.length);
+              
+              // Create map of Supabase parts by pcode for quick lookup
+              const supabaseMap = new Map();
+              supabaseParts.forEach(part => {
+                const key = part.pcode || part.oem || part.id;
+                supabaseMap.set(key, part);
+              });
+              
+              // Create map of helper parts by pcode
+              const helperMap = new Map();
+              helperParts.forEach(part => {
+                const key = part.pcode || part.oem || part.catalog_code;
+                helperMap.set(key, part);
+              });
+              
+              // Find differences
+              const toAdd = []; // In Supabase but not in helper
+              const toUpdate = []; // In both but with different data
+              const toRemove = []; // In helper but not in Supabase
+              
+              // Check Supabase parts
+              supabaseParts.forEach(supabasePart => {
+                const key = supabasePart.pcode || supabasePart.oem || supabasePart.id;
+                if (!helperMap.has(key)) {
+                  toAdd.push(supabasePart);
+                } else {
+                  // Check if data differs (quantity, comments, etc.)
+                  const helperPart = helperMap.get(key);
+                  if (helperPart.qty !== supabasePart.quantity || 
+                      helperPart.comments !== supabasePart.comments) {
+                    toUpdate.push({ key, supabasePart, helperPart });
+                  }
+                }
+              });
+              
+              // Check helper parts for removals
+              helperParts.forEach(helperPart => {
+                const key = helperPart.pcode || helperPart.oem || helperPart.catalog_code;
+                if (!supabaseMap.has(key)) {
+                  toRemove.push(key);
+                }
+              });
+              
+              console.log('📊 SESSION 17: Differences - Add:', toAdd.length, 'Update:', toUpdate.length, 'Remove:', toRemove.length);
+              
+              if (toAdd.length > 0 || toUpdate.length > 0 || toRemove.length > 0) {
+                // Apply changes
+                let updatedParts = [...helperParts];
+                
+                // Remove parts not in Supabase
+                if (toRemove.length > 0) {
+                  updatedParts = updatedParts.filter(p => {
+                    const key = p.pcode || p.oem || p.catalog_code;
+                    return !toRemove.includes(key);
+                  });
+                  console.log('🗑️ SESSION 17: Removed', toRemove.length, 'parts not in Supabase');
+                }
+                
+                // Update existing parts
+                toUpdate.forEach(({ key, supabasePart }) => {
+                  const index = updatedParts.findIndex(p => 
+                    (p.pcode || p.oem || p.catalog_code) === key
+                  );
+                  if (index !== -1) {
+                    updatedParts[index].qty = supabasePart.quantity;
+                    updatedParts[index].quantity = supabasePart.quantity;
+                    updatedParts[index].comments = supabasePart.comments || '';
+                    updatedParts[index]['הערות'] = supabasePart.comments || '';
+                  }
+                });
+                console.log('✏️ SESSION 17: Updated', toUpdate.length, 'parts with Supabase data');
+                
+                // Add new parts from Supabase
+                toAdd.forEach(supabasePart => {
+                  updatedParts.push({
+                    name: supabasePart.part_name || supabasePart.pcode,
+                    pcode: supabasePart.pcode,
+                    oem: supabasePart.oem,
+                    qty: supabasePart.quantity || 1,
+                    quantity: supabasePart.quantity || 1,
+                    group: supabasePart.part_family || '',
+                    part_family: supabasePart.part_family || '',
+                    source: supabasePart.source || 'מקורי',
+                    supplier: supabasePart.supplier_name || '',
+                    comments: supabasePart.comments || '',
+                    הערות: supabasePart.comments || '',
+                    catalog_code: supabasePart.pcode || supabasePart.oem || '',
+                    selected_at: supabasePart.selected_at
+                  });
+                });
+                console.log('➕ SESSION 17: Added', toAdd.length, 'new parts from Supabase');
+                
+                // Update helper with merged data (no duplicates)
+                window.helper.parts_search.selected_parts = updatedParts;
+                
+                // Save to sessionStorage
+                try {
+                  sessionStorage.setItem('helper', JSON.stringify(window.helper));
+                  console.log('✅ SESSION 17: Smart sync complete - no duplicates');
+                } catch (e) {
+                  console.error('❌ SESSION 17: Failed to save helper:', e);
+                }
+              } else {
+                console.log('✅ SESSION 17: Helper and Supabase already in sync - no changes needed');
+              }
+            } else {
+              console.warn('⚠️ SESSION 17: helper.parts_search not initialized, skipping sync');
             }
           }
         } else {
