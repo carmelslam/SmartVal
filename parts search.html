@@ -2423,13 +2423,27 @@ document.getElementById('sendResultToOCRBtn').addEventListener('click', function
     
     if (confirmSave) {
       try {
-        // Append current to cumulative (NO duplicate filter)
+        // SESSION 17: Initialize selected_parts if needed
         if (!window.helper.parts_search.selected_parts) {
           window.helper.parts_search.selected_parts = [];
         }
         
-        window.helper.parts_search.selected_parts.push(...currentList);
-        console.log(`✅ SESSION 14: Appended ${currentList.length} parts to cumulative list`);
+        // SESSION 17: Filter out duplicates before appending (smart sync may have already loaded these)
+        const existingKeys = new Set(
+          window.helper.parts_search.selected_parts.map(p => p.pcode || p.oem || p.catalog_code)
+        );
+        
+        const newParts = currentList.filter(part => {
+          const key = part.pcode || part.oem || part.catalog_code;
+          return !existingKeys.has(key);
+        });
+        
+        if (newParts.length > 0) {
+          window.helper.parts_search.selected_parts.push(...newParts);
+          console.log(`✅ SESSION 17: Added ${newParts.length} new parts (skipped ${currentList.length - newParts.length} duplicates)`);
+        } else {
+          console.log('ℹ️ SESSION 17: All parts already in cumulative list - no new parts to add');
+        }
         
         // Set saved flag (DON'T clear list - user still needs to see it)
         window.helper.parts_search.current_list_saved = true;
