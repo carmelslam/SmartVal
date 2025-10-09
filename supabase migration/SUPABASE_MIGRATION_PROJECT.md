@@ -438,6 +438,7 @@ INSERT INTO storage.buckets (id, name, public) VALUES
 3. Implement proper RLS policies
 4. Add role-based permissions
 5. Migrate from current auth system
+6. connct user to activities in the system where its required - like parts search , creating a cse and so on 
 
 ### Phase 7: File Storage & OneDrive Integration
 1. Implement file upload to Supabase
