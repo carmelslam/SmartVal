@@ -396,7 +396,7 @@ INSERT INTO storage.buckets (id, name, public) VALUES
     1. Locate parts : using the paths :
         1. suppose table that hosts catalogs from known suppliers = main search source, 
         2. make.com conducts web search ( name nd image based), 
-        3. car-part.co.il done on frame in the system , returns a pdf that goes to make.com OCR - search results then behave like web search .  We need to upgrade the system/ parts search module  form creation and the export to car part site .
+        
     2. Select parts - Catalog results and search will show in a UI with checklist- checked items will go to selected parts table and from there will be assigned to damage centers ( option ) or sent for print/ one drive save.
     3. Capture search results  from all paths in supabase table - search results parts . 
     4. Capture selected parts in selected table in supabase per plate
@@ -410,7 +410,7 @@ INSERT INTO storage.buckets (id, name, public) VALUES
     12. Rethink the function buttons on the UI and rebuild the parts search module to be compatible with the architecture. 
      13. Support high volume search 
 
-**FIX AND Integrate with existing helper structure rpoblems with parts_search:**
+**FIX AND Integrate with existing helper structure rpoblems with parts_search:** *this section is for later - this inckudes the parts floating screen* 
   Parts required problems :
     The page doesn’t populate from helper when helper is restore, 
     2. The total cost is not detected 
