@@ -1795,8 +1795,9 @@ document.getElementById('sendResultToOCRBtn').addEventListener('click', function
       }
     };
     
-    // Check for duplicates
-    const isDuplicate = selectedParts.some(existing => 
+    // SESSION 19: Check for duplicates in current_selected_list
+    const currentList = window.helper?.parts_search?.current_selected_list || [];
+    const isDuplicate = currentList.some(existing => 
       existing.name === item.name && 
       existing.supplier === item.supplier &&
       existing.source === item.source
@@ -1807,8 +1808,16 @@ document.getElementById('sendResultToOCRBtn').addEventListener('click', function
       return;
     }
     
-    // Add to selected parts
-    selectedParts.push(item);
+    // SESSION 19: Add to current_selected_list
+    if (!window.helper) window.helper = {};
+    if (!window.helper.parts_search) window.helper.parts_search = {};
+    if (!window.helper.parts_search.current_selected_list) {
+      window.helper.parts_search.current_selected_list = [];
+    }
+    
+    window.helper.parts_search.current_selected_list.push(item);
+    sessionStorage.setItem('helper', JSON.stringify(window.helper));
+    clearPartsCache();
     updateSelectedPartsList();
     
     // Visual feedback
@@ -1832,16 +1841,27 @@ document.getElementById('sendResultToOCRBtn').addEventListener('click', function
       document.getElementById('part_source').value = result.source;
     }
     
-    // Add to selected parts
+    // SESSION 19: Add to current_selected_list
     const item = { 
       group: result.category || 'מחיפוש', 
       name: result.name || result.description || '', 
       qty: 1, 
       source: result.source || 'תחליפי',
       price: result.price || '',
-      supplier: result.supplier || ''
+      supplier: result.supplier || '',
+      id: `search_result_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      added_at: new Date().toISOString()
     };
-    selectedParts.push(item);
+    
+    if (!window.helper) window.helper = {};
+    if (!window.helper.parts_search) window.helper.parts_search = {};
+    if (!window.helper.parts_search.current_selected_list) {
+      window.helper.parts_search.current_selected_list = [];
+    }
+    
+    window.helper.parts_search.current_selected_list.push(item);
+    sessionStorage.setItem('helper', JSON.stringify(window.helper));
+    clearPartsCache();
     updateSelectedPartsList();
     
     alert('✅ החלק נוסף לרשימה');
