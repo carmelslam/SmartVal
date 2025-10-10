@@ -320,9 +320,40 @@
   // Auto-populate on page load
   populateVehicleDataFromHelper();
   
-  // SESSION 17 TASK 2: Update selected parts list UI after helper loads
-  // Wait for function to be defined (it's declared later in the file)
-  setTimeout(() => {
+  // SESSION 20 TASK 4: Auto-sync Supabase→helper on page load
+  setTimeout(async () => {
+    console.log('🔄 SESSION 20: Starting auto-sync from Supabase to helper...');
+    
+    try {
+      const plate = window.helper?.meta?.plate || window.helper?.meta?.license_plate;
+      
+      if (plate && window.supabase && typeof getSelectedParts === 'function') {
+        console.log('📦 SESSION 20: Loading parts from Supabase for plate:', plate);
+        
+        const supabaseParts = await getSelectedParts({ plate: plate });
+        
+        if (supabaseParts && supabaseParts.length > 0) {
+          console.log(`✅ SESSION 20: Found ${supabaseParts.length} parts in Supabase`);
+          
+          if (!window.helper.parts_search) {
+            window.helper.parts_search = {};
+          }
+          
+          window.helper.parts_search.selected_parts = supabaseParts;
+          
+          sessionStorage.setItem('helper', JSON.stringify(window.helper));
+          console.log(`💾 SESSION 20: Synced ${supabaseParts.length} parts from Supabase to helper`);
+        } else {
+          console.log('ℹ️ SESSION 20: No parts found in Supabase for this plate');
+        }
+      } else {
+        console.log('⚠️ SESSION 20: Auto-sync skipped - missing plate, Supabase, or getSelectedParts function');
+      }
+    } catch (error) {
+      console.error('❌ SESSION 20: Error during auto-sync:', error);
+    }
+    
+    // SESSION 17 TASK 2: Update selected parts list UI after helper loads
     if (typeof updateSelectedPartsList === 'function') {
       updateSelectedPartsList();
       console.log('✅ SESSION 17: Updated selected parts list UI on page load');
@@ -2570,7 +2601,7 @@ document.getElementById('sendResultToOCRBtn').addEventListener('click', function
   }
   
   // SESSION 14 STEP 3: Save current session to cumulative list
-  function saveCurrentToList() {
+  async function saveCurrentToList() {
     const currentList = window.helper?.parts_search?.current_selected_list || [];
     const alreadySaved = window.helper?.parts_search?.current_list_saved || false;
     
@@ -2589,6 +2620,44 @@ document.getElementById('sendResultToOCRBtn').addEventListener('click', function
     
     if (confirmSave) {
       try {
+        const plate = window.helper?.meta?.plate || window.helper?.meta?.license_plate;
+        
+        // SESSION 20: TASK 3 - Save each part to Supabase FIRST
+        if (plate && window.supabase && window.partsSearchSupabaseService) {
+          console.log(`💾 SESSION 20: Saving ${currentList.length} parts to Supabase...`);
+          let successCount = 0;
+          let errorCount = 0;
+          
+          for (const part of currentList) {
+            try {
+              const partId = await window.partsSearchSupabaseService.saveSelectedPart(
+                plate,
+                part,
+                {
+                  searchResultId: part.search_result_id || null,
+                  searchContext: {
+                    make: window.helper?.vehicle?.make,
+                    model: window.helper?.vehicle?.model,
+                    year: window.helper?.vehicle?.year
+                  }
+                }
+              );
+              
+              if (partId) {
+                successCount++;
+                console.log(`✅ SESSION 20: Part ${successCount}/${currentList.length} saved to Supabase:`, partId);
+              }
+            } catch (error) {
+              errorCount++;
+              console.error(`❌ SESSION 20: Error saving part to Supabase:`, error);
+            }
+          }
+          
+          console.log(`💾 SESSION 20: Supabase save complete: ${successCount} success, ${errorCount} errors`);
+          
+          clearPartsCache();
+        }
+        
         // SESSION 17: Initialize selected_parts if needed
         if (!window.helper.parts_search.selected_parts) {
           window.helper.parts_search.selected_parts = [];
@@ -3193,13 +3262,27 @@ ${partsText}`;
       `;
       
       const partsList = parts.map((part, index) => `
-        <div style="padding: 10px; border-bottom: 1px solid #e5e7eb; background: ${index % 2 === 0 ? '#f9fafb' : 'white'};">
-          <div style="font-weight: bold; color: #059669;">${part.group || 'N/A'} - ${part.name || 'N/A'}</div>
-          <div style="font-size: 12px; color: #6b7280;">
-            כמות: ${part.quantity || part.qty || 1} | מקור: ${part.source || 'N/A'}
+        <div style="padding: 10px; border-bottom: 1px solid #e5e7eb; background: ${index % 2 === 0 ? '#f9fafb' : 'white'}; display: flex; justify-content: space-between; align-items: center;">
+          <div style="flex: 1;">
+            <div style="font-weight: bold; color: #059669;">${part.part_family || part.group || 'N/A'} - ${part.part_name || part.name || 'N/A'}</div>
+            <div style="font-size: 12px; color: #6b7280;">
+              כמות: ${part.quantity || part.qty || 1} | מקור: ${part.source || 'N/A'}
+            </div>
+            <div style="font-size: 11px; color: #9ca3af;">
+              קוד: ${part.pcode || part.oem || 'N/A'} | Created: ${part.created_at ? new Date(part.created_at).toLocaleString('he-IL') : 'N/A'}
+            </div>
           </div>
-          <div style="font-size: 11px; color: #9ca3af;">
-            ID: ${part.id} | Created: ${part.created_at ? new Date(part.created_at).toLocaleString('he-IL') : 'N/A'}
+          <div style="display: flex; gap: 5px; margin-right: 10px;">
+            <button onclick="window.editPart(${index})" 
+                    style="background: #f59e0b; color: white; border: none; padding: 6px 12px; 
+                           border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: bold;">
+              ✏️ ערוך
+            </button>
+            <button onclick="window.deletePartFromModal('${part.id}', '${part.plate}')" 
+                    style="background: #ef4444; color: white; border: none; padding: 6px 12px; 
+                           border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: bold;">
+              🗑️ מחק
+            </button>
           </div>
         </div>
       `).join('');
@@ -3264,6 +3347,51 @@ ${partsText}`;
     navigator.clipboard.writeText(JSON.stringify(lastLoadedParts, null, 2))
       .then(() => alert('✅ Parts JSON copied to clipboard!'))
       .catch(() => alert('❌ Failed to copy'));
+  };
+  
+  // SESSION 20: Delete part from test modal
+  window.deletePartFromModal = async function(partId, plate) {
+    console.log('🗑️ SESSION 20: Deleting part from modal:', partId);
+    
+    if (!partId || !plate) {
+      alert('❌ Missing part ID or plate number');
+      return;
+    }
+    
+    if (!confirm('האם אתה בטוח שברצונך למחוק חלק זה?')) {
+      return;
+    }
+    
+    try {
+      const { error } = await window.supabase
+        .from('selected_parts')
+        .delete()
+        .eq('id', partId)
+        .eq('plate', plate);
+      
+      if (error) {
+        console.error('❌ SESSION 20: Supabase delete error:', error);
+        alert('❌ שגיאה במחיקה:\n\n' + error.message);
+        return;
+      }
+      
+      console.log('✅ SESSION 20: Part deleted from Supabase');
+      
+      clearPartsCache();
+      
+      alert('✅ החלק נמחק בהצלחה');
+      
+      const modal = document.querySelector('[style*="z-index: 10001"]');
+      const backdrop = document.querySelector('[style*="z-index: 10000"]');
+      if (modal) modal.remove();
+      if (backdrop) backdrop.remove();
+      
+      window.TEST_showAllSavedParts();
+      
+    } catch (error) {
+      console.error('❌ SESSION 20: Error deleting part:', error);
+      alert('❌ שגיאה במחיקה:\n\n' + error.message);
+    }
   };
   
   // SESSION 19: TEST - Sync helper from Supabase
