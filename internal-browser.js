@@ -542,13 +542,20 @@
     } catch (error) {
       console.error('Auto-fill error:', error);
       
+      // Get credentials from vault for display
+      const credentials = await credentialsVault.getCredentials(config.credentialKey);
+      
       // Provide specific error handling for different error types
       if (error.name === 'SecurityError' || error.message.includes('cross-origin')) {
         updateStatus('מילוי אוטומטי חסום - גישה ידנית נדרשת');
-        showCredentialsPopup(config.credentials);
+        if (credentials) {
+          showCredentialsPopup(credentials);
+        }
       } else {
         updateStatus('שגיאה במילוי אוטומטי - נסה ידנית');
-        alert('לא ניתן למלא אוטומטית. נסה למלא ידנית.');
+        if (credentials) {
+          showCredentialsPopup(credentials);
+        }
       }
     }
   };
