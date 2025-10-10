@@ -1013,9 +1013,21 @@ class PartsSearchResultsPiP {
               .review-container {
                 padding: 0;
                 margin: 0;
+                max-width: 100%;
               }
               .pip-window {
                 box-shadow: none;
+              }
+              .results-container {
+                max-height: none !important;
+                overflow: visible !important;
+              }
+              .table-wrapper {
+                max-height: none !important;
+                overflow: visible !important;
+              }
+              body {
+                background: white !important;
               }
             }
           </style>
