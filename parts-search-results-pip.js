@@ -415,11 +415,14 @@ class PartsSearchResultsPiP {
    * Save selected part to both Supabase and helper
    */
   async saveSelectedPart(item) {
-    // SESSION 17 TASK 3: First check if helper will accept this part
+    // SESSION 19: First check if helper will accept this part
     const helperAccepted = this.addToHelper(item);
     
     if (!helperAccepted) {
-      console.log('⚠️ SESSION 17: Helper rejected part (duplicate), skipping Supabase save');
+      console.log('⚠️ SESSION 19: Helper rejected part (duplicate), reverting selection');
+      // SESSION 19: Remove from selectedItems since it was rejected
+      this.selectedItems.delete(item.id);
+      this.updateSelectionCount();
       return; // Don't save to Supabase if helper rejected
     }
     
