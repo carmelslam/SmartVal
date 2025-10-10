@@ -2643,8 +2643,7 @@ document.getElementById('sendResultToOCRBtn').addEventListener('click', function
         }
         console.log('✅ SESSION 14: Helper arrays cleared (cumulative + current)');
         
-        // SESSION 14: STEP 3 - Clear local array (backward compatibility)
-        selectedParts.length = 0;
+        // SESSION 19: No need to clear selectedParts (deprecated array)
         
         // SESSION 14: STEP 4 - Update UI
         updateSelectedPartsList();
@@ -2770,13 +2769,16 @@ document.getElementById('sendResultToOCRBtn').addEventListener('click', function
   }
   
   // ✅ NEW: Duplicate last part functionality
-  function duplicateSelectedPart() {
-    if (selectedParts.length === 0) {
+  async function duplicateSelectedPart() {
+    // SESSION 19: Read from current_selected_list
+    const currentList = window.helper?.parts_search?.current_selected_list || [];
+    
+    if (currentList.length === 0) {
       alert('אין חלקים ברשימה לשכפול');
       return;
     }
     
-    const lastPart = selectedParts[selectedParts.length - 1];
+    const lastPart = currentList[currentList.length - 1];
     const duplicatedPart = {
       ...lastPart,
       id: `part_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
@@ -2784,7 +2786,10 @@ document.getElementById('sendResultToOCRBtn').addEventListener('click', function
       duplicated_from: lastPart.id
     };
     
-    selectedParts.push(duplicatedPart);
+    // SESSION 19: Write to current_selected_list
+    currentList.push(duplicatedPart);
+    sessionStorage.setItem('helper', JSON.stringify(window.helper));
+    clearPartsCache();
     updateSelectedPartsList();
     
     // Show notification
@@ -2792,7 +2797,7 @@ document.getElementById('sendResultToOCRBtn').addEventListener('click', function
       showNotification(`שוכפל חלק: ${lastPart.name}`, 'success');
     }
     
-    console.log(`📄 Duplicated part: ${lastPart.group} - ${lastPart.name}`);
+    console.log(`📄 SESSION 19: Duplicated part: ${lastPart.group} - ${lastPart.name}`);
   }
   
   // SESSION 14 TASK 1: Async wrapper functions for onclick handlers
@@ -2824,43 +2829,11 @@ document.getElementById('sendResultToOCRBtn').addEventListener('click', function
 
   // ✅ NEW: Load saved selected parts from helper on page initialization
   function loadSavedPartsFromHelper() {
-    console.log('📦 Loading saved selected parts from helper...');
-    
-    try {
-      const helperString = sessionStorage.getItem('helper');
-      if (helperString) {
-        const helper = JSON.parse(helperString);
-        
-        // Load selected parts from helper.parts_search.selected_parts
-        if (helper.parts_search && helper.parts_search.selected_parts && Array.isArray(helper.parts_search.selected_parts)) {
-          const savedParts = helper.parts_search.selected_parts;
-          console.log(`✅ Found ${savedParts.length} saved selected parts in helper`);
-          
-          // Clear current array and load saved parts
-          selectedParts.length = 0;
-          savedParts.forEach(part => {
-            selectedParts.push({
-              id: part.id || Date.now() + Math.random(),
-              group: part.group || 'לא צוין',
-              name: part.name || 'לא צוין',
-              qty: part.qty || '1',
-              source: part.source || 'מקורי',
-              price: part.price || '',
-              supplier: part.supplier || '',
-              added_at: part.added_at || new Date().toISOString()
-            });
-          });
-          
-          console.log(`📦 Loaded ${selectedParts.length} parts from helper storage`);
-        } else {
-          console.log('ℹ️ No saved selected parts found in helper');
-        }
-      } else {
-        console.log('ℹ️ No helper data found in session storage');
-      }
-    } catch (error) {
-      console.error('❌ Error loading saved parts from helper:', error);
-    }
+    // SESSION 19: This function is now DEPRECATED
+    // Helper is fallback only, not used for loading
+    // Parts are loaded from Supabase via getSelectedParts()
+    console.log('⚠️ SESSION 19: loadSavedPartsFromHelper is deprecated - use getSelectedParts() instead');
+    console.log('📦 Helper is fallback only in new architecture');
   }
 
   window.loadSavedPartsFromHelper = loadSavedPartsFromHelper;
