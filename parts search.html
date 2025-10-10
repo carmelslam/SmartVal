@@ -609,7 +609,195 @@ ${part.supplier ? `   ספק: ${part.supplier}` : ''}
   });
 </script>
 <script>
-  const selectedParts = [];
+  // ========================================
+  // SESSION 19: NEW ARCHITECTURE
+  // Two distinct functions replace legacy selectedParts array
+  // ========================================
+
+  // FUNCTION 1: captureQueryData()
+  // Purpose: Capture search query + car details for search operations
+  // Returns: Query object for Supabase search, webhook, and search_session table
+  function captureQueryData() {
+    console.log('📊 SESSION 19: Capturing query data...');
+    
+    // Primary source: Form DOM elements
+    const plateInput = document.getElementById('license_plate');
+    const makeInput = document.getElementById('manufacturer');
+    const modelInput = document.getElementById('model');
+    const yearInput = document.getElementById('year');
+    const searchTypeSimple = document.getElementById('simple_search');
+    const searchTypeAdvanced = document.getElementById('advanced_search');
+    
+    // Fallback source: helper object
+    const helper = window.helper || {};
+    const meta = helper.meta || {};
+    const vehicle = helper.vehicle || {};
+    
+    // Build query object with fallbacks
+    const queryData = {
+      // Car details
+      plate: plateInput?.value || meta.plate || meta.license_plate || '',
+      make: makeInput?.value || meta.make || vehicle.manufacturer || '',
+      model: modelInput?.value || meta.model || vehicle.model || '',
+      year: yearInput?.value || meta.year || vehicle.year || '',
+      
+      // Search type
+      search_type: searchTypeAdvanced?.checked ? 'advanced' : 'simple',
+      
+      // Search parameters (from active search type)
+      search_term: '',
+      filters: {},
+      
+      // Metadata
+      timestamp: new Date().toISOString(),
+      session_id: helper.session_id || `session_${Date.now()}`
+    };
+    
+    // Get search term based on search type
+    if (queryData.search_type === 'simple') {
+      const simpleTermInput = document.getElementById('simple_search_term');
+      queryData.search_term = simpleTermInput?.value || '';
+    } else {
+      const advancedTermInput = document.getElementById('advanced_search_term');
+      queryData.search_term = advancedTermInput?.value || '';
+      
+      // Advanced filters (if applicable)
+      const partGroupInput = document.getElementById('part_group_filter');
+      const partCodeInput = document.getElementById('part_code_filter');
+      
+      queryData.filters = {
+        part_group: partGroupInput?.value || '',
+        part_code: partCodeInput?.value || ''
+      };
+    }
+    
+    // Validation: Check required fields
+    if (!queryData.plate) {
+      console.warn('⚠️ captureQueryData: Missing plate number');
+    }
+    
+    console.log('✅ SESSION 19: Query data captured:', queryData);
+    return queryData;
+  }
+
+  // FUNCTION 2: getSelectedParts()
+  // Purpose: Retrieve cumulative selected parts from Supabase (source of truth)
+  // Returns: Promise<Array> of parts or empty array
+  let partsCache = null;
+  let cacheTimestamp = null;
+  const CACHE_DURATION = 30000; // 30 seconds
+
+  async function getSelectedParts(options = {}) {
+    console.log('📦 SESSION 19: Getting selected parts...', options);
+    
+    const {
+      plate = null,
+      filter = null,
+      limit = null,
+      offset = 0
+    } = options;
+    
+    // Determine plate to query
+    const queryPlate = plate || 
+                       document.getElementById('license_plate')?.value || 
+                       window.helper?.meta?.plate || 
+                       window.helper?.meta?.license_plate;
+    
+    if (!queryPlate) {
+      console.warn('⚠️ getSelectedParts: No plate number available');
+      return [];
+    }
+    
+    // Check cache (30 seconds)
+    const now = Date.now();
+    if (partsCache && cacheTimestamp && (now - cacheTimestamp) < CACHE_DURATION) {
+      console.log('✅ SESSION 19: Using cached parts data');
+      return filterParts(partsCache, filter, limit, offset);
+    }
+    
+    try {
+      // Primary source: Supabase selected_parts table
+      console.log('🔍 SESSION 19: Querying Supabase for plate:', queryPlate);
+      
+      const { data, error } = await window.supabase
+        .from('selected_parts')
+        .select('*')
+        .eq('plate', queryPlate)
+        .order('created_at', { ascending: false });
+      
+      if (error) {
+        console.error('❌ SESSION 19: Supabase query error:', error);
+        throw error;
+      }
+      
+      if (data && data.length > 0) {
+        console.log(`✅ SESSION 19: Retrieved ${data.length} parts from Supabase`);
+        
+        // Update cache
+        partsCache = data;
+        cacheTimestamp = now;
+        
+        return filterParts(data, filter, limit, offset);
+      }
+      
+      console.log('ℹ️ SESSION 19: No parts found in Supabase');
+      return [];
+      
+    } catch (error) {
+      console.error('❌ SESSION 19: Error querying Supabase, falling back to helper:', error);
+      
+      // Fallback: helper.parts_search.selected_parts
+      const helperParts = window.helper?.parts_search?.selected_parts || [];
+      
+      if (helperParts.length > 0) {
+        console.log(`✅ SESSION 19: Using fallback helper data (${helperParts.length} parts)`);
+        return filterParts(helperParts, filter, limit, offset);
+      }
+      
+      console.log('ℹ️ SESSION 19: No parts in fallback helper either');
+      return [];
+    }
+  }
+
+  // Helper function: Filter parts by text and apply pagination
+  function filterParts(parts, filter, limit, offset) {
+    let filtered = parts;
+    
+    // Apply text filter if provided
+    if (filter && filter.trim() !== '') {
+      const filterLower = filter.toLowerCase();
+      filtered = parts.filter(part => {
+        return (
+          (part.name && part.name.toLowerCase().includes(filterLower)) ||
+          (part.group && part.group.toLowerCase().includes(filterLower)) ||
+          (part.pcode && part.pcode.toLowerCase().includes(filterLower)) ||
+          (part.oem && part.oem.toLowerCase().includes(filterLower))
+        );
+      });
+      console.log(`🔍 SESSION 19: Filter "${filter}" matched ${filtered.length} parts`);
+    }
+    
+    // Apply pagination if limit provided
+    if (limit) {
+      filtered = filtered.slice(offset, offset + limit);
+    } else if (offset > 0) {
+      filtered = filtered.slice(offset);
+    }
+    
+    return filtered;
+  }
+
+  // Clear cache function (call when parts are modified)
+  function clearPartsCache() {
+    console.log('🗑️ SESSION 19: Clearing parts cache');
+    partsCache = null;
+    cacheTimestamp = null;
+  }
+
+  // ========================================
+  // END SESSION 19 NEW FUNCTIONS
+  // ========================================
+
   const listUI = document.getElementById('selected_parts_list');
 
   function addFullPart() {
