@@ -1468,9 +1468,9 @@ class PartsSearchResultsPiP {
         background: white;
         border-radius: 12px;
         box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
-        max-width: 95vw;
+        max-width: 90vw;
         max-height: 90vh;
-        width: 1200px;
+        width: 1100px;
         display: flex;
         flex-direction: column;
         overflow: hidden;
