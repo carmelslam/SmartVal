@@ -1944,7 +1944,30 @@ document.getElementById('sendResultToOCRBtn').addEventListener('click', function
     // Show management buttons when there are parts
     managementButtons.style.display = 'block';
     
-    listUI.innerHTML = partsToDisplay.map((item, index) => `
+    listUI.innerHTML = partsToDisplay.map((item, index) => {
+      // SESSION 18: Check if part is from different vehicle (compatibility part)
+      const userCarMake = window.helper?.vehicle?.manufacturer || window.helper?.meta?.make;
+      const userCarModel = window.helper?.vehicle?.model || window.helper?.meta?.model;
+      const isCompatibilityPart = (item.part_make && item.part_make !== userCarMake) || 
+                                   (item.part_model && item.part_model !== userCarModel);
+      
+      const compatibilityBadge = isCompatibilityPart ? `
+        <div style="
+          background: #fef3c7; 
+          border: 1px solid #fbbf24; 
+          color: #92400e; 
+          padding: 4px 8px; 
+          border-radius: 4px; 
+          font-size: 11px; 
+          margin-top: 4px;
+          display: inline-block;
+        ">
+          ℹ️ חלק תואם מ-${item.part_make || ''} ${item.part_model || ''} 
+          ${item.part_year_from ? `(${item.part_year_from}${item.part_year_to ? '-' + item.part_year_to : ''})` : ''}
+        </div>
+      ` : '';
+      
+      return `
       <li style="
         margin-bottom: 8px; 
         padding: 12px; 
@@ -1966,6 +1989,7 @@ document.getElementById('sendResultToOCRBtn').addEventListener('click', function
             ${item.price ? ` | מחיר: <strong style="color: #059669;">₪${item.price}</strong>` : ''}
             ${item.supplier ? ` | ספק: <strong>${item.supplier}</strong>` : ''}
           </div>
+          ${compatibilityBadge}
         </div>
         <div style="display: flex; gap: 5px; align-items: center;">
           <button type="button" onclick="editPart(${index})" 
