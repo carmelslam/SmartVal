@@ -146,10 +146,10 @@
 </select>
 <input type="number" id="part_quantity" placeholder="כמות" min="1" value="1">
 
+<button type="button" class="btn" onclick="addFullPart()" style="background: #f59e0b; width: 100%; margin: 10px 0;">➕ הוסף חלק לרשימה</button>
+
 <!-- Supabase Search Button -->
 <button class="btn" type="button" onclick="searchSupabase()" style="background: #10b981; width: 100%; margin: 10px 0;">🔍 חפש ב-Supabase</button>
-
-<button type="button" class="btn" onclick="addFullPart()">הוסף חלק לרשימה</button>
 
 <!-- Selected Parts List Header and Display (matching screenshot design) -->
 <div style="margin-top: 20px; background: #c5f5e8; padding: 15px; border-radius: 8px; border: 1px solid #10b981;">
@@ -492,16 +492,10 @@
       engine_volume: document.getElementById('engine_volume').value
     };
     
-    // ✅ FIXED: Capture ALL parts from selectedParts array, not just current dropdown
+    // SESSION 20: Smart form only uses current form part (NOT selected parts list)
+    // Purpose: Create search query for external sites, not for already selected parts
     let partsToExport = [];
     
-    // SESSION 19: Get parts from current_selected_list
-    const currentList = window.helper?.parts_search?.current_selected_list || [];
-    if (currentList.length > 0) {
-      partsToExport = [...currentList];
-    }
-    
-    // Also add current form part if it's filled out and not already in the list
     const currentPart = {
       group: document.getElementById('part_group').value,
       name: document.getElementById('part_name').value,
@@ -510,16 +504,7 @@
     };
     
     if (currentPart.group && currentPart.name) {
-      // Check if this part is not already in the list
-      const isDuplicate = partsToExport.some(p => 
-        p.group === currentPart.group && 
-        p.name === currentPart.name && 
-        p.source === currentPart.source
-      );
-      
-      if (!isDuplicate) {
-        partsToExport.push(currentPart);
-      }
+      partsToExport.push(currentPart);
     }
     
     if (!vehicle.manufacturer || !vehicle.model) {
