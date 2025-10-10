@@ -1007,27 +1007,49 @@ class PartsSearchResultsPiP {
             }
 
             @media print {
-              .review-footer, #notification {
+              .review-footer, #notification, .pip-close-btn, .pip-actions {
                 display: none !important;
               }
               .review-container {
-                padding: 0;
-                margin: 0;
-                max-width: 100%;
+                padding: 0 !important;
+                margin: 0 !important;
+                max-width: 100% !important;
+                height: auto !important;
               }
               .pip-window {
-                box-shadow: none;
+                box-shadow: none !important;
+                max-height: none !important;
+                height: auto !important;
+                overflow: visible !important;
+                display: block !important;
               }
               .results-container {
                 max-height: none !important;
+                height: auto !important;
                 overflow: visible !important;
+                flex: none !important;
+                padding: 0 !important;
               }
               .table-wrapper {
                 max-height: none !important;
+                height: auto !important;
                 overflow: visible !important;
+                border: none !important;
+              }
+              .results-table {
+                page-break-inside: auto !important;
+              }
+              .result-row {
+                page-break-inside: avoid !important;
+                page-break-after: auto !important;
+              }
+              .results-table thead {
+                display: table-header-group !important;
               }
               body {
                 background: white !important;
+                padding: 0 !important;
+                margin: 0 !important;
               }
             }
           </style>
