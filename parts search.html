@@ -800,7 +800,7 @@ ${part.supplier ? `   ספק: ${part.supplier}` : ''}
 
   const listUI = document.getElementById('selected_parts_list');
 
-  function addFullPart() {
+  async function addFullPart() {
     const group = document.getElementById('part_group').value;
     const name = document.getElementById('part_name').value;
     const qty = document.getElementById('part_quantity').value || '1';
@@ -811,8 +811,9 @@ ${part.supplier ? `   ספק: ${part.supplier}` : ''}
       return;
     }
 
-    // Check for duplicates
-    const isDuplicate = selectedParts.some(existing => 
+    // SESSION 19: Check for duplicates in current_selected_list
+    const currentList = window.helper?.parts_search?.current_selected_list || [];
+    const isDuplicate = currentList.some(existing => 
       existing.group === group && 
       existing.name === name && 
       existing.source === source
@@ -832,9 +833,22 @@ ${part.supplier ? `   ספק: ${part.supplier}` : ''}
       added_at: new Date().toISOString()
     };
     
-    selectedParts.push(item);
+    // SESSION 19: Write to current_selected_list (not selectedParts)
+    if (!window.helper) window.helper = {};
+    if (!window.helper.parts_search) window.helper.parts_search = {};
+    if (!window.helper.parts_search.current_selected_list) {
+      window.helper.parts_search.current_selected_list = [];
+    }
+    
+    window.helper.parts_search.current_selected_list.push(item);
+    
+    // Save to sessionStorage
+    sessionStorage.setItem('helper', JSON.stringify(window.helper));
+    
+    // Clear parts cache
+    clearPartsCache();
 
-    // ✅ FIXED: Use the proper updateSelectedPartsList function instead of manual DOM manipulation
+    // Update UI
     updateSelectedPartsList();
 
     // Clear form for next entry
@@ -843,7 +857,7 @@ ${part.supplier ? `   ספק: ${part.supplier}` : ''}
     document.getElementById('part_source').value = '';
     
     // Visual feedback
-    console.log(`✅ Added part: ${group} - ${name} (${qty}x ${source})`);
+    console.log(`✅ SESSION 19: Added part to current_selected_list: ${group} - ${name} (${qty}x ${source})`);
     
     // Show notification if available
     if (typeof showNotification === 'function') {
