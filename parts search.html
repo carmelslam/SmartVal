@@ -1880,124 +1880,14 @@ document.getElementById('sendResultToOCRBtn').addEventListener('click', function
   // exportSelectedParts function moved to lines 526-580 (webhook-based Excel export)
   
   window.saveToSession = function() {
-    if (selectedParts.length === 0) {
-      alert('אין חלקים לשמירה');
-      return;
-    }
+    // SESSION 19: This function is now deprecated - saveCurrentToList handles saving
+    console.warn('⚠️ SESSION 19: saveToSession is deprecated - use saveCurrentToList instead');
     
-    try {
-      // ✅ FIXED: Use correct sessionStorage location for helper data
-      let helper = {};
-      try {
-        helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
-      } catch (e) {
-        console.warn('Failed to parse helper from sessionStorage, using empty object');
-        helper = {};
-      }
-      
-      // Initialize parts_search structure
-      helper.parts_search = helper.parts_search || { 
-        results: [], 
-        all_results: [], 
-        search_history: [],
-        selected_parts: [],
-        unselected_parts: [],
-        summary: {}
-      };
-      
-      // Mark selected parts in all_results
-      if (helper.parts_search.all_results) {
-        helper.parts_search.all_results.forEach(result => {
-          const isSelected = selectedParts.some(selected => 
-            (selected.name === result.name || selected.name === result.description) &&
-            selected.source === result.source
-          );
-          if (isSelected) {
-            result.selected = true;
-            result.selected_timestamp = new Date().toISOString();
-          }
-        });
-      }
-      
-      // Save selected parts to the dedicated selected_parts array
-      helper.parts_search.selected_parts = [...(helper.parts_search.selected_parts || []), ...selectedParts];
-      
-      // Save selected parts to results (for backward compatibility)
-      helper.parts_search.results = [...(helper.parts_search.results || []), ...selectedParts];
-      
-      // Update summary with comprehensive information
-      helper.parts_search.summary = {
-        total_results: helper.parts_search.results.length,
-        total_all_results: helper.parts_search.all_results?.length || 0,
-        selected_count: helper.parts_search.selected_parts.length || selectedParts.length,
-        total_searches: helper.parts_search.search_history?.length || 0,
-        last_updated: new Date().toISOString()
-      };
-      
-      // Update meta information
-      helper.meta = helper.meta || {};
-      helper.meta.last_updated = new Date().toISOString();
-      
-      // ✅ FIXED: Save to correct sessionStorage location
-      sessionStorage.setItem('helper', JSON.stringify(helper));
-      
-      // Also save to localStorage for backup compatibility
-      localStorage.setItem('helper_data', JSON.stringify(helper));
-      
-      console.log(`✅ FIXED: Saved ${selectedParts.length} selected parts to helper (sessionStorage)`);
-      
-      // Trigger helper update broadcast if available
-      if (typeof window.broadcastHelperUpdate === 'function') {
-        window.broadcastHelperUpdate(['parts_search'], 'parts_save_session');
-      }
-      
-      // Check if opened from estimate builder
-      const partSearchTarget = sessionStorage.getItem('partSearchTarget');
-      if (partSearchTarget && window.opener) {
-        try {
-          const target = JSON.parse(partSearchTarget);
-          
-          // Send selected parts back to estimate builder
-          if (selectedParts.length > 0) {
-            window.opener.postMessage({
-              type: 'PARTS_SELECTED',
-              parts: selectedParts,
-              target: target
-            }, '*');
-            
-            alert(`✅ נשמרו ${selectedParts.length} חלקים והועברו לאומדן`);
-            window.close();
-            return;
-          }
-        } catch (e) {
-          console.error('Error communicating with estimate builder:', e);
-        }
-      }
-      
-      // ✅ NEW: Check if running inside damage centers wizard iframe
-      if (window.parent !== window && window.parent.postMessage) {
-        try {
-          // Send search results back to wizard
-          window.parent.postMessage({
-            type: 'partsSearchResults',
-            results: helper.parts_search?.current_session?.results || [],
-            selectedParts: selectedParts,
-            query: document.getElementById('free_query')?.value || '',
-            source: 'parts_search_iframe'
-          }, '*');
-          
-          console.log(`📤 Sent search results to wizard: ${selectedParts.length} parts selected`);
-          alert(`✅ נשמרו ${selectedParts.length} חלקים והועברו לאשף מוקדי הנזק`);
-          return;
-        } catch (e) {
-          console.error('Error communicating with damage centers wizard:', e);
-        }
-      }
-      
-      alert(`✅ נשמרו ${selectedParts.length} חלקים להמשך באשף`);
-    } catch (e) {
-      console.error('Error saving to session:', e);
-      alert('שגיאה בשמירה');
+    // Redirect to proper save function
+    if (typeof saveCurrentToList === 'function') {
+      saveCurrentToList();
+    } else {
+      alert('אנא השתמש בכפתור "שמור לרשימה" במקום');
     }
   };
   
@@ -3009,12 +2899,15 @@ document.getElementById('sendResultToOCRBtn').addEventListener('click', function
     });
   }
   
-  // ✅ FIX 5: Create toggle popup for parts list visibility in internal browser
+  // SESSION 19: Create toggle popup using current_selected_list
   function createPartsListTogglePopup() {
-    console.log('🎯 Creating parts list toggle popup for internal browser');
+    console.log('🎯 SESSION 19: Creating parts list toggle popup for internal browser');
     
-    if (selectedParts.length === 0) {
-      console.warn('⚠️ No parts selected for external site search');
+    // SESSION 19: Get parts from current_selected_list
+    const parts = window.helper?.parts_search?.current_selected_list || [];
+    
+    if (parts.length === 0) {
+      console.warn('⚠️ SESSION 19: No parts in current_selected_list');
       return;
     }
     
@@ -3043,7 +2936,7 @@ document.getElementById('sendResultToOCRBtn').addEventListener('click', function
       overflow-y: auto;
     `;
     
-    const partsListHTML = selectedParts.map((part, index) => `
+    const partsListHTML = parts.map((part, index) => `
       <div style="padding: 8px; border-bottom: 1px solid #eee; background: ${index % 2 === 0 ? '#f8f9fa' : 'white'};">
         <div style="font-weight: bold; color: #1e40af;">${part.group} - ${part.name}</div>
         <div style="font-size: 12px; color: #6b7280;">
@@ -3054,7 +2947,7 @@ document.getElementById('sendResultToOCRBtn').addEventListener('click', function
     
     popup.innerHTML = `
       <div style="background: linear-gradient(135deg, #3b82f6 0%, #1e40af 100%); color: white; padding: 12px; border-radius: 10px 10px 0 0; text-align: center;">
-        <strong>רשימת חלקים מבוקשים (${selectedParts.length})</strong>
+        <strong>רשימת חלקים מבוקשים (${parts.length})</strong>
       </div>
       <div style="padding: 12px;">
         <div style="max-height: 250px; overflow-y: auto; margin-bottom: 12px;">
@@ -3108,7 +3001,9 @@ document.getElementById('sendResultToOCRBtn').addEventListener('click', function
   
   // ✅ Helper functions for toggle popup
   window.copyPartsListForSite = function() {
-    const partsText = selectedParts.map(part => 
+    // SESSION 19: Get parts from current_selected_list
+    const parts = window.helper?.parts_search?.current_selected_list || [];
+    const partsText = parts.map(part => 
       `${part.group} - ${part.name} (כמות: ${part.qty}, מקור: ${part.source})`
     ).join('\n');
     
