@@ -171,7 +171,8 @@ class PartsSearchResultsPiP {
    */
   generatePiPHTML(searchContext = {}) {
     const firstResult = this.searchResults[0] || {};
-    const userName = 'ירון כיוף - שמאות וייעוץ';
+    this.userName = 'ירון כיוף - שמאות וייעוץ';
+    const userName = this.userName;
     
     return `
         <div class="pip-window" dir="rtl">
@@ -911,7 +912,7 @@ class PartsSearchResultsPiP {
               background: #f3f4f6;
             }
             .review-container {
-              max-width: 700px;
+              max-width: 900px;
               margin: 0 auto;
               background: white;
               padding: 20px;
