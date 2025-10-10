@@ -185,6 +185,10 @@
   <button type="button" onclick="window.TEST_showLegacyArray()" style="background: #ef4444; color: white; padding: 12px 24px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold;">
     🧪 TEST: Legacy selectedParts Array
   </button>
+  
+  <button type="button" onclick="window.TEST_showAllSavedParts()" style="background: #10b981; color: white; padding: 12px 24px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold;">
+    🧪 SESSION 19: Show All Saved Parts (Supabase)
+  </button>
 </div>
 <script>
   window.TEMP_clearAllHistory = async function() {
@@ -3140,6 +3144,146 @@ ${partsText}`;
     // Log details to console
     console.log('🔴 Legacy selectedParts:', selectedParts);
     console.log('✅ Current list:', currentList);
+  };
+  
+  // SESSION 19: TEST - Show all saved parts from Supabase table
+  window.TEST_showAllSavedParts = async function() {
+    console.log('🧪 SESSION 19: Loading all saved parts from Supabase...');
+    
+    const plate = document.getElementById('license_plate')?.value || 
+                  document.getElementById('plate')?.value ||
+                  window.helper?.meta?.plate;
+    
+    if (!plate) {
+      alert('❌ No plate number found!\n\nPlease enter a plate number first.');
+      return;
+    }
+    
+    try {
+      // Use getSelectedParts to fetch from Supabase
+      const parts = await getSelectedParts({ plate: plate });
+      
+      console.log('📦 SESSION 19: Retrieved parts from Supabase:', parts);
+      
+      // Create display
+      if (parts.length === 0) {
+        alert('ℹ️ No saved parts found in Supabase for plate: ' + plate);
+        return;
+      }
+      
+      // Show in modal
+      const modal = document.createElement('div');
+      modal.style.cssText = `
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background: white;
+        border: 3px solid #10b981;
+        border-radius: 16px;
+        padding: 20px;
+        max-width: 600px;
+        max-height: 80vh;
+        overflow-y: auto;
+        z-index: 10001;
+        box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+      `;
+      
+      const partsList = parts.map((part, index) => `
+        <div style="padding: 10px; border-bottom: 1px solid #e5e7eb; background: ${index % 2 === 0 ? '#f9fafb' : 'white'};">
+          <div style="font-weight: bold; color: #059669;">${part.group || 'N/A'} - ${part.name || 'N/A'}</div>
+          <div style="font-size: 12px; color: #6b7280;">
+            כמות: ${part.quantity || part.qty || 1} | מקור: ${part.source || 'N/A'}
+          </div>
+          <div style="font-size: 11px; color: #9ca3af;">
+            ID: ${part.id} | Created: ${part.created_at ? new Date(part.created_at).toLocaleString('he-IL') : 'N/A'}
+          </div>
+        </div>
+      `).join('');
+      
+      modal.innerHTML = `
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+          <h3 style="margin: 0; color: #059669;">🗂️ All Saved Parts (${parts.length})</h3>
+          <button onclick="this.parentElement.parentElement.remove()" 
+                  style="background: #ef4444; color: white; border: none; padding: 8px 16px; 
+                         border-radius: 8px; cursor: pointer; font-weight: bold;">
+            ✕ Close
+          </button>
+        </div>
+        <div style="font-size: 13px; color: #6b7280; margin-bottom: 15px;">
+          Plate: <strong>${plate}</strong>
+        </div>
+        <div style="max-height: 400px; overflow-y: auto;">
+          ${partsList}
+        </div>
+        <div style="margin-top: 15px; padding-top: 15px; border-top: 2px solid #e5e7eb; text-align: center;">
+          <button onclick="window.TEST_syncHelperFromSupabase()" 
+                  style="background: #3b82f6; color: white; border: none; padding: 10px 20px; 
+                         border-radius: 8px; cursor: pointer; font-weight: bold; margin-right: 10px;">
+            🔄 Sync to Helper
+          </button>
+          <button onclick="navigator.clipboard.writeText(JSON.stringify(${JSON.stringify(parts)}, null, 2))" 
+                  style="background: #8b5cf6; color: white; border: none; padding: 10px 20px; 
+                         border-radius: 8px; cursor: pointer; font-weight: bold;">
+            📋 Copy JSON
+          </button>
+        </div>
+      `;
+      
+      document.body.appendChild(modal);
+      
+      // Add backdrop
+      const backdrop = document.createElement('div');
+      backdrop.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0,0,0,0.5);
+        z-index: 10000;
+      `;
+      backdrop.onclick = () => {
+        modal.remove();
+        backdrop.remove();
+      };
+      document.body.appendChild(backdrop);
+      
+    } catch (error) {
+      console.error('❌ SESSION 19: Error loading saved parts:', error);
+      alert('❌ Error loading parts:\n\n' + error.message);
+    }
+  };
+  
+  // SESSION 19: TEST - Sync helper from Supabase
+  window.TEST_syncHelperFromSupabase = async function() {
+    console.log('🔄 SESSION 19: Syncing helper from Supabase...');
+    
+    const plate = document.getElementById('license_plate')?.value || 
+                  document.getElementById('plate')?.value ||
+                  window.helper?.meta?.plate;
+    
+    if (!plate) {
+      alert('❌ No plate number!');
+      return;
+    }
+    
+    try {
+      const parts = await getSelectedParts({ plate: plate });
+      
+      if (!window.helper) window.helper = {};
+      if (!window.helper.parts_search) window.helper.parts_search = {};
+      
+      window.helper.parts_search.selected_parts = parts;
+      sessionStorage.setItem('helper', JSON.stringify(window.helper));
+      
+      console.log(`✅ SESSION 19: Synced ${parts.length} parts to helper.parts_search.selected_parts`);
+      alert(`✅ Synced ${parts.length} parts to helper!\n\nHelper is now in sync with Supabase.`);
+      
+    } catch (error) {
+      console.error('❌ SESSION 19: Sync error:', error);
+      alert('❌ Sync failed:\n\n' + error.message);
+    }
   };
 
 </script>
