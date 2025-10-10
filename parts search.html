@@ -1030,18 +1030,21 @@ ${part.supplier ? `   ספק: ${part.supplier}` : ''}
     }
   }
 
-  // ✅ FIX 1: Implement missing exportSelectedParts function
-  function exportSelectedParts() {
-    console.log('📄 Exporting selected parts to Excel...');
+  // SESSION 19: Excel export function (uses getSelectedParts)
+  async function exportSelectedParts() {
+    console.log('📄 SESSION 19: Exporting selected parts to Excel...');
     
-    if (selectedParts.length === 0) {
+    // SESSION 19: Get parts from Supabase
+    const parts = await getSelectedParts({});
+    
+    if (parts.length === 0) {
       alert('אין חלקים נבחרים לייצוא');
       return;
     }
     
     // Prepare export payload
     const exportData = {
-      parts: selectedParts,
+      parts: parts,
       vehicle_context: {
         plate: document.getElementById('plate').value,
         manufacturer: document.getElementById('manufacturer').value,
@@ -1069,7 +1072,7 @@ ${part.supplier ? `   ספק: ${part.supplier}` : ''}
     })
     .then(result => {
       console.log('✅ Parts exported successfully:', result);
-      alert(`✅ ייצוא הושלם בהצלחה!\n${selectedParts.length} חלקים יוצאו לקובץ Excel`);
+      alert(`✅ ייצוא הושלם בהצלחה!\n${parts.length} חלקים יוצאו לקובץ Excel`);
       
       // If download URL is provided, trigger download
       if (result.download_url) {
@@ -1149,9 +1152,11 @@ ${part.supplier ? `   ספק: ${part.supplier}` : ''}
     }
   }
   
-  // ✅ FIX 3: Enhanced validation rules according to architecture
+  // SESSION 19: Enhanced validation using current_selected_list
   function validateSearchForm() {
-    const selectedPartsCount = selectedParts ? selectedParts.length : 0;
+    // SESSION 19: Get parts count from current_selected_list
+    const currentList = window.helper?.parts_search?.current_selected_list || [];
+    const selectedPartsCount = currentList.length;
     const freeQuery = document.getElementById('free_query').value.trim();
     const hasImage = imageBase64 !== null;
     const hasVehicleData = document.getElementById('manufacturer').value.trim() !== '';
