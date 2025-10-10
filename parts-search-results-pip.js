@@ -1139,6 +1139,11 @@ class PartsSearchResultsPiP {
               pollInterval: null,
 
               clearSelections: async function() {
+                if (this.parentPiP.selectedItems.size === 0) {
+                  this.showNotification('אין בחירות לנקות', 'error');
+                  return;
+                }
+
                 const confirmed = await this.showConfirm('האם אתה בטוח שברצונך לנקות את כל הבחירות?');
                 if (!confirmed) return;
 
