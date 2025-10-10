@@ -1913,11 +1913,17 @@ document.getElementById('sendResultToOCRBtn').addEventListener('click', function
     const managementButtons = document.getElementById('parts_management_buttons');
     const countDisplay = document.getElementById('selected_parts_count');
     
-    // SESSION 17 TASK 6: Load from Supabase FIRST (source of truth), then fallback to helper
+    // SESSION 19: Display current_selected_list ONLY (temp session parts)
+    // DO NOT load from Supabase table here - that's for permanent saved parts
     let partsToDisplay = [];
     
-    // Try to load from Supabase first
-    if (window.supabase) {
+    console.log('📋 SESSION 19: updateSelectedPartsList - showing current_selected_list only');
+    
+    // SESSION 19: Skip Supabase query - just show current session
+    // Supabase selected_parts table = permanent saved parts (read via getSelectedParts when needed)
+    // current_selected_list = temporary session parts (displayed here)
+    
+    if (false && window.supabase) { // SESSION 19: Disabled - use current_selected_list instead
       try {
         const plateInput = document.getElementById('plate');
         const plate = plateInput?.value?.trim() || window.helper?.meta?.plate || window.helper?.vehicle?.plate;
@@ -2056,13 +2062,15 @@ document.getElementById('sendResultToOCRBtn').addEventListener('click', function
       }
     }
     
-    // SESSION 14 STEP 2: Read from current_selected_list (current session only) for display
-    // SESSION 17: Show current_selected_list if it has data (persists on refresh)
+    // SESSION 19: Read from current_selected_list (current session only) for display
     partsToDisplay = window.helper?.parts_search?.current_selected_list || [];
+    
+    console.log(`✅ SESSION 19: Displaying ${partsToDisplay.length} parts from current_selected_list`);
     
     // Update count display
     if (countDisplay) {
       countDisplay.textContent = partsToDisplay.length;
+      console.log(`📊 SESSION 19: Updated count display to ${partsToDisplay.length}`);
     }
     
     if (partsToDisplay.length === 0) {
