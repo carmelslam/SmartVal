@@ -168,51 +168,6 @@
   <button type="button" class="btn" onclick="saveCurrentToList()" style="background: #3b82f6; font-size: 14px; padding: 8px 16px; margin: 0 5px;">💾 שמור לרשימה</button>
 </div>
 
-<!-- TEMPORARY: Testing Buttons - DELETE AFTER TESTING -->
-<div style="margin: 20px 0; text-align: center; display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
-  <button type="button" onclick="window.TEMP_clearAllHistory()" style="background: #ff0000; color: white; padding: 12px 24px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold;">
-    🧪 TEST: Clear ALL History (selected_parts)
-  </button>
-  
-  <button type="button" onclick="window.TEST_showPartsListPopup()" style="background: #9333ea; color: white; padding: 12px 24px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold;">
-    🧪 TEST #6: Parts List Toggle Popup
-  </button>
-  
-  <button type="button" onclick="window.TEST_showSelectedPartsList()" style="background: #0ea5e9; color: white; padding: 12px 24px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold;">
-    🧪 TEST #8: Selected Parts List
-  </button>
-  
-  <button type="button" onclick="window.TEST_showLegacyArray()" style="background: #ef4444; color: white; padding: 12px 24px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold;">
-    🧪 TEST: Legacy selectedParts Array
-  </button>
-  
-</div>
-<script>
-  window.TEMP_clearAllHistory = async function() {
-    if (confirm('⚠️ TESTING ONLY: This will clear helper.parts_search.selected_parts!\n\nAre you sure?')) {
-      try {
-        // Clear ONLY selected_parts from helper
-        if (window.helper?.parts_search) {
-          window.helper.parts_search.selected_parts = [];
-          sessionStorage.setItem('helper', JSON.stringify(window.helper));
-          console.log('🧪 TEST: Cleared selected_parts from helper');
-        }
-        
-        // Update UI
-        if (typeof updateSelectedPartsList === 'function') {
-          updateSelectedPartsList();
-        } else if (typeof window.updateSelectedPartsList === 'function') {
-          window.updateSelectedPartsList();
-        }
-        
-        alert('✅ Cleared helper.parts_search.selected_parts');
-      } catch (error) {
-        console.error('❌ Error clearing history:', error);
-        alert('❌ Error: ' + error.message);
-      }
-    }
-  };
-</script>
 
 <!-- Enhanced Search Results Display -->
 <div id="search_results_display" style="display: none; margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 8px; background: #f9f9f9;">
@@ -232,7 +187,6 @@
 
 <!-- Enhanced Part Management -->
 <div style="margin-top: 20px;">
-  <button type="button" class="btn" onclick="exportSelectedParts()" style="background: #28a745;">📄 ייצא חלקים לאקסל</button>
   <button type="button" class="btn" onclick="window.TEST_showAllSavedParts()" style="background: #10b981;">🗂️ הצג רשימת חלקים נבחרים עדכנית</button>
   <button type="button" class="btn" onclick="saveToSession()" style="background: #ffc107; color: #000;">💾 שמור להמשך באשף</button>
 </div>
@@ -1073,65 +1027,7 @@ ${part.supplier ? `   ספק: ${part.supplier}` : ''}
     }
   }
 
-  // SESSION 19: Excel export function (uses getSelectedParts)
-  async function exportSelectedParts() {
-    console.log('📄 SESSION 19: Exporting selected parts to Excel...');
-    
-    // SESSION 19: Get parts from Supabase
-    const parts = await getSelectedParts({});
-    
-    if (parts.length === 0) {
-      alert('אין חלקים נבחרים לייצוא');
-      return;
-    }
-    
-    // Prepare export payload
-    const exportData = {
-      parts: parts,
-      vehicle_context: {
-        plate: document.getElementById('plate').value,
-        manufacturer: document.getElementById('manufacturer').value,
-        model: document.getElementById('model').value,
-        year: document.getElementById('year').value,
-        trim: document.getElementById('trim').value,
-        engine_volume: document.getElementById('engine_volume').value
-      },
-      export_timestamp: new Date().toISOString(),
-      export_type: 'selected_parts_list'
-    };
-    
-    // Send to ADMIN_EXPORT_SEARCH_RESULTS webhook
-    fetch('https://hook.eu2.make.com/rocp5ue661qn3597akgptja4ol9cnksy', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        task: 'export_parts_list',
-        payload: exportData
-      })
-    })
-    .then(response => {
-      if (!response.ok) throw new Error('Export failed');
-      return response.json();
-    })
-    .then(result => {
-      console.log('✅ Parts exported successfully:', result);
-      alert(`✅ ייצוא הושלם בהצלחה!\n${parts.length} חלקים יוצאו לקובץ Excel`);
-      
-      // If download URL is provided, trigger download
-      if (result.download_url) {
-        const a = document.createElement('a');
-        a.href = result.download_url;
-        a.download = `parts_export_${new Date().toISOString().split('T')[0]}.xlsx`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-      }
-    })
-    .catch(error => {
-      console.error('❌ Export error:', error);
-      alert('שגיאה בייצוא הקובץ');
-    });
-  }
+  // SESSION 21: Excel export functionality removed
   
   // ✅ FIX 2: Enhanced helper integration with 3-category system
   function updateHelperWithPartsSearch(searchResults, searchContext) {
@@ -1314,7 +1210,6 @@ ${part.supplier ? `   ספק: ${part.supplier}` : ''}
   
   
   // Make functions globally available
-  window.exportSelectedParts = exportSelectedParts;
   window.updateHelperWithPartsSearch = updateHelperWithPartsSearch;
   window.validateSearchForm = validateSearchForm;
   window.searchSupabase = searchSupabase;
@@ -1919,8 +1814,6 @@ document.getElementById('sendResultToOCRBtn').addEventListener('click', function
     document.getElementById('search_results_display').style.display = 'none';
     window.currentSearchResults = [];
   };
-  
-  // exportSelectedParts function moved to lines 526-580 (webhook-based Excel export)
   
   window.saveToSession = function() {
     // SESSION 19: This function is now deprecated - saveCurrentToList handles saving
@@ -2986,13 +2879,14 @@ document.getElementById('sendResultToOCRBtn').addEventListener('click', function
   
   // SESSION 19: Create toggle popup using current_selected_list
   function createPartsListTogglePopup() {
-    console.log('🎯 SESSION 19: Creating parts list toggle popup for internal browser');
+    console.log('🎯 SESSION 21: Creating parts list toggle popup for internal browser');
     
-    // SESSION 19: Get parts from current_selected_list
-    const parts = window.helper?.parts_search?.current_selected_list || [];
+    // SESSION 21 FIX: Get parts from search_query_list (parts TO SEARCH on external sites)
+    // This mirrors the smart form purpose - showing what to search, not what's already selected
+    const parts = window.helper?.parts_search?.search_query_list || [];
     
     if (parts.length === 0) {
-      console.warn('⚠️ SESSION 19: No parts in current_selected_list');
+      console.warn('⚠️ SESSION 21: No parts in search_query_list');
       return;
     }
     
@@ -3086,8 +2980,8 @@ document.getElementById('sendResultToOCRBtn').addEventListener('click', function
   
   // ✅ Helper functions for toggle popup
   window.copyPartsListForSite = function() {
-    // SESSION 19: Get parts from current_selected_list
-    const parts = window.helper?.parts_search?.current_selected_list || [];
+    // SESSION 21 FIX: Get parts from search_query_list (parts TO SEARCH)
+    const parts = window.helper?.parts_search?.search_query_list || [];
     const partsText = parts.map(part => 
       `${part.group} - ${part.name} (כמות: ${part.qty}, מקור: ${part.source})`
     ).join('\n');
@@ -3131,94 +3025,7 @@ ${partsText}`;
   // Make function globally available
   window.createPartsListTogglePopup = createPartsListTogglePopup;
 
-  // ========================================
-  // TESTING FUNCTIONS - DELETE AFTER TESTING
-  // ========================================
-  
-  // TEST #6: Show Parts List Toggle Popup manually
-  window.TEST_showPartsListPopup = function() {
-    console.log('🧪 TEST #6: Manually showing Parts List Toggle Popup');
-    
-    // Check if we have parts to display
-    const currentList = window.helper?.parts_search?.current_selected_list || [];
-    
-    if (currentList.length === 0) {
-      alert('⚠️ TEST #6: No parts in current_selected_list!\n\nAdd some parts first, then try again.');
-      return;
-    }
-    
-    // Temporarily populate selectedParts array for the popup
-    selectedParts.length = 0;
-    currentList.forEach(part => selectedParts.push(part));
-    
-    console.log('🧪 TEST #6: Using ' + selectedParts.length + ' parts from current_selected_list');
-    
-    // Create the popup
-    createPartsListTogglePopup();
-    
-    alert('✅ TEST #6: Parts List Toggle Popup created!\n\nParts shown: ' + selectedParts.length + '\n\nThis popup normally appears automatically when you open the internal browser.');
-  };
-  
-  // TEST #8: Show Selected Parts List (force UI update)
-  window.TEST_showSelectedPartsList = function() {
-    console.log('🧪 TEST #8: Forcing Selected Parts List UI update');
-    
-    // Check if we have helper data
-    if (!window.helper?.parts_search) {
-      alert('⚠️ TEST #8: No helper.parts_search data!\n\nThe helper object is not initialized.');
-      return;
-    }
-    
-    const currentList = window.helper.parts_search.current_selected_list || [];
-    const selectedPartsList = window.helper.parts_search.selected_parts || [];
-    
-    console.log('🧪 TEST #8: current_selected_list has', currentList.length, 'parts');
-    console.log('🧪 TEST #8: selected_parts has', selectedPartsList.length, 'parts');
-    
-    // Force update the UI
-    if (typeof updateSelectedPartsList === 'function') {
-      updateSelectedPartsList();
-      alert('✅ TEST #8: Selected Parts List UI updated!\n\nCurrent list: ' + currentList.length + ' parts\nCumulative list: ' + selectedPartsList.length + ' parts\n\nCheck the "רשימת חלקים נבחרים" section above.');
-    } else {
-      alert('❌ TEST #8: updateSelectedPartsList function not found!');
-    }
-  };
-  
-  // TEST: Show Legacy selectedParts Array
-  window.TEST_showLegacyArray = function() {
-    console.log('🧪 TEST: Checking legacy selectedParts array');
-    
-    // Access the legacy array
-    if (typeof selectedParts === 'undefined') {
-      alert('❌ Legacy selectedParts array not found!\n\nIt may have been removed or is out of scope.');
-      return;
-    }
-    
-    console.log('🧪 Legacy selectedParts array:', selectedParts);
-    
-    const currentList = window.helper?.parts_search?.current_selected_list || [];
-    
-    // Create comparison report
-    const report = `
-🔴 LEGACY ARRAY (selectedParts):
-   Count: ${selectedParts.length} parts
-   
-✅ CURRENT ARRAY (helper.parts_search.current_selected_list):
-   Count: ${currentList.length} parts
-   
-📊 COMPARISON:
-   - Legacy is ${selectedParts.length === currentList.length ? 'SAME SIZE' : 'DIFFERENT SIZE (⚠️ MISMATCH!)'}
-   - Legacy should be ${selectedParts.length === 0 ? 'EMPTY (Good if not used)' : 'POPULATED (⚠️ Redundant!)'}
-    `;
-    
-    alert(report);
-    
-    // Log details to console
-    console.log('🔴 Legacy selectedParts:', selectedParts);
-    console.log('✅ Current list:', currentList);
-  };
-  
-  // SESSION 19: TEST - Show all saved parts from Supabase table
+  // SESSION 19: Show all saved parts from Supabase table
   window.TEST_showAllSavedParts = async function() {
     console.log('🧪 SESSION 19: Loading all saved parts from Supabase...');
     
