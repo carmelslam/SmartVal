@@ -296,8 +296,12 @@
       if (typeof encryptPassword === 'function') {
         return await encryptPassword(JSON.stringify(credentials));
       }
-      // Fallback to base64 encoding (not secure, but better than plain text)
-      return btoa(JSON.stringify(credentials));
+      // Fallback to base64 encoding with UTF-8 support for Hebrew characters
+      const jsonString = JSON.stringify(credentials);
+      // Convert to UTF-8 then to base64
+      const utf8Bytes = new TextEncoder().encode(jsonString);
+      const binaryString = Array.from(utf8Bytes, byte => String.fromCharCode(byte)).join('');
+      return btoa(binaryString);
     },
 
     async decryptCredentials(encryptedData) {
@@ -307,8 +311,11 @@
           const decrypted = await decryptPassword(encryptedData);
           return JSON.parse(decrypted);
         }
-        // Fallback to base64 decoding
-        return JSON.parse(atob(encryptedData));
+        // Fallback to base64 decoding with UTF-8 support
+        const binaryString = atob(encryptedData);
+        const utf8Bytes = new Uint8Array(Array.from(binaryString, char => char.charCodeAt(0)));
+        const jsonString = new TextDecoder().decode(utf8Bytes);
+        return JSON.parse(jsonString);
       } catch (error) {
         console.error('Decryption failed:', error);
         return null;
