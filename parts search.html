@@ -492,10 +492,16 @@
       engine_volume: document.getElementById('engine_volume').value
     };
     
-    // SESSION 20: Smart form only uses current form part (NOT selected parts list)
-    // Purpose: Create search query for external sites, not for already selected parts
+    // SESSION 20: Smart form uses search_query_list (parts TO SEARCH)
+    // Get all parts from search query list
     let partsToExport = [];
+    const searchQueryList = window.helper?.parts_search?.search_query_list || [];
     
+    if (searchQueryList.length > 0) {
+      partsToExport = [...searchQueryList];
+    }
+    
+    // Also add current form part if filled
     const currentPart = {
       group: document.getElementById('part_group').value,
       name: document.getElementById('part_name').value,
@@ -504,7 +510,14 @@
     };
     
     if (currentPart.group && currentPart.name) {
-      partsToExport.push(currentPart);
+      // Check if not already in list
+      const isDuplicate = partsToExport.some(p => 
+        p.group === currentPart.group && 
+        p.name === currentPart.name
+      );
+      if (!isDuplicate) {
+        partsToExport.push(currentPart);
+      }
     }
     
     if (!vehicle.manufacturer || !vehicle.model) {
@@ -845,16 +858,23 @@ ${part.supplier ? `   ספק: ${part.supplier}` : ''}
       return;
     }
 
-    // SESSION 19: Check for duplicates in current_selected_list
-    const currentList = window.helper?.parts_search?.current_selected_list || [];
-    const isDuplicate = currentList.some(existing => 
+    // SESSION 20: Add to search_query_list (for smart form), NOT to selected parts
+    if (!window.helper) window.helper = {};
+    if (!window.helper.parts_search) window.helper.parts_search = {};
+    if (!window.helper.parts_search.search_query_list) {
+      window.helper.parts_search.search_query_list = [];
+    }
+
+    // Check for duplicates in search query list
+    const searchList = window.helper.parts_search.search_query_list;
+    const isDuplicate = searchList.some(existing => 
       existing.group === group && 
       existing.name === name && 
       existing.source === source
     );
     
     if (isDuplicate) {
-      alert("חלק זה כבר קיים ברשימה");
+      alert("חלק זה כבר קיים ברשימת החיפוש");
       return;
     }
 
@@ -863,27 +883,14 @@ ${part.supplier ? `   ספק: ${part.supplier}` : ''}
       name, 
       qty: parseInt(qty), 
       source,
-      id: `part_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      id: `query_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       added_at: new Date().toISOString()
     };
     
-    // SESSION 19: Write to current_selected_list (not selectedParts)
-    if (!window.helper) window.helper = {};
-    if (!window.helper.parts_search) window.helper.parts_search = {};
-    if (!window.helper.parts_search.current_selected_list) {
-      window.helper.parts_search.current_selected_list = [];
-    }
-    
-    window.helper.parts_search.current_selected_list.push(item);
+    window.helper.parts_search.search_query_list.push(item);
     
     // Save to sessionStorage
     sessionStorage.setItem('helper', JSON.stringify(window.helper));
-    
-    // Clear parts cache
-    clearPartsCache();
-
-    // Update UI
-    updateSelectedPartsList();
 
     // Clear form for next entry
     document.getElementById('part_name').value = '';
@@ -891,11 +898,13 @@ ${part.supplier ? `   ספק: ${part.supplier}` : ''}
     document.getElementById('part_source').value = '';
     
     // Visual feedback
-    console.log(`✅ SESSION 19: Added part to current_selected_list: ${group} - ${name} (${qty}x ${source})`);
+    console.log(`✅ SESSION 20: Added part to search_query_list (for smart form): ${group} - ${name} (${qty}x ${source})`);
     
-    // Show notification if available
+    // Show notification
     if (typeof showNotification === 'function') {
-      showNotification(`נוסף חלק: ${name}`, 'success');
+      showNotification(`נוסף לרשימת חיפוש: ${name}`, 'success');
+    } else {
+      alert(`נוסף לרשימת חיפוש: ${name}\n\nכעת ניתן ליצור טופס חכם עם ${searchList.length} חלקים`);
     }
   }
   
