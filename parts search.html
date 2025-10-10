@@ -3397,96 +3397,103 @@ ${partsText}`;
     }
   };
   
-  // SESSION 20: Edit part from test modal
+  // SESSION 20: Edit part from test modal (copied structure from editPart function)
   window.editPartFromModal = async function(partIndex) {
     console.log('✏️ SESSION 20: Editing part from modal, index:', partIndex);
     
-    try {
-      const part = window.TEST_currentModalParts[partIndex];
-      if (!part) {
-        alert('❌ חלק לא נמצא');
-        return;
-      }
-      console.log('📝 SESSION 20: Part to edit:', part);
-      
-      // Close the test modal
-      const modal = document.querySelector('[style*="z-index: 10001"]');
-      const backdrop = document.querySelector('[style*="z-index: 10000"]');
-      if (modal) modal.remove();
-      if (backdrop) backdrop.remove();
-      
-      // Create edit modal
-      const editModal = document.createElement('div');
-      editModal.style.cssText = `
-        position: fixed;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        background: white;
-        border: 3px solid #f59e0b;
-        border-radius: 16px;
-        padding: 20px;
-        max-width: 500px;
-        width: 90%;
-        z-index: 10001;
-        box-shadow: 0 8px 32px rgba(0,0,0,0.3);
-      `;
-      
-      editModal.innerHTML = `
-        <h3 style="margin: 0 0 15px 0; color: #f59e0b;">✏️ ערוך חלק</h3>
-        <div style="display: flex; flex-direction: column; gap: 10px;">
-          <div>
-            <label style="font-weight: bold; display: block; margin-bottom: 5px;">כמות:</label>
-            <input type="number" id="edit_quantity" value="${part.quantity || 1}" 
-                   style="width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 6px;" min="1">
-          </div>
-          <div>
-            <label style="font-weight: bold; display: block; margin-bottom: 5px;">מקור:</label>
-            <input type="text" id="edit_source" value="${part.source || ''}" 
-                   style="width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 6px;">
-          </div>
-          <div>
-            <label style="font-weight: bold; display: block; margin-bottom: 5px;">הערות:</label>
-            <textarea id="edit_comments" 
-                      style="width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 6px; min-height: 80px;">${part.comments || ''}</textarea>
-          </div>
+    const part = window.TEST_currentModalParts[partIndex];
+    if (!part) {
+      alert('❌ חלק לא נמצא');
+      return;
+    }
+    console.log('📝 SESSION 20: Part to edit:', part);
+    
+    // Close the test modal
+    const testModal = document.querySelector('[style*="z-index: 10001"]');
+    const testBackdrop = document.querySelector('[style*="z-index: 10000"]');
+    if (testModal) testModal.remove();
+    if (testBackdrop) testBackdrop.remove();
+    
+    // Create edit modal (same structure as editPart function)
+    const modal = document.createElement('div');
+    modal.style.cssText = `
+      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0,0,0,0.7); display: flex; align-items: center;
+      justify-content: center; z-index: 10000; direction: rtl;
+    `;
+    
+    modal.innerHTML = `
+      <div style="background: white; padding: 30px; border-radius: 15px; max-width: 500px; width: 90%; box-shadow: 0 10px 30px rgba(0,0,0,0.3);">
+        <h3 style="color: #1e3a8a; margin-bottom: 20px; text-align: center;">✏️ ערוך חלק</h3>
+        
+        <div style="margin-bottom: 15px;">
+          <label style="display: block; font-weight: bold; margin-bottom: 5px;">קבוצת חלקים:</label>
+          <select id="editPartGroup" style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 5px;">
+            <option value="">בחר קטגוריה</option>
+          </select>
         </div>
-        <div style="margin-top: 20px; display: flex; gap: 10px; justify-content: flex-end;">
-          <button onclick="this.parentElement.parentElement.remove(); document.querySelector('[style*=\\'z-index: 10000\\']')?.remove();" 
-                  style="background: #6b7280; color: white; border: none; padding: 10px 20px; 
-                         border-radius: 8px; cursor: pointer; font-weight: bold;">
-            ביטול
+        
+        <div style="margin-bottom: 15px;">
+          <label style="display: block; font-weight: bold; margin-bottom: 5px;">שם החלק:</label>
+          <input type="text" id="editPartName" value="${part.part_name || part.name || ''}" style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 5px; background: #f9fafb;" readonly>
+        </div>
+        
+        <div style="margin-bottom: 15px;">
+          <label style="display: block; font-weight: bold; margin-bottom: 5px;">כמות:</label>
+          <input type="number" id="editPartQuantity" value="${part.quantity || part.qty || 1}" min="1" style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 5px;">
+        </div>
+        
+        <div style="margin-bottom: 15px;">
+          <label style="display: block; font-weight: bold; margin-bottom: 5px;">מקור:</label>
+          <select id="editPartSource" style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 5px;">
+            <option value="מקורי" ${part.source === 'מקורי' ? 'selected' : ''}>מקורי</option>
+            <option value="חליפי" ${part.source === 'חליפי' || part.source === 'תחליפי' ? 'selected' : ''}>חליפי</option>
+            <option value="משומש" ${part.source === 'משומש' ? 'selected' : ''}>משומש</option>
+            <option value="הכל" ${part.source === 'הכל' ? 'selected' : ''}>הכל</option>
+          </select>
+        </div>
+        
+        <div style="margin-bottom: 20px;">
+          <label style="display: block; font-weight: bold; margin-bottom: 5px;">הערות:</label>
+          <textarea id="editPartComments" rows="3" style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 5px; resize: vertical;">${part.comments || ''}</textarea>
+        </div>
+        
+        <div style="display: flex; gap: 10px; justify-content: center;">
+          <button onclick="window.saveEditedPartFromModal('${part.id}', '${part.plate}')" style="background: #10b981; color: white; padding: 12px 20px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold;">
+            💾 שמור שינויים
           </button>
-          <button onclick="window.saveEditedPartFromModal('${part.id}', '${part.plate}')" 
-                  style="background: #f59e0b; color: white; border: none; padding: 10px 20px; 
-                         border-radius: 8px; cursor: pointer; font-weight: bold;">
-            💾 שמור
+          <button onclick="this.closest('[style*=fixed]').remove()" style="background: #6b7280; color: white; padding: 12px 20px; border: none; border-radius: 8px; cursor: pointer;">
+            ✕ ביטול
           </button>
         </div>
-      `;
-      
-      document.body.appendChild(editModal);
-      
-      // Add backdrop
-      const editBackdrop = document.createElement('div');
-      editBackdrop.style.cssText = `
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: rgba(0,0,0,0.5);
-        z-index: 10000;
-      `;
-      editBackdrop.onclick = () => {
-        editModal.remove();
-        editBackdrop.remove();
-      };
-      document.body.appendChild(editBackdrop);
-      
-    } catch (error) {
-      console.error('❌ SESSION 20: Error editing part:', error);
-      alert('❌ שגיאה בפתיחת עריכה:\n\n' + error.message);
+      </div>
+    `;
+    
+    modal.onclick = (e) => e.target === modal && modal.remove();
+    document.body.appendChild(modal);
+    
+    // Populate categories dropdown
+    const groupSelect = modal.querySelector('#editPartGroup');
+    const partGroup = part.part_family || part.group || '';
+    console.log('🔍 SESSION 20: Populating group dropdown, part group:', partGroup);
+    
+    if (window.PARTS_BANK) {
+      Object.keys(window.PARTS_BANK).forEach(category => {
+        const option = document.createElement('option');
+        option.value = category;
+        option.textContent = category;
+        if (category === partGroup) option.selected = true;
+        groupSelect.appendChild(option);
+      });
+    }
+    
+    // If no PARTS_BANK, add part's group as option
+    if (!window.PARTS_BANK && partGroup) {
+      const option = document.createElement('option');
+      option.value = partGroup;
+      option.textContent = partGroup;
+      option.selected = true;
+      groupSelect.appendChild(option);
     }
   };
   
@@ -3494,9 +3501,17 @@ ${partsText}`;
   window.saveEditedPartFromModal = async function(partId, plate) {
     console.log('💾 SESSION 20: Saving edited part:', partId);
     
-    const quantity = document.getElementById('edit_quantity')?.value;
-    const source = document.getElementById('edit_source')?.value;
-    const comments = document.getElementById('edit_comments')?.value;
+    const modal = document.querySelector('[style*="position: fixed"]');
+    const group = modal.querySelector('#editPartGroup')?.value;
+    const name = modal.querySelector('#editPartName')?.value;
+    const quantity = modal.querySelector('#editPartQuantity')?.value;
+    const source = modal.querySelector('#editPartSource')?.value;
+    const comments = modal.querySelector('#editPartComments')?.value;
+    
+    if (!group || !name) {
+      alert('❌ יש למלא את כל השדות הנדרשים');
+      return;
+    }
     
     if (!quantity || quantity < 1) {
       alert('❌ כמות לא תקינה');
@@ -3507,9 +3522,11 @@ ${partsText}`;
       const { error } = await window.supabase
         .from('selected_parts')
         .update({
+          part_family: group,
+          part_name: name,
           quantity: parseInt(quantity),
           source: source,
-          comments: comments
+          comments: comments || null
         })
         .eq('id', partId)
         .eq('plate', plate);
@@ -3526,11 +3543,10 @@ ${partsText}`;
       
       alert('✅ החלק עודכן בהצלחה');
       
-      const modal = document.querySelector('[style*="z-index: 10001"]');
-      const backdrop = document.querySelector('[style*="z-index: 10000"]');
-      if (modal) modal.remove();
-      if (backdrop) backdrop.remove();
+      // Close modal
+      modal.remove();
       
+      // Reopen test modal with updated data
       window.TEST_showAllSavedParts();
       
     } catch (error) {
