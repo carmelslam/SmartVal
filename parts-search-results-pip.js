@@ -925,14 +925,12 @@ class PartsSearchResultsPiP {
               height: auto;
               box-shadow: none;
             }
-            /* Hide original PiP buttons and elements not needed in review */
             .pip-close-btn,
             .pip-actions,
             .pip-footer { 
               display: none !important; 
             }
             
-            /* Ensure price alignment in review window */
             .results-table td.price-cell,
             .results-table td.col-price {
               text-align: center !important;
@@ -940,13 +938,11 @@ class PartsSearchResultsPiP {
               display: table-cell !important;
             }
             
-            /* Override any RTL text alignment for price cells */
             .results-table td.price-cell *,
             .results-table td.col-price * {
               text-align: center !important;
             }
 
-            /* Footer styles for review window */
             .review-footer {
               position: sticky;
               bottom: 0;
@@ -1022,119 +1018,6 @@ class PartsSearchResultsPiP {
               }
             }
           </style>
-          <script>
-            // Create a bridge to the parent window's functions
-            const parentPiP = window.opener.partsResultsPiP;
-
-            // Create and style notification element
-            const notificationDiv = document.createElement('div');
-            Object.assign(notificationDiv.style, {
-              position: 'fixed',
-              top: '20px',
-              left: '50%',
-              transform: 'translateX(-50%)',
-              background: '#10b981',
-              color: 'white',
-              padding: '12px 24px',
-              borderRadius: '6px',
-              fontSize: '14px',
-              zIndex: '1000',
-              display: 'none',
-              boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-              direction: 'rtl'
-            });
-            document.body.appendChild(notificationDiv);
-
-            function showNotification(message, type = 'success') {
-              notificationDiv.style.background = type === 'success' ? '#10b981' : '#ef4444';
-              notificationDiv.textContent = message;
-              notificationDiv.style.display = 'block';
-              setTimeout(() => {
-                notificationDiv.style.display = 'none';
-              }, 3000);
-            }
-            
-            async function clearSelections() {
-              await parentPiP.clearSelections();
-              showNotification('הבחירות נוקו בהצלחה');
-              updateUI();
-              // Also update the parent window's UI
-              parentPiP.updateResults();
-            }
-            
-            async function saveAllSelections() {
-              const selectedCount = parentPiP.selectedItems.size;
-              if (selectedCount === 0) {
-                showNotification('לא נבחרו חלקים לשמירה', 'error');
-                return;
-              }
-
-              await parentPiP.saveAllSelections();
-              showNotification(selectedCount + ' חלקים נשמרו בהצלחה');
-              // Update both windows
-              updateUI();
-              parentPiP.updateResults();
-            }
-            
-            function closeWindow() {
-              window.close();
-            }
-
-            function syncWithParentSelections() {
-              // Sync the selected items from parent
-              const checkboxes = document.querySelectorAll('.part-checkbox');
-              checkboxes.forEach(cb => {
-                const partId = cb.getAttribute('data-part-id');
-                cb.checked = parentPiP.selectedItems.has(partId);
-              });
-            }
-
-            function updateUI() {
-              syncWithParentSelections();
-              
-              // Update selection count
-              const countElement = document.querySelector('.selected-count');
-              if (countElement) {
-                countElement.textContent = parentPiP.selectedItems.size;
-              }
-            }
-
-            // Add click handlers to checkboxes
-            document.querySelectorAll('.part-checkbox').forEach(cb => {
-              cb.onclick = async function(e) {
-                const partId = this.getAttribute('data-part-id');
-                const catalogItem = parentPiP.searchResults.find(item => item.id === partId);
-                
-                if (this.checked) {
-                  parentPiP.selectedItems.add(partId);
-                  if (catalogItem) {
-                    await parentPiP.saveSelectedPart(catalogItem);
-                  }
-                } else {
-                  parentPiP.selectedItems.delete(partId);
-                }
-                
-                // Update both windows
-                updateUI();
-                parentPiP.updateResults();
-              };
-            });
-
-            // Poll for changes in parent window selections
-            setInterval(() => {
-              syncWithParentSelections();
-            }, 500);
-
-            // Initial state setup
-            document.addEventListener('DOMContentLoaded', () => {
-              updateUI();
-              // Ensure initial selections are reflected
-              syncWithParentSelections();
-            });
-
-            // Initial UI update
-            updateUI();
-          </script>
         </head>
         <body>
           <div class="review-container">
@@ -1235,6 +1118,7 @@ class PartsSearchResultsPiP {
           <script>
             window.reviewFunctions = {
               parentPiP: window.opener.partsResultsPiP,
+              pollInterval: null,
 
               clearSelections: async function() {
                 await this.parentPiP.clearSelections();
@@ -1260,23 +1144,12 @@ class PartsSearchResultsPiP {
 
               closeWindow: function() {
                 try {
-                  // First try to remove any event listeners
-                  document.querySelectorAll('.part-checkbox').forEach(cb => {
-                    cb.onclick = null;
-                    const clone = cb.cloneNode(true);
-                    cb.parentNode.replaceChild(clone, cb);
-                  });
-                  
-                  // Remove polling interval
                   if (this.pollInterval) {
                     clearInterval(this.pollInterval);
                   }
-                  
-                  // Close the window
                   window.close();
                 } catch (e) {
                   console.error('Error closing window:', e);
-                  // Fallback close attempt
                   window.open('', '_self').close();
                 }
               },
@@ -1314,94 +1187,83 @@ class PartsSearchResultsPiP {
               },
 
               updateUI: function() {
-                // Update checkboxes
                 const checkboxes = document.querySelectorAll('.part-checkbox');
                 checkboxes.forEach(cb => {
                   const partId = cb.getAttribute('data-part-id');
-                  cb.checked = this.parentPiP.selectedItems.has(partId);
+                  const isSelected = this.parentPiP.selectedItems.has(partId);
+                  cb.checked = isSelected;
+                  const row = cb.closest('tr');
+                  if (row) {
+                    if (isSelected) {
+                      row.classList.add('selected');
+                    } else {
+                      row.classList.remove('selected');
+                    }
+                  }
                 });
 
-                // Update count
                 const countElement = document.querySelector('.selected-count');
                 if (countElement) {
                   countElement.textContent = this.parentPiP.selectedItems.size;
                 }
 
-                // Update parent window
                 this.parentPiP.updateResults();
               },
 
               setupCheckboxHandlers: function() {
                 const self = this;
                 document.querySelectorAll('.part-checkbox').forEach(cb => {
-                  cb.onclick = async function(e) {
-                    e.stopPropagation(); // Prevent event bubbling
+                  cb.addEventListener('click', async function(e) {
+                    e.stopPropagation();
                     const partId = this.getAttribute('data-part-id');
-                    const row = this.closest('tr');
                     const catalogItem = self.parentPiP.searchResults.find(item => item.id === partId);
                     
                     if (this.checked) {
                       self.parentPiP.selectedItems.add(partId);
-                      row.classList.add('selected');
                       if (catalogItem) {
                         await self.parentPiP.saveSelectedPart(catalogItem);
                       }
                     } else {
                       self.parentPiP.selectedItems.delete(partId);
-                      row.classList.remove('selected');
                     }
                     
                     self.updateUI();
-                  };
+                  });
+                });
 
-                  // Prevent checkbox from triggering row click
-                  cb.addEventListener('click', (e) => {
-                    e.stopPropagation();
+                document.querySelectorAll('.result-row').forEach(row => {
+                  row.addEventListener('click', function(e) {
+                    if (e.target.closest('button') || e.target.closest('.part-checkbox')) {
+                      return;
+                    }
+                    const checkbox = row.querySelector('.part-checkbox');
+                    if (checkbox) {
+                      checkbox.click();
+                    }
                   });
                 });
               },
 
               init: function() {
+                this.createNotificationElement();
                 this.setupCheckboxHandlers();
                 this.updateUI();
                 
-                // Store the polling interval reference
                 this.pollInterval = setInterval(() => this.updateUI(), 500);
 
-                // Add window unload handler
                 window.addEventListener('unload', () => {
                   if (this.pollInterval) {
                     clearInterval(this.pollInterval);
                   }
                 });
-
-                // Ensure close button works by adding direct event listener
-                const closeBtn = document.querySelector('.btn-close');
-                if (closeBtn) {
-                  closeBtn.addEventListener('click', (e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    this.closeWindow();
-                  });
-                }
-
-                // Add row click handler that won't interfere with close button
-                document.querySelectorAll('.result-row').forEach(row => {
-                  row.addEventListener('click', (e) => {
-                    if (e.target.closest('.btn-close')) {
-                      return; // Don't handle row click if clicking close button
-                    }
-                    const checkbox = row.querySelector('.part-checkbox');
-                    if (checkbox && e.target !== checkbox) {
-                      checkbox.click();
-                    }
-                  });
-                });
               }
             };
 
-            // Initialize the review window functionality
-            window.reviewFunctions.init();
+            if (document.readyState === 'loading') {
+              document.addEventListener('DOMContentLoaded', () => window.reviewFunctions.init());
+            } else {
+              window.reviewFunctions.init();
+            }
           </script>
         </body>
       </html>
