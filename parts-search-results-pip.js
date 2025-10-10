@@ -222,7 +222,8 @@ class PartsSearchResultsPiP {
                 ${firstResult.make ? `יצרן: ${firstResult.make}` : ''}
                 ${firstResult.model ? ` • דגם: ${firstResult.model}` : ''}
                 ${firstResult.year_from && firstResult.year_to ? ` • שנים: ${firstResult.year_from}-${firstResult.year_to}` : ''}
-                ${firstResult.part_family ? ` • חלק: ${firstResult.part_family}` : ''}
+                ${searchContext.part_name || searchContext.part_query ? ` • חלק: ${searchContext.part_name || searchContext.part_query}` : ''}
+                ${firstResult.part_family ? ` • משפחה: ${firstResult.part_family}` : ''}
               </div>
             ` : ''}
           </div>
@@ -1678,7 +1679,7 @@ class PartsSearchResultsPiP {
         display: flex;
         gap: 10px;
         padding: 0 20px;
-        margin-bottom: 15px;
+        margin-bottom: 25px;
       }
 
       .action-btn {
