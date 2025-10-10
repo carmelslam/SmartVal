@@ -397,27 +397,28 @@ INSERT INTO storage.buckets (id, name, public) VALUES
         1. suppose table that hosts catalogs from known suppliers = main search source, 
         2. make.com conducts web search ( name nd image based), 
         
-    2. Select parts - Catalog results and search will show in a UI with checklist- checked items will go to selected parts table and from there will be assigned to damage centers ( option ) or sent for print/ one drive save.
-    3. Capture search results  from all paths in supabase table - search results parts . 
+    2. Select parts - Catalog results and search will show in a UI with checklist- checked items will go to selected parts table and *from there will be assigned to damage centers ( option ) or sent for print/ one drive save.*
+    3. *Capture search results  from all paths in supabase table - search results parts* . 
     4. Capture selected parts in selected table in supabase per plate
     5. Capture selected parts in selected parts in helper . 
-    6. Connect suggestive logic to supabase instead of helper search results -
-    7. Suggestive logic combines all paths results for suggestions.
-    8. Then part selection create the list for the specific case and assigns to damage centers.
-    9. Parts floating screen: has two tabs : selected parts search results tab - search result tab has a field for part name - filtered search results from search results table. 
+    6. *Connect suggestive logic to supabase instead of helper search results -Suggestive logic combines all paths results for suggestions.*
+    8. *Then part selection create the list for the specific case and assigns to damage centers.*
+    9. *Parts floating screen: has two tabs : selected parts search results tab - search result tab has a field for part name - filtered search results from search results table.* 
     10. All identifications are plate number associated - so the tables display the parts search results and selected for the specific car only. There is an option of general search that doesn’t  associate with plate.
-    11. supabase tables for search results / selected are associated to car plate , for general search that is not associated to a car plate we need to think if we include in the table with plate numbers or create a new table for general (unassociated) search results and selected 
+    11. *supabase tables for search results / selected are associated to car plate , for general search that is not associated to a car plate we need to think if we include in the table with plate numbers or create a new table for general (unassociated) search results and selected*
     12. Rethink the function buttons on the UI and rebuild the parts search module to be compatible with the architecture. 
      13. Support high volume search 
 
 **FIX AND Integrate with existing helper structure rpoblems with parts_search:** *this section is for later - this inckudes the parts floating screen* 
   Parts required problems :
-    The page doesn’t populate from helper when helper is restore, 
+    1.The page doesn’t populate from helper when helper is restore, 
     2. The total cost is not detected 
     3. Second damage center handled - shows no parts at all - while helper shows the parts 
     4. Page is unstable 
-    5. parts_search.selected_parts is registering doubles for each row in the UI in a damage center flow , THE SECTION NEEDS TO REGISTER EACH ROW ONE TIME - ONE PART CAN BE USED IN SEVERAL DAMAGE CENTERS - the  parts_search.selected_parts needs to accumulate all the parts selected infall damage centers in a running list .
-  Helper.parts search: 
+    5.  change the bidirectional regidtration to read and write from parts_search.required_parts and parts_required table in supabse and not from parts_search.selected_parts
+    parts suggestions is based on the supabase selected parts table.
+    THE SECTION NEEDS TO REGISTER EACH ROW ONE TIME - ONE PART CAN BE USED IN SEVERAL DAMAGE CENTERS 
+  Helper.parts search:
     1. selected parts per damage center disappeared from helper 
     2. Second damage center if modified overwrites the parts_search.selected_parts and deletes the parts from the first damage center 
     3. Non of the sections is actually registering correct data 
