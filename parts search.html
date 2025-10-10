@@ -447,9 +447,10 @@
     // ✅ FIXED: Capture ALL parts from selectedParts array, not just current dropdown
     let partsToExport = [];
     
-    // Add all parts from the selected parts list
-    if (selectedParts && selectedParts.length > 0) {
-      partsToExport = [...selectedParts];
+    // SESSION 19: Get parts from current_selected_list
+    const currentList = window.helper?.parts_search?.current_selected_list || [];
+    if (currentList.length > 0) {
+      partsToExport = [...currentList];
     }
     
     // Also add current form part if it's filled out and not already in the list
@@ -911,7 +912,7 @@ ${part.supplier ? `   ספק: ${part.supplier}` : ''}
         part_group: document.getElementById('part_group').value,
         part_name: document.getElementById('part_name').value,
         free_query: document.getElementById('free_query').value,
-        selectedParts: selectedParts
+        selectedParts: window.helper?.parts_search?.current_selected_list || []
       };
       
       console.log('📋 Search params:', searchParams);
@@ -1309,10 +1310,10 @@ ${part.supplier ? `   ספק: ${part.supplier}` : ''}
       part_name: part_name.value,
       free_query: free_query.value.trim(),
       part_image_base64: imageBase64 || null,
-      selectedParts: selectedParts || [],
+      selectedParts: window.helper?.parts_search?.current_selected_list || [],
       // Include parts list in search if available
-      search_type: (selectedParts && selectedParts.length > 0) ? 'enhanced_with_parts_list' : 'standard',
-      parts_list: selectedParts || []
+      search_type: (window.helper?.parts_search?.current_selected_list?.length > 0) ? 'enhanced_with_parts_list' : 'standard',
+      parts_list: window.helper?.parts_search?.current_selected_list || []
     };
     
     // ✅ ENHANCED: Try Supabase search first, fallback to Make.com webhook
