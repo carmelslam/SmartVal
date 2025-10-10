@@ -147,6 +147,38 @@ What the UI actually “sends”
 The UI doesn’t translate anything. The DB normalization ensures these simple parameters hit the right rows.
 
 
+**task specifications from phase 5 - advanced**
+ **other search paths integration**
+
+Web search flow:
+Search in parts search page trigger =iwebhook from the UI  - first path  —> register in supabase parts_search_sessions table 
+Second path :—> make.com—>web search —> webhook response —> writes on supabase parts_search_results table —>writes on helper —> helper.parts_search.results —>writes on UI pip for search results —> selected parts write on UI selected list ->writes on helper.parts_search.current_selected_list —>writes on suppose selected parts table ==>save button on ui list with smart sync and filter function (the same like the catalog search path) writes on helper.parts_search.selected_parts
+
+Both paths run at the same time 
+
+OCR flow:
+Trigger User sends a pdf/image to make.com for OCR—>  first path  —> register in supabase parts_search_sessions table 
+Second path : webhook response —> writes on supabase parts_search_results table —>writes on helper —> helper.parts_search.results —>writes on UI pip for search results —> selected parts write on UI selected list ->writes on helper.parts_search.current_selected_list —>writes on suppose selected parts table ==>save button on ui list with smart sync and filter function (the same like the catalog search path) writes on helper.parts_search.selected_parts 
+                                                
+Both paths run at the same time 
+
+    
+
+**FIX AND Integrate with existing helper structure rpoblems with parts_search:** *this section is for later - this inckudes the parts floating screen* 
+  Parts required problems :
+    1.The page doesn’t populate from helper when helper is restore, 
+    2. The total cost is not detected 
+    3. Second damage center handled - shows no parts at all - while helper shows the parts 
+    4. Page is unstable 
+    5.  change the bidirectional regidtration to read and write from parts_search.required_parts and parts_required table in supabse and not from parts_search.selected_parts
+    parts suggestions is based on the supabase selected parts table.
+    THE SECTION NEEDS TO REGISTER EACH ROW ONE TIME - ONE PART CAN BE USED IN SEVERAL DAMAGE CENTERS 
+  Helper.parts search:
+    1. selected parts per damage center disappeared from helper 
+    2. Second damage center if modified overwrites the parts_search.selected_parts and deletes the parts from the first damage center 
+    3. Non of the sections is actually registering correct data 
+ **Read documentation on BUILDERS DATA_FLOW AND CALCULATIONS INSTRUCTIONS folder before doing or planning anything** 
+
 Tables and schemes currently in supabase :
 1. main data table :
 
