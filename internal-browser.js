@@ -710,6 +710,19 @@
   }
 
   function showCredentialsPopup(credentials) {
+    // Remove any existing popup first
+    const existingPopup = document.getElementById('credentialsPopup');
+    if (existingPopup) {
+      existingPopup.remove();
+    }
+    
+    if (!credentials) {
+      console.error('showCredentialsPopup: No credentials provided');
+      return;
+    }
+    
+    console.log('Showing credentials popup:', credentials);
+    
     const popup = document.createElement('div');
     popup.id = 'credentialsPopup';
     popup.style.cssText = `
@@ -725,6 +738,7 @@
       box-shadow: 0 4px 20px rgba(0,0,0,0.3);
       direction: rtl;
       font-family: Arial, sans-serif;
+      min-width: 300px;
     `;
     
     popup.innerHTML = `
@@ -733,8 +747,8 @@
       <p><strong>סיסמה:</strong> ${credentials.password}</p>
       <p style="font-size: 14px; color: #666;">העתק את הפרטים והזן אותם באתר ידנית</p>
       <div style="text-align: center; margin-top: 15px;">
-        <button onclick="copyToClipboard('${credentials.username}')" style="margin: 5px; padding: 8px 15px; background: #28a745; color: white; border: none; border-radius: 5px; cursor: pointer;">העתק שם משתמש</button>
-        <button onclick="copyToClipboard('${credentials.password}')" style="margin: 5px; padding: 8px 15px; background: #ffc107; color: black; border: none; border-radius: 5px; cursor: pointer;">העתק סיסמה</button>
+        <button onclick="window.copyToClipboard('${credentials.username}')" style="margin: 5px; padding: 8px 15px; background: #28a745; color: white; border: none; border-radius: 5px; cursor: pointer;">העתק שם משתמש</button>
+        <button onclick="window.copyToClipboard('${credentials.password}')" style="margin: 5px; padding: 8px 15px; background: #ffc107; color: black; border: none; border-radius: 5px; cursor: pointer;">העתק סיסמה</button>
         <button onclick="document.getElementById('credentialsPopup').remove()" style="margin: 5px; padding: 8px 15px; background: #dc3545; color: white; border: none; border-radius: 5px; cursor: pointer;">סגור</button>
       </div>
     `;
