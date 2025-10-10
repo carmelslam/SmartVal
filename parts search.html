@@ -3261,9 +3261,10 @@ ${partsText}`;
         box-shadow: 0 8px 32px rgba(0,0,0,0.3);
       `;
       
-      const partsList = parts.map((part, index) => {
-        const partJson = JSON.stringify(part).replace(/"/g, '&quot;');
-        return `
+      // Store parts globally for edit function access
+      window.TEST_currentModalParts = parts;
+      
+      const partsList = parts.map((part, index) => `
         <div style="padding: 10px; border-bottom: 1px solid #e5e7eb; background: ${index % 2 === 0 ? '#f9fafb' : 'white'}; display: flex; justify-content: space-between; align-items: center;">
           <div style="flex: 1;">
             <div style="font-weight: bold; color: #059669;">${part.part_family || part.group || 'N/A'} - ${part.part_name || part.name || 'N/A'}</div>
@@ -3275,7 +3276,7 @@ ${partsText}`;
             </div>
           </div>
           <div style="display: flex; gap: 5px; margin-right: 10px;">
-            <button onclick='window.editPartFromModal("${partJson}")' 
+            <button onclick="window.editPartFromModal(${index})" 
                     style="background: #f59e0b; color: white; border: none; padding: 6px 12px; 
                            border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: bold;">
               ✏️ ערוך
@@ -3287,8 +3288,7 @@ ${partsText}`;
             </button>
           </div>
         </div>
-      `;
-      }).join('');
+      `).join('');
       
       modal.innerHTML = `
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
@@ -3398,11 +3398,15 @@ ${partsText}`;
   };
   
   // SESSION 20: Edit part from test modal
-  window.editPartFromModal = async function(partJsonStr) {
-    console.log('✏️ SESSION 20: Editing part from modal');
+  window.editPartFromModal = async function(partIndex) {
+    console.log('✏️ SESSION 20: Editing part from modal, index:', partIndex);
     
     try {
-      const part = JSON.parse(partJsonStr.replace(/&quot;/g, '"'));
+      const part = window.TEST_currentModalParts[partIndex];
+      if (!part) {
+        alert('❌ חלק לא נמצא');
+        return;
+      }
       console.log('📝 SESSION 20: Part to edit:', part);
       
       // Close the test modal
