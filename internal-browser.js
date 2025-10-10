@@ -198,7 +198,7 @@
         <div style="font-size: 20px; margin-bottom: 10px;">🔄</div>
         <div>טוען אתר...</div>
       </div>
-      <iframe class="browser-iframe" id="browserIframe" sandbox="allow-scripts allow-forms allow-popups allow-top-navigation" data-security-fixed="true"></iframe>
+      <iframe class="browser-iframe" id="browserIframe" sandbox="allow-scripts allow-forms allow-popups allow-top-navigation allow-same-origin" data-security-fixed="true"></iframe>
     </div>
     
     <div class="browser-status" id="browserStatus">
@@ -319,8 +319,8 @@
       // Default credentials - in production, these would come from a secure server
       const defaults = {
         car_part_credentials: {
-          username: 'yaronkayouf@gmail.com',
-          password: 'YK123456!'
+          username: 'ירון כיוף',
+          password: '8881'
         },
         levi_portal_credentials: {
           username: 'yaronkayouf@gmail.com', 
