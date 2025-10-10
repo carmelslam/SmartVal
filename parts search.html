@@ -339,10 +339,26 @@
             window.helper.parts_search = {};
           }
           
-          window.helper.parts_search.selected_parts = supabaseParts;
+          // SESSION 20 FIX: Map Supabase fields to helper format (including comments field)
+          const mappedParts = supabaseParts.map(part => ({
+            ...part,
+            // Map part_name/part_family to name/group for helper compatibility
+            name: part.part_name || part.name || '',
+            group: part.part_family || part.group || '',
+            qty: part.quantity || part.qty || 1,
+            // Map comments to both English and Hebrew fields
+            comments: part.comments || '',
+            'הערות': part.comments || '',
+            // Keep original Supabase fields too
+            part_name: part.part_name,
+            part_family: part.part_family,
+            quantity: part.quantity
+          }));
+          
+          window.helper.parts_search.selected_parts = mappedParts;
           
           sessionStorage.setItem('helper', JSON.stringify(window.helper));
-          console.log(`💾 SESSION 20: Synced ${supabaseParts.length} parts from Supabase to helper`);
+          console.log(`💾 SESSION 20: Synced ${mappedParts.length} parts from Supabase to helper (with field mapping)`);
         } else {
           console.log('ℹ️ SESSION 20: No parts found in Supabase for this plate');
         }
@@ -3569,16 +3585,29 @@ ${partsText}`;
     }
     
     try {
-      const parts = await getSelectedParts({ plate: plate });
+      const supabaseParts = await getSelectedParts({ plate: plate });
       
       if (!window.helper) window.helper = {};
       if (!window.helper.parts_search) window.helper.parts_search = {};
       
-      window.helper.parts_search.selected_parts = parts;
+      // SESSION 20 FIX: Map Supabase fields to helper format (including comments)
+      const mappedParts = supabaseParts.map(part => ({
+        ...part,
+        name: part.part_name || part.name || '',
+        group: part.part_family || part.group || '',
+        qty: part.quantity || part.qty || 1,
+        comments: part.comments || '',
+        'הערות': part.comments || '',
+        part_name: part.part_name,
+        part_family: part.part_family,
+        quantity: part.quantity
+      }));
+      
+      window.helper.parts_search.selected_parts = mappedParts;
       sessionStorage.setItem('helper', JSON.stringify(window.helper));
       
-      console.log(`✅ SESSION 19: Synced ${parts.length} parts to helper.parts_search.selected_parts`);
-      alert(`✅ Synced ${parts.length} parts to helper!\n\nHelper is now in sync with Supabase.`);
+      console.log(`✅ SESSION 19: Synced ${mappedParts.length} parts to helper.parts_search.selected_parts (with field mapping)`);
+      alert(`✅ Synced ${mappedParts.length} parts to helper!\n\nHelper is now in sync with Supabase.`);
       
     } catch (error) {
       console.error('❌ SESSION 19: Sync error:', error);
