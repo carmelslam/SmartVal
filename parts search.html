@@ -3165,6 +3165,9 @@ ${partsText}`;
       
       console.log('📦 SESSION 19: Retrieved parts from Supabase:', parts);
       
+      // Store for copy function
+      lastLoadedParts = parts;
+      
       // Create display
       if (parts.length === 0) {
         alert('ℹ️ No saved parts found in Supabase for plate: ' + plate);
@@ -3222,7 +3225,7 @@ ${partsText}`;
                          border-radius: 8px; cursor: pointer; font-weight: bold; margin-right: 10px;">
             🔄 Sync to Helper
           </button>
-          <button onclick="navigator.clipboard.writeText(JSON.stringify(${JSON.stringify(parts)}, null, 2))" 
+          <button onclick="window.TEST_copyPartsJSON()" 
                   style="background: #8b5cf6; color: white; border: none; padding: 10px 20px; 
                          border-radius: 8px; cursor: pointer; font-weight: bold;">
             📋 Copy JSON
@@ -3253,6 +3256,14 @@ ${partsText}`;
       console.error('❌ SESSION 19: Error loading saved parts:', error);
       alert('❌ Error loading parts:\n\n' + error.message);
     }
+  };
+  
+  // SESSION 19: TEST - Copy parts JSON to clipboard
+  let lastLoadedParts = [];
+  window.TEST_copyPartsJSON = function() {
+    navigator.clipboard.writeText(JSON.stringify(lastLoadedParts, null, 2))
+      .then(() => alert('✅ Parts JSON copied to clipboard!'))
+      .catch(() => alert('❌ Failed to copy'));
   };
   
   // SESSION 19: TEST - Sync helper from Supabase
