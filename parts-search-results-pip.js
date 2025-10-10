@@ -1840,12 +1840,12 @@ class PartsSearchResultsPiP {
         }
         
         .footer-buttons {
-          flex-direction: column;
           gap: 8px;
         }
         
         .footer-buttons button {
-          width: 100%;
+          font-size: 13px;
+          padding: 8px 12px;
         }
       }
     `;
