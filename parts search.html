@@ -1563,54 +1563,175 @@ document.getElementById('sendResultToOCRBtn').addEventListener('click', function
     const vehicleData = {
       manufacturer: document.getElementById('manufacturer').value,
       model: document.getElementById('model').value,
-      year: document.getElementById('year').value
+      year: document.getElementById('year').value,
+      plate: document.getElementById('plate')?.value || ''
     };
     
-    console.log('🌐 Opening Car-Part in internal browser with vehicle data:', vehicleData);
+    // Get parts list from search_query_list
+    const parts = window.helper?.parts_search?.search_query_list || [];
     
-    // ✅ FIXED: Enhanced check and fallback for internal browser
-    if (typeof window.openInternalBrowser === 'function') {
+    console.log('🌐 Opening Car-Part with vehicle data and parts:', vehicleData, parts);
+    
+    // Open in new window with specific size
+    const externalWindow = window.open('https://www.car-part.co.il', '_blank', 'width=1400,height=900');
+    
+    if (!externalWindow) {
+      alert('אנא אפשר חלונות קופצים בדפדפן');
+      return;
+    }
+    
+    // Wait for window to load, then inject floating panel
+    setTimeout(() => {
       try {
-        console.log('✅ Internal browser available, opening car-part.co.il');
-        window.openInternalBrowser('car-part.co.il', 'חיפוש חלפים');
+        // Create floating helper panel HTML
+        const panelHTML = createFloatingHelperPanel(vehicleData, parts);
         
-        // Create toggle popup for parts list visibility
-        setTimeout(() => {
-          createPartsListTogglePopup();
-        }, 2000);
+        // Try to inject (will fail due to CORS, but window reference stays)
+        // Store data in the opener for the panel to access
+        window.carPartHelperData = {
+          vehicleData,
+          parts,
+          credentials: {
+            username: 'ירון כיוף',
+            password: '8881'
+          },
+          returnUrl: window.location.href
+        };
+        
+        // Show instructions popup in our window
+        showExternalWindowInstructions(vehicleData, parts);
         
       } catch (error) {
-        console.error('❌ Failed to open internal browser:', error);
-        alert('שגיאה בפתיחת הדפדפן הפנימי: ' + error.message);
-        // Fallback to external window
-        window.open('https://www.car-part.co.il/Include/Generic/AccessSystem.jsp', '_blank');
+        console.log('Cross-origin restriction (expected):', error);
+        showExternalWindowInstructions(vehicleData, parts);
       }
-    } else {
-      console.error('❌ Internal browser function not available');
-      console.log('Available window functions:', Object.keys(window).filter(k => k.includes('Internal') || k.includes('Browser')));
-      alert('הדפדפן הפנימי לא זמין במערכת, פותח בחלון נפרד');
-      // Fallback to external window
-      window.open('https://www.car-part.co.il/Include/Generic/AccessSystem.jsp', '_blank');
-    }
-
-    const creds = dev_credentials?.carPart;
-    if (creds) {
-      const message = `📋 פרטי גישה לאתר Car-Part:\nשם משתמש: ${creds.username}\nסיסמה: ${creds.password}\n\n🚗 פרטי הרכב לחיפוש:\n${vehicleData.manufacturer} ${vehicleData.model} ${vehicleData.year}`;
-      
-      // Copy credentials to clipboard if possible
-      if (navigator.clipboard) {
-        navigator.clipboard.writeText(`${creds.username}\t${creds.password}`).then(() => {
-          alert(message + '\n\n✅ פרטי הגישה הועתקו ללוח');
-        }).catch(() => {
-          alert(message);
-        });
-      } else {
-        alert(message);
-      }
-    } else {
-      alert('⚠️ לא נמצאו פרטי התחברות');
-    }
+    }, 1000);
   };
+  
+  function createFloatingHelperPanel(vehicleData, parts) {
+    return `
+      <div id="smartval-helper" style="position: fixed; top: 20px; left: 20px; width: 350px; max-height: 80vh; background: white; border: 3px solid #10b981; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.3); z-index: 999999; overflow: hidden; font-family: Arial, sans-serif; direction: rtl;">
+        <div style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; padding: 15px; display: flex; justify-content: space-between; align-items: center;">
+          <h3 style="margin: 0; font-size: 16px;">📋 מידע לחיפוש</h3>
+          <button onclick="this.parentElement.parentElement.remove()" style="background: rgba(255,255,255,0.2); border: none; color: white; width: 30px; height: 30px; border-radius: 50%; cursor: pointer; font-size: 18px;">×</button>
+        </div>
+        
+        <div style="padding: 15px; max-height: calc(80vh - 120px); overflow-y: auto;">
+          <div style="background: #f0f9ff; padding: 12px; border-radius: 8px; margin-bottom: 15px; border-left: 4px solid #3b82f6;">
+            <h4 style="margin: 0 0 10px 0; color: #1e3a8a; font-size: 14px;">🚗 פרטי רכב</h4>
+            <div style="font-size: 13px; line-height: 1.6;">
+              <div><strong>יצרן:</strong> ${vehicleData.manufacturer || 'לא צוין'}</div>
+              <div><strong>דגם:</strong> ${vehicleData.model || 'לא צוין'}</div>
+              <div><strong>שנה:</strong> ${vehicleData.year || 'לא צוין'}</div>
+              ${vehicleData.plate ? `<div><strong>מספר רכב:</strong> ${vehicleData.plate}</div>` : ''}
+            </div>
+          </div>
+          
+          <div style="background: #fef3c7; padding: 12px; border-radius: 8px; margin-bottom: 15px; border-left: 4px solid #f59e0b;">
+            <h4 style="margin: 0 0 10px 0; color: #92400e; font-size: 14px;">🔑 פרטי כניסה</h4>
+            <div style="font-size: 13px;">
+              <div style="margin-bottom: 5px;"><strong>משתמש:</strong> ירון כיוף</div>
+              <div><strong>סיסמה:</strong> 8881</div>
+            </div>
+          </div>
+          
+          ${parts.length > 0 ? `
+            <div style="background: #dcfce7; padding: 12px; border-radius: 8px; border-left: 4px solid #10b981;">
+              <h4 style="margin: 0 0 10px 0; color: #065f46; font-size: 14px;">🔧 חלקים לחיפוש (${parts.length})</h4>
+              <div style="max-height: 300px; overflow-y: auto;">
+                ${parts.map((part, index) => `
+                  <div style="background: white; padding: 8px; margin-bottom: 8px; border-radius: 6px; font-size: 12px; border: 1px solid #d1fae5;">
+                    <div style="font-weight: bold; color: #059669; margin-bottom: 4px;">${index + 1}. ${part.name || part.part_name || 'חלק'}</div>
+                    <div style="color: #6b7280;">
+                      ${part.group ? `קבוצה: ${part.group}<br>` : ''}
+                      ${part.qty ? `כמות: ${part.qty}<br>` : ''}
+                      ${part.source ? `מקור: ${part.source}` : ''}
+                    </div>
+                  </div>
+                `).join('')}
+              </div>
+            </div>
+          ` : '<div style="color: #6b7280; text-align: center; padding: 20px;">אין חלקים ברשימה</div>'}
+        </div>
+        
+        <div style="padding: 15px; border-top: 1px solid #e5e7eb; background: #f9fafb;">
+          <button onclick="window.close(); window.opener.focus();" style="width: 100%; padding: 12px; background: #3b82f6; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 14px;">🔙 חזור למערכת</button>
+        </div>
+      </div>
+    `;
+  }
+  
+  function showExternalWindowInstructions(vehicleData, parts) {
+    const popup = document.createElement('div');
+    popup.style.cssText = `
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: white;
+      border: 3px solid #10b981;
+      border-radius: 12px;
+      padding: 25px;
+      z-index: 10001;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+      direction: rtl;
+      font-family: Arial, sans-serif;
+      max-width: 500px;
+    `;
+    
+    popup.innerHTML = `
+      <h3 style="margin-top: 0; color: #10b981; text-align: center;">✅ אתר Car-Part נפתח!</h3>
+      
+      <div style="background: #f0f9ff; padding: 15px; border-radius: 8px; margin: 15px 0; border-right: 4px solid #3b82f6;">
+        <h4 style="margin: 0 0 10px 0; color: #1e3a8a;">🚗 פרטי רכב</h4>
+        <div style="font-size: 14px; line-height: 1.8;">
+          <div><strong>יצרן:</strong> ${vehicleData.manufacturer || 'לא צוין'}</div>
+          <div><strong>דגם:</strong> ${vehicleData.model || 'לא צוין'}</div>
+          <div><strong>שנה:</strong> ${vehicleData.year || 'לא צוין'}</div>
+        </div>
+      </div>
+      
+      <div style="background: #fef3c7; padding: 15px; border-radius: 8px; margin: 15px 0; border-right: 4px solid #f59e0b;">
+        <h4 style="margin: 0 0 10px 0; color: #92400e;">🔑 פרטי כניסה</h4>
+        <div style="font-size: 14px; line-height: 1.8;">
+          <div><strong>משתמש:</strong> <span id="username-copy">ירון כיוף</span>
+            <button onclick="navigator.clipboard.writeText('ירון כיוף').then(() => alert('הועתק!'))" style="margin-right: 10px; padding: 4px 8px; background: #10b981; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">📋 העתק</button>
+          </div>
+          <div><strong>סיסמה:</strong> <span id="password-copy">8881</span>
+            <button onclick="navigator.clipboard.writeText('8881').then(() => alert('הועתק!'))" style="margin-right: 10px; padding: 4px 8px; background: #10b981; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">📋 העתק</button>
+          </div>
+        </div>
+      </div>
+      
+      ${parts.length > 0 ? `
+        <div style="background: #dcfce7; padding: 15px; border-radius: 8px; margin: 15px 0; border-right: 4px solid #10b981;">
+          <h4 style="margin: 0 0 10px 0; color: #065f46;">🔧 חלקים לחיפוש (${parts.length})</h4>
+          <div style="max-height: 200px; overflow-y: auto; font-size: 13px;">
+            ${parts.map((part, i) => `
+              <div style="padding: 6px 0; border-bottom: 1px solid #d1fae5;">
+                ${i + 1}. <strong>${part.name || part.part_name}</strong>
+                ${part.group ? ` - ${part.group}` : ''}
+                ${part.qty ? ` (כמות: ${part.qty})` : ''}
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      ` : ''}
+      
+      <div style="text-align: center; margin-top: 20px;">
+        <button onclick="this.parentElement.parentElement.remove()" style="padding: 12px 30px; background: #3b82f6; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 14px;">הבנתי, סגור</button>
+      </div>
+    `;
+    
+    document.body.appendChild(popup);
+    
+    // Auto-close after 30 seconds
+    setTimeout(() => {
+      if (popup.parentElement) {
+        popup.remove();
+      }
+    }, 30000);
+  }
   
   // ✅ ENHANCED: Comprehensive search results display for Make.com response format
   window.displayComprehensiveSearchResults = function(resultGroups) {
