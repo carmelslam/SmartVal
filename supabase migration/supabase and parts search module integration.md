@@ -12907,9 +12907,238 @@ WHERE part_year_from IS NOT NULL;
 
 ---
 
+## 🔍 HIDDEN UI ELEMENTS INVESTIGATION & TEST BUTTONS
+
+### **PROBLEM**
+User requested investigation of all hidden/dynamic lists in the code to find:
+1. Any orphaned lists without triggers
+2. Lists that exist in code but can't be shown
+3. Specifically elements #6 and #8 needed test buttons
+
+### **INVESTIGATION METHODOLOGY**
+Searched entire `parts search.html` for all elements with `display: none` and tracked their triggers.
+
+### **FINDINGS: ALL 9 DYNAMIC ELEMENTS**
+
+✅ **Element #1: Parts List UI Container** (Line 1934)
+- **Trigger**: `togglePartsListUI()` button (line 1919)
+- **Status**: Has trigger ✓
+
+✅ **Element #2: Internal Browser** (Line 2247)
+- **Trigger**: Auto-opens after search submission
+- **Status**: Has trigger ✓
+
+✅ **Element #3: Part Details Popup** (Line 2343)
+- **Trigger**: Click part name in list
+- **Status**: Has trigger ✓
+
+✅ **Element #4: Loading Overlay** (Line 2415)
+- **Trigger**: `showLoadingOverlay()` / `hideLoadingOverlay()`
+- **Status**: Has trigger ✓
+
+✅ **Element #5: Selected Parts List** (Line 100)
+- **Trigger**: Auto-updates via `updateSelectedPartsList()`
+- **Status**: Has trigger ✓
+
+✅ **Element #6: Parts List Toggle Popup** (Created dynamically)
+- **Trigger**: ⚠️ Normally auto-created when internal browser opens
+- **Issue**: No manual trigger for testing
+- **Solution**: Added TEST button #6 (purple)
+
+✅ **Element #7: No Results Message** (Line 2221)
+- **Trigger**: Shows when search returns 0 results
+- **Status**: Has trigger ✓
+
+✅ **Element #8: Selected Parts Display** (Dynamic)
+- **Trigger**: Auto-updates from `current_selected_list`
+- **Issue**: No manual trigger to force UI update
+- **Solution**: Added TEST button #8 (blue)
+
+✅ **Element #9: Confirmation Modal** (Line 2453)
+- **Trigger**: Various user actions requiring confirmation
+- **Status**: Has trigger ✓
+
+### **CONCLUSION**
+✅ **NO orphaned elements found** - All 9 dynamic elements have proper triggers  
+⚠️ **Elements #6 and #8** needed manual test buttons for easier testing
+
+---
+
+## 🧪 TEST BUTTONS IMPLEMENTATION
+
+### **Button #6: Parts List Toggle Popup** (Purple)
+**Location**: `parts search.html` lines 177-179
+
+**HTML Code**:
+```html
+<button type="button" onclick="window.TEST_showPartsListPopup()" 
+  style="background: #9333ea; color: white; padding: 12px 24px; border: none; 
+         border-radius: 8px; cursor: pointer; font-weight: bold;">
+  🧪 TEST #6: Parts List Toggle Popup
+</button>
+```
+
+**JavaScript Function**: `parts search.html` lines 2955-2975
+```javascript
+window.TEST_showPartsListPopup = function() {
+  console.log('🧪 TEST #6: Manually showing Parts List Toggle Popup');
+  
+  const currentList = window.helper?.parts_search?.current_selected_list || [];
+  
+  if (currentList.length === 0) {
+    alert('⚠️ TEST #6: No parts in current_selected_list!\n\nAdd some parts first, then try again.');
+    return;
+  }
+  
+  // Temporarily populate selectedParts array for the popup
+  selectedParts.length = 0;
+  currentList.forEach(part => selectedParts.push(part));
+  
+  console.log('🧪 TEST #6: Using ' + selectedParts.length + ' parts from current_selected_list');
+  
+  // Create the popup
+  createPartsListTogglePopup();
+  
+  alert('✅ TEST #6: Parts List Toggle Popup created!\n\nParts shown: ' + selectedParts.length);
+};
+```
+
+**What it does**:
+- Manually triggers the Parts List Toggle Popup
+- Loads parts from `current_selected_list`
+- Shows alert if no parts available
+- Normally this popup auto-creates when internal browser opens
+
+---
+
+### **Button #8: Selected Parts List** (Blue)
+**Location**: `parts search.html` lines 181-183
+
+**HTML Code**:
+```html
+<button type="button" onclick="window.TEST_showSelectedPartsList()" 
+  style="background: #0ea5e9; color: white; padding: 12px 24px; border: none; 
+         border-radius: 8px; cursor: pointer; font-weight: bold;">
+  🧪 TEST #8: Selected Parts List
+</button>
+```
+
+**JavaScript Function**: `parts search.html` lines 2978-3001
+```javascript
+window.TEST_showSelectedPartsList = function() {
+  console.log('🧪 TEST #8: Forcing Selected Parts List UI update');
+  
+  if (!window.helper?.parts_search) {
+    alert('⚠️ TEST #8: No helper.parts_search data!\n\nThe helper object is not initialized.');
+    return;
+  }
+  
+  const currentList = window.helper.parts_search.current_selected_list || [];
+  const selectedPartsList = window.helper.parts_search.selected_parts || [];
+  
+  console.log('🧪 TEST #8: current_selected_list has', currentList.length, 'parts');
+  console.log('🧪 TEST #8: selected_parts has', selectedPartsList.length, 'parts');
+  
+  // Force update the UI
+  if (typeof updateSelectedPartsList === 'function') {
+    updateSelectedPartsList();
+    alert('✅ TEST #8: Selected Parts List UI updated!\n\n' +
+          'Current list: ' + currentList.length + ' parts\n' +
+          'Cumulative list: ' + selectedPartsList.length + ' parts');
+  } else {
+    alert('❌ TEST #8: updateSelectedPartsList function not found!');
+  }
+};
+```
+
+**What it does**:
+- Forces UI update of the selected parts list
+- Shows count of current vs cumulative parts
+- Calls `updateSelectedPartsList()` function
+- Useful for testing when automatic updates don't trigger
+
+---
+
+## 🐛 BUG FIX: TEMPLATE LITERAL SYNTAX ERROR
+
+### **Error**:
+```
+parts search.html:2033 Uncaught SyntaxError: Unexpected token ')' (at parts search.html:2033:6)
+window.TEST_showPartsListPopup is not a function
+window.TEST_showSelectedPartsList is not a function
+```
+
+### **Root Cause**:
+When adding compatibility badge code, template literal starting at line 1978 was not properly closed before `.join('')` at line 2033.
+
+### **Fix Applied**:
+**Before** (line 2033):
+```javascript
+    `).join('');
+```
+
+**After** (lines 2033-2034):
+```javascript
+      `;
+    }).join('');
+```
+
+Added closing backtick on separate line before closing parenthesis.
+
+### **Result**:
+✅ Syntax error resolved  
+✅ Test button functions now globally accessible  
+✅ All test buttons working correctly
+
+---
+
+## 📋 TEST BUTTONS USAGE INSTRUCTIONS
+
+### **How to Test**:
+
+1. **For Button #6 (Parts List Toggle Popup)**:
+   - Add some parts to the search results
+   - Select at least 1 part
+   - Click purple "TEST #6" button
+   - Popup should appear showing parts list with toggle options
+
+2. **For Button #8 (Selected Parts List)**:
+   - Ensure helper object is initialized
+   - Add parts to current_selected_list
+   - Click blue "TEST #8" button
+   - Alert shows counts, UI updates in "רשימת חלקים נבחרים" section
+
+### **When to Delete**:
+⚠️ **MARKED FOR DELETION AFTER TESTING**
+
+Remove these 3 sections from `parts search.html`:
+1. **Lines 171-184**: Test button HTML container
+2. **Lines 2949-3001**: Test functions (between comment blocks)
+3. **Optional**: Remove `window.TEMP_clearAllHistory()` if not needed
+
+### **Deletion Command** (when ready):
+Use Edit tool to remove:
+- Test buttons HTML container
+- Test functions with their comment blocks
+- Keep compatibility badge code (lines 1948-2000)
+
+---
+
+## 📈 INVESTIGATION & TEST BUTTONS STATISTICS
+
+- **Hidden Elements Investigated**: 9
+- **Orphaned Elements Found**: 0 ✅
+- **Test Buttons Created**: 2
+- **Files Modified**: 1 (`parts search.html`)
+- **Lines Added**: ~100 lines (test buttons + functions)
+- **Bugs Fixed**: 1 (template literal syntax error)
+- **Testing Time Saved**: Significant (manual popup testing now possible)
+
+---
+
 **End of SESSION 18 CONTINUED Documentation**  
-**Status**: ✅ Part vehicle identity feature complete  
+**Status**: ✅ Part vehicle identity feature complete + Test buttons added  
 **User Satisfaction**: ✅ "perfect"  
-**Production Ready**: Yes - just run SQL migration
+**Production Ready**: Yes - just run SQL migration and test buttons can be deleted after testing
 
 ---
