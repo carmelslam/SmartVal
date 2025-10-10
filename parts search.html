@@ -3261,7 +3261,9 @@ ${partsText}`;
         box-shadow: 0 8px 32px rgba(0,0,0,0.3);
       `;
       
-      const partsList = parts.map((part, index) => `
+      const partsList = parts.map((part, index) => {
+        const partJson = JSON.stringify(part).replace(/"/g, '&quot;');
+        return `
         <div style="padding: 10px; border-bottom: 1px solid #e5e7eb; background: ${index % 2 === 0 ? '#f9fafb' : 'white'}; display: flex; justify-content: space-between; align-items: center;">
           <div style="flex: 1;">
             <div style="font-weight: bold; color: #059669;">${part.part_family || part.group || 'N/A'} - ${part.part_name || part.name || 'N/A'}</div>
@@ -3273,7 +3275,7 @@ ${partsText}`;
             </div>
           </div>
           <div style="display: flex; gap: 5px; margin-right: 10px;">
-            <button onclick="window.editPart(${index})" 
+            <button onclick='window.editPartFromModal("${partJson}")' 
                     style="background: #f59e0b; color: white; border: none; padding: 6px 12px; 
                            border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: bold;">
               ✏️ ערוך
@@ -3285,7 +3287,8 @@ ${partsText}`;
             </button>
           </div>
         </div>
-      `).join('');
+      `;
+      }).join('');
       
       modal.innerHTML = `
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
@@ -3391,6 +3394,144 @@ ${partsText}`;
     } catch (error) {
       console.error('❌ SESSION 20: Error deleting part:', error);
       alert('❌ שגיאה במחיקה:\n\n' + error.message);
+    }
+  };
+  
+  // SESSION 20: Edit part from test modal
+  window.editPartFromModal = async function(partJsonStr) {
+    console.log('✏️ SESSION 20: Editing part from modal');
+    
+    try {
+      const part = JSON.parse(partJsonStr.replace(/&quot;/g, '"'));
+      console.log('📝 SESSION 20: Part to edit:', part);
+      
+      // Close the test modal
+      const modal = document.querySelector('[style*="z-index: 10001"]');
+      const backdrop = document.querySelector('[style*="z-index: 10000"]');
+      if (modal) modal.remove();
+      if (backdrop) backdrop.remove();
+      
+      // Create edit modal
+      const editModal = document.createElement('div');
+      editModal.style.cssText = `
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background: white;
+        border: 3px solid #f59e0b;
+        border-radius: 16px;
+        padding: 20px;
+        max-width: 500px;
+        width: 90%;
+        z-index: 10001;
+        box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+      `;
+      
+      editModal.innerHTML = `
+        <h3 style="margin: 0 0 15px 0; color: #f59e0b;">✏️ ערוך חלק</h3>
+        <div style="display: flex; flex-direction: column; gap: 10px;">
+          <div>
+            <label style="font-weight: bold; display: block; margin-bottom: 5px;">כמות:</label>
+            <input type="number" id="edit_quantity" value="${part.quantity || 1}" 
+                   style="width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 6px;" min="1">
+          </div>
+          <div>
+            <label style="font-weight: bold; display: block; margin-bottom: 5px;">מקור:</label>
+            <input type="text" id="edit_source" value="${part.source || ''}" 
+                   style="width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 6px;">
+          </div>
+          <div>
+            <label style="font-weight: bold; display: block; margin-bottom: 5px;">הערות:</label>
+            <textarea id="edit_comments" 
+                      style="width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 6px; min-height: 80px;">${part.comments || ''}</textarea>
+          </div>
+        </div>
+        <div style="margin-top: 20px; display: flex; gap: 10px; justify-content: flex-end;">
+          <button onclick="this.parentElement.parentElement.remove(); document.querySelector('[style*=\\'z-index: 10000\\']')?.remove();" 
+                  style="background: #6b7280; color: white; border: none; padding: 10px 20px; 
+                         border-radius: 8px; cursor: pointer; font-weight: bold;">
+            ביטול
+          </button>
+          <button onclick="window.saveEditedPartFromModal('${part.id}', '${part.plate}')" 
+                  style="background: #f59e0b; color: white; border: none; padding: 10px 20px; 
+                         border-radius: 8px; cursor: pointer; font-weight: bold;">
+            💾 שמור
+          </button>
+        </div>
+      `;
+      
+      document.body.appendChild(editModal);
+      
+      // Add backdrop
+      const editBackdrop = document.createElement('div');
+      editBackdrop.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0,0,0,0.5);
+        z-index: 10000;
+      `;
+      editBackdrop.onclick = () => {
+        editModal.remove();
+        editBackdrop.remove();
+      };
+      document.body.appendChild(editBackdrop);
+      
+    } catch (error) {
+      console.error('❌ SESSION 20: Error editing part:', error);
+      alert('❌ שגיאה בפתיחת עריכה:\n\n' + error.message);
+    }
+  };
+  
+  // SESSION 20: Save edited part from modal
+  window.saveEditedPartFromModal = async function(partId, plate) {
+    console.log('💾 SESSION 20: Saving edited part:', partId);
+    
+    const quantity = document.getElementById('edit_quantity')?.value;
+    const source = document.getElementById('edit_source')?.value;
+    const comments = document.getElementById('edit_comments')?.value;
+    
+    if (!quantity || quantity < 1) {
+      alert('❌ כמות לא תקינה');
+      return;
+    }
+    
+    try {
+      const { error } = await window.supabase
+        .from('selected_parts')
+        .update({
+          quantity: parseInt(quantity),
+          source: source,
+          comments: comments
+        })
+        .eq('id', partId)
+        .eq('plate', plate);
+      
+      if (error) {
+        console.error('❌ SESSION 20: Supabase update error:', error);
+        alert('❌ שגיאה בעדכון:\n\n' + error.message);
+        return;
+      }
+      
+      console.log('✅ SESSION 20: Part updated in Supabase');
+      
+      clearPartsCache();
+      
+      alert('✅ החלק עודכן בהצלחה');
+      
+      const modal = document.querySelector('[style*="z-index: 10001"]');
+      const backdrop = document.querySelector('[style*="z-index: 10000"]');
+      if (modal) modal.remove();
+      if (backdrop) backdrop.remove();
+      
+      window.TEST_showAllSavedParts();
+      
+    } catch (error) {
+      console.error('❌ SESSION 20: Error updating part:', error);
+      alert('❌ שגיאה בעדכון:\n\n' + error.message);
     }
   };
   
