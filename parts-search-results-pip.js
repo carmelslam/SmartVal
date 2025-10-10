@@ -1044,6 +1044,23 @@ class PartsSearchResultsPiP {
               <!-- Title -->
               <h2 class="pip-title">תוצאות חיפוש חלקים</h2>
               
+              <!-- Search Info Bar -->
+              <div class="search-info-bar">
+                <div class="search-stats">
+                  נמצאו <strong>${this.searchResults.length}</strong> תוצאות
+                  ${this.currentPlateNumber ? `• רכב: <strong>${this.currentPlateNumber}</strong>` : ''}
+                </div>
+                ${this.searchResults.length > 0 && (this.searchResults[0].make || this.searchResults[0].model) ? `
+                  <div class="vehicle-info">
+                    ${this.searchResults[0].make ? `יצרן: ${this.searchResults[0].make}` : ''}
+                    ${this.searchResults[0].model ? ` • דגם: ${this.searchResults[0].model}` : ''}
+                    ${this.searchResults[0].year_from && this.searchResults[0].year_to ? ` • שנים: ${this.searchResults[0].year_from}-${this.searchResults[0].year_to}` : ''}
+                    ${this.currentSearchContext?.searchParams?.part_name || this.currentSearchContext?.searchParams?.free_query || this.currentSearchContext?.part_name ? ` • חלק: ${this.currentSearchContext.searchParams?.part_name || this.currentSearchContext.searchParams?.free_query || this.currentSearchContext.part_name}` : ''}
+                    ${this.searchResults[0].part_family ? ` • משפחה: ${this.searchResults[0].part_family}` : ''}
+                  </div>
+                ` : ''}
+              </div>
+              
               <!-- Results Table -->
               <div class="results-container">
                 <div class="table-wrapper">
@@ -1121,9 +1138,23 @@ class PartsSearchResultsPiP {
               pollInterval: null,
 
               clearSelections: async function() {
-                await this.parentPiP.clearSelections();
-                this.showNotification('הבחירות נוקו בהצלחה');
-                this.updateUI();
+                const confirmed = await this.showConfirm('האם אתה בטוח שברצונך לנקות את כל הבחירות?');
+                if (!confirmed) return;
+
+                try {
+                  const { supabase } = await import('./lib/supabaseClient.js');
+                  await supabase
+                    .from('selected_parts')
+                    .delete()
+                    .eq('plate', this.parentPiP.currentPlateNumber);
+                  
+                  this.parentPiP.selectedItems.clear();
+                  this.showNotification('הבחירות נוקו בהצלחה');
+                  this.updateUI();
+                } catch (error) {
+                  console.error('Error clearing selections:', error);
+                  this.showNotification('שגיאה בניקוי הבחירות', 'error');
+                }
               },
 
               saveAllSelections: async function() {
@@ -1133,9 +1164,25 @@ class PartsSearchResultsPiP {
                   return;
                 }
 
-                await this.parentPiP.saveAllSelections();
-                this.showNotification(selectedCount + ' חלקים נשמרו בהצלחה');
-                this.updateUI();
+                try {
+                  let totalForPlate = 0;
+                  if (window.opener.supabase && this.parentPiP.currentPlateNumber) {
+                    const { data } = await window.opener.supabase
+                      .from('selected_parts')
+                      .select('id', { count: 'exact', head: false })
+                      .eq('plate', this.parentPiP.currentPlateNumber);
+                    
+                    totalForPlate = data?.length || 0;
+                  }
+                  
+                  this.showNotification(
+                    \`נשמרו \${selectedCount} חלקים בחיפוש זה\\nסה"כ \${totalForPlate} חלקים נבחרו למספר רכב \${this.parentPiP.currentPlateNumber || ''}\`
+                  );
+                  this.updateUI();
+                } catch (error) {
+                  console.error('Error saving selections:', error);
+                  this.showNotification('שגיאה בשמירת הבחירות', 'error');
+                }
               },
 
               printWindow: function() {
@@ -1157,11 +1204,62 @@ class PartsSearchResultsPiP {
               showNotification: function(message, type = 'success') {
                 const notificationDiv = document.getElementById('notification') || this.createNotificationElement();
                 notificationDiv.style.background = type === 'success' ? '#10b981' : '#ef4444';
-                notificationDiv.textContent = message;
+                notificationDiv.innerHTML = message.replace(/\\n/g, '<br>');
                 notificationDiv.style.display = 'block';
                 setTimeout(() => {
                   notificationDiv.style.display = 'none';
-                }, 3000);
+                }, 5000);
+              },
+
+              showConfirm: function(message) {
+                return new Promise((resolve) => {
+                  const overlay = document.createElement('div');
+                  Object.assign(overlay.style, {
+                    position: 'fixed',
+                    top: '0',
+                    left: '0',
+                    width: '100%',
+                    height: '100%',
+                    background: 'rgba(0,0,0,0.5)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    zIndex: '10000',
+                    direction: 'rtl'
+                  });
+
+                  const dialog = document.createElement('div');
+                  Object.assign(dialog.style, {
+                    background: 'white',
+                    padding: '24px',
+                    borderRadius: '8px',
+                    boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
+                    minWidth: '300px',
+                    maxWidth: '400px'
+                  });
+
+                  dialog.innerHTML = \`
+                    <div style="margin-bottom: 20px; font-size: 16px; color: #333;">\${message}</div>
+                    <div style="display: flex; gap: 10px; justify-content: flex-end;">
+                      <button id="confirm-cancel" style="padding: 8px 16px; border-radius: 6px; border: 1px solid #d1d5db; background: white; cursor: pointer;">ביטול</button>
+                      <button id="confirm-ok" style="padding: 8px 16px; border-radius: 6px; border: none; background: #4f46e5; color: white; cursor: pointer;">אישור</button>
+                    </div>
+                  \`;
+
+                  overlay.appendChild(dialog);
+                  document.body.appendChild(overlay);
+
+                  const cleanup = (result) => {
+                    document.body.removeChild(overlay);
+                    resolve(result);
+                  };
+
+                  document.getElementById('confirm-ok').onclick = () => cleanup(true);
+                  document.getElementById('confirm-cancel').onclick = () => cleanup(false);
+                  overlay.onclick = (e) => {
+                    if (e.target === overlay) cleanup(false);
+                  };
+                });
               },
 
               createNotificationElement: function() {
