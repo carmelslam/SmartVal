@@ -196,6 +196,9 @@ class PartsSearchResultsPiP {
             <button class="pip-close-btn" onclick="window.partsResultsPiP?.hidePiP()">×</button>
           </div>
 
+          <!-- Title -->
+          <h2 class="pip-title">תוצאות חיפוש חלקים</h2>
+
           <!-- Action Buttons -->
           <div class="pip-actions">
             <button class="action-btn print-btn" onclick="window.partsResultsPiP?.printResults()">
@@ -207,9 +210,6 @@ class PartsSearchResultsPiP {
               סקירה
             </button>
           </div>
-
-          <!-- Title -->
-          <h2 class="pip-title">תוצאות חיפוש חלקים</h2>
           
           <!-- Search Info Bar -->
           <div class="search-info-bar">
@@ -222,7 +222,7 @@ class PartsSearchResultsPiP {
                 ${firstResult.make ? `יצרן: ${firstResult.make}` : ''}
                 ${firstResult.model ? ` • דגם: ${firstResult.model}` : ''}
                 ${firstResult.year_from && firstResult.year_to ? ` • שנים: ${firstResult.year_from}-${firstResult.year_to}` : ''}
-                ${searchContext.part_name || searchContext.part_query ? ` • חלק: ${searchContext.part_name || searchContext.part_query}` : ''}
+                ${searchContext.searchParams?.part_name || searchContext.searchParams?.free_query || searchContext.part_name ? ` • חלק: ${searchContext.searchParams?.part_name || searchContext.searchParams?.free_query || searchContext.part_name}` : ''}
                 ${firstResult.part_family ? ` • משפחה: ${firstResult.part_family}` : ''}
               </div>
             ` : ''}
