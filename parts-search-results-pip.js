@@ -868,44 +868,26 @@ class PartsSearchResultsPiP {
    * Print the current PiP content
    */
   printResults() {
-    // Create a new window for printing
-    const printWindow = window.open('', '_blank');
+    // SESSION 22: Print directly without opening new window
+    // Hide buttons and unnecessary elements for print
+    const pipActions = this.pipWindow.querySelector('.pip-actions');
+    const pipCloseBtn = this.pipWindow.querySelector('.pip-close-btn');
+    const pipFooter = this.pipWindow.querySelector('.pip-footer');
     
-    // Get the current PiP content
-    const pipContent = this.pipWindow.innerHTML;
+    // Temporarily hide elements
+    if (pipActions) pipActions.style.display = 'none';
+    if (pipCloseBtn) pipCloseBtn.style.display = 'none';
+    if (pipFooter) pipFooter.style.display = 'none';
     
-    // Create a styled print version
-    printWindow.document.write(`
-      <!DOCTYPE html>
-      <html dir="rtl">
-        <head>
-          <title>תוצאות חיפוש חלקים</title>
-          <style>
-            ${this.getStyles()}
-            @media print {
-              .pip-close-btn, .pip-actions { display: none !important; }
-              .pip-window { 
-                box-shadow: none !important;
-                position: static !important;
-                transform: none !important;
-                width: 100% !important;
-                height: auto !important;
-              }
-            }
-          </style>
-        </head>
-        <body>
-          ${pipContent}
-        </body>
-      </html>
-    `);
+    // Trigger print dialog directly
+    window.print();
     
-    printWindow.document.close();
-    
-    // Wait for images to load before printing
+    // Restore hidden elements after print dialog closes
     setTimeout(() => {
-      printWindow.print();
-    }, 500);
+      if (pipActions) pipActions.style.display = 'flex';
+      if (pipCloseBtn) pipCloseBtn.style.display = 'block';
+      if (pipFooter) pipFooter.style.display = 'flex';
+    }, 100);
   }
 
   /**
