@@ -486,7 +486,8 @@ core car detailes response to the open case webhook OPEN_CASE_UI:
   "סה\"כ עבודות": "8,239.00",
   "סה\"כ חלקים": "4,564.00"
 }
-parts search results json structure from teh webhook response :
+
+**parts search results json structure from the webhook response :**
 {
   "plate": "221-84-003",
   "search_date": "2025-08-12T17:05:53.850+02:00",
