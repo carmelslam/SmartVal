@@ -167,6 +167,24 @@ class PartsSearchResultsPiP {
   }
 
   /**
+   * SESSION 23: Get source badge based on data source
+   */
+  getSourceBadge(searchContext = {}) {
+    const dataSource = searchContext.dataSource || 'קטלוג';
+    
+    let badge = '';
+    if (dataSource === 'קטלוג') {
+      badge = '<span style="display: inline-block; margin-right: 10px; padding: 4px 12px; background: #10b981; color: white; border-radius: 12px; font-size: 14px; font-weight: 600;">🗄️ קטלוג</span>';
+    } else if (dataSource === 'אינטרנט') {
+      badge = '<span style="display: inline-block; margin-right: 10px; padding: 4px 12px; background: #3b82f6; color: white; border-radius: 12px; font-size: 14px; font-weight: 600;">🌐 אינטרנט</span>';
+    } else if (dataSource === 'אחר') {
+      badge = '<span style="display: inline-block; margin-right: 10px; padding: 4px 12px; background: #f59e0b; color: white; border-radius: 12px; font-size: 14px; font-weight: 600;">📄 OCR</span>';
+    }
+    
+    return badge;
+  }
+
+  /**
    * Generate PiP HTML structure
    */
   generatePiPHTML(searchContext = {}) {
@@ -198,7 +216,10 @@ class PartsSearchResultsPiP {
           </div>
 
           <!-- Title -->
-          <h2 class="pip-title">תוצאות חיפוש חלקים</h2>
+          <h2 class="pip-title">
+            תוצאות חיפוש חלקים
+            ${this.getSourceBadge(searchContext)}
+          </h2>
 
           <!-- Action Buttons -->
           <div class="pip-actions">
@@ -1077,7 +1098,10 @@ class PartsSearchResultsPiP {
               </div>
 
               <!-- Title -->
-              <h2 class="pip-title">תוצאות חיפוש חלקים</h2>
+              <h2 class="pip-title">
+                תוצאות חיפוש חלקים
+                ${this.getSourceBadge(this.currentSearchContext || {})}
+              </h2>
               
               <!-- Search Info Bar -->
               <div class="search-info-bar">

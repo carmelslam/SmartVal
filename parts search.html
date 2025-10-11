@@ -242,11 +242,11 @@
 <div style="margin: 15px 0; padding: 15px; background: #f9fafb; border-radius: 8px; border: 1px solid #e5e7eb;">
   <label for="resultFileUpload" style="display: block; margin-bottom: 10px; font-weight: 600; color: #374151; font-size: 14px;">העלה תוצאת חיפוש (PDF/תמונה)</label>
   <input type="file" id="resultFileUpload" accept=".pdf,.png,.jpg,.jpeg,.html" style="display: block; width: 100%; padding: 8px; margin-bottom: 10px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;">
-  <button type="button" class="btn" id="sendResultToOCRBtn" style="background: #f59e0b; width: 100%; padding: 10px 20px; border: none; border-radius: 8px; color: white; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.3s; box-shadow: 0 2px 4px rgba(245, 158, 11, 0.3);" onmouseover="this.style.background='#d97706'; this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 8px rgba(245, 158, 11, 0.4)';" onmouseout="this.style.background='#f59e0b'; this.style.transform='translateY(0)'; this.style.boxShadow='0 2px 4px rgba(245, 158, 11, 0.3)';">📤 שלח תוצאת חיפוש לניתוח</button>
+  <button type="button" class="btn" id="sendResultToOCRBtn" onclick="searchOCR()" style="background: #f59e0b; width: 100%; padding: 10px 20px; border: none; border-radius: 8px; color: white; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.3s; box-shadow: 0 2px 4px rgba(245, 158, 11, 0.3);" onmouseover="this.style.background='#d97706'; this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 8px rgba(245, 158, 11, 0.4)';" onmouseout="this.style.background='#f59e0b'; this.style.transform='translateY(0)'; this.style.boxShadow='0 2px 4px rgba(245, 158, 11, 0.3)';">📤 שלח תוצאת חיפוש לניתוח</button>
 </div>
 
 <h2 style="text-align: right; font-size: 18px; margin-top: 30px;">חיפוש חלפים במערכת חיצונית</h2>
-<button class="btn" type="submit" style="background: #3b82f6; width: 100%; padding: 12px 20px; border: none; border-radius: 8px; color: white; font-size: 15px; font-weight: 600; cursor: pointer; transition: all 0.3s; box-shadow: 0 2px 4px rgba(59, 130, 246, 0.3); margin: 10px 0;" onmouseover="this.style.background='#2563eb'; this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 8px rgba(59, 130, 246, 0.4)';" onmouseout="this.style.background='#3b82f6'; this.style.transform='translateY(0)'; this.style.boxShadow='0 2px 4px rgba(59, 130, 246, 0.3)';">🔍 חפש במערכת חיצונית (Make.com)</button>
+<button class="btn" type="button" onclick="searchWebExternal()" style="background: #3b82f6; width: 100%; padding: 12px 20px; border: none; border-radius: 8px; color: white; font-size: 15px; font-weight: 600; cursor: pointer; transition: all 0.3s; box-shadow: 0 2px 4px rgba(59, 130, 246, 0.3); margin: 10px 0;" onmouseover="this.style.background='#2563eb'; this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 8px rgba(59, 130, 246, 0.4)';" onmouseout="this.style.background='#3b82f6'; this.style.transform='translateY(0)'; this.style.boxShadow='0 2px 4px rgba(59, 130, 246, 0.3)';">🔍 חפש במערכת חיצונית (Make.com)</button>
 
 <!-- Enhanced Part Management -->
 <div style="margin-top: 20px;">
@@ -939,11 +939,12 @@ ${part.supplier ? `   ספק: ${part.supplier}` : ''}
     const supabaseBtn = document.querySelector('button[onclick="searchSupabase()"]');
     const originalText = supabaseBtn ? supabaseBtn.innerHTML : '';
     
+    manageSearchButtons('catalog');
+    
     try {
       // Show loading state
       if (supabaseBtn) {
         supabaseBtn.innerHTML = '⏳ מחפש במאגר הנתונים...';
-        supabaseBtn.disabled = true;
       }
       
       // Critical dependency check
@@ -1084,9 +1085,9 @@ ${part.supplier ? `   ספק: ${part.supplier}` : ''}
       console.log('🔄 Restoring button state...');
       if (supabaseBtn) {
         supabaseBtn.innerHTML = originalText;
-        supabaseBtn.disabled = false;
-        console.log('✅ Button state restored');
       }
+      manageSearchButtons(null);
+      console.log('✅ Button state restored');
     }
   }
 
@@ -1272,10 +1273,383 @@ ${part.supplier ? `   ספק: ${part.supplier}` : ''}
   }
   
   
+  // SESSION 23: Mutual Button Exclusion for Search Sources
+  function manageSearchButtons(activeSource) {
+    const catalogBtn = document.querySelector('button[onclick="searchSupabase()"]');
+    const webBtn = document.querySelector('button.btn[type="submit"]');
+    const ocrBtn = document.getElementById('sendResultToOCRBtn');
+    
+    if (activeSource === 'catalog') {
+      if (catalogBtn) catalogBtn.disabled = true;
+      if (webBtn) webBtn.disabled = true;
+      if (ocrBtn) ocrBtn.disabled = true;
+    } else if (activeSource === 'web') {
+      if (catalogBtn) catalogBtn.disabled = true;
+      if (webBtn) webBtn.disabled = true;
+      if (ocrBtn) ocrBtn.disabled = true;
+    } else if (activeSource === 'ocr') {
+      if (catalogBtn) catalogBtn.disabled = true;
+      if (webBtn) webBtn.disabled = true;
+      if (ocrBtn) ocrBtn.disabled = true;
+    } else if (activeSource === null) {
+      if (catalogBtn) catalogBtn.disabled = false;
+      if (webBtn) webBtn.disabled = false;
+      if (ocrBtn) ocrBtn.disabled = false;
+    }
+    
+    console.log(`🔘 Button state: ${activeSource || 'all enabled'}`);
+  }
+  
+  // SESSION 23: Handle Webhook Response from Make.com (Web Search / OCR)
+  async function handleWebhookResponse(webhookData, dataSource) {
+    console.log('📥 SESSION 23: Processing webhook response', { dataSource, resultCount: webhookData.results?.length || 0 });
+    
+    try {
+      const plate = webhookData.plate || document.getElementById('plate').value;
+      
+      // Parallel Path A: Save to Supabase parts_search_results table
+      const saveToSupabasePromise = (async () => {
+        if (!window.partsSearchSupabaseService) {
+          console.warn('⚠️ Supabase service not available, skipping save');
+          return null;
+        }
+        
+        const sessionId = window.currentSearchSessionId || null;
+        const searchParams = {
+          plate: plate,
+          manufacturer: document.getElementById('manufacturer').value,
+          model: document.getElementById('model').value,
+          year: document.getElementById('year').value,
+          dataSource: dataSource
+        };
+        
+        const flatResults = [];
+        if (webhookData.results && Array.isArray(webhookData.results)) {
+          webhookData.results.forEach(group => {
+            if (group.search_results && Array.isArray(group.search_results)) {
+              group.search_results.forEach(part => {
+                flatResults.push({
+                  ...part,
+                  group: group.group,
+                  part_name: group.name,
+                  data_source: dataSource
+                });
+              });
+            }
+          });
+        }
+        
+        console.log(`💾 Saving ${flatResults.length} results to Supabase...`);
+        const resultId = await window.partsSearchSupabaseService.saveSearchResults(
+          sessionId,
+          flatResults,
+          { plate, searchParams, dataSource }
+        );
+        console.log('✅ Supabase save completed:', resultId);
+        return resultId;
+      })();
+      
+      // Parallel Path B: Update helper.parts_search.results
+      const updateHelperPromise = (async () => {
+        let helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+        
+        if (!helper.parts_search) {
+          helper.parts_search = {
+            results: [],
+            current_selected_list: [],
+            selected_parts: []
+          };
+        }
+        
+        if (!helper.parts_search.results) {
+          helper.parts_search.results = [];
+        }
+        
+        const newResults = {
+          search_date: webhookData.search_date || new Date().toISOString(),
+          data_source: dataSource,
+          plate: plate,
+          results: webhookData.results || []
+        };
+        
+        helper.parts_search.results.push(newResults);
+        
+        sessionStorage.setItem('helper', JSON.stringify(helper));
+        localStorage.setItem('helper_data', JSON.stringify(helper));
+        
+        console.log('✅ Helper updated with webhook results');
+        return helper;
+      })();
+      
+      await Promise.all([saveToSupabasePromise, updateHelperPromise]);
+      
+      const flatResults = [];
+      if (webhookData.results && Array.isArray(webhookData.results)) {
+        webhookData.results.forEach(group => {
+          if (group.search_results && Array.isArray(group.search_results)) {
+            group.search_results.forEach(part => {
+              flatResults.push({
+                ...part,
+                group: group.group,
+                part_name: group.name,
+                data_source: dataSource
+              });
+            });
+          }
+        });
+      }
+      
+      if (window.partsResultsPiP) {
+        const pipContext = {
+          plate: plate,
+          sessionId: window.currentSearchSessionId || 'no-session',
+          searchType: dataSource === 'אינטרנט' ? 'web_search' : 'ocr_search',
+          dataSource: dataSource,
+          searchSuccess: flatResults.length > 0,
+          searchTime: 0,
+          searchParams: { plate, dataSource }
+        };
+        
+        await window.partsResultsPiP.showResults(flatResults, pipContext);
+        console.log('✅ PiP displayed with webhook results');
+        
+        if (flatResults.length > 0) {
+          if (typeof showNotification === 'function') {
+            showNotification(`נמצאו ${flatResults.length} תוצאות מ${dataSource}`, 'success');
+          }
+        }
+      }
+      
+    } catch (error) {
+      console.error('❌ Error handling webhook response:', error);
+      throw error;
+    }
+  }
+  
+  // SESSION 23: Web Search Function (Make.com External Search)
+  async function searchWebExternal() {
+    console.log('🌐 SESSION 23: Starting web external search...');
+    
+    const webBtn = document.querySelector('button.btn[type="submit"]');
+    const originalText = webBtn ? webBtn.innerHTML : '';
+    
+    manageSearchButtons('web');
+    
+    try {
+      if (webBtn) {
+        webBtn.innerHTML = '⏳ מחפש במערכת חיצונית...';
+      }
+      
+      const plate = document.getElementById('plate').value;
+      if (!plate) {
+        throw new Error('מספר רישוי חסר');
+      }
+      
+      const searchParams = {
+        plate: plate,
+        manufacturer: document.getElementById('manufacturer').value,
+        model: document.getElementById('model').value,
+        year: document.getElementById('year').value,
+        part_name: document.getElementById('part_name').value,
+        free_query: document.getElementById('free_query').value,
+        selectedParts: window.helper?.parts_search?.current_selected_list || []
+      };
+      
+      if (window.partsSearchSupabaseService) {
+        const sessionId = await window.partsSearchSupabaseService.createSearchSession(
+          plate,
+          { searchParams, dataSource: 'אינטרנט' }
+        );
+        window.currentSearchSessionId = sessionId;
+        console.log('✅ Search session created:', sessionId);
+      }
+      
+      const webhookUrl = 'https://hook.eu2.make.com/xenshho1chvd955wpaum5yh51v8klo58';
+      const webhookPayload = {
+        plate: searchParams.plate,
+        manufacturer: searchParams.manufacturer,
+        model: searchParams.model,
+        year: searchParams.year,
+        parts: searchParams.selectedParts
+      };
+      
+      console.log('📤 Sending webhook to Make.com...', webhookPayload);
+      
+      if (webBtn) {
+        webBtn.innerHTML = '⏳ ממתין לתוצאות (עד 5 דקות)...';
+      }
+      
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('הזמן הקצוב למערכת חיצונית הסתיים (5 דקות)')), 300000)
+      );
+      
+      const fetchPromise = fetch(webhookUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(webhookPayload)
+      });
+      
+      const response = await Promise.race([fetchPromise, timeoutPromise]);
+      
+      if (!response.ok) {
+        throw new Error(`שגיאת תקשורת: ${response.status}`);
+      }
+      
+      const webhookData = await response.json();
+      console.log('✅ Webhook response received:', webhookData);
+      
+      await handleWebhookResponse(webhookData, 'אינטרנט');
+      
+    } catch (error) {
+      console.error('❌ Web search error:', error);
+      
+      if (window.partsSearchSupabaseService && window.currentSearchSessionId) {
+        try {
+          await window.partsSearchSupabaseService.saveSearchResults(
+            window.currentSearchSessionId,
+            [],
+            { error: error.message, dataSource: 'אינטרנט' }
+          );
+        } catch (logError) {
+          console.error('❌ Failed to log error to Supabase:', logError);
+        }
+      }
+      
+      alert(`שגיאה בחיפוש חיצוני: ${error.message}`);
+    } finally {
+      if (webBtn) {
+        webBtn.innerHTML = originalText;
+      }
+      manageSearchButtons(null);
+    }
+  }
+  
+  // SESSION 23: OCR Search Function
+  async function searchOCR() {
+    console.log('📄 SESSION 23: Starting OCR search...');
+    
+    const ocrBtn = document.getElementById('sendResultToOCRBtn');
+    const fileInput = document.getElementById('resultFileUpload');
+    const originalText = ocrBtn ? ocrBtn.innerHTML : '';
+    
+    manageSearchButtons('ocr');
+    
+    try {
+      if (ocrBtn) {
+        ocrBtn.innerHTML = '⏳ מעלה קובץ...';
+      }
+      
+      const file = fileInput?.files?.[0];
+      if (!file) {
+        throw new Error('לא נבחר קובץ');
+      }
+      
+      const validTypes = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png'];
+      if (!validTypes.includes(file.type)) {
+        throw new Error('סוג קובץ לא תקין. נדרש PDF או תמונה (JPG/PNG)');
+      }
+      
+      const maxSize = 10 * 1024 * 1024;
+      if (file.size > maxSize) {
+        throw new Error('גודל הקובץ חורג מ-10MB');
+      }
+      
+      const plate = document.getElementById('plate').value;
+      if (!plate) {
+        throw new Error('מספר רישוי חסר');
+      }
+      
+      if (window.partsSearchSupabaseService) {
+        const sessionId = await window.partsSearchSupabaseService.createSearchSession(
+          plate,
+          { searchParams: { plate }, dataSource: 'אחר' }
+        );
+        window.currentSearchSessionId = sessionId;
+        console.log('✅ OCR session created:', sessionId);
+      }
+      
+      const reader = new FileReader();
+      const fileDataPromise = new Promise((resolve, reject) => {
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = () => reject(new Error('שגיאה בקריאת הקובץ'));
+        reader.readAsDataURL(file);
+      });
+      
+      if (ocrBtn) {
+        ocrBtn.innerHTML = '⏳ שולח לניתוח OCR...';
+      }
+      
+      const fileData = await fileDataPromise;
+      
+      const webhookUrl = 'https://hook.eu2.make.com/w11tujdfbmq03co3vakb2jfr5vo4k6w6';
+      const webhookPayload = {
+        plate: plate,
+        file_name: file.name,
+        file_type: file.type,
+        file_data: fileData
+      };
+      
+      console.log('📤 Sending OCR webhook to Make.com...');
+      
+      if (ocrBtn) {
+        ocrBtn.innerHTML = '⏳ מנתח קובץ (עד 5 דקות)...';
+      }
+      
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('הזמן הקצוב לניתוח OCR הסתיים (5 דקות)')), 300000)
+      );
+      
+      const fetchPromise = fetch(webhookUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(webhookPayload)
+      });
+      
+      const response = await Promise.race([fetchPromise, timeoutPromise]);
+      
+      if (!response.ok) {
+        throw new Error(`שגיאת תקשורת: ${response.status}`);
+      }
+      
+      const webhookData = await response.json();
+      console.log('✅ OCR webhook response received:', webhookData);
+      
+      await handleWebhookResponse(webhookData, 'אחר');
+      
+      fileInput.value = '';
+      
+    } catch (error) {
+      console.error('❌ OCR search error:', error);
+      
+      if (window.partsSearchSupabaseService && window.currentSearchSessionId) {
+        try {
+          await window.partsSearchSupabaseService.saveSearchResults(
+            window.currentSearchSessionId,
+            [],
+            { error: error.message, dataSource: 'אחר' }
+          );
+        } catch (logError) {
+          console.error('❌ Failed to log error to Supabase:', logError);
+        }
+      }
+      
+      alert(`שגיאה בניתוח OCR: ${error.message}`);
+    } finally {
+      if (ocrBtn) {
+        ocrBtn.innerHTML = originalText;
+      }
+      manageSearchButtons(null);
+    }
+  }
+  
   // Make functions globally available
   window.updateHelperWithPartsSearch = updateHelperWithPartsSearch;
   window.validateSearchForm = validateSearchForm;
   window.searchSupabase = searchSupabase;
+  window.manageSearchButtons = manageSearchButtons;
+  window.handleWebhookResponse = handleWebhookResponse;
+  window.searchWebExternal = searchWebExternal;
+  window.searchOCR = searchOCR;
   
 </script>
 
