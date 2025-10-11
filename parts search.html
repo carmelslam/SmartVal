@@ -1445,16 +1445,36 @@ ${part.supplier ? `   ספק: ${part.supplier}` : ''}
         throw new Error('מספר רישוי חסר');
       }
       
+      // DEBUG: Read all form values
+      console.log('🔍 DEBUG: Reading form values...');
+      const formValues = {
+        plate: document.getElementById('plate')?.value,
+        manufacturer: document.getElementById('manufacturer')?.value,
+        model: document.getElementById('model')?.value,
+        year: document.getElementById('year')?.value,
+        part_name: document.getElementById('part_name')?.value,
+        part_group: document.getElementById('part_group')?.value,
+        free_query: document.getElementById('free_query')?.value,
+        trim: document.getElementById('trim')?.value,
+        model_code: document.getElementById('model_code')?.value,
+        engine_type: document.getElementById('engine_type')?.value,
+        engine_volume: document.getElementById('engine_volume')?.value,
+        vin: document.getElementById('vin')?.value
+      };
+      console.log('📋 Form values:', formValues);
+      
       const searchParams = {
         plate: plate,
-        manufacturer: document.getElementById('manufacturer').value,
-        model: document.getElementById('model').value,
-        year: document.getElementById('year').value,
-        part_name: document.getElementById('part_name').value,
-        part_group: document.getElementById('part_group').value,
-        free_query: document.getElementById('free_query').value,
+        manufacturer: formValues.manufacturer,
+        model: formValues.model,
+        year: formValues.year,
+        part_name: formValues.part_name,
+        part_group: formValues.part_group,
+        free_query: formValues.free_query,
         selectedParts: window.helper?.parts_search?.current_selected_list || []
       };
+      
+      console.log('📦 Search params assembled:', searchParams);
       
       if (window.partsSearchSupabaseService) {
         const sessionId = await window.partsSearchSupabaseService.createSearchSession(
@@ -1468,21 +1488,21 @@ ${part.supplier ? `   ספק: ${part.supplier}` : ''}
       const webhookUrl = 'https://hook.eu2.make.com/xenshho1chvd955wpaum5yh51v8klo58';
       
       const webhookPayload = {
-        manufacturer: searchParams.manufacturer || "",
-        model: searchParams.model || "",
-        trim: document.getElementById('trim')?.value || "",
-        model_code: document.getElementById('model_code')?.value || "",
-        year: searchParams.year || "",
-        engine: document.getElementById('engine_type')?.value || "",
-        engine_volume: document.getElementById('engine_volume')?.value || "",
-        engine_model: document.getElementById('engine_type')?.value || "",
-        engine_type: document.getElementById('engine_type')?.value || "",
-        vin_number: document.getElementById('vin')?.value || "",
-        plate: searchParams.plate || "",
+        manufacturer: formValues.manufacturer || "",
+        model: formValues.model || "",
+        trim: formValues.trim || "",
+        model_code: formValues.model_code || "",
+        year: formValues.year || "",
+        engine: formValues.engine_type || "",
+        engine_volume: formValues.engine_volume || "",
+        engine_model: formValues.engine_type || "",
+        engine_type: formValues.engine_type || "",
+        vin_number: formValues.vin || "",
+        plate: formValues.plate || "",
         
-        keyword: searchParams.free_query || "",
-        part_group: searchParams.part_group || "",
-        part_name: searchParams.part_name || "",
+        keyword: formValues.free_query || "",
+        part_group: formValues.part_group || "",
+        part_name: formValues.part_name || "",
         search_type: "web_search",
         
         parts_count: searchParams.selectedParts ? searchParams.selectedParts.length : 0,
@@ -1492,6 +1512,8 @@ ${part.supplier ? `   ספק: ${part.supplier}` : ''}
         timestamp: new Date().toISOString(),
         source: "parts_search_module"
       };
+      
+      console.log('📤 Webhook payload assembled:', webhookPayload);
       
       console.log('📤 Sending webhook to Make.com...', webhookPayload);
       
