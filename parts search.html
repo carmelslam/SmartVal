@@ -1321,8 +1321,8 @@ ${part.supplier ? `   ספק: ${part.supplier}` : ''}
       window.raw_webhook_data = webhookData; // Keep window copy too
       console.log('💾 Raw webhook data captured in helper.parts_search.raw_webhook_data');
       
-      // Webhook returns flat array of parts directly in results[]
-      const flatResults = webhookData.results || [];
+      // Extract results from webhook (check both structures)
+      const flatResults = webhookData.body?.results || webhookData.results || [];
       console.log(`📦 Received ${flatResults.length} results from webhook`);
       
       // Get search params for transformation
@@ -1337,21 +1337,22 @@ ${part.supplier ? `   ספק: ${part.supplier}` : ''}
       };
       
       // Transform webhook results to match catalog field structure
+      // Handle BOTH Hebrew and English field names
       const transformedResults = flatResults.map(item => ({
-        pcode: item.catalog_code || item.oem_code || 'לא זמין',
-        cat_num_desc: item.part_description || 'לא זמין',
-        supplier_name: item.supplier_name || 'לא זמין',
-        availability: item.source_type || 'מקורי',
-        price: parseFloat((item.price || '0').toString().replace(/,/g, '')) || 0,
+        pcode: item.קוד_קטלוגי || item.catalog_code || item.קוד_יצרן || item.oem_code || 'לא זמין',
+        cat_num_desc: item.תיאור_חלק || item.part_description || 'לא זמין',
+        supplier_name: item.ספק || item.supplier_name || 'לא זמין',
+        availability: item.סוג || item.source_type || 'מקורי',
+        price: parseFloat((item.מחיר || item.price || '0').toString().replace(/,/g, '')) || 0,
         version_date: new Date().toISOString(),
         part_family: searchParams.part_group || 'לא מוגדר',
         model: searchParams.model || 'לא מוגדר',
         extracted_year: searchParams.year || 'לא מוגדר',
-        location: item.location,
-        condition: item.condition,
-        currency: item.currency,
-        notes: item.notes,
-        oem: item.oem_code
+        location: item.מיקום || item.location,
+        condition: item.מצב || item.condition,
+        currency: item.מטבע || item.currency,
+        notes: item.הערות || item.notes,
+        oem: item.קוד_יצרן || item.oem_code
       }));
       
       console.log(`🔄 Transformed ${transformedResults.length} results to catalog format`);
@@ -1395,7 +1396,7 @@ ${part.supplier ? `   ספק: ${part.supplier}` : ''}
           search_date: webhookData.search_date || new Date().toISOString(),
           data_source: dataSource,
           plate: plate,
-          results: transformedResults
+          results: flatResults // Store ORIGINAL webhook data, not transformed
         };
         
         helper.parts_search.results.push(newResults);
