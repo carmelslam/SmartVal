@@ -1307,9 +1307,19 @@ ${part.supplier ? `   ספק: ${part.supplier}` : ''}
     try {
       const plate = webhookData.plate || document.getElementById('plate').value;
       
-      // Capture raw webhook data
-      window.raw_webhook_data = webhookData;
-      console.log('💾 Raw webhook data captured in window.raw_webhook_data');
+      // Step 1: Capture RAW webhook data in helper
+      let helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+      if (!helper.parts_search) {
+        helper.parts_search = {
+          results: [],
+          current_selected_list: [],
+          selected_parts: []
+        };
+      }
+      helper.parts_search.raw_webhook_data = webhookData;
+      sessionStorage.setItem('helper', JSON.stringify(helper));
+      window.raw_webhook_data = webhookData; // Keep window copy too
+      console.log('💾 Raw webhook data captured in helper.parts_search.raw_webhook_data');
       
       // Webhook returns flat array of parts directly in results[]
       const flatResults = webhookData.results || [];
@@ -1322,7 +1332,8 @@ ${part.supplier ? `   ספק: ${part.supplier}` : ''}
         model: document.getElementById('model').value,
         year: document.getElementById('year').value,
         part_group: document.getElementById('part_group')?.value,
-        part_name: document.getElementById('part_name')?.value
+        part_name: document.getElementById('part_name')?.value,
+        selectedParts: window.helper?.parts_search?.current_selected_list || []
       };
       
       // Transform webhook results to match catalog field structure
@@ -1331,7 +1342,7 @@ ${part.supplier ? `   ספק: ${part.supplier}` : ''}
         cat_num_desc: item.part_description || 'לא זמין',
         supplier_name: item.supplier_name || 'לא זמין',
         availability: item.source_type || 'מקורי',
-        price: parseFloat(item.price) || 0,
+        price: parseFloat((item.price || '0').toString().replace(/,/g, '')) || 0,
         version_date: new Date().toISOString(),
         part_family: searchParams.part_group || 'לא מוגדר',
         model: searchParams.model || 'לא מוגדר',
@@ -1405,8 +1416,9 @@ ${part.supplier ? `   ספק: ${part.supplier}` : ''}
           searchType: dataSource === 'אינטרנט' ? 'web_search' : 'ocr_search',
           dataSource: dataSource,
           searchSuccess: transformedResults.length > 0,
+          errorMessage: null,
           searchTime: 0,
-          searchParams: searchParams
+          searchParams: searchParams // Includes selectedParts array
         };
         
         await window.partsResultsPiP.showResults(transformedResults, pipContext);
