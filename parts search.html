@@ -1537,10 +1537,26 @@ ${part.supplier ? `   ספק: ${part.supplier}` : ''}
         throw new Error(`שגיאת תקשורת: ${response.status}`);
       }
       
-      const webhookData = await response.json();
-      console.log('✅ Webhook response received:', webhookData);
+      const responseText = await response.text();
+      console.log('📥 Raw webhook response:', responseText);
       
-      await handleWebhookResponse(webhookData, 'אינטרנט');
+      if (responseText.trim() === 'Accepted' || responseText.trim() === 'accepted') {
+        console.log('✅ Webhook accepted - processing started');
+        alert('הבקשה התקבלה! התוצאות יופיעו כשהחיפוש יסתיים.');
+        return;
+      }
+      
+      let webhookData;
+      try {
+        webhookData = JSON.parse(responseText);
+        console.log('✅ Webhook response received:', webhookData);
+      } catch (parseError) {
+        console.warn('⚠️ Response is not JSON:', responseText);
+        alert('התקבלה תשובה לא צפויה מהמערכת.');
+        return;
+      }
+      
+      await handleWebhookResponse(webhookData, 'web');
       
     } catch (error) {
       console.error('❌ Web search error:', error);
