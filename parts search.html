@@ -1307,9 +1307,43 @@ ${part.supplier ? `   ספק: ${part.supplier}` : ''}
     try {
       const plate = webhookData.plate || document.getElementById('plate').value;
       
+      // Capture raw webhook data
+      window.raw_webhook_data = webhookData;
+      console.log('💾 Raw webhook data captured in window.raw_webhook_data');
+      
       // Webhook returns flat array of parts directly in results[]
       const flatResults = webhookData.results || [];
       console.log(`📦 Received ${flatResults.length} results from webhook`);
+      
+      // Get search params for transformation
+      const searchParams = {
+        plate: plate,
+        manufacturer: document.getElementById('manufacturer').value,
+        model: document.getElementById('model').value,
+        year: document.getElementById('year').value,
+        part_group: document.getElementById('part_group')?.value,
+        part_name: document.getElementById('part_name')?.value
+      };
+      
+      // Transform webhook results to match catalog field structure
+      const transformedResults = flatResults.map(item => ({
+        pcode: item.catalog_code || item.oem_code || 'לא זמין',
+        cat_num_desc: item.part_description || 'לא זמין',
+        supplier_name: item.supplier_name || 'לא זמין',
+        availability: item.source_type || 'מקורי',
+        price: parseFloat(item.price) || 0,
+        version_date: new Date().toISOString(),
+        part_family: searchParams.part_group || 'לא מוגדר',
+        model: searchParams.model || 'לא מוגדר',
+        extracted_year: searchParams.year || 'לא מוגדר',
+        location: item.location,
+        condition: item.condition,
+        currency: item.currency,
+        notes: item.notes,
+        oem: item.oem_code
+      }));
+      
+      console.log(`🔄 Transformed ${transformedResults.length} results to catalog format`);
       
       // Parallel Path A: Save to Supabase parts_search_results table
       const saveToSupabasePromise = (async () => {
@@ -1319,18 +1353,11 @@ ${part.supplier ? `   ספק: ${part.supplier}` : ''}
         }
         
         const sessionId = window.currentSearchSessionId || null;
-        const searchParams = {
-          plate: plate,
-          manufacturer: document.getElementById('manufacturer').value,
-          model: document.getElementById('model').value,
-          year: document.getElementById('year').value,
-          dataSource: dataSource
-        };
         
-        console.log(`💾 Saving ${flatResults.length} results to Supabase...`);
+        console.log(`💾 Saving ${transformedResults.length} results to Supabase...`);
         const resultId = await window.partsSearchSupabaseService.saveSearchResults(
           sessionId,
-          flatResults,
+          transformedResults,
           { plate, searchParams, dataSource }
         );
         console.log('✅ Supabase save completed:', resultId);
@@ -1357,7 +1384,7 @@ ${part.supplier ? `   ספק: ${part.supplier}` : ''}
           search_date: webhookData.search_date || new Date().toISOString(),
           data_source: dataSource,
           plate: plate,
-          results: flatResults
+          results: transformedResults
         };
         
         helper.parts_search.results.push(newResults);
@@ -1377,17 +1404,17 @@ ${part.supplier ? `   ספק: ${part.supplier}` : ''}
           sessionId: window.currentSearchSessionId || 'no-session',
           searchType: dataSource === 'אינטרנט' ? 'web_search' : 'ocr_search',
           dataSource: dataSource,
-          searchSuccess: flatResults.length > 0,
+          searchSuccess: transformedResults.length > 0,
           searchTime: 0,
-          searchParams: { plate, dataSource }
+          searchParams: searchParams
         };
         
-        await window.partsResultsPiP.showResults(flatResults, pipContext);
-        console.log('✅ PiP displayed with webhook results');
+        await window.partsResultsPiP.showResults(transformedResults, pipContext);
+        console.log('✅ PiP displayed with transformed webhook results');
         
-        if (flatResults.length > 0) {
+        if (transformedResults.length > 0) {
           if (typeof showNotification === 'function') {
-            showNotification(`נמצאו ${flatResults.length} תוצאות מ${dataSource}`, 'success');
+            showNotification(`נמצאו ${transformedResults.length} תוצאות מ${dataSource}`, 'success');
           }
         }
       }
