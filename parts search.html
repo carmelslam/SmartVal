@@ -1466,15 +1466,31 @@ ${part.supplier ? `   ספק: ${part.supplier}` : ''}
       }
       
       const webhookUrl = 'https://hook.eu2.make.com/xenshho1chvd955wpaum5yh51v8klo58';
+      
       const webhookPayload = {
-        plate: searchParams.plate,
-        manufacturer: searchParams.manufacturer,
-        model: searchParams.model,
-        year: searchParams.year,
-        part_name: searchParams.part_name,
-        part_group: searchParams.part_group,
-        free_query: searchParams.free_query,
-        parts: searchParams.selectedParts
+        manufacturer: searchParams.manufacturer || "",
+        model: searchParams.model || "",
+        trim: document.getElementById('trim')?.value || "",
+        model_code: document.getElementById('model_code')?.value || "",
+        year: searchParams.year || "",
+        engine: document.getElementById('engine_type')?.value || "",
+        engine_volume: document.getElementById('engine_volume')?.value || "",
+        engine_model: document.getElementById('engine_type')?.value || "",
+        engine_type: document.getElementById('engine_type')?.value || "",
+        vin_number: document.getElementById('vin')?.value || "",
+        plate: searchParams.plate || "",
+        
+        keyword: searchParams.free_query || "",
+        part_group: searchParams.part_group || "",
+        part_name: searchParams.part_name || "",
+        search_type: "web_search",
+        
+        parts_count: searchParams.selectedParts ? searchParams.selectedParts.length : 0,
+        parts_list: searchParams.selectedParts && searchParams.selectedParts.length > 0 ? 
+          searchParams.selectedParts.map(part => `${part.group || ''}: ${part.name || ''} (${part.source || 'מקורי'})`).join('; ') : "",
+        
+        timestamp: new Date().toISOString(),
+        source: "parts_search_module"
       };
       
       console.log('📤 Sending webhook to Make.com...', webhookPayload);
