@@ -1302,10 +1302,14 @@ ${part.supplier ? `   ספק: ${part.supplier}` : ''}
   
   // SESSION 23: Handle Webhook Response from Make.com (Web Search / OCR)
   async function handleWebhookResponse(webhookData, dataSource) {
-    console.log('📥 SESSION 23: Processing webhook response', { dataSource, resultCount: webhookData.results?.length || 0 });
+    console.log('📥 SESSION 23: Processing webhook response', { dataSource, webhookData });
     
     try {
       const plate = webhookData.plate || document.getElementById('plate').value;
+      
+      // Webhook returns flat array of parts directly in results[]
+      const flatResults = webhookData.results || [];
+      console.log(`📦 Received ${flatResults.length} results from webhook`);
       
       // Parallel Path A: Save to Supabase parts_search_results table
       const saveToSupabasePromise = (async () => {
@@ -1322,22 +1326,6 @@ ${part.supplier ? `   ספק: ${part.supplier}` : ''}
           year: document.getElementById('year').value,
           dataSource: dataSource
         };
-        
-        const flatResults = [];
-        if (webhookData.results && Array.isArray(webhookData.results)) {
-          webhookData.results.forEach(group => {
-            if (group.search_results && Array.isArray(group.search_results)) {
-              group.search_results.forEach(part => {
-                flatResults.push({
-                  ...part,
-                  group: group.group,
-                  part_name: group.name,
-                  data_source: dataSource
-                });
-              });
-            }
-          });
-        }
         
         console.log(`💾 Saving ${flatResults.length} results to Supabase...`);
         const resultId = await window.partsSearchSupabaseService.saveSearchResults(
@@ -1369,7 +1357,7 @@ ${part.supplier ? `   ספק: ${part.supplier}` : ''}
           search_date: webhookData.search_date || new Date().toISOString(),
           data_source: dataSource,
           plate: plate,
-          results: webhookData.results || []
+          results: flatResults
         };
         
         helper.parts_search.results.push(newResults);
@@ -1383,27 +1371,11 @@ ${part.supplier ? `   ספק: ${part.supplier}` : ''}
       
       await Promise.all([saveToSupabasePromise, updateHelperPromise]);
       
-      const flatResults = [];
-      if (webhookData.results && Array.isArray(webhookData.results)) {
-        webhookData.results.forEach(group => {
-          if (group.search_results && Array.isArray(group.search_results)) {
-            group.search_results.forEach(part => {
-              flatResults.push({
-                ...part,
-                group: group.group,
-                part_name: group.name,
-                data_source: dataSource
-              });
-            });
-          }
-        });
-      }
-      
       if (window.partsResultsPiP) {
         const pipContext = {
           plate: plate,
           sessionId: window.currentSearchSessionId || 'no-session',
-          searchType: dataSource === 'web' ? 'web_search' : 'ocr_search',
+          searchType: dataSource === 'אינטרנט' ? 'web_search' : 'ocr_search',
           dataSource: dataSource,
           searchSuccess: flatResults.length > 0,
           searchTime: 0,
@@ -1480,7 +1452,7 @@ ${part.supplier ? `   ספק: ${part.supplier}` : ''}
       if (window.partsSearchSupabaseService) {
         const sessionId = await window.partsSearchSupabaseService.createSearchSession(
           plate,
-          { searchParams, dataSource: 'web' }
+          { searchParams, dataSource: 'אינטרנט' }
         );
         window.currentSearchSessionId = sessionId;
         console.log('✅ Search session created:', sessionId);
@@ -1557,7 +1529,7 @@ ${part.supplier ? `   ספק: ${part.supplier}` : ''}
         return;
       }
       
-      await handleWebhookResponse(webhookData, 'web');
+      await handleWebhookResponse(webhookData, 'אינטרנט');
       
     } catch (error) {
       console.error('❌ Web search error:', error);
@@ -1567,7 +1539,7 @@ ${part.supplier ? `   ספק: ${part.supplier}` : ''}
           await window.partsSearchSupabaseService.saveSearchResults(
             window.currentSearchSessionId,
             [],
-            { error: error.message, dataSource: 'web' }
+            { error: error.message, dataSource: 'אינטרנט' }
           );
         } catch (logError) {
           console.error('❌ Failed to log error to Supabase:', logError);
