@@ -1013,7 +1013,7 @@ ${part.supplier ? `   ספק: ${part.supplier}` : ''}
           plate: searchParams.plate,
           sessionId: searchService.getSessionId() || 'no-session',
           searchType: 'smart_search',
-          dataSource: 'קטלוג', // SESSION 12: Supabase catalog search (Hebrew)
+          dataSource: 'catalog',
           searchSuccess: searchSuccess,
           errorMessage: result.error ? result.error.message : null,
           searchTime: result.searchTime || 0,
@@ -1403,7 +1403,7 @@ ${part.supplier ? `   ספק: ${part.supplier}` : ''}
         const pipContext = {
           plate: plate,
           sessionId: window.currentSearchSessionId || 'no-session',
-          searchType: dataSource === 'אינטרנט' ? 'web_search' : 'ocr_search',
+          searchType: dataSource === 'web' ? 'web_search' : 'ocr_search',
           dataSource: dataSource,
           searchSuccess: flatResults.length > 0,
           searchTime: 0,
@@ -1451,6 +1451,7 @@ ${part.supplier ? `   ספק: ${part.supplier}` : ''}
         model: document.getElementById('model').value,
         year: document.getElementById('year').value,
         part_name: document.getElementById('part_name').value,
+        part_group: document.getElementById('part_group').value,
         free_query: document.getElementById('free_query').value,
         selectedParts: window.helper?.parts_search?.current_selected_list || []
       };
@@ -1458,7 +1459,7 @@ ${part.supplier ? `   ספק: ${part.supplier}` : ''}
       if (window.partsSearchSupabaseService) {
         const sessionId = await window.partsSearchSupabaseService.createSearchSession(
           plate,
-          { searchParams, dataSource: 'אינטרנט' }
+          { searchParams, dataSource: 'web' }
         );
         window.currentSearchSessionId = sessionId;
         console.log('✅ Search session created:', sessionId);
@@ -1470,6 +1471,9 @@ ${part.supplier ? `   ספק: ${part.supplier}` : ''}
         manufacturer: searchParams.manufacturer,
         model: searchParams.model,
         year: searchParams.year,
+        part_name: searchParams.part_name,
+        part_group: searchParams.part_group,
+        free_query: searchParams.free_query,
         parts: searchParams.selectedParts
       };
       
@@ -1508,7 +1512,7 @@ ${part.supplier ? `   ספק: ${part.supplier}` : ''}
           await window.partsSearchSupabaseService.saveSearchResults(
             window.currentSearchSessionId,
             [],
-            { error: error.message, dataSource: 'אינטרנט' }
+            { error: error.message, dataSource: 'web' }
           );
         } catch (logError) {
           console.error('❌ Failed to log error to Supabase:', logError);
@@ -1562,7 +1566,7 @@ ${part.supplier ? `   ספק: ${part.supplier}` : ''}
       if (window.partsSearchSupabaseService) {
         const sessionId = await window.partsSearchSupabaseService.createSearchSession(
           plate,
-          { searchParams: { plate }, dataSource: 'אחר' }
+          { searchParams: { plate }, dataSource: 'ocr' }
         );
         window.currentSearchSessionId = sessionId;
         console.log('✅ OCR session created:', sessionId);
@@ -1626,7 +1630,7 @@ ${part.supplier ? `   ספק: ${part.supplier}` : ''}
           await window.partsSearchSupabaseService.saveSearchResults(
             window.currentSearchSessionId,
             [],
-            { error: error.message, dataSource: 'אחר' }
+            { error: error.message, dataSource: 'ocr' }
           );
         } catch (logError) {
           console.error('❌ Failed to log error to Supabase:', logError);

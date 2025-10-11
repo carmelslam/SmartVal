@@ -170,14 +170,14 @@ class PartsSearchResultsPiP {
    * SESSION 23: Get source badge based on data source
    */
   getSourceBadge(searchContext = {}) {
-    const dataSource = searchContext.dataSource || 'קטלוג';
+    const dataSource = searchContext.dataSource || 'catalog';
     
     let badge = '';
-    if (dataSource === 'קטלוג') {
+    if (dataSource === 'catalog') {
       badge = '<span style="display: inline-block; margin-right: 10px; padding: 4px 12px; background: #10b981; color: white; border-radius: 12px; font-size: 14px; font-weight: 600;">🗄️ קטלוג</span>';
-    } else if (dataSource === 'אינטרנט') {
+    } else if (dataSource === 'web') {
       badge = '<span style="display: inline-block; margin-right: 10px; padding: 4px 12px; background: #3b82f6; color: white; border-radius: 12px; font-size: 14px; font-weight: 600;">🌐 אינטרנט</span>';
-    } else if (dataSource === 'אחר') {
+    } else if (dataSource === 'ocr') {
       badge = '<span style="display: inline-block; margin-right: 10px; padding: 4px 12px; background: #f59e0b; color: white; border-radius: 12px; font-size: 14px; font-weight: 600;">📄 OCR</span>';
     }
     
