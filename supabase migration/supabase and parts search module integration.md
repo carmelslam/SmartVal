@@ -17622,3 +17622,447 @@ The user was right to be frustrated. This session represents a complete failure 
 ---
 
 **END OF SESSION 23 FAILURE REPORT**
+
+**SESSION 24 TASKS**
+Here's the complete, comprehensive instruction document:
+
+---
+
+# **Parts Search Module - Multi-Path Integration Recovery & Restoration**
+
+## **Project Context**
+
+We are integrating **OCR search** and **Web search** paths into the existing Parts Search Module framework. **Session 23** successfully connected the web search path to the PiP but **broke several critical functionalities** in the catalog search path that must be restored.
+
+---
+
+## **Critical Issue Summary**
+
+### **What Broke in Session 23:**
+1. ✗ **Catalog search no longer registers data in Supabase tables**
+2. ✗ **Smart sync broken** between `helper.parts_search.parts_selected_parts` and `supabase.selected_parts` table
+3. ✗ **Web search PiP count broken:** Multiple selections counted as 1
+4. ✗ **OCR search count broken:** Same counting issue as web search
+5. ✗ **Count confusion:** Mixing "selected count in PiP" vs "selected count for entire case"
+6. ✗ **Data source label missing:** Not showing whether search is from Catalog, Web, or OCR
+
+### **What Still Works Correctly:**
+- ✓ **Legacy page** `parts_searchtest.html` - PiP connection with Supabase intact
+- ✓ **Catalog search count logic** - Works correctly (this is our reference model)
+- ✓ **Web search PiP connection** - Established in Session 23
+
+---
+
+## **Primary Objective**
+
+**Restore all catalog search functionality from the legacy page (`parts_searchtest.html`) to the current page (`parts_search.html`) WITHOUT breaking the web search connection established in Session 23.**
+
+### **Success Criteria:**
+- All three search paths (Catalog, Web, OCR) work simultaneously
+- No path overrides or breaks another
+- Data source label displays correctly: "Catalog", "Web", or "OCR"
+- PiP processes all three search paths correctly
+- All results populate PiP fields appropriately
+- Count logic works correctly in all three paths
+- Smart sync functions properly
+- All Supabase tables receive data correctly
+
+---
+
+## **Technical Architecture Requirements**
+
+### **1. PiP (Picture-in-Picture) Configuration**
+
+#### **Current Problem:**
+- `parts_search.html` PiP **lost Supabase connection** after web search integration in Session 23
+- `parts_searchtest.html` PiP still maintains **proper working connection**
+
+#### **Required Actions:**
+1. **Compare PiP implementations** between both pages:
+   - `parts_search.html` (current - broken catalog connection)
+   - `parts_searchtest.html` (legacy - working catalog connection)
+
+2. **Restore Supabase connection** in `parts_search.html` PiP for catalog search
+
+3. **Ensure PiP can process three distinct search paths:**
+   - Catalog search
+   - Web search
+   - OCR search
+
+4. **All results must populate according to PiP field structure** regardless of source
+
+5. **Data source label must display** to indicate: "Catalog", "Web", or "OCR"
+
+---
+
+### **2. Data Flow Architecture**
+
+#### **A. Webhook Response Handling - CRITICAL FIX NEEDED**
+
+**INCORRECT (Current Implementation):**
+- ✗ Raw webhook data captured in `helper.parts_search` 
+
+**CORRECT (Required Implementation):**
+- ✓ Raw webhook response → `helper.raw_webhook_data`
+- ✓ Processed results → `helper.parts_search.results` (currently working)
+
+#### **B. Complete Flow for OCR & Web Search Paths**
+
+**Step-by-step flow (both paths follow identical pattern):**
+
+**Step 1: Webhook Response Capture**
+- Raw webhook data → `helper.raw_webhook_data`
+- Store complete unprocessed webhook response
+
+**Step 2: Results Processing & Display**
+- Processed results → `helper.parts_search.results`
+- Display in PiP ✓ (currently working)
+
+**Step 3: Part Selection in PiP**
+- User selects parts in PiP
+- Selected parts → `helper.parts_search.current_selected_list`
+
+**Step 4: Database Write**
+- Selected parts → `supabase.selected_parts` table
+
+**Step 5: Save Action**
+- Upon saving selected list
+- Selected parts move → `helper.parts_search.parts_selected_parts`
+
+**Step 6: Page Load Smart Sync** ❌ (CURRENTLY BROKEN)
+- On page load, smart sync executes
+- `supabase.selected_parts` table ↔ `helper.parts_search.parts_selected_parts`
+- Ensures consistency between database and helper
+- **This sync is broken and must be restored**
+
+#### **C. Catalog Search Path Flow**
+
+The catalog search follows a similar pattern but data comes from internal database queries rather than webhooks. This is the **master framework** that the other two paths must match.
+
+---
+
+### **3. Supabase Table Field Mapping**
+
+#### **Challenge:**
+- Supabase tables contain additional fields beyond basic part info: **comments, location, and other fields**
+- Web search webhook responses include these fields
+- **Field names may differ** between webhook response and Supabase table columns
+
+#### **Required Implementation:**
+
+**For OCR & Web Search Webhooks:**
+1. Capture **all available webhook fields** in appropriate Supabase table columns
+2. Map webhook field names to corresponding Supabase field names
+3. Handle field name variations correctly
+
+**Example Mapping Structure:**
+```
+Webhook Response Field    →    Supabase Table Field
+-------------------------      ---------------------
+[webhook_comment_field]   →    comments
+[webhook_location_field]  →    location
+[webhook_field_x]         →    [corresponding_table_column]
+```
+
+**Tables Affected:**
+- `parts_search_sessions` - Initial search query registration
+- `parts_search_results` - Search results from all sources
+- `selected_parts` - User-selected parts
+
+**Important:** Study the existing catalog search implementation to understand exact field mapping requirements.
+
+---
+
+### **4. Search Count Logic - CRITICAL FIX**
+
+#### **Current Behavior:**
+- ✓ **Catalog search:** Count logic works **CORRECTLY** ← This is the reference implementation
+- ✗ **Web search:** Multiple selections counted as 1 - **BROKEN**
+- ✗ **OCR search:** Count logic **BROKEN**
+
+#### **The Core Issue:**
+Confusion between two different count types:
+1. **PiP-level count:** Parts selected from **current search results** (individual search session)
+2. **Case-level count:** **Total parts selected** for the entire case (cumulative across all searches)
+
+#### **Required Fix:**
+1. **Study the working count logic** from catalog search path
+2. **Identify exactly how catalog search:**
+   - Tracks selections in the PiP
+   - Updates `helper.parts_search.current_selected_list`
+   - Calculates and displays count
+   - Distinguishes between PiP count vs case count
+
+3. **Apply identical logic** to Web and OCR paths
+
+4. **Ensure both paths distinguish clearly between:**
+   - PiP-level count (parts selected from current search results)
+   - Case-level count (total parts selected for the case)
+
+#### **Root Cause Investigation:**
+Why does catalog search count correctly while web/OCR paths don't? 
+
+**Investigate:**
+- How selections are registered in `helper.parts_search.current_selected_list`
+- How the count is calculated/displayed in the PiP
+- Event handling differences between the three search paths
+- Selection state management differences
+
+**The catalog search counting mechanism is the working model that web and OCR paths must replicate exactly.**
+
+---
+
+### **5. Database Registration for All Search Paths**
+
+#### **Current Problem:**
+Catalog search **no longer registers** in Supabase tables after Session 23
+
+#### **Required Tables & Registration Flow:**
+
+**All Three Search Paths Must Register:**
+
+**Path 1 (Registration) - Runs Simultaneously:**
+- Search initiated → Register in `supabase.parts_search_sessions` table
+  - Catalog: Query parameters
+  - Web: Webhook payload details
+  - OCR: File upload details
+
+**Path 2 (Results Processing) - Runs Simultaneously:**
+- Results received → Write to `supabase.parts_search_results` table
+- Results → `helper.parts_search.results`
+- Display in PiP
+- User selection → `helper.parts_search.current_selected_list`
+- Selected parts → `supabase.selected_parts` table
+- Save action → `helper.parts_search.parts_selected_parts`
+- Smart sync on page load
+
+**Both paths run at the same time for all three search types**
+
+---
+
+## **Framework Principles - CRITICAL UNDERSTANDING**
+
+### **Master Framework: Catalog Search Path**
+The **catalog search path** and all its configurations serve as the **master framework**. 
+
+**The OCR and Web search paths must:**
+- Adapt to the catalog search structure
+- Follow the same data handling patterns
+- Use identical UI interactions
+- Use identical helper interactions
+- Use identical Supabase table interactions
+
+### **The ONLY Difference: Data Source**
+The **ONLY** variation between the three paths is **where the data comes from**:
+
+- **Catalog Search:** Internal database query
+- **Web Search:** Make.com webhook response
+- **OCR Search:** Make.com OCR webhook response
+
+### **Unified Data Handling - CRITICAL**
+**Regardless of source**, data must be:
+- ✓ Displayed **identically** in the UI
+- ✓ Processed through the **same helper structure**
+- ✓ Stored in the **same Supabase tables** with **identical logic**
+- ✓ Counted using the **same mechanism**
+- ✓ Selected using the **same process**
+- ✓ Synced using the **same smart sync**
+
+**The framework is the same. Only the data source differs.**
+
+---
+
+## **Required Study Materials**
+
+### **Primary Task File:**
+📄 **`supabase and parts search module integration.md`**
+
+#### **Focus Sessions:**
+- **Sessions 5-23** - Comprehensive review of all development
+- **Session 22** - Last fully stable state (**DO NOT BREAK THIS**)
+- **Session 23** - Where breaks occurred (**Understand what changed and why**)
+
+#### **What to Study:**
+1. How catalog search was implemented (Sessions 5-21)
+2. What Session 22 accomplished (stable state)
+3. What Session 23 changed (web search integration + breaks)
+4. How to fix broken functions (solutions in task file)
+
+### **Search Path Documentation:**
+- OCR search path instructions and requirements
+- Web search path instructions and requirements
+- Field mapping requirements
+- Webhook structure documentation
+
+### **Code Comparison:**
+- `parts_search.html` (current page - broken catalog, working web)
+- `parts_searchtest.html` (legacy page - working catalog)
+- PiP implementation differences
+- Helper interactions differences
+- Supabase connection differences
+
+---
+
+## **Execution Protocol - FOLLOW STRICTLY**
+
+### **Phase 1: Planning (Before Any Code Changes)**
+
+1. **Read all required documentation thoroughly**
+   - Task file sessions 5-23
+   - Search path instructions
+   - Previous session summaries
+
+2. **Identify exactly what Session 23 changed**
+   - Compare code before/after
+   - List all modifications
+   - Understand why breaks occurred
+
+3. **Create detailed task breakdown**
+   - Each task must be atomic (single focused change)
+   - Tasks must build on each other logically
+   - Each task must be testable independently
+
+4. **Plan restoration strategy**
+   - How to restore catalog search without breaking web search
+   - How to fix count logic in web/OCR paths
+   - How to restore smart sync
+   - How to fix raw webhook data storage
+
+### **Phase 2: Execution (ONE TASK AT A TIME)**
+
+**⚠️ CRITICAL RULE: Execute ONE task at a time**
+
+**Process for EACH task:**
+
+1. **Describe the specific task** you will execute
+   - What you will change
+   - Which files will be affected
+   - Expected outcome
+
+2. **Wait for my confirmation** ✓
+   - Do NOT proceed without approval
+
+3. **Execute the single task**
+   - Make only the changes described
+   - No additional modifications
+
+4. **Test the change immediately**
+   - Verify expected functionality
+   - Check for regressions
+   - Test all three search paths
+
+5. **Report results**
+   - What worked
+   - What didn't work
+   - Any unexpected behavior
+
+6. **Wait for confirmation to proceed** ✓
+   - Get approval for next task
+   - Do NOT continue without permission
+
+### **Phase 3: Quality Assurance (After Each Task)**
+
+**Test checklist after EVERY change:**
+- [ ] Catalog search still works (or is restored)
+- [ ] Web search still works (Session 23 progress maintained)
+- [ ] OCR search works (if applicable to task)
+- [ ] No console errors
+- [ ] No Supabase connection errors
+- [ ] Count displays correctly
+- [ ] Data flows to correct tables/helpers
+
+---
+
+## **Success Checklist - Final Validation**
+
+Before marking the project complete, verify ALL items:
+
+### **Core Functionality:**
+- [ ] Catalog search registers in Supabase `parts_search_sessions` table
+- [ ] Catalog search registers in Supabase `parts_search_results` table
+- [ ] Web search maintains Session 23 connectivity and functionality
+- [ ] OCR search path integrated and working correctly
+- [ ] PiP displays results from all three sources correctly
+
+### **Data Flow:**
+- [ ] Raw webhook data stored in `helper.raw_webhook_data` (NOT in `helper.parts_search`)
+- [ ] Processed results in `helper.parts_search.results`
+- [ ] Selected parts in `helper.parts_search.current_selected_list`
+- [ ] Selected parts in `supabase.selected_parts` table
+- [ ] Saved parts in `helper.parts_search.parts_selected_parts`
+
+### **Smart Sync:**
+- [ ] Smart sync works on page load
+- [ ] `supabase.selected_parts` ↔ `helper.parts_search.parts_selected_parts` sync functional
+- [ ] No data loss during sync
+- [ ] Sync handles all three search sources correctly
+
+### **Count Logic:**
+- [ ] Catalog search count accurate (already working - maintain)
+- [ ] Web search count accurate (currently broken - fix)
+- [ ] OCR search count accurate (currently broken - fix)
+- [ ] PiP-level count correct (parts from current search)
+- [ ] Case-level count correct (total parts across all searches)
+- [ ] No confusion between count types
+
+### **UI & Display:**
+- [ ] Data source label shows: "Catalog" / "Web" / "OCR"
+- [ ] All PiP fields populated correctly from all sources
+- [ ] Search results display properly in PiP
+- [ ] Selected parts list displays correctly
+
+### **Database & Tables:**
+- [ ] All Supabase table fields populated correctly
+- [ ] Field mapping works: webhook fields → Supabase columns
+- [ ] Comments, location, and other fields captured
+- [ ] Field name variations handled correctly
+
+### **Integration & Compatibility:**
+- [ ] All three paths work simultaneously
+- [ ] No path breaks another
+- [ ] No path overrides another
+- [ ] Session 22 functionality fully preserved
+- [ ] Session 23 web search fully preserved
+
+---
+
+## **Critical Reminders**
+
+1. **The catalog search path is the master framework** - OCR and Web must adapt to it, not the other way around
+
+2. **Session 22 is the last stable state** - understand it completely before making changes
+
+3. **Session 23 connected web search but broke catalog** - we need both working together
+
+4. **One task at a time** - no exceptions, wait for approval between tasks
+
+5. **Test after every change** - catch regressions immediately
+
+6. **The only difference is data source** - everything else must be identical across all three paths
+
+7. **Study the working catalog count logic** - then replicate exactly for web/OCR
+
+8. **Raw webhook data location is critical** - `helper.raw_webhook_data` NOT `helper.parts_search`
+
+9. **Smart sync must work** - critical for data consistency
+
+10. **Both paths run simultaneously** - registration and processing happen in parallel
+
+---
+
+## **Next Steps**
+
+1. **Confirm understanding** of all requirements in this document
+
+2. **Read all study materials** (task file sessions 5-23, documentation)
+
+3. **Present your task breakdown plan** for approval
+   - List each task in order
+   - Explain what each task will accomplish
+   - Identify dependencies between tasks
+
+4. **Wait for approval** before executing ANY code changes
+
+5. **Execute first task** only after plan is approved
+
+
