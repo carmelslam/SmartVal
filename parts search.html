@@ -1524,25 +1524,7 @@ ${part.supplier ? `   ספק: ${part.supplier}` : ''}
       
       console.log(`🔄 Transformed ${transformedResults.length} results to catalog format`);
       
-      // Parallel Path A: Save to Supabase parts_search_results table
-      const saveToSupabasePromise = (async () => {
-        if (!window.partsSearchSupabaseService) {
-          console.warn('⚠️ Supabase service not available, skipping save');
-          return null;
-        }
-        
-        const sessionId = window.currentSearchSessionId || null;
-        
-        console.log(`💾 Saving ${transformedResults.length} results to Supabase...`);
-        const resultId = await window.partsSearchSupabaseService.saveSearchResults(
-          sessionId,
-          transformedResults,
-          { plate, searchParams, dataSource }
-        );
-        console.log('✅ Supabase save completed:', resultId);
-        return resultId;
-      })();
-      
+      // SESSION 25: REMOVED duplicate saveSearchResults call - PiP already does this
       // Parallel Path B: Update helper.parts_search.results
       const updateHelperPromise = (async () => {
         
@@ -1566,7 +1548,7 @@ ${part.supplier ? `   ספק: ${part.supplier}` : ''}
         return helper;
       })();
       
-      await Promise.all([saveToSupabasePromise, updateHelperPromise]);
+      await updateHelperPromise; // SESSION 25: Only wait for helper update, not Supabase (PiP handles that)
       
       if (window.partsResultsPiP) {
         const pipContext = {
