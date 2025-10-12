@@ -1407,34 +1407,66 @@ ${part.supplier ? `   ספק: ${part.supplier}` : ''}
         selectedParts: window.helper?.parts_search?.current_selected_list || []
       };
       
-      // SESSION 24: Transform webhook results to match catalog field structure
-      // Handle ACTUAL webhook field names from Make.com
-      const transformedResults = flatResults.map(item => ({
-        // Primary catalog code - try קוד_קטלוגי first, then קוד_OEM as fallback
-        pcode: item.קוד_קטלוגי || item.catalog_code || item.קוד_OEM || item.oem_code || 'לא זמין',
-        // Part description
-        cat_num_desc: item.תיאור_חלק || item.part_description || 'לא זמין',
-        // Supplier name - note webhook uses שם_ספק not ספק
-        supplier_name: item.שם_ספק || item.ספק || item.supplier_name || 'לא זמין',
-        // Source type - note webhook uses סוג_מקור not סוג (OEM/Aftermarket/Used)
-        availability: item.סוג_מקור || item.סוג || item.source_type || 'מקורי',
-        source: item.סוג_מקור || item.סוג || item.source_type || 'מקורי', // For Supabase mapping
-        // Price - handle both number and string formats
-        price: parseFloat((item.מחיר || item.price || '0').toString().replace(/,/g, '')) || 0,
-        version_date: new Date().toISOString(),
-        part_family: searchParams.part_group || 'לא מוגדר',
-        model: searchParams.model || 'לא מוגדר',
-        extracted_year: searchParams.year || 'לא מוגדר',
-        // SESSION 24: Webhook-specific fields for Supabase selected_parts table
-        location: item.מיקום || item.location || '', // Geographic location (Israel/Germany/etc)
-        condition: item.מצב || item.condition || '', // Condition (new/used)
-        currency: item.מטבע || item.currency || 'ILS',
-        comments: item.הערות || item.notes || '', // Notes/comments field
-        // Stock/availability status (זמין/במלאי/זמין בהזמנה)
-        stock: item.מלאי || item.availability || '',
-        // OEM code - note webhook uses קוד_OEM not קוד_יצרן
-        oem: item.קוד_OEM || item.קוד_יצרן || item.oem_code || ''
-      }));
+      // SESSION 24: Transform webhook results - try ALL possible field name variations
+      console.log('🔄 SESSION 24: Transforming webhook results...');
+      const transformedResults = flatResults.map((item, index) => {
+        if (index === 0) {
+          console.log('📋 First webhook item keys:', Object.keys(item));
+          console.log('📋 First webhook item sample:', item);
+        }
+        
+        return {
+          // Primary catalog code - try ALL variations
+          pcode: item.קוד_קטלוגי || item['קוד קטלוגי'] || item.catalog_code || 
+                 item.קוד_OEM || item['קוד OEM'] || item.oem_code || 
+                 item.pcode || item.catalogCode || 'לא זמין',
+          
+          // Part description - try ALL variations
+          cat_num_desc: item.תיאור_חלק || item['תיאור חלק'] || item.part_description || 
+                        item.description || item.partDescription || item.תיאור || 'לא זמין',
+          
+          // Supplier name - try ALL variations
+          supplier_name: item.שם_ספק || item['שם ספק'] || item.ספק || item.supplier_name || 
+                        item.supplier || item.supplierName || 'לא זמין',
+          
+          // Source type (OEM/Aftermarket/Used) - try ALL variations
+          availability: item.סוג_מקור || item['סוג מקור'] || item.סוג || item.source_type || 
+                       item.sourceType || item.type || 'מקורי',
+          source: item.סוג_מקור || item['סוג מקור'] || item.סוג || item.source_type || 
+                  item.sourceType || item.type || 'מקורי',
+          
+          // Price - handle both number and string formats with ALL variations
+          price: parseFloat((item.מחיר || item.price || item.Price || '0').toString().replace(/,/g, '')) || 0,
+          
+          version_date: new Date().toISOString(),
+          part_family: searchParams.part_group || 'לא מוגדר',
+          model: searchParams.model || 'לא מוגדר',
+          extracted_year: searchParams.year || 'לא מוגדר',
+          
+          // Geographic location - try ALL variations
+          location: item.מיקום || item.location || item.Location || '',
+          
+          // Condition (new/used) - try ALL variations
+          condition: item.מצב || item.condition || item.Condition || '',
+          
+          // Currency
+          currency: item.מטבע || item.currency || item.Currency || 'ILS',
+          
+          // Notes/comments - try ALL variations
+          comments: item.הערות || item['הערות'] || item.notes || item.Notes || item.comments || '',
+          
+          // Stock status (זמין/במלאי) - try ALL variations
+          stock: item.מלאי || item['מלאי'] || item.availability || item.Availability || 
+                 item.stock || item.Stock || '',
+          
+          // OEM code - try ALL variations
+          oem: item.קוד_OEM || item['קוד OEM'] || item.קוד_יצרן || item.oem_code || 
+               item.oem || item.OEM || item.oemCode || '',
+          
+          // Keep original item for debugging
+          _original: item
+        };
+      });
       
       console.log(`🔄 Transformed ${transformedResults.length} results to catalog format`);
       
