@@ -18794,7 +18794,7 @@ problems :
 **Next session should focus on:** Testing edge cases, cleaning up old code comments, and standardizing helper object usage.
 
 
-session 26 p tasks :
+**session 26  tasks :**
 1. fix teh remaining problems from session 25 
 2. replicate the same work done to web search and its integration in teh module for teh OCR search path :
   1. create a new array in the helper.parts_search called OCR results 
