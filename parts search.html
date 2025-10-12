@@ -1362,7 +1362,7 @@ ${part.supplier ? `   ספק: ${part.supplier}` : ''}
     try {
       const plate = webhookData.plate || document.getElementById('plate').value;
       
-      // SESSION 24: Capture RAW webhook data in helper.raw_webhook_data (NOT in parts_search)
+      // Capture webhook data in helper.parts_search only
       let helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
       if (!helper.parts_search) {
         helper.parts_search = {
@@ -1371,24 +1371,6 @@ ${part.supplier ? `   ספק: ${part.supplier}` : ''}
           selected_parts: []
         };
       }
-      
-      // SESSION 24 FIX: APPEND to raw_webhook_data array, don't replace
-      if (!helper.raw_webhook_data || !Array.isArray(helper.raw_webhook_data)) {
-        helper.raw_webhook_data = [];
-      }
-      
-      // Add timestamp and source info to webhook entry
-      const webhookEntry = {
-        timestamp: new Date().toISOString(),
-        data_source: dataSource,
-        plate: plate,
-        webhook: webhookData
-      };
-      
-      helper.raw_webhook_data.push(webhookEntry);
-      sessionStorage.setItem('helper', JSON.stringify(helper));
-      window.raw_webhook_data = helper.raw_webhook_data; // Keep window copy with ALL webhooks
-      console.log(`💾 SESSION 24: Raw webhook appended to helper.raw_webhook_data (total: ${helper.raw_webhook_data.length})`);
       
       // SESSION 24: Extract results from webhook with proper structure handling
       // Webhook can be: Array[{body:{results:[]}}] OR {body:{results:[]}} OR {results:[]}
@@ -1530,8 +1512,6 @@ ${part.supplier ? `   ספק: ${part.supplier}` : ''}
       
       // Parallel Path B: Update helper.parts_search.results
       const updateHelperPromise = (async () => {
-        // SESSION 24: Use the SAME helper object that was already loaded and updated above
-        // DON'T re-parse from sessionStorage - use the helper variable from line 1339
         
         if (!helper.parts_search.results) {
           helper.parts_search.results = [];
