@@ -359,12 +359,12 @@
         
         const supabaseParts = await getSelectedParts({ plate: plate });
         
+        if (!window.helper.parts_search) {
+          window.helper.parts_search = {};
+        }
+        
         if (supabaseParts && supabaseParts.length > 0) {
           console.log(`✅ SESSION 20: Found ${supabaseParts.length} parts in Supabase`);
-          
-          if (!window.helper.parts_search) {
-            window.helper.parts_search = {};
-          }
           
           // SESSION 20 FIX: Map Supabase fields to helper format (including comments field)
           const mappedParts = supabaseParts.map(part => ({
@@ -386,7 +386,11 @@
           sessionStorage.setItem('helper', JSON.stringify(window.helper));
           console.log(`💾 SESSION 20: Synced ${mappedParts.length} parts from Supabase to helper (with field mapping)`);
         } else {
-          console.log('ℹ️ SESSION 20: No parts found in Supabase for this plate');
+          // SESSION 24: Clear helper if Supabase has no parts (handles deletions)
+          console.log('ℹ️ SESSION 24: No parts in Supabase - clearing helper.parts_search.selected_parts');
+          window.helper.parts_search.selected_parts = [];
+          sessionStorage.setItem('helper', JSON.stringify(window.helper));
+          console.log('💾 SESSION 24: Helper cleared to match empty Supabase state');
         }
       } else {
         console.log('⚠️ SESSION 20: Auto-sync skipped - missing plate, Supabase, or getSelectedParts function');
@@ -806,8 +810,30 @@ ${part.supplier ? `   ספק: ${part.supplier}` : ''}
         throw error;
       }
       
+      console.log(`📊 SESSION 24: Supabase query result for plate "${queryPlate}":`, {
+        rowCount: data?.length || 0,
+        hasData: !!data,
+        hasError: !!error
+      });
+      
+      // SESSION 24: If no results, query ALL plates to help debug
+      if ((!data || data.length === 0) && !error) {
+        try {
+          const { data: allPlates } = await window.supabase
+            .from('selected_parts')
+            .select('plate')
+            .limit(20);
+          const uniquePlates = [...new Set(allPlates?.map(p => p.plate) || [])];
+          console.log('🔍 SESSION 24: Found these plates in selected_parts table:', uniquePlates);
+          console.log('💡 Your query plate:', queryPlate);
+        } catch (e) {
+          console.log('⚠️ Could not fetch plate list:', e.message);
+        }
+      }
+      
       if (data && data.length > 0) {
         console.log(`✅ SESSION 19: Retrieved ${data.length} parts from Supabase`);
+        console.log('📋 First part sample:', data[0]);
         
         // Update cache
         partsCache = data;
@@ -816,7 +842,8 @@ ${part.supplier ? `   ספק: ${part.supplier}` : ''}
         return filterParts(data, filter, limit, offset);
       }
       
-      console.log('ℹ️ SESSION 19: No parts found in Supabase');
+      console.log('ℹ️ SESSION 19: No parts found in Supabase for plate:', queryPlate);
+      console.log('💡 TIP: Check if plate format matches (with/without dashes)');
       return [];
       
     } catch (error) {
