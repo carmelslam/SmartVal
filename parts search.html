@@ -1355,9 +1355,16 @@ ${part.supplier ? `   ספק: ${part.supplier}` : ''}
       // Webhook can be: Array[{body:{results:[]}}] OR {body:{results:[]}} OR {results:[]}
       let flatResults = [];
       
+      console.log('🔍 SESSION 24: Analyzing webhook structure...');
+      console.log('  - Is Array?', Array.isArray(webhookData));
+      console.log('  - Has body?', !!webhookData.body);
+      console.log('  - Has results?', !!webhookData.results);
+      
       if (Array.isArray(webhookData)) {
         // Webhook is array - get first element
         const firstItem = webhookData[0];
+        console.log('  - Array first item has body?', !!firstItem?.body);
+        console.log('  - Array first item has results?', !!firstItem?.results);
         flatResults = firstItem?.body?.results || firstItem?.results || [];
         console.log('📦 Webhook is ARRAY, extracted from first element');
       } else if (webhookData.body?.results) {
@@ -1368,10 +1375,18 @@ ${part.supplier ? `   ספק: ${part.supplier}` : ''}
         // Webhook has direct results
         flatResults = webhookData.results;
         console.log('📦 Webhook has direct results structure');
+      } else {
+        console.error('❌ SESSION 24: Could not extract results from webhook!');
+        console.error('  - Webhook structure:', Object.keys(webhookData));
       }
       
       console.log(`📦 Received ${flatResults.length} results from webhook`);
-      console.log('📋 First result sample:', flatResults[0]);
+      if (flatResults.length > 0) {
+        console.log('📋 First result sample:', flatResults[0]);
+        console.log('📋 First result keys:', Object.keys(flatResults[0]));
+      } else {
+        console.warn('⚠️ flatResults is EMPTY - check webhook structure!');
+      }
       
       // SESSION 24: Get search params with FULL vehicle data (matching catalog search)
       const searchParams = {
