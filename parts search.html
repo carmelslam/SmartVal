@@ -1349,9 +1349,27 @@ ${part.supplier ? `   ספק: ${part.supplier}` : ''}
       window.raw_webhook_data = webhookData; // Keep window copy too
       console.log('💾 Raw webhook data captured in helper.parts_search.raw_webhook_data');
       
-      // Extract results from webhook (check both structures)
-      const flatResults = webhookData.body?.results || webhookData.results || [];
+      // SESSION 24: Extract results from webhook with proper structure handling
+      // Webhook can be: Array[{body:{results:[]}}] OR {body:{results:[]}} OR {results:[]}
+      let flatResults = [];
+      
+      if (Array.isArray(webhookData)) {
+        // Webhook is array - get first element
+        const firstItem = webhookData[0];
+        flatResults = firstItem?.body?.results || firstItem?.results || [];
+        console.log('📦 Webhook is ARRAY, extracted from first element');
+      } else if (webhookData.body?.results) {
+        // Webhook has body.results
+        flatResults = webhookData.body.results;
+        console.log('📦 Webhook has body.results structure');
+      } else if (webhookData.results) {
+        // Webhook has direct results
+        flatResults = webhookData.results;
+        console.log('📦 Webhook has direct results structure');
+      }
+      
       console.log(`📦 Received ${flatResults.length} results from webhook`);
+      console.log('📋 First result sample:', flatResults[0]);
       
       // Get search params for transformation
       const searchParams = {
@@ -1364,23 +1382,32 @@ ${part.supplier ? `   ספק: ${part.supplier}` : ''}
         selectedParts: window.helper?.parts_search?.current_selected_list || []
       };
       
-      // Transform webhook results to match catalog field structure
-      // Handle BOTH Hebrew and English field names
+      // SESSION 24: Transform webhook results to match catalog field structure
+      // Handle ACTUAL webhook field names from Make.com
       const transformedResults = flatResults.map(item => ({
-        pcode: item.קוד_קטלוגי || item.catalog_code || item.קוד_יצרן || item.oem_code || 'לא זמין',
+        // Primary catalog code - try קוד_קטלוגי first, then קוד_OEM as fallback
+        pcode: item.קוד_קטלוגי || item.catalog_code || item.קוד_OEM || item.oem_code || 'לא זמין',
+        // Part description
         cat_num_desc: item.תיאור_חלק || item.part_description || 'לא זמין',
-        supplier_name: item.ספק || item.supplier_name || 'לא זמין',
-        availability: item.סוג || item.source_type || 'מקורי',
+        // Supplier name - note webhook uses שם_ספק not ספק
+        supplier_name: item.שם_ספק || item.ספק || item.supplier_name || 'לא זמין',
+        // Source type - note webhook uses סוג_מקור not סוג
+        availability: item.סוג_מקור || item.סוג || item.source_type || 'מקורי',
+        // Price - handle both number and string formats
         price: parseFloat((item.מחיר || item.price || '0').toString().replace(/,/g, '')) || 0,
         version_date: new Date().toISOString(),
         part_family: searchParams.part_group || 'לא מוגדר',
         model: searchParams.model || 'לא מוגדר',
         extracted_year: searchParams.year || 'לא מוגדר',
-        location: item.מיקום || item.location,
-        condition: item.מצב || item.condition,
-        currency: item.מטבע || item.currency,
-        notes: item.הערות || item.notes,
-        oem: item.קוד_יצרן || item.oem_code
+        // Location, condition, currency, notes
+        location: item.מיקום || item.location || '',
+        condition: item.מצב || item.condition || '',
+        currency: item.מטבע || item.currency || 'ILS',
+        notes: item.הערות || item.notes || '',
+        // OEM code - note webhook uses קוד_OEM not קוד_יצרן
+        oem: item.קוד_OEM || item.קוד_יצרן || item.oem_code || '',
+        // Stock/availability status
+        stock: item.מלאי || item.availability || ''
       }));
       
       console.log(`🔄 Transformed ${transformedResults.length} results to catalog format`);
