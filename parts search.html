@@ -1373,14 +1373,22 @@ ${part.supplier ? `   ספק: ${part.supplier}` : ''}
       console.log(`📦 Received ${flatResults.length} results from webhook`);
       console.log('📋 First result sample:', flatResults[0]);
       
-      // Get search params for transformation
+      // SESSION 24: Get search params with FULL vehicle data (matching catalog search)
       const searchParams = {
         plate: plate,
         manufacturer: document.getElementById('manufacturer').value,
         model: document.getElementById('model').value,
+        model_code: document.getElementById('model_code')?.value,
+        trim: document.getElementById('trim')?.value,
         year: document.getElementById('year').value,
+        engine_volume: document.getElementById('engine_volume')?.value,
+        engine_code: document.getElementById('engine_code')?.value,
+        engine_type: document.getElementById('engine_type')?.value,
+        vin: document.getElementById('vin')?.value,
+        oem: document.getElementById('oem')?.value,
         part_group: document.getElementById('part_group')?.value,
         part_name: document.getElementById('part_name')?.value,
+        free_query: document.getElementById('free_query')?.value,
         selectedParts: window.helper?.parts_search?.current_selected_list || []
       };
       
@@ -1393,23 +1401,24 @@ ${part.supplier ? `   ספק: ${part.supplier}` : ''}
         cat_num_desc: item.תיאור_חלק || item.part_description || 'לא זמין',
         // Supplier name - note webhook uses שם_ספק not ספק
         supplier_name: item.שם_ספק || item.ספק || item.supplier_name || 'לא זמין',
-        // Source type - note webhook uses סוג_מקור not סוג
+        // Source type - note webhook uses סוג_מקור not סוג (OEM/Aftermarket/Used)
         availability: item.סוג_מקור || item.סוג || item.source_type || 'מקורי',
+        source: item.סוג_מקור || item.סוג || item.source_type || 'מקורי', // For Supabase mapping
         // Price - handle both number and string formats
         price: parseFloat((item.מחיר || item.price || '0').toString().replace(/,/g, '')) || 0,
         version_date: new Date().toISOString(),
         part_family: searchParams.part_group || 'לא מוגדר',
         model: searchParams.model || 'לא מוגדר',
         extracted_year: searchParams.year || 'לא מוגדר',
-        // Location, condition, currency, notes
-        location: item.מיקום || item.location || '',
-        condition: item.מצב || item.condition || '',
+        // SESSION 24: Webhook-specific fields for Supabase selected_parts table
+        location: item.מיקום || item.location || '', // Geographic location (Israel/Germany/etc)
+        condition: item.מצב || item.condition || '', // Condition (new/used)
         currency: item.מטבע || item.currency || 'ILS',
-        notes: item.הערות || item.notes || '',
+        comments: item.הערות || item.notes || '', // Notes/comments field
+        // Stock/availability status (זמין/במלאי/זמין בהזמנה)
+        stock: item.מלאי || item.availability || '',
         // OEM code - note webhook uses קוד_OEM not קוד_יצרן
-        oem: item.קוד_OEM || item.קוד_יצרן || item.oem_code || '',
-        // Stock/availability status
-        stock: item.מלאי || item.availability || ''
+        oem: item.קוד_OEM || item.קוד_יצרן || item.oem_code || ''
       }));
       
       console.log(`🔄 Transformed ${transformedResults.length} results to catalog format`);
