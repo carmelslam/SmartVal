@@ -81,13 +81,9 @@ class PartsSearchResultsPiP {
         }
         console.log('✅ SESSION 9: Service available');
         
-        // Create search session in Supabase (ONLY if results > 0)
-        console.log('💾 SESSION 12: Creating search session in Supabase...');
-        const supabaseSessionId = await partsSearchService.createSearchSession(
-          this.currentPlateNumber,
-          searchContext
-        );
-        console.log('✅ SESSION 9: Search session saved to Supabase:', supabaseSessionId);
+        // Use existing session from searchContext (created by search function)
+        const supabaseSessionId = searchContext.sessionId || window.currentSearchSessionId;
+        console.log('✅ SESSION 9: Using existing search session:', supabaseSessionId);
         this.currentSupabaseSessionId = supabaseSessionId; // SESSION 11: Store for selected parts save
         
         // Save search results
