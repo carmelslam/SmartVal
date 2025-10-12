@@ -336,9 +336,9 @@
             source: partData.availability || partData.source,
             part_family: partData.part_family,
             // SESSION 24: Fix availability vs location mapping
-            availability: partData.stock || partData.availability_status || 'זמין', // Stock status (זמין/במלאי/וכו')
-            location: partData.location, // Geographic location (ישראל/גרמניה/וכו')
-            comments: partData.comments || null,
+            availability: partData.stock || partData.availability_status || partData['זמינות'] || 'זמין', // Stock status (זמין/במלאי/וכו')
+            location: partData.location || partData['מיקום'] || null, // Geographic location (ישראל/גרמניה/וכו')
+            comments: partData.comments || partData['הערות'] || null,
             quantity: partData.quantity || 1,
             // SESSION 11: Vehicle data from search context
             make: searchParams.manufacturer || searchParams.make || null,
