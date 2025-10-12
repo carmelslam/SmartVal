@@ -81,24 +81,25 @@ class PartsSearchResultsPiP {
         }
         console.log('✅ SESSION 9: Service available');
         
-        // Use existing session from searchContext (created by search function)
+        // SESSION 25: Use existing session from searchContext (created by search function)
         const supabaseSessionId = searchContext.sessionId || window.currentSearchSessionId;
-        console.log('✅ SESSION 9: Using existing search session:', supabaseSessionId);
-        this.currentSupabaseSessionId = supabaseSessionId; // SESSION 11: Store for selected parts save
         
-        // Save search results
-        if (supabaseSessionId) {
-          console.log('💾 SESSION 9: Saving search results...');
+        if (!supabaseSessionId || supabaseSessionId === 'no-session') {
+          console.warn('⚠️ SESSION 25: No valid session ID, skipping Supabase save');
+        } else {
+          console.log('✅ SESSION 25: Using existing search session:', supabaseSessionId);
+          this.currentSupabaseSessionId = supabaseSessionId;
+          
+          // SESSION 25: Save search results (creates parts_search_results.id for FK)
+          console.log('💾 SESSION 25: Saving search results...');
           const searchResultId = await partsSearchService.saveSearchResults(
             supabaseSessionId,
             this.searchResults,
             searchContext
           );
-          console.log('✅ SESSION 9: Search results saved to Supabase');
-          this.currentSearchResultId = searchResultId; // SESSION 11: Store parts_search_results.id for selected parts
-          console.log('📋 SESSION 11: Stored search result ID for FK:', searchResultId);
-        } else {
-          console.warn('⚠️ SESSION 9: No session ID returned from Supabase, skipping results save');
+          console.log('✅ SESSION 25: Search results saved to Supabase');
+          this.currentSearchResultId = searchResultId; // Store parts_search_results.id for FK
+          console.log('📋 SESSION 25: Stored search result ID for FK:', searchResultId);
         }
       } catch (error) {
         console.error('❌ SESSION 9: Error saving to Supabase:', error);

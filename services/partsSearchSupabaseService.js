@@ -426,17 +426,22 @@
         console.log('🗑️ Deleting selected part:', partId);
         const supabase = this.getSupabase();
 
-        // Try delete by UUID first
+        // SESSION 25: Properly detect UUID vs catalog code
+        // UUID format: 8-4-4-4-12 characters (36 total with dashes)
+        const isUUID = partId.length === 36 && partId.split('-').length === 5;
+        
         let query = supabase.from('selected_parts').delete();
         
-        if (partId.includes('-')) {
-          // UUID format
+        if (isUUID) {
+          // UUID format - delete by id
+          console.log('🔍 SESSION 25: Deleting by UUID:', partId);
           query = query.eq('id', partId);
         } else if (plate) {
-          // pcode format
+          // Catalog code format - delete by plate + pcode
+          console.log('🔍 SESSION 25: Deleting by plate+pcode:', plate, partId);
           query = query.eq('plate', plate).eq('pcode', partId);
         } else {
-          console.warn('⚠️ Cannot determine delete criteria');
+          console.warn('⚠️ Cannot determine delete criteria - no plate provided for catalog code');
           return false;
         }
 

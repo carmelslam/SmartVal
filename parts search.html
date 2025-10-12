@@ -1037,6 +1037,16 @@ ${part.supplier ? `   ספק: ${part.supplier}` : ''}
       const searchService = new window.SimplePartsSearchService();
       console.log('✅ SimplePartsSearchService initialized');
       
+      // SESSION 25: Create Supabase session BEFORE search
+      if (window.partsSearchSupabaseService) {
+        const sessionId = await window.partsSearchSupabaseService.createSearchSession(
+          searchParams.plate,
+          { searchParams, dataSource: 'קטלוג' }
+        );
+        window.currentSearchSessionId = sessionId;
+        console.log('✅ SESSION 25: Catalog search session created:', sessionId);
+      }
+      
       // Show loading notification
       if (typeof showNotification === 'function') {
         showNotification('מחפש בקטלוג...', 'info');
@@ -1066,7 +1076,7 @@ ${part.supplier ? `   ספק: ${part.supplier}` : ''}
         const pipContext = {
           // Metadata
           plate: searchParams.plate,
-          sessionId: searchService.getSessionId() || 'no-session',
+          sessionId: window.currentSearchSessionId || 'no-session', // SESSION 25: Use Supabase UUID session
           searchType: 'smart_search',
           dataSource: 'קטלוג',
           searchSuccess: searchSuccess,
