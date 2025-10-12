@@ -1368,9 +1368,30 @@ ${part.supplier ? `   ספק: ${part.supplier}` : ''}
         helper.parts_search = {
           results: [],
           current_selected_list: [],
-          selected_parts: []
+          selected_parts: [],
+          raw_webhook_data: []
         };
       }
+      
+      if (!helper.parts_search.raw_webhook_data) {
+        helper.parts_search.raw_webhook_data = [];
+      }
+      
+      // Generate unique identifier for this webhook
+      const webhookId = `webhook_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      
+      // Append raw webhook with unique ID
+      const webhookEntry = {
+        id: webhookId,
+        timestamp: new Date().toISOString(),
+        data_source: dataSource,
+        plate: plate,
+        webhook: webhookData
+      };
+      
+      helper.parts_search.raw_webhook_data.push(webhookEntry);
+      sessionStorage.setItem('helper', JSON.stringify(helper));
+      console.log(`💾 Raw webhook appended to helper.parts_search.raw_webhook_data (id: ${webhookId}, total: ${helper.parts_search.raw_webhook_data.length})`);
       
       // SESSION 24: Extract results from webhook with proper structure handling
       // Webhook can be: Array[{body:{results:[]}}] OR {body:{results:[]}} OR {results:[]}
