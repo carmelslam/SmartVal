@@ -553,9 +553,10 @@ class PartsSearchResultsPiP {
     );
 
     if (currentIndex !== -1) {
-      // Update existing entry in current list
-      window.helper.parts_search.current_selected_list[currentIndex] = selectedPartEntry;
-      console.log('🔄 SESSION 19: Updated existing part in current_selected_list');
+      // SESSION 24: Duplicate found - reject instead of updating
+      console.warn('⚠️ SESSION 24: Duplicate part detected, rejecting:', itemCatalogCode);
+      console.log('📋 Part already exists in current_selected_list at index:', currentIndex);
+      return false; // Reject duplicate
     } else {
       // Add new part to CURRENT session list
       window.helper.parts_search.current_selected_list.push(selectedPartEntry);

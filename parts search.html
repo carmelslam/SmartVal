@@ -340,6 +340,18 @@
     console.log('🔄 SESSION 20: Starting auto-sync from Supabase to helper...');
     
     try {
+      // SESSION 24: Ensure window.helper is loaded from sessionStorage first
+      if (!window.helper) {
+        const helperString = sessionStorage.getItem('helper');
+        if (helperString) {
+          window.helper = JSON.parse(helperString);
+          console.log('✅ SESSION 24: Loaded window.helper from sessionStorage for sync');
+        } else {
+          window.helper = {};
+          console.log('⚠️ SESSION 24: No helper in sessionStorage, initialized empty');
+        }
+      }
+      
       const plate = window.helper?.meta?.plate || window.helper?.meta?.license_plate;
       
       if (plate && window.supabase && typeof getSelectedParts === 'function') {
@@ -823,6 +835,9 @@ ${part.supplier ? `   ספק: ${part.supplier}` : ''}
     }
   }
 
+  // SESSION 24: Export to global scope for smart sync access
+  window.getSelectedParts = getSelectedParts;
+
   // Helper function: Filter parts by text and apply pagination
   function filterParts(parts, filter, limit, offset) {
     let filtered = parts;
@@ -942,6 +957,19 @@ ${part.supplier ? `   ספק: ${part.supplier}` : ''}
     manageSearchButtons('catalog');
     
     try {
+      // SESSION 24: Ensure helper structure exists before search
+      if (!window.helper) window.helper = {};
+      if (!window.helper.parts_search) {
+        window.helper.parts_search = {
+          results: [],
+          current_selected_list: [],
+          selected_parts: []
+        };
+      }
+      if (!window.helper.parts_search.current_selected_list) {
+        window.helper.parts_search.current_selected_list = [];
+      }
+      
       // Show loading state
       if (supabaseBtn) {
         supabaseBtn.innerHTML = '⏳ מחפש במאגר הנתונים...';
@@ -1013,7 +1041,7 @@ ${part.supplier ? `   ספק: ${part.supplier}` : ''}
           plate: searchParams.plate,
           sessionId: searchService.getSessionId() || 'no-session',
           searchType: 'smart_search',
-          dataSource: 'catalog',
+          dataSource: 'קטלוג',
           searchSuccess: searchSuccess,
           errorMessage: result.error ? result.error.message : null,
           searchTime: result.searchTime || 0,
