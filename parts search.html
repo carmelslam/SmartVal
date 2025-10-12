@@ -1335,7 +1335,7 @@ ${part.supplier ? `   ספק: ${part.supplier}` : ''}
     try {
       const plate = webhookData.plate || document.getElementById('plate').value;
       
-      // Step 1: Capture RAW webhook data in helper
+      // SESSION 24: Capture RAW webhook data in helper.raw_webhook_data (NOT in parts_search)
       let helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
       if (!helper.parts_search) {
         helper.parts_search = {
@@ -1344,10 +1344,12 @@ ${part.supplier ? `   ספק: ${part.supplier}` : ''}
           selected_parts: []
         };
       }
-      helper.parts_search.raw_webhook_data = webhookData;
+      
+      // Store raw webhook at ROOT level of helper
+      helper.raw_webhook_data = webhookData;
       sessionStorage.setItem('helper', JSON.stringify(helper));
       window.raw_webhook_data = webhookData; // Keep window copy too
-      console.log('💾 Raw webhook data captured in helper.parts_search.raw_webhook_data');
+      console.log('💾 SESSION 24: Raw webhook data captured in helper.raw_webhook_data (root level)');
       
       // SESSION 24: Extract results from webhook with proper structure handling
       // Webhook can be: Array[{body:{results:[]}}] OR {body:{results:[]}} OR {results:[]}
