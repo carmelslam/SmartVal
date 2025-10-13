@@ -1491,11 +1491,16 @@ ${part.supplier ? `   ספק: ${part.supplier}` : ''}
       
       // SESSION 24: Transform webhook results - try ALL possible field name variations
       console.log('🔄 SESSION 24: Transforming webhook results...');
+      console.log('🔍 SESSION 27: Data source is:', dataSource);
+      
       const transformedResults = flatResults.map((item, index) => {
         if (index === 0) {
           console.log('📋 First webhook item keys:', Object.keys(item));
           console.log('📋 First webhook item sample:', item);
         }
+        
+        // SESSION 27: For OCR, use ONLY webhook data; for web, allow form fallback
+        const useFormFallback = dataSource !== 'ocr';
         
         return {
           // Unique ID for each result (critical for duplicate detection)
@@ -1506,26 +1511,34 @@ ${part.supplier ? `   ספק: ${part.supplier}` : ''}
                  item.pcode || item.catalogCode || 'לא זמין',
           
           // Part description - try ALL variations
-          cat_num_desc: item.תיאור_חלק || item['תיאור חלק'] || item.part_description || 
-                        item.description || item.partDescription || item.תיאור || 'לא זמין',
+          cat_num_desc: item.cat_num_desc || item.תיאור_חלק || item['תיאור חלק'] || 
+                        item.part_description || item.description || item.partDescription || 
+                        item.תיאור || 'לא זמין',
           
           // Supplier name - try ALL variations
           supplier_name: item.שם_ספק || item['שם ספק'] || item.ספק || item.supplier_name || 
                         item.supplier || item.supplierName || 'לא זמין',
           
           // Source type (OEM/Aftermarket/Used) - try ALL variations
-          availability: item.סוג_מקור || item['סוג מקור'] || item.סוג || item.source_type || 
-                       item.sourceType || item.type || 'מקורי',
-          source: item.סוג_מקור || item['סוג מקור'] || item.סוג || item.source_type || 
-                  item.sourceType || item.type || 'מקורי',
+          availability: item.source || item.availability || item.סוג_מקור || item['סוג מקור'] || 
+                       item.סוג || item.source_type || item.sourceType || item.type || 'מקורי',
+          source: item.source || item.availability || item.סוג_מקור || item['סוג מקור'] || 
+                  item.סוג || item.source_type || item.sourceType || item.type || 'מקורי',
           
           // Price - handle both number and string formats with ALL variations
           price: parseFloat((item.מחיר || item.price || item.Price || '0').toString().replace(/,/g, '')) || 0,
           
           version_date: new Date().toISOString(),
-          part_family: searchParams.part_group || 'לא מוגדר',
-          model: searchParams.model || 'לא מוגדר',
-          extracted_year: searchParams.year || 'לא מוגדר',
+          
+          // SESSION 27 FIX: OCR uses ONLY webhook data, web search can use form fallback
+          part_family: item.part_family || item.משפחת_חלק || 
+                      (useFormFallback ? searchParams.part_group : null) || 'לא מוגדר',
+          model: item.model || item.דגם || 
+                (useFormFallback ? searchParams.model : null) || 'לא מוגדר',
+          extracted_year: item.year || item.year_from || item.שנה || 
+                         (useFormFallback ? searchParams.year : null) || 'לא מוגדר',
+          make: item.make || item.יצרן || 
+               (useFormFallback ? searchParams.manufacturer : null) || '',
           
           // Geographic location - try ALL variations
           location: item.מיקום || item.location || item.Location || '',
