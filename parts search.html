@@ -1861,6 +1861,11 @@ ${part.supplier ? `   ספק: ${part.supplier}` : ''}
       
       const fileData = await fileDataPromise;
       
+      // SESSION 26: Strip data URL prefix to get pure base64
+      // fileData format: "data:image/jpeg;base64,XXXXX"
+      // We need just: "XXXXX"
+      const base64Data = fileData.split(',')[1]; // Get everything after the comma
+      
       // SESSION 26: Collect vehicle details from form
       const make = document.getElementById('manufacturer')?.value || '';
       const model = document.getElementById('model')?.value || '';
@@ -1876,7 +1881,7 @@ ${part.supplier ? `   ספק: ${part.supplier}` : ''}
         // File data
         file_name: file.name,
         file_type: file.type,
-        file_data: fileData
+        file_data: base64Data // SESSION 26: Send pure base64 without data URL prefix
       };
       
       console.log('📋 SESSION 26: OCR webhook payload:', {
@@ -1886,10 +1891,12 @@ ${part.supplier ? `   ספק: ${part.supplier}` : ''}
         year,
         file_name: file.name,
         file_type: file.type,
-        file_data_length: fileData?.length || 0
+        base64_length: base64Data?.length || 0
       });
       
-      console.log('📤 Sending OCR webhook to Make.com...');
+      console.log('📤 SESSION 26: Sending OCR webhook to Make.com...');
+      console.log('  - URL:', webhookUrl);
+      console.log('  - Payload size:', JSON.stringify(webhookPayload).length, 'bytes');
       
       if (ocrBtn) {
         ocrBtn.innerHTML = '⏳ מנתח קובץ (עד 5 דקות)...';
@@ -1899,13 +1906,22 @@ ${part.supplier ? `   ספק: ${part.supplier}` : ''}
         setTimeout(() => reject(new Error('הזמן הקצוב לניתוח OCR הסתיים (5 דקות)')), 300000)
       );
       
+      console.log('🌐 SESSION 26: Initiating fetch request...');
       const fetchPromise = fetch(webhookUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(webhookPayload)
+      }).then(response => {
+        console.log('✅ SESSION 26: Fetch completed, status:', response.status);
+        return response;
+      }).catch(error => {
+        console.error('❌ SESSION 26: Fetch failed:', error);
+        throw error;
       });
       
+      console.log('⏳ SESSION 26: Waiting for response (max 5 minutes)...');
       const response = await Promise.race([fetchPromise, timeoutPromise]);
+      console.log('📨 SESSION 26: Response received:', response.status, response.statusText);
       
       if (!response.ok) {
         throw new Error(`שגיאת תקשורת: ${response.status}`);
