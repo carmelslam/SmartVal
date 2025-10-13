@@ -1579,7 +1579,7 @@ ${part.supplier ? `   ספק: ${part.supplier}` : ''}
           helper.parts_search.web_search_results.push(newResults);
           console.log(`✅ SESSION 26: Web result appended! New total: ${helper.parts_search.web_search_results.length}`);
           
-        } else if (dataSource === 'אחר') {
+        } else if (dataSource === 'ניתוח תוצאות') {
           // OCR search results
           if (!helper.parts_search.ocr_results) {
             helper.parts_search.ocr_results = [];
@@ -1605,10 +1605,18 @@ ${part.supplier ? `   ספק: ${part.supplier}` : ''}
       await updateHelperPromise; // SESSION 25: Only wait for helper update, not Supabase (PiP handles that)
       
       if (window.partsResultsPiP) {
+        // SESSION 26: Determine search type based on data source
+        let searchType = 'ocr_search'; // Default for webhooks
+        if (dataSource === 'אינטרנט') {
+          searchType = 'web_search';
+        } else if (dataSource === 'ניתוח תוצאות') {
+          searchType = 'ocr_search';
+        }
+        
         const pipContext = {
           plate: plate,
           sessionId: window.currentSearchSessionId || 'no-session',
-          searchType: dataSource === 'אינטרנט' ? 'web_search' : 'ocr_search',
+          searchType: searchType,
           dataSource: dataSource,
           searchSuccess: transformedResults.length > 0,
           errorMessage: null,
@@ -1834,7 +1842,7 @@ ${part.supplier ? `   ספק: ${part.supplier}` : ''}
       if (window.partsSearchSupabaseService) {
         const sessionId = await window.partsSearchSupabaseService.createSearchSession(
           plate,
-          { searchParams: { plate }, dataSource: 'אחר' } // SESSION 26 FIX: Hebrew value required by DB constraint
+          { searchParams: { plate }, dataSource: 'ניתוח תוצאות' } // SESSION 26: OCR data source
         );
         window.currentSearchSessionId = sessionId;
         console.log('✅ SESSION 26: OCR session created:', sessionId);
@@ -1886,7 +1894,7 @@ ${part.supplier ? `   ספק: ${part.supplier}` : ''}
       const webhookData = await response.json();
       console.log('✅ OCR webhook response received:', webhookData);
       
-      await handleWebhookResponse(webhookData, 'אחר');
+      await handleWebhookResponse(webhookData, 'ניתוח תוצאות'); // SESSION 26: OCR data source
       
       fileInput.value = '';
       
@@ -2083,40 +2091,13 @@ ${part.supplier ? `   ספק: ${part.supplier}` : ''}
   });
 </script>
 <script>
-document.getElementById('sendResultToOCRBtn').addEventListener('click', function () {
-  const fileInput = document.getElementById('resultFileUpload');
-  const file = fileInput.files[0];
-  if (!file) {
-    alert('אנא העלה קובץ חיפוש לפני השליחה');
-    return;
-  }
+// SESSION 26: OLD OCR event listener removed - now using searchOCR() function via onclick
+// The old addEventListener was conflicting with the new unified OCR search implementation
+// OCR button now uses: onclick="searchOCR()" (line 245)
 
-  // Show processing indicator
-  const btn = document.getElementById('sendResultToOCRBtn');
-  const originalText = btn.textContent;
-  btn.textContent = 'מעבד...';
-  btn.disabled = true;
-
-  sendSearchResultFile(file, {
-    plate: sessionStorage.getItem('plate') || '',
-    model: sessionStorage.getItem('model') || ''
-  }).then(results => {
-    if (results && results.parts && results.parts.length > 0) {
-      displaySearchResults(results.parts);
-      alert(`✅ נמצאו ${results.parts.length} חלקים בקובץ`);
-    } else {
-      alert('לא נמצאו חלקים בקובץ או שגיאה בעיבוד');
-    }
-  }).catch(error => {
-    console.error('OCR processing error:', error);
-    alert('שגיאה בעיבוד הקובץ');
-  }).finally(() => {
-    btn.textContent = originalText;
-    btn.disabled = false;
-  });
-  
-  // SESSION 14 TASK 3: Keep current session list persistent on refresh
-  // Load from helper (which is saved to sessionStorage)
+// SESSION 14 TASK 3: Keep current session list persistent on refresh
+// Load from helper (which is saved to sessionStorage) on page load
+window.addEventListener('DOMContentLoaded', function() {
   if (window.helper?.parts_search?.selected_parts) {
     console.log('✅ SESSION 14: Loaded', window.helper.parts_search.selected_parts.length, 'parts from helper');
     if (typeof updateSelectedPartsList === 'function') {
