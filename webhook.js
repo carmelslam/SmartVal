@@ -18,7 +18,7 @@ EXPERTISE_HTML: 'https://hook.eu2.make.com/7e78v6idlf5j4glq7tesn4bidws2rfkh',
 SAVE_EXPERTISE_SUMMARY: 'https://hook.eu2.make.com/ysj95d4nk7igro19k0dgi4mj0p9uegf5',
 FINAL_REPORT_DRAFT: 'https://hook.eu2.make.com/j5qb0obvpa6maab9j4a7t71o70brqdfp',
   SUBMIT_FINAL_REPORT: 'https://hook.eu2.make.com/humgj4nyifchtnivuatdrh6u9slj8xrh',
-  OCR_INVOICES: 'https://hook.eu2.make.com/9xs0avqydq7uyq944189dyt584ccknmh',
+  OCR_INVOICES: 'https://hook.eu2.make.com/w11tujdfbmq03co3vakb2jfr5vo4k6w6',
   FILL_FINAL_REPORT: 'https://hook.eu2.make.com/bd81gxcw37qavq62avte893czvgjuwr5',
 
   SEARCH_MODULE: 'https://hook.eu2.make.com/n3bbnj3izbymrmq6baj0vgaqhhin9fmd',
