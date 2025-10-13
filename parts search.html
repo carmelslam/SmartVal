@@ -1038,13 +1038,19 @@ ${part.supplier ? `   ספק: ${part.supplier}` : ''}
       console.log('✅ SimplePartsSearchService initialized');
       
       // SESSION 25: Create Supabase session BEFORE search
+      // SESSION 26 FIX: Add detailed logging to track session creation
       if (window.partsSearchSupabaseService) {
+        console.log('🔍 SESSION 26: Creating catalog search session...');
+        console.log('  - Plate:', searchParams.plate);
+        console.log('  - Stack trace:', new Error().stack);
+        
         const sessionId = await window.partsSearchSupabaseService.createSearchSession(
           searchParams.plate,
           { searchParams, dataSource: 'קטלוג' }
         );
         window.currentSearchSessionId = sessionId;
-        console.log('✅ SESSION 25: Catalog search session created:', sessionId);
+        console.log('✅ SESSION 26: Catalog search session created:', sessionId);
+        console.log('  - This is the ONLY session creation for catalog search');
       }
       
       // Show loading notification
@@ -1372,18 +1378,34 @@ ${part.supplier ? `   ספק: ${part.supplier}` : ''}
     try {
       const plate = webhookData.plate || document.getElementById('plate').value;
       
-      // Capture webhook data in helper.parts_search only
-      let helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+      // SESSION 26 FIX: Use window.helper to prevent overwriting existing data
+      // PROBLEM: Reading from sessionStorage each time loses any unsaved changes
+      let helper = window.helper || JSON.parse(sessionStorage.getItem('helper') || '{}');
+      console.log('🔍 SESSION 26 DEBUG: Raw webhook data before append...');
+      console.log('  - Using window.helper:', !!window.helper);
+      console.log('  - Current raw_webhook_data length:', helper.parts_search?.raw_webhook_data?.length || 0);
+      
       if (!helper.parts_search) {
         helper.parts_search = {
           results: [],
           current_selected_list: [],
           selected_parts: [],
-          raw_webhook_data: []
+          raw_webhook_data: [],
+          web_search_results: [], // SESSION 26: Separate web search results
+          ocr_results: []          // SESSION 26: Separate OCR search results
         };
       }
       
+      // SESSION 26: Add new arrays if missing (backward compatibility)
+      if (!helper.parts_search.web_search_results) {
+        helper.parts_search.web_search_results = [];
+      }
+      if (!helper.parts_search.ocr_results) {
+        helper.parts_search.ocr_results = [];
+      }
+      
       if (!helper.parts_search.raw_webhook_data || !Array.isArray(helper.parts_search.raw_webhook_data)) {
+        console.warn('⚠️ SESSION 26: raw_webhook_data was not an array, initializing...');
         helper.parts_search.raw_webhook_data = [];
       }
       
@@ -1399,9 +1421,17 @@ ${part.supplier ? `   ספק: ${part.supplier}` : ''}
         webhook: webhookData
       };
       
+      console.log(`📝 SESSION 26: Appending webhook to array (current length: ${helper.parts_search.raw_webhook_data.length})...`);
       helper.parts_search.raw_webhook_data.push(webhookEntry);
+      console.log(`✅ SESSION 26: Webhook appended! New length: ${helper.parts_search.raw_webhook_data.length}`);
+      console.log(`  - Webhook ID: ${webhookId}`);
+      console.log(`  - Data source: ${dataSource}`);
+      
+      // SESSION 26: Update BOTH window.helper and sessionStorage
+      window.helper = helper;
       sessionStorage.setItem('helper', JSON.stringify(helper));
-      console.log(`💾 Raw webhook appended to helper.parts_search.raw_webhook_data (id: ${webhookId}, total: ${helper.parts_search.raw_webhook_data.length})`);
+      localStorage.setItem('helper_data', JSON.stringify(helper));
+      console.log('💾 SESSION 26: Helper saved to window, sessionStorage, and localStorage');
       
       // SESSION 24: Extract results from webhook with proper structure handling
       // Webhook can be: Array[{body:{results:[]}}] OR {body:{results:[]}} OR {results:[]}
@@ -1525,7 +1555,7 @@ ${part.supplier ? `   ספק: ${part.supplier}` : ''}
       console.log(`🔄 Transformed ${transformedResults.length} results to catalog format`);
       
       // SESSION 25: REMOVED duplicate saveSearchResults call - PiP already does this
-      // Parallel Path B: Update helper.parts_search.results
+      // SESSION 26: Route results to correct array based on dataSource
       const updateHelperPromise = (async () => {
         
         if (!helper.parts_search.results) {
@@ -1539,12 +1569,36 @@ ${part.supplier ? `   ספק: ${part.supplier}` : ''}
           results: flatResults // Store ORIGINAL webhook data, not transformed
         };
         
-        helper.parts_search.results.push(newResults);
+        // SESSION 26: Route to specific array based on dataSource
+        if (dataSource === 'אינטרנט') {
+          // Web search results
+          if (!helper.parts_search.web_search_results) {
+            helper.parts_search.web_search_results = [];
+          }
+          console.log(`📝 SESSION 26: Appending to web_search_results (current: ${helper.parts_search.web_search_results.length})...`);
+          helper.parts_search.web_search_results.push(newResults);
+          console.log(`✅ SESSION 26: Web result appended! New total: ${helper.parts_search.web_search_results.length}`);
+          
+        } else if (dataSource === 'אחר') {
+          // OCR search results
+          if (!helper.parts_search.ocr_results) {
+            helper.parts_search.ocr_results = [];
+          }
+          console.log(`📝 SESSION 26: Appending to ocr_results (current: ${helper.parts_search.ocr_results.length})...`);
+          helper.parts_search.ocr_results.push(newResults);
+          console.log(`✅ SESSION 26: OCR result appended! New total: ${helper.parts_search.ocr_results.length}`);
+        }
         
+        // Also keep in generic results array for backward compatibility
+        helper.parts_search.results.push(newResults);
+        console.log(`📋 SESSION 26: Also added to generic results array (total: ${helper.parts_search.results.length})`);
+        
+        // SESSION 26: Update window.helper AND storage
+        window.helper = helper;
         sessionStorage.setItem('helper', JSON.stringify(helper));
         localStorage.setItem('helper_data', JSON.stringify(helper));
         
-        console.log('✅ Helper updated with webhook results');
+        console.log('✅ SESSION 26: Helper updated with webhook results and saved');
         return helper;
       })();
       

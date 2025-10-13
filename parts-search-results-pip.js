@@ -82,24 +82,31 @@ class PartsSearchResultsPiP {
         console.log('✅ SESSION 9: Service available');
         
         // SESSION 25: Use existing session from searchContext (created by search function)
+        // SESSION 26 FIX: Add detailed logging to track PiP session usage
         const supabaseSessionId = searchContext.sessionId || window.currentSearchSessionId;
         
+        console.log('🔍 SESSION 26 DEBUG: PiP session handling...');
+        console.log('  - searchContext.sessionId:', searchContext.sessionId);
+        console.log('  - window.currentSearchSessionId:', window.currentSearchSessionId);
+        console.log('  - Resolved session ID:', supabaseSessionId);
+        console.log('  - Stack trace:', new Error().stack);
+        
         if (!supabaseSessionId || supabaseSessionId === 'no-session') {
-          console.warn('⚠️ SESSION 25: No valid session ID, skipping Supabase save');
+          console.warn('⚠️ SESSION 26: No valid session ID, skipping Supabase save');
         } else {
-          console.log('✅ SESSION 25: Using existing search session:', supabaseSessionId);
+          console.log('✅ SESSION 26: PiP using existing search session (NOT creating new):', supabaseSessionId);
           this.currentSupabaseSessionId = supabaseSessionId;
           
           // SESSION 25: Save search results (creates parts_search_results.id for FK)
-          console.log('💾 SESSION 25: Saving search results...');
+          console.log('💾 SESSION 26: PiP calling saveSearchResults (does NOT create session)...');
           const searchResultId = await partsSearchService.saveSearchResults(
             supabaseSessionId,
             this.searchResults,
             searchContext
           );
-          console.log('✅ SESSION 25: Search results saved to Supabase');
+          console.log('✅ SESSION 26: Search results saved to Supabase');
           this.currentSearchResultId = searchResultId; // Store parts_search_results.id for FK
-          console.log('📋 SESSION 25: Stored search result ID for FK:', searchResultId);
+          console.log('📋 SESSION 26: Stored search result ID for FK:', searchResultId);
         }
       } catch (error) {
         console.error('❌ SESSION 9: Error saving to Supabase:', error);
