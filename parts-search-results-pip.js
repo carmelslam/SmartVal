@@ -249,9 +249,13 @@ class PartsSearchResultsPiP {
               if ((dataSource === 'ocr' || dataSource === 'אחר') && firstResult.model) {
                 const count = this.searchResults.length;
                 const model = firstResult.model || 'לא מוגדר';
+                const year = firstResult.extracted_year || firstResult.year || '';
                 const modelDesc = firstResult.model_description || '';
-                const truncated = modelDesc.length > 100 ? modelDesc.substring(0, 100) + '...' : modelDesc;
-                return `<div class="vehicle-info">${count} חלקים • ${model}${truncated ? ' • ' + truncated : ''}</div>`;
+                return `
+                  <div class="vehicle-info" style="line-height: 1.6;">
+                    <div style="margin-bottom: 4px;">${count} חלקים • ${model}${year ? ' • ' + year : ''}</div>
+                    ${modelDesc ? `<div style="font-size: 0.9em; color: #64748b;">${modelDesc}</div>` : ''}
+                  </div>`;
               }
               return firstResult.make || firstResult.model ? `
                 <div class="vehicle-info">
