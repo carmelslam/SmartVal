@@ -172,17 +172,18 @@ class PartsSearchResultsPiP {
 
   /**
    * SESSION 23: Get source badge based on data source
+   * SESSION 28 TASK 1: Support both English (DB values) and Hebrew (legacy) values
    */
   getSourceBadge(searchContext = {}) {
-    const dataSource = searchContext.dataSource || 'קטלוג';
+    const dataSource = searchContext.dataSource || 'catalog';
     
     let badge = '';
-    if (dataSource === 'קטלוג') {
+    if (dataSource === 'קטלוג' || dataSource === 'catalog') {
       badge = '<span style="display: inline-block; margin-right: 10px; padding: 4px 12px; background: #10b981; color: white; border-radius: 12px; font-size: 14px; font-weight: 600;">🗄️ קטלוג</span>';
-    } else if (dataSource === 'אינטרנט') {
+    } else if (dataSource === 'אינטרנט' || dataSource === 'web') {
       badge = '<span style="display: inline-block; margin-right: 10px; padding: 4px 12px; background: #3b82f6; color: white; border-radius: 12px; font-size: 14px; font-weight: 600;">🌐 אינטרנט</span>';
-    } else if (dataSource === 'אחר') {
-      badge = '<span style="display: inline-block; margin-right: 10px; padding: 4px 12px; background: #f59e0b; color: white; border-radius: 12px; font-size: 14px; font-weight: 600;">📄 OCR</span>';
+    } else if (dataSource === 'אחר' || dataSource === 'ocr') {
+      badge = '<span style="display: inline-block; margin-right: 10px; padding: 4px 12px; background: #f59e0b; color: white; border-radius: 12px; font-size: 14px; font-weight: 600;">📄 ניתוח תוצאות</span>';
     }
     
     return badge;
