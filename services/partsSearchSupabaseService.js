@@ -127,6 +127,9 @@
      */
     async createSearchSession(plate, searchContext = {}) {
       try {
+        console.log('💾 SESSION 26 DEBUG: createSearchSession called!');
+        console.log('  - Plate:', plate);
+        console.log('  - Call stack:', new Error().stack);
         console.log('💾 SESSION 11: Creating search session for plate:', plate);
         const supabase = this.getSupabase();
         
