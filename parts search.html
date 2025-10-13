@@ -1848,18 +1848,64 @@ ${part.supplier ? `   ספק: ${part.supplier}` : ''}
         console.log('✅ SESSION 26: OCR session created:', sessionId);
       }
       
-      const reader = new FileReader();
-      const fileDataPromise = new Promise((resolve, reject) => {
-        reader.onload = () => resolve(reader.result);
-        reader.onerror = () => reject(new Error('שגיאה בקריאת הקובץ'));
-        reader.readAsDataURL(file);
-      });
+      // SESSION 26: Compress image before sending to avoid 5MB payload
+      if (ocrBtn) {
+        ocrBtn.innerHTML = '⏳ דוחס תמונה...';
+      }
+      
+      const compressImage = (file) => {
+        return new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = (e) => {
+            const img = new Image();
+            img.onload = () => {
+              // Create canvas with max dimensions
+              const MAX_WIDTH = 1920;
+              const MAX_HEIGHT = 1920;
+              let width = img.width;
+              let height = img.height;
+              
+              // Calculate scaling
+              if (width > height) {
+                if (width > MAX_WIDTH) {
+                  height = height * (MAX_WIDTH / width);
+                  width = MAX_WIDTH;
+                }
+              } else {
+                if (height > MAX_HEIGHT) {
+                  width = width * (MAX_HEIGHT / height);
+                  height = MAX_HEIGHT;
+                }
+              }
+              
+              const canvas = document.createElement('canvas');
+              canvas.width = width;
+              canvas.height = height;
+              const ctx = canvas.getContext('2d');
+              ctx.drawImage(img, 0, 0, width, height);
+              
+              // Convert to JPEG with 0.7 quality to reduce size
+              const compressedData = canvas.toDataURL('image/jpeg', 0.7);
+              console.log('🗜️ SESSION 26: Image compressed', {
+                original_size: file.size,
+                compressed_size: compressedData.length,
+                reduction: ((1 - compressedData.length / file.size) * 100).toFixed(1) + '%'
+              });
+              resolve(compressedData);
+            };
+            img.onerror = () => reject(new Error('שגיאה בטעינת התמונה'));
+            img.src = e.target.result;
+          };
+          reader.onerror = () => reject(new Error('שגיאה בקריאת הקובץ'));
+          reader.readAsDataURL(file);
+        });
+      };
       
       if (ocrBtn) {
         ocrBtn.innerHTML = '⏳ שולח לניתוח OCR...';
       }
       
-      const fileData = await fileDataPromise;
+      const fileData = await compressImage(file);
       
       // SESSION 26: Strip data URL prefix to get pure base64
       // fileData format: "data:image/jpeg;base64,XXXXX"
