@@ -244,15 +244,25 @@ class PartsSearchResultsPiP {
               נמצאו <strong>${this.searchResults.length}</strong> תוצאות
               ${this.currentPlateNumber ? `• רכב: <strong>${this.currentPlateNumber}</strong>` : ''}
             </div>
-            ${firstResult.make || firstResult.model ? `
-              <div class="vehicle-info">
-                ${firstResult.make ? `יצרן: ${firstResult.make}` : ''}
-                ${firstResult.model ? ` • דגם: ${firstResult.model}` : ''}
-                ${firstResult.year_from && firstResult.year_to ? ` • שנים: ${firstResult.year_from}-${firstResult.year_to}` : ''}
-                ${searchContext.searchParams?.part_name || searchContext.searchParams?.free_query || searchContext.part_name ? ` • חלק: ${searchContext.searchParams?.part_name || searchContext.searchParams?.free_query || searchContext.part_name}` : ''}
-                ${firstResult.part_family ? ` • משפחה: ${firstResult.part_family}` : ''}
-              </div>
-            ` : ''}
+            ${(() => {
+              const dataSource = searchContext.dataSource;
+              if ((dataSource === 'ocr' || dataSource === 'אחר') && firstResult.model) {
+                const count = this.searchResults.length;
+                const model = firstResult.model || 'לא מוגדר';
+                const modelDesc = firstResult.model_description || '';
+                const truncated = modelDesc.length > 100 ? modelDesc.substring(0, 100) + '...' : modelDesc;
+                return `<div class="vehicle-info">${count} חלקים • ${model}${truncated ? ' • ' + truncated : ''}</div>`;
+              }
+              return firstResult.make || firstResult.model ? `
+                <div class="vehicle-info">
+                  ${firstResult.make ? `יצרן: ${firstResult.make}` : ''}
+                  ${firstResult.model ? ` • דגם: ${firstResult.model}` : ''}
+                  ${firstResult.year_from && firstResult.year_to ? ` • שנים: ${firstResult.year_from}-${firstResult.year_to}` : ''}
+                  ${searchContext.searchParams?.part_name || searchContext.searchParams?.free_query || searchContext.part_name ? ` • חלק: ${searchContext.searchParams?.part_name || searchContext.searchParams?.free_query || searchContext.part_name}` : ''}
+                  ${firstResult.part_family ? ` • משפחה: ${firstResult.part_family}` : ''}
+                </div>
+              ` : '';
+            })()}
           </div>
 
           <!-- Results Container -->
