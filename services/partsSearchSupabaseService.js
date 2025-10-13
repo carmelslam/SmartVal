@@ -145,8 +145,8 @@
         
         // SESSION 12: Determine data source (English values)
         // Default: 'catalog' (Supabase catalog_items search)
-        // Future: 'web' (external API search), 'ocr' (OCR, direct external site)
-        const dataSource = searchContext.dataSource || searchParams.dataSource || 'קטלוג';
+        // SESSION 26: Changed default from Hebrew to English for DB constraint
+        const dataSource = searchContext.dataSource || searchParams.dataSource || 'catalog';
         
         const { data, error } = await supabase
           .from('parts_search_sessions')
@@ -235,7 +235,7 @@
         // SESSION 12: Determine data source (English values)
         // Default: 'catalog' (Supabase catalog_items search)
         // 'web' (external Make.com API), 'ocr' (OCR results from Make.com)
-        const dataSource = query.dataSource || searchParams.dataSource || 'קטלוג';
+        const dataSource = query.dataSource || searchParams.dataSource || 'catalog'; // SESSION 26: English for DB constraint
         
         // OPTION A: Clean structure - only search params + full results
         const insertData = {
@@ -306,7 +306,7 @@
         const searchParams = context.searchContext?.searchParams || {};
         
         // SESSION 12: Get data_source from search context (English value)
-        const dataSource = context.searchContext?.dataSource || 'קטלוג';
+        const dataSource = context.searchContext?.dataSource || 'catalog'; // SESSION 26: English for DB constraint
 
         // Check for duplicates (same plate + pcode)
         const { data: existingParts, error: checkError } = await supabase
