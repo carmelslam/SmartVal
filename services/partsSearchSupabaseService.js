@@ -148,6 +148,12 @@
         // SESSION 26: Changed default from Hebrew to English for DB constraint
         const dataSource = searchContext.dataSource || searchParams.dataSource || 'catalog';
         
+        // SESSION 28: Debug - what value are we actually sending?
+        console.log('🔍 SESSION 28: dataSource being sent to Supabase:', dataSource);
+        console.log('  - searchContext.dataSource:', searchContext.dataSource);
+        console.log('  - searchParams.dataSource:', searchParams.dataSource);
+        console.log('  - DB expects: catalog, web, or ocr');
+        
         const { data, error } = await supabase
           .from('parts_search_sessions')
           .insert({
