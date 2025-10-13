@@ -970,8 +970,21 @@ ${part.supplier ? `   ספק: ${part.supplier}` : ''}
   // ✅ NEW: Send current parts list to Make.com for processing
   
   // ✅ NEW: Supabase Search Function for PiP Integration
+  // SESSION 26: Prevent double-execution guard
+  let catalogSearchInProgress = false;
+  
   async function searchSupabase() {
     console.log('🔍 Starting Supabase search...');
+    
+    // SESSION 26 FIX: Prevent double execution
+    if (catalogSearchInProgress) {
+      console.warn('⚠️ SESSION 26: Catalog search already in progress, ignoring duplicate call');
+      return;
+    }
+    
+    catalogSearchInProgress = true;
+    console.log('✅ SESSION 26: Catalog search guard activated');
+    
     console.log('🔍 DEBUG: Checking dependencies at search start...');
     console.log('  - window.SmartPartsSearchService:', typeof window.SmartPartsSearchService);
     console.log('  - window.partsResultsPiP:', typeof window.partsResultsPiP);
@@ -1152,6 +1165,10 @@ ${part.supplier ? `   ספק: ${part.supplier}` : ''}
         }
       }
     } finally {
+      // SESSION 26: Reset guard to allow next search
+      catalogSearchInProgress = false;
+      console.log('✅ SESSION 26: Catalog search guard released');
+      
       // Restore button state
       console.log('🔄 Restoring button state...');
       if (supabaseBtn) {
