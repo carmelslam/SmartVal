@@ -4807,12 +4807,18 @@ ${partsText}`;
     }
     
     try {
+      // SESSION 29: Normalize plate number (remove dashes for database query)
+      // Database stores plates without dashes: "22184003"
+      // UI might display with dashes: "221-84-003"
+      const normalizedPlate = plate.replace(/-/g, '');
+      console.log('📋 SESSION 29: Normalized plate:', plate, '→', normalizedPlate);
+      
       // SESSION 29: Get the case UUID and filing_case_id directly from cases table by plate
       // The cases table is the authoritative source for case identifiers
       const { data: casesData, error: caseError } = await window.supabase
         .from('cases')
         .select('id, status, filing_case_id')
-        .eq('plate', plate)
+        .eq('plate', normalizedPlate)
         .order('created_at', { ascending: false });
       
       if (caseError) {
@@ -4883,10 +4889,11 @@ ${partsText}`;
       
       // Prepare payload for Make.com webhook
       const payload = {
-        plate: plate,
+        plate: normalizedPlate,  // Normalized plate without dashes (database format)
+        plate_formatted: plate,   // Original plate with dashes (display format)
         case_id: filingCaseId,
         case_uuid: caseUuid,
-        case_folder: plate,
+        case_folder: normalizedPlate,
         export_date: new Date().toISOString(),
         vehicle: vehicleInfo,
         parts_count: parts.length,
@@ -4919,7 +4926,7 @@ ${partsText}`;
         .insert({
           case_id: caseUuid,
           filing_case_id: filingCaseId,
-          plate: plate,
+          plate: normalizedPlate,  // Use normalized plate (without dashes) for consistency
           parts_count: parts.length,
           total_estimated_cost: totalEstimatedCost,
           pdf_storage_path: storagePath,
