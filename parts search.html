@@ -4007,62 +4007,151 @@ ${partsText}`;
       // Store parts globally for edit function access
       window.TEST_currentModalParts = parts;
       
-      const partsList = parts.map((part, index) => `
-        <div style="padding: 10px; border-bottom: 1px solid #e5e7eb; background: ${index % 2 === 0 ? '#f9fafb' : 'white'}; display: flex; justify-content: space-between; align-items: center;">
-          <div style="flex: 1;">
-            <div style="font-weight: bold; color: #059669;">${part.part_family || part.group || 'N/A'} - ${part.part_name || part.name || 'N/A'}</div>
-            <div style="font-size: 12px; color: #6b7280;">
-              כמות: ${part.quantity || part.qty || 1} | מקור: ${part.source || 'N/A'}
+      // SESSION 29 TASK 1: Convert to professional table layout
+      const tableRows = parts.map((part, index) => `
+        <tr style="background: ${index % 2 === 0 ? '#f9fafb' : 'white'}; border-bottom: 1px solid #e5e7eb;">
+          <td style="padding: 10px; text-align: center; width: 40px;">
+            <input type="checkbox" class="part-checkbox" data-part-id="${part.id}" data-part-index="${index}" 
+                   style="width: 18px; height: 18px; cursor: pointer;">
+          </td>
+          <td style="padding: 10px; text-align: right;">
+            <div style="font-weight: bold; color: #059669; margin-bottom: 4px;">
+              ${part.part_family || part.group || 'N/A'} - ${part.part_name || part.name || 'N/A'}
             </div>
-            <div style="font-size: 11px; color: #9ca3af;">
-              קוד: ${part.pcode || part.oem || 'N/A'} | Created: ${part.created_at ? new Date(part.created_at).toLocaleString('he-IL') : 'N/A'}
-            </div>
-          </div>
-          <div style="display: flex; gap: 5px; margin-right: 10px;">
+          </td>
+          <td style="padding: 10px; text-align: center; color: #6b7280;">
+            ${part.quantity || part.qty || 1}
+          </td>
+          <td style="padding: 10px; text-align: center; color: #6b7280;">
+            ${part.source || 'N/A'}
+          </td>
+          <td style="padding: 10px; text-align: center; color: #9ca3af; font-size: 11px;">
+            ${part.pcode || part.oem || 'N/A'}
+          </td>
+          <td style="padding: 10px; text-align: center; color: #9ca3af; font-size: 11px;">
+            ${part.created_at ? new Date(part.created_at).toLocaleString('he-IL', { 
+              year: 'numeric', month: '2-digit', day: '2-digit', 
+              hour: '2-digit', minute: '2-digit' 
+            }) : 'N/A'}
+          </td>
+          <td style="padding: 10px; text-align: center; white-space: nowrap;">
             <button onclick="window.editPartFromModal(${index})" 
                     style="background: #f59e0b; color: white; border: none; padding: 6px 12px; 
-                           border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: bold;">
+                           border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: bold; margin-left: 4px;"
+                    onmouseover="this.style.background='#d97706'" 
+                    onmouseout="this.style.background='#f59e0b'">
               ✏️ ערוך
             </button>
             <button onclick="window.deletePartFromModal('${part.id}', '${part.plate}')" 
                     style="background: #ef4444; color: white; border: none; padding: 6px 12px; 
-                           border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: bold;">
+                           border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: bold;"
+                    onmouseover="this.style.background='#dc2626'" 
+                    onmouseout="this.style.background='#ef4444'">
               🗑️ מחק
             </button>
-          </div>
-        </div>
+          </td>
+        </tr>
       `).join('');
       
+      // SESSION 29 TASK 1: Updated modal with table structure
       modal.innerHTML = `
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-          <h3 style="margin: 0; color: #059669;">🗂️ All Saved Parts (${parts.length})</h3>
+          <h3 style="margin: 0; color: #059669;">🗂️ רשימת חלקים נבחרים (${parts.length})</h3>
           <button onclick="this.parentElement.parentElement.remove()" 
                   style="background: #ef4444; color: white; border: none; padding: 8px 16px; 
                          border-radius: 8px; cursor: pointer; font-weight: bold;">
-            ✕ Close
+            ✕ סגור
           </button>
         </div>
         <div style="font-size: 13px; color: #6b7280; margin-bottom: 15px;">
-          Plate: <strong>${plate}</strong>
+          מספר רישוי: <strong>${plate}</strong>
         </div>
-        <div style="max-height: 400px; overflow-y: auto;">
-          ${partsList}
+        <div style="max-height: 500px; overflow-y: auto; overflow-x: auto;">
+          <table style="width: 100%; border-collapse: collapse; border: 1px solid #e5e7eb; direction: rtl;">
+            <thead style="background: #10b981; color: white; position: sticky; top: 0; z-index: 1;">
+              <tr>
+                <th style="padding: 12px; text-align: center; border: 1px solid #059669; width: 40px;">
+                  <input type="checkbox" id="selectAllParts" 
+                         style="width: 18px; height: 18px; cursor: pointer;"
+                         onchange="window.toggleSelectAll(this.checked)">
+                </th>
+                <th style="padding: 12px; text-align: right; border: 1px solid #059669;">שם החלק</th>
+                <th style="padding: 12px; text-align: center; border: 1px solid #059669; width: 80px;">כמות</th>
+                <th style="padding: 12px; text-align: center; border: 1px solid #059669; width: 100px;">מקור</th>
+                <th style="padding: 12px; text-align: center; border: 1px solid #059669; width: 120px;">קוד</th>
+                <th style="padding: 12px; text-align: center; border: 1px solid #059669; width: 140px;">תאריך יצירה</th>
+                <th style="padding: 12px; text-align: center; border: 1px solid #059669; width: 160px;">פעולות</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${tableRows}
+            </tbody>
+          </table>
         </div>
-        <div style="margin-top: 15px; padding-top: 15px; border-top: 2px solid #e5e7eb; text-align: center;">
-          <button onclick="window.TEST_syncHelperFromSupabase()" 
-                  style="background: #3b82f6; color: white; border: none; padding: 10px 20px; 
-                         border-radius: 8px; cursor: pointer; font-weight: bold; margin-right: 10px;">
-            🔄 Sync to Helper
+        <div style="margin-top: 15px; padding-top: 15px; border-top: 2px solid #e5e7eb; display: flex; gap: 10px; flex-wrap: wrap; justify-content: center;">
+          <button id="bulkDeleteBtn" onclick="window.bulkDeleteParts('${plate}')" 
+                  style="background: #ef4444; color: white; border: none; padding: 10px 20px; 
+                         border-radius: 8px; cursor: pointer; font-weight: bold; display: none;"
+                  onmouseover="this.style.background='#dc2626'" 
+                  onmouseout="this.style.background='#ef4444'">
+            🗑️ מחק נבחרים (<span id="selectedCount">0</span>)
           </button>
-          <button onclick="window.TEST_copyPartsJSON()" 
+          <button onclick="window.openPartsPreviewWindow('${plate}')" 
                   style="background: #8b5cf6; color: white; border: none; padding: 10px 20px; 
-                         border-radius: 8px; cursor: pointer; font-weight: bold;">
-            📋 Copy JSON
+                         border-radius: 8px; cursor: pointer; font-weight: bold;"
+                  onmouseover="this.style.background='#7c3aed'" 
+                  onmouseout="this.style.background='#8b5cf6'">
+            👁️ תצוגה מקדימה
+          </button>
+          <button onclick="window.printPartsList()" 
+                  style="background: #10b981; color: white; border: none; padding: 10px 20px; 
+                         border-radius: 8px; cursor: pointer; font-weight: bold;"
+                  onmouseover="this.style.background='#059669'" 
+                  onmouseout="this.style.background='#10b981'">
+            🖨️ הדפס רשימה
+          </button>
+          <button onclick="window.exportPartsToOneDrive('${plate}')" 
+                  style="background: #f59e0b; color: white; border: none; padding: 10px 20px; 
+                         border-radius: 8px; cursor: pointer; font-weight: bold;"
+                  onmouseover="this.style.background='#d97706'" 
+                  onmouseout="this.style.background='#f59e0b'">
+            📤 ייצא לתיקייה
           </button>
         </div>
       `;
       
       document.body.appendChild(modal);
+      
+      // SESSION 29 TASK 3: Add checkbox change listeners to show/hide bulk delete button
+      setTimeout(() => {
+        const checkboxes = document.querySelectorAll('.part-checkbox');
+        const bulkDeleteBtn = document.getElementById('bulkDeleteBtn');
+        const selectedCountSpan = document.getElementById('selectedCount');
+        
+        const updateBulkDeleteButton = () => {
+          const checkedCount = document.querySelectorAll('.part-checkbox:checked').length;
+          if (bulkDeleteBtn && selectedCountSpan) {
+            if (checkedCount > 0) {
+              bulkDeleteBtn.style.display = 'block';
+              selectedCountSpan.textContent = checkedCount;
+            } else {
+              bulkDeleteBtn.style.display = 'none';
+            }
+          }
+        };
+        
+        checkboxes.forEach(cb => {
+          cb.addEventListener('change', updateBulkDeleteButton);
+        });
+        
+        // Also listen to select all checkbox
+        const selectAllCheckbox = document.getElementById('selectAllParts');
+        if (selectAllCheckbox) {
+          selectAllCheckbox.addEventListener('change', () => {
+            setTimeout(updateBulkDeleteButton, 50);
+          });
+        }
+      }, 100);
       
       // Add backdrop
       const backdrop = document.createElement('div');
@@ -4087,12 +4176,294 @@ ${partsText}`;
     }
   };
   
-  // SESSION 19: TEST - Copy parts JSON to clipboard
-  let lastLoadedParts = [];
-  window.TEST_copyPartsJSON = function() {
-    navigator.clipboard.writeText(JSON.stringify(lastLoadedParts, null, 2))
-      .then(() => alert('✅ Parts JSON copied to clipboard!'))
-      .catch(() => alert('❌ Failed to copy'));
+  // SESSION 29 TASK 2: Checkbox selection functions
+  window.toggleSelectAll = function(checked) {
+    console.log('🔲 SESSION 29: Toggle all checkboxes:', checked);
+    const checkboxes = document.querySelectorAll('.part-checkbox');
+    checkboxes.forEach(cb => {
+      cb.checked = checked;
+    });
+    console.log(`✅ SESSION 29: ${checked ? 'Selected' : 'Deselected'} all ${checkboxes.length} checkboxes`);
+  };
+  
+  window.getSelectedPartIds = function() {
+    const checkboxes = document.querySelectorAll('.part-checkbox:checked');
+    const selectedIds = Array.from(checkboxes).map(cb => cb.getAttribute('data-part-id'));
+    console.log('📋 SESSION 29: Selected part IDs:', selectedIds);
+    return selectedIds;
+  };
+  
+  window.getSelectedPartIndices = function() {
+    const checkboxes = document.querySelectorAll('.part-checkbox:checked');
+    const selectedIndices = Array.from(checkboxes).map(cb => parseInt(cb.getAttribute('data-part-index')));
+    console.log('📋 SESSION 29: Selected part indices:', selectedIndices);
+    return selectedIndices;
+  };
+  
+  // SESSION 29 TASK 3: Bulk delete functionality
+  window.bulkDeleteParts = async function(plate) {
+    console.log('🗑️ SESSION 29: Starting bulk delete for plate:', plate);
+    
+    const selectedIds = window.getSelectedPartIds();
+    
+    if (selectedIds.length === 0) {
+      alert('❌ לא נבחרו חלקים למחיקה');
+      return;
+    }
+    
+    const confirmMessage = `האם אתה בטוח שברצונך למחוק ${selectedIds.length} חלקים?`;
+    if (!confirm(confirmMessage)) {
+      console.log('⏭️ SESSION 29: Bulk delete cancelled by user');
+      return;
+    }
+    
+    try {
+      console.log(`🗑️ SESSION 29: Deleting ${selectedIds.length} parts...`);
+      let successCount = 0;
+      let errorCount = 0;
+      
+      // Delete each part
+      for (const partId of selectedIds) {
+        try {
+          const { error } = await window.supabase
+            .from('selected_parts')
+            .delete()
+            .eq('id', partId)
+            .eq('plate', plate);
+          
+          if (error) {
+            console.error(`❌ SESSION 29: Error deleting part ${partId}:`, error);
+            errorCount++;
+          } else {
+            console.log(`✅ SESSION 29: Deleted part ${partId}`);
+            successCount++;
+          }
+        } catch (error) {
+          console.error(`❌ SESSION 29: Exception deleting part ${partId}:`, error);
+          errorCount++;
+        }
+      }
+      
+      console.log(`✅ SESSION 29: Bulk delete completed - Success: ${successCount}, Errors: ${errorCount}`);
+      
+      // Clear cache
+      clearPartsCache();
+      
+      // Show result message
+      if (errorCount > 0) {
+        alert(`⚠️ נמחקו ${successCount} חלקים\n${errorCount} חלקים נכשלו במחיקה`);
+      } else {
+        alert(`✅ נמחקו ${successCount} חלקים בהצלחה`);
+      }
+      
+      // Close and refresh modal
+      const modal = document.querySelector('[style*="z-index: 10001"]');
+      const backdrop = document.querySelector('[style*="z-index: 10000"]');
+      if (modal) modal.remove();
+      if (backdrop) backdrop.remove();
+      
+      // Reload the list
+      window.TEST_showAllSavedParts();
+      
+    } catch (error) {
+      console.error('❌ SESSION 29: Bulk delete failed:', error);
+      alert('❌ שגיאה במחיקה המרובה:\n\n' + error.message);
+    }
+  };
+  
+  // SESSION 29 TASK 5: Preview window function
+  window.openPartsPreviewWindow = function(plate) {
+    console.log('👁️ SESSION 29: Opening preview window for plate:', plate);
+    
+    const parts = window.TEST_currentModalParts || [];
+    if (parts.length === 0) {
+      alert('❌ אין חלקים להצגה');
+      return;
+    }
+    
+    const previewWindow = window.open('', '_blank', 'width=1200,height=800');
+    if (!previewWindow) {
+      alert('❌ נכשל בפתיחת חלון חדש. אנא בדוק שהחלונות הקופצים מותרים.');
+      return;
+    }
+    
+    const tableRows = parts.map((part, index) => `
+      <tr style="background: ${index % 2 === 0 ? '#f9fafb' : 'white'}; border-bottom: 1px solid #e5e7eb;">
+        <td style="padding: 10px; text-align: center;">${index + 1}</td>
+        <td style="padding: 10px; text-align: right;">
+          ${part.part_family || part.group || 'N/A'} - ${part.part_name || part.name || 'N/A'}
+        </td>
+        <td style="padding: 10px; text-align: center;">${part.quantity || part.qty || 1}</td>
+        <td style="padding: 10px; text-align: center;">${part.source || 'N/A'}</td>
+        <td style="padding: 10px; text-align: center;">${part.pcode || part.oem || 'N/A'}</td>
+        <td style="padding: 10px; text-align: center;">
+          ${part.created_at ? new Date(part.created_at).toLocaleString('he-IL', { 
+            year: 'numeric', month: '2-digit', day: '2-digit', 
+            hour: '2-digit', minute: '2-digit' 
+          }) : 'N/A'}
+        </td>
+      </tr>
+    `).join('');
+    
+    previewWindow.document.write(`
+      <!DOCTYPE html>
+      <html lang="he" dir="rtl">
+      <head>
+        <meta charset="UTF-8">
+        <title>תצוגה מקדימה - רשימת חלקים</title>
+        <style>
+          body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            padding: 20px;
+            background: #f3f4f6;
+          }
+          .header {
+            text-align: center;
+            margin-bottom: 20px;
+            padding: 20px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+          }
+          h1 {
+            color: #059669;
+            margin: 0 0 10px 0;
+          }
+          .plate-info {
+            color: #6b7280;
+            font-size: 16px;
+          }
+          table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+          }
+          th {
+            background: #10b981;
+            color: white;
+            padding: 12px;
+            text-align: center;
+            border: 1px solid #059669;
+          }
+          td {
+            border: 1px solid #e5e7eb;
+          }
+          .actions {
+            text-align: center;
+            margin-top: 20px;
+          }
+          button {
+            background: #10b981;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            margin: 0 5px;
+          }
+          button:hover {
+            background: #059669;
+          }
+          @media print {
+            .actions { display: none; }
+          }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <h1>🗂️ רשימת חלקים נבחרים</h1>
+          <div class="plate-info">מספר רישוי: <strong>${plate}</strong> | סה"כ חלקים: <strong>${parts.length}</strong></div>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th style="width: 50px;">#</th>
+              <th>שם החלק</th>
+              <th style="width: 80px;">כמות</th>
+              <th style="width: 100px;">מקור</th>
+              <th style="width: 120px;">קוד</th>
+              <th style="width: 140px;">תאריך יצירה</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${tableRows}
+          </tbody>
+        </table>
+        <div class="actions">
+          <button onclick="window.print()">🖨️ הדפס</button>
+          <button onclick="window.close()">✕ סגור</button>
+        </div>
+      </body>
+      </html>
+    `);
+    
+    previewWindow.document.close();
+    console.log('✅ SESSION 29: Preview window opened successfully');
+  };
+  
+  // SESSION 29 TASK 6: Print function
+  window.printPartsList = function() {
+    console.log('🖨️ SESSION 29: Printing parts list');
+    window.openPartsPreviewWindow(document.getElementById('plate')?.value || window.helper?.meta?.plate || 'N/A');
+  };
+  
+  // SESSION 29 TASK 7: Export to OneDrive via Make.com
+  window.exportPartsToOneDrive = async function(plate) {
+    console.log('📤 SESSION 29: Starting export to OneDrive for plate:', plate);
+    
+    const parts = window.TEST_currentModalParts || [];
+    if (parts.length === 0) {
+      alert('❌ אין חלקים לייצוא');
+      return;
+    }
+    
+    try {
+      // Get vehicle info from form or helper
+      const vehicleInfo = {
+        make: document.getElementById('manufacturer')?.value || window.helper?.vehicle?.manufacturer || '',
+        model: document.getElementById('model')?.value || window.helper?.vehicle?.model || '',
+        year: document.getElementById('year')?.value || window.helper?.vehicle?.year || ''
+      };
+      
+      // Prepare payload for Make.com webhook
+      const payload = {
+        plate: plate,
+        case_folder: plate,
+        export_date: new Date().toISOString(),
+        vehicle: vehicleInfo,
+        parts_count: parts.length,
+        parts: parts.map(part => ({
+          part_family: part.part_family || part.group || '',
+          part_name: part.part_name || part.name || '',
+          quantity: part.quantity || part.qty || 1,
+          source: part.source || '',
+          pcode: part.pcode || part.oem || '',
+          created_at: part.created_at || ''
+        }))
+      };
+      
+      console.log('📤 SESSION 29: Sending export payload:', payload);
+      
+      // Import sendToWebhook dynamically
+      const { sendToWebhook } = await import('./webhook.js');
+      
+      // Send to webhook
+      const response = await sendToWebhook('EXPORT_SELECTED_PARTS', payload);
+      
+      console.log('✅ SESSION 29: Export response:', response);
+      
+      if (response && response.success !== false) {
+        alert(`✅ הייצוא הושלם בהצלחה!\n\nנשמר ב: /Cases/${plate}/selected_parts.xlsx`);
+      } else {
+        throw new Error(response?.error || 'שגיאה לא ידועה בייצוא');
+      }
+      
+    } catch (error) {
+      console.error('❌ SESSION 29: Export failed:', error);
+      alert('❌ שגיאה בייצוא:\n\n' + error.message);
+    }
   };
   
   // SESSION 20: Delete part from test modal
