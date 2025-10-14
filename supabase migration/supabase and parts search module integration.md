@@ -21304,3 +21304,164 @@ The PDF export system provides a complete audit trail with Supabase Storage inte
 **End of Session 29 Log**  
 **Agent:** Claude Sonnet 4  
 **Date:** 2025-10-14
+
+errors from session 29 :
+internal-browser.js:222 An iframe which has both allow-scripts and allow-same-origin for its sandbox attribute can escape its sandboxing.
+(anonymous) @ internal-browser.js:222
+html2canvas.min.js:20 #1 0ms Starting document clone with size 1200x799 scrolled to 0,0
+html2canvas.min.js:20 #1 68ms Document cloned, element located at 0,0 with size 1200x799 using computed rendering
+html2canvas.min.js:20 #1 68ms Starting DOM parsing
+html2canvas.min.js:20 #1 83ms Added image https://carmelcayouf.com/wp-content/uploads/2025/06/g.webp
+html2canvas.min.js:20 #1 105ms Starting renderer for element at 0,0 with size 1200x799
+html2canvas.min.js:20 #1 105ms Canvas renderer initialized (1200x799) with scale 2
+parts search.html:1 Access to image at 'https://carmelcayouf.com/wp-content/uploads/2025/06/g.webp' from origin 'https://yaron-cayouf-portal.netlify.app' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.
+html2canvas.min.js:20  GET https://carmelcayouf.com/wp-content/uploads/2025/06/g.webp net::ERR_FAILED
+(anonymous) @ html2canvas.min.js:20
+(anonymous) @ html2canvas.min.js:20
+(anonymous) @ html2canvas.min.js:20
+(anonymous) @ html2canvas.min.js:20
+(anonymous) @ html2canvas.min.js:20
+a @ html2canvas.min.js:20
+Vn.loadImage @ html2canvas.min.js:20
+Vn.addImage @ html2canvas.min.js:20
+rB @ html2canvas.min.js:20
+VB @ html2canvas.min.js:20
+OB @ html2canvas.min.js:20
+OB @ html2canvas.min.js:20
+OB @ html2canvas.min.js:20
+kB @ html2canvas.min.js:20
+(anonymous) @ html2canvas.min.js:20
+(anonymous) @ html2canvas.min.js:20
+(anonymous) @ html2canvas.min.js:20
+r @ html2canvas.min.js:20
+Promise.then
+n @ html2canvas.min.js:20
+(anonymous) @ html2canvas.min.js:20
+a @ html2canvas.min.js:20
+Js @ html2canvas.min.js:20
+(anonymous) @ html2canvas.min.js:20
+window.generatePartsPDF @ parts search.html:4764
+await in window.generatePartsPDF
+window.exportPartsToOneDrive @ parts search.html:4826
+onclick @ parts search.html:1
+html2canvas.min.js:20 #1 126ms Error loading image https://carmelcayouf.com/wp-content/uploads/2025/06/g.webp
+Ns.error @ html2canvas.min.js:20
+(anonymous) @ html2canvas.min.js:20
+(anonymous) @ html2canvas.min.js:20
+(anonymous) @ html2canvas.min.js:20
+B @ html2canvas.min.js:20
+Promise.then
+n @ html2canvas.min.js:20
+(anonymous) @ html2canvas.min.js:20
+a @ html2canvas.min.js:20
+Ds.renderNodeContent @ html2canvas.min.js:20
+(anonymous) @ html2canvas.min.js:20
+(anonymous) @ html2canvas.min.js:20
+(anonymous) @ html2canvas.min.js:20
+r @ html2canvas.min.js:20
+Promise.then
+n @ html2canvas.min.js:20
+(anonymous) @ html2canvas.min.js:20
+a @ html2canvas.min.js:20
+Ds.renderNode @ html2canvas.min.js:20
+(anonymous) @ html2canvas.min.js:20
+(anonymous) @ html2canvas.min.js:20
+(anonymous) @ html2canvas.min.js:20
+r @ html2canvas.min.js:20
+Promise.then
+n @ html2canvas.min.js:20
+r @ html2canvas.min.js:20
+Promise.then
+n @ html2canvas.min.js:20
+r @ html2canvas.min.js:20
+Promise.then
+n @ html2canvas.min.js:20
+r @ html2canvas.min.js:20
+Promise.then
+n @ html2canvas.min.js:20
+r @ html2canvas.min.js:20
+Promise.then
+n @ html2canvas.min.js:20
+r @ html2canvas.min.js:20
+Promise.then
+n @ html2canvas.min.js:20
+r @ html2canvas.min.js:20
+Promise.then
+n @ html2canvas.min.js:20
+r @ html2canvas.min.js:20
+Promise.then
+n @ html2canvas.min.js:20
+r @ html2canvas.min.js:20
+Promise.then
+n @ html2canvas.min.js:20
+r @ html2canvas.min.js:20
+Promise.then
+n @ html2canvas.min.js:20
+r @ html2canvas.min.js:20
+Promise.then
+n @ html2canvas.min.js:20
+r @ html2canvas.min.js:20
+Promise.then
+n @ html2canvas.min.js:20
+r @ html2canvas.min.js:20
+Promise.then
+n @ html2canvas.min.js:20
+r @ html2canvas.min.js:20
+Promise.then
+n @ html2canvas.min.js:20
+r @ html2canvas.min.js:20
+Promise.then
+n @ html2canvas.min.js:20
+r @ html2canvas.min.js:20
+Promise.then
+n @ html2canvas.min.js:20
+r @ html2canvas.min.js:20
+Promise.then
+n @ html2canvas.min.js:20
+r @ html2canvas.min.js:20
+Promise.then
+n @ html2canvas.min.js:20
+r @ html2canvas.min.js:20
+Promise.then
+n @ html2canvas.min.js:20
+r @ html2canvas.min.js:20
+Promise.then
+n @ html2canvas.min.js:20
+r @ html2canvas.min.js:20
+Promise.then
+n @ html2canvas.min.js:20
+r @ html2canvas.min.js:20
+Promise.then
+n @ html2canvas.min.js:20
+r @ html2canvas.min.js:20
+Promise.then
+n @ html2canvas.min.js:20
+r @ html2canvas.min.js:20
+Promise.then
+n @ html2canvas.min.js:20
+r @ html2canvas.min.js:20
+Promise.then
+n @ html2canvas.min.js:20
+r @ html2canvas.min.js:20
+Promise.then
+n @ html2canvas.min.js:20
+r @ html2canvas.min.js:20
+Promise.then
+n @ html2canvas.min.js:20
+r @ html2canvas.min.js:20
+Promise.then
+n @ html2canvas.min.js:20
+r @ html2canvas.min.js:20
+Promise.then
+n @ html2canvas.min.js:20
+r @ html2canvas.min.js:20
+Promise.then
+n @ html2canvas.min.js:20
+r @ html2canvas.min.js:20
+html2canvas.min.js:20 #1 127ms Finished rendering
+parts search.html:4929 ❌ SESSION 29: Export failed: TypeError: Cannot read properties of undefined (reading 'from')
+    at window.exportPartsToOneDrive (parts search.html:4835:10)
+window.exportPartsToOneDrive @ parts search.html:4929
+await in window.exportPartsToOneDrive
+onclick @ parts search.html:1
+
