@@ -4604,6 +4604,13 @@ ${partsText}`;
         year: document.getElementById('year')?.value || window.helper?.vehicle?.year || ''
       };
       
+      // SESSION 29: Calculate total estimated cost
+      const totalEstimatedCost = parts.reduce((sum, part) => {
+        const price = parseFloat(part.price || part.cost || part.expected_cost || 0);
+        const qty = parseInt(part.quantity || part.qty || 1);
+        return sum + (price * qty);
+      }, 0);
+      
       // Prepare payload for Make.com webhook
       const payload = {
         plate: plate,
@@ -4611,15 +4618,24 @@ ${partsText}`;
         export_date: new Date().toISOString(),
         vehicle: vehicleInfo,
         parts_count: parts.length,
-        parts: parts.map(part => ({
-          part_family: part.part_family || part.group || '',
-          part_name: part.part_name || part.name || '',
-          quantity: part.quantity || part.qty || 1,
-          source: part.source || '',
-          supplier: part.supplier || part.supplier_name || '',
-          pcode: part.pcode || part.oem || '',
-          selected_at: part.selected_at || ''
-        }))
+        total_estimated_cost: totalEstimatedCost,
+        parts: parts.map(part => {
+          const price = parseFloat(part.price || part.cost || part.expected_cost || 0);
+          const qty = parseInt(part.quantity || part.qty || 1);
+          const calculatedPrice = price * qty;
+          
+          return {
+            part_family: part.part_family || part.group || '',
+            part_name: part.part_name || part.name || '',
+            pcode: part.pcode || part.oem || '',
+            source: part.source || '',
+            price: price,
+            quantity: qty,
+            calculated_price: calculatedPrice,
+            supplier: part.supplier || part.supplier_name || '',
+            selected_at: part.selected_at || ''
+          };
+        })
       };
       
       console.log('📤 SESSION 29: Sending export payload:', payload);
