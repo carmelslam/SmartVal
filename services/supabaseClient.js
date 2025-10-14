@@ -205,6 +205,22 @@ const supabase = {
         const builder = new SupabaseQueryBuilder(table);
         builder.insert(data);
         return {
+          select: (fields = '*') => {
+            builder.select(fields);
+            return {
+              single: () => {
+                builder.single();
+                return {
+                  then: (onResolve, onReject) => {
+                    return executeQuery(builder).then(onResolve, onReject);
+                  }
+                };
+              },
+              then: (onResolve, onReject) => {
+                return executeQuery(builder).then(onResolve, onReject);
+              }
+            };
+          },
           then: (onResolve, onReject) => {
             return executeQuery(builder).then(onResolve, onReject);
           }
