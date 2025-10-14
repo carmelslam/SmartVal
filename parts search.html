@@ -4008,29 +4008,40 @@ ${partsText}`;
       window.TEST_currentModalParts = parts;
       
       // SESSION 29 TASK 1: Convert to professional table layout
-      const tableRows = parts.map((part, index) => `
+      const tableRows = parts.map((part, index) => {
+        const price = parseFloat(part.price || part.cost || part.expected_cost || 0);
+        const qty = parseInt(part.quantity || part.qty || 1);
+        const calculatedPrice = price * qty;
+        
+        return `
         <tr style="background: ${index % 2 === 0 ? '#f9fafb' : 'white'}; border-bottom: 1px solid #e5e7eb;">
           <td style="padding: 10px; text-align: center; width: 40px;">
             <input type="checkbox" class="part-checkbox" data-part-id="${part.id}" data-part-index="${index}" 
                    style="width: 14px; height: 14px; cursor: pointer;">
           </td>
+          <td style="padding: 8px; text-align: center; font-size: 11px; color: #6b7280;">
+            ${index + 1}
+          </td>
+          <td style="padding: 8px; text-align: center; font-size: 11px; color: #6b7280;">
+            ${part.pcode || part.oem || 'N/A'}
+          </td>
           <td style="padding: 8px 10px; text-align: right; font-size: 11px; color: #1f2937;">
             ${part.part_family || part.group || 'N/A'} - ${part.part_name || part.name || 'N/A'}
-          </td>
-          <td style="padding: 8px; text-align: center; font-size: 11px; color: #1f2937;">
-            ${part.quantity || part.qty || 1}
           </td>
           <td style="padding: 8px; text-align: center; font-size: 11px; color: #4b5563;">
             ${part.source || 'N/A'}
           </td>
           <td style="padding: 8px; text-align: center; font-size: 11px; color: #059669; font-weight: 600;">
-            ${part.price || part.cost || part.expected_cost ? '₪' + parseFloat(part.price || part.cost || part.expected_cost).toLocaleString('he-IL', {minimumFractionDigits: 2}) : '-'}
+            ${price ? '₪' + price.toLocaleString('he-IL', {minimumFractionDigits: 2}) : '-'}
+          </td>
+          <td style="padding: 8px; text-align: center; font-size: 11px; color: #1f2937;">
+            ${qty}
+          </td>
+          <td style="padding: 8px; text-align: center; font-size: 11px; color: #059669; font-weight: 700;">
+            ${calculatedPrice ? '₪' + calculatedPrice.toLocaleString('he-IL', {minimumFractionDigits: 2}) : '-'}
           </td>
           <td style="padding: 8px; text-align: center; font-size: 11px; color: #4b5563;">
             ${part.supplier || part.supplier_name || '-'}
-          </td>
-          <td style="padding: 8px; text-align: center; font-size: 11px; color: #6b7280;">
-            ${part.pcode || part.oem || 'N/A'}
           </td>
           <td style="padding: 8px; text-align: center; font-size: 11px; color: #6b7280;">
             ${part.selected_at ? new Date(part.selected_at).toLocaleDateString('he-IL', { 
@@ -4054,7 +4065,7 @@ ${partsText}`;
             </button>
           </td>
         </tr>
-      `).join('');
+      `}).join('');
       
       // SESSION 29: Get vehicle info from helper
       const vehicleInfo = {
@@ -4115,12 +4126,14 @@ ${partsText}`;
                          style="width: 12px; height: 12px; cursor: pointer;"
                          onchange="window.toggleSelectAll(this.checked)">
                 </th>
+                <th style="padding: 8px; text-align: center; border: 1px solid #059669; width: 40px; font-size: 11px;">#</th>
+                <th style="padding: 8px; text-align: center; border: 1px solid #059669; width: 100px; font-size: 11px;">קוד</th>
                 <th style="padding: 8px 10px; text-align: right; border: 1px solid #059669; min-width: 200px; font-size: 11px;">שם החלק</th>
-                <th style="padding: 8px; text-align: center; border: 1px solid #059669; width: 50px; font-size: 11px;">כמות</th>
                 <th style="padding: 8px; text-align: center; border: 1px solid #059669; width: 80px; font-size: 11px;">מקור</th>
                 <th style="padding: 8px; text-align: center; border: 1px solid #059669; width: 80px; font-size: 11px;">מחיר</th>
+                <th style="padding: 8px; text-align: center; border: 1px solid #059669; width: 50px; font-size: 11px;">כמות</th>
+                <th style="padding: 8px; text-align: center; border: 1px solid #059669; width: 90px; font-size: 11px;">סכום</th>
                 <th style="padding: 8px; text-align: center; border: 1px solid #059669; width: 120px; font-size: 11px;">ספק</th>
-                <th style="padding: 8px; text-align: center; border: 1px solid #059669; width: 100px; font-size: 11px;">קוד</th>
                 <th style="padding: 8px; text-align: center; border: 1px solid #059669; width: 110px; font-size: 11px;">תאריך</th>
                 <th style="padding: 8px; text-align: center; border: 1px solid #059669; width: 140px; font-size: 11px;">פעולות</th>
               </tr>
@@ -4378,26 +4391,34 @@ ${partsText}`;
       year: 'numeric'
     });
     
-    const tableRows = parts.map((part, index) => `
+    const tableRows = parts.map((part, index) => {
+      const price = parseFloat(part.price || part.cost || part.expected_cost || 0);
+      const qty = parseInt(part.quantity || part.qty || 1);
+      const calculatedPrice = price * qty;
+      
+      return `
       <tr style="background: ${index % 2 === 0 ? '#fafafa' : 'white'}; border-bottom: 1px solid #ddd;">
         <td style="padding: 8px; text-align: center; font-size: 11px; border: 1px solid #ddd;">${index + 1}</td>
+        <td style="padding: 8px; text-align: center; font-size: 11px; border: 1px solid #ddd;">${part.pcode || part.oem || 'N/A'}</td>
         <td style="padding: 8px 10px; text-align: right; font-size: 11px; border: 1px solid #ddd;">
           ${part.part_family || part.group || 'N/A'} - ${part.part_name || part.name || 'N/A'}
         </td>
-        <td style="padding: 8px; text-align: center; font-size: 11px; border: 1px solid #ddd;">${part.quantity || part.qty || 1}</td>
         <td style="padding: 8px; text-align: center; font-size: 11px; border: 1px solid #ddd;">${part.source || 'N/A'}</td>
         <td style="padding: 8px; text-align: center; font-size: 11px; border: 1px solid #ddd; color: #059669; font-weight: 600;">
-          ${part.price || part.cost || part.expected_cost ? '₪' + parseFloat(part.price || part.cost || part.expected_cost).toLocaleString('he-IL', {minimumFractionDigits: 2}) : '-'}
+          ${price ? '₪' + price.toLocaleString('he-IL', {minimumFractionDigits: 2}) : '-'}
+        </td>
+        <td style="padding: 8px; text-align: center; font-size: 11px; border: 1px solid #ddd;">${qty}</td>
+        <td style="padding: 8px; text-align: center; font-size: 11px; border: 1px solid #ddd; color: #059669; font-weight: 700;">
+          ${calculatedPrice ? '₪' + calculatedPrice.toLocaleString('he-IL', {minimumFractionDigits: 2}) : '-'}
         </td>
         <td style="padding: 8px; text-align: center; font-size: 11px; border: 1px solid #ddd;">${part.supplier || part.supplier_name || '-'}</td>
-        <td style="padding: 8px; text-align: center; font-size: 11px; border: 1px solid #ddd;">${part.pcode || part.oem || 'N/A'}</td>
         <td style="padding: 8px; text-align: center; font-size: 10px; border: 1px solid #ddd;">
           ${part.selected_at ? new Date(part.selected_at).toLocaleDateString('he-IL', { 
             year: '2-digit', month: '2-digit', day: '2-digit'
           }) : 'N/A'}
         </td>
       </tr>
-    `).join('');
+    `}).join('');
     
     previewWindow.document.write(`
       <!DOCTYPE html>
@@ -4506,12 +4527,13 @@ ${partsText}`;
           <thead>
             <tr>
               <th style="width: 40px; font-size: 11px;">#</th>
+              <th style="width: 110px; font-size: 11px;">קוד</th>
               <th style="min-width: 250px; text-align: right; font-size: 11px;">שם החלק</th>
-              <th style="width: 60px; font-size: 11px;">כמות</th>
               <th style="width: 80px; font-size: 11px;">מקור</th>
               <th style="width: 80px; font-size: 11px;">מחיר</th>
+              <th style="width: 60px; font-size: 11px;">כמות</th>
+              <th style="width: 90px; font-size: 11px;">סכום</th>
               <th style="width: 120px; font-size: 11px;">ספק</th>
-              <th style="width: 110px; font-size: 11px;">קוד</th>
               <th style="width: 80px; font-size: 11px;">תאריך</th>
             </tr>
           </thead>
