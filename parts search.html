@@ -4807,19 +4807,11 @@ ${partsText}`;
     }
     
     try {
-      // SESSION 29: Get filing system case_id (YC-PLATE-YEAR format) from helper
-      const filingCaseId = window.helper?.meta?.case_id || window.helper?.case_id;
-      if (!filingCaseId) {
-        throw new Error('No case_id found in helper. Please ensure a case is active.');
-      }
-      
-      console.log('📋 SESSION 29: Filing case_id from helper:', filingCaseId);
-      
-      // SESSION 29: Get the database UUID directly from cases table by plate
-      // This is the authoritative source for case UUIDs
+      // SESSION 29: Get the case UUID and filing_case_id directly from cases table by plate
+      // The cases table is the authoritative source for case identifiers
       const { data: casesData, error: caseError } = await window.supabase
         .from('cases')
-        .select('id, status')
+        .select('id, status, filing_case_id')
         .eq('plate', plate)
         .order('created_at', { ascending: false });
       
@@ -4837,7 +4829,12 @@ ${partsText}`;
       }
       
       const caseUuid = activeCase.id;
-      console.log('✅ SESSION 29: Found case UUID from cases table:', caseUuid, 'for plate:', plate);
+      const filingCaseId = activeCase.filing_case_id || `YC-${plate}-${new Date().getFullYear()}`;
+      
+      console.log('✅ SESSION 29: Found case from cases table');
+      console.log('   - UUID:', caseUuid);
+      console.log('   - Filing ID:', filingCaseId);
+      console.log('   - Plate:', plate);
       
       // Get vehicle info from form or helper
       const vehicleInfo = {
