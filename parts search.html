@@ -4815,55 +4815,29 @@ ${partsText}`;
       
       console.log('📋 SESSION 29: Filing case_id from helper:', filingCaseId);
       
-      // SESSION 29: Get the database UUID by querying case_helper
-      // The case_id column in case_helper is the UUID that links to cases table
-      // First try using the new filing_case_id column (faster)
-      let caseHelperData, helperError;
+      // SESSION 29: Get the database UUID directly from cases table by plate
+      // This is the authoritative source for case UUIDs
+      const { data: casesData, error: caseError } = await window.supabase
+        .from('cases')
+        .select('id, status')
+        .eq('plate', plate)
+        .order('created_at', { ascending: false });
       
-      const helperQuery = await window.supabase
-        .from('case_helper')
-        .select('case_id')
-        .eq('is_current', true)
-        .eq('filing_case_id', filingCaseId)
-        .single();
-      
-      caseHelperData = helperQuery.data;
-      helperError = helperQuery.error;
-      
-      // Fallback to JSON query if filing_case_id column doesn't exist or didn't match
-      if (helperError || !caseHelperData) {
-        console.log('ℹ️ SESSION 29: Trying JSON query fallback...');
-        const jsonQuery = await window.supabase
-          .from('case_helper')
-          .select('case_id')
-          .eq('is_current', true)
-          .eq('helper_json->meta->>case_id', filingCaseId)
-          .single();
-        
-        caseHelperData = jsonQuery.data;
-        helperError = jsonQuery.error;
+      if (caseError) {
+        console.error('❌ SESSION 29: Failed to query cases:', caseError);
+        throw new Error(`Failed to query cases: ${caseError.message}`);
       }
       
-      if (helperError || !caseHelperData) {
-        console.warn('⚠️ SESSION 29: Could not find case via case_helper, trying by plate...');
-        // Final fallback: get case UUID by plate
-        const { data: casesData, error: caseError } = await window.supabase
-          .from('cases')
-          .select('id')
-          .eq('plate', plate)
-          .order('created_at', { ascending: false })
-          .limit(1);
-        
-        if (caseError || !casesData || casesData.length === 0) {
-          throw new Error(`Could not find case for plate: ${plate}`);
-        }
-        
-        var caseUuid = casesData[0].id;
-        console.log('✅ SESSION 29: Found case UUID via plate:', caseUuid);
-      } else {
-        var caseUuid = caseHelperData.case_id;
-        console.log('✅ SESSION 29: Found case UUID via case_helper:', caseUuid);
+      // Find active case (OPEN or IN_PROGRESS)
+      const activeCase = casesData?.find(c => c.status === 'OPEN' || c.status === 'IN_PROGRESS');
+      
+      if (!activeCase) {
+        console.error('❌ SESSION 29: No active case found for plate:', plate);
+        throw new Error(`No active case found for plate: ${plate}. Please ensure a case is open.`);
       }
+      
+      const caseUuid = activeCase.id;
+      console.log('✅ SESSION 29: Found case UUID from cases table:', caseUuid, 'for plate:', plate);
       
       // Get vehicle info from form or helper
       const vehicleInfo = {
