@@ -279,6 +279,151 @@ const supabase = {
       on: () => ({ subscribe: () => {} }),
       unsubscribe: () => {}
     };
+  },
+
+  // SESSION 29: Storage API support
+  storage: {
+    from: (bucketName) => {
+      return {
+        upload: async (path, file, options = {}) => {
+          try {
+            const url = `${supabaseUrl}/storage/v1/object/${bucketName}/${path}`;
+            const formData = new FormData();
+            formData.append('file', file);
+
+            const headers = {
+              'apikey': supabaseAnonKey,
+              'Authorization': `Bearer ${supabaseAnonKey}`
+            };
+
+            if (options.contentType) {
+              headers['Content-Type'] = options.contentType;
+            }
+
+            if (options.upsert) {
+              headers['x-upsert'] = 'true';
+            }
+
+            console.log(`📤 SESSION 29: Uploading to storage: ${bucketName}/${path}`);
+
+            const response = await fetch(url, {
+              method: 'POST',
+              headers: headers,
+              body: file
+            });
+
+            if (!response.ok) {
+              const errorText = await response.text();
+              console.error(`❌ SESSION 29: Storage upload error ${response.status}:`, errorText);
+              return {
+                data: null,
+                error: {
+                  message: `Storage upload failed: ${response.status} ${errorText}`,
+                  code: response.status.toString()
+                }
+              };
+            }
+
+            const data = await response.json();
+            console.log(`✅ SESSION 29: Storage upload successful:`, data);
+            return { data, error: null };
+
+          } catch (error) {
+            console.error('❌ SESSION 29: Storage upload error:', error);
+            return {
+              data: null,
+              error: {
+                message: error.message,
+                code: 'NETWORK_ERROR'
+              }
+            };
+          }
+        },
+
+        getPublicUrl: (path) => {
+          const publicUrl = `${supabaseUrl}/storage/v1/object/public/${bucketName}/${path}`;
+          console.log(`🔗 SESSION 29: Generated public URL:`, publicUrl);
+          return {
+            data: {
+              publicUrl: publicUrl
+            }
+          };
+        },
+
+        download: async (path) => {
+          try {
+            const url = `${supabaseUrl}/storage/v1/object/${bucketName}/${path}`;
+            const response = await fetch(url, {
+              headers: {
+                'apikey': supabaseAnonKey,
+                'Authorization': `Bearer ${supabaseAnonKey}`
+              }
+            });
+
+            if (!response.ok) {
+              const errorText = await response.text();
+              return {
+                data: null,
+                error: {
+                  message: `Download failed: ${response.status} ${errorText}`,
+                  code: response.status.toString()
+                }
+              };
+            }
+
+            const blob = await response.blob();
+            return { data: blob, error: null };
+
+          } catch (error) {
+            return {
+              data: null,
+              error: {
+                message: error.message,
+                code: 'NETWORK_ERROR'
+              }
+            };
+          }
+        },
+
+        remove: async (paths) => {
+          try {
+            const url = `${supabaseUrl}/storage/v1/object/${bucketName}`;
+            const response = await fetch(url, {
+              method: 'DELETE',
+              headers: {
+                'apikey': supabaseAnonKey,
+                'Authorization': `Bearer ${supabaseAnonKey}`,
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({ prefixes: paths })
+            });
+
+            if (!response.ok) {
+              const errorText = await response.text();
+              return {
+                data: null,
+                error: {
+                  message: `Remove failed: ${response.status} ${errorText}`,
+                  code: response.status.toString()
+                }
+              };
+            }
+
+            const data = await response.json();
+            return { data, error: null };
+
+          } catch (error) {
+            return {
+              data: null,
+              error: {
+                message: error.message,
+                code: 'NETWORK_ERROR'
+              }
+            };
+          }
+        }
+      };
+    }
   }
 };
 
