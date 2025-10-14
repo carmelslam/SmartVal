@@ -4,12 +4,18 @@
 -- Agent: Claude Session 29
 
 -- ============================================================================
+-- DROP EXISTING TABLE IF EXISTS (to ensure clean schema)
+-- ============================================================================
+
+DROP TABLE IF EXISTS public.parts_export_reports CASCADE;
+
+-- ============================================================================
 -- TABLE: parts_export_reports
 -- Purpose: Store metadata for PDF exports of selected parts lists
 -- Trigger: When user clicks "📤 ייצא לתיקייה" button
 -- ============================================================================
 
-CREATE TABLE IF NOT EXISTS public.parts_export_reports (
+CREATE TABLE public.parts_export_reports (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   case_id UUID NOT NULL REFERENCES public.cases(id) ON DELETE CASCADE, -- Database UUID from cases table
   filing_case_id TEXT,             -- Filing system case_id (YC-PLATE-YEAR format) for reference
