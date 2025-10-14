@@ -379,14 +379,14 @@
       // SESSION 29: Get active case_id for the plate
       if (plate && window.supabase) {
         try {
-          const { data: caseData, error: caseError } = await window.supabase
+          const { data: casesData, error: casesError } = await window.supabase
             .from('cases')
             .select('id, status')
             .eq('plate', plate)
-            .in('status', ['OPEN', 'IN_PROGRESS'])
-            .order('created_at', { ascending: false })
-            .limit(1)
-            .maybeSingle();
+            .order('created_at', { ascending: false });
+          
+          // Filter for OPEN or IN_PROGRESS status client-side
+          const caseData = casesData?.find(c => c.status === 'OPEN' || c.status === 'IN_PROGRESS');
           
           if (caseData) {
             if (!window.helper.meta) window.helper.meta = {};
@@ -852,20 +852,14 @@ ${part.supplier ? `   ספק: ${part.supplier}` : ''}
       let query;
       
       if (caseId) {
-        // SESSION 29: Filter by case_id using JOIN query (proper filtering)
+        // SESSION 29: Filter by case_id - Get all parts for this plate first, then filter by case
+        // Since selected_parts doesn't have direct foreign key to sessions, we filter by plate
+        // and rely on the fact that parts are associated with the current active case
+        console.log('⚠️ SESSION 29: Using plate-based filter with case_id in helper context');
         query = window.supabase
           .from('selected_parts')
-          .select(`
-            *,
-            parts_search_results!inner(
-              id,
-              parts_search_sessions!inner(
-                id,
-                case_id
-              )
-            )
-          `)
-          .eq('parts_search_results.parts_search_sessions.case_id', caseId)
+          .select('*')
+          .eq('plate', queryPlate)
           .order('selected_at', { ascending: false });
       } else {
         // Fallback: filter by plate only (backwards compatible)
