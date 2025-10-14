@@ -14,6 +14,10 @@
   <script type="module" src="./selected-parts-list.js"></script>
   <script type="module" src="./parts-helper-utils.js"></script>
   <script src="./internal-browser.js"></script>
+  
+  <!-- SESSION 29: PDF Export Libraries -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 
   <link rel="icon" type="image/webp" href="https://carmelcayouf.com/wp-content/uploads/2025/06/g.webp">
   <link rel="shortcut icon" href="https://carmelcayouf.com/wp-content/uploads/2025/06/g.webp">
@@ -371,6 +375,31 @@
       }
       
       const plate = window.helper?.meta?.plate || window.helper?.meta?.license_plate;
+      
+      // SESSION 29: Get active case_id for the plate
+      if (plate && window.supabase) {
+        try {
+          const { data: caseData, error: caseError } = await window.supabase
+            .from('cases')
+            .select('id, status')
+            .eq('plate', plate)
+            .in('status', ['OPEN', 'IN_PROGRESS'])
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .maybeSingle();
+          
+          if (caseData) {
+            if (!window.helper.meta) window.helper.meta = {};
+            window.helper.meta.case_id = caseData.id;
+            sessionStorage.setItem('helper', JSON.stringify(window.helper));
+            console.log('✅ SESSION 29: Retrieved case_id:', caseData.id, 'for plate:', plate);
+          } else {
+            console.log('ℹ️ SESSION 29: No active case found for plate:', plate);
+          }
+        } catch (error) {
+          console.error('❌ SESSION 29: Error retrieving case_id:', error);
+        }
+      }
       
       if (plate && window.supabase && typeof getSelectedParts === 'function') {
         console.log('📦 SESSION 20: Loading parts from Supabase for plate:', plate);
@@ -814,14 +843,41 @@ ${part.supplier ? `   ספק: ${part.supplier}` : ''}
     }
     
     try {
-      // Primary source: Supabase selected_parts table
-      console.log('🔍 SESSION 19: Querying Supabase for plate:', queryPlate);
+      // SESSION 29: Get case_id from helper for filtering
+      const caseId = window.helper?.meta?.case_id;
       
-      const { data, error } = await window.supabase
-        .from('selected_parts')
-        .select('*')
-        .eq('plate', queryPlate)
-        .order('selected_at', { ascending: false });
+      // Primary source: Supabase selected_parts table
+      console.log('🔍 SESSION 19: Querying Supabase for plate:', queryPlate, 'case_id:', caseId || 'N/A');
+      
+      let query;
+      
+      if (caseId) {
+        // SESSION 29: Filter by case_id using JOIN query (proper filtering)
+        query = window.supabase
+          .from('selected_parts')
+          .select(`
+            *,
+            parts_search_results!inner(
+              id,
+              parts_search_sessions!inner(
+                id,
+                case_id
+              )
+            )
+          `)
+          .eq('parts_search_results.parts_search_sessions.case_id', caseId)
+          .order('selected_at', { ascending: false });
+      } else {
+        // Fallback: filter by plate only (backwards compatible)
+        console.log('⚠️ SESSION 29: No case_id available, falling back to plate-only filter');
+        query = window.supabase
+          .from('selected_parts')
+          .select('*')
+          .eq('plate', queryPlate)
+          .order('selected_at', { ascending: false });
+      }
+      
+      const { data, error } = await query;
       
       if (error) {
         console.error('❌ SESSION 19: Supabase query error:', error);
@@ -4586,6 +4642,160 @@ ${partsText}`;
     window.openPartsPreviewWindow(document.getElementById('plate')?.value || window.helper?.meta?.plate || 'N/A');
   };
   
+  // SESSION 29: Generate PDF from preview window content
+  window.generatePartsPDF = async function(parts, vehicleInfo, plate, totalCost) {
+    console.log('📄 SESSION 29: Generating PDF for', parts.length, 'parts');
+    
+    try {
+      // Open invisible preview window
+      const previewWindow = window.open('', '_blank', 'width=1200,height=800');
+      if (!previewWindow) {
+        throw new Error('Could not open preview window for PDF generation');
+      }
+      
+      // Use same preview window generation logic
+      const previewSubtotal = totalCost;
+      const previewVehicleInfo = vehicleInfo;
+      const previewDate = new Date().toLocaleDateString('he-IL', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric'
+      });
+      
+      const tableRows = parts.map((part, index) => {
+        const price = parseFloat(part.price || part.cost || part.expected_cost || 0);
+        const qty = parseInt(part.quantity || part.qty || 1);
+        const calculatedPrice = price * qty;
+        
+        return `
+        <tr style="background: ${index % 2 === 0 ? '#fafafa' : 'white'}; border-bottom: 1px solid #ddd;">
+          <td style="padding: 8px; text-align: center; font-size: 11px; border: 1px solid #ddd;">${index + 1}</td>
+          <td style="padding: 8px; text-align: center; font-size: 11px; border: 1px solid #ddd;">${part.pcode || part.oem || 'N/A'}</td>
+          <td style="padding: 8px 10px; text-align: right; font-size: 11px; border: 1px solid #ddd;">
+            ${part.part_family || part.group || 'N/A'} - ${part.part_name || part.name || 'N/A'}
+          </td>
+          <td style="padding: 8px; text-align: center; font-size: 11px; border: 1px solid #ddd;">${part.source || 'N/A'}</td>
+          <td style="padding: 8px; text-align: center; font-size: 11px; border: 1px solid #ddd; color: #059669; font-weight: 600;">
+            ${price ? '₪' + price.toLocaleString('he-IL', {minimumFractionDigits: 2}) : '-'}
+          </td>
+          <td style="padding: 8px; text-align: center; font-size: 11px; border: 1px solid #ddd;">${qty}</td>
+          <td style="padding: 8px; text-align: center; font-size: 11px; border: 1px solid #ddd; color: #059669; font-weight: 700;">
+            ${calculatedPrice ? '₪' + calculatedPrice.toLocaleString('he-IL', {minimumFractionDigits: 2}) : '-'}
+          </td>
+          <td style="padding: 8px; text-align: center; font-size: 11px; border: 1px solid #ddd;">${part.supplier || part.supplier_name || '-'}</td>
+          <td style="padding: 8px; text-align: center; font-size: 10px; border: 1px solid #ddd;">
+            ${part.selected_at ? new Date(part.selected_at).toLocaleDateString('he-IL', { 
+              year: '2-digit', month: '2-digit', day: '2-digit'
+            }) : 'N/A'}
+          </td>
+        </tr>
+      `}).join('');
+      
+      previewWindow.document.write(`
+        <!DOCTYPE html>
+        <html lang="he" dir="rtl">
+        <head>
+          <meta charset="UTF-8">
+          <title>רשימת חלקים - ${plate}</title>
+        </head>
+        <body style="font-family: Arial, sans-serif; padding: 20px;">
+          <div style="background: linear-gradient(135deg, #2563eb 0%, #3b82f6 100%); padding: 20px; border-radius: 12px; display: flex; justify-content: space-between; align-items: center; color: white; margin-bottom: 20px;">
+            <div style="text-align: right;">
+              <div style="font-size: 12px; opacity: 0.9;">בעל רשימה</div>
+              <div style="font-size: 14px; font-weight: 600;">ירון כיוף - שמאות וייעוץ</div>
+            </div>
+            <div style="text-align: center;">
+              <img src="https://carmelcayouf.com/wp-content/uploads/2025/06/g.webp" style="width: 50px; height: 50px; border-radius: 50%; background: white; padding: 5px;">
+            </div>
+            <div style="font-size: 14px; font-weight: 500; text-align: left;">תאריך: ${previewDate}</div>
+          </div>
+          
+          <div style="background: #f0f9ff; padding: 20px; text-align: center; border: 3px solid #3b82f6; border-radius: 8px; margin-bottom: 15px;">
+            <h1 style="margin: 0; color: #2563eb; font-size: 28px; font-weight: 700;">
+              🗂️ רשימת חלקים נבחרים (${parts.length})
+            </h1>
+          </div>
+          
+          <div style="background: #fafafa; padding: 15px; border: 2px solid #e5e7eb; border-radius: 8px; text-align: right; margin-bottom: 15px;">
+            <div style="font-size: 15px; color: #1f2937; margin-bottom: 5px; font-weight: 600;">
+              נמצאו ${parts.length} תוצאות • רכב: ${plate}
+            </div>
+            <div style="font-size: 13px; color: #6b7280;">
+              יצרן: ${previewVehicleInfo.make} • דגם: ${previewVehicleInfo.model} • שנים: ${previewVehicleInfo.year}
+            </div>
+          </div>
+          
+          <table style="width: 100%; border-collapse: collapse; background: white;">
+            <thead>
+              <tr>
+                <th style="background: #10b981; color: white; padding: 10px 8px; text-align: center; border: 1px solid #333; width: 40px; font-size: 11px;">#</th>
+                <th style="background: #10b981; color: white; padding: 10px 8px; text-align: center; border: 1px solid #333; width: 110px; font-size: 11px;">קוד</th>
+                <th style="background: #10b981; color: white; padding: 10px 8px; text-align: right; border: 1px solid #333; min-width: 250px; font-size: 11px;">שם החלק</th>
+                <th style="background: #10b981; color: white; padding: 10px 8px; text-align: center; border: 1px solid #333; width: 80px; font-size: 11px;">מקור</th>
+                <th style="background: #10b981; color: white; padding: 10px 8px; text-align: center; border: 1px solid #333; width: 80px; font-size: 11px;">מחיר</th>
+                <th style="background: #10b981; color: white; padding: 10px 8px; text-align: center; border: 1px solid #333; width: 60px; font-size: 11px;">כמות</th>
+                <th style="background: #10b981; color: white; padding: 10px 8px; text-align: center; border: 1px solid #333; width: 90px; font-size: 11px;">סכום</th>
+                <th style="background: #10b981; color: white; padding: 10px 8px; text-align: center; border: 1px solid #333; width: 120px; font-size: 11px;">ספק</th>
+                <th style="background: #10b981; color: white; padding: 10px 8px; text-align: center; border: 1px solid #333; width: 80px; font-size: 11px;">תאריך</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${tableRows}
+            </tbody>
+          </table>
+          
+          <div style="background: #f0fdf4; padding: 20px; margin-top: 20px; border: 3px solid #10b981; border-radius: 8px; text-align: right;">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <div style="font-size: 20px; font-weight: 600; color: #1f2937;">סה"כ עלות משוערת:</div>
+              <div style="text-align: left;">
+                <div style="font-size: 24px; font-weight: 700; color: #059669;">
+                  ₪${previewSubtotal.toLocaleString('he-IL', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </div>
+                <div style="font-size: 13px; color: #6b7280; margin-top: 8px;">
+                  ${parts.length} חלקים • המחירים הינם משוערים בלבד
+                </div>
+              </div>
+            </div>
+          </div>
+        </body>
+        </html>
+      `);
+      
+      previewWindow.document.close();
+      
+      // Wait for content to load
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // Use html2canvas to capture the content
+      const canvas = await html2canvas(previewWindow.document.body, {
+        scale: 2,
+        useCORS: true,
+        allowTaint: true
+      });
+      
+      // Convert canvas to PDF
+      const { jsPDF } = window.jspdf;
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      const imgData = canvas.toDataURL('image/png');
+      const imgWidth = 210; // A4 width in mm
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+      
+      pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);
+      
+      // Close preview window
+      previewWindow.close();
+      
+      // Return PDF as blob
+      const pdfBlob = pdf.output('blob');
+      console.log('✅ SESSION 29: PDF generated successfully');
+      return pdfBlob;
+      
+    } catch (error) {
+      console.error('❌ SESSION 29: PDF generation failed:', error);
+      throw error;
+    }
+  };
+  
   // SESSION 29 TASK 7: Export to OneDrive via Make.com
   window.exportPartsToOneDrive = async function(plate) {
     console.log('📤 SESSION 29: Starting export to OneDrive for plate:', plate);
@@ -4597,6 +4807,12 @@ ${partsText}`;
     }
     
     try {
+      // SESSION 29: Get case_id
+      const caseId = window.helper?.meta?.case_id;
+      if (!caseId) {
+        throw new Error('No case_id found. Please ensure a case is active for this plate.');
+      }
+      
       // Get vehicle info from form or helper
       const vehicleInfo = {
         make: document.getElementById('manufacturer')?.value || window.helper?.vehicle?.manufacturer || '',
@@ -4611,14 +4827,48 @@ ${partsText}`;
         return sum + (price * qty);
       }, 0);
       
+      // SESSION 29: Generate PDF
+      console.log('📄 SESSION 29: Generating PDF...');
+      const pdfBlob = await window.generatePartsPDF(parts, vehicleInfo, plate, totalEstimatedCost);
+      
+      // SESSION 29: Upload PDF to Supabase Storage
+      console.log('☁️ SESSION 29: Uploading PDF to Supabase Storage...');
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-').substring(0, 19);
+      const filename = `${plate}_selected_parts_${timestamp}.pdf`;
+      const storagePath = `${caseId}/${filename}`;
+      
+      const { data: uploadData, error: uploadError } = await window.supabase.storage
+        .from('parts-reports')
+        .upload(storagePath, pdfBlob, {
+          contentType: 'application/pdf',
+          upsert: false
+        });
+      
+      if (uploadError) {
+        console.error('❌ SESSION 29: Storage upload error:', uploadError);
+        throw new Error('Failed to upload PDF: ' + uploadError.message);
+      }
+      
+      console.log('✅ SESSION 29: PDF uploaded to storage:', storagePath);
+      
+      // SESSION 29: Get public URL
+      const { data: { publicUrl } } = window.supabase.storage
+        .from('parts-reports')
+        .getPublicUrl(storagePath);
+      
+      console.log('🔗 SESSION 29: PDF public URL:', publicUrl);
+      
       // Prepare payload for Make.com webhook
       const payload = {
         plate: plate,
+        case_id: caseId,
         case_folder: plate,
         export_date: new Date().toISOString(),
         vehicle: vehicleInfo,
         parts_count: parts.length,
         total_estimated_cost: totalEstimatedCost,
+        pdf_url: publicUrl,
+        pdf_storage_path: storagePath,
         parts: parts.map(part => {
           const price = parseFloat(part.price || part.cost || part.expected_cost || 0);
           const qty = parseInt(part.quantity || part.qty || 1);
@@ -4638,7 +4888,34 @@ ${partsText}`;
         })
       };
       
-      console.log('📤 SESSION 29: Sending export payload:', payload);
+      // SESSION 29: Save export metadata to parts_export_reports table
+      console.log('💾 SESSION 29: Saving export metadata to database...');
+      const { data: report, error: reportError } = await window.supabase
+        .from('parts_export_reports')
+        .insert({
+          case_id: caseId,
+          plate: plate,
+          parts_count: parts.length,
+          total_estimated_cost: totalEstimatedCost,
+          pdf_storage_path: storagePath,
+          pdf_public_url: publicUrl,
+          vehicle_info: vehicleInfo,
+          export_payload: payload
+        })
+        .select()
+        .single();
+      
+      if (reportError) {
+        console.error('❌ SESSION 29: Database insert error:', reportError);
+        throw new Error('Failed to save export metadata: ' + reportError.message);
+      }
+      
+      console.log('✅ SESSION 29: Export report saved with ID:', report.id);
+      
+      // Add report_id to payload
+      payload.report_id = report.id;
+      
+      console.log('📤 SESSION 29: Sending export payload to webhook:', payload);
       
       // Import sendToWebhook dynamically
       const { sendToWebhook } = await import('./webhook.js');
@@ -4649,7 +4926,7 @@ ${partsText}`;
       console.log('✅ SESSION 29: Export response:', response);
       
       if (response && response.success !== false) {
-        alert(`✅ הייצוא הושלם בהצלחה!\n\nנשמר ב: /Cases/${plate}/selected_parts.xlsx`);
+        alert(`✅ הייצוא הושלם בהצלחה!\n\nנשמר ב: /Cases/${plate}/selected_parts.xlsx\nPDF: ${publicUrl}`);
       } else {
         throw new Error(response?.error || 'שגיאה לא ידועה בייצוא');
       }
