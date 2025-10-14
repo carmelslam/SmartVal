@@ -1876,35 +1876,36 @@ ${part.supplier ? `   ספק: ${part.supplier}` : ''}
       
       const webhookUrl = 'https://hook.eu2.make.com/xenshho1chvd955wpaum5yh51v8klo58';
       
+      // SESSION 29B: Build payload with separate image fields for Make.com mapping
       const webhookPayload = {
-        manufacturer: formValues.manufacturer || "",
-        model: formValues.model || "",
-        trim: formValues.trim || "",
-        model_code: formValues.model_code || "",
-        year: formValues.year || "",
-        engine: formValues.engine_type || "",
-        engine_volume: formValues.engine_volume || "",
-        engine_model: formValues.engine_type || "",
-        engine_type: formValues.engine_type || "",
-        vin_number: formValues.vin || "",
-        plate: formValues.plate || "",
+        // Main search parameters (unified value)
+        value: JSON.stringify({
+          manufacturer: formValues.manufacturer || "",
+          model: formValues.model || "",
+          trim: formValues.trim || "",
+          model_code: formValues.model_code || "",
+          year: formValues.year || "",
+          engine: formValues.engine_type || "",
+          engine_volume: formValues.engine_volume || "",
+          engine_model: formValues.engine_type || "",
+          engine_type: formValues.engine_type || "",
+          vin_number: formValues.vin || "",
+          plate: formValues.plate || "",
+          keyword: formValues.free_query || "",
+          part_group: formValues.part_group || "",
+          part_name: formValues.part_name || "",
+          source: formValues.part_source || "",
+          search_type: "web_search",
+          parts_count: searchParams.selectedParts ? searchParams.selectedParts.length : 0,
+          parts_list: searchParams.selectedParts && searchParams.selectedParts.length > 0 ? 
+            searchParams.selectedParts.map(part => `${part.group || ''}: ${part.name || ''} (${part.source || 'מקורי'})`).join('; ') : "",
+          timestamp: new Date().toISOString()
+        }),
         
-        keyword: formValues.free_query || "",
-        part_group: formValues.part_group || "",
-        part_name: formValues.part_name || "",
-        source: formValues.part_source || "",
-        search_type: "web_search",
-        
-        parts_count: searchParams.selectedParts ? searchParams.selectedParts.length : 0,
-        parts_list: searchParams.selectedParts && searchParams.selectedParts.length > 0 ? 
-          searchParams.selectedParts.map(part => `${part.group || ''}: ${part.name || ''} (${part.source || 'מקורי'})`).join('; ') : "",
-        
-        // SESSION 29B: Add image if exists
+        // Image fields outside unified value for direct mapping in Make.com
         has_image: compressedImageBase64 !== null,
         part_image_base64: compressedImageBase64,
-        image_filename: uploadedFile ? uploadedFile.name : null,
-        
-        timestamp: new Date().toISOString()
+        image_filename: uploadedFile ? uploadedFile.name : null
       };
       
       console.log('📤 Webhook payload assembled:', webhookPayload);
