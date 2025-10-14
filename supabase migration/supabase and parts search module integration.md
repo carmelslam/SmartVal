@@ -21465,3 +21465,72 @@ window.exportPartsToOneDrive @ parts search.html:4929
 await in window.exportPartsToOneDrive
 onclick @ parts search.html:1
 
+
+---
+
+# SESSION 29B - PDF Export System & Database Architecture Corrections
+**Date:** 2025-10-14  
+**Status:** ✅ Completed
+
+## Summary
+Session 29B corrected fundamental database architecture issues and completed the PDF export system. Key breakthrough: identified `cases` table as authoritative source for case identifiers, not `case_helper`.
+
+## Critical Changes
+1. **Added `filing_case_id` to cases table** - stores "YC-PLATE-YEAR" format
+2. **Implemented plate normalization** - handles "221-84-003" vs "22184003"
+3. **Simplified export logic** - query `cases` directly by plate
+4. **Added Supabase Storage API** - custom client now supports storage operations
+5. **Hybrid history tracking** - `is_current` flag for easy latest query while maintaining full audit trail
+
+## Database Enhancements
+- `cases`: added `filing_case_id TEXT UNIQUE` with auto-generation trigger
+- `parts_export_reports`: added `filing_case_id`, `is_current` columns
+- `case_helper`: optionally added `filing_case_id` and `plate` (denormalized from JSON)
+
+## Export Flow (Corrected)
+```
+UI → Normalize plate → Query cases table → Get UUID + filing_case_id
+  → Generate PDF → Upload to Supabase Storage → Save metadata
+  → Send webhook to Make.com → Make.com downloads PDF → Save to OneDrive
+```
+
+## Files Modified
+- `services/supabaseClient.js` - Added storage API support
+- `parts search.html` - Corrected export logic, plate normalization
+
+## SQL Migrations Created (5 files)
+1. `SESSION_29_ADD_FILING_CASE_ID_TO_CASES.sql` - Add filing ID to cases
+2. `SESSION_29_ADD_PARTS_EXPORT_REPORTS_TABLE.sql` - Create export reports table
+3. `SESSION_29_CREATE_STORAGE_BUCKET_POLICY.sql` - Storage bucket & RLS
+4. `SESSION_29_ADD_IS_CURRENT_TO_EXPORT_REPORTS.sql` - History tracking
+5. `SESSION_29_ADD_FILING_CASE_ID_TO_CASE_HELPER.sql` - Optional enhancement
+
+## Errors Resolved (7)
+1. `window.supabase.storage` undefined → Added storage API
+2. `.insert().select()` not a function → Fixed chaining
+3. `filing_case_id` column missing → Dropped/recreated table
+4. Invalid UUID "YC-22184003-2025" → Query cases for proper UUID
+5. No case found "221-84-003" → Plate normalization
+6. `cases.case_id` doesn't exist → Use `cases.id` + `cases.filing_case_id`
+7. CORS error loading logo → Skip logo in PDF generation
+
+## Success Message
+```
+✅ רשימת החלקים יוצאה בהצלחה לשרת
+```
+
+## Testing Status
+- ✅ PDF export working
+- ✅ Storage upload successful
+- ✅ Metadata saved to database
+- ✅ Webhook sent to Make.com
+- ⏳ Pending: Full user acceptance testing
+
+## Next Steps
+1. Test Make.com → OneDrive integration
+2. Verify history tracking with multiple exports
+3. Performance monitoring in production
+
+**Full detailed log:** `SESSION_29B_COMPLETE_LOG_2025-10-14.md`
+
+---
