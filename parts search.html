@@ -1736,6 +1736,55 @@ ${part.supplier ? `   ספק: ${part.supplier}` : ''}
     }
   }
   
+  // SESSION 29B: Helper function for image compression (reused from OCR)
+  function compressImage(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+          // Create canvas with max dimensions
+          const MAX_WIDTH = 1920;
+          const MAX_HEIGHT = 1920;
+          let width = img.width;
+          let height = img.height;
+          
+          // Calculate scaling
+          if (width > height) {
+            if (width > MAX_WIDTH) {
+              height = height * (MAX_WIDTH / width);
+              width = MAX_WIDTH;
+            }
+          } else {
+            if (height > MAX_HEIGHT) {
+              width = width * (MAX_HEIGHT / height);
+              height = MAX_HEIGHT;
+            }
+          }
+          
+          const canvas = document.createElement('canvas');
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, width, height);
+          
+          // Convert to JPEG with 0.7 quality to reduce size
+          const compressedData = canvas.toDataURL('image/jpeg', 0.7);
+          console.log('🗜️ SESSION 29B: Image compressed', {
+            original_size: file.size,
+            compressed_size: compressedData.length,
+            reduction: ((1 - compressedData.length / file.size) * 100).toFixed(1) + '%'
+          });
+          resolve(compressedData);
+        };
+        img.onerror = () => reject(new Error('שגיאה בטעינת התמונה'));
+        img.src = e.target.result;
+      };
+      reader.onerror = () => reject(new Error('שגיאה בקריאת הקובץ'));
+      reader.readAsDataURL(file);
+    });
+  }
+  
   // SESSION 23: Web Search Function (Make.com External Search)
   async function searchWebExternal() {
     console.log('🌐 SESSION 23: Starting web external search...');
@@ -1754,6 +1803,27 @@ ${part.supplier ? `   ספק: ${part.supplier}` : ''}
       const plate = document.getElementById('plate').value;
       if (!plate) {
         throw new Error('מספר רישוי חסר');
+      }
+      
+      // SESSION 29B: Check if image exists and compress if needed
+      let compressedImageBase64 = null;
+      const partImageInput = document.getElementById('part_image');
+      const uploadedFile = partImageInput?.files?.[0];
+      
+      if (uploadedFile) {
+        console.log('📸 SESSION 29B: Image file detected, compressing...');
+        if (webBtn) {
+          webBtn.innerHTML = '⏳ דוחס תמונה...';
+        }
+        
+        const compressedDataUrl = await compressImage(uploadedFile);
+        // Strip "data:image/jpeg;base64," prefix to get pure base64
+        compressedImageBase64 = compressedDataUrl.split(',')[1];
+        console.log('✅ SESSION 29B: Image compressed and ready for webhook');
+        
+        if (webBtn) {
+          webBtn.innerHTML = '⏳ שולח בקשה עם תמונה...';
+        }
       }
       
       // DEBUG: Read all form values
@@ -1828,6 +1898,11 @@ ${part.supplier ? `   ספק: ${part.supplier}` : ''}
         parts_count: searchParams.selectedParts ? searchParams.selectedParts.length : 0,
         parts_list: searchParams.selectedParts && searchParams.selectedParts.length > 0 ? 
           searchParams.selectedParts.map(part => `${part.group || ''}: ${part.name || ''} (${part.source || 'מקורי'})`).join('; ') : "",
+        
+        // SESSION 29B: Add image if exists
+        has_image: compressedImageBase64 !== null,
+        part_image_base64: compressedImageBase64,
+        image_filename: uploadedFile ? uploadedFile.name : null,
         
         timestamp: new Date().toISOString()
       };
@@ -1947,57 +2022,10 @@ ${part.supplier ? `   ספק: ${part.supplier}` : ''}
       }
       
       // SESSION 26: Compress image before sending to avoid 5MB payload
+      // SESSION 29B: Now using shared compressImage() function
       if (ocrBtn) {
         ocrBtn.innerHTML = '⏳ דוחס תמונה...';
       }
-      
-      const compressImage = (file) => {
-        return new Promise((resolve, reject) => {
-          const reader = new FileReader();
-          reader.onload = (e) => {
-            const img = new Image();
-            img.onload = () => {
-              // Create canvas with max dimensions
-              const MAX_WIDTH = 1920;
-              const MAX_HEIGHT = 1920;
-              let width = img.width;
-              let height = img.height;
-              
-              // Calculate scaling
-              if (width > height) {
-                if (width > MAX_WIDTH) {
-                  height = height * (MAX_WIDTH / width);
-                  width = MAX_WIDTH;
-                }
-              } else {
-                if (height > MAX_HEIGHT) {
-                  width = width * (MAX_HEIGHT / height);
-                  height = MAX_HEIGHT;
-                }
-              }
-              
-              const canvas = document.createElement('canvas');
-              canvas.width = width;
-              canvas.height = height;
-              const ctx = canvas.getContext('2d');
-              ctx.drawImage(img, 0, 0, width, height);
-              
-              // Convert to JPEG with 0.7 quality to reduce size
-              const compressedData = canvas.toDataURL('image/jpeg', 0.7);
-              console.log('🗜️ SESSION 26: Image compressed', {
-                original_size: file.size,
-                compressed_size: compressedData.length,
-                reduction: ((1 - compressedData.length / file.size) * 100).toFixed(1) + '%'
-              });
-              resolve(compressedData);
-            };
-            img.onerror = () => reject(new Error('שגיאה בטעינת התמונה'));
-            img.src = e.target.result;
-          };
-          reader.onerror = () => reject(new Error('שגיאה בקריאת הקובץ'));
-          reader.readAsDataURL(file);
-        });
-      };
       
       if (ocrBtn) {
         ocrBtn.innerHTML = '⏳ שולח לניתוח OCR...';
