@@ -1876,41 +1876,45 @@ ${part.supplier ? `   ספק: ${part.supplier}` : ''}
       
       const webhookUrl = 'https://hook.eu2.make.com/xenshho1chvd955wpaum5yh51v8klo58';
       
-      // SESSION 29B: Build payload with separate image fields for Make.com mapping
-      const webhookPayload = {
-        // Main search parameters (unified value)
-        value: JSON.stringify({
-          manufacturer: formValues.manufacturer || "",
-          model: formValues.model || "",
-          trim: formValues.trim || "",
-          model_code: formValues.model_code || "",
-          year: formValues.year || "",
-          engine: formValues.engine_type || "",
-          engine_volume: formValues.engine_volume || "",
-          engine_model: formValues.engine_type || "",
-          engine_type: formValues.engine_type || "",
-          vin_number: formValues.vin || "",
-          plate: formValues.plate || "",
-          keyword: formValues.free_query || "",
-          part_group: formValues.part_group || "",
-          part_name: formValues.part_name || "",
-          source: formValues.part_source || "",
-          search_type: "web_search",
-          parts_count: searchParams.selectedParts ? searchParams.selectedParts.length : 0,
-          parts_list: searchParams.selectedParts && searchParams.selectedParts.length > 0 ? 
-            searchParams.selectedParts.map(part => `${part.group || ''}: ${part.name || ''} (${part.source || 'מקורי'})`).join('; ') : "",
-          timestamp: new Date().toISOString()
-        }),
-        
-        // Image fields outside unified value for direct mapping in Make.com
-        has_image: compressedImageBase64 !== null,
-        part_image_base64: compressedImageBase64,
-        image_filename: uploadedFile ? uploadedFile.name : null
+      // SESSION 29B: Build FormData payload for proper file upload
+      const formData = new FormData();
+      
+      // Add unified value as JSON string
+      const valueObj = {
+        manufacturer: formValues.manufacturer || "",
+        model: formValues.model || "",
+        trim: formValues.trim || "",
+        model_code: formValues.model_code || "",
+        year: formValues.year || "",
+        engine: formValues.engine_type || "",
+        engine_volume: formValues.engine_volume || "",
+        engine_model: formValues.engine_type || "",
+        engine_type: formValues.engine_type || "",
+        vin_number: formValues.vin || "",
+        plate: formValues.plate || "",
+        keyword: formValues.free_query || "",
+        part_group: formValues.part_group || "",
+        part_name: formValues.part_name || "",
+        source: formValues.part_source || "",
+        search_type: "web_search",
+        parts_count: searchParams.selectedParts ? searchParams.selectedParts.length : 0,
+        parts_list: searchParams.selectedParts && searchParams.selectedParts.length > 0 ? 
+          searchParams.selectedParts.map(part => `${part.group || ''}: ${part.name || ''} (${part.source || 'מקורי'})`).join('; ') : "",
+        timestamp: new Date().toISOString()
       };
       
-      console.log('📤 Webhook payload assembled:', webhookPayload);
+      formData.append('value', JSON.stringify(valueObj));
+      formData.append('has_image', compressedImageBase64 !== null);
       
-      console.log('📤 Sending webhook to Make.com...', webhookPayload);
+      // Add image file if exists
+      if (compressedImageBase64 && uploadedFile) {
+        // Convert base64 to Blob
+        const base64Response = await fetch(`data:image/jpeg;base64,${compressedImageBase64}`);
+        const blob = await base64Response.blob();
+        formData.append('part_image', blob, uploadedFile.name);
+      }
+      
+      console.log('📤 Webhook FormData assembled with image:', uploadedFile ? uploadedFile.name : 'no image');
       
       if (webBtn) {
         webBtn.innerHTML = '⏳ מעבד את הבקשה - אנא המתן...';
@@ -1922,8 +1926,7 @@ ${part.supplier ? `   ספק: ${part.supplier}` : ''}
       
       const fetchPromise = fetch(webhookUrl, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(webhookPayload)
+        body: formData  // Send as multipart/form-data (no Content-Type header needed, browser sets it)
       });
       
       const response = await Promise.race([fetchPromise, timeoutPromise]);
