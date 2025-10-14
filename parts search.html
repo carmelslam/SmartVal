@@ -4807,11 +4807,27 @@ ${partsText}`;
     }
     
     try {
-      // SESSION 29: Get case_id
-      const caseId = window.helper?.meta?.case_id;
-      if (!caseId) {
+      // SESSION 29: Get filing system case_id (YC-PLATE-YEAR format)
+      const filingCaseId = window.helper?.meta?.case_id;
+      if (!filingCaseId) {
         throw new Error('No case_id found. Please ensure a case is active for this plate.');
       }
+      
+      // SESSION 29: Query Supabase to get the UUID for this case
+      console.log('🔍 SESSION 29: Looking up Supabase UUID for filing case_id:', filingCaseId);
+      const { data: caseRecord, error: caseError } = await window.supabase
+        .from('cases')
+        .select('id')
+        .eq('case_id', filingCaseId)
+        .single();
+      
+      if (caseError || !caseRecord) {
+        console.error('❌ SESSION 29: Failed to find case UUID:', caseError);
+        throw new Error(`Case not found in Supabase for case_id: ${filingCaseId}`);
+      }
+      
+      const caseUuid = caseRecord.id;
+      console.log('✅ SESSION 29: Found Supabase UUID:', caseUuid, 'for filing case_id:', filingCaseId);
       
       // Get vehicle info from form or helper
       const vehicleInfo = {
@@ -4835,7 +4851,7 @@ ${partsText}`;
       console.log('☁️ SESSION 29: Uploading PDF to Supabase Storage...');
       const timestamp = new Date().toISOString().replace(/[:.]/g, '-').substring(0, 19);
       const filename = `${plate}_selected_parts_${timestamp}.pdf`;
-      const storagePath = `${caseId}/${filename}`;
+      const storagePath = `${filingCaseId}/${filename}`;
       
       const { data: uploadData, error: uploadError } = await window.supabase.storage
         .from('parts-reports')
@@ -4861,7 +4877,8 @@ ${partsText}`;
       // Prepare payload for Make.com webhook
       const payload = {
         plate: plate,
-        case_id: caseId,
+        case_id: filingCaseId,
+        case_uuid: caseUuid,
         case_folder: plate,
         export_date: new Date().toISOString(),
         vehicle: vehicleInfo,
@@ -4893,7 +4910,7 @@ ${partsText}`;
       const { data: report, error: reportError } = await window.supabase
         .from('parts_export_reports')
         .insert({
-          case_id: caseId,
+          case_id: caseUuid,
           plate: plate,
           parts_count: parts.length,
           total_estimated_cost: totalEstimatedCost,
