@@ -4053,18 +4053,55 @@ ${partsText}`;
         </tr>
       `).join('');
       
-      // SESSION 29 TASK 1: Updated modal with table structure
+      // SESSION 29: Get vehicle info from helper
+      const vehicleInfo = {
+        make: window.helper?.vehicle?.manufacturer || 'N/A',
+        model: window.helper?.vehicle?.model || 'N/A',
+        year: window.helper?.vehicle?.year || 'N/A'
+      };
+      
+      // SESSION 29: Calculate subtotal from parts with price/cost field
+      const subtotal = parts.reduce((sum, part) => {
+        const price = parseFloat(part.price || part.cost || part.expected_cost || 0);
+        const qty = parseInt(part.quantity || part.qty || 1);
+        return sum + (price * qty);
+      }, 0);
+      
+      const currentDate = new Date().toLocaleDateString('he-IL', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric'
+      });
+      
+      // SESSION 29 TASK 1: Updated modal with PiP-style header and subtitle
       modal.innerHTML = `
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-          <h3 style="margin: 0; color: #059669;">🗂️ רשימת חלקים נבחרים (${parts.length})</h3>
-          <button onclick="this.parentElement.parentElement.remove()" 
-                  style="background: #ef4444; color: white; border: none; padding: 8px 16px; 
-                         border-radius: 8px; cursor: pointer; font-weight: bold;">
-            ✕ סגור
-          </button>
+        <!-- PiP-Style Header -->
+        <div style="background: linear-gradient(135deg, #2563eb 0%, #3b82f6 100%); padding: 20px; border-radius: 12px 12px 0 0; display: flex; justify-content: space-between; align-items: center; color: white; margin: -20px -20px 0 -20px;">
+          <div style="font-size: 14px; font-weight: 500;">תאריך: ${currentDate}</div>
+          <div style="text-align: center;">
+            <img src="https://carmelcayouf.com/wp-content/uploads/2025/06/g.webp" style="width: 50px; height: 50px; border-radius: 50%; background: white; padding: 5px;">
+          </div>
+          <div style="text-align: left;">
+            <div style="font-size: 12px; opacity: 0.9;">בעל רשימה</div>
+            <div style="font-size: 14px; font-weight: 600;">ירון כיוף - שמאות וייעוץ</div>
+          </div>
         </div>
-        <div style="font-size: 13px; color: #6b7280; margin-bottom: 15px;">
-          מספר רישוי: <strong>${plate}</strong>
+        
+        <!-- Title Section -->
+        <div style="background: #f0f9ff; padding: 20px; text-align: center; border-bottom: 3px solid #3b82f6;">
+          <h2 style="margin: 0; color: #2563eb; font-size: 24px; font-weight: 700;">
+            🗂️ רשימת חלקים נבחרים <span style="font-size: 20px;">(${parts.length})</span>
+          </h2>
+        </div>
+        
+        <!-- Subtitle with Vehicle Info -->
+        <div style="background: #fafafa; padding: 15px; border-bottom: 2px solid #e5e7eb; text-align: right; direction: rtl;">
+          <div style="font-size: 15px; color: #1f2937; margin-bottom: 5px;">
+            <strong>נמצאו ${parts.length} תוצאות • רכב: ${plate}</strong>
+          </div>
+          <div style="font-size: 13px; color: #6b7280;">
+            יצרן: ${vehicleInfo.make} • דגם: ${vehicleInfo.model} • שנים: ${vehicleInfo.year}
+          </div>
         </div>
         <div style="max-height: 500px; overflow-y: auto; overflow-x: auto;">
           <table style="width: 100%; border-collapse: collapse; border: 1px solid #e5e7eb; direction: rtl;">
@@ -4089,7 +4126,32 @@ ${partsText}`;
             </tbody>
           </table>
         </div>
-        <div style="margin-top: 15px; padding-top: 15px; border-top: 2px solid #e5e7eb; display: flex; gap: 10px; flex-wrap: wrap; justify-content: center;">
+        
+        <!-- Subtotal Section -->
+        <div style="background: #f0fdf4; padding: 15px; margin-top: 10px; border: 2px solid #10b981; border-radius: 8px; text-align: right; direction: rtl;">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div style="font-size: 18px; font-weight: 700; color: #059669;">
+              ₪${subtotal.toLocaleString('he-IL', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            </div>
+            <div style="font-size: 16px; font-weight: 600; color: #1f2937;">
+              סה"כ עלות משוערת:
+            </div>
+          </div>
+          <div style="font-size: 12px; color: #6b7280; margin-top: 5px;">
+            ${parts.length} חלקים • המחירים הינם משוערים בלבד
+          </div>
+        </div>
+        
+        <!-- Close Button & Action Buttons -->
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 15px; padding-top: 15px; border-top: 2px solid #e5e7eb;">
+          <button onclick="this.closest('[style*=\"z-index: 10001\"]').remove(); document.querySelector('[style*=\"z-index: 10000\"]').remove();" 
+                  style="background: #ef4444; color: white; border: none; padding: 10px 20px; 
+                         border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 14px;"
+                  onmouseover="this.style.background='#dc2626'" 
+                  onmouseout="this.style.background='#ef4444'">
+            ✕ סגור
+          </button>
+          <div style="display: flex; gap: 10px; flex-wrap: wrap;">
           <button id="bulkDeleteBtn" onclick="window.bulkDeleteParts('${plate}')" 
                   style="background: #ef4444; color: white; border: none; padding: 10px 20px; 
                          border-radius: 8px; cursor: pointer; font-weight: bold; display: none;"
@@ -4118,6 +4180,7 @@ ${partsText}`;
                   onmouseout="this.style.background='#f59e0b'">
             📤 ייצא לתיקייה
           </button>
+          </div>
         </div>
       `;
       
@@ -4291,6 +4354,26 @@ ${partsText}`;
       return;
     }
     
+    // SESSION 29: Calculate subtotal for preview/print
+    const previewSubtotal = parts.reduce((sum, part) => {
+      const price = parseFloat(part.price || part.cost || part.expected_cost || 0);
+      const qty = parseInt(part.quantity || part.qty || 1);
+      return sum + (price * qty);
+    }, 0);
+    
+    // SESSION 29: Get vehicle info for preview
+    const previewVehicleInfo = {
+      make: window.helper?.vehicle?.manufacturer || 'N/A',
+      model: window.helper?.vehicle?.model || 'N/A',
+      year: window.helper?.vehicle?.year || 'N/A'
+    };
+    
+    const previewDate = new Date().toLocaleDateString('he-IL', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric'
+    });
+    
     const tableRows = parts.map((part, index) => `
       <tr style="background: ${index % 2 === 0 ? '#fafafa' : 'white'}; border-bottom: 1px solid #ddd;">
         <td style="padding: 8px; text-align: center; font-size: 12px; border: 1px solid #ddd;">${index + 1}</td>
@@ -4384,9 +4467,33 @@ ${partsText}`;
         </style>
       </head>
       <body>
-        <div class="header">
-          <h1>🗂️ רשימת חלקים נבחרים</h1>
-          <div class="plate-info">מספר רישוי: <strong>${plate}</strong> | סה"כ חלקים: <strong>${parts.length}</strong></div>
+        <!-- PiP-Style Header for Print -->
+        <div style="background: linear-gradient(135deg, #2563eb 0%, #3b82f6 100%); padding: 20px; border-radius: 12px; display: flex; justify-content: space-between; align-items: center; color: white; margin-bottom: 20px;">
+          <div style="font-size: 14px; font-weight: 500;">תאריך: ${previewDate}</div>
+          <div style="text-align: center;">
+            <img src="https://carmelcayouf.com/wp-content/uploads/2025/06/g.webp" style="width: 50px; height: 50px; border-radius: 50%; background: white; padding: 5px;">
+          </div>
+          <div style="text-align: left;">
+            <div style="font-size: 12px; opacity: 0.9;">בעל רשימה</div>
+            <div style="font-size: 14px; font-weight: 600;">ירון כיוף - שמאות וייעוץ</div>
+          </div>
+        </div>
+        
+        <!-- Title Section -->
+        <div style="background: #f0f9ff; padding: 20px; text-align: center; border: 3px solid #3b82f6; border-radius: 8px; margin-bottom: 15px;">
+          <h1 style="margin: 0; color: #2563eb; font-size: 28px; font-weight: 700;">
+            🗂️ רשימת חלקים נבחרים <span style="font-size: 24px;">(${parts.length})</span>
+          </h1>
+        </div>
+        
+        <!-- Subtitle with Vehicle Info -->
+        <div style="background: #fafafa; padding: 15px; border: 2px solid #e5e7eb; border-radius: 8px; text-align: right; margin-bottom: 15px;">
+          <div style="font-size: 15px; color: #1f2937; margin-bottom: 5px; font-weight: 600;">
+            נמצאו ${parts.length} תוצאות • רכב: ${plate}
+          </div>
+          <div style="font-size: 13px; color: #6b7280;">
+            יצרן: ${previewVehicleInfo.make} • דגם: ${previewVehicleInfo.model} • שנים: ${previewVehicleInfo.year}
+          </div>
         </div>
         <table>
           <thead>
@@ -4404,6 +4511,22 @@ ${partsText}`;
             ${tableRows}
           </tbody>
         </table>
+        
+        <!-- Subtotal Section -->
+        <div style="background: #f0fdf4; padding: 20px; margin-top: 20px; border: 3px solid #10b981; border-radius: 8px; text-align: right;">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div style="font-size: 24px; font-weight: 700; color: #059669;">
+              ₪${previewSubtotal.toLocaleString('he-IL', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            </div>
+            <div style="font-size: 20px; font-weight: 600; color: #1f2937;">
+              סה"כ עלות משוערת:
+            </div>
+          </div>
+          <div style="font-size: 13px; color: #6b7280; margin-top: 8px;">
+            ${parts.length} חלקים • המחירים הינם משוערים בלבד
+          </div>
+        </div>
+        
         <div class="actions">
           <button onclick="window.print()">🖨️ הדפס</button>
           <button onclick="window.close()">✕ סגור</button>
