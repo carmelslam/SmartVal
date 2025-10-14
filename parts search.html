@@ -4817,16 +4817,36 @@ ${partsText}`;
       
       // SESSION 29: Get the database UUID by querying case_helper
       // The case_id column in case_helper is the UUID that links to cases table
-      const { data: caseHelperData, error: helperError } = await window.supabase
+      // First try using the new filing_case_id column (faster)
+      let caseHelperData, helperError;
+      
+      const helperQuery = await window.supabase
         .from('case_helper')
         .select('case_id')
         .eq('is_current', true)
-        .eq('helper_json->meta->>case_id', filingCaseId)
+        .eq('filing_case_id', filingCaseId)
         .single();
+      
+      caseHelperData = helperQuery.data;
+      helperError = helperQuery.error;
+      
+      // Fallback to JSON query if filing_case_id column doesn't exist or didn't match
+      if (helperError || !caseHelperData) {
+        console.log('ℹ️ SESSION 29: Trying JSON query fallback...');
+        const jsonQuery = await window.supabase
+          .from('case_helper')
+          .select('case_id')
+          .eq('is_current', true)
+          .eq('helper_json->meta->>case_id', filingCaseId)
+          .single();
+        
+        caseHelperData = jsonQuery.data;
+        helperError = jsonQuery.error;
+      }
       
       if (helperError || !caseHelperData) {
         console.warn('⚠️ SESSION 29: Could not find case via case_helper, trying by plate...');
-        // Fallback: get case UUID by plate
+        // Final fallback: get case UUID by plate
         const { data: casesData, error: caseError } = await window.supabase
           .from('cases')
           .select('id')
