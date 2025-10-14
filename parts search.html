@@ -4807,27 +4807,43 @@ ${partsText}`;
     }
     
     try {
-      // SESSION 29: Get filing system case_id (YC-PLATE-YEAR format)
-      const filingCaseId = window.helper?.meta?.case_id;
+      // SESSION 29: Get filing system case_id (YC-PLATE-YEAR format) from helper
+      const filingCaseId = window.helper?.meta?.case_id || window.helper?.case_id;
       if (!filingCaseId) {
-        throw new Error('No case_id found. Please ensure a case is active for this plate.');
+        throw new Error('No case_id found in helper. Please ensure a case is active.');
       }
       
-      // SESSION 29: Query Supabase to get the UUID for this case
-      console.log('🔍 SESSION 29: Looking up Supabase UUID for filing case_id:', filingCaseId);
-      const { data: caseRecord, error: caseError } = await window.supabase
-        .from('cases')
-        .select('id')
-        .eq('case_id', filingCaseId)
+      console.log('📋 SESSION 29: Filing case_id from helper:', filingCaseId);
+      
+      // SESSION 29: Get the database UUID by querying case_helper
+      // The case_id column in case_helper is the UUID that links to cases table
+      const { data: caseHelperData, error: helperError } = await window.supabase
+        .from('case_helper')
+        .select('case_id')
+        .eq('is_current', true)
+        .eq('helper_json->meta->>case_id', filingCaseId)
         .single();
       
-      if (caseError || !caseRecord) {
-        console.error('❌ SESSION 29: Failed to find case UUID:', caseError);
-        throw new Error(`Case not found in Supabase for case_id: ${filingCaseId}`);
+      if (helperError || !caseHelperData) {
+        console.warn('⚠️ SESSION 29: Could not find case via case_helper, trying by plate...');
+        // Fallback: get case UUID by plate
+        const { data: casesData, error: caseError } = await window.supabase
+          .from('cases')
+          .select('id')
+          .eq('plate', plate)
+          .order('created_at', { ascending: false })
+          .limit(1);
+        
+        if (caseError || !casesData || casesData.length === 0) {
+          throw new Error(`Could not find case for plate: ${plate}`);
+        }
+        
+        var caseUuid = casesData[0].id;
+        console.log('✅ SESSION 29: Found case UUID via plate:', caseUuid);
+      } else {
+        var caseUuid = caseHelperData.case_id;
+        console.log('✅ SESSION 29: Found case UUID via case_helper:', caseUuid);
       }
-      
-      const caseUuid = caseRecord.id;
-      console.log('✅ SESSION 29: Found Supabase UUID:', caseUuid, 'for filing case_id:', filingCaseId);
       
       // Get vehicle info from form or helper
       const vehicleInfo = {
@@ -4911,6 +4927,7 @@ ${partsText}`;
         .from('parts_export_reports')
         .insert({
           case_id: caseUuid,
+          filing_case_id: filingCaseId,
           plate: plate,
           parts_count: parts.length,
           total_estimated_cost: totalEstimatedCost,

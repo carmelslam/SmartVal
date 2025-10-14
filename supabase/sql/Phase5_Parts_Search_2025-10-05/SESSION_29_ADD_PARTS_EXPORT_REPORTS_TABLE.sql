@@ -11,7 +11,8 @@
 
 CREATE TABLE IF NOT EXISTS public.parts_export_reports (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  case_id UUID NOT NULL REFERENCES public.cases(id) ON DELETE CASCADE,
+  case_id UUID NOT NULL REFERENCES public.cases(id) ON DELETE CASCADE, -- Database UUID from cases table
+  filing_case_id TEXT,             -- Filing system case_id (YC-PLATE-YEAR format) for reference
   plate TEXT NOT NULL,
   report_date TIMESTAMPTZ NOT NULL DEFAULT now(),
   parts_count INT NOT NULL,
