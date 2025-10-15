@@ -5357,57 +5357,38 @@ ${partsText}`;
         </html>
       `);
       reviewWindow.document.close();
-      reviewWindow.close();
       
-      console.log('📄 SESSION 33: Generating lightweight text-based PDF...');
+      // SESSION 33: Wait for content to load (SAME AS generatePartsPDF)
+      await new Promise(resolve => setTimeout(resolve, 1000));
       
-      // SESSION 33: Create simple text-based PDF (not image-based like html2canvas)
+      console.log('📄 SESSION 33: Generating PDF using html2canvas (SAME AS selected parts)...');
+      
+      // SESSION 33: EXACT SAME PATTERN AS generatePartsPDF() - Use html2canvas to capture the content
+      const canvas = await html2canvas(reviewWindow.document.body, {
+        scale: 2,
+        useCORS: true,
+        allowTaint: true,
+        logging: false,
+        imageTimeout: 0,
+        ignoreElements: (element) => {
+          // Skip images that might cause CORS issues
+          return element.tagName === 'IMG' && element.src.includes('carmelcayouf.com');
+        }
+      });
+      
+      // SESSION 33: Convert canvas to PDF (SAME AS generatePartsPDF)
       const { jsPDF } = window.jspdf;
       const pdf = new jsPDF('p', 'mm', 'a4');
+      const imgData = canvas.toDataURL('image/png');
+      const imgWidth = 210; // A4 width in mm
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
       
-      // Add title
-      pdf.setFontSize(16);
-      pdf.setFont(undefined, 'bold');
-      pdf.text('היסטוריית תוצאות חיפוש חלקים', 105, 20, { align: 'center' });
+      pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);
       
-      // Add vehicle info
-      pdf.setFontSize(10);
-      pdf.setFont(undefined, 'normal');
-      pdf.text(`רכב: ${vehicleInfo.make} ${vehicleInfo.model} ${vehicleInfo.year}`, 105, 30, { align: 'center' });
-      pdf.text(`מספר רישוי: ${plate}`, 105, 35, { align: 'center' });
-      pdf.text(`סה״כ ${totalSearches} חיפושים • ${allResults.length} תוצאות`, 105, 40, { align: 'center' });
+      // SESSION 33: Close preview window
+      reviewWindow.close();
       
-      // SESSION 33: Add table with autoTable plugin (creates text-based table, not image)
-      const tableData = allResults.map((result, index) => {
-        const price = parseFloat(result.price || result.cost || 0);
-        const searchDate = result.search_date ? new Date(result.search_date).toLocaleDateString('he-IL') : '-';
-        const dataSource = result.data_source === 'catalog' ? 'קטלוגי' : 
-                          result.data_source === 'web' ? 'אינטרנט' : 
-                          result.data_source === 'ocr' ? 'OCR' : '-';
-        
-        return [
-          index + 1,
-          searchDate,
-          dataSource,
-          result.supplier_name || result.supplier || '-',
-          result.pcode || result.oem || '-',
-          (result.cat_num_desc || result.part_name || result.description || '-').substring(0, 30), // Limit length
-          result.part_family || result.group || '-',
-          price ? `₪${price}` : '-'
-        ];
-      });
-      
-      pdf.autoTable({
-        startY: 50,
-        head: [['#', 'תאריך', 'מקור', 'ספק', 'קטלוגי', 'תיאור', 'משפחה', 'מחיר']],
-        body: tableData,
-        styles: { font: 'helvetica', fontSize: 8, halign: 'center' },
-        headStyles: { fillColor: [16, 185, 129], textColor: 255 },
-        theme: 'grid',
-        margin: { top: 50 }
-      });
-      
-      // SESSION 33: Get PDF as blob
+      // SESSION 33: Get PDF as blob (SAME AS generatePartsPDF)
       const pdfBlob = pdf.output('blob');
       
       console.log('☁️ SESSION 33: Uploading PDF to Supabase Storage...');
