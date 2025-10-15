@@ -429,7 +429,7 @@
       <input type="file" id="resultFileUpload" accept=".pdf,.png,.jpg,.jpeg,.html" onclick="event.stopPropagation()" onchange="event.stopPropagation()" style="display: block; width: 100%; padding: 8px; margin-bottom: 15px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;">
       
       <!-- Upload button - full width -->
-      <button type="button" class="btn" id="sendResultToOCRBtn" onclick="event.stopPropagation(); searchOCR();" style="background: #f59e0b; width: 100%; padding: 12px 20px; border: none; border-radius: 8px; color: white; font-size: 15px; font-weight: 600; cursor: pointer; transition: all 0.3s; box-shadow: 0 2px 4px rgba(245, 158, 11, 0.3); margin-bottom: 10px;">📤 שלח תוצאת חיפוש לניתוח</button>
+      <button type="button" class="btn" id="sendResultToOCRBtn" onclick="event.stopPropagation(); handleOCRSearch();" style="background: #f59e0b; width: 100%; padding: 12px 20px; border: none; border-radius: 8px; color: white; font-size: 15px; font-weight: 600; cursor: pointer; transition: all 0.3s; box-shadow: 0 2px 4px rgba(245, 158, 11, 0.3); margin-bottom: 10px;">📤 שלח תוצאת חיפוש לניתוח</button>
       
       <!-- Clear button - small, centered, hidden by default -->
       <button type="button" class="btn" id="clearOCRBtn" onclick="event.stopPropagation(); clearOCRSelection();" style="background: #ef4444; padding: 8px 16px; border: none; border-radius: 8px; color: white; font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.3s; box-shadow: 0 2px 4px rgba(239, 68, 68, 0.3); display: none; margin: 0 auto;">🗑️ נקה בחירה</button>
@@ -525,26 +525,55 @@
     }
   }
   
+  // SESSION 31: Disable/Enable all search cards
+  function disableAllCards() {
+    const cards = ['catalogSearchCard', 'webSearchCard', 'imageSearchCard', 'ocrSearchCard'];
+    cards.forEach(cardId => {
+      const card = document.getElementById(cardId);
+      if (card) {
+        card.style.pointerEvents = 'none';
+        card.style.opacity = '0.5';
+      }
+    });
+  }
+  
+  function enableAllCards() {
+    const cards = ['catalogSearchCard', 'webSearchCard', 'imageSearchCard', 'ocrSearchCard'];
+    cards.forEach(cardId => {
+      const card = document.getElementById(cardId);
+      if (card) {
+        card.style.pointerEvents = 'auto';
+        card.style.opacity = '1';
+      }
+    });
+  }
+  
   // SESSION 31: Search handler wrappers with loading animations
   async function handleCatalogSearch() {
     const card = document.getElementById('catalogSearchCard');
+    
+    disableAllCards();
     card.classList.add('loading');
     
     try {
       await searchSupabase();
     } finally {
       card.classList.remove('loading');
+      enableAllCards();
     }
   }
   
   async function handleWebSearch() {
     const card = document.getElementById('webSearchCard');
+    
+    disableAllCards();
     card.classList.add('loading');
     
     try {
       await searchWebExternal();
     } finally {
       card.classList.remove('loading');
+      enableAllCards();
     }
   }
   
@@ -553,6 +582,7 @@
     const btn = document.getElementById('imageWebSearchBtn');
     const originalText = btn.innerHTML;
     
+    disableAllCards();
     card.classList.add('loading');
     btn.disabled = true;
     btn.innerHTML = '🔍 מחפש... <span class="spinner"></span>';
@@ -563,6 +593,7 @@
       card.classList.remove('loading');
       btn.disabled = false;
       btn.innerHTML = originalText;
+      enableAllCards();
     }
   }
   
@@ -607,6 +638,26 @@
     window.imageBase64 = null;
     
     console.log('✅ Image selection cleared');
+  }
+  
+  async function handleOCRSearch() {
+    const card = document.getElementById('ocrSearchCard');
+    const btn = document.getElementById('sendResultToOCRBtn');
+    const originalText = btn.innerHTML;
+    
+    disableAllCards();
+    card.classList.add('loading');
+    btn.disabled = true;
+    btn.innerHTML = '📤 שולח... <span class="spinner"></span>';
+    
+    try {
+      await searchOCR();
+    } finally {
+      card.classList.remove('loading');
+      btn.disabled = false;
+      btn.innerHTML = originalText;
+      enableAllCards();
+    }
   }
   
   function clearOCRSelection() {

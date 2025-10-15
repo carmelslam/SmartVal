@@ -394,3 +394,46 @@ Created 3 separate hidden file inputs with dedicated buttons:
 - **Total Tasks:** 15/15 ✅ COMPLETE  
 - **All Issues Resolved**
 - **Ready for Production:** Yes
+
+---
+
+## Mutual Exclusion Feature (Session 31F)
+
+### ✅ Task 16: Implement Mutual Exclusion Across All Search Cards
+**Lines:** 643-661 (JavaScript)
+
+**Problem:**
+- Multiple search operations could run simultaneously
+- Cards remained active during searches, allowing users to trigger multiple concurrent searches
+- No visual feedback that other operations were in progress
+
+**Solution:**
+Added `handleOCRSearch()` wrapper function following the same pattern as other search handlers:
+
+**Implementation:**
+- Disables all 4 cards when OCR search starts (`disableAllCards()`)
+- Adds loading class to OCR card for visual feedback
+- Disables OCR button to prevent double-clicks
+- Changes button text to "📤 שולח..." with spinner during upload
+- Re-enables all cards when search completes (`enableAllCards()`)
+- Restores original button text and state
+
+**Complete Mutual Exclusion Coverage:**
+1. **Catalog Search** → `handleCatalogSearch()` - disables all cards
+2. **Web Search** → `handleWebSearch()` - disables all cards
+3. **Image Web Search** → `handleImageWebSearch()` - disables all cards
+4. **OCR Search** → `handleOCRSearch()` - disables all cards
+
+**Result:**
+✅ Only one search operation can run at a time  
+✅ All cards disabled during any search  
+✅ Cards re-enable automatically when search completes  
+✅ Visual feedback via opacity and loading animations  
+✅ Prevents race conditions and confused UI states
+
+---
+
+**Final Status:**
+- **Total Tasks:** 16/16 ✅ COMPLETE
+- **All Features Implemented:** Layout, animations, uploads, clear buttons, mutual exclusion
+- **Ready for Production:** Yes
