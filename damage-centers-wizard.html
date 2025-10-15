@@ -6479,19 +6479,34 @@
     async function loadSelectedPartsCount() {
       try {
         const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
-        const caseId = helper.case_info?.case_id || helper.meta?.case_id || helper.case?.id;
+        const filingCaseId = helper.case_info?.case_id || helper.meta?.case_id || helper.case?.id;
         
-        if (!caseId) {
+        if (!filingCaseId) {
           console.warn('⚠️ SESSION 34: No case_id found, cannot load selected parts count');
           console.log('📋 SESSION 34: Helper structure:', { case_info: helper.case_info, meta: helper.meta, case: helper.case });
           return;
         }
         
-        console.log(`📊 SESSION 34: Loading selected parts count for case ${caseId}`);
+        console.log(`📊 SESSION 34: Found filing_case_id: ${filingCaseId}, looking up UUID...`);
         
-        // Query Supabase function
+        // First, get the UUID from the cases table using filing_case_id
+        const { data: caseData, error: caseError } = await window.supabase
+          .from('cases')
+          .select('id')
+          .eq('filing_case_id', filingCaseId)
+          .single();
+        
+        if (caseError || !caseData) {
+          console.error('❌ SESSION 34: Could not find case UUID for filing_case_id:', filingCaseId, caseError);
+          return;
+        }
+        
+        const caseUuid = caseData.id;
+        console.log(`📊 SESSION 34: Found case UUID: ${caseUuid}, counting selected parts...`);
+        
+        // Now query the count function with the UUID
         const { data, error } = await window.supabase
-          .rpc('count_selected_parts_by_case', { case_uuid: caseId });
+          .rpc('count_selected_parts_by_case', { case_uuid: caseUuid });
         
         if (error) {
           console.error('❌ SESSION 34: Error loading selected parts count:', error);

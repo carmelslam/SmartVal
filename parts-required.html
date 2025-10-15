@@ -335,13 +335,38 @@ form button {
     });
     
     // ✅ NEW: Handle wizard context
-    function handleWizardContext(contextData) {
+    async function handleWizardContext(contextData) {
       console.log('🎯 Parts required handling wizard context:', contextData);
       
       try {
-        // SESSION 34: Store case_id from wizard context for later use when saving parts
-        window.currentCaseId = contextData.helper?.case_info?.case_id || contextData.helper?.meta?.case_id || contextData.helper?.case?.id;
-        console.log(`📋 SESSION 34: Stored case_id for parts: ${window.currentCaseId}`);
+        // SESSION 34: Get filing_case_id and look up the UUID
+        const filingCaseId = contextData.helper?.case_info?.case_id || contextData.helper?.meta?.case_id || contextData.helper?.case?.id;
+        console.log(`📋 SESSION 34: Found filing_case_id: ${filingCaseId}`);
+        
+        // Look up the UUID from the cases table
+        if (filingCaseId && window.supabaseClient) {
+          try {
+            const { data: caseData, error } = await window.supabaseClient
+              .from('cases')
+              .select('id')
+              .eq('filing_case_id', filingCaseId)
+              .single();
+            
+            if (!error && caseData) {
+              window.currentCaseId = caseData.id; // Store UUID
+              window.currentFilingCaseId = filingCaseId; // Keep filing ID for reference
+              console.log(`✅ SESSION 34: Stored case UUID: ${window.currentCaseId}`);
+            } else {
+              console.warn(`⚠️ SESSION 34: Could not find UUID for filing_case_id: ${filingCaseId}`, error);
+              window.currentCaseId = null;
+            }
+          } catch (error) {
+            console.error(`❌ SESSION 34: Error looking up case UUID:`, error);
+            window.currentCaseId = null;
+          }
+        } else {
+          window.currentCaseId = null;
+        }
         
         // Update global helper with wizard data
         if (contextData.helper) {
@@ -779,11 +804,12 @@ function savePartsData() {
         // ✅ NEW: Distinguish between manual entry and suggestion selection
         entry_type: part.fromSuggestion ? 'suggestion_selected' : 'manual_entry',
         manual_entry: !part.fromSuggestion,
-        // SESSION 34: Add case_id to root level for Supabase foreign key
-        case_id: window.currentCaseId || helper.case_info?.case_id || helper.meta?.case_id || helper.case?.id || null,
+        // SESSION 34: Add case_id (UUID) to root level for Supabase foreign key
+        case_id: window.currentCaseId || null,
         case_context: {
           plate: helper.vehicle?.plate || '',
-          case_id: window.currentCaseId || helper.case_info?.case_id || helper.meta?.case_id || helper.case?.id || '',
+          filing_case_id: window.currentFilingCaseId || helper.case_info?.case_id || '',
+          case_uuid: window.currentCaseId || '',
           step: isStandaloneMode ? null : 5,
           wizard_session: new Date().toISOString()
         }
