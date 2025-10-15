@@ -5296,62 +5296,87 @@ ${partsText}`;
         throw new Error('לא ניתן לפתוח חלון לייצוא PDF. אנא אפשר חלונות קופצים.');
       }
       
-      // Generate same HTML as review window
+      // SESSION 33: Generate table rows with styling matching selected parts PDF
       const tableRows = allResults.map((result, index) => {
         const price = parseFloat(result.price || result.cost || 0);
-        const formattedPrice = price ? `₪${price.toLocaleString('he-IL')}` : 'לא זמין';
-        const searchDate = result.search_date ? new Date(result.search_date).toLocaleDateString('he-IL') : 'לא זמין';
+        const formattedPrice = price ? '₪' + price.toLocaleString('he-IL', {minimumFractionDigits: 2}) : '-';
+        const searchDate = result.search_date ? new Date(result.search_date).toLocaleDateString('he-IL', { 
+          year: '2-digit', month: '2-digit', day: '2-digit'
+        }) : '-';
         const dataSource = result.data_source === 'catalog' ? 'קטלוגי' : 
                           result.data_source === 'web' ? 'אינטרנט' : 
-                          result.data_source === 'ocr' ? 'OCR' : result.data_source || 'לא זמין';
+                          result.data_source === 'ocr' ? 'OCR' : '-';
         
         return `
-          <tr>
-            <td>${index + 1}</td>
-            <td>${searchDate}</td>
-            <td>${dataSource}</td>
-            <td>${result.supplier_name || result.supplier || 'לא זמין'}</td>
-            <td>${result.pcode || result.oem || 'לא זמין'}</td>
-            <td>${result.cat_num_desc || result.part_name || result.description || 'לא זמין'}</td>
-            <td>${result.part_family || result.group || 'לא מוגדר'}</td>
-            <td>${formattedPrice}</td>
+          <tr style="background: ${index % 2 === 0 ? '#fafafa' : 'white'}; border-bottom: 1px solid #ddd;">
+            <td style="padding: 8px; text-align: center; font-size: 11px; border: 1px solid #ddd;">${index + 1}</td>
+            <td style="padding: 8px; text-align: center; font-size: 11px; border: 1px solid #ddd;">${searchDate}</td>
+            <td style="padding: 8px; text-align: center; font-size: 11px; border: 1px solid #ddd;">${dataSource}</td>
+            <td style="padding: 8px; text-align: center; font-size: 11px; border: 1px solid #ddd;">${result.supplier_name || result.supplier || '-'}</td>
+            <td style="padding: 8px; text-align: center; font-size: 11px; border: 1px solid #ddd;">${result.pcode || result.oem || '-'}</td>
+            <td style="padding: 8px 10px; text-align: right; font-size: 11px; border: 1px solid #ddd;">${result.cat_num_desc || result.part_name || result.description || '-'}</td>
+            <td style="padding: 8px; text-align: center; font-size: 11px; border: 1px solid #ddd;">${result.part_family || result.group || '-'}</td>
+            <td style="padding: 8px; text-align: center; font-size: 11px; border: 1px solid #ddd; color: #059669; font-weight: 600;">${formattedPrice}</td>
           </tr>
         `;
       }).join('');
       
+      const previewDate = new Date().toLocaleDateString('he-IL', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric'
+      });
+      
       reviewWindow.document.write(`
         <!DOCTYPE html>
-        <html dir="rtl">
+        <html lang="he" dir="rtl">
         <head>
           <meta charset="UTF-8">
-          <title>Search Results Export</title>
-          <style>
-            * { margin: 0; padding: 0; box-sizing: border-box; }
-            body { font-family: Arial, sans-serif; padding: 20px; }
-            h1 { text-align: center; margin-bottom: 20px; }
-            table { width: 100%; border-collapse: collapse; }
-            th, td { border: 1px solid #ddd; padding: 8px; text-align: center; }
-            th { background: #f0f0f0; }
-          </style>
+          <title>היסטוריית תוצאות חיפוש - ${plate}</title>
         </head>
-        <body>
-          <h1>היסטוריית תוצאות חיפוש חלקים - ${plate}</h1>
-          <p>רכב: ${vehicleInfo.make} ${vehicleInfo.model} ${vehicleInfo.year}</p>
-          <p>סה״כ ${totalSearches} חיפושים • ${allResults.length} תוצאות</p>
-          <table>
+        <body style="font-family: Arial, sans-serif; padding: 20px;">
+          <div style="background: linear-gradient(135deg, #2563eb 0%, #3b82f6 100%); padding: 20px; border-radius: 12px; display: flex; justify-content: space-between; align-items: center; color: white; margin-bottom: 20px;">
+            <div style="text-align: right;">
+              <div style="font-size: 12px; opacity: 0.9;">בעל רשימה</div>
+              <div style="font-size: 14px; font-weight: 600;">ירון כיוף - שמאות וייעוץ</div>
+            </div>
+            <div style="text-align: center;">
+              <img src="https://carmelcayouf.com/wp-content/uploads/2025/06/g.webp" style="width: 50px; height: 50px; border-radius: 50%; background: white; padding: 5px;">
+            </div>
+            <div style="font-size: 14px; font-weight: 500; text-align: left;">תאריך: ${previewDate}</div>
+          </div>
+          
+          <div style="background: #f0f9ff; padding: 20px; text-align: center; border: 3px solid #3b82f6; border-radius: 8px; margin-bottom: 15px;">
+            <h1 style="margin: 0; color: #2563eb; font-size: 28px; font-weight: 700;">
+              📊 היסטוריית תוצאות חיפוש חלקים (${allResults.length})
+            </h1>
+          </div>
+          
+          <div style="background: #fafafa; padding: 15px; border: 2px solid #e5e7eb; border-radius: 8px; text-align: right; margin-bottom: 15px;">
+            <div style="font-size: 15px; color: #1f2937; margin-bottom: 5px; font-weight: 600;">
+              נמצאו ${allResults.length} תוצאות מ-${totalSearches} חיפושים • רכב: ${plate}
+            </div>
+            <div style="font-size: 13px; color: #6b7280;">
+              יצרן: ${vehicleInfo.make} • דגם: ${vehicleInfo.model} • שנה: ${vehicleInfo.year}
+            </div>
+          </div>
+          
+          <table style="width: 100%; border-collapse: collapse; background: white;">
             <thead>
               <tr>
-                <th>#</th>
-                <th>תאריך</th>
-                <th>מקור</th>
-                <th>ספק</th>
-                <th>קטלוגי</th>
-                <th>תיאור</th>
-                <th>משפחה</th>
-                <th>מחיר</th>
+                <th style="background: #10b981; color: white; padding: 10px 8px; text-align: center; border: 1px solid #333; width: 40px; font-size: 11px;">#</th>
+                <th style="background: #10b981; color: white; padding: 10px 8px; text-align: center; border: 1px solid #333; width: 80px; font-size: 11px;">תאריך</th>
+                <th style="background: #10b981; color: white; padding: 10px 8px; text-align: center; border: 1px solid #333; width: 70px; font-size: 11px;">מקור</th>
+                <th style="background: #10b981; color: white; padding: 10px 8px; text-align: center; border: 1px solid #333; width: 120px; font-size: 11px;">ספק</th>
+                <th style="background: #10b981; color: white; padding: 10px 8px; text-align: center; border: 1px solid #333; width: 110px; font-size: 11px;">קטלוגי</th>
+                <th style="background: #10b981; color: white; padding: 10px 8px; text-align: right; border: 1px solid #333; min-width: 200px; font-size: 11px;">תיאור</th>
+                <th style="background: #10b981; color: white; padding: 10px 8px; text-align: center; border: 1px solid #333; width: 100px; font-size: 11px;">משפחה</th>
+                <th style="background: #10b981; color: white; padding: 10px 8px; text-align: center; border: 1px solid #333; width: 80px; font-size: 11px;">מחיר</th>
               </tr>
             </thead>
-            <tbody>${tableRows}</tbody>
+            <tbody>
+              ${tableRows}
+            </tbody>
           </table>
         </body>
         </html>
