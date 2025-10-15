@@ -4883,12 +4883,19 @@ ${partsText}`;
       const sessionIds = sessions.map(s => s.id);
       console.log('📋 SESSION 32: Session IDs:', sessionIds);
       
-      // Query parts_search_results table by session_id
-      const { data: searchResults, error: resultsError } = await window.supabase
+      // Query parts_search_results table by session_id using OR filter
+      // Build OR query: session_id.eq.xxx,session_id.eq.yyy
+      let query = window.supabase
         .from('parts_search_results')
-        .select('*')
-        .in('session_id', sessionIds)
-        .order('created_at', { ascending: false });
+        .select('*');
+      
+      // Use or() filter with multiple session_id matches
+      if (sessionIds.length > 0) {
+        const orFilters = sessionIds.map(id => `session_id.eq.${id}`).join(',');
+        query = query.or(orFilters);
+      }
+      
+      const { data: searchResults, error: resultsError } = await query.order('created_at', { ascending: false });
       
       if (resultsError) {
         console.error('❌ SESSION 32: Error loading search results:', resultsError);
