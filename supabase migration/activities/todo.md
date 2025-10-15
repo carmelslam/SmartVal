@@ -209,3 +209,40 @@ Restructure the parts search page by consolidating 4 scattered search methods in
 - **Total Tasks:** 9/9
 - **Lines Modified:** CSS (219-316), HTML (358-402), JS (480-553)
 - **New Features:** Card loading animations + Image web search button
+
+---
+
+## Bug Fixes (Session 31C)
+
+### ✅ Task 10: Fix Card Auto-Closing on File Upload
+**Lines:** 397, 399, 411, 413
+
+**Problem:**
+- Image card collapsed when user uploaded an image
+- OCR card collapsed when user uploaded a file
+- Search button disappeared after file selection
+- File input events were bubbling up to parent card onclick handler
+
+**Solution:**
+- Added `onclick="event.stopPropagation()"` to both content containers
+- Added `onclick="event.stopPropagation()"` to file inputs
+- Added `onchange="event.stopPropagation()"` to file inputs
+- Now cards stay expanded until user manually closes them
+
+**Changes:**
+- `imageSearchContent` div: stops all click propagation
+- `part_image` input: stops click and change events
+- `ocrSearchContent` div: stops all click propagation  
+- `resultFileUpload` input: stops click and change events
+
+**Result:**
+✅ Cards remain open after file upload
+✅ Search buttons stay visible
+✅ User has full control over when to close cards
+
+---
+
+**Final Status:**
+- **Total Tasks:** 10/10 ✅ COMPLETE
+- **All Issues Resolved:** Card expansion, file uploads, search buttons
+- **Ready for Production:** Yes
