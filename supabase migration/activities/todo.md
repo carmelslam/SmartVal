@@ -246,3 +246,32 @@ Restructure the parts search page by consolidating 4 scattered search methods in
 - **Total Tasks:** 10/10 ✅ COMPLETE
 - **All Issues Resolved:** Card expansion, file uploads, search buttons
 - **Ready for Production:** Yes
+
+---
+
+### ✅ Task 11: Fix Image Preview Pushing Button Out of View
+**Lines:** 285-293
+
+**Problem:**
+- When large image was uploaded, preview expanded beyond 800px max-height
+- Search button was pushed below visible area
+- User had to scroll to find the button
+
+**Solution:**
+- Removed `max-height` limit from card content (changed to `none`)
+- Added `max-height: 400px` specifically to `#previewImage`
+- Added `object-fit: contain` to maintain aspect ratio
+- Button now always visible below preview image
+
+**Result:**
+✅ Preview images limited to 400px height
+✅ Search button always visible
+✅ Images maintain aspect ratio
+✅ Card can expand naturally without cutting off content
+
+---
+
+**Final Status:**
+- **Total Tasks:** 11/11 ✅ COMPLETE
+- **All Issues Resolved:** Cards, uploads, buttons, image preview
+- **Ready for Production:** Yes
