@@ -4844,14 +4844,27 @@ ${partsText}`;
       
       const caseUuid = activeCase.id;
       console.log('✅ SESSION 32: Found case UUID:', caseUuid);
-      console.log('📋 SESSION 32: Querying for plate:', normalizedPlate, 'AND case_id:', caseUuid);
       
-      // Get all sessions for THIS SPECIFIC plate AND case_id
-      const { data: sessions, error: sessionsError } = await window.supabase
+      // Get ALL sessions for this case, then filter by plate with normalization
+      const { data: allSessions, error: sessionsError } = await window.supabase
         .from('parts_search_sessions')
-        .select('id')
-        .eq('case_id', caseUuid)
-        .eq('plate', normalizedPlate);
+        .select('id, plate, created_at')
+        .eq('case_id', caseUuid);
+      
+      console.log(`📋 SESSION 32: Found ${allSessions?.length || 0} total sessions for case`);
+      
+      // Filter sessions by plate (normalize both sides for comparison)
+      const sessions = allSessions?.filter(session => {
+        const sessionPlate = session.plate?.replace(/-/g, '') || '';
+        const queryPlate = normalizedPlate;
+        const match = sessionPlate === queryPlate;
+        if (match) {
+          console.log(`  ✅ Match: session plate "${session.plate}" normalized to "${sessionPlate}" matches "${queryPlate}"`);
+        }
+        return match;
+      }) || [];
+      
+      console.log(`✅ SESSION 32: Filtered to ${sessions.length} sessions matching plate ${plate} (normalized: ${normalizedPlate})`);
       
       if (sessionsError) {
         console.error('❌ SESSION 32: Error loading sessions:', sessionsError);
