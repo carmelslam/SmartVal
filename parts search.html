@@ -403,20 +403,26 @@
       <h4 class="right-small-heading" style="text-align: center; font-size: 16px; margin: 15px 0 10px 0;">העלה/צלם תמונה לחיפוש</h4>
       <input type="file" id="part_image" accept="image/*" capture="environment" onclick="event.stopPropagation()" onchange="event.stopPropagation()" style="display: block; width: 100%; padding: 8px; margin-bottom: 10px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;">
       <img id="previewImage" style="display: none; max-width: 100%; margin-bottom: 10px; border: 1px solid #ccc; border-radius: 8px;" />
-      <button type="button" class="btn" id="imageWebSearchBtn" onclick="event.stopPropagation(); handleImageWebSearch();" style="background: #10b981; width: 100%; padding: 10px 20px; border: none; border-radius: 8px; color: white; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.3s; box-shadow: 0 2px 4px rgba(16, 185, 129, 0.3);">🔍 חפש ברשת עם תמונה</button>
+      <div style="display: flex; gap: 10px; margin-top: 10px;">
+        <button type="button" class="btn" id="imageWebSearchBtn" onclick="event.stopPropagation(); handleImageWebSearch();" style="background: #10b981; flex: 1; padding: 10px 20px; border: none; border-radius: 8px; color: white; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.3s; box-shadow: 0 2px 4px rgba(16, 185, 129, 0.3);">🔍 חפש ברשת עם תמונה</button>
+        <button type="button" class="btn" onclick="event.stopPropagation(); clearImageSelection();" style="background: #ef4444; padding: 10px 20px; border: none; border-radius: 8px; color: white; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.3s; box-shadow: 0 2px 4px rgba(239, 68, 68, 0.3);">🗑️ נקה</button>
+      </div>
     </div>
   </div>
 
   <!-- Card 4: OCR Search -->
   <div class="search-card ocr" id="ocrSearchCard" onclick="toggleOCRCard(event)">
     <span class="search-card-icon">📄</span>
-    <h3 class="search-card-title">ניתוח OCR</h3>
+    <h3 class="search-card-title">ניתוח תוצאות חיפוש</h3>
     <p style="font-size: 14px; color: #64748b; margin: 10px 0 0 0;">שלח תוצאת חיפוש לניתוח</p>
     
     <div class="search-card-content" id="ocrSearchContent" onclick="event.stopPropagation()">
       <h4 style="text-align: center; font-size: 16px; margin: 15px 0 10px 0; color: #374151;">העלה תוצאת חיפוש (PDF/תמונה)</h4>
       <input type="file" id="resultFileUpload" accept=".pdf,.png,.jpg,.jpeg,.html" onclick="event.stopPropagation()" onchange="event.stopPropagation()" style="display: block; width: 100%; padding: 8px; margin-bottom: 10px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;">
-      <button type="button" class="btn" id="sendResultToOCRBtn" onclick="event.stopPropagation(); searchOCR();" style="background: #f59e0b; width: 100%; padding: 10px 20px; border: none; border-radius: 8px; color: white; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.3s; box-shadow: 0 2px 4px rgba(245, 158, 11, 0.3);">📤 שלח תוצאת חיפוש לניתוח</button>
+      <div style="display: flex; gap: 10px; margin-top: 10px;">
+        <button type="button" class="btn" id="sendResultToOCRBtn" onclick="event.stopPropagation(); searchOCR();" style="background: #f59e0b; flex: 1; padding: 10px 20px; border: none; border-radius: 8px; color: white; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.3s; box-shadow: 0 2px 4px rgba(245, 158, 11, 0.3);">📤 שלח תוצאת חיפוש לניתוח</button>
+        <button type="button" class="btn" onclick="event.stopPropagation(); clearOCRSelection();" style="background: #ef4444; padding: 10px 20px; border: none; border-radius: 8px; color: white; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.3s; box-shadow: 0 2px 4px rgba(239, 68, 68, 0.3);">🗑️ נקה</button>
+      </div>
     </div>
   </div>
 </div>
@@ -550,12 +556,41 @@
     }
   }
   
+  // SESSION 31: Clear selection functions
+  function clearImageSelection() {
+    const fileInput = document.getElementById('part_image');
+    const previewImage = document.getElementById('previewImage');
+    
+    // Clear file input
+    fileInput.value = '';
+    
+    // Hide and clear preview image
+    previewImage.style.display = 'none';
+    previewImage.src = '';
+    
+    // Clear the base64 data
+    window.imageBase64 = null;
+    
+    console.log('✅ Image selection cleared');
+  }
+  
+  function clearOCRSelection() {
+    const fileInput = document.getElementById('resultFileUpload');
+    
+    // Clear file input
+    fileInput.value = '';
+    
+    console.log('✅ OCR file selection cleared');
+  }
+  
   // Make functions globally accessible
   window.toggleImageCard = toggleImageCard;
   window.toggleOCRCard = toggleOCRCard;
   window.handleCatalogSearch = handleCatalogSearch;
   window.handleWebSearch = handleWebSearch;
   window.handleImageWebSearch = handleImageWebSearch;
+  window.clearImageSelection = clearImageSelection;
+  window.clearOCRSelection = clearOCRSelection;
 
   document.addEventListener("DOMContentLoaded", () => {
   // ✅ DEBUG: Check internal browser availability on page load

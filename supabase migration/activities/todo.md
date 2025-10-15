@@ -275,3 +275,45 @@ Restructure the parts search page by consolidating 4 scattered search methods in
 - **Total Tasks:** 11/11 ✅ COMPLETE
 - **All Issues Resolved:** Cards, uploads, buttons, image preview
 - **Ready for Production:** Yes
+
+---
+
+## Additional Features (Session 31D)
+
+### ✅ Task 12: Add Clear Buttons to Image and OCR Cards
+**Lines:** 406-409 (Image), 422-425 (OCR), 559-593 (JavaScript)
+
+**Changes - Image Card:**
+- Added flex container with search button and clear button
+- Clear button: Red (#ef4444) with trash icon 🗑️
+- Button layout: Search button (flex: 1) + Clear button side-by-side
+- `clearImageSelection()` function:
+  - Clears file input value
+  - Hides preview image
+  - Clears image src
+  - Resets `window.imageBase64` to null
+
+**Changes - OCR Card:**
+- Added flex container with upload button and clear button
+- Clear button: Red (#ef4444) with trash icon 🗑️
+- Button layout: Upload button (flex: 1) + Clear button side-by-side
+- `clearOCRSelection()` function:
+  - Clears file input value
+  - Ready for new file selection
+
+---
+
+### ✅ Task 13: Update OCR Card Title
+**Line:** 416
+
+**Change:**
+- **Old:** "ניתוח OCR"
+- **New:** "ניתוח תוצאות חיפוש"
+- More descriptive and clearer for Hebrew users
+
+---
+
+**Final Status:**
+- **Total Tasks:** 13/13 ✅ COMPLETE
+- **Features:** 4-card layout, animations, clear buttons, proper titles
+- **Ready for Production:** Yes
