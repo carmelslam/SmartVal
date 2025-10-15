@@ -5361,11 +5361,11 @@ ${partsText}`;
       // SESSION 33: Wait for content to load (SAME AS generatePartsPDF)
       await new Promise(resolve => setTimeout(resolve, 1000));
       
-      console.log('📄 SESSION 33: Generating PDF using html2canvas (SAME AS selected parts)...');
+      console.log('📄 SESSION 33: Generating PDF using html2canvas...');
       
-      // SESSION 33: EXACT SAME PATTERN AS generatePartsPDF() - Use html2canvas to capture the content
+      // SESSION 33: Use html2canvas with REDUCED scale to avoid 413 error
       const canvas = await html2canvas(reviewWindow.document.body, {
-        scale: 2,
+        scale: 1,  // SESSION 33: Reduced from 2 to 1 to reduce file size
         useCORS: true,
         allowTaint: true,
         logging: false,
@@ -5376,14 +5376,14 @@ ${partsText}`;
         }
       });
       
-      // SESSION 33: Convert canvas to PDF (SAME AS generatePartsPDF)
+      // SESSION 33: Convert canvas to PDF with JPEG compression to reduce size
       const { jsPDF } = window.jspdf;
       const pdf = new jsPDF('p', 'mm', 'a4');
-      const imgData = canvas.toDataURL('image/png');
+      const imgData = canvas.toDataURL('image/jpeg', 0.7);  // SESSION 33: JPEG with 70% quality instead of PNG
       const imgWidth = 210; // A4 width in mm
       const imgHeight = (canvas.height * imgWidth) / canvas.width;
       
-      pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);
+      pdf.addImage(imgData, 'JPEG', 0, 0, imgWidth, imgHeight);
       
       // SESSION 33: Close preview window
       reviewWindow.close();
