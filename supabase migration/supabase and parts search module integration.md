@@ -21534,3 +21534,194 @@ UI → Normalize plate → Query cases table → Get UUID + filing_case_id
 **Full detailed log:** `SESSION_29B_COMPLETE_LOG_2025-10-14.md`
 
 ---
+
+
+---
+
+# SESSION 30 - Catalog Results Integration & Mobile UX Fixes
+**Date:** 2025-10-15  
+**Status:** ⚠️ PARTIAL - Mobile Modal Issues Remain
+
+## Summary
+Session 30 successfully integrated catalog search results into helper.parts_search.results for consistency across all search paths (catalog, web, OCR). Attempted mobile UX improvements for parts search module but encountered issues with selected parts list modal requiring further work.
+
+## Tasks Completed
+
+### ✅ TASK 1: Catalog Search Results Integration
+**Objective:** Add catalog search results to helper.parts_search.results to match web/OCR pattern
+
+**Implementation:**
+- Added result-saving logic after catalog search PiP display
+- Matches exact structure from web/OCR paths: `{search_date, data_source, plate, results: []}`
+- Non-blocking, executes only when search has results
+- Safe initialization of helper.parts_search.results array
+
+**Files Modified:**
+- `parts search.html` (lines 1168-1195)
+
+**Result:** ✅ Catalog search now consistently saves to helper.parts_search.results alongside web and OCR paths
+
+---
+
+### ✅ TASK 2: Main Page Mobile UX Fixes
+**Objective:** Fix mobile display issues for parts search page and search results PiP
+
+**Issues Fixed:**
+1. **Input/Select Container Overflow** - Added `box-sizing: border-box` to prevent fields extending beyond container
+2. **Container Width** - Proper mobile fit with `width: calc(100% - 20px)`
+3. **Button Stacking** - Force vertical layout on mobile with `flex-direction: column`
+4. **PiP Window Positioning** - Full-width overlay, proper mobile dimensions
+5. **Body Scroll Management** - Prevent double-scroll when PiP opens
+
+**Files Modified:**
+- `parts search.html` (lines 76, 132-217)
+- `parts-search-results-pip.js` (lines 150, 903, 1877-1956)
+
+**Mobile Breakpoints:**
+- Tablet (≤ 768px): Compressed layout, stacked buttons, full-width PiP
+- Mobile (≤ 480px): Ultra-compact, maximum content visibility
+
+**Result:** ✅ Main page and search results PiP display properly on mobile
+
+---
+
+### ❌ TASK 3: Selected Parts List Modal Mobile Fixes
+**Objective:** Fix mobile display for selected parts list modal
+
+**Attempted Approaches:**
+1. **Aggressive compression** (failed) - Reduced font sizes, compressed spacing, smaller buttons → resulted in broken layout, illegible text, misaligned elements
+2. **Simplified fit** (failed) - Full-screen modal with horizontal scroll → modal styling broken, checkboxes too large, edit/delete buttons oversized
+
+**Issues Encountered:**
+- Font size reductions made headers unreadable
+- Checkbox sizing became inconsistent
+- Edit/delete button icons too large for mobile view
+- Table layout broke with text flowing incorrectly
+- Header logo and text alignment changed unexpectedly
+- Subtotal section alignment broken (centered instead of proper left/right)
+
+**Current State:**
+- Modal CSS reverted to minimal changes (lines 197-217)
+- Only positioning fixes applied (full-screen, horizontal scroll)
+- **Design still broken on mobile** - requires complete rethink
+
+**User Requirements (NOT MET):**
+- Keep desktop design intact on mobile
+- Logo centered, name right, date left (same as desktop)
+- Subtotal: text right, amount left
+- Reasonable checkbox sizes
+- Appropriate edit/delete button sizes
+- Maintain professional table appearance
+- Enable horizontal scroll without breaking layout
+
+**Files Modified:**
+- `parts search.html` (lines 197-217) - multiple iterations, currently minimal
+
+**Result:** ❌ Selected parts list modal still has significant mobile display issues
+
+---
+
+## Files Modified Summary
+
+### parts search.html
+1. **Line 76** - Added box-sizing to inputs/selects
+2. **Lines 132-195** - Enhanced mobile responsive styles for main page
+3. **Lines 197-217** - Selected parts modal mobile fixes (minimal, issues remain)
+4. **Lines 1168-1195** - Catalog results saving to helper
+
+### parts-search-results-pip.js
+1. **Line 150** - Body scroll prevention when PiP opens
+2. **Line 903** - Body scroll restoration when PiP closes
+3. **Lines 1877-1956** - Mobile PiP positioning and responsive styles
+
+---
+
+## Technical Achievements
+
+### Catalog Integration
+- ✅ All 3 search paths now save to helper.parts_search.results
+- ✅ Consistent data structure across catalog, web, OCR
+- ✅ Session 30 logging for debugging
+
+### Mobile UX (Main Page)
+- ✅ Container overflow fixed
+- ✅ Button responsive behavior
+- ✅ PiP full-width overlay
+- ✅ Touch-friendly scrolling
+- ✅ Desktop display unaffected (all changes in @media queries)
+
+---
+
+## Issues Requiring Next Session
+
+### Critical: Selected Parts List Modal Mobile Display
+
+**Problems:**
+1. Table layout breaks when attempting responsive design
+2. Checkboxes become oversized
+3. Edit/delete buttons too large
+4. Header alignment changes (logo/text positioning)
+5. Subtotal section alignment broken
+6. Font size changes make content unreadable
+
+**Requirements for Next Session:**
+1. Keep exact desktop design/layout
+2. Make modal fit mobile screen without design changes
+3. Maintain all element proportions and sizes
+4. Only adjust: modal container positioning, enable horizontal scroll
+5. DO NOT modify: fonts, button sizes, checkbox sizes, table layout, header structure, subtotal layout
+
+**Recommended Approach:**
+- Use wrapper div with horizontal scroll
+- Keep table minimum width
+- Adjust only modal container for full-screen
+- Preserve all internal styling exactly as desktop
+- Test on actual device before implementation
+
+---
+
+## Testing Status
+
+### ✅ Working on Mobile:
+- Parts search page inputs
+- Search buttons
+- Search results PiP
+- Catalog search functionality
+- Helper.parts_search.results population
+
+### ❌ Broken on Mobile:
+- Selected parts list modal display
+- Table layout in modal
+- Button/checkbox sizing in modal
+- Header alignment in modal
+- Subtotal alignment in modal
+
+---
+
+## Lessons Learned
+
+1. **Don't shrink complex table layouts** - horizontal scroll is better than compression
+2. **Preserve desktop design on mobile** - users prefer scrolling to broken layouts
+3. **Test incremental changes** - avoid aggressive styling that breaks existing design
+4. **Inline styles override media queries** - makes responsive design challenging
+5. **User frustration indicates wrong approach** - simpler solution needed
+
+---
+
+## Next Session Priority
+
+**HIGH PRIORITY:**
+Fix selected parts list modal mobile display using minimal-change approach:
+- Full-screen container only
+- Horizontal scroll for table
+- NO font changes
+- NO size changes
+- NO layout changes
+- Keep exact desktop appearance
+
+---
+
+**End of Session 30 Log**  
+**Agent:** Claude Sonnet 4  
+**Date:** 2025-10-15
+
