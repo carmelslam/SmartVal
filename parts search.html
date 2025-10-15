@@ -5358,17 +5358,64 @@ ${partsText}`;
       `);
       reviewWindow.document.close();
       
-      // Wait for content to load
-      await new Promise(resolve => setTimeout(resolve, 500));
+      // SESSION 33: Wait for content to load
+      await new Promise(resolve => setTimeout(resolve, 1000));
       
-      console.log('☁️ SESSION 32: Preparing data for Supabase and Make.com...');
+      console.log('📄 SESSION 33: Generating PDF from HTML...');
+      
+      // SESSION 33: Use html2canvas to capture the content
+      const canvas = await html2canvas(reviewWindow.document.body, {
+        scale: 2,
+        useCORS: true,
+        allowTaint: true,
+        logging: false,
+        imageTimeout: 0,
+        ignoreElements: (element) => {
+          // Skip images that might cause CORS issues
+          return element.tagName === 'IMG' && element.src.includes('carmelcayouf.com');
+        }
+      });
+      
+      // SESSION 33: Convert canvas to PDF
+      const { jsPDF } = window.jspdf;
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      const imgData = canvas.toDataURL('image/png');
+      const imgWidth = 210; // A4 width in mm
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+      
+      pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);
+      
+      // SESSION 33: Get PDF as blob
+      const pdfBlob = pdf.output('blob');
+      
+      // Close review window
+      reviewWindow.close();
+      
+      console.log('☁️ SESSION 33: Uploading PDF to Supabase Storage...');
       
       const timestamp = new Date().toISOString().replace(/[:.]/g, '-').substring(0, 19);
       const filename = `${normalizedPlate}_full_search_results_${timestamp}.pdf`;
       const storagePath = `${filingCaseId}/${filename}`;
       
-      // Generate placeholder public URL (will be updated by Make.com after PDF generation)
-      const publicUrl = `https://nvqrptokmwdhvpiufrad.supabase.co/storage/v1/object/public/parts-reports/${storagePath}`;
+      // SESSION 33: Upload PDF to Supabase Storage
+      const { data: uploadData, error: uploadError } = await window.supabase.storage
+        .from('parts-reports')
+        .upload(storagePath, pdfBlob, {
+          contentType: 'application/pdf',
+          upsert: false
+        });
+      
+      if (uploadError) {
+        console.error('❌ SESSION 33: Storage upload error:', uploadError);
+        throw new Error('Failed to upload PDF: ' + uploadError.message);
+      }
+      
+      console.log('✅ SESSION 33: PDF uploaded to storage:', storagePath);
+      
+      // SESSION 33: Get real public URL from uploaded file
+      const { data: { publicUrl } } = window.supabase.storage
+        .from('parts-reports')
+        .getPublicUrl(storagePath);
       
       // Prepare payload first (needed for export_payload field)
       const payload = {
