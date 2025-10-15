@@ -333,6 +333,8 @@
           .insert({
             // Link to search result
             search_result_id: context.searchResultId || null, // SESSION 11: Link to parts_search_results.id
+            // SESSION 34: Add case_id from context
+            case_id: context.case_id || context.caseId || null,
             // Plate
             plate: plate,
             // Part details

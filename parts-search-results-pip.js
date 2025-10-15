@@ -11,6 +11,7 @@ class PartsSearchResultsPiP {
     this.selectedItems = new Set();
     this.currentPlateNumber = null;
     this.currentSessionId = null;
+    this.currentCaseId = null; // SESSION 34: Store case UUID
     this.pipWindow = null;
     
     this.init();
@@ -53,6 +54,10 @@ class PartsSearchResultsPiP {
     console.log('  - Extraction strategy used:', this.currentPlateNumber ? 'SUCCESS' : 'FAILED');
     
     this.currentSessionId = searchContext.sessionId || null;
+    
+    // SESSION 34: Store case UUID from context (universal for all 3 search paths)
+    this.currentCaseId = searchContext.caseId || searchContext.case_id || window.currentCaseId || null;
+    console.log('📋 SESSION 34: Case UUID stored in PiP:', this.currentCaseId);
     this.searchSuccess = searchContext.searchSuccess !== false; // Default to true unless explicitly false
     this.errorMessage = searchContext.errorMessage || null;
     this.currentSearchContext = searchContext; // SESSION 11: Store for selected parts save
@@ -479,12 +484,14 @@ class PartsSearchResultsPiP {
         }
         
         // SESSION 11: Pass search context with vehicle data and result ID
+        // SESSION 34: Include case_id for dual identification (plate + case_id)
         const partId = await partsSearchService.saveSelectedPart(
           this.currentPlateNumber,
           item,
           {
             searchResultId: this.currentSearchResultId,
-            searchContext: this.currentSearchContext
+            searchContext: this.currentSearchContext,
+            case_id: this.currentCaseId // SESSION 34: Add case UUID
           }
         );
         

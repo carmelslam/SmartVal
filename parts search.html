@@ -892,7 +892,7 @@
   }
   
   // ENHANCED: Auto-populate vehicle data from helper
-  function populateVehicleDataFromHelper() {
+  async function populateVehicleDataFromHelper() {
     console.log('🚗 Parts Search: Auto-populating vehicle data from helper...');
     
     try {
@@ -900,6 +900,29 @@
       if (helperString) {
         const helper = JSON.parse(helperString);
         console.log('✅ Helper data loaded for parts search:', helper);
+        
+        // SESSION 34: Look up case UUID from filing_case_id
+        const filingCaseId = helper.case_info?.case_id || helper.meta?.case_id || helper.case?.id;
+        if (filingCaseId && window.supabaseClient) {
+          try {
+            const { data: caseData, error } = await window.supabaseClient
+              .from('cases')
+              .select('id')
+              .eq('filing_case_id', filingCaseId)
+              .single();
+            
+            if (!error && caseData) {
+              window.currentCaseId = caseData.id;
+              console.log(`✅ SESSION 34: Stored case UUID for parts search: ${window.currentCaseId}`);
+            } else {
+              console.warn(`⚠️ SESSION 34: Could not find UUID for filing_case_id: ${filingCaseId}`);
+              window.currentCaseId = null;
+            }
+          } catch (error) {
+            console.error(`❌ SESSION 34: Error looking up case UUID:`, error);
+            window.currentCaseId = null;
+          }
+        }
         
         // Populate form fields with helper data using corrected field mapping
         const fieldMappings = {
@@ -1726,7 +1749,9 @@ ${part.supplier ? `   ספק: ${part.supplier}` : ''}
           errorMessage: result.error ? result.error.message : null,
           searchTime: result.searchTime || 0,
           // ACTUAL search parameters for Supabase
-          searchParams: searchParams // Include full search params
+          searchParams: searchParams, // Include full search params
+          // SESSION 34: Add case UUID for dual identification
+          caseId: window.currentCaseId || null
         };
         
         console.log('📋 PiP context:', pipContext);
@@ -2316,7 +2341,9 @@ ${part.supplier ? `   ספק: ${part.supplier}` : ''}
           searchSuccess: transformedResults.length > 0,
           errorMessage: null,
           searchTime: 0,
-          searchParams: searchParams // Includes selectedParts array
+          searchParams: searchParams, // Includes selectedParts array
+          // SESSION 34: Add case UUID for dual identification
+          caseId: window.currentCaseId || null
         };
         
         await window.partsResultsPiP.showResults(transformedResults, pipContext);
