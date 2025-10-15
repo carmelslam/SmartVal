@@ -5367,31 +5367,11 @@ ${partsText}`;
       const filename = `${normalizedPlate}_full_search_results_${timestamp}.pdf`;
       const storagePath = `${filingCaseId}/${filename}`;
       
-      // SESSION 32: Save export metadata to parts_export_reports table
-      console.log('💾 SESSION 32: Saving export metadata to database...');
-      const { data: report, error: reportError } = await window.supabase
-        .from('parts_export_reports')
-        .insert({
-          case_id: caseUuid,
-          filing_case_id: filingCaseId,
-          plate: normalizedPlate,
-          parts_count: allResults.length,
-          pdf_storage_path: storagePath,
-          vehicle_info: vehicleInfo
-        })
-        .select()
-        .single();
+      // Generate placeholder public URL (will be updated by Make.com after PDF generation)
+      const publicUrl = `https://nvqrptokmwdhvpiufrad.supabase.co/storage/v1/object/public/parts-reports/${storagePath}`;
       
-      if (reportError) {
-        console.error('❌ SESSION 32: Database insert error:', reportError);
-        throw new Error('Failed to save export metadata: ' + reportError.message);
-      }
-      
-      console.log('✅ SESSION 32: Export report saved with ID:', report.id);
-      
-      // Prepare payload for Make.com webhook
+      // Prepare payload first (needed for export_payload field)
       const payload = {
-        report_id: report.id,
         plate: normalizedPlate,
         plate_formatted: plate,
         case_id: filingCaseId,
@@ -5404,6 +5384,7 @@ ${partsText}`;
         total_searches: totalSearches,
         total_results: allResults.length,
         pdf_storage_path: storagePath,
+        pdf_url: publicUrl,
         search_sessions: allResults.map(r => ({
           search_date: r.search_date,
           data_source: r.data_source,
@@ -5414,6 +5395,34 @@ ${partsText}`;
           price: parseFloat(r.price || r.cost || 0)
         }))
       };
+      
+      // SESSION 32: Save export metadata to parts_export_reports table
+      console.log('💾 SESSION 32: Saving export metadata to database...');
+      const { data: report, error: reportError } = await window.supabase
+        .from('parts_export_reports')
+        .insert({
+          case_id: caseUuid,
+          filing_case_id: filingCaseId,
+          plate: normalizedPlate,
+          parts_count: allResults.length,
+          total_estimated_cost: 0,  // Search results don't have cost totals
+          pdf_storage_path: storagePath,
+          pdf_public_url: publicUrl,
+          vehicle_info: vehicleInfo,
+          export_payload: payload
+        })
+        .select()
+        .single();
+      
+      if (reportError) {
+        console.error('❌ SESSION 32: Database insert error:', reportError);
+        throw new Error('Failed to save export metadata: ' + reportError.message);
+      }
+      
+      console.log('✅ SESSION 32: Export report saved with ID:', report.id);
+      
+      // Add report_id to payload
+      payload.report_id = report.id;
       
       console.log('📤 SESSION 32: Sending payload to webhook:', payload);
       
