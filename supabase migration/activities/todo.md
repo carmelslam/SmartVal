@@ -317,3 +317,51 @@ Restructure the parts search page by consolidating 4 scattered search methods in
 - **Total Tasks:** 13/13 ✅ COMPLETE
 - **Features:** 4-card layout, animations, clear buttons, proper titles
 - **Ready for Production:** Yes
+
+---
+
+## Upload Options Enhancement (Session 31E)
+
+### ✅ Task 14: Multiple Image Upload Options
+**Lines:** 405-415 (HTML), 571-585 (JS), 300-304 (CSS)
+
+**Problem:**
+- Single file input with `capture="environment"` forced camera on mobile
+- No option to choose between camera, gallery, or files
+- Desktop users couldn't access camera option (appropriate)
+
+**Solution:**
+Created 3 separate hidden file inputs with dedicated buttons:
+
+**Mobile (3 options):**
+1. **📷 צלם** - Camera input with `capture="environment"`
+2. **🖼️ גלריה** - Gallery/photos without capture attribute
+3. **📁 קבצים** - File system access
+
+**Desktop (2 options):**
+- Camera button hidden via CSS media query
+- Gallery and Files buttons available
+
+**Technical Implementation:**
+- 3 hidden `<input type="file">` elements with IDs:
+  - `part_image_camera` (capture="environment")
+  - `part_image_gallery` (no capture)
+  - `part_image` (file system)
+- Grid layout buttons trigger respective inputs
+- Single `handleImageUpload(input)` function handles all three
+- Updated `clearImageSelection()` to clear all three inputs
+- CSS hides camera button on desktop (min-width: 769px)
+
+**Result:**
+✅ Mobile: 3 upload options (camera, gallery, files)  
+✅ Desktop: 2 upload options (gallery, files)  
+✅ All options preview image correctly  
+✅ Clear button resets all inputs  
+✅ Responsive button grid layout
+
+---
+
+**Final Status:**
+- **Total Tasks:** 14/14 ✅ COMPLETE
+- **All Features:** Cards, animations, upload options, clear buttons
+- **Ready for Production:** Yes
