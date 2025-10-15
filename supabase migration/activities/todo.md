@@ -170,5 +170,42 @@ Restructure the parts search page by consolidating 4 scattered search methods in
 ---
 
 **Implementation Status:** ✅ COMPLETE  
-**All Tasks:** 7/7 Completed  
+**All Tasks:** 9/9 Completed  
 **Ready for Testing:** Yes
+
+---
+
+## Additional Enhancements (Session 31B)
+
+### ✅ Task 8: Add Loading Animations to Cards
+**Lines:** 294-310 (CSS), 508-546 (JavaScript)
+
+**Changes:**
+- Added `.search-card.loading` class with opacity and pointer-events control
+- Spinner animation on card icon during search (animated circle)
+- Wrapper functions for each search method:
+  - `handleCatalogSearch()` - wraps `searchSupabase()` with card animation
+  - `handleWebSearch()` - wraps `searchWebExternal()` with card animation
+  - `handleImageWebSearch()` - wraps `searchWebExternal()` with button spinner
+- Cards become semi-transparent and non-clickable during search
+- Animations automatically removed when search completes
+
+---
+
+### ✅ Task 9: Full Web Search Button for Image Card
+**Lines:** 401 (HTML), 530-546 (JavaScript)
+
+**Changes:**
+- Button ID added: `imageWebSearchBtn`
+- New handler: `handleImageWebSearch()` with full functionality
+- Button shows "🔍 מחפש..." with spinner during search
+- Card animation + button animation work together
+- Calls same `searchWebExternal()` function as main web card
+- Button disables during search to prevent double-clicks
+
+---
+
+**Final Implementation:**
+- **Total Tasks:** 9/9
+- **Lines Modified:** CSS (219-316), HTML (358-402), JS (480-553)
+- **New Features:** Card loading animations + Image web search button

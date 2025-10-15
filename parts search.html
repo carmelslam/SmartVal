@@ -291,6 +291,24 @@
       grid-column: span 2;
     }
 
+    .search-card.loading {
+      pointer-events: none;
+      opacity: 0.7;
+    }
+
+    .search-card.loading .search-card-icon::after {
+      content: '';
+      display: inline-block;
+      width: 20px;
+      height: 20px;
+      border: 3px solid rgba(255, 255, 255, 0.3);
+      border-top-color: white;
+      border-radius: 50%;
+      animation: spinner-rotate 0.8s linear infinite;
+      margin-left: 10px;
+      vertical-align: middle;
+    }
+
     /* Mobile responsiveness for cards */
     @media (max-width: 768px) {
       .search-methods-container {
@@ -357,14 +375,14 @@
 
 <div class="search-methods-container">
   <!-- Card 1: Catalog Search -->
-  <div class="search-card catalog" onclick="searchSupabase()">
+  <div class="search-card catalog" id="catalogSearchCard" onclick="handleCatalogSearch()">
     <span class="search-card-icon">🔍</span>
     <h3 class="search-card-title">חיפוש קטלוגי</h3>
     <p style="font-size: 14px; color: #64748b; margin: 10px 0 0 0;">חפש במאגר הנתונים</p>
   </div>
 
   <!-- Card 2: Web Search -->
-  <div class="search-card web" onclick="searchWebExternal()">
+  <div class="search-card web" id="webSearchCard" onclick="handleWebSearch()">
     <span class="search-card-icon">🌐</span>
     <h3 class="search-card-title">חיפוש ברשת</h3>
     <p style="font-size: 14px; color: #64748b; margin: 10px 0 0 0;">חפש חלקים ברשת</p>
@@ -380,7 +398,7 @@
       <h4 class="right-small-heading" style="text-align: center; font-size: 16px; margin: 15px 0 10px 0;">העלה/צלם תמונה לחיפוש</h4>
       <input type="file" id="part_image" accept="image/*" capture="environment" style="display: block; width: 100%; padding: 8px; margin-bottom: 10px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;">
       <img id="previewImage" style="display: none; max-width: 100%; margin-bottom: 10px; border: 1px solid #ccc; border-radius: 8px;" />
-      <button type="button" class="btn" onclick="event.stopPropagation(); searchWebExternal();" style="background: #10b981; width: 100%; padding: 10px 20px; border: none; border-radius: 8px; color: white; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.3s; box-shadow: 0 2px 4px rgba(16, 185, 129, 0.3);">🔍 חפש ברשת עם תמונה</button>
+      <button type="button" class="btn" id="imageWebSearchBtn" onclick="event.stopPropagation(); handleImageWebSearch();" style="background: #10b981; width: 100%; padding: 10px 20px; border: none; border-radius: 8px; color: white; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.3s; box-shadow: 0 2px 4px rgba(16, 185, 129, 0.3);">🔍 חפש ברשת עם תמונה</button>
     </div>
   </div>
 
@@ -486,9 +504,53 @@
     }
   }
   
-  // Make toggle functions globally accessible
+  // SESSION 31: Search handler wrappers with loading animations
+  async function handleCatalogSearch() {
+    const card = document.getElementById('catalogSearchCard');
+    card.classList.add('loading');
+    
+    try {
+      await searchSupabase();
+    } finally {
+      card.classList.remove('loading');
+    }
+  }
+  
+  async function handleWebSearch() {
+    const card = document.getElementById('webSearchCard');
+    card.classList.add('loading');
+    
+    try {
+      await searchWebExternal();
+    } finally {
+      card.classList.remove('loading');
+    }
+  }
+  
+  async function handleImageWebSearch() {
+    const card = document.getElementById('imageSearchCard');
+    const btn = document.getElementById('imageWebSearchBtn');
+    const originalText = btn.innerHTML;
+    
+    card.classList.add('loading');
+    btn.disabled = true;
+    btn.innerHTML = '🔍 מחפש... <span class="spinner"></span>';
+    
+    try {
+      await searchWebExternal();
+    } finally {
+      card.classList.remove('loading');
+      btn.disabled = false;
+      btn.innerHTML = originalText;
+    }
+  }
+  
+  // Make functions globally accessible
   window.toggleImageCard = toggleImageCard;
   window.toggleOCRCard = toggleOCRCard;
+  window.handleCatalogSearch = handleCatalogSearch;
+  window.handleWebSearch = handleWebSearch;
+  window.handleImageWebSearch = handleImageWebSearch;
 
   document.addEventListener("DOMContentLoaded", () => {
   // ✅ DEBUG: Check internal browser availability on page load
