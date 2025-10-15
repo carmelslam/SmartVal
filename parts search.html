@@ -1165,6 +1165,35 @@ ${part.supplier ? `   ספק: ${part.supplier}` : ''}
         await window.partsResultsPiP.showResults(resultsToShow, pipContext);
         console.log('✅ PiP showResults completed successfully');
         
+        // SESSION 30: Save catalog results to helper.parts_search.results (consistency with web/OCR)
+        if (!result.error && result.data && result.data.length > 0) {
+          console.log('📝 SESSION 30: Saving catalog results to helper.parts_search.results...');
+          
+          const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+          
+          if (!helper.parts_search) {
+            helper.parts_search = {};
+          }
+          
+          if (!helper.parts_search.results) {
+            helper.parts_search.results = [];
+          }
+          
+          const newResults = {
+            search_date: new Date().toISOString(),
+            data_source: 'catalog',
+            plate: searchParams.plate,
+            results: result.data
+          };
+          
+          helper.parts_search.results.push(newResults);
+          console.log(`✅ SESSION 30: Catalog results saved to helper.parts_search.results (total searches: ${helper.parts_search.results.length}, this search: ${result.data.length} parts)`);
+          
+          window.helper = helper;
+          sessionStorage.setItem('helper', JSON.stringify(helper));
+          localStorage.setItem('helper_data', JSON.stringify(helper));
+        }
+        
         // Success feedback
         if (!result.error && result.data && result.data.length > 0) {
           console.log('✅ Smart search successful:', result.data.length, 'results');
