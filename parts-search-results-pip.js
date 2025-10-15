@@ -815,63 +815,30 @@ class PartsSearchResultsPiP {
 
   /**
    * Clear all selections
-   * SESSION 35 FIX: Only clear parts shown in current PiP (by pcode), NOT all parts for case
+   * SESSION 35 FIX: Use removeSelectedPart() for each item (proven working pattern)
    */
   async clearSelections() {
     if (this.selectedItems.size === 0) return;
 
     if (confirm('האם אתה בטוח שברצונך לנקות את כל הבחירות?')) {
-      // SESSION 35 FIX: Clear from Supabase - ONLY the pcodes in current PiP
-      if (this.currentPlateNumber) {
+      console.log('🧹 SESSION 35: Clearing', this.selectedItems.size, 'selected parts from PiP');
+      
+      // SESSION 35 FIX: Get all selected items before clearing the Set
+      const itemsToRemove = Array.from(this.selectedItems)
+        .map(itemId => this.searchResults.find(r => r.id === itemId))
+        .filter(Boolean);
+      
+      console.log('🗑️ SESSION 35: Found', itemsToRemove.length, 'items to remove');
+      
+      // SESSION 35 FIX: Use removeSelectedPart() for each item
+      // This properly removes from: Supabase, helper.current_selected_list, and UI
+      for (const item of itemsToRemove) {
         try {
-          const { supabase } = await import('./lib/supabaseClient.js');
-          
-          // Get pcodes of selected items from current search results
-          const selectedPcodes = Array.from(this.selectedItems)
-            .map(itemId => {
-              const item = this.searchResults.find(r => r.id === itemId);
-              return item?.pcode || item?.catalog_number;
-            })
-            .filter(Boolean);
-          
-          if (selectedPcodes.length > 0) {
-            console.log('🗑️ SESSION 35: Deleting ONLY these pcodes from PiP:', selectedPcodes);
-            
-            // SESSION 35 FIX: Delete by plate + pcode ONLY (NOT case_id - would delete too much!)
-            // This deletes ONLY the specific parts in this PiP, not all case history
-            const { error } = await supabase
-              .from('selected_parts')
-              .delete()
-              .eq('plate', this.currentPlateNumber)
-              .in('pcode', selectedPcodes);
-            
-            if (error) throw error;
-            console.log('✅ SESSION 35: Cleared', selectedPcodes.length, 'specific parts from database');
-            
-            // SESSION 35: Refresh wizard counter
-            if (window.parent && window.parent.loadSelectedPartsCount) {
-              console.log('📊 SESSION 35: Triggering counter refresh after clear...');
-              window.parent.loadSelectedPartsCount();
-            }
-          }
+          await this.removeSelectedPart(item);
+          console.log('✅ Removed:', item.pcode || item.id);
         } catch (error) {
-          console.error('❌ SESSION 35: Error clearing selections:', error);
+          console.error('❌ Error removing part:', item.pcode, error);
         }
-      }
-
-      // SESSION 35: Clear from helper - only matching pcodes
-      if (window.helper?.parts_search?.selected_parts) {
-        const selectedPcodes = Array.from(this.selectedItems)
-          .map(itemId => {
-            const item = this.searchResults.find(r => r.id === itemId);
-            return item?.pcode || item?.catalog_number;
-          })
-          .filter(Boolean);
-        
-        window.helper.parts_search.selected_parts = 
-          window.helper.parts_search.selected_parts.filter(part => 
-            !selectedPcodes.includes(part.pcode)
-          );
       }
 
       // Clear local state
@@ -880,8 +847,14 @@ class PartsSearchResultsPiP {
       // Update UI
       this.updateAllCheckboxes();
       this.updateSelectionCount();
+      
+      // SESSION 35: Refresh wizard counter
+      if (window.parent && window.parent.loadSelectedPartsCount) {
+        console.log('📊 SESSION 35: Triggering counter refresh after clear...');
+        window.parent.loadSelectedPartsCount();
+      }
 
-      console.log('🧹 SESSION 35: Current PiP selections cleared (pcodes only)');
+      console.log('🧹 SESSION 35: All PiP selections cleared successfully');
     }
   }
 
@@ -1281,37 +1254,31 @@ class PartsSearchResultsPiP {
                 if (!confirmed) return;
 
                 try {
-                  // SESSION 35 FIX: Only clear pcodes in PiP, NOT all case parts
-                  const { supabase } = await import('./lib/supabaseClient.js');
+                  console.log('🧹 SESSION 35 (Review): Clearing', this.parentPiP.selectedItems.size, 'parts');
                   
-                  // Get pcodes of selected items
-                  const selectedPcodes = Array.from(this.parentPiP.selectedItems)
-                    .map(itemId => {
-                      const item = this.parentPiP.searchResults.find(r => r.id === itemId);
-                      return item?.pcode || item?.catalog_number;
-                    })
+                  // SESSION 35 FIX: Get items before clearing Set
+                  const itemsToRemove = Array.from(this.parentPiP.selectedItems)
+                    .map(itemId => this.parentPiP.searchResults.find(r => r.id === itemId))
                     .filter(Boolean);
                   
-                  if (selectedPcodes.length > 0) {
-                    console.log('🗑️ SESSION 35 (Review): Deleting ONLY these pcodes:', selectedPcodes);
-                    
-                    // SESSION 35 FIX: Delete by plate + pcode ONLY (NOT case_id!)
-                    const { error } = await supabase
-                      .from('selected_parts')
-                      .delete()
-                      .eq('plate', this.parentPiP.currentPlateNumber)
-                      .in('pcode', selectedPcodes);
-                    
-                    if (error) throw error;
-                    
-                    // SESSION 35: Refresh wizard counter
-                    if (window.opener.parent && window.opener.parent.loadSelectedPartsCount) {
-                      console.log('📊 SESSION 35 (Review): Triggering counter refresh after clear...');
-                      window.opener.parent.loadSelectedPartsCount();
+                  // SESSION 35 FIX: Use removeSelectedPart() for each (proven pattern)
+                  for (const item of itemsToRemove) {
+                    try {
+                      await this.parentPiP.removeSelectedPart(item);
+                      console.log('✅ Removed:', item.pcode || item.id);
+                    } catch (error) {
+                      console.error('❌ Error removing part:', item.pcode, error);
                     }
                   }
                   
                   this.parentPiP.selectedItems.clear();
+                  
+                  // SESSION 35: Refresh wizard counter
+                  if (window.opener.parent && window.opener.parent.loadSelectedPartsCount) {
+                    console.log('📊 SESSION 35 (Review): Triggering counter refresh...');
+                    window.opener.parent.loadSelectedPartsCount();
+                  }
+                  
                   this.showNotification('הבחירות נוקו בהצלחה');
                   this.updateUI();
                 } catch (error) {
