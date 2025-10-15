@@ -1261,9 +1261,9 @@
         </div>
         
         <div class="subtotal-display" id="searchResultsInfo" style="display:none;">
-          <div class="subtotal-title">תוצאות חיפוש</div>
-          <div class="subtotal-amount" id="searchResultsCount">0 חלפים נמצאו</div>
-          <div class="vat-info">התוצאות נשמרו למערכת לבחירה בשלב הבא</div>
+          <div class="subtotal-title">חלפים נבחרים</div>
+          <div class="subtotal-amount" id="searchResultsCount">0 חלפים נבחרו</div>
+          <div class="vat-info">החלפים נשמרו למערכת</div>
         </div>
         
         <!-- Local Refresh Button for Parts Search -->
@@ -2722,6 +2722,7 @@
             setTimeout(() => {
               try {
                 loadPartsSearchModule();
+                loadSelectedPartsCount(); // SESSION 34: Load counter when entering step 4
                 hideLoadingState('partsSearchModule');
                 showUserNotification('מודול חיפוש חלפים נטען בהצלחה', 'success', 2000);
               } catch (error) {
@@ -6459,6 +6460,43 @@
       }
     }
     
+    // SESSION 34: Load selected parts count from Supabase
+    async function loadSelectedPartsCount() {
+      try {
+        const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+        const caseId = helper.meta?.case_id || helper.case?.id;
+        
+        if (!caseId) {
+          console.warn('⚠️ SESSION 34: No case_id found, cannot load selected parts count');
+          return;
+        }
+        
+        console.log(`📊 SESSION 34: Loading selected parts count for case ${caseId}`);
+        
+        // Query Supabase function
+        const { data, error } = await window.supabase
+          .rpc('count_selected_parts_by_case', { case_uuid: caseId });
+        
+        if (error) {
+          console.error('❌ SESSION 34: Error loading selected parts count:', error);
+          throw error;
+        }
+        
+        // Update counter display
+        const searchResultsCount = document.getElementById('searchResultsCount');
+        const searchResultsInfo = document.getElementById('searchResultsInfo');
+        
+        if (searchResultsCount && searchResultsInfo) {
+          searchResultsCount.textContent = `${data || 0} חלפים נבחרו`;
+          searchResultsInfo.style.display = 'block';
+          console.log(`✅ SESSION 34: Updated counter to show ${data || 0} selected parts`);
+        }
+        
+      } catch (error) {
+        console.error('❌ SESSION 34: Failed to load selected parts count:', error);
+      }
+    }
+    
     // ✅ NEW: Handle parts selection updates from Step 5  
     function handlePartsSelectionUpdate(data) {
       console.log('🔧 Received parts selection update:', data);
@@ -6466,6 +6504,9 @@
       try {
         // Update moduleData with selected parts
         moduleData.parts = data.selectedParts || [];
+        
+        // SESSION 34: Refresh the selected parts counter
+        loadSelectedPartsCount();
         
         // Store in helper
         let helper = JSON.parse(sessionStorage.getItem('helper') || '{}');

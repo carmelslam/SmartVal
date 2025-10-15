@@ -339,6 +339,10 @@ form button {
       console.log('🎯 Parts required handling wizard context:', contextData);
       
       try {
+        // SESSION 34: Store case_id from wizard context for later use when saving parts
+        window.currentCaseId = contextData.helper?.meta?.case_id || contextData.helper?.case?.id;
+        console.log(`📋 SESSION 34: Stored case_id for parts: ${window.currentCaseId}`);
+        
         // Update global helper with wizard data
         if (contextData.helper) {
           window.helper = contextData.helper;
@@ -775,9 +779,11 @@ function savePartsData() {
         // ✅ NEW: Distinguish between manual entry and suggestion selection
         entry_type: part.fromSuggestion ? 'suggestion_selected' : 'manual_entry',
         manual_entry: !part.fromSuggestion,
+        // SESSION 34: Add case_id to root level for Supabase foreign key
+        case_id: window.currentCaseId || helper.meta?.case_id || helper.case?.id || helper.case_info?.case_id || null,
         case_context: {
           plate: helper.vehicle?.plate || '',
-          case_id: helper.case_info?.case_id || '',
+          case_id: window.currentCaseId || helper.meta?.case_id || helper.case?.id || helper.case_info?.case_id || '',
           step: isStandaloneMode ? null : 5,
           wizard_session: new Date().toISOString()
         }
