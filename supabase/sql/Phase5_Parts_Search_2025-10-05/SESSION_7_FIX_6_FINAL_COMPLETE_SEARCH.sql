@@ -67,6 +67,12 @@ DECLARE
     i INT;
 BEGIN
     -- ============================================================================
+    -- SESSION 35: Increase timeout for complex cascading search (cold start fix)
+    -- Default timeout causes first search to fail, subsequent searches work
+    -- ============================================================================
+    SET LOCAL statement_timeout = '15s';
+    
+    -- ============================================================================
     -- REQUIREMENT: Either part_param OR free_query_param must be provided
     -- ============================================================================
     
