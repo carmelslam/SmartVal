@@ -815,14 +815,14 @@ class PartsSearchResultsPiP {
 
   /**
    * Clear all selections
-   * SESSION 35: Only clear parts selected in current PiP for current case
+   * SESSION 35 FIX: Only clear parts shown in current PiP (by pcode), NOT all parts for case
    */
   async clearSelections() {
     if (this.selectedItems.size === 0) return;
 
     if (confirm('האם אתה בטוח שברצונך לנקות את כל הבחירות?')) {
-      // SESSION 35: Clear from Supabase - only current case + current selections
-      if (this.currentPlateNumber && this.currentCaseId) {
+      // SESSION 35 FIX: Clear from Supabase - ONLY the pcodes in current PiP
+      if (this.currentPlateNumber) {
         try {
           const { supabase } = await import('./lib/supabaseClient.js');
           
@@ -835,18 +835,18 @@ class PartsSearchResultsPiP {
             .filter(Boolean);
           
           if (selectedPcodes.length > 0) {
-            console.log('🗑️ SESSION 35: Deleting selected parts:', selectedPcodes);
+            console.log('🗑️ SESSION 35: Deleting ONLY these pcodes from PiP:', selectedPcodes);
             
-            // Delete only parts matching: plate + case_id + pcode IN (selected list)
+            // SESSION 35 FIX: Delete by plate + pcode ONLY (NOT case_id - would delete too much!)
+            // This deletes ONLY the specific parts in this PiP, not all case history
             const { error } = await supabase
               .from('selected_parts')
               .delete()
               .eq('plate', this.currentPlateNumber)
-              .eq('case_id', this.currentCaseId)
               .in('pcode', selectedPcodes);
             
             if (error) throw error;
-            console.log('✅ SESSION 35: Cleared', selectedPcodes.length, 'parts from database');
+            console.log('✅ SESSION 35: Cleared', selectedPcodes.length, 'specific parts from database');
             
             // SESSION 35: Refresh wizard counter
             if (window.parent && window.parent.loadSelectedPartsCount) {
@@ -881,7 +881,7 @@ class PartsSearchResultsPiP {
       this.updateAllCheckboxes();
       this.updateSelectionCount();
 
-      console.log('🧹 SESSION 35: Current PiP selections cleared');
+      console.log('🧹 SESSION 35: Current PiP selections cleared (pcodes only)');
     }
   }
 
@@ -1281,7 +1281,7 @@ class PartsSearchResultsPiP {
                 if (!confirmed) return;
 
                 try {
-                  // SESSION 35: Only clear current PiP selections for current case
+                  // SESSION 35 FIX: Only clear pcodes in PiP, NOT all case parts
                   const { supabase } = await import('./lib/supabaseClient.js');
                   
                   // Get pcodes of selected items
@@ -1292,14 +1292,14 @@ class PartsSearchResultsPiP {
                     })
                     .filter(Boolean);
                   
-                  if (selectedPcodes.length > 0 && this.parentPiP.currentCaseId) {
-                    console.log('🗑️ SESSION 35 (Review): Deleting selected parts:', selectedPcodes);
+                  if (selectedPcodes.length > 0) {
+                    console.log('🗑️ SESSION 35 (Review): Deleting ONLY these pcodes:', selectedPcodes);
                     
+                    // SESSION 35 FIX: Delete by plate + pcode ONLY (NOT case_id!)
                     const { error } = await supabase
                       .from('selected_parts')
                       .delete()
                       .eq('plate', this.parentPiP.currentPlateNumber)
-                      .eq('case_id', this.parentPiP.currentCaseId)
                       .in('pcode', selectedPcodes);
                     
                     if (error) throw error;
