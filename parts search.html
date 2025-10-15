@@ -5361,26 +5361,63 @@ ${partsText}`;
       // Wait for content to load
       await new Promise(resolve => setTimeout(resolve, 500));
       
-      // Note: Actual PDF generation would require jsPDF or similar
-      // For now, prepare payload for webhook
-      console.log('☁️ SESSION 32: Preparing data for Make.com webhook...');
+      console.log('☁️ SESSION 32: Preparing data for Supabase and Make.com...');
       
       const timestamp = new Date().toISOString().replace(/[:.]/g, '-').substring(0, 19);
-      const filename = `${plate}_search_results_history_${timestamp}.pdf`;
+      const filename = `${normalizedPlate}_full_search_results_${timestamp}.pdf`;
       const storagePath = `${filingCaseId}/${filename}`;
       
-      // Prepare payload
+      // SESSION 32: Mark previous exports as not current
+      console.log('📋 SESSION 32: Marking previous exports as not current...');
+      await window.supabase
+        .from('parts_export_reports')
+        .update({ current_state: false })
+        .eq('case_id', caseUuid)
+        .eq('export_type', 'full_search_results');
+      
+      // SESSION 32: Save export metadata to parts_export_reports table
+      console.log('💾 SESSION 32: Saving export metadata to database...');
+      const { data: report, error: reportError } = await window.supabase
+        .from('parts_export_reports')
+        .insert({
+          case_id: caseUuid,
+          filing_case_id: filingCaseId,
+          plate: normalizedPlate,
+          export_type: 'full_search_results',
+          export_label: 'היסטוריית תוצאות חיפוש מלאה',
+          parts_count: allResults.length,
+          searches_count: totalSearches,
+          pdf_storage_path: storagePath,
+          vehicle_info: vehicleInfo,
+          current_state: true,
+          export_date: new Date().toISOString()
+        })
+        .select()
+        .single();
+      
+      if (reportError) {
+        console.error('❌ SESSION 32: Database insert error:', reportError);
+        throw new Error('Failed to save export metadata: ' + reportError.message);
+      }
+      
+      console.log('✅ SESSION 32: Export report saved with ID:', report.id);
+      
+      // Prepare payload for Make.com webhook
       const payload = {
+        report_id: report.id,
         plate: normalizedPlate,
         plate_formatted: plate,
         case_id: filingCaseId,
         case_uuid: caseUuid,
         case_folder: normalizedPlate,
         export_date: new Date().toISOString(),
+        export_type: 'full_search_results',
+        export_label: 'היסטוריית תוצאות חיפוש מלאה',
         vehicle: vehicleInfo,
         total_searches: totalSearches,
         total_results: allResults.length,
         pdf_storage_path: storagePath,
+        current_state: true,
         search_sessions: allResults.map(r => ({
           search_date: r.search_date,
           data_source: r.data_source,
@@ -5406,7 +5443,7 @@ ${partsText}`;
       reviewWindow.close();
       
       if (response && response.success !== false) {
-        alert('✅ היסטוריית תוצאות החיפוש יוצאה בהצלחה');
+        alert('✅ היסטוריית תוצאות החיפוש יוצאה בהצלחה ל-Supabase ו-Make.com');
       } else {
         throw new Error(response?.error || 'שגיאה לא ידועה בייצוא');
       }
