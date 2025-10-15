@@ -4845,11 +4845,15 @@ ${partsText}`;
       const caseUuid = activeCase.id;
       console.log('✅ SESSION 32: Found case UUID:', caseUuid);
       
-      // Query parts_search_results table for all results
+      // Query parts_search_results table via parts_search_sessions (join)
+      // parts_search_results.session_id -> parts_search_sessions.id -> parts_search_sessions.case_id
       const { data: searchResults, error: resultsError } = await window.supabase
         .from('parts_search_results')
-        .select('*')
-        .eq('case_id', caseUuid)
+        .select(`
+          *,
+          parts_search_sessions!inner(case_id, plate, created_at)
+        `)
+        .eq('parts_search_sessions.case_id', caseUuid)
         .order('created_at', { ascending: false });
       
       if (resultsError) {
