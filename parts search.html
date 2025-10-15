@@ -497,6 +497,7 @@
 <!-- Enhanced Part Management -->
 <div style="margin-top: 20px;">
   <button type="button" class="btn" onclick="window.TEST_showAllSavedParts()" style="background: #10b981;">🗂️ הצג רשימת חלקים נבחרים עדכנית</button>
+  <button type="button" class="btn" onclick="window.showAllSearchResults()" style="background: #3b82f6;">📊 הצג רשימת כל תוצאות החיפוש</button>
   <button type="button" class="btn" onclick="saveToSession()" style="background: #ffc107; color: #000;">💾 שמור להמשך באשף</button>
 </div>
   </form>
@@ -4801,6 +4802,579 @@ ${partsText}`;
     } catch (error) {
       console.error('❌ SESSION 19: Error loading saved parts:', error);
       alert('❌ Error loading parts:\n\n' + error.message);
+    }
+  };
+  
+  // SESSION 32: Show all search results history from parts_search_results table
+  window.showAllSearchResults = async function() {
+    console.log('📊 SESSION 32: Loading all search results history from Supabase...');
+    
+    const plate = document.getElementById('license_plate')?.value || 
+                  document.getElementById('plate')?.value ||
+                  window.helper?.meta?.plate;
+    
+    if (!plate) {
+      alert('❌ לא נמצא מספר רישוי');
+      return;
+    }
+    
+    try {
+      // Normalize plate number (remove dashes)
+      const normalizedPlate = plate.replace(/-/g, '');
+      console.log('📋 SESSION 32: Normalized plate:', plate, '→', normalizedPlate);
+      
+      // Get case_id from cases table
+      const { data: casesData, error: caseError } = await window.supabase
+        .from('cases')
+        .select('id, filing_case_id')
+        .eq('plate', normalizedPlate)
+        .order('created_at', { ascending: false });
+      
+      if (caseError) {
+        console.error('❌ SESSION 32: Failed to query cases:', caseError);
+        throw new Error(`Failed to query cases: ${caseError.message}`);
+      }
+      
+      const activeCase = casesData?.find(c => c.status === 'OPEN' || c.status === 'IN_PROGRESS') || casesData?.[0];
+      
+      if (!activeCase) {
+        console.error('❌ SESSION 32: No case found for plate:', plate);
+        throw new Error(`No case found for plate: ${plate}`);
+      }
+      
+      const caseUuid = activeCase.id;
+      console.log('✅ SESSION 32: Found case UUID:', caseUuid);
+      
+      // Query parts_search_results table for all results
+      const { data: searchResults, error: resultsError } = await window.supabase
+        .from('parts_search_results')
+        .select('*')
+        .eq('case_id', caseUuid)
+        .order('created_at', { ascending: false });
+      
+      if (resultsError) {
+        console.error('❌ SESSION 32: Error loading search results:', resultsError);
+        throw new Error('שגיאה בטעינת תוצאות חיפוש: ' + resultsError.message);
+      }
+      
+      console.log(`✅ SESSION 32: Loaded ${searchResults?.length || 0} search result records`);
+      
+      // Flatten all results from all searches
+      let allResults = [];
+      let totalSearches = 0;
+      
+      if (searchResults && searchResults.length > 0) {
+        searchResults.forEach(record => {
+          totalSearches++;
+          const results = record.results || [];
+          // Add metadata to each result
+          results.forEach(result => {
+            allResults.push({
+              ...result,
+              search_date: record.created_at,
+              search_session_id: record.session_id,
+              data_source: record.search_query?.data_source || record.data_source || 'catalog'
+            });
+          });
+        });
+      }
+      
+      console.log(`📊 SESSION 32: Total searches: ${totalSearches}, Total results: ${allResults.length}`);
+      
+      // Store for export function
+      window.currentSearchResultsData = {
+        plate: plate,
+        normalizedPlate: normalizedPlate,
+        caseUuid: caseUuid,
+        filingCaseId: activeCase.filing_case_id,
+        allResults: allResults,
+        totalSearches: totalSearches
+      };
+      
+      // Create modal to display results
+      window.createSearchResultsModal(allResults, plate, totalSearches);
+      
+    } catch (error) {
+      console.error('❌ SESSION 32: Error loading search results:', error);
+      alert('❌ Error loading search results:\n\n' + error.message);
+    }
+  };
+  
+  // SESSION 32: Create modal to display all search results
+  window.createSearchResultsModal = function(results, plate, totalSearches) {
+    console.log('🎨 SESSION 32: Creating search results modal');
+    
+    // Calculate totals
+    const totalResults = results.length;
+    const totalCost = results.reduce((sum, r) => {
+      const price = parseFloat(r.price || r.cost || 0);
+      return sum + price;
+    }, 0);
+    
+    // Get vehicle info
+    const vehicleInfo = {
+      manufacturer: document.getElementById('manufacturer')?.value || window.helper?.vehicle?.manufacturer || 'לא זמין',
+      model: document.getElementById('model')?.value || window.helper?.vehicle?.model || 'לא זמין',
+      year: document.getElementById('year')?.value || window.helper?.vehicle?.year || 'לא זמין'
+    };
+    
+    // Create modal
+    const modal = document.createElement('div');
+    modal.style.cssText = `
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 95%;
+      max-width: 1400px;
+      max-height: 90vh;
+      background: white;
+      border-radius: 16px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+      z-index: 10001;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    `;
+    
+    // Create table rows
+    const tableRows = results.map((result, index) => {
+      const price = parseFloat(result.price || result.cost || 0);
+      const formattedPrice = price ? `₪${price.toLocaleString('he-IL')}` : 'לא זמין';
+      const searchDate = result.search_date ? new Date(result.search_date).toLocaleDateString('he-IL') : 'לא זמין';
+      const dataSource = result.data_source === 'catalog' ? 'קטלוגי' : 
+                        result.data_source === 'web' ? 'אינטרנט' : 
+                        result.data_source === 'ocr' ? 'OCR' : result.data_source || 'לא זמין';
+      
+      return `
+        <tr style="border-bottom: 1px solid #e5e7eb;">
+          <td style="padding: 12px; text-align: center; font-size: 13px;">${searchDate}</td>
+          <td style="padding: 12px; text-align: center; font-size: 13px;">
+            <span style="background: #dbeafe; color: #1e40af; padding: 4px 8px; border-radius: 6px; font-weight: 600;">
+              ${dataSource}
+            </span>
+          </td>
+          <td style="padding: 12px; text-align: center; font-size: 13px; font-weight: 600;">${result.supplier_name || result.supplier || 'לא זמין'}</td>
+          <td style="padding: 12px; text-align: center; font-size: 13px; font-family: monospace; color: #1e40af;">${result.pcode || result.oem || 'לא זמין'}</td>
+          <td style="padding: 12px; text-align: right; font-size: 13px;">${result.cat_num_desc || result.part_name || result.description || 'לא זמין'}</td>
+          <td style="padding: 12px; text-align: center; font-size: 13px;">${result.part_family || result.group || 'לא מוגדר'}</td>
+          <td style="padding: 12px; text-align: center; font-size: 13px; font-weight: 600; color: #059669;">${formattedPrice}</td>
+        </tr>
+      `;
+    }).join('');
+    
+    modal.innerHTML = `
+      <div style="padding: 25px; background: linear-gradient(135deg, #2563eb 0%, #3b82f6 100%); color: white; border-bottom: 3px solid #1e40af;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+          <div style="flex: 1; display: flex; justify-content: flex-start;">
+            <div style="background: rgba(255,255,255,0.2); padding: 12px 20px; border-radius: 8px;">
+              <div style="font-size: 11px; opacity: 0.9; margin-bottom: 4px;">בעל הרשומה</div>
+              <div style="font-size: 14px; font-weight: 600;">ירון כיוף - שמאות וייעוץ</div>
+            </div>
+          </div>
+          <div style="flex: 1; display: flex; justify-content: center;">
+            <img src="https://carmelcayouf.com/wp-content/uploads/2025/06/g.webp" alt="Logo" style="height: 60px;">
+          </div>
+          <div style="flex: 1; display: flex; justify-content: flex-end; align-items: center; font-size: 14px;">
+            <span style="opacity: 0.9; margin-left: 8px;">תאריך:</span>
+            <span style="font-weight: 600;">${new Date().toLocaleDateString('he-IL')}</span>
+          </div>
+          <button onclick="window.closeSearchResultsModal();" style="position: absolute; top: 15px; left: 15px; background: rgba(255,255,255,0.2); border: none; color: white; font-size: 28px; width: 40px; height: 40px; border-radius: 50%; cursor: pointer; line-height: 1; font-weight: 300;" onmouseover="this.style.background='rgba(255,255,255,0.3)'" onmouseout="this.style.background='rgba(255,255,255,0.2)'">×</button>
+        </div>
+        <h2 style="margin: 0; font-size: 24px; text-align: center; font-weight: 700;">
+          📊 היסטוריית תוצאות חיפוש חלקים
+        </h2>
+        <p style="text-align: center; margin: 8px 0 0 0; font-size: 14px; opacity: 0.95;">
+          רכב: ${vehicleInfo.manufacturer} ${vehicleInfo.model} • שנה: ${vehicleInfo.year} • מספר רישוי: ${plate}
+        </p>
+      </div>
+      
+      <!-- Action Buttons -->
+      <div style="padding: 15px 25px; background: #f9fafb; border-bottom: 1px solid #e5e7eb; display: flex; gap: 10px; justify-content: center;">
+        <button onclick="window.openSearchResultsReviewWindow();" style="background: #8b5cf6; color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 14px; display: flex; align-items: center; gap: 8px;" onmouseover="this.style.background='#7c3aed'" onmouseout="this.style.background='#8b5cf6'">
+          🔍 סקירה
+        </button>
+        <button onclick="window.printAllSearchResults();" style="background: #10b981; color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 14px; display: flex; align-items: center; gap: 8px;" onmouseover="this.style.background='#059669'" onmouseout="this.style.background='#10b981'">
+          🖨️ הדפסה
+        </button>
+        <button onclick="window.exportSearchResultsToPDF();" style="background: #f59e0b; color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 14px; display: flex; align-items: center; gap: 8px;" onmouseover="this.style.background='#d97706'" onmouseout="this.style.background='#f59e0b'">
+          📤 ייצא ל-PDF
+        </button>
+      </div>
+      
+      <!-- Summary Info Bar -->
+      <div style="padding: 15px 25px; background: #eff6ff; border-bottom: 1px solid #bfdbfe;">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+          <div style="font-size: 15px; color: #1e40af; font-weight: 600;">
+            סה״כ <strong style="color: #1e3a8a;">${totalSearches}</strong> חיפושים • <strong style="color: #1e3a8a;">${totalResults}</strong> תוצאות כולל
+          </div>
+          <div style="font-size: 15px; color: #059669; font-weight: 600;">
+            עלות משוערת: <strong style="font-size: 17px;">₪${totalCost.toLocaleString('he-IL', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Results Table -->
+      <div style="flex: 1; overflow-y: auto; padding: 0 25px;">
+        <table style="width: 100%; border-collapse: collapse; margin-top: 15px;">
+          <thead style="position: sticky; top: 0; background: white; z-index: 10; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
+            <tr style="background: #f3f4f6; border-bottom: 2px solid #d1d5db;">
+              <th style="padding: 12px; text-align: center; font-size: 13px; font-weight: 700; color: #374151;">תאריך חיפוש</th>
+              <th style="padding: 12px; text-align: center; font-size: 13px; font-weight: 700; color: #374151;">מקור נתונים</th>
+              <th style="padding: 12px; text-align: center; font-size: 13px; font-weight: 700; color: #374151;">ספק</th>
+              <th style="padding: 12px; text-align: center; font-size: 13px; font-weight: 700; color: #374151;">מספר קטלוגי</th>
+              <th style="padding: 12px; text-align: right; font-size: 13px; font-weight: 700; color: #374151;">תיאור</th>
+              <th style="padding: 12px; text-align: center; font-size: 13px; font-weight: 700; color: #374151;">משפחת חלק</th>
+              <th style="padding: 12px; text-align: center; font-size: 13px; font-weight: 700; color: #374151;">מחיר</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${tableRows}
+          </tbody>
+        </table>
+      </div>
+      
+      <!-- Footer -->
+      <div style="padding: 20px 25px; background: #f9fafb; border-top: 2px solid #e5e7eb; display: flex; justify-content: flex-end;">
+        <button onclick="window.closeSearchResultsModal();" style="background: #6b7280; color: white; border: none; padding: 10px 24px; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 14px;" onmouseover="this.style.background='#4b5563'" onmouseout="this.style.background='#6b7280'">
+          סגור
+        </button>
+      </div>
+    `;
+    
+    document.body.appendChild(modal);
+    
+    // Add backdrop
+    const backdrop = document.createElement('div');
+    backdrop.style.cssText = `
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.5);
+      z-index: 10000;
+    `;
+    backdrop.onclick = () => window.closeSearchResultsModal();
+    document.body.appendChild(backdrop);
+    
+    console.log('✅ SESSION 32: Search results modal created');
+  };
+  
+  // SESSION 32: Close search results modal
+  window.closeSearchResultsModal = function() {
+    const modal = document.querySelector('div[style*="z-index: 10001"]');
+    const backdrop = document.querySelector('div[style*="z-index: 10000"]');
+    if (modal) modal.remove();
+    if (backdrop) backdrop.remove();
+  };
+  
+  // SESSION 32: Open review window for search results
+  window.openSearchResultsReviewWindow = function() {
+    console.log('🔍 SESSION 32: Opening review window for search results');
+    
+    if (!window.currentSearchResultsData) {
+      alert('❌ אין נתונים להצגה');
+      return;
+    }
+    
+    const { allResults, plate, totalSearches } = window.currentSearchResultsData;
+    
+    const vehicleInfo = {
+      manufacturer: document.getElementById('manufacturer')?.value || window.helper?.vehicle?.manufacturer || 'לא זמין',
+      model: document.getElementById('model')?.value || window.helper?.vehicle?.model || 'לא זמין',
+      year: document.getElementById('year')?.value || window.helper?.vehicle?.year || 'לא זמין'
+    };
+    
+    const totalResults = allResults.length;
+    const totalCost = allResults.reduce((sum, r) => sum + parseFloat(r.price || r.cost || 0), 0);
+    
+    const tableRows = allResults.map((result, index) => {
+      const price = parseFloat(result.price || result.cost || 0);
+      const formattedPrice = price ? `₪${price.toLocaleString('he-IL')}` : 'לא זמין';
+      const searchDate = result.search_date ? new Date(result.search_date).toLocaleDateString('he-IL') : 'לא זמין';
+      const dataSource = result.data_source === 'catalog' ? 'קטלוגי' : 
+                        result.data_source === 'web' ? 'אינטרנט' : 
+                        result.data_source === 'ocr' ? 'OCR' : result.data_source || 'לא זמין';
+      
+      return `
+        <tr style="border-bottom: 1px solid #e5e7eb;">
+          <td style="padding: 12px; text-align: center; font-size: 13px;">${index + 1}</td>
+          <td style="padding: 12px; text-align: center; font-size: 13px;">${searchDate}</td>
+          <td style="padding: 12px; text-align: center; font-size: 13px;">
+            <span style="background: #dbeafe; color: #1e40af; padding: 4px 8px; border-radius: 6px; font-weight: 600;">
+              ${dataSource}
+            </span>
+          </td>
+          <td style="padding: 12px; text-align: center; font-size: 13px; font-weight: 600;">${result.supplier_name || result.supplier || 'לא זמין'}</td>
+          <td style="padding: 12px; text-align: center; font-size: 13px; font-family: monospace; color: #1e40af;">${result.pcode || result.oem || 'לא זמין'}</td>
+          <td style="padding: 12px; text-align: right; font-size: 13px;">${result.cat_num_desc || result.part_name || result.description || 'לא זמין'}</td>
+          <td style="padding: 12px; text-align: center; font-size: 13px;">${result.part_family || result.group || 'לא מוגדר'}</td>
+          <td style="padding: 12px; text-align: center; font-size: 13px; font-weight: 600; color: #059669;">${formattedPrice}</td>
+        </tr>
+      `;
+    }).join('');
+    
+    const reviewWindow = window.open('', '_blank', 'width=1200,height=800');
+    if (!reviewWindow) {
+      alert('❌ לא ניתן לפתוח חלון חדש. אנא אפשר חלונות קופצים בדפדפן.');
+      return;
+    }
+    
+    reviewWindow.document.write(`
+      <!DOCTYPE html>
+      <html dir="rtl" lang="he">
+      <head>
+        <meta charset="UTF-8">
+        <title>סקירת היסטוריית תוצאות חיפוש - ${plate}</title>
+        <style>
+          * { margin: 0; padding: 0; box-sizing: border-box; }
+          body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: white; padding: 20px; }
+          .header { background: linear-gradient(135deg, #2563eb 0%, #3b82f6 100%); color: white; padding: 25px; border-radius: 12px; margin-bottom: 20px; }
+          .header-content { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+          .user-info { background: rgba(255,255,255,0.2); padding: 12px 20px; border-radius: 8px; }
+          .user-label { font-size: 11px; opacity: 0.9; margin-bottom: 4px; }
+          .user-name { font-size: 14px; font-weight: 600; }
+          .logo { height: 60px; }
+          .date-info { font-size: 14px; }
+          .title { text-align: center; font-size: 24px; font-weight: 700; margin-bottom: 8px; }
+          .subtitle { text-align: center; font-size: 14px; opacity: 0.95; }
+          .summary-bar { background: #eff6ff; padding: 15px 25px; border-radius: 8px; margin-bottom: 20px; display: flex; justify-content: space-between; }
+          .summary-item { font-size: 15px; color: #1e40af; font-weight: 600; }
+          .summary-cost { font-size: 15px; color: #059669; font-weight: 600; }
+          table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+          thead { background: #f3f4f6; }
+          th { padding: 12px; text-align: center; font-size: 13px; font-weight: 700; color: #374151; border-bottom: 2px solid #d1d5db; }
+          td { padding: 12px; text-align: center; font-size: 13px; border-bottom: 1px solid #e5e7eb; }
+          .no-print { text-align: center; margin-top: 20px; }
+          .btn { background: #3b82f6; color: white; border: none; padding: 10px 24px; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 14px; margin: 0 5px; }
+          .btn:hover { background: #2563eb; }
+          @media print {
+            .no-print { display: none; }
+            body { padding: 10px; }
+            .header { box-shadow: none; border: 1px solid #ddd; }
+            table { box-shadow: none; page-break-inside: avoid; }
+            th { background: #f0f0f0 !important; color: #000 !important; }
+            tr { page-break-inside: avoid; }
+          }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <div class="header-content">
+            <div class="user-info">
+              <div class="user-label">בעל הרשומה</div>
+              <div class="user-name">ירון כיוף - שמאות וייעוץ</div>
+            </div>
+            <img src="https://carmelcayouf.com/wp-content/uploads/2025/06/g.webp" alt="Logo" class="logo">
+            <div class="date-info">
+              <span style="opacity: 0.9; margin-left: 8px;">תאריך:</span>
+              <span style="font-weight: 600;">${new Date().toLocaleDateString('he-IL')}</span>
+            </div>
+          </div>
+          <div class="title">📊 היסטוריית תוצאות חיפוש חלקים</div>
+          <div class="subtitle">רכב: ${vehicleInfo.manufacturer} ${vehicleInfo.model} • שנה: ${vehicleInfo.year} • מספר רישוי: ${plate}</div>
+        </div>
+        
+        <div class="summary-bar">
+          <div class="summary-item">
+            סה״כ <strong>${totalSearches}</strong> חיפושים • <strong>${totalResults}</strong> תוצאות כולל
+          </div>
+          <div class="summary-cost">
+            עלות משוערת: <strong style="font-size: 17px;">₪${totalCost.toLocaleString('he-IL', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong>
+          </div>
+        </div>
+        
+        <table>
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>תאריך חיפוש</th>
+              <th>מקור נתונים</th>
+              <th>ספק</th>
+              <th>מספר קטלוגי</th>
+              <th>תיאור</th>
+              <th>משפחת חלק</th>
+              <th>מחיר</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${tableRows}
+          </tbody>
+        </table>
+        
+        <div class="no-print">
+          <button class="btn" onclick="window.print()">🖨️ הדפס</button>
+          <button class="btn" onclick="window.close()">סגור</button>
+        </div>
+      </body>
+      </html>
+    `);
+    
+    reviewWindow.document.close();
+    console.log('✅ SESSION 32: Review window opened successfully');
+  };
+  
+  // SESSION 32: Print all search results
+  window.printAllSearchResults = function() {
+    console.log('🖨️ SESSION 32: Printing all search results');
+    window.openSearchResultsReviewWindow();
+  };
+  
+  // SESSION 32: Export search results to PDF and send to Make.com
+  window.exportSearchResultsToPDF = async function() {
+    console.log('📤 SESSION 32: Starting export of search results to PDF');
+    
+    if (!window.currentSearchResultsData) {
+      alert('❌ אין נתונים לייצוא');
+      return;
+    }
+    
+    const { plate, normalizedPlate, caseUuid, filingCaseId, allResults, totalSearches } = window.currentSearchResultsData;
+    
+    if (!allResults || allResults.length === 0) {
+      alert('❌ אין תוצאות לייצוא');
+      return;
+    }
+    
+    try {
+      // Get vehicle info
+      const vehicleInfo = {
+        make: document.getElementById('manufacturer')?.value || window.helper?.vehicle?.manufacturer || '',
+        model: document.getElementById('model')?.value || window.helper?.vehicle?.model || '',
+        year: document.getElementById('year')?.value || window.helper?.vehicle?.year || ''
+      };
+      
+      // Calculate total cost
+      const totalCost = allResults.reduce((sum, r) => sum + parseFloat(r.price || r.cost || 0), 0);
+      
+      console.log('📄 SESSION 32: Generating PDF from review window...');
+      
+      // Open review window invisibly to generate PDF
+      const reviewWindow = window.open('', '_blank', 'width=1200,height=800');
+      if (!reviewWindow) {
+        throw new Error('לא ניתן לפתוח חלון לייצוא PDF. אנא אפשר חלונות קופצים.');
+      }
+      
+      // Generate same HTML as review window
+      const tableRows = allResults.map((result, index) => {
+        const price = parseFloat(result.price || result.cost || 0);
+        const formattedPrice = price ? `₪${price.toLocaleString('he-IL')}` : 'לא זמין';
+        const searchDate = result.search_date ? new Date(result.search_date).toLocaleDateString('he-IL') : 'לא זמין';
+        const dataSource = result.data_source === 'catalog' ? 'קטלוגי' : 
+                          result.data_source === 'web' ? 'אינטרנט' : 
+                          result.data_source === 'ocr' ? 'OCR' : result.data_source || 'לא זמין';
+        
+        return `
+          <tr>
+            <td>${index + 1}</td>
+            <td>${searchDate}</td>
+            <td>${dataSource}</td>
+            <td>${result.supplier_name || result.supplier || 'לא זמין'}</td>
+            <td>${result.pcode || result.oem || 'לא זמין'}</td>
+            <td>${result.cat_num_desc || result.part_name || result.description || 'לא זמין'}</td>
+            <td>${result.part_family || result.group || 'לא מוגדר'}</td>
+            <td>${formattedPrice}</td>
+          </tr>
+        `;
+      }).join('');
+      
+      reviewWindow.document.write(`
+        <!DOCTYPE html>
+        <html dir="rtl">
+        <head>
+          <meta charset="UTF-8">
+          <title>Search Results Export</title>
+          <style>
+            * { margin: 0; padding: 0; box-sizing: border-box; }
+            body { font-family: Arial, sans-serif; padding: 20px; }
+            h1 { text-align: center; margin-bottom: 20px; }
+            table { width: 100%; border-collapse: collapse; }
+            th, td { border: 1px solid #ddd; padding: 8px; text-align: center; }
+            th { background: #f0f0f0; }
+          </style>
+        </head>
+        <body>
+          <h1>היסטוריית תוצאות חיפוש חלקים - ${plate}</h1>
+          <p>רכב: ${vehicleInfo.make} ${vehicleInfo.model} ${vehicleInfo.year}</p>
+          <p>סה״כ ${totalSearches} חיפושים • ${allResults.length} תוצאות</p>
+          <table>
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>תאריך</th>
+                <th>מקור</th>
+                <th>ספק</th>
+                <th>קטלוגי</th>
+                <th>תיאור</th>
+                <th>משפחה</th>
+                <th>מחיר</th>
+              </tr>
+            </thead>
+            <tbody>${tableRows}</tbody>
+          </table>
+        </body>
+        </html>
+      `);
+      reviewWindow.document.close();
+      
+      // Wait for content to load
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      // Note: Actual PDF generation would require jsPDF or similar
+      // For now, prepare payload for webhook
+      console.log('☁️ SESSION 32: Preparing data for Make.com webhook...');
+      
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-').substring(0, 19);
+      const filename = `${plate}_search_results_history_${timestamp}.pdf`;
+      const storagePath = `${filingCaseId}/${filename}`;
+      
+      // Prepare payload
+      const payload = {
+        plate: normalizedPlate,
+        plate_formatted: plate,
+        case_id: filingCaseId,
+        case_uuid: caseUuid,
+        case_folder: normalizedPlate,
+        export_date: new Date().toISOString(),
+        vehicle: vehicleInfo,
+        total_searches: totalSearches,
+        total_results: allResults.length,
+        total_estimated_cost: totalCost,
+        pdf_storage_path: storagePath,
+        search_sessions: allResults.map(r => ({
+          search_date: r.search_date,
+          data_source: r.data_source,
+          supplier: r.supplier_name || r.supplier,
+          pcode: r.pcode || r.oem,
+          description: r.cat_num_desc || r.part_name || r.description,
+          part_family: r.part_family || r.group,
+          price: parseFloat(r.price || r.cost || 0)
+        }))
+      };
+      
+      console.log('📤 SESSION 32: Sending payload to webhook:', payload);
+      
+      // Import sendToWebhook
+      const { sendToWebhook } = await import('./webhook.js');
+      
+      // Send to webhook
+      const response = await sendToWebhook('EXPORT_FULL_SEARCH_RESULTS', payload);
+      
+      console.log('✅ SESSION 32: Export response:', response);
+      
+      // Close the temporary window
+      reviewWindow.close();
+      
+      if (response && response.success !== false) {
+        alert('✅ היסטוריית תוצאות החיפוש יוצאה בהצלחה');
+      } else {
+        throw new Error(response?.error || 'שגיאה לא ידועה בייצוא');
+      }
+      
+    } catch (error) {
+      console.error('❌ SESSION 32: Export failed:', error);
+      alert('❌ שגיאה בייצוא:\n\n' + error.message);
     }
   };
   
