@@ -413,8 +413,8 @@
       <!-- Search button - full width -->
       <button type="button" class="btn" id="imageWebSearchBtn" onclick="event.stopPropagation(); handleImageWebSearch();" style="background: #10b981; width: 100%; padding: 12px 20px; border: none; border-radius: 8px; color: white; font-size: 15px; font-weight: 600; cursor: pointer; transition: all 0.3s; box-shadow: 0 2px 4px rgba(16, 185, 129, 0.3); margin-bottom: 10px;">🔍 חפש ברשת עם תמונה</button>
       
-      <!-- Clear button - small, centered -->
-      <button type="button" class="btn" onclick="event.stopPropagation(); clearImageSelection();" style="background: #ef4444; padding: 8px 16px; border: none; border-radius: 8px; color: white; font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.3s; box-shadow: 0 2px 4px rgba(239, 68, 68, 0.3); display: block; margin: 0 auto;">🗑️ נקה בחירה</button>
+      <!-- Clear button - small, centered, hidden by default -->
+      <button type="button" class="btn" id="clearImageBtn" onclick="event.stopPropagation(); clearImageSelection();" style="background: #ef4444; padding: 8px 16px; border: none; border-radius: 8px; color: white; font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.3s; box-shadow: 0 2px 4px rgba(239, 68, 68, 0.3); display: none; margin: 0 auto;">🗑️ נקה בחירה</button>
     </div>
   </div>
 
@@ -431,8 +431,8 @@
       <!-- Upload button - full width -->
       <button type="button" class="btn" id="sendResultToOCRBtn" onclick="event.stopPropagation(); searchOCR();" style="background: #f59e0b; width: 100%; padding: 12px 20px; border: none; border-radius: 8px; color: white; font-size: 15px; font-weight: 600; cursor: pointer; transition: all 0.3s; box-shadow: 0 2px 4px rgba(245, 158, 11, 0.3); margin-bottom: 10px;">📤 שלח תוצאת חיפוש לניתוח</button>
       
-      <!-- Clear button - small, centered -->
-      <button type="button" class="btn" onclick="event.stopPropagation(); clearOCRSelection();" style="background: #ef4444; padding: 8px 16px; border: none; border-radius: 8px; color: white; font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.3s; box-shadow: 0 2px 4px rgba(239, 68, 68, 0.3); display: block; margin: 0 auto;">🗑️ נקה בחירה</button>
+      <!-- Clear button - small, centered, hidden by default -->
+      <button type="button" class="btn" id="clearOCRBtn" onclick="event.stopPropagation(); clearOCRSelection();" style="background: #ef4444; padding: 8px 16px; border: none; border-radius: 8px; color: white; font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.3s; box-shadow: 0 2px 4px rgba(239, 68, 68, 0.3); display: none; margin: 0 auto;">🗑️ נקה בחירה</button>
     </div>
   </div>
 </div>
@@ -566,7 +566,7 @@
     }
   }
   
-  // SESSION 31: Image upload handler for all three inputs
+  // SESSION 31: Image upload handler
   function handleImageUpload(input) {
     const file = input.files[0];
     if (!file) return;
@@ -575,8 +575,14 @@
     reader.onload = function(e) {
       window.imageBase64 = e.target.result;
       const img = document.getElementById('previewImage');
+      const clearBtn = document.getElementById('clearImageBtn');
+      
       img.src = window.imageBase64;
       img.style.display = 'block';
+      
+      // Show clear button
+      if (clearBtn) clearBtn.style.display = 'block';
+      
       console.log('✅ Image uploaded and previewed');
     };
     reader.readAsDataURL(file);
@@ -586,12 +592,16 @@
   function clearImageSelection() {
     const fileInput = document.getElementById('part_image');
     const previewImage = document.getElementById('previewImage');
+    const clearBtn = document.getElementById('clearImageBtn');
     
     if (fileInput) fileInput.value = '';
     
     // Hide and clear preview image
     previewImage.style.display = 'none';
     previewImage.src = '';
+    
+    // Hide clear button
+    if (clearBtn) clearBtn.style.display = 'none';
     
     // Clear the base64 data
     window.imageBase64 = null;
@@ -601,9 +611,13 @@
   
   function clearOCRSelection() {
     const fileInput = document.getElementById('resultFileUpload');
+    const clearBtn = document.getElementById('clearOCRBtn');
     
     // Clear file input
-    fileInput.value = '';
+    if (fileInput) fileInput.value = '';
+    
+    // Hide clear button
+    if (clearBtn) clearBtn.style.display = 'none';
     
     console.log('✅ OCR file selection cleared');
   }
@@ -619,6 +633,17 @@
   window.clearOCRSelection = clearOCRSelection;
 
   document.addEventListener("DOMContentLoaded", () => {
+  // SESSION 31: Add listener to show clear button when OCR file is selected
+  const ocrFileInput = document.getElementById('resultFileUpload');
+  if (ocrFileInput) {
+    ocrFileInput.addEventListener('change', function() {
+      const clearBtn = document.getElementById('clearOCRBtn');
+      if (this.files && this.files.length > 0 && clearBtn) {
+        clearBtn.style.display = 'block';
+      }
+    });
+  }
+  
   // ✅ DEBUG: Check internal browser availability on page load
   console.log('🔍 Parts Search Page Loaded - Debug Info:');
   console.log('  - openInternalBrowser function available:', typeof window.openInternalBrowser === 'function');
