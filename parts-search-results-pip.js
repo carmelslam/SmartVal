@@ -146,6 +146,9 @@ class PartsSearchResultsPiP {
     
     document.body.appendChild(this.pipWindow);
     
+    // SESSION 30: Prevent body scroll on mobile when PiP opens
+    document.body.style.overflow = 'hidden';
+    
     console.log('🪟 PiP DOM element created and appended:', {
       element: this.pipWindow,
       className: this.pipWindow.className,
@@ -895,6 +898,10 @@ class PartsSearchResultsPiP {
   hidePiP() {
     if (this.pipWindow) {
       this.pipWindow.classList.remove('pip-visible');
+      
+      // SESSION 30: Restore body scroll when PiP closes
+      document.body.style.overflow = '';
+      
       setTimeout(() => {
         if (this.pipWindow && this.pipWindow.parentNode) {
           this.pipWindow.parentNode.removeChild(this.pipWindow);
@@ -1871,6 +1878,87 @@ class PartsSearchResultsPiP {
         .footer-buttons button {
           font-size: 13px;
           padding: 8px 12px;
+        }
+      }
+
+      /* SESSION 30: Mobile PiP Fixes */
+      @media (max-width: 768px) {
+        .pip-overlay {
+          align-items: flex-start;
+          padding: 10px;
+          overflow-y: auto;
+        }
+        
+        .pip-window {
+          max-width: 100%;
+          max-height: none;
+          width: 100%;
+          margin: 10px 0;
+          border-radius: 8px;
+        }
+        
+        .pip-header {
+          padding: 10px 15px;
+          flex-wrap: wrap;
+        }
+        
+        .pip-logo {
+          height: 40px;
+        }
+        
+        .results-container {
+          max-height: 60vh;
+          padding: 0 10px;
+        }
+        
+        .result-item {
+          padding: 12px;
+        }
+        
+        .action-buttons {
+          flex-direction: column;
+          gap: 8px;
+        }
+        
+        .action-buttons button {
+          width: 100% !important;
+          min-width: 100% !important;
+        }
+
+        .header-left,
+        .header-right {
+          font-size: 12px;
+        }
+
+        .results-table th,
+        .results-table td {
+          padding: 8px 4px;
+          font-size: 12px;
+        }
+      }
+
+      @media (max-width: 480px) {
+        .pip-window {
+          border-radius: 0;
+          margin: 0;
+          max-height: 95vh;
+        }
+        
+        .pip-overlay {
+          padding: 0;
+        }
+        
+        .results-container {
+          max-height: 50vh;
+          padding: 0 5px;
+        }
+
+        .pip-header {
+          padding: 8px 10px;
+        }
+
+        .pip-logo {
+          height: 35px;
         }
       }
     `;
