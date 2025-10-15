@@ -431,6 +431,9 @@ class PartsSearchResultsPiP {
     const isChecked = checkbox.checked;
     const item = this.searchResults[itemIndex];
 
+    console.log(`🆔 SESSION 34 DEBUG: handlePartSelection called - itemId: ${itemId}, index: ${itemIndex}, checked: ${isChecked}`);
+    console.log(`🆔 SESSION 34 DEBUG: item.id from searchResults: ${item?.id}`);
+
     if (!item) {
       console.error('❌ Item not found for selection:', itemId);
       return;
@@ -440,11 +443,13 @@ class PartsSearchResultsPiP {
       if (isChecked) {
         // Add to selected items
         this.selectedItems.add(itemId);
+        console.log(`🆔 SESSION 34 DEBUG: Added to selectedItems. Set now has ${this.selectedItems.size} items:`, Array.from(this.selectedItems));
         await this.saveSelectedPart(item);
         console.log('✅ Part selected:', item.pcode || item.id);
       } else {
         // Remove from selected items
         this.selectedItems.delete(itemId);
+        console.log(`🆔 SESSION 34 DEBUG: Removed from selectedItems. Set now has ${this.selectedItems.size} items`);
         await this.removeSelectedPart(item);
         console.log('🗑️ Part deselected:', item.pcode || item.id);
       }
