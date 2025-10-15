@@ -4845,12 +4845,34 @@ ${partsText}`;
       const caseUuid = activeCase.id;
       console.log('✅ SESSION 32: Found case UUID:', caseUuid);
       
-      // Query parts_search_results table directly by plate
-      // The table stores plate, so we query by normalized plate
+      // First, get all sessions for this case
+      const { data: sessions, error: sessionsError } = await window.supabase
+        .from('parts_search_sessions')
+        .select('id')
+        .eq('case_id', caseUuid);
+      
+      if (sessionsError) {
+        console.error('❌ SESSION 32: Error loading sessions:', sessionsError);
+        throw new Error('שגיאה בטעינת היסטוריית חיפושים: ' + sessionsError.message);
+      }
+      
+      console.log(`✅ SESSION 32: Found ${sessions?.length || 0} search sessions for case`);
+      
+      if (!sessions || sessions.length === 0) {
+        console.log('⚠️ SESSION 32: No search sessions found for this case');
+        window.createSearchResultsModal([], plate, 0);
+        return;
+      }
+      
+      // Get session IDs
+      const sessionIds = sessions.map(s => s.id);
+      console.log('📋 SESSION 32: Session IDs:', sessionIds);
+      
+      // Query parts_search_results table by session_id
       const { data: searchResults, error: resultsError } = await window.supabase
         .from('parts_search_results')
         .select('*')
-        .eq('plate', normalizedPlate)
+        .in('session_id', sessionIds)
         .order('created_at', { ascending: false });
       
       if (resultsError) {
