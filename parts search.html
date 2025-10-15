@@ -4859,6 +4859,7 @@ ${partsText}`;
       }
       
       console.log(`✅ SESSION 32: Loaded ${searchResults?.length || 0} search result records`);
+      console.log('📋 SESSION 32: Raw search results from Supabase:', searchResults);
       
       // Flatten all results from all searches
       let allResults = [];
@@ -4867,20 +4868,28 @@ ${partsText}`;
       if (searchResults && searchResults.length > 0) {
         searchResults.forEach(record => {
           totalSearches++;
+          console.log(`📦 SESSION 32: Processing record ${totalSearches}:`, record);
+          
+          // The results are stored in the 'results' JSONB field
           const results = record.results || [];
+          console.log(`  └─ Results array length: ${results.length}`);
+          
           // Add metadata to each result
-          results.forEach(result => {
-            allResults.push({
-              ...result,
-              search_date: record.created_at,
-              search_session_id: record.session_id,
-              data_source: record.search_query?.data_source || record.data_source || 'catalog'
+          if (Array.isArray(results)) {
+            results.forEach(result => {
+              allResults.push({
+                ...result,
+                search_date: record.created_at,
+                search_session_id: record.session_id,
+                data_source: record.search_query?.data_source || record.data_source || 'catalog'
+              });
             });
-          });
+          }
         });
       }
       
       console.log(`📊 SESSION 32: Total searches: ${totalSearches}, Total results: ${allResults.length}`);
+      console.log('📋 SESSION 32: Flattened results:', allResults);
       
       // Store for export function
       window.currentSearchResultsData = {
