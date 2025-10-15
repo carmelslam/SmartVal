@@ -26,6 +26,7 @@ FINAL_REPORT_DRAFT: 'https://hook.eu2.make.com/j5qb0obvpa6maab9j4a7t71o70brqdfp'
   PARTS_IMAGE_SEARCH: 'https://hook.eu2.make.com/ud8wxs74pn88ktum4iilf5wm7rs3sjdf',
   INTERNAL_PARTS_OCR: 'https://hook.eu2.make.com/w11tujdfbmq03co3vakb2jfr5vo4k6w6',
  EXPORT_SELECTED_PARTS: 'https://hook.eu2.make.com/imvnclrrvmbg3vpp8synqsynedb9qit1',
+ EXPORT_FULL_SEARCH_RESULTS: 'https://hook.eu2.make.com/a6lvfjq983t0feg6mjf6yrymxrf4aysk,'
   DEV_HUB: 'https://hook.eu2.make.com/cg8j5gu0wyum6yrbl4rz2myd0pew3znt',
   ADMIN_HUB: 'https://hook.eu2.make.com/xwr4rxw9sp1v16ihuw4ldgyxa312hg2p',
   ADMIN_EXPORT_SEARCH_RESULTS: 'https://hook.eu2.make.com/rocp5ue661qn3597akgptja4ol9cnksy',
