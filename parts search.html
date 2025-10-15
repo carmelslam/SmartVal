@@ -298,20 +298,24 @@
 
     .search-card.loading {
       pointer-events: none;
-      opacity: 0.7;
+      opacity: 0.95;
+      border-color: #3b82f6;
+      box-shadow: 0 4px 20px rgba(59, 130, 246, 0.4);
+      animation: pulse-border 1.5s ease-in-out infinite;
     }
 
-    .search-card.loading .search-card-icon::after {
-      content: '';
-      display: inline-block;
-      width: 20px;
-      height: 20px;
-      border: 3px solid rgba(255, 255, 255, 0.3);
-      border-top-color: white;
-      border-radius: 50%;
-      animation: spinner-rotate 0.8s linear infinite;
-      margin-left: 10px;
-      vertical-align: middle;
+    @keyframes pulse-border {
+      0%, 100% { box-shadow: 0 4px 20px rgba(59, 130, 246, 0.4); }
+      50% { box-shadow: 0 4px 30px rgba(59, 130, 246, 0.7); }
+    }
+
+    .search-card.loading .search-card-icon {
+      animation: icon-pulse 1s ease-in-out infinite;
+    }
+
+    @keyframes icon-pulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.2); }
     }
 
     /* Mobile responsiveness for cards */
@@ -551,28 +555,36 @@
   // SESSION 31: Search handler wrappers with loading animations
   async function handleCatalogSearch() {
     const card = document.getElementById('catalogSearchCard');
+    const title = card.querySelector('.search-card-title');
+    const originalTitle = title.innerHTML;
     
     disableAllCards();
     card.classList.add('loading');
+    title.innerHTML = '⏳ מחפש במאגר הנתונים...';
     
     try {
       await searchSupabase();
     } finally {
       card.classList.remove('loading');
+      title.innerHTML = originalTitle;
       enableAllCards();
     }
   }
   
   async function handleWebSearch() {
     const card = document.getElementById('webSearchCard');
+    const title = card.querySelector('.search-card-title');
+    const originalTitle = title.innerHTML;
     
     disableAllCards();
     card.classList.add('loading');
+    title.innerHTML = '⏳ מחפש במערכת חיצונית...';
     
     try {
       await searchWebExternal();
     } finally {
       card.classList.remove('loading');
+      title.innerHTML = originalTitle;
       enableAllCards();
     }
   }
@@ -580,17 +592,21 @@
   async function handleImageWebSearch() {
     const card = document.getElementById('imageSearchCard');
     const btn = document.getElementById('imageWebSearchBtn');
+    const title = card.querySelector('.search-card-title');
     const originalText = btn.innerHTML;
+    const originalTitle = title.innerHTML;
     
     disableAllCards();
     card.classList.add('loading');
+    title.innerHTML = '⏳ שולח בקשה עם תמונה...';
     btn.disabled = true;
-    btn.innerHTML = '🔍 מחפש... <span class="spinner"></span>';
+    btn.innerHTML = '⏳ מחפש... <span class="spinner"></span>';
     
     try {
       await searchWebExternal();
     } finally {
       card.classList.remove('loading');
+      title.innerHTML = originalTitle;
       btn.disabled = false;
       btn.innerHTML = originalText;
       enableAllCards();
@@ -643,17 +659,21 @@
   async function handleOCRSearch() {
     const card = document.getElementById('ocrSearchCard');
     const btn = document.getElementById('sendResultToOCRBtn');
+    const title = card.querySelector('.search-card-title');
     const originalText = btn.innerHTML;
+    const originalTitle = title.innerHTML;
     
     disableAllCards();
     card.classList.add('loading');
+    title.innerHTML = '⏳ שולח לניתוח OCR...';
     btn.disabled = true;
-    btn.innerHTML = '📤 שולח... <span class="spinner"></span>';
+    btn.innerHTML = '⏳ מעבד את הבקשה... <span class="spinner"></span>';
     
     try {
       await searchOCR();
     } finally {
       card.classList.remove('loading');
+      title.innerHTML = originalTitle;
       btn.disabled = false;
       btn.innerHTML = originalText;
       enableAllCards();
