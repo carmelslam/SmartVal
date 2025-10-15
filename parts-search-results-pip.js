@@ -672,7 +672,7 @@ class PartsSearchResultsPiP {
       "qty": 1, // SESSION 13 TASK 1: English key for UI display
       "group": catalogItem.part_family || "", // SESSION 13 TASK 1: Part family as group
       "מחיר": `₪${price.toLocaleString('he-IL')}`,
-      "סוג חלק": catalogItem.availability || "מקורי",
+      "סוג חלק": catalogItem.source || "חלופי",
       "ספק": catalogItem.supplier_name || "",
       "supplier": catalogItem.supplier_name || "", // SESSION 13 TASK 1: English key for UI display
       "fromSuggestion": false,
@@ -684,7 +684,7 @@ class PartsSearchResultsPiP {
       "הערות": catalogItem.comments || "",
       "price": price,
       "quantity": 1,
-      "source": catalogItem.availability || "מקורי",
+      "source": catalogItem.source || "חלופי",
       
       // SESSION 15: Store both codes + unified catalog_code for duplicate checking
       "supplier_pcode": catalogItem.pcode || "",  // Supplier's part code
@@ -1206,7 +1206,7 @@ class PartsSearchResultsPiP {
                             <td class="col-catalog catalog-number" title="${item.pcode || ''}">${item.pcode || 'לא זמין'}</td>
                             <td class="col-description part-description" title="${item.cat_num_desc || ''}">${item.cat_num_desc || 'לא זמין'}</td>
                             <td class="col-family" title="${item.part_family || ''}">${item.part_family || 'לא זמין'}</td>
-                            <td class="col-type">${item.availability || 'מקורי'}</td>
+                            <td class="col-type">${item.source || 'חלופי'}</td>
                             <td class="col-price price-cell" title="${formattedPrice}">${formattedPrice}</td>
                             <td class="col-date">${versionDate}</td>
                           </tr>

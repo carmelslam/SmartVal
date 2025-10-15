@@ -131,7 +131,7 @@ class SelectedPartsList {
       "תיאור": part.cat_num_desc || "",
       "כמות": part.quantity || 1,
       "מחיר": `₪${(part.price || 0).toLocaleString('he-IL')}`,
-      "סוג חלק": part.availability || "מקורי",
+      "סוג חלק": part.source || "חלופי",
       "ספק": part.supplier_name || "",
       "fromSuggestion": false,
       "entry_method": "catalog_search",
@@ -141,7 +141,7 @@ class SelectedPartsList {
       "הערות": part.comments || "",
       "price": parseFloat(part.price) || 0,
       "quantity": part.quantity || 1,
-      "source": part.availability || "מקורי",
+      "source": part.source || "חלופי",
       
       // NEW REQUIRED FIELDS
       "מספר קטלוגי": part.pcode || "",

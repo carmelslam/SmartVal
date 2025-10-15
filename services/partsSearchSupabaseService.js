@@ -344,10 +344,10 @@
             oem: partData.oem,
             supplier_name: partData.supplier_name,
             price: partData.price,
-            source: partData.availability || partData.source,
+            source: partData.source || partData['מקור'] || 'חלופי', // Part type: מקורי/חלופי/משומש
             part_family: partData.part_family,
             // SESSION 24: Fix availability vs location mapping
-            availability: partData.stock || partData.availability_status || partData['זמינות'] || 'זמין', // Stock status (זמין/במלאי/וכו')
+            availability: partData.availability || partData.stock || partData.availability_status || partData['זמינות'] || 'זמין', // Stock status (זמין/במלאי/וכו')
             location: partData.location || partData['מיקום'] || null, // Geographic location (ישראל/גרמניה/וכו')
             comments: partData.comments || partData['הערות'] || null,
             quantity: partData.quantity || 1,
