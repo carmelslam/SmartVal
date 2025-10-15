@@ -375,7 +375,7 @@ class PartsSearchResultsPiP {
           <td class="col-family" title="${partFamily}">${partFamily}</td>
           <td class="col-model" title="${modelDisplay}">${modelDisplay}</td>
           <td class="col-year" title="${extractedYear}">${extractedYear}</td>
-          <td class="col-type">${item.availability || 'מקורי'}</td>
+          <td class="col-type">${item.source || 'חלופי'}</td>
           <td class="col-price price-cell" title="${formattedPrice}">${formattedPrice}</td>
           <td class="col-date">${versionDate}</td>
         </tr>
