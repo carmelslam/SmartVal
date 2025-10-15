@@ -22169,3 +22169,938 @@ while (heightLeft > 0) {
 **Agent:** Claude Sonnet 4  
 **Date:** 2025-10-15
 
+
+---
+
+# Session 34: Selected Parts Counter with Case ID Tracking
+
+**Date:** 2025-10-15  
+**Agent:** Claude Sonnet 4  
+**Context:** Damage Centers Wizard - Step 4 (Parts Search)
+
+---
+
+## Overview
+
+Session 34 implemented a selected parts counter in the damage centers wizard that tracks parts by **case_id (UUID)** with dual identification: **plate + case_id**. This allows multiple cases per vehicle plate, with each case maintaining its own selected parts count.
+
+---
+
+## Problem Statement
+
+### Initial Issues:
+1. **No counter for selected parts** - Users couldn't see how many parts they selected for the current case
+2. **No case_id tracking** - Selected parts were only identified by plate, causing conflicts when one plate had multiple cases
+3. **No dual identification** - System couldn't distinguish parts from different cases of the same vehicle
+4. **Counter not updating** - After selecting parts, counter didn't refresh in real-time
+5. **Refresh button resets wizard** - Page refresh sent user back to Step 1
+
+### Business Context:
+- One vehicle (plate) can have multiple insurance cases
+- Each case needs its own selected parts list
+- Users need to see part count for **current case only**, not all cases for that plate
+
+---
+
+## Tasks Breakdown
+
+### 1. Database Schema: Add case_id to selected_parts
+
+**Problem:**
+- `selected_parts` table only had `plate` column
+- No way to distinguish which case each part belongs to
+- One-to-many relationship: one plate → multiple cases
+
+**Solution:**
+- Added `case_id UUID` column with foreign key to `cases(id)`
+- Added `ON DELETE CASCADE` to clean up parts when case is deleted
+- Created indexes for performance:
+  - `idx_selected_parts_case_id` on `case_id`
+  - `idx_selected_parts_case_plate` on `(case_id, plate)`
+
+**Files Modified:**
+- `SESSION_34_ADD_CASE_ID_TO_SELECTED_PARTS.sql` (NEW)
+
+**SQL:**
+```sql
+ALTER TABLE public.selected_parts 
+ADD COLUMN IF NOT EXISTS case_id UUID 
+REFERENCES public.cases(id) ON DELETE CASCADE;
+
+CREATE INDEX IF NOT EXISTS idx_selected_parts_case_id 
+ON public.selected_parts(case_id);
+
+CREATE INDEX IF NOT EXISTS idx_selected_parts_case_plate 
+ON public.selected_parts(case_id, plate);
+```
+
+---
+
+### 2. Database Function: Count Parts by Case
+
+**Problem:**
+- Need efficient way to count selected parts for a specific case
+- Client-side counting would require fetching all rows
+
+**Solution:**
+- Created PostgreSQL function `count_selected_parts_by_case(UUID)`
+- Returns integer count directly from database
+- Granted permissions to authenticated and anon users
+
+**Files Modified:**
+- `SESSION_34_ADD_CASE_ID_TO_SELECTED_PARTS.sql`
+
+**SQL:**
+```sql
+CREATE OR REPLACE FUNCTION public.count_selected_parts_by_case(case_uuid UUID)
+RETURNS INTEGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+  part_count INTEGER;
+BEGIN
+  SELECT COUNT(*)::INTEGER INTO part_count
+  FROM public.selected_parts 
+  WHERE case_id = case_uuid;
+  
+  RETURN COALESCE(part_count, 0);
+END;
+$$;
+
+GRANT EXECUTE ON FUNCTION public.count_selected_parts_by_case(UUID) 
+TO authenticated, anon;
+```
+
+---
+
+### 3. Supabase Client: Add RPC Method
+
+**Problem:**
+- Custom `lib/supabaseClient.js` didn't have `rpc()` method
+- Couldn't call PostgreSQL functions from JavaScript
+
+**Solution:**
+- Added `rpc(functionName, params)` method to Supabase client
+- Uses `POST /rest/v1/rpc/{functionName}` endpoint
+- Returns `{ data, error }` format matching official Supabase client
+
+**Files Modified:**
+- `lib/supabaseClient.js` (lines 206-250)
+
+**Code:**
+```javascript
+rpc: async (functionName, params = {}) => {
+  try {
+    const url = `${supabaseUrl}/rest/v1/rpc/${functionName}`;
+    
+    const options = {
+      method: 'POST',
+      headers: {
+        'apikey': supabaseAnonKey,
+        'Authorization': `Bearer ${supabaseAnonKey}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(params)
+    };
+    
+    const response = await fetch(url, options);
+    
+    if (\!response.ok) {
+      const errorText = await response.text();
+      return { 
+        data: null, 
+        error: { 
+          message: `RPC call failed: ${response.status} ${errorText}`,
+          code: response.status.toString()
+        } 
+      };
+    }
+    
+    const data = await response.json();
+    return { data, error: null };
+    
+  } catch (error) {
+    return { 
+      data: null, 
+      error: { 
+        message: error.message,
+        code: 'NETWORK_ERROR'
+      } 
+    };
+  }
+}
+```
+
+---
+
+### 4. Wizard: Initialize Supabase Client
+
+**Problem:**
+- Wizard page didn't have Supabase client loaded
+- Couldn't query database from wizard
+
+**Solution:**
+- Import Supabase client as ES module
+- Assign to `window.supabase` for global access
+- Initialize before wizard loads
+
+**Files Modified:**
+- `damage-centers-wizard.html` (lines 1498-1503)
+
+**Code:**
+```javascript
+<script type="module">
+  // SESSION 34: Import and initialize Supabase client for RPC calls
+  import { supabase } from './lib/supabaseClient.js';
+  window.supabase = supabase;
+  console.log('✅ SESSION 34: Supabase client initialized');
+</script>
+```
+
+---
+
+### 5. Wizard: Load Selected Parts Count Function
+
+**Problem:**
+- Helper contains `filing_case_id` (e.g., "YC-22184003-2025") not UUID
+- RPC function expects `case_id` (UUID from cases table)
+- Need to look up UUID from filing_case_id
+
+**Solution:**
+- Created `loadSelectedPartsCount()` async function
+- Extracts filing_case_id from helper
+- Queries `cases` table to get UUID
+- Calls RPC function with UUID
+- Updates UI counter display
+
+**Files Modified:**
+- `damage-centers-wizard.html` (lines 6479-6529)
+
+**Code:**
+```javascript
+async function loadSelectedPartsCount() {
+  try {
+    const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+    const filingCaseId = helper.case_info?.case_id || helper.meta?.case_id || helper.case?.id;
+    
+    if (\!filingCaseId) {
+      console.warn('⚠️ SESSION 34: No case_id found');
+      return;
+    }
+    
+    // Look up UUID from cases table
+    const { data: caseData, error: caseError } = await window.supabase
+      .from('cases')
+      .select('id')
+      .eq('filing_case_id', filingCaseId)
+      .single();
+    
+    if (caseError || \!caseData) {
+      console.error('❌ SESSION 34: Could not find case UUID');
+      return;
+    }
+    
+    const caseUuid = caseData.id;
+    
+    // Call RPC function
+    const { data, error } = await window.supabase
+      .rpc('count_selected_parts_by_case', { case_uuid: caseUuid });
+    
+    if (error) {
+      console.error('❌ SESSION 34: Error loading count:', error);
+      return;
+    }
+    
+    // Update UI
+    const searchResultsCount = document.getElementById('searchResultsCount');
+    const searchResultsInfo = document.getElementById('searchResultsInfo');
+    
+    if (searchResultsCount && searchResultsInfo) {
+      searchResultsCount.textContent = `${data || 0} חלפים נבחרו`;
+      searchResultsInfo.style.display = 'block';
+      console.log(`✅ SESSION 34: Updated counter to show ${data || 0} selected parts`);
+    }
+    
+  } catch (error) {
+    console.error('❌ SESSION 34: Failed to load count:', error);
+  }
+}
+```
+
+---
+
+### 6. Wizard: Call Counter on Step 4 Load
+
+**Problem:**
+- Counter wasn't displayed when user navigated to Step 4
+
+**Solution:**
+- Call `loadSelectedPartsCount()` when loading Step 4 module
+- Shows counter immediately when step loads
+
+**Files Modified:**
+- `damage-centers-wizard.html` (line 2740)
+
+**Code:**
+```javascript
+case 4:
+  showLoadingState('טוען מודול חיפוש חלפים...', 'partsSearchModule');
+  setTimeout(() => {
+    try {
+      loadPartsSearchModule();
+      loadSelectedPartsCount(); // SESSION 34: Load counter
+      hideLoadingState('partsSearchModule');
+    } catch (error) {
+      console.error('❌ Failed to load parts search module:', error);
+    }
+  }, 500);
+  break;
+```
+
+---
+
+### 7. Wizard: Update Counter UI Text
+
+**Problem:**
+- UI said "נמצאו" (found) but counter shows selected parts, not search results
+
+**Solution:**
+- Changed text from "נמצאו" to "נבחרו" (selected)
+- Updated title from generic to "חלפים נבחרים" (Selected Parts)
+
+**Files Modified:**
+- `damage-centers-wizard.html` (lines 1263-1266)
+
+**Before:**
+```html
+<div class="subtotal-title">תוצאות חיפוש</div>
+<div class="subtotal-amount">0 חלפים נמצאו</div>
+```
+
+**After:**
+```html
+<div class="subtotal-title">חלפים נבחרים</div>
+<div class="subtotal-amount" id="searchResultsCount">0 חלפים נבחרו</div>
+```
+
+---
+
+### 8. Parts Search: Look Up Case UUID on Init
+
+**Problem:**
+- Parts search page receives filing_case_id from helper
+- Needs UUID to save with selected parts
+- Lookup must happen before user selects parts
+
+**Solution:**
+- Modified `populateVehicleDataFromHelper()` to async
+- Added case UUID lookup from cases table
+- Store UUID in `window.currentCaseId`
+
+**Files Modified:**
+- `parts search.html` (lines 895-925)
+
+**Code:**
+```javascript
+async function populateVehicleDataFromHelper() {
+  try {
+    const helperString = sessionStorage.getItem('helper');
+    if (helperString) {
+      const helper = JSON.parse(helperString);
+      
+      // SESSION 34: Look up case UUID from filing_case_id
+      const filingCaseId = helper.case_info?.case_id || helper.meta?.case_id;
+      if (filingCaseId && window.supabaseClient) {
+        try {
+          const { data: caseData, error } = await window.supabaseClient
+            .from('cases')
+            .select('id')
+            .eq('filing_case_id', filingCaseId)
+            .single();
+          
+          if (\!error && caseData) {
+            window.currentCaseId = caseData.id;
+            console.log(`✅ SESSION 34: Stored case UUID: ${window.currentCaseId}`);
+          } else {
+            console.warn(`⚠️ SESSION 34: Could not find UUID for: ${filingCaseId}`);
+            window.currentCaseId = null;
+          }
+        } catch (error) {
+          console.error(`❌ SESSION 34: Error looking up case UUID:`, error);
+          window.currentCaseId = null;
+        }
+      }
+      
+      // ... rest of vehicle data population
+    }
+  } catch (error) {
+    console.error('Error populating vehicle data:', error);
+  }
+}
+```
+
+---
+
+### 9. Parts Search: Add case_id to All PiP Contexts
+
+**Problem:**
+- 3 different search paths (catalog, web, OCR) each create pipContext
+- Need to pass case_id consistently across all paths
+
+**Solution:**
+- Added `caseId: window.currentCaseId || null` to all 3 pipContext objects
+
+**Files Modified:**
+- `parts search.html` (lines 1754, 2346)
+
+**Catalog Search (line 1754):**
+```javascript
+const pipContext = {
+  plate: searchParams.plate,
+  sessionId: window.currentSearchSessionId || 'no-session',
+  searchType: 'smart_search',
+  dataSource: 'catalog',
+  searchSuccess: searchSuccess,
+  errorMessage: result.error ? result.error.message : null,
+  searchTime: result.searchTime || 0,
+  searchParams: searchParams,
+  caseId: window.currentCaseId || null // SESSION 34
+};
+```
+
+**Web/OCR Search (line 2346):**
+```javascript
+const pipContext = {
+  plate: plate,
+  sessionId: window.currentSearchSessionId || 'no-session',
+  searchType: searchType,
+  dataSource: dataSource,
+  searchSuccess: transformedResults.length > 0,
+  errorMessage: null,
+  searchTime: 0,
+  searchParams: searchParams,
+  caseId: window.currentCaseId || null // SESSION 34
+};
+```
+
+---
+
+### 10. PiP: Store case_id Universally
+
+**Problem:**
+- PiP receives context from 3 different search paths
+- Need single place to capture case_id consistently
+
+**Solution:**
+- Added `currentCaseId` property to PiP class
+- Updated `showResults()` to extract case_id from context
+- Fallback to `window.currentCaseId` if not in context
+
+**Files Modified:**
+- `parts-search-results-pip.js` (lines 14, 58-60)
+
+**Constructor (line 14):**
+```javascript
+constructor() {
+  this.isVisible = false;
+  this.searchResults = [];
+  this.selectedItems = new Set();
+  this.currentPlateNumber = null;
+  this.currentSessionId = null;
+  this.currentCaseId = null; // SESSION 34: Store case UUID
+  this.pipWindow = null;
+  
+  this.init();
+}
+```
+
+**showResults Method (lines 58-60):**
+```javascript
+this.currentSessionId = searchContext.sessionId || null;
+
+// SESSION 34: Store case UUID from context (universal for all 3 search paths)
+this.currentCaseId = searchContext.caseId || searchContext.case_id || window.currentCaseId || null;
+console.log('📋 SESSION 34: Case UUID stored in PiP:', this.currentCaseId);
+```
+
+---
+
+### 11. PiP: Pass case_id When Saving Parts
+
+**Problem:**
+- `saveSelectedPart()` calls Supabase service but doesn't pass case_id
+
+**Solution:**
+- Added `case_id: this.currentCaseId` to context object
+- Supabase service receives and saves it
+
+**Files Modified:**
+- `parts-search-results-pip.js` (lines 482-495)
+
+**Code:**
+```javascript
+const partId = await partsSearchService.saveSelectedPart(
+  this.currentPlateNumber,
+  item,
+  {
+    searchResultId: this.currentSearchResultId,
+    searchContext: this.currentSearchContext,
+    case_id: this.currentCaseId // SESSION 34: Add case UUID
+  }
+);
+```
+
+---
+
+### 12. Supabase Service: Save case_id with Parts
+
+**Problem:**
+- `saveSelectedPart()` in partsSearchSupabaseService didn't save case_id
+
+**Solution:**
+- Accept `case_id` from context parameter
+- Include in INSERT statement
+
+**Files Modified:**
+- `services/partsSearchSupabaseService.js` (lines 336-337)
+
+**Code:**
+```javascript
+const { data, error } = await supabase
+  .from('selected_parts')
+  .insert({
+    search_result_id: context.searchResultId || null,
+    case_id: context.case_id || context.caseId || null, // SESSION 34
+    plate: plate,
+    part_name: partData.name || partData.part_name,
+    pcode: partData.pcode || partData.catalog_number,
+    // ... rest of fields
+  });
+```
+
+---
+
+### 13. Real-time Counter Updates After Part Selection
+
+**Problem:**
+- Counter showed correct count on Step 4 load
+- But didn't update when user selected new parts
+- User had to fully refresh wizard (losing current step) to see updated count
+
+**Solution:**
+- After part is saved to Supabase, call wizard's counter function
+- Use `window.parent.loadSelectedPartsCount()` to communicate from iframe (PiP) to parent (wizard)
+
+**Files Modified:**
+- `parts-search-results-pip.js` (lines 501-505)
+
+**Code:**
+```javascript
+if (partId) {
+  console.log('✅ SESSION 11: Part saved to Supabase selected_parts:', partId);
+  
+  // SESSION 34: Notify wizard to refresh counter
+  if (window.parent && window.parent.loadSelectedPartsCount) {
+    console.log('📊 SESSION 34: Triggering counter refresh in wizard...');
+    window.parent.loadSelectedPartsCount();
+  }
+}
+```
+
+---
+
+### 14. Refresh Button: Update Counter
+
+**Problem:**
+- "🔄 רענן חיפוש חלפים" button refreshed iframe content
+- But didn't refresh the counter
+- Users had to know to manually reload entire wizard
+
+**Solution:**
+- Added `loadSelectedPartsCount()` call to `refreshPartsSearchModule()` function
+- Counter now updates when user clicks refresh button
+
+**Files Modified:**
+- `damage-centers-wizard.html` (line 7537)
+
+**Code:**
+```javascript
+function refreshPartsSearchModule() {
+  console.log('🔄 Refreshing parts search module...');
+  try {
+    showUserNotification('מרענן חיפוש חלפים...', 'info', 1000);
+    
+    // SESSION 34: Refresh the selected parts counter
+    loadSelectedPartsCount();
+    
+    // Get current iframe
+    const iframe = document.getElementById('partsSearchModuleFrame');
+    if (iframe) {
+      iframe.contentWindow.postMessage({
+        type: 'refreshModule',
+        reason: 'user_request',
+        moduleType: 'partsSearch'
+      }, '*');
+    }
+    
+    setTimeout(() => {
+      showUserNotification('חיפוש חלפים עודכן\!', 'success', 2000);
+    }, 1000);
+    
+  } catch (error) {
+    console.error('❌ Failed to refresh parts search module:', error);
+    showUserNotification('שגיאה ברענון חיפוש חלפים', 'error', 2000);
+  }
+}
+```
+
+---
+
+## Data Flow
+
+### Complete Flow from Case Open to Parts Counted:
+
+```
+1. User opens case in earlier steps (Open Case → General Info → Levi Report)
+   - filing_case_id created (e.g., "YC-22184003-2025")
+   - Stored in helper.case_info.case_id
+   ↓
+2. Wizard loads (damage-centers-wizard.html)
+   - Supabase client initialized
+   - Helper loaded from sessionStorage
+   - Debug logs show helper structure
+   ↓
+3. User navigates to Step 4 (Parts Search)
+   - loadPartsSearchModule() called
+   - loadSelectedPartsCount() called
+   - Queries: filing_case_id → cases table → UUID
+   - Calls: count_selected_parts_by_case(UUID)
+   - Updates: Counter UI display
+   ↓
+4. Parts search iframe loads (parts search.html)
+   - populateVehicleDataFromHelper() runs
+   - Looks up case UUID: filing_case_id → UUID
+   - Stores in window.currentCaseId
+   ↓
+5. User performs search (catalog/web/OCR)
+   - Search completes with results
+   - Creates pipContext with caseId: window.currentCaseId
+   - Calls: partsResultsPiP.showResults(results, pipContext)
+   ↓
+6. PiP displays results
+   - Extracts and stores: this.currentCaseId = context.caseId
+   - User checks parts to select
+   ↓
+7. Part selected (checkbox clicked)
+   - saveSelectedPart() called
+   - Passes context with case_id: this.currentCaseId
+   - partsSearchSupabaseService.saveSelectedPart() called
+   - INSERT INTO selected_parts (case_id, plate, ...) VALUES (UUID, plate, ...)
+   - Part saved to database
+   ↓
+8. Counter auto-refreshes
+   - window.parent.loadSelectedPartsCount() called from PiP
+   - Queries: count_selected_parts_by_case(UUID)
+   - Updates: Counter UI in wizard
+   - User sees new count immediately
+```
+
+### Dual Identification:
+- **filing_case_id**: Human-readable (e.g., "YC-22184003-2025") - stored in helper, shown in UI
+- **case_id (UUID)**: Database primary key (e.g., "a1b2c3d4-e5f6-...") - used for foreign keys
+- **plate**: Vehicle license plate (e.g., "221-84-003") - additional identification
+
+### Why Dual Identification?
+```
+Scenario: Vehicle plate 221-84-003 has 3 different insurance cases
+
+cases table:
+| id (UUID)          | filing_case_id      | plate       |
+|--------------------|---------------------|-------------|
+| uuid-aaa-111       | YC-22184003-2025    | 221-84-003  |
+| uuid-bbb-222       | YC-22184003-2024    | 221-84-003  |
+| uuid-ccc-333       | YC-22184003-2023    | 221-84-003  |
+
+selected_parts table:
+| id | part_name  | plate       | case_id      |
+|----|------------|-------------|--------------|
+| 1  | Door Left  | 221-84-003  | uuid-aaa-111 | ← Case 2025
+| 2  | Bumper     | 221-84-003  | uuid-aaa-111 | ← Case 2025
+| 3  | Mirror     | 221-84-003  | uuid-bbb-222 | ← Case 2024
+
+Without case_id:
+- Query: SELECT COUNT(*) FROM selected_parts WHERE plate = '221-84-003'
+- Result: 3 parts (WRONG - includes parts from all cases\!)
+
+With case_id:
+- Query: SELECT COUNT(*) FROM selected_parts WHERE case_id = 'uuid-aaa-111'
+- Result: 2 parts (CORRECT - only parts for current case)
+```
+
+---
+
+## Technical Details
+
+### Database Schema Changes
+
+**Column Addition:**
+```sql
+ALTER TABLE public.selected_parts 
+ADD COLUMN IF NOT EXISTS case_id UUID 
+REFERENCES public.cases(id) ON DELETE CASCADE;
+```
+
+**Indexes:**
+```sql
+CREATE INDEX IF NOT EXISTS idx_selected_parts_case_id 
+ON public.selected_parts(case_id);
+
+CREATE INDEX IF NOT EXISTS idx_selected_parts_case_plate 
+ON public.selected_parts(case_id, plate);
+```
+
+**RPC Function:**
+```sql
+CREATE OR REPLACE FUNCTION public.count_selected_parts_by_case(case_uuid UUID)
+RETURNS INTEGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+  part_count INTEGER;
+BEGIN
+  SELECT COUNT(*)::INTEGER INTO part_count
+  FROM public.selected_parts 
+  WHERE case_id = case_uuid;
+  
+  RETURN COALESCE(part_count, 0);
+END;
+$$;
+```
+
+**Permissions:**
+```sql
+GRANT EXECUTE ON FUNCTION public.count_selected_parts_by_case(UUID) 
+TO authenticated;
+
+GRANT EXECUTE ON FUNCTION public.count_selected_parts_by_case(UUID) 
+TO anon;
+```
+
+---
+
+## Code Examples
+
+### Filing Case ID → UUID Lookup Pattern
+```javascript
+// Pattern used in multiple places (wizard, parts search, parts-required)
+
+const filingCaseId = helper.case_info?.case_id || helper.meta?.case_id || helper.case?.id;
+
+if (filingCaseId && window.supabaseClient) {
+  const { data: caseData, error } = await window.supabaseClient
+    .from('cases')
+    .select('id')
+    .eq('filing_case_id', filingCaseId)
+    .single();
+  
+  if (\!error && caseData) {
+    window.currentCaseId = caseData.id; // UUID stored globally
+  }
+}
+```
+
+### RPC Call Pattern
+```javascript
+const { data, error } = await window.supabase
+  .rpc('count_selected_parts_by_case', { 
+    case_uuid: caseUuid 
+  });
+
+if (\!error) {
+  console.log(`Count: ${data}`); // data is the integer count
+}
+```
+
+### Iframe → Parent Communication
+```javascript
+// From PiP (iframe) to Wizard (parent)
+if (window.parent && window.parent.loadSelectedPartsCount) {
+  window.parent.loadSelectedPartsCount(); // Refresh counter
+}
+```
+
+---
+
+## Files Modified Summary
+
+### SQL Files (New)
+1. **SESSION_34_ADD_CASE_ID_TO_SELECTED_PARTS.sql**
+   - Add case_id column with foreign key
+   - Create indexes
+   - Create count_selected_parts_by_case() function
+   - Grant permissions
+   - Verification tests
+
+### Backend/Services
+1. **lib/supabaseClient.js**
+   - Lines 206-250: Added rpc() method
+
+2. **services/partsSearchSupabaseService.js**
+   - Lines 336-337: Added case_id to INSERT statement
+
+### Frontend - Wizard
+1. **damage-centers-wizard.html**
+   - Lines 1263-1266: Updated counter UI text
+   - Lines 1498-1503: Import and initialize Supabase client
+   - Lines 1680-1687: Added debug logging for helper structure on init
+   - Line 2740: Call loadSelectedPartsCount() on Step 4 load
+   - Lines 6479-6529: Created loadSelectedPartsCount() function
+   - Line 7537: Added counter refresh to refreshPartsSearchModule()
+
+### Frontend - Parts Search
+1. **parts search.html**
+   - Lines 895-925: Added case UUID lookup in populateVehicleDataFromHelper()
+   - Line 1754: Added caseId to catalog pipContext
+   - Line 2346: Added caseId to web/OCR pipContext
+
+### Frontend - PiP
+1. **parts-search-results-pip.js**
+   - Line 14: Added currentCaseId property to constructor
+   - Lines 58-60: Store case_id in showResults()
+   - Lines 490-495: Pass case_id when saving parts
+   - Lines 501-505: Refresh counter after part saved
+
+---
+
+## Testing Results
+
+### ✅ Verified Working:
+
+**Database Level:**
+- ✅ case_id column added successfully
+- ✅ Foreign key constraint working (ON DELETE CASCADE)
+- ✅ Indexes created and optimized queries
+- ✅ RPC function returns correct counts
+- ✅ Permissions granted to authenticated and anon users
+
+**Counter Display:**
+- ✅ Counter shows 0 on first Step 4 load (no parts yet)
+- ✅ Counter loads and displays existing count
+- ✅ Counter shows in Hebrew: "X חלפים נבחרו"
+- ✅ Counter div becomes visible when count loads
+
+**Real-time Updates:**
+- ✅ Counter updates immediately after selecting part in catalog search
+- ✅ Counter updates immediately after selecting part in web search
+- ✅ Counter updates immediately after selecting part in OCR search
+- ✅ Refresh button updates counter without resetting wizard step
+
+**Case Isolation:**
+- ✅ Parts saved with correct case UUID
+- ✅ Counter only shows parts for current case
+- ✅ Different cases for same plate have independent counts
+
+**Lookup Chain:**
+- ✅ Helper contains filing_case_id correctly
+- ✅ Lookup finds matching UUID in cases table
+- ✅ UUID passed through all 3 search paths
+- ✅ PiP receives and stores case UUID
+- ✅ Supabase service saves with UUID
+
+### Known Behaviors:
+
+1. **Counter Element:**
+   - Hidden by default (`display:none`)
+   - Shown by JavaScript when count loads
+   - Located in Step 4 HTML (visible only on that step)
+
+2. **Lookup Timing:**
+   - UUID lookup happens once on page init
+   - Cached in `window.currentCaseId`
+   - Reused for all part selections in that session
+
+3. **Iframe Communication:**
+   - Uses `window.parent.loadSelectedPartsCount()`
+   - Requires function to exist in parent window
+   - Silent failure if parent function not available
+
+---
+
+## Lessons Learned
+
+1. **UUID vs Human-Readable IDs:**
+   - Database foreign keys need UUIDs (case_id)
+   - UI shows human-readable IDs (filing_case_id)
+   - Always lookup UUID from filing_case_id before database operations
+
+2. **Multiple Code Paths:**
+   - 3 search paths (catalog, web, OCR) need consistent implementation
+   - Create universal handler (PiP.showResults) rather than duplicating logic
+   - Test all 3 paths independently
+
+3. **Iframe-Parent Communication:**
+   - Check if parent function exists before calling
+   - Use `window.parent.functionName()` pattern
+   - Consider message passing for complex scenarios
+
+4. **Real-time Updates:**
+   - Users expect immediate UI updates after actions
+   - Call refresh functions after database writes
+   - Don't rely on full page refreshes
+
+5. **Performance:**
+   - Use database functions (RPC) for aggregations
+   - Index frequently queried columns (case_id, plate)
+   - Cache lookups in global variables when appropriate
+
+6. **Testing Strategy:**
+   - Test counter on initial load (Step 4 first visit)
+   - Test counter after selecting parts (real-time update)
+   - Test counter persistence (navigate away and back)
+   - Test with multiple cases for same plate (isolation)
+
+---
+
+## Known Issues / Future Improvements
+
+### Current Limitations:
+1. **Counter doesn't update when parts are removed** - only handles additions
+2. **No visual feedback during counter loading** - appears instantly or not at all
+3. **Error handling could be more user-friendly** - console logs only
+4. **No counter on other steps** - only visible on Step 4
+
+### Potential Enhancements:
+1. Add counter refresh when parts are deleted/removed
+2. Show loading spinner while counting
+3. Display toast notification on count update
+4. Show cumulative parts count across all wizard steps
+5. Add "View Selected Parts" link from counter
+6. Implement optimistic UI updates (instant local count, verify with server)
+
+### Edge Cases to Consider:
+1. What if case UUID lookup fails? (Currently: counter doesn't load)
+2. What if RPC call times out? (Currently: error logged, counter stays at 0)
+3. What if user has no internet? (Currently: silent failure)
+4. What if two users select parts for same case simultaneously? (Currently: last write wins)
+
+---
+
+## Session Statistics
+
+- **Duration:** Full session (continuation from Session 33)
+- **Tasks Completed:** 14 major tasks
+- **Files Modified:** 6 files
+- **SQL Files Created:** 1 new migration file
+- **Lines Changed:** ~150 lines across all files
+- **Database Changes:** 1 column, 2 indexes, 1 function, 2 permissions
+- **Bug Fixes:** 2 (counter not updating, refresh button)
+- **Feature Additions:** 1 (selected parts counter with case isolation)
+
+---
+
+**End of Session 34 Log**  
+**Agent:** Claude Sonnet 4  
+**Date:** 2025-10-15
+
