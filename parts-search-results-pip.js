@@ -497,6 +497,12 @@ class PartsSearchResultsPiP {
         
         if (partId) {
           console.log('✅ SESSION 11: Part saved to Supabase selected_parts:', partId);
+          
+          // SESSION 34: Notify wizard to refresh counter
+          if (window.parent && window.parent.loadSelectedPartsCount) {
+            console.log('📊 SESSION 34: Triggering counter refresh in wizard...');
+            window.parent.loadSelectedPartsCount();
+          }
         }
       } catch (error) {
         console.error('❌ SESSION 11: Error saving part to Supabase:', error);
