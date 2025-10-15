@@ -5376,26 +5376,32 @@ ${partsText}`;
         }
       });
       
-      // SESSION 33: Convert canvas to PDF with multiple pages
+      // SESSION 33: Convert canvas to PDF with multiple pages and margins
       const { jsPDF } = window.jspdf;
       const pdf = new jsPDF('p', 'mm', 'a4');
       const imgData = canvas.toDataURL('image/jpeg', 0.7);  // JPEG with 70% quality
-      const imgWidth = 210; // A4 width in mm
+      const pageWidth = 210; // A4 width in mm
       const pageHeight = 297; // A4 height in mm
-      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+      const topMargin = 15; // Top margin
+      const bottomMargin = 15; // Bottom margin
+      const leftMargin = 10; // Left margin
+      const rightMargin = 10; // Right margin
+      const contentWidth = pageWidth - leftMargin - rightMargin; // Usable width
+      const contentHeight = pageHeight - topMargin - bottomMargin; // Usable height per page
+      const imgHeight = (canvas.height * contentWidth) / canvas.width;
       let heightLeft = imgHeight;
-      let position = 0;
+      let position = topMargin;
       
-      // SESSION 33: Add first page
-      pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight);
-      heightLeft -= pageHeight;
+      // SESSION 33: Add first page with all margins (top, left)
+      pdf.addImage(imgData, 'JPEG', leftMargin, position, contentWidth, imgHeight);
+      heightLeft -= contentHeight;
       
       // SESSION 33: Add additional pages if content is longer than one page
       while (heightLeft > 0) {
-        position = heightLeft - imgHeight;
+        position = -(imgHeight - heightLeft) + topMargin;
         pdf.addPage();
-        pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight);
-        heightLeft -= pageHeight;
+        pdf.addImage(imgData, 'JPEG', leftMargin, position, contentWidth, imgHeight);
+        heightLeft -= contentHeight;
       }
       
       // SESSION 33: Close preview window
