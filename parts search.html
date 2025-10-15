@@ -215,6 +215,105 @@
         -webkit-overflow-scrolling: touch !important;
       }
     }
+
+    /* SESSION 31: 4-Card Search Methods Grid */
+    .search-methods-container {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 15px;
+      margin: 20px 0;
+    }
+
+    .search-card {
+      background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+      border: 2px solid #cbd5e1;
+      border-radius: 12px;
+      padding: 20px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .search-card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
+      border-color: #3b82f6;
+    }
+
+    .search-card.catalog {
+      background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+      border-color: #3b82f6;
+    }
+
+    .search-card.web {
+      background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
+      border-color: #10b981;
+    }
+
+    .search-card.image {
+      background: linear-gradient(135deg, #e9d5ff 0%, #d8b4fe 100%);
+      border-color: #8b5cf6;
+    }
+
+    .search-card.ocr {
+      background: linear-gradient(135deg, #fed7aa 0%, #fdba74 100%);
+      border-color: #f59e0b;
+    }
+
+    .search-card-icon {
+      font-size: 48px;
+      margin-bottom: 10px;
+      display: block;
+    }
+
+    .search-card-title {
+      font-size: 18px;
+      font-weight: bold;
+      color: #1e3a8a;
+      margin: 0;
+    }
+
+    .search-card-content {
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.3s ease;
+      margin-top: 0;
+    }
+
+    .search-card.expanded .search-card-content {
+      max-height: 500px;
+      margin-top: 15px;
+    }
+
+    .search-card.expanded {
+      grid-column: span 2;
+    }
+
+    /* Mobile responsiveness for cards */
+    @media (max-width: 768px) {
+      .search-methods-container {
+        grid-template-columns: 1fr;
+        gap: 10px;
+      }
+
+      .search-card {
+        padding: 15px;
+      }
+
+      .search-card-icon {
+        font-size: 36px;
+      }
+
+      .search-card-title {
+        font-size: 16px;
+      }
+
+      .search-card.expanded {
+        grid-column: span 1;
+      }
+    }
   </style>
 </head>
 <body>
@@ -238,9 +337,6 @@
     <input type="text" id="vin" name="vin" placeholder="מספר שלדה">
     <input type="text" id="oem" name="oem" placeholder="מספר OEM">
  <input type="text" id="free_query" name="free_query" placeholder="חיפוש חופשי">
-<h2 class="right-small-heading">העלה/צלם תמונה לחיפוש (אופציונלי)</h2>
-    <input type="file" id="part_image" accept="image/*" capture="environment" placeholder="תמונת חלק (אופציונלי)">
-    <img id="previewImage" />
     <select id="part_group" onchange="updatePartNameOptions()">
       <option value="" disabled selected hidden>בחר קבוצת חלקים</option>
     </select>
@@ -256,11 +352,55 @@
 </select>
 <input type="number" id="part_quantity" placeholder="כמות" min="1" value="1">
 
+<!-- SESSION 31: 4-Card Search Methods Grid -->
+<h2 style="text-align: center; font-size: 20px; color: #1e3a8a; margin: 30px 0 20px 0;">שיטת חיפוש</h2>
+
+<div class="search-methods-container">
+  <!-- Card 1: Catalog Search -->
+  <div class="search-card catalog" onclick="searchSupabase()">
+    <span class="search-card-icon">🔍</span>
+    <h3 class="search-card-title">חיפוש קטלוגי</h3>
+    <p style="font-size: 14px; color: #64748b; margin: 10px 0 0 0;">חפש במאגר הנתונים</p>
+  </div>
+
+  <!-- Card 2: Web Search -->
+  <div class="search-card web" onclick="searchWebExternal()">
+    <span class="search-card-icon">🌐</span>
+    <h3 class="search-card-title">חיפוש ברשת</h3>
+    <p style="font-size: 14px; color: #64748b; margin: 10px 0 0 0;">חפש חלקים ברשת</p>
+  </div>
+
+  <!-- Card 3: Image Search -->
+  <div class="search-card image" id="imageSearchCard" onclick="toggleImageCard(event)">
+    <span class="search-card-icon">📷</span>
+    <h3 class="search-card-title">חיפוש לפי תמונה</h3>
+    <p style="font-size: 14px; color: #64748b; margin: 10px 0 0 0;">העלה או צלם תמונה</p>
+    
+    <div class="search-card-content" id="imageSearchContent">
+      <h4 class="right-small-heading" style="text-align: center; font-size: 16px; margin: 15px 0 10px 0;">העלה/צלם תמונה לחיפוש</h4>
+      <input type="file" id="part_image" accept="image/*" capture="environment" style="display: block; width: 100%; padding: 8px; margin-bottom: 10px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;">
+      <img id="previewImage" style="display: none; max-width: 100%; margin-bottom: 10px; border: 1px solid #ccc; border-radius: 8px;" />
+      <button type="button" class="btn" onclick="event.stopPropagation(); searchWebExternal();" style="background: #10b981; width: 100%; padding: 10px 20px; border: none; border-radius: 8px; color: white; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.3s; box-shadow: 0 2px 4px rgba(16, 185, 129, 0.3);">🔍 חפש ברשת עם תמונה</button>
+    </div>
+  </div>
+
+  <!-- Card 4: OCR Search -->
+  <div class="search-card ocr" id="ocrSearchCard" onclick="toggleOCRCard(event)">
+    <span class="search-card-icon">📄</span>
+    <h3 class="search-card-title">ניתוח OCR</h3>
+    <p style="font-size: 14px; color: #64748b; margin: 10px 0 0 0;">שלח תוצאת חיפוש לניתוח</p>
+    
+    <div class="search-card-content" id="ocrSearchContent">
+      <h4 style="text-align: center; font-size: 16px; margin: 15px 0 10px 0; color: #374151;">העלה תוצאת חיפוש (PDF/תמונה)</h4>
+      <input type="file" id="resultFileUpload" accept=".pdf,.png,.jpg,.jpeg,.html" style="display: block; width: 100%; padding: 8px; margin-bottom: 10px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;">
+      <button type="button" class="btn" id="sendResultToOCRBtn" onclick="event.stopPropagation(); searchOCR();" style="background: #f59e0b; width: 100%; padding: 10px 20px; border: none; border-radius: 8px; color: white; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.3s; box-shadow: 0 2px 4px rgba(245, 158, 11, 0.3);">📤 שלח תוצאת חיפוש לניתוח</button>
+    </div>
+  </div>
+</div>
+
 <!-- Action Buttons Row -->
 <div style="display: flex; gap: 10px; margin: 15px 0;">
   <button type="button" class="btn" onclick="addFullPart()" style="background: #f59e0b; flex: 1; padding: 12px 20px; border: none; border-radius: 8px; color: white; font-size: 15px; font-weight: 600; cursor: pointer; transition: all 0.3s; box-shadow: 0 2px 4px rgba(245, 158, 11, 0.3);" onmouseover="this.style.background='#d97706'; this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 8px rgba(245, 158, 11, 0.4)';" onmouseout="this.style.background='#f59e0b'; this.style.transform='translateY(0)'; this.style.boxShadow='0 2px 4px rgba(245, 158, 11, 0.3)';">➕ הוסף חלק לרשימה</button>
-  
-  <button class="btn" type="button" onclick="searchSupabase()" style="background: #10b981; flex: 1; padding: 12px 20px; border: none; border-radius: 8px; color: white; font-size: 15px; font-weight: 600; cursor: pointer; transition: all 0.3s; box-shadow: 0 2px 4px rgba(16, 185, 129, 0.3);" onmouseover="this.style.background='#059669'; this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 8px rgba(16, 185, 129, 0.4)';" onmouseout="this.style.background='#10b981'; this.style.transform='translateY(0)'; this.style.boxShadow='0 2px 4px rgba(16, 185, 129, 0.3)';">🔍 חפש במאגר הנתונים</button>
 </div>
 
 <!-- Selected Parts List Header and Display (matching screenshot design) -->
@@ -291,24 +431,20 @@
   <button type="button" class="btn" onclick="clearSearchResults()" style="background: #6c757d; margin-top: 10px;">נקה תוצאות</button>
 </div>
 
-<h2 style="text-align: right; font-size: 18px; margin-top: 30px;">חיפוש חלפים באתר</h2>
-
-<!-- External Site Buttons Row -->
-<div style="display: flex; gap: 10px; margin: 15px 0; flex-wrap: wrap;">
-  <button type="button" class="btn" onclick="generateExternalForm()" style="background: #10b981; flex: 1; min-width: 200px; padding: 12px 20px; border: none; border-radius: 8px; color: white; font-size: 15px; font-weight: 600; cursor: pointer; transition: all 0.3s; box-shadow: 0 2px 4px rgba(16, 185, 129, 0.3);" onmouseover="this.style.background='#059669'; this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 8px rgba(16, 185, 129, 0.4)';" onmouseout="this.style.background='#10b981'; this.style.transform='translateY(0)'; this.style.boxShadow='0 2px 4px rgba(16, 185, 129, 0.3)';">🚀 צור טופס חכם לאתר חיצוני</button>
+<!-- SESSION 31: Hidden old scattered search sections (moved to cards above) -->
+<div style="display: none;">
+  <h2 style="text-align: right; font-size: 18px; margin-top: 30px;">חיפוש חלפים באתר</h2>
   
-  <button type="button" class="btn" onclick="openSearchSite()" style="background: #8b5cf6; flex: 1; min-width: 200px; padding: 12px 20px; border: none; border-radius: 8px; color: white; font-size: 15px; font-weight: 600; cursor: pointer; transition: all 0.3s; box-shadow: 0 2px 4px rgba(139, 92, 246, 0.3);" onmouseover="this.style.background='#7c3aed'; this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 8px rgba(139, 92, 246, 0.4)';" onmouseout="this.style.background='#8b5cf6'; this.style.transform='translateY(0)'; this.style.boxShadow='0 2px 4px rgba(139, 92, 246, 0.3)';">🌐 פתח אתר car-part לחיפוש</button>
+  <!-- External Site Buttons Row -->
+  <div style="display: flex; gap: 10px; margin: 15px 0; flex-wrap: wrap;">
+    <button type="button" class="btn" onclick="generateExternalForm()" style="background: #10b981; flex: 1; min-width: 200px; padding: 12px 20px; border: none; border-radius: 8px; color: white; font-size: 15px; font-weight: 600; cursor: pointer; transition: all 0.3s; box-shadow: 0 2px 4px rgba(16, 185, 129, 0.3);" onmouseover="this.style.background='#059669'; this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 8px rgba(16, 185, 129, 0.4)';" onmouseout="this.style.background='#10b981'; this.style.transform='translateY(0)'; this.style.boxShadow='0 2px 4px rgba(16, 185, 129, 0.3)';">🚀 צור טופס חכם לאתר חיצוני</button>
+    
+    <button type="button" class="btn" onclick="openSearchSite()" style="background: #8b5cf6; flex: 1; min-width: 200px; padding: 12px 20px; border: none; border-radius: 8px; color: white; font-size: 15px; font-weight: 600; cursor: pointer; transition: all 0.3s; box-shadow: 0 2px 4px rgba(139, 92, 246, 0.3);" onmouseover="this.style.background='#7c3aed'; this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 8px rgba(139, 92, 246, 0.4)';" onmouseout="this.style.background='#8b5cf6'; this.style.transform='translateY(0)'; this.style.boxShadow='0 2px 4px rgba(139, 92, 246, 0.3)';">🌐 פתח אתר car-part לחיפוש</button>
+  </div>
+  
+  <h2 style="text-align: right; font-size: 18px; margin-top: 30px;">חיפוש חלפים במערכת חיצונית</h2>
+  <button class="btn" type="button" onclick="searchWebExternal()" style="background: #3b82f6; width: 100%; padding: 12px 20px; border: none; border-radius: 8px; color: white; font-size: 15px; font-weight: 600; cursor: pointer; transition: all 0.3s; box-shadow: 0 2px 4px rgba(59, 130, 246, 0.3); margin: 10px 0;" onmouseover="this.style.background='#2563eb'; this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 8px rgba(59, 130, 246, 0.4)';" onmouseout="this.style.background='#3b82f6'; this.style.transform='translateY(0)'; this.style.boxShadow='0 2px 4px rgba(59, 130, 246, 0.3)';">🔍 חפש חלקים ברשת</button>
 </div>
-
-<!-- File Upload Section -->
-<div style="margin: 15px 0; padding: 15px; background: #f9fafb; border-radius: 8px; border: 1px solid #e5e7eb;">
-  <label for="resultFileUpload" style="display: block; margin-bottom: 10px; font-weight: 600; color: #374151; font-size: 14px;">העלה תוצאת חיפוש (PDF/תמונה)</label>
-  <input type="file" id="resultFileUpload" accept=".pdf,.png,.jpg,.jpeg,.html" style="display: block; width: 100%; padding: 8px; margin-bottom: 10px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;">
-  <button type="button" class="btn" id="sendResultToOCRBtn" onclick="searchOCR()" style="background: #f59e0b; width: 100%; padding: 10px 20px; border: none; border-radius: 8px; color: white; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.3s; box-shadow: 0 2px 4px rgba(245, 158, 11, 0.3);" onmouseover="this.style.background='#d97706'; this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 8px rgba(245, 158, 11, 0.4)';" onmouseout="this.style.background='#f59e0b'; this.style.transform='translateY(0)'; this.style.boxShadow='0 2px 4px rgba(245, 158, 11, 0.3)';">📤 שלח תוצאת חיפוש לניתוח</button>
-</div>
-
-<h2 style="text-align: right; font-size: 18px; margin-top: 30px;">חיפוש חלפים במערכת חיצונית</h2>
-<button class="btn" type="button" onclick="searchWebExternal()" style="background: #3b82f6; width: 100%; padding: 12px 20px; border: none; border-radius: 8px; color: white; font-size: 15px; font-weight: 600; cursor: pointer; transition: all 0.3s; box-shadow: 0 2px 4px rgba(59, 130, 246, 0.3); margin: 10px 0;" onmouseover="this.style.background='#2563eb'; this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 8px rgba(59, 130, 246, 0.4)';" onmouseout="this.style.background='#3b82f6'; this.style.transform='translateY(0)'; this.style.boxShadow='0 2px 4px rgba(59, 130, 246, 0.3)';">🔍 חפש חלקים ברשת</button>
 
 <!-- Enhanced Part Management -->
 <div style="margin-top: 20px;">
@@ -323,6 +459,37 @@
   <div class="footer">All rights reserved © Carmel Cayouf</div>
 </div>
 <script>
+  // SESSION 31: Toggle functions for expandable search cards
+  function toggleImageCard(event) {
+    event.stopPropagation();
+    const card = document.getElementById('imageSearchCard');
+    const ocrCard = document.getElementById('ocrSearchCard');
+    
+    if (card.classList.contains('expanded')) {
+      card.classList.remove('expanded');
+    } else {
+      card.classList.add('expanded');
+      ocrCard.classList.remove('expanded');
+    }
+  }
+  
+  function toggleOCRCard(event) {
+    event.stopPropagation();
+    const card = document.getElementById('ocrSearchCard');
+    const imageCard = document.getElementById('imageSearchCard');
+    
+    if (card.classList.contains('expanded')) {
+      card.classList.remove('expanded');
+    } else {
+      card.classList.add('expanded');
+      imageCard.classList.remove('expanded');
+    }
+  }
+  
+  // Make toggle functions globally accessible
+  window.toggleImageCard = toggleImageCard;
+  window.toggleOCRCard = toggleOCRCard;
+
   document.addEventListener("DOMContentLoaded", () => {
   // ✅ DEBUG: Check internal browser availability on page load
   console.log('🔍 Parts Search Page Loaded - Debug Info:');
