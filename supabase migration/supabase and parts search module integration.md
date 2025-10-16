@@ -24005,4 +24005,73 @@ Before fixing a field mapping bug, search the entire codebase for similar patter
     7. The connections to the reports generation and validation pages is done via the helper so the helper needs to be extremely synced and all current connections not to change- we can think of linking the report generation to supabase data but this is not in the scope of this task .
     8. All the observation from your analysis may be correct but need to be viewed through the lenses of the  flow above.
 
+parts_required supabse table schema :
+create table public.parts_required (
+  id uuid not null default gen_random_uuid (),
+  case_id uuid null,
+  damage_center_code text null,
+  part_number text null,
+  part_name text null,
+  manufacturer text null,
+  quantity integer null default 1,
+  unit_price numeric(10, 2) null,
+  selected_supplier text null,
+  status text null default 'PENDING'::text,
+  metadata jsonb null,
+  created_at timestamp with time zone not null default now(),
+  updated_at timestamp with time zone not null default now(),
+  plate text null,
+  make text null,
+  model text null,
+  trim text null,
+  year text null,
+  engine_volume text null,
+  engine_code text null,
+  engine_type text null,
+  vin text null,
+  part_group text null,
+  pcode text null,
+  cat_num_desc text null,
+  price numeric null,
+  source text null,
+  oem text null,
+  availability text null,
+  location text null,
+  comments text null,
+  supplier_name text null,
+  part_family text null,
+  constraint parts_required_pkey primary key (id),
+  constraint parts_required_case_id_fkey foreign KEY (case_id) references cases (id) on delete CASCADE,
+  constraint parts_required_status_check check (
+    (
+      status = any (
+        array[
+          'PENDING'::text,
+          'ORDERED'::text,
+          'RECEIVED'::text,
+          'CANCELLED'::text
+        ]
+      )
+    )
+  )
+) TABLESPACE pg_default;
 
+create index IF not exists idx_parts_required_plate on public.parts_required using btree (plate) TABLESPACE pg_default;
+
+create index IF not exists idx_parts_required_damage_center on public.parts_required using btree (damage_center_code) TABLESPACE pg_default;
+
+create index IF not exists idx_parts_required_oem on public.parts_required using btree (oem) TABLESPACE pg_default;
+
+create index IF not exists idx_parts_required_pcode on public.parts_required using btree (pcode) TABLESPACE pg_default;
+
+create index IF not exists idx_parts_required_make_model on public.parts_required using btree (make, model) TABLESPACE pg_default;
+
+create index IF not exists idx_parts_case on public.parts_required using btree (case_id) TABLESPACE pg_default;
+
+create index IF not exists idx_parts_status on public.parts_required using btree (status) TABLESPACE pg_default;
+
+create index IF not exists idx_parts_supplier on public.parts_required using btree (selected_supplier) TABLESPACE pg_default;
+
+create trigger update_parts_required_updated_at BEFORE
+update on parts_required for EACH row
+execute FUNCTION update_updated_at ();
