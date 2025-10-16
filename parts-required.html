@@ -347,6 +347,15 @@ form button {
           globalHelper = contextData.helper;
         }
         
+        // SESSION 38: Store damage center code for Supabase queries
+        if (contextData.damageCenter?.code) {
+          window.currentDamageCenterCode = contextData.damageCenter.code;
+          console.log(`✅ SESSION 38: Stored damage center code: ${window.currentDamageCenterCode}`);
+        } else if (contextData.damageCenterId) {
+          window.currentDamageCenterCode = contextData.damageCenterId;
+          console.log(`✅ SESSION 38: Stored damage center ID as code: ${window.currentDamageCenterCode}`);
+        }
+        
         // Store search results globally for suggestions
         if (contextData.searchResults && contextData.searchResults.length > 0) {
           window.wizardSearchResults = contextData.searchResults;
@@ -2657,7 +2666,7 @@ function savePartsData() {
       
       if (!caseId || !damageCenterCode) {
         console.warn('  ⚠️ Missing IDs, falling back to helper');
-        return loadPartsFromHelper();
+        return loadExistingPartsIntoUI();
       }
       
       try {
@@ -2670,7 +2679,7 @@ function savePartsData() {
         
         if (error) {
           console.error('  ❌ Supabase load error:', error);
-          return loadPartsFromHelper();
+          return loadExistingPartsIntoUI();
         }
         
         console.log(`  ✅ Loaded ${parts?.length || 0} parts from Supabase`);
@@ -2688,12 +2697,12 @@ function savePartsData() {
           
         } else {
           console.log('  ℹ️ No Supabase data, trying helper');
-          loadPartsFromHelper();
+          loadExistingPartsIntoUI();
         }
         
       } catch (error) {
         console.error('  ❌ Load error:', error);
-        loadPartsFromHelper();
+        loadExistingPartsIntoUI();
       }
     }
 
