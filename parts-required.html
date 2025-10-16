@@ -1251,17 +1251,38 @@ function savePartsData() {
         return;
       }
 
-      // Remove duplicates and limit to 10 results
-      const uniqueSuggestions = suggestions.filter((suggestion, index, self) => 
-        index === self.findIndex(s => s.name === suggestion.name)
-      ).slice(0, 10);
-
-      dropdown.innerHTML = '<option value="">בחר הצעה...</option>' +
-        uniqueSuggestions.map((s, i) => `
-          <option value="${i}">${s.name}${s.category ? ` (${s.category})` : ''}${s.price ? ` - ₪${s.price}` : ''}</option>
-        `).join('');
+      // Remove duplicates and separate by source
+      const supabaseSuggestions = suggestions.filter(s => s.fromSupabase);
+      const bankSuggestions = suggestions.filter(s => s.fromPartsBank);
+      
+      // Limit results
+      const topSupabase = supabaseSuggestions.slice(0, 8);
+      const topBank = topSupabase.length < 8 ? bankSuggestions.slice(0, 10 - topSupabase.length) : [];
+      
+      const allSuggestions = [...topSupabase, ...topBank];
+      
+      let dropdownHTML = '<option value="">בחר הצעה...</option>';
+      
+      if (topSupabase.length > 0) {
+        dropdownHTML += '<option disabled>───── מחלקים שנבחרו ─────</option>';
+        topSupabase.forEach((s, i) => {
+          dropdownHTML += `<option value="${i}">${s.name}${s.price ? ` - ₪${s.price}` : ''}</option>`;
+        });
+      }
+      
+      if (topBank.length > 0) {
+        dropdownHTML += '<option disabled>───── בחירה כללית ─────</option>';
+        topBank.forEach((s, i) => {
+          const idx = topSupabase.length + i;
+          dropdownHTML += `<option value="${idx}">${s.name}${s.category ? ` (${s.category})` : ''}</option>`;
+        });
+      }
+      
+      dropdown.innerHTML = dropdownHTML;
       dropdown.style.display = "";
-      dropdown._suggestions = uniqueSuggestions;
+      dropdown.style.textAlign = "right";
+      dropdown.style.direction = "rtl";
+      dropdown._suggestions = allSuggestions;
 
       // ✅ ENHANCED: Comprehensive autofill functionality
       dropdown.onchange = function () {
