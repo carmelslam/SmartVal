@@ -151,9 +151,14 @@ class SupabaseQueryBuilder {
       }
     };
 
-    // SESSION 39: Add upsert Prefer header for conflict resolution
+    // SESSION 40 FIX: Add upsert Prefer header with correct PostgREST syntax
     if (this.upsertConflict && this.method === 'POST') {
+      // PostgREST requires: resolution=merge-duplicates AND return=representation
       options.headers['Prefer'] = 'resolution=merge-duplicates,return=representation';
+      
+      // SESSION 40 FIX: Add ON CONFLICT column to URL params
+      // PostgREST syntax: ?on_conflict=column_name
+      this.params.set('on_conflict', this.upsertConflict);
     }
 
     if (this.insertData && (this.method === 'POST' || this.method === 'PATCH')) {
