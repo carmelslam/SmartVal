@@ -469,15 +469,20 @@ form button {
   const row = document.createElement("div");
   row.className = "row";
   row.setAttribute("data-row-index", newRowIndex);
+  row.setAttribute("data-row-uuid", crypto.randomUUID());
   row.innerHTML = `
     <div class="input-wrap">
           <input type="text" class="name" placeholder="שם החלק" oninput="suggestPart(this); autoSaveOnChange(this)">
           <select class="suggest-dropdown" style="display:none;"></select>
         </div>
-        <input type="text" class="desc" placeholder="תיאור" oninput="suggestPart(this); autoSaveOnChange(this)">
-        <input type="number" class="quantity" placeholder="כמות" value="1" min="1" style="width: 60px; margin-left: 8px;" onchange="autoSaveOnChange(this)">
-        <input type="text" class="price" placeholder="מחיר" onchange="autoSaveOnChange(this)">
-        <select class="source">
+        <input type="text" class="description" placeholder="תיאור" oninput="autoSaveOnChange(this)">
+        <input type="number" class="price-per-unit" placeholder="מחיר ליח׳" step="0.01" min="0" oninput="calculatePriceFields(this.closest('.row'))">
+        <input type="number" class="reduction" placeholder="הנחה %" step="0.01" min="0" max="100" value="0" oninput="calculatePriceFields(this.closest('.row'))">
+        <input type="number" class="wear" placeholder="בלאי %" step="0.01" min="0" max="100" value="0" oninput="calculatePriceFields(this.closest('.row'))">
+        <input type="text" class="updated-price" placeholder="מחיר מעודכן" readonly style="background: #f0f0f0; cursor: not-allowed;">
+        <input type="number" class="quantity" placeholder="כמות" value="1" min="1" style="width: 60px;" onchange="calculatePriceFields(this.closest('.row'))">
+        <input type="text" class="total-cost" placeholder="סה״כ" readonly style="background: #f0f0f0; cursor: not-allowed;">
+        <select class="source" onchange="autoSaveOnChange(this)">
           <option value="">מקור</option>
           <option value="חליפי/מקורי">חליפי/מקורי</option>
           <option value="חליפי/משומש">חליפי/משומש</option>
@@ -486,6 +491,7 @@ form button {
           <option value="משומש">משומש</option>
           <option value="ריק">ריק</option>
         </select>
+        <input type="hidden" class="price" value="">
         <div class="row-actions" style="display: flex; gap: 5px; margin-right: 8px;">
           <button type="button" class="btn-edit" onclick="editPartRow(${newRowIndex})" title="ערוך חלק" style="
             background: #f59e0b; color: white; border: none; padding: 6px 10px; 
