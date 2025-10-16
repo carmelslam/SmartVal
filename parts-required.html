@@ -388,6 +388,9 @@ form button {
         // Show wizard mode indicator
         showWizardModeUI(contextData);
         
+        // SESSION 38: Load parts from Supabase
+        await loadPartsFromSupabase();
+        
       } catch (error) {
         console.error('❌ Failed to handle wizard context:', error);
       }
@@ -484,7 +487,7 @@ form button {
         <label style="display: block; font-size: 11px; color: #555; margin-bottom: 4px; font-weight: bold;">סה״כ</label>
         <input type="text" class="total-cost" placeholder="₪0.00" readonly style="width: 100%; padding: 8px; font-size: 13px; border-radius: 8px; border: 1px solid #ccc; background: #f0f0f0; cursor: not-allowed;">
       </div>
-      <div style="flex: 1 1 150px;">
+      <div style="flex: 0 0 100px;">
         <label style="display: block; font-size: 11px; color: #555; margin-bottom: 4px; font-weight: bold;">ספק</label>
         <input type="text" class="supplier" placeholder="ספק" oninput="autoSaveOnChange(this)" style="width: 100%; padding: 8px; font-size: 13px; border-radius: 8px; border: 1px solid #ccc;">
       </div>
@@ -2419,6 +2422,390 @@ function savePartsData() {
     } catch (e) {
       console.warn('Module import not supported');
     }
+  </script>
+  
+  <script>
+    /**
+     * SESSION 38: Save row to Supabase parts_required table
+     * Uses UPSERT by row_uuid for edit mode
+     */
+    async function saveRowToSupabase(row) {
+      console.log('💾 SESSION 38: Saving row to Supabase...');
+      
+      const caseId = window.currentCaseId;
+      const plate = window.helper?.meta?.plate || globalHelper?.meta?.plate || globalHelper?.vehicle?.plate;
+      const damageCenterCode = window.currentDamageCenterCode || 
+                              sessionStorage.getItem('active_damage_center_code') ||
+                              window.helper?.current_damage_center?.code;
+      
+      if (!caseId || !plate || !damageCenterCode) {
+        console.error('❌ Missing required IDs:', { caseId, plate, damageCenterCode });
+        return;
+      }
+      
+      let rowUuid = row.dataset.rowUuid;
+      if (!rowUuid) {
+        rowUuid = crypto.randomUUID();
+        row.dataset.rowUuid = rowUuid;
+      }
+      
+      const partName = row.querySelector('.name')?.value || '';
+      const catalogCode = row.querySelector('.catalog-code')?.value || '';
+      const description = row.querySelector('.description')?.value || '';
+      const source = row.querySelector('.source')?.value || '';
+      const pricePerUnit = parseFloat(row.querySelector('.price-per-unit')?.value) || 0;
+      const reductionPct = parseFloat(row.querySelector('.reduction')?.value) || 0;
+      const wearPct = parseFloat(row.querySelector('.wear')?.value) || 0;
+      const updatedPriceStr = row.querySelector('.updated-price')?.value || '₪0';
+      const updatedPrice = parseFloat(updatedPriceStr.replace(/[^0-9.-]/g, '')) || 0;
+      const quantity = parseInt(row.querySelector('.quantity')?.value) || 1;
+      const totalCostStr = row.querySelector('.total-cost')?.value || '₪0';
+      const totalCost = parseFloat(totalCostStr.replace(/[^0-9.-]/g, '')) || 0;
+      const supplier = row.querySelector('.supplier')?.value || '';
+      
+      if (!partName.trim() && !description.trim()) {
+        console.log('  ⚠️ Empty row, skipping');
+        return;
+      }
+      
+      let partMetadata = {};
+      try {
+        partMetadata = JSON.parse(row.dataset.partData || '{}');
+      } catch (e) {
+        console.warn('  ⚠️ Could not parse part metadata');
+      }
+      
+      const supabaseData = {
+        row_uuid: rowUuid,
+        case_id: caseId,
+        plate: plate,
+        damage_center_code: damageCenterCode,
+        
+        part_name: partName,
+        description: description,
+        source: source,
+        quantity: quantity,
+        
+        price_per_unit: pricePerUnit,
+        reduction_percentage: reductionPct,
+        wear_percentage: wearPct,
+        updated_price: updatedPrice,
+        total_cost: totalCost,
+        unit_price: updatedPrice,
+        price: totalCost,
+        
+        pcode: catalogCode || partMetadata.pcode || '',
+        oem: partMetadata.oem || '',
+        supplier_name: supplier || partMetadata.supplier_name || partMetadata.ספק || '',
+        cat_num_desc: partMetadata.cat_num_desc || '',
+        part_family: partMetadata.part_family || '',
+        manufacturer: partMetadata.manufacturer || '',
+        selected_supplier: supplier || partMetadata.supplier_name || '',
+        
+        make: window.helper?.vehicle?.manufacturer || '',
+        model: window.helper?.vehicle?.model || '',
+        year: window.helper?.vehicle?.year || '',
+        trim: window.helper?.vehicle?.trim || '',
+        engine_code: window.helper?.vehicle?.engine_code || '',
+        engine_type: window.helper?.vehicle?.fuel_type || '',
+        vin: window.helper?.vehicle?.vin || '',
+        
+        metadata: partMetadata,
+        updated_at: new Date().toISOString()
+      };
+      
+      console.log('  📤 Saving:', { row_uuid: rowUuid, part_name: partName, total_cost: totalCost });
+      
+      try {
+        const { data, error } = await window.supabaseClient
+          .from('parts_required')
+          .upsert(supabaseData, { 
+            onConflict: 'row_uuid',
+            ignoreDuplicates: false 
+          })
+          .select();
+        
+        if (error) {
+          console.error('❌ Supabase save error:', error);
+          return;
+        }
+        
+        console.log('  ✅ Saved to Supabase:', data);
+        
+        saveToHelper(supabaseData, damageCenterCode);
+        
+      } catch (error) {
+        console.error('❌ SESSION 38: Save error:', error);
+      }
+    }
+
+    let saveTimeout;
+    function debouncedSave(row) {
+      clearTimeout(saveTimeout);
+      saveTimeout = setTimeout(() => {
+        console.log('💾 SESSION 38: Debounced save triggered');
+        saveRowToSupabase(row);
+        sendPartsUpdateToWizard();
+      }, 500);
+    }
+
+    window.saveRowToSupabase = saveRowToSupabase;
+    window.debouncedSave = debouncedSave;
+  </script>
+  
+  <script>
+    /**
+     * SESSION 38: Save to helper.current_damage_center
+     */
+    function saveToHelper(partData, damageCenterCode) {
+      console.log('📝 SESSION 38: Saving to helper.current_damage_center');
+      
+      const helper = window.helper || globalHelper;
+      
+      if (!helper.current_damage_center) {
+        helper.current_damage_center = { 
+          code: damageCenterCode,
+          Parts: { parts_required: [] } 
+        };
+      }
+      if (!helper.current_damage_center.Parts) {
+        helper.current_damage_center.Parts = { parts_required: [] };
+      }
+      if (!helper.current_damage_center.Parts.parts_required) {
+        helper.current_damage_center.Parts.parts_required = [];
+      }
+      
+      const existingIndex = helper.current_damage_center.Parts.parts_required
+        .findIndex(p => p.row_uuid === partData.row_uuid);
+      
+      if (existingIndex >= 0) {
+        helper.current_damage_center.Parts.parts_required[existingIndex] = partData;
+        console.log('  ✅ Updated existing part in helper');
+      } else {
+        helper.current_damage_center.Parts.parts_required.push(partData);
+        console.log('  ✅ Added new part to helper');
+      }
+      
+      sessionStorage.setItem('helper', JSON.stringify(helper));
+      window.helper = helper;
+      if (typeof globalHelper !== 'undefined') {
+        globalHelper = helper;
+      }
+      
+      console.log(`  📊 Total parts: ${helper.current_damage_center.Parts.parts_required.length}`);
+    }
+
+    /**
+     * SESSION 38: Flatten to parts_search.required_parts
+     * Called by wizard after saving damage center
+     */
+    function syncRequiredPartsToHelper() {
+      console.log('🔄 SESSION 38: Syncing to parts_search.required_parts');
+      
+      const helper = window.helper || globalHelper;
+      
+      if (!helper.centers || !Array.isArray(helper.centers)) {
+        console.log('  ⚠️ No damage centers to sync');
+        return;
+      }
+      
+      const allRequiredParts = [];
+      
+      helper.centers.forEach((center, index) => {
+        const centerParts = center.Parts?.parts_required;
+        
+        if (centerParts && Array.isArray(centerParts)) {
+          centerParts.forEach(part => {
+            allRequiredParts.push({
+              ...part,
+              damage_center_id: center.id,
+              damage_center_code: center.code || `מוקד ${center.number || index + 1}`,
+              damage_center_location: center.location || '',
+              damage_center_number: center.number || index + 1
+            });
+          });
+        }
+      });
+      
+      helper.parts_search = helper.parts_search || {};
+      helper.parts_search.required_parts = allRequiredParts;
+      
+      sessionStorage.setItem('helper', JSON.stringify(helper));
+      window.helper = helper;
+      if (typeof globalHelper !== 'undefined') {
+        globalHelper = helper;
+      }
+      
+      console.log(`  ✅ Synced ${allRequiredParts.length} parts from ${helper.centers.length} centers`);
+    }
+
+    window.saveToHelper = saveToHelper;
+    window.syncRequiredPartsToHelper = syncRequiredPartsToHelper;
+  </script>
+  
+  <script>
+    /**
+     * SESSION 38: Load parts from Supabase
+     * Supabase is source of truth
+     */
+    async function loadPartsFromSupabase() {
+      console.log('📥 SESSION 38: Loading parts from Supabase...');
+      
+      const caseId = window.currentCaseId;
+      const damageCenterCode = window.currentDamageCenterCode || 
+                              sessionStorage.getItem('active_damage_center_code');
+      
+      if (!caseId || !damageCenterCode) {
+        console.warn('  ⚠️ Missing IDs, falling back to helper');
+        return loadPartsFromHelper();
+      }
+      
+      try {
+        const { data: parts, error } = await window.supabaseClient
+          .from('parts_required')
+          .select('*')
+          .eq('case_id', caseId)
+          .eq('damage_center_code', damageCenterCode)
+          .order('created_at', { ascending: true });
+        
+        if (error) {
+          console.error('  ❌ Supabase load error:', error);
+          return loadPartsFromHelper();
+        }
+        
+        console.log(`  ✅ Loaded ${parts?.length || 0} parts from Supabase`);
+        
+        if (parts && parts.length > 0) {
+          document.getElementById('partsList').innerHTML = '';
+          
+          parts.forEach(part => {
+            addPartFromSupabaseData(part);
+          });
+          
+          calculatePartsTotals();
+          
+          overwriteHelperWithSupabaseData(parts, damageCenterCode);
+          
+        } else {
+          console.log('  ℹ️ No Supabase data, trying helper');
+          loadPartsFromHelper();
+        }
+        
+      } catch (error) {
+        console.error('  ❌ Load error:', error);
+        loadPartsFromHelper();
+      }
+    }
+
+    /**
+     * SESSION 38: Add part row from Supabase data
+     */
+    function addPartFromSupabaseData(partData) {
+      const partsList = document.getElementById('partsList');
+      const newRowIndex = partsList.children.length;
+      const newRow = document.createElement('div');
+      newRow.className = 'row';
+      newRow.setAttribute('data-row-index', newRowIndex);
+      newRow.setAttribute('data-row-uuid', partData.row_uuid);
+      newRow.dataset.partData = JSON.stringify(partData.metadata || {});
+      
+      newRow.innerHTML = `
+    <div style="display: flex; width: 100%; gap: 10px; margin-bottom: 10px;">
+      <div class="input-wrap" style="flex: 2;">
+        <label style="display: block; font-size: 12px; color: #555; margin-bottom: 4px; font-weight: bold;">שם החלק</label>
+        <input type="text" class="name" value="${partData.part_name || ''}" oninput="suggestPart(this); autoSaveOnChange(this)" style="width: 100%; padding: 10px; font-size: 14px; border-radius: 8px; border: 1px solid #ccc;">
+        <select class="suggest-dropdown" style="display:none;"></select>
+      </div>
+      <div style="flex: 1;">
+        <label style="display: block; font-size: 12px; color: #555; margin-bottom: 4px; font-weight: bold;">קוד קטלוגי</label>
+        <input type="text" class="catalog-code" value="${partData.pcode || ''}" oninput="autoSaveOnChange(this)" style="width: 100%; padding: 10px; font-size: 14px; border-radius: 8px; border: 1px solid #ccc;">
+      </div>
+      <div style="flex: 2;">
+        <label style="display: block; font-size: 12px; color: #555; margin-bottom: 4px; font-weight: bold;">תיאור</label>
+        <input type="text" class="description" value="${partData.description || ''}" oninput="autoSaveOnChange(this)" style="width: 100%; padding: 10px; font-size: 14px; border-radius: 8px; border: 1px solid #ccc;">
+      </div>
+    </div>
+    <div style="display: flex; width: 100%; gap: 8px; align-items: center; flex-wrap: wrap;">
+      <div style="flex: 0 0 80px;">
+        <label style="display: block; font-size: 11px; color: #555; margin-bottom: 4px; font-weight: bold;">מחיר ליח׳</label>
+        <input type="number" class="price-per-unit" value="${partData.price_per_unit || 0}" step="0.01" min="0" oninput="calculatePriceFields(this.closest('.row'))" style="width: 100%; padding: 8px; font-size: 13px; border-radius: 8px; border: 1px solid #ccc;">
+      </div>
+      <div style="flex: 0 0 70px;">
+        <label style="display: block; font-size: 11px; color: #555; margin-bottom: 4px; font-weight: bold;">הנחה %</label>
+        <input type="number" class="reduction" value="${partData.reduction_percentage || 0}" step="0.1" min="0" max="100" oninput="calculatePriceFields(this.closest('.row'))" style="width: 100%; padding: 8px; font-size: 13px; border-radius: 8px; border: 1px solid #ccc;">
+      </div>
+      <div style="flex: 0 0 70px;">
+        <label style="display: block; font-size: 11px; color: #555; margin-bottom: 4px; font-weight: bold;">בלאי %</label>
+        <input type="number" class="wear" value="${partData.wear_percentage || 0}" step="0.1" min="0" max="100" oninput="calculatePriceFields(this.closest('.row'))" style="width: 100%; padding: 8px; font-size: 13px; border-radius: 8px; border: 1px solid #ccc;">
+      </div>
+      <div style="flex: 0 0 90px;">
+        <label style="display: block; font-size: 11px; color: #555; margin-bottom: 4px; font-weight: bold;">מחיר מעודכן</label>
+        <input type="text" class="updated-price" value="₪${(partData.updated_price || 0).toFixed(2)}" readonly style="width: 100%; padding: 8px; font-size: 13px; border-radius: 8px; border: 1px solid #ccc; background: #f0f0f0; cursor: not-allowed;">
+      </div>
+      <div style="flex: 0 0 60px;">
+        <label style="display: block; font-size: 11px; color: #555; margin-bottom: 4px; font-weight: bold;">כמות</label>
+        <input type="number" class="quantity" value="${partData.quantity || 1}" min="1" onchange="calculatePriceFields(this.closest('.row'))" style="width: 100%; padding: 8px; font-size: 13px; border-radius: 8px; border: 1px solid #ccc; text-align: center;">
+      </div>
+      <div style="flex: 0 0 90px;">
+        <label style="display: block; font-size: 11px; color: #555; margin-bottom: 4px; font-weight: bold;">סה״כ</label>
+        <input type="text" class="total-cost" value="₪${(partData.total_cost || 0).toFixed(2)}" readonly style="width: 100%; padding: 8px; font-size: 13px; border-radius: 8px; border: 1px solid #ccc; background: #f0f0f0; cursor: not-allowed;">
+      </div>
+      <div style="flex: 0 0 100px;">
+        <label style="display: block; font-size: 11px; color: #555; margin-bottom: 4px; font-weight: bold;">ספק</label>
+        <input type="text" class="supplier" value="${partData.supplier_name || ''}" oninput="autoSaveOnChange(this)" style="width: 100%; padding: 8px; font-size: 13px; border-radius: 8px; border: 1px solid #ccc;">
+      </div>
+      <div style="flex: 0 0 90px;">
+        <label style="display: block; font-size: 11px; color: #555; margin-bottom: 4px; font-weight: bold;">מקור</label>
+        <select class="source" onchange="autoSaveOnChange(this)" style="width: 100%; padding: 8px; font-size: 13px; border-radius: 8px; border: 1px solid #ccc;">
+          <option value="">בחר מקור</option>
+          <option value="חליפי/מקורי" ${partData.source === 'חליפי/מקורי' ? 'selected' : ''}>חליפי/מקורי</option>
+          <option value="חליפי/משומש" ${partData.source === 'חליפי/משומש' ? 'selected' : ''}>חליפי/משומש</option>
+          <option value="חדש מקורי" ${partData.source === 'חדש מקורי' ? 'selected' : ''}>חדש מקורי</option>
+          <option value="חליפי" ${partData.source === 'חליפי' ? 'selected' : ''}>חליפי</option>
+          <option value="משומש" ${partData.source === 'משומש' ? 'selected' : ''}>משומש</option>
+          <option value="ריק" ${partData.source === 'ריק' ? 'selected' : ''}>ריק</option>
+        </select>
+      </div>
+      <input type="hidden" class="price" value="₪${(partData.updated_price || 0).toFixed(2)}">
+      <div class="row-actions" style="display: flex; gap: 5px;">
+        <button type="button" class="btn-delete" onclick="deletePartRow(${newRowIndex})" title="מחק חלק" style="background: #dc3545; color: white; border: none; padding: 6px 10px; border-radius: 5px; cursor: pointer; font-size: 12px; font-weight: bold;">🗑️</button>
+        <button type="button" class="btn-edit" onclick="editPartRow(${newRowIndex})" title="ערוך חלק" style="background: #f59e0b; color: white; border: none; padding: 6px 10px; border-radius: 5px; cursor: pointer; font-size: 12px; font-weight: bold;">✏️</button>
+      </div>
+    </div>
+  `;
+      
+      partsList.appendChild(newRow);
+    }
+
+    /**
+     * SESSION 38: Overwrite helper with Supabase data
+     */
+    function overwriteHelperWithSupabaseData(parts, damageCenterCode) {
+      console.log('  📝 Overwriting helper with Supabase data');
+      
+      const helper = window.helper || globalHelper;
+      
+      if (!helper.current_damage_center) {
+        helper.current_damage_center = { code: damageCenterCode, Parts: {} };
+      }
+      if (!helper.current_damage_center.Parts) {
+        helper.current_damage_center.Parts = {};
+      }
+      
+      helper.current_damage_center.Parts.parts_required = parts;
+      
+      sessionStorage.setItem('helper', JSON.stringify(helper));
+      window.helper = helper;
+      if (typeof globalHelper !== 'undefined') {
+        globalHelper = helper;
+      }
+      
+      console.log(`  ✅ Helper overwritten with ${parts.length} parts`);
+    }
+
+    window.loadPartsFromSupabase = loadPartsFromSupabase;
+    window.addPartFromSupabaseData = addPartFromSupabaseData;
+    window.overwriteHelperWithSupabaseData = overwriteHelperWithSupabaseData;
   </script>
 </body>
 </html>
