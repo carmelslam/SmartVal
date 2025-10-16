@@ -3586,42 +3586,35 @@
           const partsData = moduleData.parts || [];
           
           if (helper.current_damage_center) {
-            // SESSION 40: Save parts with NEW structure matching current_damage_center format
-            // This ensures centers[] array has same structure as Supabase
+            // SESSION 40: CLEAN structure - 25 fields, NO duplicates
             helper.current_damage_center.Parts.parts_required = partsData.map(part => ({
-              // Core identification
+              // Core identification (4 fields)
               row_uuid: part.row_uuid || crypto.randomUUID(),
               case_id: helper.current_damage_center.case_id || '',
               plate: helper.current_damage_center.plate || helper.vehicleInfo?.plate || '',
               damage_center_code: helper.current_damage_center.code || '',
               
-              // Part info - NEW English fields
+              // Part info (7 fields)
               part_name: part.name || part.part || '',
-              name: part.name || part.part || '', // Duplicate for compatibility
               description: part.description || part.תיאור || '',
-              source: part.source || 'manual',
-              quantity: parseInt(part.quantity || part.כמות) || 1,
+              pcode: part.pcode || part.catalog_code || part.part_number || '',
+              oem: part.oem || part['מספר OEM'] || '',
+              supplier_name: part.supplier || part.supplier_name || part.ספק || '',
+              part_family: part.part_family || '',
+              manufacturer: part.manufacturer || '',
               
-              // Pricing - NEW structure with all calculation fields
-              // SESSION 40 FIX: Don't use cascading fallbacks - they override distinct values
-              price_per_unit: parseFloat(part.price_per_unit || part.unit_price) || 0,
+              // Pricing (5 fields) - NO cascading fallbacks
+              price_per_unit: parseFloat(part.price_per_unit) || 0,
               reduction_percentage: parseFloat(part.reduction_percentage || part.reduction) || 0,
               wear_percentage: parseFloat(part.wear_percentage || part.wear) || 0,
               updated_price: parseFloat(part.updated_price) || 0,
               total_cost: parseFloat(part.total_cost) || 0,
-              unit_price: parseFloat(part.price_per_unit || part.unit_price) || 0,
-              price: parseFloat(part.price || part.updated_price || part.price_per_unit) || 0,
               
-              // Catalog info
-              pcode: part.pcode || part.catalog_code || part.part_number || '',
-              oem: part.oem || part['מספר OEM'] || '',
-              supplier_name: part.supplier || part.supplier_name || part.ספק || '',
-              cat_num_desc: part.cat_num_desc || '',
-              part_family: part.part_family || '',
-              manufacturer: part.manufacturer || '',
-              selected_supplier: part.selected_supplier || part.supplier || '',
+              // Source (2 fields)
+              source: part.source || 'manual',
+              quantity: parseInt(part.quantity || part.כמות) || 1,
               
-              // Vehicle info - SESSION 40 FIX: Use current_damage_center first
+              // Vehicle info (7 fields)
               make: helper.current_damage_center["Vehicle Make"] || helper.vehicleInfo?.make || '',
               model: helper.current_damage_center["Vehicle Model"] || helper.vehicleInfo?.model || '',
               year: helper.current_damage_center["Vehicle Year"] || helper.vehicleInfo?.year || '',
@@ -3630,18 +3623,12 @@
               engine_type: helper.current_damage_center["Engine Type"] || helper.vehicleInfo?.engine_type || '',
               vin: helper.current_damage_center["VIN"] || helper.vehicleInfo?.vin || '',
               
-              // Metadata
+              // Metadata (2 fields)
               metadata: part.metadata || {},
               updated_at: new Date().toISOString(),
               
-              // SESSION 39: BACKWARD COMPATIBILITY for OLD structure (Hebrew fields)
-              // Keep these for reports that still expect Hebrew field names
-              תיאור: part.description || part.תיאור || '',
-              כמות: parseInt(part.quantity || part.כמות) || 1,
-              מחיר: parseFloat(part.price || part.updated_price || part.price_per_unit) || 0,
-              'סוג חלק': part.source || 'חליפי/מקורי',
-              ספק: part.supplier || part.supplier_name || '',
-              'מספר OEM': part.oem || part.part_number || '',
+              // Hebrew fields for reports ONLY (4 fields)
+              מחיר: parseFloat(part.updated_price) || 0,
               מיקום: part.location || 'ישראל',
               הערות: part.notes || '',
               זמינות: part.availability || 'זמין'

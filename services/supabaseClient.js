@@ -14,6 +14,7 @@ class SupabaseQueryBuilder {
     this.insertData = null;
     this.singleResult = false;
     this.upsertConflict = null; // SESSION 39: For upsert conflict resolution
+    this.params = new URLSearchParams(); // SESSION 40: Initialize params for upsert
   }
 
   select(fields = '*') {
@@ -106,30 +107,31 @@ class SupabaseQueryBuilder {
   buildUrl() {
     let url = `${supabaseUrl}/rest/v1/${this.table}`;
     
-    const params = new URLSearchParams();
+    // SESSION 40: Use this.params (class property) instead of local variable
+    this.params = new URLSearchParams(); // Reset params each time
     
     // Add select fields
     if (this.selectFields !== '*') {
-      params.append('select', this.selectFields);
+      this.params.append('select', this.selectFields);
     }
     
     // Add filters
     this.filters.forEach(filter => {
       const [key, value] = filter.split('=');
-      params.append(key, value);
+      this.params.append(key, value);
     });
     
     // Add order
     if (this.orderBy) {
-      params.append('order', this.orderBy);
+      this.params.append('order', this.orderBy);
     }
     
     // Add limit
     if (this.limitCount) {
-      params.append('limit', this.limitCount);
+      this.params.append('limit', this.limitCount);
     }
 
-    const paramString = params.toString();
+    const paramString = this.params.toString();
     if (paramString) {
       url += '?' + paramString;
     }
