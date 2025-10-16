@@ -466,7 +466,7 @@ Both paths run at the same time
 3. Test file operations
 4. Implement signed URL generation
 5. Set up automated backups
-6. REPORTS PDF STORAGE AND EXPORT TO MAKE.COM - CREATE A NEW TABLE/BUCKET FOR REPORTS : ASSOCIAATED BY CASE_ID AND PLATE - WITH CURRRENT (TRUE/FALSE) DETECTION.
+
 
 ### Phase 8: Production Readiness & Optimization
 1. Tighten security policies
@@ -483,12 +483,17 @@ Both paths run at the same time
 שינוי נתונים
 יומן פעולות
 2. modify the button לוח בקרת אימות in admin hub, to give a health cases check of all teh cases in supabase, think of a smart way to display health and statistics - this is a cretive task that you need to think about before making . unlink the file validation-dashboard.html and create a new health file , also change teh button name to sth that is compitable with the funtion 
+3. add tracking tables, fee payments and case status that update automatically - make.com can read from it 
+4. add fee tracking payment in admin that connects to case id and can be modified on UI - with reporting abikity , reminders and alerts - use table structure - can be used for tracking tables or use teh current tracking tables : |מספר רכב|	תוצרת|	שנת יצור|	בעלים| 	טלפון|	תאריך נזק|	סוג נזק|	סוכן	|סה"כ שכ"ט	| תאריך שידור|	מוסך|	מטפל בתביעה|	צפי תשלום	| סטטוס תשלום	|הערות
+rtl. 
+ask for tracking tables clarifications and current formats. 
 
 
 ### Phase 10 : connect the load report on modules to supabase
 1. final report builder and estimate builder have reload case, ourpose : to reload existing reports.
 2. Restored case on selection page P populates the plate window in estimator builder and the fina report builder in the window טען תיק קיים
 3. The buttons of the report retrieval will call the actual report of the plate from supabase buckets
+4. REPORTS PDF STORAGE AND EXPORT TO MAKE.COM - CREATE A NEW TABLE/BUCKET FOR REPORTS : ASSOCIAATED BY CASE_ID AND PLATE - WITH CURRRENT (TRUE/FALSE) DETECTION.
 
 **finish**
 delete all test pages and debugs used in teh migration process - just what is not neccessary anymore .
