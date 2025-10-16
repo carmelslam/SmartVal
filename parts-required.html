@@ -1569,6 +1569,7 @@ function savePartsData() {
     });
     
     // ✅ NEW: Helper function to add part from data (for pre-filling from wizard)
+    // SESSION 39: Updated to match NEW 11-field structure
     function addPartFromData(partData) {
       const partsList = document.getElementById('partsList');
       const newRow = document.createElement('div');
@@ -1576,37 +1577,85 @@ function savePartsData() {
       
       const rowIndex = partsList.children.length;
       newRow.setAttribute('data-row-index', rowIndex);
+      newRow.setAttribute('data-row-uuid', partData.row_uuid || crypto.randomUUID());
+      
+      // Parse pricing fields
+      const pricePerUnit = parseFloat(partData.price_per_unit || partData.price || 0);
+      const reductionPct = parseFloat(partData.reduction_percentage || 0);
+      const wearPct = parseFloat(partData.wear_percentage || 0);
+      const quantity = parseInt(partData.quantity || partData.qty || 1);
       
       newRow.innerHTML = `
-        <div class="input-wrap">
-          <input type="text" class="name" placeholder="שם החלק" oninput="suggestPart(this)" value="${partData.name || partData.part || ''}">
-          <select class="suggest-dropdown" style="display:none;"></select>
+        <div style="display: flex; width: 100%; gap: 10px; margin-bottom: 10px;">
+          <div class="input-wrap" style="flex: 2;">
+            <label style="display: block; font-size: 12px; color: #555; margin-bottom: 4px; font-weight: bold;">שם החלק</label>
+            <input type="text" class="name" placeholder="שם החלק" value="${partData.name || partData.part_name || partData.part || ''}" oninput="suggestPart(this); autoSaveOnChange(this)" style="width: 100%; padding: 10px; font-size: 14px; border-radius: 8px; border: 1px solid #ccc;">
+            <select class="suggest-dropdown" style="display:none;"></select>
+          </div>
+          <div style="flex: 1;">
+            <label style="display: block; font-size: 12px; color: #555; margin-bottom: 4px; font-weight: bold;">קוד קטלוגי</label>
+            <input type="text" class="catalog-code" placeholder="קוד" value="${partData.pcode || partData.catalog_code || ''}" oninput="autoSaveOnChange(this)" style="width: 100%; padding: 10px; font-size: 14px; border-radius: 8px; border: 1px solid #ccc;">
+          </div>
+          <div style="flex: 2;">
+            <label style="display: block; font-size: 12px; color: #555; margin-bottom: 4px; font-weight: bold;">תיאור</label>
+            <input type="text" class="description" placeholder="תיאור" value="${partData.description || partData.desc || ''}" oninput="autoSaveOnChange(this)" style="width: 100%; padding: 10px; font-size: 14px; border-radius: 8px; border: 1px solid #ccc;">
+          </div>
         </div>
-        <input type="text" class="desc" placeholder="תיאור" oninput="suggestPart(this)" value="${partData.description || partData.desc || ''}">
-        <input type="number" class="quantity" placeholder="כמות" value="${partData.quantity || partData.qty || 1}" min="1" style="width: 60px; margin-left: 8px;">
-        <input type="text" class="price" placeholder="מחיר" value="${partData.price || ''}">
-        <select class="source">
-          <option value="">מקור</option>
-          <option value="חליפי/מקורי" ${partData.source === 'חליפי/מקורי' ? 'selected' : ''}>חליפי/מקורי</option>
-          <option value="חליפי/משומש" ${partData.source === 'חליפי/משומש' ? 'selected' : ''}>חליפי/משומש</option>
-          <option value="חדש מקורי" ${partData.source === 'חדש מקורי' ? 'selected' : ''}>חדש מקורי</option>
-          <option value="חליפי" ${partData.source === 'חליפי' ? 'selected' : ''}>חליפי</option>
-          <option value="משומש" ${partData.source === 'משומש' ? 'selected' : ''}>משומש</option>
-          <option value="ריק" ${partData.source === 'ריק' ? 'selected' : ''}>ריק</option>
-        </select>
-        <div class="row-actions" style="display: flex; gap: 5px; margin-right: 8px;">
-          <button type="button" class="btn-edit" onclick="editPartRow(${rowIndex})" title="ערוך חלק" style="
-            background: #f59e0b; color: white; border: none; padding: 6px 10px; 
-            border-radius: 5px; cursor: pointer; font-size: 12px; font-weight: bold;
-          ">✏️</button>
-          <button type="button" class="btn-delete" onclick="deletePartRow(${rowIndex})" title="מחק חלק" style="
-            background: #dc3545; color: white; border: none; padding: 6px 10px; 
-            border-radius: 5px; cursor: pointer; font-size: 12px; font-weight: bold;
-          ">🗑️</button>
+        <div style="display: flex; width: 100%; gap: 8px; align-items: center; flex-wrap: wrap;">
+          <div style="flex: 0 0 80px;">
+            <label style="display: block; font-size: 11px; color: #555; margin-bottom: 4px; font-weight: bold;">מחיר ליח׳</label>
+            <input type="number" class="price-per-unit" placeholder="0" step="0.01" min="0" value="${pricePerUnit}" oninput="calculatePriceFields(this.closest('.row'))" style="width: 100%; padding: 8px; font-size: 13px; border-radius: 8px; border: 1px solid #ccc;">
+          </div>
+          <div style="flex: 0 0 70px;">
+            <label style="display: block; font-size: 11px; color: #555; margin-bottom: 4px; font-weight: bold;">הנחה %</label>
+            <input type="number" class="reduction" placeholder="0" step="0.01" min="0" max="100" value="${reductionPct}" oninput="calculatePriceFields(this.closest('.row'))" style="width: 100%; padding: 8px; font-size: 13px; border-radius: 8px; border: 1px solid #ccc;">
+          </div>
+          <div style="flex: 0 0 70px;">
+            <label style="display: block; font-size: 11px; color: #555; margin-bottom: 4px; font-weight: bold;">בלאי %</label>
+            <input type="number" class="wear" placeholder="0" step="0.01" min="0" max="100" value="${wearPct}" oninput="calculatePriceFields(this.closest('.row'))" style="width: 100%; padding: 8px; font-size: 13px; border-radius: 8px; border: 1px solid #ccc;">
+          </div>
+          <div style="flex: 0 0 80px;">
+            <label style="display: block; font-size: 11px; color: #555; margin-bottom: 4px; font-weight: bold;">מחיר מעודכן</label>
+            <input type="text" class="updated-price" placeholder="₪0.00" readonly style="width: 100%; padding: 8px; font-size: 13px; border-radius: 8px; border: 1px solid #ccc; background: #f0f0f0; cursor: not-allowed;">
+          </div>
+          <div style="flex: 0 0 60px;">
+            <label style="display: block; font-size: 11px; color: #555; margin-bottom: 4px; font-weight: bold;">כמות</label>
+            <input type="number" class="quantity" placeholder="1" value="${quantity}" min="1" onchange="calculatePriceFields(this.closest('.row'))" style="width: 100%; padding: 8px; font-size: 13px; border-radius: 8px; border: 1px solid #ccc; text-align: center;">
+          </div>
+          <div style="flex: 0 0 90px;">
+            <label style="display: block; font-size: 11px; color: #555; margin-bottom: 4px; font-weight: bold;">סה״כ</label>
+            <input type="text" class="total-cost" placeholder="₪0.00" readonly style="width: 100%; padding: 8px; font-size: 13px; border-radius: 8px; border: 1px solid #ccc; background: #f0f0f0; cursor: not-allowed;">
+          </div>
+          <div style="flex: 0 0 110px;">
+            <label style="display: block; font-size: 11px; color: #555; margin-bottom: 4px; font-weight: bold;">מקור</label>
+            <select class="source" onchange="autoSaveOnChange(this)" style="width: 100%; padding: 8px; font-size: 13px; border-radius: 8px; border: 1px solid #ccc;">
+              <option value="">בחר מקור</option>
+              <option value="חליפי/מקורי" ${partData.source === 'חליפי/מקורי' ? 'selected' : ''}>חליפי/מקורי</option>
+              <option value="חליפי/משומש" ${partData.source === 'חליפי/משומש' ? 'selected' : ''}>חליפי/משומש</option>
+              <option value="חדש מקורי" ${partData.source === 'חדש מקורי' ? 'selected' : ''}>חדש מקורי</option>
+              <option value="חליפי" ${partData.source === 'חליפי' ? 'selected' : ''}>חליפי</option>
+              <option value="משומש" ${partData.source === 'משומש' ? 'selected' : ''}>משומש</option>
+              <option value="ריק" ${partData.source === 'ריק' ? 'selected' : ''}>ריק</option>
+            </select>
+          </div>
+          <div style="flex: 2;">
+            <label style="display: block; font-size: 11px; color: #555; margin-bottom: 4px; font-weight: bold;">ספק</label>
+            <input type="text" class="supplier" placeholder="ספק" value="${partData.supplier_name || partData.supplier || ''}" oninput="autoSaveOnChange(this)" style="width: 100%; padding: 8px; font-size: 13px; border-radius: 8px; border: 1px solid #ccc;">
+          </div>
+          <div class="row-actions" style="display: flex; gap: 5px;">
+            <button type="button" class="btn-delete" onclick="deletePartRow(${rowIndex})" title="מחק חלק" style="background: #dc3545; color: white; border: none; padding: 6px 10px; border-radius: 5px; cursor: pointer; font-size: 12px; font-weight: bold;">🗑️</button>
+            <button type="button" class="btn-edit" onclick="editPartRow(${rowIndex})" title="ערוך חלק" style="background: #f59e0b; color: white; border: none; padding: 6px 10px; border-radius: 5px; cursor: pointer; font-size: 12px; font-weight: bold;">✏️</button>
+          </div>
+          <input type="hidden" class="price" value="">
         </div>
       `;
       
       partsList.appendChild(newRow);
+      
+      // SESSION 39: Calculate prices after adding row
+      calculatePriceFields(newRow);
+      
+      console.log(`✅ SESSION 39: Added part from data with new 11-field structure:`, partData.name || partData.part_name);
     }
     
     // ✅ NEW: Edit/Delete functionality for individual parts
