@@ -3591,7 +3591,7 @@
               // Core identification (4 fields)
               row_uuid: part.row_uuid || crypto.randomUUID(),
               case_id: helper.current_damage_center.case_id || '',
-              plate: helper.current_damage_center.plate || helper.vehicleInfo?.plate || '',
+              plate: helper.current_damage_center.plate || helper.vehicle?.plate || '',
               damage_center_code: helper.current_damage_center.code || '',
               
               // Part info (7 fields)
@@ -3614,14 +3614,14 @@
               source: part.source || 'manual',
               quantity: parseInt(part.quantity || part.כמות) || 1,
               
-              // Vehicle info (7 fields)
-              make: helper.current_damage_center["Vehicle Make"] || helper.vehicleInfo?.make || '',
-              model: helper.current_damage_center["Vehicle Model"] || helper.vehicleInfo?.model || '',
-              year: helper.current_damage_center["Vehicle Year"] || helper.vehicleInfo?.year || '',
-              trim: helper.current_damage_center["Vehicle Trim"] || helper.vehicleInfo?.trim || '',
-              engine_code: helper.current_damage_center["Engine Code"] || helper.vehicleInfo?.engine_code || '',
-              engine_type: helper.current_damage_center["Engine Type"] || helper.vehicleInfo?.engine_type || '',
-              vin: helper.current_damage_center["VIN"] || helper.vehicleInfo?.vin || '',
+              // Vehicle info (7 fields) - SESSION 40: Use helper.vehicle
+              make: helper.current_damage_center["Vehicle Make"] || helper.vehicle?.make || '',
+              model: helper.current_damage_center["Vehicle Model"] || helper.vehicle?.model || '',
+              year: helper.current_damage_center["Vehicle Year"] || helper.vehicle?.year || '',
+              trim: helper.current_damage_center["Vehicle Trim"] || helper.vehicle?.trim || '',
+              engine_code: helper.current_damage_center["Engine Code"] || helper.vehicle?.engine_code || '',
+              engine_type: helper.current_damage_center["Engine Type"] || helper.vehicle?.fuel_type || '',
+              vin: helper.current_damage_center["VIN"] || helper.vehicle?.vin || '',
               
               // Metadata (2 fields)
               metadata: part.metadata || {},
@@ -6117,13 +6117,13 @@
               
             case 'parts':
               contextData.searchResults = helper.parts_search?.current_session?.results || [];
-              // ✅ FIX: Only send parts from CURRENT damage center, not all centers
-              const currentCenter = helper.damage_assessment?.centers?.find(center => 
-                center.id === currentCenterId || center.current_center_id === currentCenterId
+              // SESSION 40 FIX: Load from centers[] with fallback to current_damage_center
+              const currentCenter = helper.centers?.find(center => 
+                center.Id === currentCenterId || center.id === currentCenterId
               );
-              // ✅ FIX: Check multiple possible field names for parts data and ensure proper field mapping
-              const rawParts = currentCenter?.parts_items || 
-                              currentCenter?.Parts?.parts_required || 
+              // Try multiple sources: centers[] > current_damage_center > moduleData
+              const rawParts = currentCenter?.Parts?.parts_required || 
+                              helper.current_damage_center?.Parts?.parts_required ||
                               moduleData.parts || [];
               
               console.log(`🔍 EDIT MODE DEBUG - Data sources for parts:`, {
