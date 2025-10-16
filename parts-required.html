@@ -1064,11 +1064,12 @@ function savePartsData() {
     }
 
     // --- Suggestion logic with dropdown ---
-    function suggestPart(input) {
+    async function suggestPart(input) {
       const row = input.closest('.row');
       const nameInput = row.querySelector('.name');
       const descInput = row.querySelector('.description');
       const priceInput = row.querySelector('.price');
+      const pricePerUnitInput = row.querySelector('.price-per-unit');
       const sourceSelect = row.querySelector('.source');
       const dropdown = row.querySelector('.suggest-dropdown');
 
@@ -1083,6 +1084,34 @@ function savePartsData() {
 
       // Get suggestions from multiple sources
       const suggestions = [];
+      
+      if (window.supabaseClient && window.currentCaseId) {
+        try {
+          const { data: supabaseParts, error } = await window.supabaseClient
+            .from('selected_parts')
+            .select('*')
+            .eq('case_id', window.currentCaseId)
+            .or(`part_name.ilike.%${query}%,part_number.ilike.%${query}%,cat_num_desc.ilike.%${query}%,description.ilike.%${query}%`)
+            .limit(10);
+          
+          if (!error && supabaseParts && supabaseParts.length > 0) {
+            supabaseParts.forEach(part => {
+              suggestions.push({
+                name: part.part_name || part.part_number || '',
+                desc: part.description || part.cat_num_desc || '',
+                price: part.price || '',
+                source: part.source || '',
+                supplier: part.supplier_name || '',
+                availability: part.availability || '',
+                fromSupabase: true
+              });
+            });
+            console.log(`🔍 Found ${supabaseParts.length} suggestions from Supabase selected_parts`);
+          }
+        } catch (err) {
+          console.error('❌ Supabase suggestion query error:', err);
+        }
+      }
       
       // ✅ FIXED: Search ONLY in helper parts_search results (from parts search module)
       const searchResults = [];
@@ -1246,7 +1275,11 @@ function savePartsData() {
         
         // Enhanced autofill for all available fields
         if (suggestion.price) {
-          priceInput.value = suggestion.price;
+          const cleanPrice = suggestion.price.toString().replace('₪', '').trim();
+          if (pricePerUnitInput) {
+            pricePerUnitInput.value = cleanPrice;
+            calculatePriceFields(row);
+          }
         }
         
         if (suggestion.source || suggestion.condition) {
@@ -1365,6 +1398,17 @@ function savePartsData() {
         <div style="font-size: 24px; color: #1b5e20;">₪${total.toLocaleString()}</div>
         <div style="font-size: 14px; color: #424242;">כולל מע"מ: ₪${(total * 1.17).toLocaleString()}</div>
       `;
+      
+      if (window.parent && window.parent !== window) {
+        window.parent.postMessage({
+          type: 'partsSubtotalUpdate',
+          data: {
+            subtotal: total,
+            subtotal_with_vat: total * 1.17,
+            part_count: parts.length
+          }
+        }, '*');
+      }
       
       return { parts, total };
     }
