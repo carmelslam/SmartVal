@@ -23979,3 +23979,30 @@ Before fixing a field mapping bug, search the entire codebase for similar patter
 **Date:** 2025-10-15  
 **Status:** ✅ All Critical Bugs Fixed
 
+**Session 36 - parts required integration :**
+1. The parts required file is meant to assign selected parts to damage centers - 
+2. The selection of parts can either be by selecting from list of suggestions that is based on the selected parts table in supabase (default) with fallback to helper selected parts OR manual input . 
+3. The edit mode of the wizard allows changing the required parts selection over time and according to the needs of the user.
+4. Flow: 
+    1. user searches in the parts search html. Results and selected parts are saved to supabase initially and to the helper, in their designated tables or helper arrays. 
+    2. User move on to the parts required page, on typing the system opens a list of selected parts from the table, the suggestions are filtered on typing more letters. The suggestive function needs to be broad and not limiting since the user doesn’t  know the exact format / name the part has in the table.
+    3. User selects a part , the full information of the part is then filling the other fields in the row, pay attention that not all the table fields are represented in this row, so the row needs to know what to import.
+    4. Once the user selects the parts and saves (automatic save is already in place) the following happens :
+        1. Table parts_required in supabase , records the part sand associate to damage center .-  = needs setup 
+        2. The table has the main association which is the case_id and plate number - those are the identification parameters that makes the uniqueness of the entry to register a specific case and just the data of s specific case to be called = needs setup 
+        3.  When the damage centers is being created in the wizard , the helper opens a temporary array called : helper.current_damage_center - this array captures the parts required in current_damage_center.Parts.parts_required. once the damage center is saved the current  damage center array transfers its data to helepr.centers which has a nested structure in which each damage center is detailed including the parts in helper.centers[item].Parts.parts_required - works and tested 
+        4. Once the helper.centers[item].Parts.parts_required. is filled it feeds other locations in the helper - automatically - this is already working but needs to be verified on testing .- works and tested 
+        5. parts_search.required_parts also registers the UI . But its synced from supabase on page load, meaning that the supabase table will check if there are any mismatches between it sown records and the parts_search.required_parts and to overwrite those differences with the correct data stored in it. = needs setup 
+        6. The parts_search.required_parts  also needs to have a field that indicates the association to a damage meters - as its already exists in the table in supabase.
+        7. We will need to think the relations between parts_search.required_parts  and helper.centers[item].Parts.parts_required : do we keep two separated sets of data that can be with different data potentially or do we overwrite the helper.centers[item].Parts.parts_required with the synced data from parts_search.required_parts .- bare in mind that the flow suggests that whatever is in the current_damage_center.Parts.parts_required and later in the helper.centers[item].Parts.parts_required  is created on the same time that the table is recording data - so it suggest alignment .
+        8. Edit mode in the wizard UI needs to write on existing data in the table - for example if the user changes the quantity of parts on one row, or changes the parts name , the same already row in the table needs to be updated and creating a new row leaving the old one in the table - that will require us to add iid to a row - or similar identification method.
+    5. The parts required.html table (in the UI) will need to be modified and add the following cells to it :
+        1. Currently having : part name - description - quantity - price - source (dropdown)
+        2. Needs to be : part name - description - source (dropdown) - price per unit - reduction (הנחה) percentage- wear (בלאי) percentage  - updated price - quantity - total cost 
+        3. Math logic : the reduction is calculated from the original price and the wear is calculated from the updated price after reduction -  the result is in the cell  updated price  - total cost is the multiple of  updated price X quantity .
+        4. We need to be careful since the current price cell in the UI  is feeding multiple helper’s locations , we will need to reserve the connection as is - trying to figure out all the locations that it writes to can take a long Time and cause system to break- FIND THE SAFEST WAY TO RESERVE THIS 
+    6. All page calculations need to be reserved - they should work - they work for now 
+    7. The connections to the reports generation and validation pages is done via the helper so the helper needs to be extremely synced and all current connections not to change- we can think of linking the report generation to supabase data but this is not in the scope of this task .
+    8. All the observation from your analysis may be correct but need to be viewed through the lenses of the  flow above.
+
+
