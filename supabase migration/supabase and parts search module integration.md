@@ -24129,3 +24129,139 @@ Session 36 implements parts-required.html integration with Supabase, adding pric
 
 ---
 EOF < /dev/null
+
+---
+
+## Session 37 - Parts Required Integration Implementation (PARTIAL)
+
+**Date:** 2025-10-16  
+**Status:** IN PROGRESS - Session capacity reached at Task 6 completion
+
+### ✅ COMPLETED TASKS
+
+#### Task 1-2: SQL Migration
+- Created `SESSION_36_UPDATE_PARTS_REQUIRED_TABLE.sql` in `sql/Phase5_Parts_Search_2025-10-05/`
+- Added columns: `price_per_unit`, `reduction_percentage`, `wear_percentage`, `updated_price`, `total_cost`, `row_uuid`, `description`
+- Created indexes for UPSERT operations and case/center lookup
+- **Status:** DEPLOYED to Supabase successfully
+
+#### Task 3: UI Layout Modification
+- Updated `addPart()` function in parts-required.html
+- Changed from 5 fields to 11 fields:
+  - **Row 1:** שם החלק, קוד קטלוגי (NEW), תיאור
+  - **Row 2:** מחיר ליח׳, הנחה %, בלאי %, מחיר מעודכן (readonly), כמות, סה״כ (readonly), ספק (NEW), מקור, buttons
+- Added `data-row-uuid` attribute for UPSERT tracking
+- Removed legacy hardcoded row from HTML
+- Enhanced row visibility: background `#f1f5f9`, border `#d1d5db`
+- **Catalog code:** Extracts `pcode` (priority) or `oem` (fallback) from Supabase
+- **Supplier field:** Auto-populated from Supabase suggestions
+
+#### Task 4: Price Calculation Function
+- Implemented `calculatePriceFields()` function (lines 509-525)
+- Formula: 
+  - Step 1: `priceAfterReduction = pricePerUnit × (1 - reduction%/100)`
+  - Step 2: `priceAfterWear = priceAfterReduction × (1 - wear%/100)`
+  - Step 3: `totalCost = updatedPrice × quantity`
+- Updates hidden `.price` field for backwards compatibility
+- Triggers `calculatePartsTotals()` on every change
+
+#### Task 5: Page Total Sync with Wizard
+- Updated `calculatePartsTotals()` (lines 1369-1378)
+- Sends postMessage to wizard parent:
+  ```js
+  {
+    type: 'partsSubtotalUpdate',
+    data: { subtotal, subtotal_with_vat, part_count }
+  }
+  ```
+- Syncs green boxes in wizard iframe in real-time
+
+#### Task 6: Supabase Suggestions (COMPLETED with fixes)
+- Added Supabase client script: `<script src="./services/supabaseClient.js">`
+- Implemented async `suggestPart()` function with Supabase query
+- Query: `selected_parts` table filtered by `case_id`, searches across `part_name`, `pcode`, `cat_num_desc`
+- **Fixed column errors:** Removed non-existent columns (`part_number`, `description`)
+- Suggestions prioritized: Supabase first (up to 8), parts bank fallback
+- Dropdown separators: "───── מחלקים שנבחרו ─────" and "───── בחירה כללית ─────"
+- Auto-fills: name, catalog_code, description, supplier, price_per_unit, source
+- **Bug fixes:**
+  - Fixed `quantityInput` undefined error
+  - Fixed `.desc` → `.description` selector bugs in `savePartsData()`, `deletePartRow()`, `calculatePartsTotals()`
+  - Fixed price validation stripping `₪` symbol
+  - Fixed dropdown RTL alignment
+  - Preserved `fromPartsBank` flag in suggestions array
+
+### 🚧 PENDING TASKS (for Session 38)
+
+#### Task 7: Implement saveRowToSupabase() with UPSERT
+- Create `saveRowToSupabase(row)` function
+- UPSERT by `row_uuid`: `supabaseClient.from('parts_required').upsert(data, { onConflict: 'row_uuid' })`
+- Map all 11 fields to Supabase columns including: `catalog_code → pcode`, `supplier → supplier_name`
+- Call on input change (debounced 500ms)
+
+#### Task 8: Implement Helper Sync Functions
+- Create `saveToHelper(row)` - saves row data to `helper.centers[item].Parts.parts_required`
+- Create `syncRequiredPartsToHelper()` - syncs all rows to helper structure
+- Add `catalog_code` and `supplier` to helper structure
+- Maintain backwards compatibility with existing `OEM` field
+
+#### Task 9: Implement loadPartsFromSupabase() on Page Load
+- Query `parts_required` table by `case_id` and `damage_center_code`
+- Fallback to helper if Supabase empty
+- Populate UI rows with all 11 fields
+- Restore `row_uuid` for edit mode
+
+#### Task 10: Testing
+- Test new part entry with all fields
+- Test edit mode (UPSERT updates existing row)
+- Test multiple damage centers (isolation)
+- Test case restore (load from Supabase)
+- Test wizard subtotal sync
+- Test backwards compatibility (existing code reading `.price`)
+- Test catalog code and supplier fields
+
+### 📋 HELPER STRUCTURE UPDATE NEEDED
+
+Add to `helper.centers[item].Parts.parts_required[]`:
+```js
+{
+  name: string,
+  catalog_code: string,  // NEW - pcode or oem
+  description: string,
+  price_per_unit: number,  // NEW
+  reduction_percentage: number,  // NEW
+  wear_percentage: number,  // NEW
+  updated_price: number,  // NEW (calculated)
+  quantity: number,
+  total_cost: number,  // NEW (calculated)
+  supplier: string,  // NEW
+  source: string,
+  price: number,  // kept for backwards compatibility
+  OEM: string,  // existing field, kept for compatibility
+  row_uuid: string  // NEW - for UPSERT
+}
+```
+
+### 🔧 FILES MODIFIED
+1. `parts-required.html` - Lines 8, 89-101, 276-277, 443-528, 509-525, 1067-1390, 1599-1605
+2. `sql/Phase5_Parts_Search_2025-10-05/SESSION_36_UPDATE_PARTS_REQUIRED_TABLE.sql` - Created
+
+### 🐛 KNOWN ISSUES FIXED
+1. ✅ Supabase client not loaded - Added script tag
+2. ✅ Column errors (part_number, description) - Fixed query to use correct columns
+3. ✅ `.desc` selector errors - Changed to `.description` throughout
+4. ✅ Price validation failing - Strip `₪` before validation
+5. ✅ Dropdown not showing - Fixed `fromPartsBank` flag preservation
+6. ✅ Source not populating - Fixed matching logic
+7. ✅ quantityInput undefined - Added variable definition
+
+### 📊 PROGRESS: 60% Complete
+- ✅ UI/UX: 100%
+- ✅ Calculations: 100%
+- ✅ Supabase Suggestions: 100%
+- 🚧 Supabase Save/Load: 0%
+- 🚧 Helper Sync: 0%
+- 🚧 Testing: 0%
+
+**Next Session:** Continue with Task 7 (saveRowToSupabase implementation)
+
