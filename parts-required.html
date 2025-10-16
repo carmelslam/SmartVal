@@ -450,6 +450,10 @@ form button {
         <input type="text" class="name" placeholder="שם החלק" oninput="suggestPart(this); autoSaveOnChange(this)" style="width: 100%; padding: 10px; font-size: 14px; border-radius: 8px; border: 1px solid #ccc;">
         <select class="suggest-dropdown" style="display:none;"></select>
       </div>
+      <div style="flex: 1;">
+        <label style="display: block; font-size: 12px; color: #555; margin-bottom: 4px; font-weight: bold;">קוד קטלוגי</label>
+        <input type="text" class="catalog-code" placeholder="קוד" oninput="autoSaveOnChange(this)" style="width: 100%; padding: 10px; font-size: 14px; border-radius: 8px; border: 1px solid #ccc;">
+      </div>
       <div style="flex: 2;">
         <label style="display: block; font-size: 12px; color: #555; margin-bottom: 4px; font-weight: bold;">תיאור</label>
         <input type="text" class="description" placeholder="תיאור" oninput="autoSaveOnChange(this)" style="width: 100%; padding: 10px; font-size: 14px; border-radius: 8px; border: 1px solid #ccc;">
@@ -1068,6 +1072,7 @@ function savePartsData() {
     async function suggestPart(input) {
       const row = input.closest('.row');
       const nameInput = row.querySelector('.name');
+      const catalogCodeInput = row.querySelector('.catalog-code');
       const descInput = row.querySelector('.description');
       const priceInput = row.querySelector('.price');
       const pricePerUnitInput = row.querySelector('.price-per-unit');
@@ -1108,11 +1113,13 @@ function savePartsData() {
             supabaseParts.forEach(part => {
               suggestions.push({
                 name: part.part_name || '',
+                catalog_code: part.pcode || part.oem || '',
                 desc: part.cat_num_desc || '',
                 price: part.price || '',
                 source: part.source || '',
                 supplier: part.supplier_name || '',
                 availability: part.availability || '',
+                oem: part.oem || '',
                 fromSupabase: true
               });
             });
@@ -1318,6 +1325,9 @@ function savePartsData() {
         
         // Core fields autofill
         nameInput.value = suggestion.name || "";
+        if (catalogCodeInput && suggestion.catalog_code) {
+          catalogCodeInput.value = suggestion.catalog_code;
+        }
         descInput.value = suggestion.desc || suggestion.description || "";
         
         // Enhanced autofill for all available fields
