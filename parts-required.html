@@ -2199,10 +2199,24 @@ function savePartsData() {
 
     // ✅ AUTO-SAVE FUNCTION: Automatically save when parts change
     function autoSaveOnChange(element) {
-      // SESSION 38: Save individual row to Supabase immediately
       const row = element.closest('.row');
-      if (row && typeof saveRowToSupabase === 'function') {
-        debouncedSave(row);
+      
+      // SESSION 40 FIX: Don't save incomplete rows (just typed one letter)
+      if (row) {
+        const nameField = row.querySelector('.name');
+        const nameValue = nameField?.value?.trim() || '';
+        
+        // Only save if name has at least 2 characters OR other fields are filled
+        const hasMinimumData = nameValue.length >= 2 || 
+                              row.querySelector('.price-per-unit')?.value > 0 ||
+                              row.querySelector('.catalog-code')?.value?.trim() ||
+                              row.querySelector('.quantity')?.value > 1;
+        
+        if (hasMinimumData && typeof saveRowToSupabase === 'function') {
+          debouncedSave(row);
+        } else {
+          console.log('⏸️ SESSION 40: Skipping save - insufficient data (name:', nameValue.length, 'chars)');
+        }
       }
       
       // Debounce legacy helper save to avoid excessive saves
