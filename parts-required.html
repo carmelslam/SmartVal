@@ -543,6 +543,11 @@ function calculatePriceFields(row) {
   row.querySelector('.price').value = `₪${updatedPrice.toFixed(2)}`;
   
   calculatePartsTotals();
+  
+  // SESSION 38: Save to Supabase after calculation
+  if (typeof debouncedSave === 'function') {
+    debouncedSave(row);
+  }
 }
 
 // === PHASE 2: Remove duplicate parts function ===
@@ -2119,7 +2124,13 @@ function savePartsData() {
 
     // ✅ AUTO-SAVE FUNCTION: Automatically save when parts change
     function autoSaveOnChange(element) {
-      // Debounce to avoid excessive saves
+      // SESSION 38: Save individual row to Supabase immediately
+      const row = element.closest('.row');
+      if (row && typeof saveRowToSupabase === 'function') {
+        debouncedSave(row);
+      }
+      
+      // Debounce legacy helper save to avoid excessive saves
       clearTimeout(window.autoSaveTimer);
       window.autoSaveTimer = setTimeout(() => {
         console.log('🔄 Auto-saving parts data after change...');
@@ -2665,6 +2676,12 @@ function savePartsData() {
       const caseId = window.currentCaseId;
       const damageCenterCode = window.currentDamageCenterCode || 
                               sessionStorage.getItem('active_damage_center_code');
+      
+      console.log('  🔍 SESSION 38 DEBUG:', { 
+        caseId, 
+        damageCenterCode,
+        hasSupabaseClient: !!window.supabaseClient 
+      });
       
       if (!caseId || !damageCenterCode) {
         console.warn('  ⚠️ Missing IDs, falling back to helper');
