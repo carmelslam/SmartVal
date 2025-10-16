@@ -274,34 +274,6 @@ form button {
         <input id="inputYear" placeholder="שנה" type="number" />
       </div>
       <div id="partsList">
-        <div class="row" data-row-index="0">
-          <div class="input-wrap">
-            <input type="text" class="name" placeholder="שם החלק" oninput="suggestPart(this)">
-            <select class="suggest-dropdown" style="display:none;"></select>
-          </div>
-          <input type="text" class="desc" placeholder="תיאור" oninput="suggestPart(this)">
-          <input type="number" class="quantity" placeholder="כמות" value="1" min="1" style="width: 60px; margin-left: 8px;">
-          <input type="text" class="price" placeholder="מחיר">
-          <select class="source">
-            <option value="">מקור</option>
-            <option value="חליפי/מקורי">חליפי/מקורי</option>
-            <option value="חליפי/משומש">חליפי/משומש</option>
-            <option value="חדש מקורי">חדש מקורי</option>
-            <option value="חליפי">חליפי</option>
-            <option value="משומש">משומש</option>
-            <option value="ריק">ריק</option>
-          </select>
-          <div class="row-actions" style="display: flex; gap: 5px; margin-right: 8px;">
-            <button type="button" class="btn-edit" onclick="editPartRow(0)" title="ערוך חלק" style="
-              background: #f59e0b; color: white; border: none; padding: 6px 10px; 
-              border-radius: 5px; cursor: pointer; font-size: 12px; font-weight: bold;
-            ">✏️</button>
-            <button type="button" class="btn-delete" onclick="deletePartRow(0)" title="מחק חלק" style="
-              background: #dc3545; color: white; border: none; padding: 6px 10px; 
-              border-radius: 5px; cursor: pointer; font-size: 12px; font-weight: bold;
-            ">🗑️</button>
-          </div>
-        </div>
       </div>
 
       <button type="button" class="btn-secondary" onclick="addPart()">הוסף חלק</button>
@@ -532,6 +504,24 @@ form button {
   updatePartCount();
   
   console.log(`➕ Added new part row ${newRowIndex}`);
+}
+
+function calculatePriceFields(row) {
+  const pricePerUnit = parseFloat(row.querySelector('.price-per-unit')?.value) || 0;
+  const reductionPct = parseFloat(row.querySelector('.reduction')?.value) || 0;
+  const wearPct = parseFloat(row.querySelector('.wear')?.value) || 0;
+  const quantity = parseInt(row.querySelector('.quantity')?.value) || 1;
+  
+  const priceAfterReduction = pricePerUnit * (1 - reductionPct / 100);
+  const priceAfterWear = priceAfterReduction * (1 - wearPct / 100);
+  const updatedPrice = priceAfterWear;
+  const totalCost = updatedPrice * quantity;
+  
+  row.querySelector('.updated-price').value = `₪${updatedPrice.toFixed(2)}`;
+  row.querySelector('.total-cost').value = `₪${totalCost.toFixed(2)}`;
+  row.querySelector('.price').value = `₪${updatedPrice.toFixed(2)}`;
+  
+  calculatePartsTotals();
 }
 
 // === PHASE 2: Remove duplicate parts function ===
