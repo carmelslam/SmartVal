@@ -1579,11 +1579,28 @@ function savePartsData() {
       newRow.setAttribute('data-row-index', rowIndex);
       newRow.setAttribute('data-row-uuid', partData.row_uuid || crypto.randomUUID());
       
-      // Parse pricing fields
-      const pricePerUnit = parseFloat(partData.price_per_unit || partData.price || 0);
-      const reductionPct = parseFloat(partData.reduction_percentage || 0);
-      const wearPct = parseFloat(partData.wear_percentage || 0);
+      // SESSION 39: Parse pricing fields with EXTENSIVE fallback for old/new data
+      // Try NEW fields first, then OLD fields, then defaults
+      const pricePerUnit = parseFloat(
+        partData.price_per_unit || 
+        partData.unit_price || 
+        partData.price || 
+        partData.מחיר || 
+        0
+      );
+      const reductionPct = parseFloat(partData.reduction_percentage || partData.reduction || 0);
+      const wearPct = parseFloat(partData.wear_percentage || partData.wear || 0);
       const quantity = parseInt(partData.quantity || partData.qty || 1);
+      
+      // Debug log to see what data we're receiving
+      console.log(`🔍 SESSION 39: addPartFromData mapping:`, {
+        name: partData.name || partData.part_name,
+        pcode: partData.pcode || partData.catalog_code || partData.part_number,
+        pricePerUnit: pricePerUnit,
+        reduction: reductionPct,
+        wear: wearPct,
+        rawData: partData
+      });
       
       newRow.innerHTML = `
         <div style="display: flex; width: 100%; gap: 10px; margin-bottom: 10px;">
@@ -1594,7 +1611,7 @@ function savePartsData() {
           </div>
           <div style="flex: 1;">
             <label style="display: block; font-size: 12px; color: #555; margin-bottom: 4px; font-weight: bold;">קוד קטלוגי</label>
-            <input type="text" class="catalog-code" placeholder="קוד" value="${partData.pcode || partData.catalog_code || ''}" oninput="autoSaveOnChange(this)" style="width: 100%; padding: 10px; font-size: 14px; border-radius: 8px; border: 1px solid #ccc;">
+            <input type="text" class="catalog-code" placeholder="קוד" value="${partData.pcode || partData.catalog_code || partData.part_number || partData.oem || ''}" oninput="autoSaveOnChange(this)" style="width: 100%; padding: 10px; font-size: 14px; border-radius: 8px; border: 1px solid #ccc;">
           </div>
           <div style="flex: 2;">
             <label style="display: block; font-size: 12px; color: #555; margin-bottom: 4px; font-weight: bold;">תיאור</label>
@@ -1640,7 +1657,7 @@ function savePartsData() {
           </div>
           <div style="flex: 2;">
             <label style="display: block; font-size: 11px; color: #555; margin-bottom: 4px; font-weight: bold;">ספק</label>
-            <input type="text" class="supplier" placeholder="ספק" value="${partData.supplier_name || partData.supplier || ''}" oninput="autoSaveOnChange(this)" style="width: 100%; padding: 8px; font-size: 13px; border-radius: 8px; border: 1px solid #ccc;">
+            <input type="text" class="supplier" placeholder="ספק" value="${partData.supplier_name || partData.supplier || partData.ספק || partData.selected_supplier || ''}" oninput="autoSaveOnChange(this)" style="width: 100%; padding: 8px; font-size: 13px; border-radius: 8px; border: 1px solid #ccc;">
           </div>
           <div class="row-actions" style="display: flex; gap: 5px;">
             <button type="button" class="btn-delete" onclick="deletePartRow(${rowIndex})" title="מחק חלק" style="background: #dc3545; color: white; border: none; padding: 6px 10px; border-radius: 5px; cursor: pointer; font-size: 12px; font-weight: bold;">🗑️</button>
