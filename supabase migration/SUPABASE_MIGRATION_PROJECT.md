@@ -383,8 +383,9 @@ INSERT INTO storage.buckets (id, name, public) VALUES
 עדכון אחרון:  dd/mm/yyyy
 סה"כ גיבויים: n
 7. in admin hub add delete case from supabase (שרת) and give 2 step confirmation
-8. **VERY IMPORTANT** helper is not creating another version , its staying on v1 in supabase - NEW VERSIONS ARE NOT BEING SAVED AND ARE REVERTED TO V1 -**not fixed**
+8. **VERY IMPORTANT** *helper is not creating another version , its staying on v1 in supabase - NEW VERSIONS ARE NOT BEING SAVED AND ARE REVERTED TO V1* -**not fixed**
 9. admin hub preview version history status showing wrong information -**not fixed**
+10.**CHAECK IF OPEN CASE PAGE TRUGGERES A NEW CASE CREATION IN SUPABASE - CASE ID - PLATE IN : CASES, CASE_HELPER, HELPER_VERSIONS TABLES**
 
 
 
@@ -463,6 +464,7 @@ Both paths run at the same time
 3. Test file operations
 4. Implement signed URL generation
 5. Set up automated backups
+6. REPORTS PDF STORAGE AND EXPORT TO MAKE.COM - CREATE A NEW TABLE/BUCKET FOR REPORTS : ASSOCIAATED BY CASE_ID AND PLATE - WITH CURRRENT (TRUE/FALSE) DETECTION.
 
 ### Phase 8: Production Readiness & Optimization
 1. Tighten security policies
