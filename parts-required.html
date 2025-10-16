@@ -1071,6 +1071,7 @@ function savePartsData() {
       const descInput = row.querySelector('.description');
       const priceInput = row.querySelector('.price');
       const pricePerUnitInput = row.querySelector('.price-per-unit');
+      const quantityInput = row.querySelector('.quantity');
       const sourceSelect = row.querySelector('.source');
       const dropdown = row.querySelector('.suggest-dropdown');
 
@@ -1330,28 +1331,20 @@ function savePartsData() {
         
         if (suggestion.source || suggestion.condition) {
           const sourceValue = suggestion.source || suggestion.condition;
-          // Try to match source value with dropdown options
+          console.log('🔍 Trying to match source:', sourceValue);
+          
           const sourceOptions = Array.from(sourceSelect.options);
           const matchingOption = sourceOptions.find(opt => 
+            opt.value === sourceValue || 
             opt.value.toLowerCase() === sourceValue.toLowerCase() ||
-            opt.textContent.toLowerCase().includes(sourceValue.toLowerCase())
+            opt.textContent === sourceValue
           );
+          
           if (matchingOption) {
             sourceSelect.value = matchingOption.value;
-          } else if (sourceValue) {
-            // If no exact match, try common mappings
-            const sourceMap = {
-              'new': 'חדש',
-              'used': 'משומש', 
-              'oem': 'מקורי',
-              'aftermarket': 'תחליפי',
-              'refurbished': 'מחודש'
-            };
-            const hebrewSource = sourceMap[sourceValue.toLowerCase()] || sourceValue;
-            const hebrewMatch = sourceOptions.find(opt => opt.textContent.includes(hebrewSource));
-            if (hebrewMatch) {
-              sourceSelect.value = hebrewMatch.value;
-            }
+            console.log('✅ Matched source exactly:', matchingOption.value);
+          } else {
+            console.log('⚠️ No exact match, available options:', sourceOptions.map(o => o.value));
           }
         }
         
