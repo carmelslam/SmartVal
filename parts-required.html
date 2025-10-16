@@ -1085,6 +1085,12 @@ function savePartsData() {
       // Get suggestions from multiple sources
       const suggestions = [];
       
+      console.log('🔍 Supabase check:', {
+        hasClient: !!window.supabaseClient,
+        hasCaseId: !!window.currentCaseId,
+        caseId: window.currentCaseId
+      });
+      
       if (window.supabaseClient && window.currentCaseId) {
         try {
           const { data: supabaseParts, error } = await window.supabaseClient
@@ -1093,6 +1099,8 @@ function savePartsData() {
             .eq('case_id', window.currentCaseId)
             .or(`part_name.ilike.%${query}%,part_number.ilike.%${query}%,cat_num_desc.ilike.%${query}%,description.ilike.%${query}%`)
             .limit(10);
+          
+          console.log('🔍 Supabase query result:', { data: supabaseParts, error });
           
           if (!error && supabaseParts && supabaseParts.length > 0) {
             supabaseParts.forEach(part => {
@@ -1106,12 +1114,16 @@ function savePartsData() {
                 fromSupabase: true
               });
             });
-            console.log(`🔍 Found ${supabaseParts.length} suggestions from Supabase selected_parts`);
+            console.log(`✅ Found ${supabaseParts.length} suggestions from Supabase selected_parts`);
           }
         } catch (err) {
           console.error('❌ Supabase suggestion query error:', err);
         }
+      } else {
+        console.log('⚠️ Skipping Supabase query - missing client or case_id');
       }
+      
+      console.log(`🔍 Total suggestions after Supabase: ${suggestions.length}`);
       
       // ✅ FIXED: Search ONLY in helper parts_search results (from parts search module)
       const searchResults = [];
@@ -1245,6 +1257,8 @@ function savePartsData() {
         }
       });
 
+      console.log(`🔍 Total suggestions collected: ${suggestions.length}`);
+      
       if (suggestions.length === 0) {
         dropdown.innerHTML = '';
         dropdown.style.display = "none";
@@ -1254,8 +1268,9 @@ function savePartsData() {
       // Remove duplicates and separate by source
       const supabaseSuggestions = suggestions.filter(s => s.fromSupabase);
       const bankSuggestions = suggestions.filter(s => s.fromPartsBank);
+      const otherSuggestions = suggestions.filter(s => !s.fromSupabase && !s.fromPartsBank);
       
-      console.log(`🔍 Suggestions breakdown: ${supabaseSuggestions.length} from Supabase, ${bankSuggestions.length} from bank`);
+      console.log(`🔍 Suggestions breakdown: ${supabaseSuggestions.length} from Supabase, ${bankSuggestions.length} from bank, ${otherSuggestions.length} from other sources`);
       
       // Limit results
       const topSupabase = supabaseSuggestions.slice(0, 8);
