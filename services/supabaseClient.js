@@ -130,6 +130,11 @@ class SupabaseQueryBuilder {
     if (this.limitCount) {
       this.params.append('limit', this.limitCount);
     }
+    
+    // SESSION 40 FIX: Add on_conflict for UPSERT **BEFORE** converting to string
+    if (this.upsertConflict && this.method === 'POST') {
+      this.params.append('on_conflict', this.upsertConflict);
+    }
 
     const paramString = this.params.toString();
     if (paramString) {
@@ -157,10 +162,7 @@ class SupabaseQueryBuilder {
     if (this.upsertConflict && this.method === 'POST') {
       // PostgREST requires: resolution=merge-duplicates AND return=representation
       options.headers['Prefer'] = 'resolution=merge-duplicates,return=representation';
-      
-      // SESSION 40 FIX: Add ON CONFLICT column to URL params
-      // PostgREST syntax: ?on_conflict=column_name
-      this.params.set('on_conflict', this.upsertConflict);
+      // NOTE: on_conflict param is added in buildUrl() before URL is finalized
     }
 
     if (this.insertData && (this.method === 'POST' || this.method === 'PATCH')) {

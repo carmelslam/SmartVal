@@ -1429,33 +1429,75 @@ function savePartsData() {
     function calculatePartsTotals() {
       const parts = [];
       
-      // ✅ FIXED: Use correct selector for rows
+      // SESSION 40: Read ALL NEW fields from UI (11 fields + metadata)
       document.querySelectorAll("#partsList .row").forEach(row => {
+        const rowUuid = row.getAttribute('data-row-uuid') || '';
         const nameInput = row.querySelector('.name');
+        const catalogCodeInput = row.querySelector('.catalog-code');
         const descInput = row.querySelector('.description');
+        const pricePerUnitInput = row.querySelector('.price-per-unit');
+        const reductionInput = row.querySelector('.reduction');
+        const wearInput = row.querySelector('.wear');
+        const updatedPriceInput = row.querySelector('.updated-price');
         const quantityInput = row.querySelector('.quantity');
         const totalCostInput = row.querySelector('.total-cost');
         const sourceSelect = row.querySelector('.source');
+        const supplierInput = row.querySelector('.supplier');
         
         const name = nameInput ? nameInput.value.trim() : '';
+        const pcode = catalogCodeInput ? catalogCodeInput.value.trim() : '';
         const desc = descInput ? descInput.value.trim() : '';
+        const pricePerUnit = pricePerUnitInput ? parseFloat(pricePerUnitInput.value) || 0 : 0;
+        const reduction = reductionInput ? parseFloat(reductionInput.value) || 0 : 0;
+        const wear = wearInput ? parseFloat(wearInput.value) || 0 : 0;
+        const updatedPrice = updatedPriceInput ? parseFloat(updatedPriceInput.value.replace('₪', '')) || 0 : 0;
         const quantity = quantityInput ? parseInt(quantityInput.value) || 1 : 1;
         const totalCost = totalCostInput ? parseFloat(totalCostInput.value.replace('₪', '')) || 0 : 0;
         const source = sourceSelect ? sourceSelect.value : '';
+        const supplier = supplierInput ? supplierInput.value.trim() : '';
         
         if (name || desc) {
           const fromSuggestion = nameInput?.dataset.fromSuggestion === 'true' || 
                                  descInput?.dataset.fromSuggestion === 'true';
           
+          // SESSION 40: Send COMPLETE data structure with NEW fields
           parts.push({ 
+            // Identification
+            "row_uuid": rowUuid,
+            
+            // Part info (NEW English fields)
             "name": name,
-            "תיאור": desc,
-            "כמות": quantity,
-            "מחיר": `₪${totalCost}`,
-            "סוג חלק": source,
-            "ספק": "",
+            "part": name,
+            "pcode": pcode,
+            "catalog_code": pcode,
+            "description": desc,
+            "supplier": supplier,
+            "supplier_name": supplier,
+            
+            // Pricing (NEW fields)
+            "price_per_unit": pricePerUnit,
+            "reduction_percentage": reduction,
+            "reduction": reduction,
+            "wear_percentage": wear,
+            "wear": wear,
+            "updated_price": updatedPrice,
+            "total_cost": totalCost,
+            "price": updatedPrice, // For backward compatibility
+            
+            // Source
+            "source": source,
+            "quantity": quantity,
+            
+            // Metadata
             "fromSuggestion": fromSuggestion,
             "entry_method": fromSuggestion ? "suggestion_selected" : "manual_typed",
+            
+            // OLD Hebrew fields for backward compatibility
+            "תיאור": desc,
+            "כמות": quantity,
+            "מחיר": `₪${updatedPrice}`,
+            "סוג חלק": source,
+            "ספק": supplier,
             "מיקום": "ישראל",
             "זמינות": "זמין",
             "מספר OEM": "",
