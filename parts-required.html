@@ -2539,19 +2539,25 @@ function savePartsData() {
       console.log('  📤 Saving:', { row_uuid: rowUuid, part_name: partName, total_cost: totalCost });
       
       try {
-        const { data, error } = await window.supabaseClient
-          .from('parts_required')
-          .upsert(supabaseData, { 
-            onConflict: 'row_uuid',
-            ignoreDuplicates: false 
-          })
-          .select();
+        // SESSION 38: Custom client doesn't have upsert, use insert with Prefer header
+        const response = await fetch(`${window.supabaseClient.url}/rest/v1/parts_required`, {
+          method: 'POST',
+          headers: {
+            'apikey': window.supabaseClient.key,
+            'Authorization': `Bearer ${window.supabaseClient.key}`,
+            'Content-Type': 'application/json',
+            'Prefer': 'resolution=merge-duplicates,return=representation'
+          },
+          body: JSON.stringify(supabaseData)
+        });
         
-        if (error) {
-          console.error('❌ Supabase save error:', error);
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error('❌ Supabase save error:', response.status, errorText);
           return;
         }
         
+        const data = await response.json();
         console.log('  ✅ Saved to Supabase:', data);
         
         saveToHelper(supabaseData, damageCenterCode);
