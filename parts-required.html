@@ -1429,6 +1429,14 @@ function savePartsData() {
     function calculatePartsTotals() {
       const parts = [];
       
+      // SESSION 40: Debug - check if IDs are available
+      console.log('🔍 calculatePartsTotals - IDs check:', {
+        currentCaseId: window.currentCaseId,
+        currentDamageCenterCode: window.currentDamageCenterCode,
+        helperCaseId: window.helper?.current_damage_center?.case_id,
+        helperDamageCenterCode: window.helper?.current_damage_center?.code
+      });
+      
       // SESSION 40: Read ALL NEW fields from UI (11 fields + metadata)
       document.querySelectorAll("#partsList .row").forEach(row => {
         const rowUuid = row.getAttribute('data-row-uuid') || '';
@@ -1464,9 +1472,9 @@ function savePartsData() {
           parts.push({ 
             // Identification (4 fields)
             "row_uuid": rowUuid,
-            "case_id": window.currentCaseId || '',
-            "damage_center_code": window.currentDamageCenterCode || '',
-            "plate": window.helper?.vehicle?.plate || '',
+            "case_id": window.currentCaseId || window.helper?.current_damage_center?.case_id || window.helper?.case_info?.case_id || '',
+            "damage_center_code": window.currentDamageCenterCode || window.helper?.current_damage_center?.code || '',
+            "plate": window.helper?.vehicle?.plate || window.helper?.current_damage_center?.plate || '',
             
             // Part info (NEW English fields)
             "name": name,
