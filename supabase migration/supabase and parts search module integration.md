@@ -24075,3 +24075,57 @@ create index IF not exists idx_parts_supplier on public.parts_required using btr
 create trigger update_parts_required_updated_at BEFORE
 update on parts_required for EACH row
 execute FUNCTION update_updated_at ();
+
+
+---
+
+## Session 36 - Complete Implementation Plan (Approved)
+
+**Date:** 2025-10-16  
+**Agent:** Claude Sonnet 4  
+**Status:** ✅ Ready for Implementation
+
+### Executive Summary
+
+Session 36 implements parts-required.html integration with Supabase, adding pricing calculation fields (reduction/wear). All existing functionality preserved through backwards compatibility. Wizard subtotal sync maintained.
+
+### Architecture - Single Source of Truth (APPROVED) ✅
+
+- **PRIMARY**: `helper.centers[item].Parts.parts_required`
+- **MIRROR**: `parts_search.required_parts` (flattened from centers)
+- **SYNC**: Supabase `parts_required` table ↔ helper
+
+**Data Flow:** User input → current_damage_center → centers[item] → flatten to required_parts → Supabase
+
+### Implementation Tasks Summary
+
+1. **SQL Migration** - Add columns: price_per_unit, reduction_percentage, wear_percentage, updated_price, total_cost, row_uuid
+2. **UI Layout** - 9 fields: name, desc, source, price/unit, reduction%, wear%, updated price (readonly), quantity, total (readonly)
+3. **Calculations** - Math: reduction → wear → updated_price → total_cost
+4. **Supabase Query** - Suggestions from selected_parts table with broad ILIKE matching
+5. **Save** - UPSERT by row_uuid for edit mode
+6. **Helper Sync** - Save to current_damage_center, flatten to required_parts
+7. **Load** - Query Supabase on page load (source of truth)
+8. **Testing** - 7 scenarios covering new entry, edit, multiple centers, restore, subtotal, compatibility
+
+### Backwards Compatibility - CRITICAL
+
+- Hidden `price` field updated with final updated_price
+- Existing code reads price unchanged
+- New fields added, old fields preserved
+
+### Success Criteria
+
+✅ All 9 fields functional  
+✅ Calculations accurate  
+✅ Supabase saves without errors  
+✅ Edit mode updates (no duplicates)  
+✅ Multiple centers isolated  
+✅ Subtotal syncs to wizard  
+✅ Case restore loads from Supabase  
+✅ Reports/validation still work  
+
+**Detailed implementation code and step-by-step instructions documented above.**
+
+---
+EOF < /dev/null
