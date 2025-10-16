@@ -383,9 +383,11 @@ INSERT INTO storage.buckets (id, name, public) VALUES
 עדכון אחרון:  dd/mm/yyyy
 סה"כ גיבויים: n
 7. in admin hub add delete case from supabase (שרת) and give 2 step confirmation
-8. **VERY IMPORTANT** *helper is not creating another version , its staying on v1 in supabase - NEW VERSIONS ARE NOT BEING SAVED AND ARE REVERTED TO V1* -**not fixed**
-9. admin hub preview version history status showing wrong information -**not fixed**
-10.**CHAECK IF OPEN CASE PAGE TRUGGERES A NEW CASE CREATION IN SUPABASE - CASE ID - PLATE IN : CASES, CASE_HELPER, HELPER_VERSIONS TABLES**
+8. admin hub preview version history status showing wrong information -**not fixed**
+**MOST IMPORTANT - HIGH PRIORITY TASKS :** 
+9. **VERY IMPORTANT** *helper is not creating another version , its staying on v1 in supabase - NEW VERSIONS ARE NOT BEING SAVED AND ARE REVERTED TO V1* -**not fixed**
+10.**OPEN CASE PAGE  open-cases.html DOESNT TRIGGER A NEW CASE CREATION IN SUPABASE - CASE ID - PLATE IN : CASES, CASE_HELPER, HELPER_VERSIONS TABLES**
+11. ADD A SAVE FUNCTION TO SAVE HELPER IN TEH VERSIONS ON LOG OUT/ CLOSED SESSION - OR THE BEST WAY TO DO THAT - I DONT KNOW **SUGGEST**
 
 
 
