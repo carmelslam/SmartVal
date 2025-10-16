@@ -443,7 +443,7 @@ Both paths run at the same time
     3. Non of the sections is actually registering correct data 
  **Read documentation on BUILDERS DATA_FLOW AND CALCULATIONS INSTRUCTIONS folder before doing or planning anything** 
      
- ### Phase 5a: invoice managemnt integration:     
+ **### Phase 5a: invoice managemnt integration:**   
 2. Implement **invoice management** - use the current invoices modul module and use the invoice json structure 
 3. connect to invoice floating screen and to invoice module.
 4. suggestive logic for diffrentials option fields in the final report 
@@ -452,7 +452,7 @@ Both paths run at the same time
 7. Integrate with existing helper structure 
    
 
-### Phase 6: User Management & Authentication
+**### Phase 6: User Management & Authentication**
 1. Set up Supabase Auth (magic link/OTP)
 2. Create user profiles and organizations
 3. Implement proper RLS policies
@@ -468,14 +468,14 @@ Both paths run at the same time
 5. Set up automated backups
 
 
-### Phase 8: Production Readiness & Optimization
+**### Phase 8: Production Readiness & Optimization**
 1. Tighten security policies
 2. Add monitoring and alerting
 3. Performance optimization
 4. Error handling improvements
 5. Create deployment procedures
 
-### Phase 9: admin functions migration
+**###Phase 9: admin functions migration**
 1. check all menue functions and connect to supabase: 
 סטטוס תיקים
 סקירה לפי שדות
@@ -489,7 +489,7 @@ rtl.
 ask for tracking tables clarifications and current formats. 
 
 
-### Phase 10 : connect the load report on modules to supabase
+**### Phase 10 : connect the load report on modules to supabase**
 1. final report builder and estimate builder have reload case, ourpose : to reload existing reports.
 2. Restored case on selection page P populates the plate window in estimator builder and the fina report builder in the window טען תיק קיים
 3. The buttons of the report retrieval will call the actual report of the plate from supabase buckets
