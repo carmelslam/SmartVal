@@ -6117,14 +6117,27 @@
                   (part.name || part.description || part.part_number || part.price > 0)
                 )
                 .map(part => ({
-                  // ✅ Map to expected field names for parts-required iframe
+                  // SESSION 40: Explicitly map OLD and NEW fields for parts-required iframe
+                  // OLD fields for backward compatibility
                   name: part.name || part.part_name || '',
                   description: part.description || part.desc || part.תיאור || '', // PHASE 4 FIX: Never use name as description fallback
                   part_number: part.part_number || part.partNumber || '',
-                  price: parseFloat(part.price) || 0,
+                  price: parseFloat(part.price || part.updated_price || part.price_per_unit) || 0,
                   quantity: parseInt(part.quantity) || 1,
                   source: part.source || '',
-                  // Keep original data
+                  
+                  // SESSION 40: NEW fields explicitly passed to ensure not lost
+                  pcode: part.pcode || part.catalog_code || part.part_number || '',
+                  catalog_code: part.catalog_code || part.pcode || part.part_number || '',
+                  price_per_unit: parseFloat(part.price_per_unit || part.unit_price || part.price) || 0,
+                  reduction_percentage: parseFloat(part.reduction_percentage || part.reduction) || 0,
+                  wear_percentage: parseFloat(part.wear_percentage || part.wear) || 0,
+                  updated_price: parseFloat(part.updated_price || part.price) || 0,
+                  total_cost: parseFloat(part.total_cost) || 0,
+                  supplier: part.supplier || part.supplier_name || part.ספק || '',
+                  supplier_name: part.supplier_name || part.supplier || part.ספק || '',
+                  
+                  // Keep ALL original data (may contain additional fields)
                   ...part
                 }));
               

@@ -2677,7 +2677,7 @@ function savePartsData() {
      * SESSION 38: Save to helper.current_damage_center
      */
     function saveToHelper(partData, damageCenterCode) {
-      console.log('📝 SESSION 38: Saving to helper.current_damage_center');
+      console.log('📝 SESSION 39: Saving to helper.current_damage_center');
       
       const helper = window.helper || globalHelper;
       
@@ -2693,6 +2693,14 @@ function savePartsData() {
       if (!helper.current_damage_center.Parts.parts_required) {
         helper.current_damage_center.Parts.parts_required = [];
       }
+      
+      // SESSION 39: BACKWARD COMPATIBILITY FOR REPORTS
+      // All report builders expect part.price field (OLD structure)
+      // Map from NEW structure fields to OLD field name
+      partData.price = partData.updated_price || partData.total_cost || partData.price_per_unit || 0;
+      partData.מחיר = partData.price; // Hebrew version for expertise-builder.html
+      
+      console.log(`  🔄 SESSION 39: Backward compatibility - mapped part.price = ${partData.price} from updated_price/total_cost/price_per_unit`);
       
       const existingIndex = helper.current_damage_center.Parts.parts_required
         .findIndex(p => p.row_uuid === partData.row_uuid);
