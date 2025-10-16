@@ -2603,14 +2603,14 @@ function savePartsData() {
     async function saveRowToSupabase(row) {
       console.log('💾 SESSION 38: Saving row to Supabase...');
       
-      const caseId = window.currentCaseId;
-      const plate = window.helper?.meta?.plate || globalHelper?.meta?.plate || globalHelper?.vehicle?.plate;
+      const caseId = window.currentCaseId || window.helper?.case_info?.case_id || window.helper?.meta?.case_id;
+      const plate = window.helper?.vehicle?.plate || window.helper?.meta?.plate || globalHelper?.meta?.plate || globalHelper?.vehicle?.plate;
       const damageCenterCode = window.currentDamageCenterCode || 
-                              sessionStorage.getItem('active_damage_center_code') ||
-                              window.helper?.current_damage_center?.code;
+                              window.helper?.current_damage_center?.code ||
+                              sessionStorage.getItem('active_damage_center_code');
       
       if (!caseId || !plate || !damageCenterCode) {
-        console.error('❌ Missing required IDs:', { caseId, plate, damageCenterCode });
+        console.error('❌ Missing required IDs:', { caseId, plate, damageCenterCode }, 'Helper:', window.helper);
         return;
       }
       
