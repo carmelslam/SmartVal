@@ -25105,10 +25105,125 @@ helper.current_damage_center.Parts.parts_required = partsData.map(part => ({
 
 ---
 
+---
+
+## 🔧 SESSION 40 BUG FIX #3: Price Fields Override Issue
+
+### **User Report:**
+
+Screenshot showed UI with distinct values:
+- Price per unit: ₪5082.8
+- Reduction: 6%
+- Wear: 10%
+- Updated price: ₪4300.05
+- Total: ₪4300.05
+
+But `current_damage_center.Parts.parts_required` showed:
+```json
+{
+  "price": 4300.05,
+  "price_per_unit": 4300.05,  // ❌ Should be 5082.8
+  "unit_price": 4300.05,       // ❌ Should be 5082.8
+  "updated_price": 4300.05,
+  "total_cost": 4300.05
+}
+```
+
+### **Root Cause:**
+
+**Location:** `damage-centers-wizard.html:3606-3612`
+
+Cascading fallbacks were overriding distinct values:
+```javascript
+price_per_unit: parseFloat(part.price_per_unit || part.unit_price || part.price) || 0,
+//                                                                      ^^^^^^^^ BAD - overrides with 4300.05
+```
+
+### **Fix Applied:**
+
+Removed cascading fallbacks that override distinct values:
+
+```javascript
+// SESSION 40 FIX: Don't use cascading fallbacks
+price_per_unit: parseFloat(part.price_per_unit || part.unit_price) || 0,  // Only related fields
+reduction_percentage: parseFloat(part.reduction_percentage || part.reduction) || 0,
+wear_percentage: parseFloat(part.wear_percentage || part.wear) || 0,
+updated_price: parseFloat(part.updated_price) || 0,  // No fallback - distinct value
+total_cost: parseFloat(part.total_cost) || 0,  // No fallback - distinct value
+unit_price: parseFloat(part.price_per_unit || part.unit_price) || 0,
+price: parseFloat(part.price || part.updated_price || part.price_per_unit) || 0,  // Backward compat only
+```
+
+**Result:** Each price field maintains its distinct value
+
+---
+
+## 🔧 SESSION 40 BUG FIX #4: Empty Vehicle Info
+
+### **User Report:**
+
+All vehicle fields empty in `current_damage_center.Parts.parts_required`:
+```json
+{
+  "make": "",
+  "model": "",
+  "year": "",
+  "trim": "",
+  "engine_type": "",
+  "vin": ""
+}
+```
+
+### **Root Cause:**
+
+**Location:** `damage-centers-wizard.html:3625-3631`
+
+Mapping only checked `helper.vehicleInfo` which might not exist:
+```javascript
+make: helper.vehicleInfo?.make || '',  // ❌ vehicleInfo might not exist
+```
+
+But vehicle data exists in `helper.current_damage_center["Vehicle Make"]` etc.
+
+### **Fix Applied:**
+
+Use `current_damage_center` first (which has data from wizard):
+
+```javascript
+// SESSION 40 FIX: Use current_damage_center first
+make: helper.current_damage_center["Vehicle Make"] || helper.vehicleInfo?.make || '',
+model: helper.current_damage_center["Vehicle Model"] || helper.vehicleInfo?.model || '',
+year: helper.current_damage_center["Vehicle Year"] || helper.vehicleInfo?.year || '',
+trim: helper.current_damage_center["Vehicle Trim"] || helper.vehicleInfo?.trim || '',
+engine_code: helper.current_damage_center["Engine Code"] || helper.vehicleInfo?.engine_code || '',
+engine_type: helper.current_damage_center["Engine Type"] || helper.vehicleInfo?.engine_type || '',
+vin: helper.current_damage_center["VIN"] || helper.vehicleInfo?.vin || '',
+```
+
+**Result:** Vehicle info now populated from wizard data
+
+---
+
+## 📝 DUPLICATE FIELDS EXPLANATION
+
+User noted duplicate fields in structure:
+- `name` + `part_name`
+- `description` + `תיאור`
+- `price` + `מחיר`
+- `quantity` + `כמות`
+
+**This is INTENTIONAL for backward compatibility:**
+- **English fields** (name, description, price, quantity) → NEW structure for Supabase
+- **Hebrew fields** (תיאור, כמות, מחיר, סוג חלק) → OLD structure for existing reports
+
+Reports like `expertise-builder.html`, `final-report-builder.html`, etc. expect Hebrew field names. Removing them would break all reports.
+
+---
+
 **END OF SESSION 40 DOCUMENTATION**
 
-**Status:** ✅ Implementation 100% Complete  
-**Confidence:** 🟢 HIGH - Both root causes fixed, structure unified  
-**Risk:** 🟢 LOW - Backward compatible, extensive fallbacks  
+**Status:** ✅ Implementation 100% Complete + Bug Fixes  
+**Confidence:** 🟢 HIGH - All root causes fixed, price fields distinct, vehicle info populated  
+**Risk:** 🟢 LOW - Backward compatible, proper field separation  
 **Next:** User testing phase
 

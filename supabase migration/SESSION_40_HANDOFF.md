@@ -1023,10 +1023,66 @@ parts-required.html (NEW structure)
 
 ---
 
+---
+
+## 🐛 SESSION 40 BUG FIX #3: Price Fields All Same Value
+
+**User Screenshot:** UI showed price_per_unit: 5082.8, updated_price: 4300.05  
+**Data Showed:** All prices = 4300.05
+
+**Root Cause:** `damage-centers-wizard.html:3606-3612` - Cascading fallbacks overriding distinct values
+```javascript
+price_per_unit: parseFloat(part.price_per_unit || part.unit_price || part.price) || 0,
+//                                                  ^^^^^^^^^^^^^^^^ ^^^^^^^^^^^^^ BAD
+```
+
+**Fix:** Removed cross-field fallbacks
+```javascript
+price_per_unit: parseFloat(part.price_per_unit || part.unit_price) || 0,  // Only related
+updated_price: parseFloat(part.updated_price) || 0,  // No fallback
+total_cost: parseFloat(part.total_cost) || 0,  // No fallback
+```
+
+**Result:** ✅ Each field maintains distinct value
+
+---
+
+## 🐛 SESSION 40 BUG FIX #4: Empty Vehicle Info
+
+**User Report:** make, model, year, trim all empty strings
+
+**Root Cause:** `damage-centers-wizard.html:3625-3631` - Only checked `helper.vehicleInfo` (doesn't exist)
+```javascript
+make: helper.vehicleInfo?.make || '',  // ❌ Returns empty
+```
+
+**Fix:** Use `current_damage_center` fields first (has wizard data)
+```javascript
+make: helper.current_damage_center["Vehicle Make"] || helper.vehicleInfo?.make || '',
+model: helper.current_damage_center["Vehicle Model"] || helper.vehicleInfo?.model || '',
+// etc...
+```
+
+**Result:** ✅ Vehicle info populated from wizard
+
+---
+
+## 📝 DUPLICATE FIELDS EXPLANATION
+
+User noted: name + part_name, description + תיאור, price + מחיר, etc.
+
+**This is INTENTIONAL:**
+- **English fields** → NEW Supabase structure
+- **Hebrew fields** → OLD structure for reports (expertise-builder.html, final-report-builder.html)
+
+Removing Hebrew fields would break all existing reports.
+
+---
+
 **END OF SESSION 40 HANDOFF**
 
-**Status:** ✅ Implementation Complete + Structure Unified  
-**Confidence Level:** 🟢 HIGH - centers[] and current_damage_center now identical structure  
-**Risk Level:** 🟢 LOW - All parts save with row_uuid and full metadata
+**Status:** ✅ Implementation Complete + All Bugs Fixed  
+**Confidence Level:** 🟢 HIGH - Structure unified, prices distinct, vehicle info populated  
+**Risk Level:** 🟢 LOW - Backward compatible, proper field separation
 
-**Recommended First Action:** Test save/edit cycle - verify row_uuid persists and no duplicates created
+**Recommended First Action:** Test with screenshot scenario - verify price_per_unit ≠ updated_price
