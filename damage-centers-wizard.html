@@ -3586,17 +3586,61 @@
           const partsData = moduleData.parts || [];
           
           if (helper.current_damage_center) {
+            // SESSION 40: Save parts with NEW structure matching current_damage_center format
+            // This ensures centers[] array has same structure as Supabase
             helper.current_damage_center.Parts.parts_required = partsData.map(part => ({
-              name: part.name || part.part || '',
+              // Core identification
+              row_uuid: part.row_uuid || crypto.randomUUID(),
+              case_id: helper.current_damage_center.case_id || '',
+              plate: helper.current_damage_center.plate || helper.vehicleInfo?.plate || '',
+              damage_center_code: helper.current_damage_center.code || '',
+              
+              // Part info - NEW English fields
+              part_name: part.name || part.part || '',
+              name: part.name || part.part || '', // Duplicate for compatibility
+              description: part.description || part.תיאור || '',
+              source: part.source || 'manual',
+              quantity: parseInt(part.quantity || part.כמות) || 1,
+              
+              // Pricing - NEW structure with all calculation fields
+              price_per_unit: parseFloat(part.price_per_unit || part.unit_price || part.price) || 0,
+              reduction_percentage: parseFloat(part.reduction_percentage || part.reduction) || 0,
+              wear_percentage: parseFloat(part.wear_percentage || part.wear) || 0,
+              updated_price: parseFloat(part.updated_price || part.price) || 0,
+              total_cost: parseFloat(part.total_cost || (part.quantity * (part.updated_price || part.price))) || 0,
+              unit_price: parseFloat(part.price_per_unit || part.unit_price || part.price) || 0,
+              price: parseFloat(part.price || part.updated_price || part.price_per_unit) || 0,
+              
+              // Catalog info
+              pcode: part.pcode || part.catalog_code || part.part_number || '',
+              oem: part.oem || part['מספר OEM'] || '',
+              supplier_name: part.supplier || part.supplier_name || part.ספק || '',
+              cat_num_desc: part.cat_num_desc || '',
+              part_family: part.part_family || '',
+              manufacturer: part.manufacturer || '',
+              selected_supplier: part.selected_supplier || part.supplier || '',
+              
+              // Vehicle info
+              make: helper.vehicleInfo?.make || '',
+              model: helper.vehicleInfo?.model || '',
+              year: helper.vehicleInfo?.year || '',
+              trim: helper.vehicleInfo?.trim || '',
+              engine_code: helper.vehicleInfo?.engine_code || '',
+              engine_type: helper.vehicleInfo?.engine_type || '',
+              vin: helper.vehicleInfo?.vin || '',
+              
+              // Metadata
+              metadata: part.metadata || {},
+              updated_at: new Date().toISOString(),
+              
+              // SESSION 39: BACKWARD COMPATIBILITY for OLD structure (Hebrew fields)
+              // Keep these for reports that still expect Hebrew field names
               תיאור: part.description || part.תיאור || '',
               כמות: parseInt(part.quantity || part.כמות) || 1,
-              מחיר: part.price ? `₪${part.price}` : '₪0',
-              price: parseFloat(part.price) || 0,
-              quantity: parseInt(part.quantity || part.כמות) || 1,
-              source: part.source || 'manual',
+              מחיר: parseFloat(part.price || part.updated_price || part.price_per_unit) || 0,
               'סוג חלק': part.source || 'חליפי/מקורי',
-              ספק: part.supplier || '',
-              'מספר OEM': part.part_number || '',
+              ספק: part.supplier || part.supplier_name || '',
+              'מספר OEM': part.oem || part.part_number || '',
               מיקום: part.location || 'ישראל',
               הערות: part.notes || '',
               זמינות: part.availability || 'זמין'
