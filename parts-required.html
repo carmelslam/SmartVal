@@ -373,9 +373,12 @@ form button {
           }
         }
         
-        // Pre-fill with existing selected parts for current damage center
-        console.log('🔍 EDIT MODE DEBUG - contextData.selectedParts:', contextData.selectedParts?.length || 0);
-        console.log('🔍 EDIT MODE DEBUG - damageCenterId:', contextData.damageCenterId);
+        // SESSION 39: Prioritize helper data in edit mode (matches wizard's flow)
+        console.log('🔍 SESSION 39 EDIT MODE DEBUG - contextData.selectedParts:', contextData.selectedParts?.length || 0);
+        console.log('🔍 SESSION 39 EDIT MODE DEBUG - damageCenterId:', contextData.damageCenterId);
+        console.log('🔍 SESSION 39 EDIT MODE DEBUG - mode:', contextData.mode);
+        
+        const isEditMode = contextData.mode === 'edit_existing' || contextData.isEditMode;
         
         if (contextData.selectedParts && contextData.selectedParts.length > 0) {
           // Clear existing parts first to avoid duplicates
@@ -383,22 +386,28 @@ form button {
           partsList.innerHTML = '';
           
           contextData.selectedParts.forEach((part, index) => {
-            console.log(`🔍 Adding part ${index} for center ${contextData.damageCenterId}:`, part);
+            console.log(`🔍 SESSION 39: Adding part ${index} from wizard context:`, part.name);
             addPartFromData(part);
           });
-          console.log(`✅ Pre-filled ${contextData.selectedParts.length} parts for damage center ${contextData.damageCenterId}`);
+          console.log(`✅ SESSION 39: Pre-filled ${contextData.selectedParts.length} parts from helper.centers[].Parts.parts_required`);
+          
+          // Store IDs for save operations
+          sessionStorage.setItem('currentCaseId', window.currentCaseId || '');
+          sessionStorage.setItem('currentDamageCenterCode', window.currentDamageCenterCode || '');
+          
+        } else if (!isEditMode) {
+          // Only load from Supabase if creating new (not edit mode with no parts)
+          console.log('📥 SESSION 39: No parts in context, attempting Supabase load...');
+          await loadPartsFromSupabase();
         } else {
-          // If no parts for this center, clear the UI and show empty state
+          // Edit mode with no parts - clear UI
           const partsList = document.getElementById('partsList');
           partsList.innerHTML = '';
-          console.log(`📝 No existing parts found for damage center ${contextData.damageCenterId}`);
+          console.log(`📝 SESSION 39: Edit mode with no existing parts for center ${contextData.damageCenterId}`);
         }
         
         // Show wizard mode indicator
         showWizardModeUI(contextData);
-        
-        // SESSION 38: Load parts from Supabase
-        await loadPartsFromSupabase();
         
       } catch (error) {
         console.error('❌ Failed to handle wizard context:', error);
@@ -2539,41 +2548,57 @@ function savePartsData() {
       console.log('  📤 Saving:', { row_uuid: rowUuid, part_name: partName, total_cost: totalCost });
       
       try {
-        // SESSION 38: Custom client doesn't have upsert, use insert with Prefer header
-        const response = await fetch(`${window.supabaseClient.url}/rest/v1/parts_required`, {
-          method: 'POST',
-          headers: {
-            'apikey': window.supabaseClient.key,
-            'Authorization': `Bearer ${window.supabaseClient.key}`,
-            'Content-Type': 'application/json',
-            'Prefer': 'resolution=merge-duplicates,return=representation'
-          },
-          body: JSON.stringify(supabaseData)
-        });
+        // SESSION 39: Use native upsert method now available in custom client
+        const { data, error } = await window.supabaseClient
+          .from('parts_required')
+          .upsert(supabaseData, { 
+            onConflict: 'row_uuid' 
+          })
+          .select();
         
-        if (!response.ok) {
-          const errorText = await response.text();
-          console.error('❌ Supabase save error:', response.status, errorText);
+        if (error) {
+          console.error('❌ SESSION 39: Supabase upsert error:', error);
           return;
         }
         
-        const data = await response.json();
-        console.log('  ✅ Saved to Supabase:', data);
+        console.log('  ✅ SESSION 39: Saved to Supabase via upsert:', data);
         
         saveToHelper(supabaseData, damageCenterCode);
         
       } catch (error) {
-        console.error('❌ SESSION 38: Save error:', error);
+        console.error('❌ SESSION 39: Save error:', error);
       }
     }
 
-    let saveTimeout;
+    // SESSION 39: Optimize debounced save - use single global timeout
+    let saveTimeout = null;
+    let pendingRows = new Set(); // Track rows waiting to be saved
+    
     function debouncedSave(row) {
-      clearTimeout(saveTimeout);
-      saveTimeout = setTimeout(() => {
-        console.log('💾 SESSION 38: Debounced save triggered');
-        saveRowToSupabase(row);
+      // Add row to pending set
+      pendingRows.add(row);
+      
+      // Clear any existing timeout
+      if (saveTimeout) {
+        clearTimeout(saveTimeout);
+      }
+      
+      // Schedule batch save
+      saveTimeout = setTimeout(async () => {
+        console.log(`💾 SESSION 39: Debounced save triggered for ${pendingRows.size} row(s)`);
+        
+        // Save all pending rows
+        const rowsToSave = Array.from(pendingRows);
+        pendingRows.clear();
+        
+        for (const r of rowsToSave) {
+          await saveRowToSupabase(r);
+        }
+        
+        // Update wizard once after all saves
         sendPartsUpdateToWizard();
+        
+        saveTimeout = null;
       }, 500);
     }
 
@@ -2677,21 +2702,24 @@ function savePartsData() {
      * Supabase is source of truth
      */
     async function loadPartsFromSupabase() {
-      console.log('📥 SESSION 38: Loading parts from Supabase...');
+      console.log('📥 SESSION 39: Loading parts from Supabase...');
       
-      const caseId = window.currentCaseId;
-      const damageCenterCode = window.currentDamageCenterCode || 
-                              sessionStorage.getItem('active_damage_center_code');
+      // SESSION 39: Try to restore IDs from sessionStorage first
+      let caseId = window.currentCaseId || sessionStorage.getItem('currentCaseId');
+      let damageCenterCode = window.currentDamageCenterCode || 
+                            sessionStorage.getItem('currentDamageCenterCode') ||
+                            sessionStorage.getItem('active_damage_center_code');
       
-      console.log('  🔍 SESSION 38 DEBUG:', { 
+      console.log('  🔍 SESSION 39 DEBUG:', { 
         caseId, 
         damageCenterCode,
         hasSupabaseClient: !!window.supabaseClient 
       });
       
       if (!caseId || !damageCenterCode) {
-        console.warn('  ⚠️ Missing IDs, falling back to helper');
-        return loadExistingPartsIntoUI();
+        console.warn('  ⚠️ SESSION 39: Missing IDs, cannot load from Supabase');
+        console.warn('  💡 This is OK in edit mode - data loaded from wizard context');
+        return;
       }
       
       try {

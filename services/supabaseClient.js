@@ -13,6 +13,7 @@ class SupabaseQueryBuilder {
     this.method = 'GET';
     this.insertData = null;
     this.singleResult = false;
+    this.upsertConflict = null; // SESSION 39: For upsert conflict resolution
   }
 
   select(fields = '*') {
@@ -88,6 +89,14 @@ class SupabaseQueryBuilder {
     return this;
   }
 
+  // SESSION 39: Add upsert support for PostgreSQL ON CONFLICT
+  upsert(data, options = {}) {
+    this.method = 'POST';
+    this.insertData = data;
+    this.upsertConflict = options.onConflict || null; // Column(s) to check for conflict
+    return this;
+  }
+
   delete() {
     this.method = 'DELETE';
     return this;
@@ -141,6 +150,11 @@ class SupabaseQueryBuilder {
         'Prefer': 'return=representation'
       }
     };
+
+    // SESSION 39: Add upsert Prefer header for conflict resolution
+    if (this.upsertConflict && this.method === 'POST') {
+      options.headers['Prefer'] = 'resolution=merge-duplicates,return=representation';
+    }
 
     if (this.insertData && (this.method === 'POST' || this.method === 'PATCH')) {
       options.body = JSON.stringify(this.insertData);
@@ -204,6 +218,33 @@ const supabase = {
       insert: (data) => {
         const builder = new SupabaseQueryBuilder(table);
         builder.insert(data);
+        return {
+          select: (fields = '*') => {
+            builder.select(fields);
+            return {
+              single: () => {
+                builder.single();
+                return {
+                  then: (onResolve, onReject) => {
+                    return executeQuery(builder).then(onResolve, onReject);
+                  }
+                };
+              },
+              then: (onResolve, onReject) => {
+                return executeQuery(builder).then(onResolve, onReject);
+              }
+            };
+          },
+          then: (onResolve, onReject) => {
+            return executeQuery(builder).then(onResolve, onReject);
+          }
+        };
+      },
+      
+      // SESSION 39: Add upsert method to supabase.from() API
+      upsert: (data, options = {}) => {
+        const builder = new SupabaseQueryBuilder(table);
+        builder.upsert(data, options);
         return {
           select: (fields = '*') => {
             builder.select(fields);
