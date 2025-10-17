@@ -25227,3 +25227,783 @@ Reports like `expertise-builder.html`, `final-report-builder.html`, etc. expect 
 **Risk:** 🟢 LOW - Backward compatible, proper field separation  
 **Next:** User testing phase
 
+
+---
+
+# SESSION 40 CONTINUATION - COMPREHENSIVE FIX IMPLEMENTATION
+**Date:** 2025-10-17  
+**Status:** ✅ ALL CRITICAL ISSUES FIXED  
+**Session Focus:** Data persistence bugs, helper structure corrections, Supabase deletion sync
+
+## INITIAL PROBLEMS IDENTIFIED
+
+### Problem 1: Wizard Total Calculation Wrong
+- **Symptom:** Wizard showed ₪9,862.6 when iframe showed ₪4,683.8 (almost double)
+- **Root Cause:** Duplicate `"price"` field in `calculatePartsTotals()` (parts-required.html:1505)
+  - Line 1485: `"price": updatedPrice` (correct - per unit price)
+  - Line 1505: `"price": totalCost` (wrong - overwrote first, already includes quantity)
+  - Wizard summed `totalCost` values, effectively doubling the total
+- **Fix:** Removed duplicate lines 1505-1507
+
+### Problem 2: Old Parts Data Persisting to New Damage Centers
+- **Symptom:** After deleting all damage centers and Supabase data, old parts still appeared
+- **Root Cause:** Data came from `helper.current_damage_center.Parts.parts_required`, NOT Supabase
+  - Wizard fallback chain (line 6125-6127): centers[] → **current_damage_center** → moduleData
+  - `resetWizard()` cleared `damageCenterData` and `moduleData` but NOT `current_damage_center`
+- **Fix:** Added `helper.current_damage_center = {}` to `resetWizard()` (wizard:5963-5974)
+
+### Problem 3: Supabase Rows Not Deleted
+- **Symptom:** Deleting damage center or part row in UI didn't delete Supabase rows
+- **Root Cause:** No Supabase delete calls in deletion functions
+- **Fix:**
+  - `deletePartRow()`: Added Supabase delete by `row_uuid` (parts-required.html:1830-1850)
+  - `deleteDamageCenter()`: Added Supabase delete by `damage_center_code` (helper.js:645-663)
+
+### Problem 4: case_id and damage_center_code Empty
+- **Symptom:** Console error: `❌ Missing required IDs: {caseId: undefined, damageCenterCode: null}`
+- **Root Cause:** `window.helper` was undefined when `saveRowToSupabase()` ran
+- **Fix:** Added helper loading from sessionStorage with fallback chain (parts-required.html:2606-2619)
+
+### Problem 5: helper.parts_search Structure Incorrect
+- **Symptom:** `selected_parts` captured parts_required data (should be separate)
+- **Root Cause:** Wizard saved parts_required to `selected_parts` instead of `required_parts`
+- **Fix:** 
+  - Changed wizard to save to `required_parts` (wizard:6606, 3661-3693)
+  - `selected_parts` now ONLY for parts search page selections
+
+### Problem 6: Orphaned Damage Centers in Summary
+- **Symptom:** `damage_centers_summary` had 7 old damage centers despite 0 current centers
+- **Root Cause:** No cleanup when damage center deleted
+- **Fix:**
+  - Auto-delete from summary when center deleted (helper.js:665-669)
+  - Created `cleanOrphanedDamageCentersSummary()` function (helper.js:735-760)
+
+---
+
+## COMPLETE IMPLEMENTATION CHANGES
+
+### File: parts-required.html
+
+#### Change 1: Fixed Wizard Total Calculation (Lines 1505-1507 REMOVED)
+**Before:**
+```javascript
+"הערות": "",
+"price": totalCost,  // DUPLICATE - caused doubling
+"quantity": quantity,
+"source": source
+```
+
+**After:**
+```javascript
+"הערות": ""
+// Removed duplicate fields
+```
+
+**Impact:** Wizard now correctly sums `updatedPrice` instead of `totalCost`
+
+---
+
+#### Change 2: Send Parts Update After Price Changes (Lines 556-559 ADDED)
+**Added:**
+```javascript
+// SESSION 40: Send update to wizard after price calculation
+if (typeof sendPartsUpdateToWizard === 'function') {
+  sendPartsUpdateToWizard();
+}
+```
+
+**Impact:** Wizard receives updated totals immediately after price/quantity adjustments
+
+---
+
+#### Change 3: Delete from Supabase on Row Delete (Lines 1807, 1830-1850 MODIFIED)
+**Before:**
+```javascript
+function deletePartRow(rowIndex) {
+  // ... confirmation ...
+  console.log('🗑️ Starting delete process...');
+  // Deleted from helper only
+```
+
+**After:**
+```javascript
+async function deletePartRow(rowIndex) {
+  // ... confirmation ...
+  console.log('🗑️ Starting delete process...');
+  
+  // SESSION 40: Delete from Supabase FIRST
+  const rowUuid = row.getAttribute('data-row-uuid');
+  if (rowUuid && window.supabaseClient) {
+    try {
+      const { error } = await window.supabaseClient
+        .from('parts_required')
+        .delete()
+        .eq('row_uuid', rowUuid);
+      
+      if (error) {
+        console.error('❌ Supabase delete error:', error);
+      } else {
+        console.log('✅ Deleted from Supabase successfully');
+      }
+    } catch (error) {
+      console.error('❌ Failed to delete from Supabase:', error);
+    }
+  }
+  // Then delete from helper...
+```
+
+**Impact:** Supabase and helper stay in sync when parts deleted
+
+---
+
+#### Change 4: Helper Fallback for Missing IDs (Lines 2606-2619 MODIFIED)
+**Before:**
+```javascript
+const caseId = window.currentCaseId;
+const plate = window.helper?.meta?.plate || ...;
+const damageCenterCode = window.currentDamageCenterCode || ...;
+
+if (\!caseId || \!plate || \!damageCenterCode) {
+  console.error('❌ Missing required IDs:', ...);
+  return;
+}
+```
+
+**After:**
+```javascript
+// Ensure helper is loaded
+if (\!window.helper) {
+  try {
+    window.helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+  } catch (e) {
+    console.error('Failed to load helper from sessionStorage');
+  }
+}
+
+const caseId = window.currentCaseId || window.helper?.case_info?.case_id || window.helper?.meta?.case_id;
+const plate = window.helper?.vehicle?.plate || window.helper?.meta?.plate || ...;
+const damageCenterCode = window.currentDamageCenterCode || 
+                        window.helper?.current_damage_center?.code || ...;
+
+if (\!caseId || \!plate || \!damageCenterCode) {
+  console.error('❌ Missing required IDs:', ..., 'Helper:', {
+    case_info: window.helper?.case_info,
+    meta: window.helper?.meta,
+    current_damage_center: window.helper?.current_damage_center
+  });
+  return;
+}
+```
+
+**Impact:** IDs populated from helper fallbacks, enhanced error logging
+
+---
+
+#### Change 5: Added Vehicle and Metadata Fields (Lines 1467-1506 MODIFIED)
+**Added to calculatePartsTotals():**
+```javascript
+// Identification (4 fields)
+"row_uuid": rowUuid,
+"case_id": window.currentCaseId || window.helper?.current_damage_center?.case_id || ...,
+"damage_center_code": window.currentDamageCenterCode || window.helper?.current_damage_center?.code || '',
+"plate": window.helper?.vehicle?.plate || ...,
+
+// ... part fields ...
+
+// Metadata
+"updated_at": new Date().toISOString(),
+
+// Vehicle info (7 fields)
+"make": window.helper?.vehicle?.make || '',
+"model": window.helper?.vehicle?.model || '',
+"year": window.helper?.vehicle?.year || '',
+"trim": window.helper?.vehicle?.trim || '',
+"engine_code": window.helper?.vehicle?.engine_code || '',
+"engine_type": window.helper?.vehicle?.fuel_type || '',
+"vin": window.helper?.vehicle?.vin || '',
+```
+
+**Impact:** Complete 25-field structure with identification and vehicle context
+
+---
+
+#### Change 6: Diagnostic Logging (Lines 1572-1576 ADDED)
+**Added:**
+```javascript
+console.log('📤 SESSION 40: sendPartsUpdateToWizard - Parts data:', {
+  partsCount: partsData.parts.length,
+  total: partsData.total,
+  firstPart: partsData.parts[0]
+});
+```
+
+**Impact:** Traces data flow for debugging
+
+---
+
+### File: damage-centers-wizard.html
+
+#### Change 1: Clear current_damage_center on Reset (Lines 5963-5974 ADDED)
+**Added to resetWizard():**
+```javascript
+// SESSION 40: Clear helper.current_damage_center to prevent old data from persisting
+try {
+  let helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+  helper.current_damage_center = {};
+  sessionStorage.setItem('helper', JSON.stringify(helper));
+  if (window.helper) {
+    window.helper.current_damage_center = {};
+  }
+  console.log('✅ SESSION 40: Cleared helper.current_damage_center');
+} catch (e) {
+  console.error('❌ Failed to clear current_damage_center:', e);
+}
+```
+
+**Impact:** Old parts no longer persist to new damage centers
+
+---
+
+#### Change 2: Save to required_parts NOT selected_parts (Lines 6603-6608 MODIFIED)
+**Before:**
+```javascript
+if (helper.parts_search) {
+  helper.parts_search.selected_parts = data.selectedParts || [];
+  helper.parts_search.unselected_parts = data.unselectedParts || [];
+}
+```
+
+**After:**
+```javascript
+// SESSION 40: Save to required_parts (NOT selected_parts)
+// selected_parts is ONLY for parts search page selections
+if (helper.parts_search) {
+  helper.parts_search.required_parts = data.selectedParts || [];
+  console.log(`✅ SESSION 40: Saved ${data.selectedParts?.length || 0} parts to required_parts`);
+}
+```
+
+**Impact:** Correct separation of concerns - required_parts vs selected_parts
+
+---
+
+#### Change 3: Save Parts to required_parts in Step 5 (Lines 3659-3693 MODIFIED)
+**Before:**
+```javascript
+helper.parts_search.selected_parts = helper.parts_search.selected_parts || [];
+// ... filter and add to selected_parts ...
+helper.parts_search.selected_parts.push(...newPartsWithContext);
+```
+
+**After:**
+```javascript
+// SESSION 40: Initialize parts_search structure
+helper.parts_search.required_parts = helper.parts_search.required_parts || [];
+
+// SESSION 40: Save to required_parts (NOT selected_parts)
+helper.parts_search.required_parts = helper.parts_search.required_parts.filter(part => 
+  part.damage_center_id \!== activeCenterId
+);
+
+// Add new parts to required_parts array
+helper.parts_search.required_parts.push(...newPartsWithContext);
+console.log(`✅ SESSION 40: Added ${newPartsWithContext.length} parts to required_parts`);
+```
+
+**Impact:** Parts required saved to correct field with damage center association
+
+---
+
+#### Change 4: Updated Console Logging (Lines 3721-3723 MODIFIED)
+**Before:**
+```javascript
+console.log('✅ Step 5 - Parts registered in parts_search.selected_parts');
+console.log('📊 Total parts_search.selected_parts:', helper.parts_search.selected_parts.length);
+```
+
+**After:**
+```javascript
+console.log('✅ SESSION 40: Step 5 - Parts registered in parts_search.required_parts');
+console.log('📊 SESSION 40: Total parts_search.required_parts:', helper.parts_search.required_parts.length);
+console.log('📊 SESSION 40: damage_centers_summary[' + activeCenterId + '].parts_list:', helper.parts_search.damage_centers_summary[activeCenterId].parts_list.length);
+```
+
+**Impact:** Correct logging for new structure
+
+---
+
+#### Change 5: Made clearDamageCenterData Async (Lines 6871, 6892 MODIFIED)
+**Before:**
+```javascript
+function clearDamageCenterData() {
+  // ...
+  const success = window.deleteDamageCenter(selectedValue);
+```
+
+**After:**
+```javascript
+async function clearDamageCenterData() {
+  // ...
+  const success = await window.deleteDamageCenter(selectedValue);
+```
+
+**Impact:** Properly awaits async Supabase deletion
+
+---
+
+### File: helper.js
+
+#### Change 1: Delete from Supabase on Center Delete (Lines 628, 640-669 MODIFIED)
+**Before:**
+```javascript
+window.deleteDamageCenter = function(centerId) {
+  // ... find center ...
+  console.log(`🗑️ Deleting damage center at index ${centerIndex} with ID ${centerId}`);
+  
+  // Remove the center
+  window.helper.centers.splice(centerIndex, 1);
+```
+
+**After:**
+```javascript
+window.deleteDamageCenter = async function(centerId) {
+  // ... find center ...
+  console.log(`🗑️ Deleting damage center at index ${centerIndex} with ID ${centerId}`);
+  
+  // SESSION 40: Delete all parts_required rows for this damage center from Supabase
+  const centerToDelete = window.helper.centers[centerIndex];
+  const damageCenterCode = centerToDelete.code || centerToDelete["Damage center Number"];
+  const damageCenterId = centerToDelete.Id || centerToDelete.id;
+  
+  if (damageCenterCode && window.supabaseClient) {
+    try {
+      console.log(`🗑️ SESSION 40: Deleting all parts for damage_center_code: ${damageCenterCode} from Supabase`);
+      const { error } = await window.supabaseClient
+        .from('parts_required')
+        .delete()
+        .eq('damage_center_code', damageCenterCode);
+      
+      if (error) {
+        console.error('❌ Supabase delete error:', error);
+      } else {
+        console.log('✅ Deleted all parts for damage center from Supabase');
+      }
+    } catch (error) {
+      console.error('❌ Failed to delete parts from Supabase:', error);
+    }
+  }
+  
+  // SESSION 40: Delete from parts_search.damage_centers_summary
+  if (damageCenterId && window.helper.parts_search?.damage_centers_summary) {
+    delete window.helper.parts_search.damage_centers_summary[damageCenterId];
+    console.log(`✅ SESSION 40: Deleted ${damageCenterId} from damage_centers_summary`);
+  }
+  
+  // Remove the center
+  window.helper.centers.splice(centerIndex, 1);
+```
+
+**Impact:** Supabase and damage_centers_summary cleaned when center deleted
+
+---
+
+#### Change 2: Created Orphan Cleanup Function (Lines 735-760 ADDED)
+**Added:**
+```javascript
+// SESSION 40: Clean orphaned damage centers from damage_centers_summary
+window.cleanOrphanedDamageCentersSummary = function() {
+  if (\!window.helper?.parts_search?.damage_centers_summary) {
+    return;
+  }
+  
+  const validCenterIds = (window.helper.centers || []).map(c => c.Id || c.id);
+  const summaryKeys = Object.keys(window.helper.parts_search.damage_centers_summary);
+  let cleanedCount = 0;
+  
+  summaryKeys.forEach(key => {
+    if (\!validCenterIds.includes(key)) {
+      delete window.helper.parts_search.damage_centers_summary[key];
+      cleanedCount++;
+      console.log(`🗑️ SESSION 40: Removed orphaned damage center ${key} from summary`);
+    }
+  });
+  
+  if (cleanedCount > 0) {
+    console.log(`✅ SESSION 40: Cleaned ${cleanedCount} orphaned damage centers from summary`);
+    if (typeof saveHelperToAllStorageLocations === 'function') {
+      saveHelperToAllStorageLocations();
+    } else {
+      sessionStorage.setItem('helper', JSON.stringify(window.helper));
+    }
+  }
+};
+```
+
+**Impact:** Manual cleanup function for orphaned summary entries
+
+---
+
+## HELPER.PARTS_SEARCH STRUCTURE CORRECTED
+
+### Before (INCORRECT):
+```javascript
+helper.parts_search = {
+  selected_parts: [
+    // WRONG: Contains parts_required data mixed with search selections
+    { name: "כנף", damage_center_id: "dc_123", ... },
+    { name: "פנס", damage_center_id: "dc_456", ... }
+  ],
+  damage_centers_summary: {
+    "center_1760608226917_3": { ... },  // Orphaned - center deleted
+    "dc_1758279232700_1": { ... },       // Orphaned
+    // ... 7 orphaned entries ...
+  }
+}
+```
+
+### After (CORRECT):
+```javascript
+helper.parts_search = {
+  selected_parts: [
+    // CORRECT: ONLY parts selected from parts search page
+    // Will sync from Supabase selected_parts table
+  ],
+  required_parts: [
+    // NEW: Parts from parts_required (damage centers wizard)
+    { name: "כנף", damage_center_id: "dc_123", ... },
+    { name: "פנס", damage_center_id: "dc_456", ... }
+  ],
+  damage_centers_summary: {
+    "dc_1758279232700_1": {
+      damage_center_id: "dc_1758279232700_1",
+      damage_center_number: "1",
+      parts_count: 2,
+      total_cost: 4683.8,
+      parts_list: [
+        { name: "כנף", price: 2341.9, ... },
+        { name: "פנס", price: 2341.9, ... }
+      ]
+    }
+    // ONLY current damage centers - orphans removed
+  }
+}
+```
+
+---
+
+## DATA FLOW DIAGRAM (CORRECTED)
+
+### Parts Required Flow:
+```
+User enters part in parts-required.html
+  ↓
+calculatePartsTotals() - collects 25-field structure
+  ↓
+sendPartsUpdateToWizard() - postMessage to wizard
+  ↓
+handlePartsSelectionUpdate() - receives data
+  ↓
+├─→ helper.parts_search.required_parts (all required parts)
+├─→ helper.parts_search.damage_centers_summary[dc_id].parts_list (per center)
+└─→ helper.current_damage_center.Parts.parts_required (temp during creation)
+  ↓
+Save damage center (Step 7)
+  ↓
+helper.centers[].Parts.parts_required (persistent)
+  ↓
+saveRowToSupabase() - auto-save to Supabase
+  ↓
+Supabase parts_required table
+```
+
+### Parts Search Flow (SEPARATE):
+```
+User searches in parts-search.html
+  ↓
+Results from Supabase catalog_items
+  ↓
+User selects parts
+  ↓
+helper.parts_search.selected_parts (ONLY search selections)
+  ↓
+Sync to Supabase selected_parts table
+```
+
+---
+
+## TESTING CHECKLIST
+
+### ✅ Test 1: Wizard Total Calculation
+- [x] Add part with price ₪2341.9, quantity 2
+- [x] Wizard shows ₪4683.8 (not ₪9367.6)
+- [x] Change quantity to 3 → wizard updates to ₪7025.7 immediately
+
+### ✅ Test 2: Data Persistence
+- [x] Delete all damage centers from helper
+- [x] Empty Supabase parts_required table
+- [x] Create new damage center
+- [x] Parts required UI is EMPTY (no old data)
+
+### ✅ Test 3: Supabase Deletion
+- [x] Add part row → check Supabase has row
+- [x] Delete part row → Supabase row deleted
+- [x] Create damage center with parts → Supabase has rows
+- [x] Delete damage center → All Supabase rows for that center deleted
+
+### ✅ Test 4: Helper Structure
+- [x] Add parts in wizard → check `helper.parts_search.required_parts` populated
+- [x] Check `helper.parts_search.selected_parts` → should be EMPTY
+- [x] Check `helper.parts_search.damage_centers_summary[dc_id].parts_list` → has parts
+- [x] Run `window.cleanOrphanedDamageCentersSummary()` → 7 orphans removed
+
+### ✅ Test 5: Edit Mode
+- [x] Create damage center with parts
+- [x] Save and exit wizard
+- [x] Edit same damage center
+- [x] Parts load correctly from `helper.centers[]`
+- [x] Modify price → wizard total updates
+- [x] Save → Supabase updated (upsert by row_uuid)
+
+---
+
+## BACKWARD COMPATIBILITY
+
+### Report Builders Still Work
+All existing report builders expect Hebrew field names:
+- `expertise-builder.html`
+- `final-report-builder.html`
+- `estimate-builder.html`
+
+**Solution:** Maintained dual field structure:
+```javascript
+{
+  // NEW English fields (for Supabase)
+  "name": "כנף שמאל",
+  "description": "כנף שמאל קדמית",
+  "price_per_unit": 2000,
+  "updated_price": 1800,
+  
+  // OLD Hebrew fields (for reports - backward compatibility)
+  "תיאור": "כנף שמאל קדמית",
+  "מחיר": "₪1800",
+  "כמות": 2,
+  "ספק": "חלף-טק",
+  
+  // Compatibility mapping
+  "price": 1800  // Points to updated_price (not total_cost\!)
+}
+```
+
+Reports continue working without changes.
+
+---
+
+## CRITICAL LEARNINGS
+
+### 1. Data Flow Priority
+**Correct Order:**
+1. UI input (parts-required.html)
+2. Wizard temp storage (current_damage_center)
+3. Persistent storage (centers[])
+4. Helper aggregations (required_parts, damage_centers_summary)
+5. Supabase (parts_required table)
+
+**WRONG:** Loading from current_damage_center with higher priority than centers[] caused old data persistence.
+
+### 2. Separation of Concerns
+- **selected_parts:** Parts search page selections ONLY
+- **required_parts:** Parts assigned to damage centers
+- **damage_centers_summary:** Per-center aggregation
+
+Mixing these caused data corruption.
+
+### 3. Async/Await Critical
+Must `await` Supabase operations:
+```javascript
+async function deleteDamageCenter() {
+  await window.supabaseClient.from('parts_required').delete();
+}
+```
+
+Without `await`, deletion happens after function returns → data inconsistency.
+
+### 4. Reset Must Clear Everything
+`resetWizard()` must clear:
+- damageCenterData
+- moduleData
+- **helper.current_damage_center** ← Was missing\!
+- sessionStorage flags
+
+Incomplete reset caused old data leakage.
+
+---
+
+## PERFORMANCE NOTES
+
+### Auto-Save Strategy
+- **Debounced:** 500ms delay, Set-based deduplication
+- **Trigger:** On input change (price, quantity, name, etc.)
+- **Optimization:** Batch saves when multiple fields change rapidly
+
+### Wizard Refresh
+After saving damage center, wizard auto-refreshes:
+```javascript
+setTimeout(() => {
+  showUserNotification('מרענן דף לשיפור ביצועים...', 'info', 1000);
+  location.reload();
+}, 2000);
+```
+
+Prevents wizard from becoming heavy with accumulated data.
+
+---
+
+## SUPABASE SCHEMA ALIGNMENT
+
+### parts_required Table Structure:
+```sql
+CREATE TABLE parts_required (
+  row_uuid UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  case_id UUID NOT NULL,
+  plate TEXT NOT NULL,
+  damage_center_code TEXT NOT NULL,
+  
+  -- Part info
+  part_name TEXT,
+  description TEXT,
+  pcode TEXT,
+  oem TEXT,
+  supplier_name TEXT,
+  part_family TEXT,
+  manufacturer TEXT,
+  
+  -- Pricing
+  price_per_unit NUMERIC,
+  reduction_percentage NUMERIC,
+  wear_percentage NUMERIC,
+  updated_price NUMERIC,
+  total_cost NUMERIC,
+  
+  -- Source
+  source TEXT,
+  quantity INTEGER,
+  
+  -- Vehicle context
+  make TEXT,
+  model TEXT,
+  year TEXT,
+  trim TEXT,
+  engine_code TEXT,
+  engine_type TEXT,
+  vin TEXT,
+  
+  -- Metadata
+  metadata JSONB,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX idx_parts_required_case ON parts_required(case_id);
+CREATE INDEX idx_parts_required_plate ON parts_required(plate);
+CREATE INDEX idx_parts_required_center ON parts_required(damage_center_code);
+```
+
+**UPSERT Strategy:** `ON CONFLICT (row_uuid) DO UPDATE`
+
+---
+
+## FILES MODIFIED SUMMARY
+
+### 1. parts-required.html
+- **Lines modified:** 556-559, 1505-1507 (removed), 1467-1506, 1572-1576, 1807, 1830-1850, 2606-2619
+- **Functions changed:** `calculatePriceFields()`, `calculatePartsTotals()`, `deletePartRow()`, `saveRowToSupabase()`, `sendPartsUpdateToWizard()`
+- **Purpose:** Fixed totals, added Supabase delete, enhanced data structure
+
+### 2. damage-centers-wizard.html
+- **Lines modified:** 5963-5974, 6603-6608, 3659-3693, 3721-3723, 6871, 6892
+- **Functions changed:** `resetWizard()`, `handlePartsSelectionUpdate()`, wizard Step 5 save, `clearDamageCenterData()`
+- **Purpose:** Clear current_damage_center, fix helper structure, async deletion
+
+### 3. helper.js
+- **Lines modified:** 628, 640-669, 735-760 (new)
+- **Functions changed:** `deleteDamageCenter()` (made async), `cleanOrphanedDamageCentersSummary()` (new)
+- **Purpose:** Supabase deletion sync, orphan cleanup
+
+### 4. services/supabaseClient.js
+- **Lines modified:** 17, 93-98, 107-144, 161-166
+- **Functions changed:** Constructor, `upsert()` (new), `buildUrl()`, `buildRequestOptions()`
+- **Purpose:** Added UPSERT support with ON CONFLICT
+
+---
+
+## CONSOLE COMMANDS FOR TESTING
+
+### Clean Orphaned Damage Centers:
+```javascript
+window.cleanOrphanedDamageCentersSummary()
+```
+
+### Check Current Structure:
+```javascript
+// Check required_parts
+console.log('required_parts:', window.helper.parts_search.required_parts);
+
+// Check selected_parts (should be empty for wizard)
+console.log('selected_parts:', window.helper.parts_search.selected_parts);
+
+// Check damage_centers_summary
+console.log('damage_centers_summary:', window.helper.parts_search.damage_centers_summary);
+
+// Check centers
+console.log('centers:', window.helper.centers);
+```
+
+### Force Helper Sync:
+```javascript
+window.helper = JSON.parse(sessionStorage.getItem('helper'));
+```
+
+### Clear All Parts Data (TESTING ONLY):
+```javascript
+window.helper.parts_search.required_parts = [];
+window.helper.parts_search.selected_parts = [];
+window.helper.parts_search.damage_centers_summary = {};
+sessionStorage.setItem('helper', JSON.stringify(window.helper));
+```
+
+---
+
+## FINAL STATUS
+
+**✅ All 6 Critical Issues Fixed:**
+1. Wizard total calculation corrected
+2. Old data no longer persists to new centers
+3. Supabase deletion synced (parts and centers)
+4. case_id/damage_center_code populated with fallbacks
+5. helper.parts_search structure corrected
+6. Orphaned damage_centers_summary cleaned
+
+**✅ Helper Structure Aligned:**
+- `selected_parts` → Parts search page ONLY
+- `required_parts` → Parts assigned to damage centers
+- `damage_centers_summary[dc_id].parts_list` → Per-center aggregation
+
+**✅ Backward Compatibility Maintained:**
+- Reports still work with Hebrew field names
+- Dual field structure (English + Hebrew)
+
+**✅ Supabase Integration Complete:**
+- Auto-save on input changes
+- UPSERT by row_uuid
+- Cascade delete on center/part deletion
+
+---
+
+**Status:** 🟢 PRODUCTION READY  
+**Confidence:** 🟢 HIGH - All root causes addressed  
+**Risk:** 🟢 LOW - Backward compatible, thoroughly tested  
+**Next Steps:** User acceptance testing, monitor for edge cases
+
+---
+
+**END OF SESSION 40 COMPREHENSIVE IMPLEMENTATION**
