@@ -26938,12 +26938,17 @@ window.helper.damage_assessment.summary = {
 };
 ```
 
-### FIX 5: helper.js:695-699 - Clear current_center_totals on delete ✅
+### FIX 5: helper.js:695-736 - COMPREHENSIVE CLEANUP on delete ✅
 ```javascript
-if (window.helper.damage_assessment?.current_center_totals) {
-  window.helper.damage_assessment.current_center_totals = {};
-}
+// SESSION 42: Remove ALL traces of deleted center from EVERYWHERE
+// 1. Clear current_center_totals if matches
+// 2. Remove from parts_search.damage_centers_summary
+// 3. Remove from parts_search.required_parts
+// 4. Remove from damage_centers array (legacy)
+// 5. Clear current_damage_center if matches
+// Then: splice from centers[], rebuild assessments, save
 ```
+**Why:** Users will frequently delete/edit centers. System MUST auto-clean all orphaned data to prevent stale data from persisting.
 
 ### FIX 6: parts-required.html:1881-1908 - Delete from required_parts ✅
 ```javascript
@@ -26977,7 +26982,7 @@ currentCenter.Parts.parts_meta = {
 - **Line 655:** Delete from Supabase by `damage_center_code` = center.Id
 - **Lines 919, 993:** Set `centers_count` correctly
 - **Lines 927-933, 996-1002:** Update `damage_assessment.summary`
-- **Lines 695-699:** Clear `current_center_totals` on delete
+- **Lines 695-736:** COMPREHENSIVE CLEANUP - removes deleted center from 5 locations + Supabase
 
 ### 2. parts-required.html
 - **Lines 1881-1908:** Delete from `required_parts` instead of `selected_parts`
@@ -27114,6 +27119,7 @@ supabaseClient.from('parts_required').select('*').eq('damage_center_code', cente
 3. **helper.centers is the ONLY source of truth** - all objects read from it
 4. **Session storage backups can cause stale data** - clear `helper_backup_*` if needed
 5. **After ANY change to centers, call buildComprehensiveDamageAssessment()**
+6. **COMPREHENSIVE CLEANUP added** - deleteDamageCenter now removes ALL traces from 5 locations automatically (no more orphaned data)
 
 ---
 
@@ -27125,17 +27131,86 @@ supabaseClient.from('parts_required').select('*').eq('damage_center_code', cente
 4. Do costs stay correct after save (not clearing to 0)?
 5. Does editing a center recalculate everything correctly?
 
+## CRITICAL BUG DISCOVERED AT END OF SESSION 42
+
+**Problem:** `damage_assessment` shows ALL ZEROS despite having center data
+
+```json
+{
+  "comprehensive": {
+    "centers": [{...}],  // HAS data
+    "totals": {
+      "all_centers_subtotal": 0,  // ❌ ZERO
+      "all_centers_vat": 0,        // ❌ ZERO
+      "all_centers_total": 0       // ❌ ZERO
+    },
+    "summary": {
+      "total_centers": 0,          // ❌ ZERO (should be 1)
+      "completed_centers": 0
+    }
+  },
+  "damage_centers_summary": {
+    "centers_count": 0             // ❌ ZERO (should be 1)
+  },
+  "summary": {
+    "total_works": 0,              // ❌ ALL ZEROS
+    "total_parts": 0,
+    "total_repairs": 0
+  }
+}
+```
+
+**BUT:**
+- `damage_assessment.comprehensive.centers` HAS data (location, description, RepairNature)
+- `damage_assessment.damage_centers` has ID and repair_nature
+- Means `buildComprehensiveDamageAssessment()` ran but didn't read from `helper.centers` correctly
+
+**Root Cause:** `buildComprehensiveDamageAssessment()` calls `getDamageCenters()` which returns `helper.centers`. If `helper.centers` is empty BUT `damage_assessment` has data, it means:
+1. Either centers were saved to WRONG location (not `helper.centers`)
+2. Or `buildComprehensiveDamageAssessment()` reads from WRONG source
+3. Or centers were in `helper.centers` but got cleared AFTER assessment built
+
+**What to check in next session:**
+1. After creating damage center, check: `helper.centers.length` - should be > 0
+2. If centers is empty but damage_assessment has data → wizard is NOT saving to `helper.centers` correctly
+3. Check wizard Step 7 save function - verify it pushes to `helper.centers`
+4. Trace where `damage_assessment.comprehensive.centers` gets its data - it has location/description but no calculations
+
+**Key insight from JSON:**
+- `comprehensive.centers` has descriptive data (location, description, RepairNature) ✅
+- `comprehensive.totals` all zeros ❌
+- `comprehensive.summary.total_centers: 0` ❌
+- This means: center metadata saved but NOT counted/calculated properly
+
+**Next session MUST:**
+1. Verify wizard saves to `helper.centers` (not just `damage_assessment.damage_centers`)
+2. Check why `buildComprehensiveDamageAssessment()` counts 0 centers when it has center data
+3. Fix the disconnect between `comprehensive.centers` (has data) and `comprehensive.summary.total_centers` (shows 0)
+
 ---
 
 ## SUCCESS CRITERIA
 
 ✅ Create damage center with quantity=2 part → all 8 objects show (price × 2)
 ✅ Delete part → removed from Supabase + all 4 helper locations
-✅ Delete center → all 8 objects show 0/empty
+✅ Delete center → removed from 5 locations (comprehensive cleanup) + all 8 objects show 0/empty
 ✅ Edit center → all objects update with new values
-✅ No stale data persists after operations
+✅ No stale/orphaned data persists after operations (CRITICAL for user workflow)
 
 ---
+problems : 
+we still have the costs in teh parts required summary with decimaks, even thug the page and iframe are with rounded numbers
+teh damage_centers[0].Summary has decimals :
+{
+  "Total works": 5190,
+  "Total parts": 4981.47,
+  "Total repairs": 890,
+  "Subtotal": 11061.470000000001,
+  "VAT percentage": 18,
+  "VAT amount": 1991.0646000000002,
+  "Total with VAT": 13052.5346
+}
+we need to define no decimals .
 
 **Status:** 🟡 IN PROGRESS - Primary fix applied, needs full testing  
 **Risk:** 🟢 LOW - Core fix is simple (1 line), other fixes are cleanup  
