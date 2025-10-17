@@ -762,6 +762,11 @@ window.deleteDamageCenter = async function(centerId) {
     window.calculateAllDamageCentersTotals();
   }
   
+  // SESSION 41 FIX 5: Clean orphaned entries after deletion
+  if (typeof window.cleanOrphanedDamageCentersSummary === 'function') {
+    window.cleanOrphanedDamageCentersSummary();
+  }
+  
   // ✅ FORCE SAVE: Ensure updated data is immediately saved to storage
   console.log('💾 Force saving updated helper data after deletion and rebuild...');
   if (typeof saveHelperToAllStorageLocations === 'function') {
@@ -773,6 +778,79 @@ window.deleteDamageCenter = async function(centerId) {
   
   console.log(`✅ Damage center deleted and ${window.helper.centers.length} remaining centers renumbered sequentially`);
   return true;
+};
+
+// SESSION 41 FIX 1: Recalculate parts_meta for all existing damage centers
+// This fixes centers created before Session 41 that have wrong parts_meta.total_cost
+window.recalculateAllPartsMeta = function() {
+  console.log('🔧 SESSION 41: Recalculating parts_meta for all damage centers...');
+  
+  if (!window.helper?.centers || !Array.isArray(window.helper.centers)) {
+    console.warn('⚠️ No centers found to recalculate');
+    return 0;
+  }
+  
+  let recalculatedCount = 0;
+  
+  window.helper.centers.forEach((center, index) => {
+    // Check if center has parts that need recalculation
+    const partsRequired = center.Parts?.parts_required;
+    
+    if (!partsRequired || !Array.isArray(partsRequired) || partsRequired.length === 0) {
+      return; // Skip centers with no parts
+    }
+    
+    // Recalculate total_cost using part.total_cost (correct) NOT part.price
+    const correctTotalCost = partsRequired.reduce((sum, part) => {
+      return sum + (parseFloat(part.total_cost) || 0);
+    }, 0);
+    
+    const correctTotalItems = partsRequired.length;
+    
+    // Check if current parts_meta is wrong
+    const currentTotalCost = center.Parts?.parts_meta?.total_cost || 0;
+    
+    if (Math.abs(currentTotalCost - correctTotalCost) > 0.01) {
+      // Update parts_meta with correct values
+      if (!center.Parts.parts_meta) {
+        center.Parts.parts_meta = {};
+      }
+      
+      center.Parts.parts_meta.total_cost = correctTotalCost;
+      center.Parts.parts_meta.total_items = correctTotalItems;
+      center.Parts.parts_meta.timestamp = new Date().toISOString();
+      
+      console.log(`✅ SESSION 41: Recalculated center ${index + 1}: ${currentTotalCost} → ${correctTotalCost}`);
+      recalculatedCount++;
+    }
+  });
+  
+  if (recalculatedCount > 0) {
+    console.log(`✅ SESSION 41: Recalculated ${recalculatedCount} damage centers`);
+    
+    // Rebuild comprehensive damage assessment with correct data
+    if (typeof window.buildComprehensiveDamageAssessment === 'function') {
+      window.buildComprehensiveDamageAssessment();
+    }
+    
+    // Recalculate all totals
+    if (typeof window.calculateAllDamageCentersTotals === 'function') {
+      window.calculateAllDamageCentersTotals();
+    }
+    
+    // Save updated helper
+    if (typeof saveHelperToAllStorageLocations === 'function') {
+      saveHelperToAllStorageLocations();
+    } else {
+      sessionStorage.setItem('helper', JSON.stringify(window.helper));
+    }
+    
+    console.log('💾 SESSION 41: Updated helper saved with recalculated parts_meta');
+  } else {
+    console.log('✅ SESSION 41: All parts_meta values are already correct');
+  }
+  
+  return recalculatedCount;
 };
 
 // SESSION 40: Clean orphaned damage centers from damage_centers_summary

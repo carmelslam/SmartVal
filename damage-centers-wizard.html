@@ -2176,6 +2176,12 @@
             }));
             console.log('✅ Updated damage_centers from damage_centers_wizard with source tracking');
             
+            // SESSION 41 FIX 4: Rebuild comprehensive damage assessment after save
+            if (typeof window.buildComprehensiveDamageAssessment === 'function') {
+              window.buildComprehensiveDamageAssessment();
+              console.log('✅ SESSION 41: Rebuilt comprehensive damage assessment after save');
+            }
+            
             // Save back to sessionStorage AND window.helper
             sessionStorage.setItem('helper', JSON.stringify(helper));
             window.helper = helper; // Ensure window.helper is also updated
@@ -3717,7 +3723,8 @@
                     name: part.name || part.part,
                     description: part.description || part.desc || part.תיאור || '', // === PHASE 4: Include Hebrew field ===
                     quantity: part.quantity || part.כמות,
-                    price: part.price,
+                    price: part.updated_price || part.price, // SESSION 41 FIX 2: Use updated_price (actual cost) not price_per_unit
+                    total_cost: part.total_cost, // SESSION 41 FIX 2: Add total_cost field
                     source: part.source
                   };
                 }),
@@ -3762,10 +3769,9 @@
                     });
                     
                     // Calculate total cost
+                    // SESSION 41 FIX 3: Use part.total_cost directly instead of recalculating price * quantity
                     const totalCost = wizardModeParts.reduce((sum, part) => {
-                      const price = parseFloat(part.price) || 0;
-                      const quantity = parseInt(part.quantity) || 1;
-                      return sum + (price * quantity);
+                      return sum + (parseFloat(part.total_cost) || 0);
                     }, 0);
                     
                     // Update case_summary
@@ -3977,6 +3983,12 @@
               last_updated: new Date().toISOString()
             }));
             console.log('✅ Updated damage_centers from damage_centers_wizard with source tracking');
+            
+            // SESSION 41 FIX 4: Rebuild comprehensive damage assessment after save
+            if (typeof window.buildComprehensiveDamageAssessment === 'function') {
+              window.buildComprehensiveDamageAssessment();
+              console.log('✅ SESSION 41: Rebuilt comprehensive damage assessment after save');
+            }
             
             // Clear current_damage_center for next use
             helper.current_damage_center = {};
