@@ -1878,31 +1878,33 @@ function savePartsData() {
           
           console.log(`🗑️ DELETE SYNC: Starting comprehensive delete for "${name}"/"${desc}" from center ${activeCenterId}`);
           
-          // 1. Remove from parts_search.selected_parts
-          if (helper.parts_search && helper.parts_search.selected_parts) {
-            const beforeCount = helper.parts_search.selected_parts.length;
-            console.log(`🔍 DELETE DEBUG: Looking for parts with name="${name}" or desc="${desc}" in center="${activeCenterId}"`);
+          // 1. Remove from parts_search.required_parts (NOT selected_parts)
+          if (helper.parts_search && helper.parts_search.required_parts) {
+            const beforeCount = helper.parts_search.required_parts.length;
+            console.log(`🔍 DELETE DEBUG: Looking for parts with row_uuid="${rowUuid}" or name="${name}" or desc="${desc}" in center="${activeCenterId}"`);
             
-            helper.parts_search.selected_parts = helper.parts_search.selected_parts.filter(part => {
+            helper.parts_search.required_parts = helper.parts_search.required_parts.filter(part => {
               const partName = part.name || part.part || '';
               const partDesc = part.desc || part.description || '';
               const partCenter = part.damage_center_id;
+              const partUuid = part.row_uuid;
               
-              // Match criteria: (name OR desc) AND same damage center
+              // Match by UUID first, then by (name OR desc) AND same damage center
+              const uuidMatch = rowUuid && partUuid === rowUuid;
               const nameMatch = partName.toLowerCase().trim() === name.toLowerCase().trim();
               const descMatch = partDesc.toLowerCase().trim() === desc.toLowerCase().trim();
               const centerMatch = activeCenterId ? (partCenter === activeCenterId) : (!partCenter);
               
               // Keep parts that DON'T match - remove parts that DO match
-              const shouldRemove = (nameMatch || descMatch) && centerMatch;
+              const shouldRemove = uuidMatch || ((nameMatch || descMatch) && centerMatch);
               
               // Debug each part
-              console.log(`🔍 Part check: "${partName}" (center: ${partCenter}) - nameMatch: ${nameMatch}, descMatch: ${descMatch}, centerMatch: ${centerMatch}, shouldRemove: ${shouldRemove}`);
+              console.log(`🔍 Part check: "${partName}" (center: ${partCenter}, uuid: ${partUuid}) - uuidMatch: ${uuidMatch}, nameMatch: ${nameMatch}, descMatch: ${descMatch}, centerMatch: ${centerMatch}, shouldRemove: ${shouldRemove}`);
               
               return !shouldRemove;
             });
-            const afterCount = helper.parts_search.selected_parts.length;
-            console.log(`🗑️ 1/3 Removed ${beforeCount - afterCount} from parts_search.selected_parts`);
+            const afterCount = helper.parts_search.required_parts.length;
+            console.log(`🗑️ 1/3 Removed ${beforeCount - afterCount} from parts_search.required_parts`);
           }
           
           // 2. Remove from current_damage_center.Parts.parts_required
@@ -1949,29 +1951,37 @@ function savePartsData() {
               // Update center summary totals
               centerSummary.parts_count = centerSummary.parts_list.length;
               centerSummary.total_cost = centerSummary.parts_list.reduce((sum, part) => {
-                const price = parseFloat(part.price) || 0;
-                const quantity = parseInt(part.quantity) || 1;
-                return sum + (price * quantity);
+                return sum + (parseFloat(part.total_cost) || 0);
               }, 0);
               centerSummary.last_updated = new Date().toISOString();
             }
           }
           
-          // Save updated helper
-          sessionStorage.setItem('helper', JSON.stringify(helper));
-          // === DEBUG: Check if delete worked ===
-          helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
-          console.log('🔍 VERIFICATION: After delete attempt:');
-          console.log('- parts_search.selected_parts count:', helper.parts_search?.selected_parts?.length || 0);
-          console.log('- current_damage_center parts count:', helper.current_damage_center?.parts?.length || 0);
-          
-          if (helper.parts_search?.selected_parts) {
-            const matchingParts = helper.parts_search.selected_parts.filter(p => 
-              (p.name === name || p.desc === desc || p.description === desc));
-            console.log(`- Still found ${matchingParts.length} matching parts in selected_parts:`, matchingParts);
+          // Recalculate parts_meta for the damage center
+          if (activeCenterId && helper.centers && Array.isArray(helper.centers)) {
+            const currentCenter = helper.centers.find(c => c.Id === activeCenterId || c.id === activeCenterId);
+            if (currentCenter && currentCenter.Parts && currentCenter.Parts.parts_required) {
+              const partsRequired = currentCenter.Parts.parts_required;
+              const correctTotalCost = partsRequired.reduce((sum, part) => sum + (parseFloat(part.total_cost) || 0), 0);
+              currentCenter.Parts.parts_meta = {
+                total_items: partsRequired.length,
+                total_cost: correctTotalCost,
+                timestamp: new Date().toISOString()
+              };
+              console.log(`✅ Recalculated parts_meta: ${partsRequired.length} items, ₪${correctTotalCost}`);
+            }
           }
           
-          console.log(`✅ Comprehensive delete completed - removed "${partInfo}" from all 3 locations`);
+          // Save updated helper
+          sessionStorage.setItem('helper', JSON.stringify(helper));
+          window.helper = helper;
+          
+          // === DEBUG: Check if delete worked ===
+          console.log('🔍 VERIFICATION: After delete attempt:');
+          console.log('- parts_search.required_parts count:', helper.parts_search?.required_parts?.length || 0);
+          console.log('- current_damage_center parts count:', helper.current_damage_center?.Parts?.parts_required?.length || 0);
+          
+          console.log(`✅ Comprehensive delete completed - removed "${partInfo}" from all locations`);
           
         } catch (error) {
           console.error('❌ Failed to sync delete with helper data:', error);
