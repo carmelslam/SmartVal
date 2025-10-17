@@ -421,7 +421,7 @@ window.calculateDamageCenterTotals = function(centerId) {
   
   // Calculate subtotals
   const worksTotal = workItems.reduce((sum, item) => sum + (parseFloat(item.cost) || 0), 0);
-  const partsTotal = partsItems.reduce((sum, item) => sum + (parseFloat(item.price || item.cost) || 0), 0);
+  const partsTotal = partsItems.reduce((sum, item) => sum + (parseFloat(item.total_cost || item.price || item.cost) || 0), 0);
   const repairsTotal = repairsItems.reduce((sum, item) => sum + (parseFloat(item.cost) || 0), 0);
   const feesTotal = 0; // Can be extended for additional fees
   
