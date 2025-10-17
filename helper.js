@@ -625,7 +625,7 @@ window.getDamageCenterById = function(centerId) {
   ) || null;
 };
 
-window.deleteDamageCenter = function(centerId) {
+window.deleteDamageCenter = async function(centerId) {
   if (!window.helper || !window.helper.centers) {
     return false;
   }
@@ -636,6 +636,30 @@ window.deleteDamageCenter = function(centerId) {
   }
   
   console.log(`🗑️ Deleting damage center at index ${centerIndex} with ID ${centerId}`);
+  
+  // SESSION 40: Delete all parts_required rows for this damage center from Supabase
+  const centerToDelete = window.helper.centers[centerIndex];
+  const damageCenterCode = centerToDelete.code || centerToDelete["Damage center Number"];
+  
+  if (damageCenterCode && window.supabaseClient) {
+    try {
+      console.log(`🗑️ SESSION 40: Deleting all parts for damage_center_code: ${damageCenterCode} from Supabase`);
+      const { error } = await window.supabaseClient
+        .from('parts_required')
+        .delete()
+        .eq('damage_center_code', damageCenterCode);
+      
+      if (error) {
+        console.error('❌ Supabase delete error:', error);
+      } else {
+        console.log('✅ Deleted all parts for damage center from Supabase');
+      }
+    } catch (error) {
+      console.error('❌ Failed to delete parts from Supabase:', error);
+    }
+  } else {
+    console.warn('⚠️ No damage_center_code or supabaseClient, skipping Supabase delete');
+  }
   
   // Remove the center
   window.helper.centers.splice(centerIndex, 1);

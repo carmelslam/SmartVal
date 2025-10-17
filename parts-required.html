@@ -1804,7 +1804,7 @@ function savePartsData() {
       console.log(`💾 Finished editing row ${rowIndex}`);
     }
     
-    function deletePartRow(rowIndex) {
+    async function deletePartRow(rowIndex) {
       const rows = document.querySelectorAll('#partsList .row');
       const row = rows[rowIndex];
       
@@ -1826,6 +1826,29 @@ function savePartsData() {
       }
       
       console.log('🗑️ Starting delete process...');
+      
+      // SESSION 40: Delete from Supabase FIRST
+      const rowUuid = row.getAttribute('data-row-uuid');
+      if (rowUuid && window.supabaseClient) {
+        try {
+          console.log(`🗑️ SESSION 40: Deleting from Supabase row_uuid: ${rowUuid}`);
+          const { error } = await window.supabaseClient
+            .from('parts_required')
+            .delete()
+            .eq('row_uuid', rowUuid);
+          
+          if (error) {
+            console.error('❌ Supabase delete error:', error);
+          } else {
+            console.log('✅ Deleted from Supabase successfully');
+          }
+        } catch (error) {
+          console.error('❌ Failed to delete from Supabase:', error);
+        }
+      } else {
+        console.warn('⚠️ No row_uuid or supabaseClient, skipping Supabase delete');
+      }
+      
       // === PHASE 0: DIAGNOSTIC - Log delete operation ===
       console.log('=== DELETE OPERATION DIAGNOSTIC ===');
       console.log('Part to delete:', { name, desc, rowIndex });
