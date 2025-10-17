@@ -2913,20 +2913,18 @@ function savePartsData() {
       }
       
       const helper = window.helper || JSON.parse(sessionStorage.getItem('helper') || '{}');
-      const caseId = helper?.case_info?.case_id || helper?.meta?.case_id;
       const plate = helper?.vehicle?.plate || helper?.meta?.plate;
       
-      if (!caseId || !plate) {
-        console.warn('⚠️ SESSION 41: Missing case_id or plate, skipping smart sync');
+      if (!plate) {
+        console.warn('⚠️ SESSION 41: Missing plate, skipping smart sync');
         return;
       }
       
       try {
-        // Fetch ALL parts_required for this case from Supabase
+        // SESSION 41: Query by plate only (case_id is UUID type in Supabase)
         const { data: supabaseParts, error } = await window.supabaseClient
           .from('parts_required')
           .select('*')
-          .eq('case_id', caseId)
           .eq('plate', plate)
           .order('created_at', { ascending: true });
         
