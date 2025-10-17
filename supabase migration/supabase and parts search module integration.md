@@ -26851,3 +26851,296 @@ console.log('8. totals_after_differentials:', helper.damage_assessment.totals_af
 ---
 
 **END OF SESSION 41 IMPLEMENTATION**
+
+---
+
+# SESSION 42 - DEBUGGING DATA SOURCE ISSUES & FINAL FIXES
+
+## USER REPORTED PROBLEMS
+
+1. **After Session 41 fixes, most fields still displayed wrong data**
+   - Wrong damage center counts (showing 2 when should be 0-1)
+   - Wrong costs (objects showing old/incorrect values)
+   - Decimals in wrong places
+   - Data not clearing when damage centers deleted
+
+2. **Deleting damage centers didn't delete associated parts from Supabase**
+
+3. **Deleting parts from parts-required page didn't delete from multiple locations**
+
+4. **After adding parts, costs cleared to 0**
+
+---
+
+## ROOT CAUSES DISCOVERED
+
+### PRIMARY ISSUE: Wrong Data Source in calculateComprehensiveTotals()
+**File:** helper.js:424
+**Problem:** Parts calculation used `item.price` (per-unit) instead of `item.total_cost`
+
+```javascript
+// WRONG (before fix)
+const partsTotal = partsItems.reduce((sum, item) => sum + (parseFloat(item.price || item.cost) || 0), 0);
+
+// CORRECT (after fix)
+const partsTotal = partsItems.reduce((sum, item) => sum + (parseFloat(item.total_cost || item.price || item.cost) || 0), 0);
+```
+
+**Impact:** This fed `center.calculations.parts_subtotal` which fed ALL damage_assessment objects
+
+---
+
+### SECONDARY ISSUES
+
+1. **Supabase deletion used wrong field**
+   - Code tried to delete by `damage_center_code` AND `damage_center_id` (doesn't exist)
+   - Should only use `damage_center_code` = center's `Id`
+
+2. **Parts deletion targeted wrong object**
+   - Deleted from `parts_search.selected_parts` instead of `parts_search.required_parts`
+   - Used `part.price * quantity` instead of `part.total_cost`
+
+3. **Missing objects not cleared on deletion**
+   - `damage_assessment.current_center_totals` not cleared
+   - `damage_assessment.summary` not updated
+   - `centers_count` not set
+
+---
+
+## FIXES IMPLEMENTED
+
+### FIX 1: helper.js:424 - Use total_cost for parts calculation ✅
+```javascript
+const partsTotal = partsItems.reduce((sum, item) => sum + (parseFloat(item.total_cost || item.price || item.cost) || 0), 0);
+```
+
+### FIX 2: helper.js:655 - Supabase deletion by correct field ✅
+```javascript
+const { data: deleted, error } = await window.supabaseClient
+  .from('parts_required')
+  .delete()
+  .eq('damage_center_code', damageCenterId); // Uses center.Id
+```
+
+### FIX 3: helper.js:919, 993 - Set centers_count correctly ✅
+```javascript
+window.helper.damage_assessment.damage_centers_summary.centers_count = allCenters.length;
+```
+
+### FIX 4: helper.js:927-933, 996-1002 - Update damage_assessment.summary ✅
+```javascript
+window.helper.damage_assessment.summary = {
+  total_works: totalWorks,
+  total_parts: totalParts,
+  total_repairs: totalRepairs,
+  total_without_vat: totalWithoutVAT,
+  total_with_vat: totalWithVAT
+};
+```
+
+### FIX 5: helper.js:695-699 - Clear current_center_totals on delete ✅
+```javascript
+if (window.helper.damage_assessment?.current_center_totals) {
+  window.helper.damage_assessment.current_center_totals = {};
+}
+```
+
+### FIX 6: parts-required.html:1881-1908 - Delete from required_parts ✅
+```javascript
+// Changed from selected_parts to required_parts
+helper.parts_search.required_parts = helper.parts_search.required_parts.filter(...)
+```
+
+### FIX 7: parts-required.html:1953-1955 - Use total_cost when recalculating ✅
+```javascript
+centerSummary.total_cost = centerSummary.parts_list.reduce((sum, part) => {
+  return sum + (parseFloat(part.total_cost) || 0);
+}, 0);
+```
+
+### FIX 8: parts-required.html:1960-1973 - Recalculate parts_meta after deletion ✅
+```javascript
+const correctTotalCost = partsRequired.reduce((sum, part) => sum + (parseFloat(part.total_cost) || 0), 0);
+currentCenter.Parts.parts_meta = {
+  total_items: partsRequired.length,
+  total_cost: correctTotalCost,
+  timestamp: new Date().toISOString()
+};
+```
+
+---
+
+## FILES MODIFIED IN SESSION 42
+
+### 1. helper.js
+- **Line 424:** Use `total_cost` first in parts calculation (PRIMARY FIX)
+- **Line 655:** Delete from Supabase by `damage_center_code` = center.Id
+- **Lines 919, 993:** Set `centers_count` correctly
+- **Lines 927-933, 996-1002:** Update `damage_assessment.summary`
+- **Lines 695-699:** Clear `current_center_totals` on delete
+
+### 2. parts-required.html
+- **Lines 1881-1908:** Delete from `required_parts` instead of `selected_parts`
+- **Lines 1953-1955:** Use `total_cost` instead of `price * quantity`
+- **Lines 1960-1973:** Recalculate `parts_meta` after deletion with correct `total_cost`
+
+---
+
+## TESTING PERFORMED
+
+### Test 1: Empty Centers Check ✅
+```javascript
+helper.centers // Returns: []
+```
+**Result:** Empty array - centers correctly deleted
+
+### Test 2: damage_centers_summary ✅
+```javascript
+helper.damage_assessment.damage_centers_summary // Returns: {centers_count: 0}
+```
+**Result:** Correctly shows 0 centers, no old data
+
+### Test 3: Session Storage Cleanup
+- Identified multiple `helper_backup_*` keys storing stale data
+- Cleared via console commands
+- System now uses single source: `helper.centers`
+
+---
+
+## REMAINING ISSUES TO TEST IN NEXT SESSION
+
+### CRITICAL - Must Test:
+1. **Add new damage center with parts (quantity > 1)**
+   - Verify all 8 objects show correct `total_cost` values
+   - Check no decimals in wrong places
+   - Confirm costs don't clear to 0 after save
+
+2. **Delete part from parts-required iframe**
+   - Verify deletes from Supabase
+   - Verify deletes from `helper.centers[].Parts.parts_required`
+   - Verify deletes from `parts_search.required_parts`
+   - Verify deletes from `damage_centers_summary[].parts_list`
+   - Verify `parts_meta` recalculates correctly
+
+3. **Delete entire damage center**
+   - Verify parts deleted from Supabase
+   - Verify all 8 objects update (not just damage_centers_summary)
+   - Check: `parts_search.damage_centers_summary`
+   - Check: `damage_assessment.comprehensive.summary`
+   - Check: `damage_assessment.summary`
+   - Check: `damage_assessment.totals`
+   - Check: `damage_assessment.totals_after_differentials`
+
+4. **Edit existing damage center**
+   - Change part quantity
+   - Verify `parts_meta.total_cost` updates
+   - Verify all downstream objects update
+
+---
+
+## THE 8 OBJECTS DATA FLOW (CORRECTED)
+
+```
+SOURCE OF TRUTH: helper.centers[]
+         ↓
+calculateComprehensiveTotals(centerId) [helper.js:424]
+         ↓ (reads Parts.parts_required)
+center.calculations.parts_subtotal ✅ (now uses total_cost)
+         ↓
+         ├─→ 1. parts_search.case_summary (wizard calculates)
+         ├─→ 2. parts_search.damage_centers_summary (wizard calculates)
+         ├─→ 3. damage_centers[].Summary (reads parts_meta.total_cost)
+         ├─→ 4. damage_assessment.comprehensive.summary (counts centers)
+         ├─→ 5. damage_assessment.comprehensive.totals (sums calculations)
+         ├─→ 6. damage_assessment.damage_centers_summary (reads parts_meta) ✅
+         ├─→ 7. damage_assessment.summary (copied from totals) ✅
+         └─→ 8. damage_assessment.totals_after_differentials (base + diffs)
+```
+
+**Key Point:** If `helper.centers` changes, must call `buildComprehensiveDamageAssessment()` to rebuild all objects
+
+---
+
+## DEBUGGING COMMANDS FOR NEXT SESSION
+
+### Check Source of Truth:
+```javascript
+helper.centers.length // Should match expected count
+helper.centers[0]?.Parts?.parts_required // Check parts array
+helper.centers[0]?.Parts?.parts_meta?.total_cost // Check calculated total
+```
+
+### Check All 8 Objects:
+```javascript
+console.log('1. case_summary:', helper.parts_search.case_summary);
+console.log('2. damage_centers_summary:', helper.parts_search.damage_centers_summary);
+console.log('3. centers[0].Summary:', helper.centers[0]?.Summary);
+console.log('4. comprehensive.summary:', helper.damage_assessment.comprehensive.summary);
+console.log('5. comprehensive.totals:', helper.damage_assessment.comprehensive.totals);
+console.log('6. damage_centers_summary:', helper.damage_assessment.damage_centers_summary);
+console.log('7. summary:', helper.damage_assessment.summary);
+console.log('8. totals_after_differentials:', helper.damage_assessment.totals_after_differentials);
+```
+
+### Force Rebuild:
+```javascript
+window.buildComprehensiveDamageAssessment();
+console.log('Rebuilt - check objects again');
+```
+
+### Check Supabase Sync:
+```javascript
+// After adding/deleting parts, check if Supabase matches helper
+const centerId = helper.centers[0]?.Id;
+supabaseClient.from('parts_required').select('*').eq('damage_center_code', centerId).then(r => console.log('Supabase parts:', r.data));
+```
+
+---
+
+## KNOWN WORKING FUNCTIONS
+
+✅ `window.buildComprehensiveDamageAssessment()` - Rebuilds all damage_assessment objects from helper.centers
+✅ `window.calculateAllDamageCentersTotals()` - Recalculates totals from center.calculations
+✅ `window.deleteDamageCenter(id)` - Deletes center, parts from Supabase, rebuilds objects
+✅ `window.cleanOrphanedDamageCentersSummary()` - Removes orphaned entries
+✅ `window.recalculateAllPartsMeta()` - Migration function for old data (not needed for new centers)
+
+---
+
+## CRITICAL NOTES FOR NEXT SESSION
+
+1. **Always test in damage-centers-wizard.html page** - that's where helper.js is loaded
+2. **Check console context** - make sure you're in main window, not iframe
+3. **helper.centers is the ONLY source of truth** - all objects read from it
+4. **Session storage backups can cause stale data** - clear `helper_backup_*` if needed
+5. **After ANY change to centers, call buildComprehensiveDamageAssessment()**
+
+---
+
+## QUESTIONS TO ANSWER IN NEXT SESSION
+
+1. Do all 8 objects now show correct data after adding parts?
+2. Does deleting parts work completely (Supabase + all helper locations)?
+3. Does deleting damage center clear ALL objects (not just damage_centers_summary)?
+4. Do costs stay correct after save (not clearing to 0)?
+5. Does editing a center recalculate everything correctly?
+
+---
+
+## SUCCESS CRITERIA
+
+✅ Create damage center with quantity=2 part → all 8 objects show (price × 2)
+✅ Delete part → removed from Supabase + all 4 helper locations
+✅ Delete center → all 8 objects show 0/empty
+✅ Edit center → all objects update with new values
+✅ No stale data persists after operations
+
+---
+
+**Status:** 🟡 IN PROGRESS - Primary fix applied, needs full testing  
+**Risk:** 🟢 LOW - Core fix is simple (1 line), other fixes are cleanup  
+**Next Session:** Full end-to-end testing of all scenarios
+
+---
+
+**END OF SESSION 42**
