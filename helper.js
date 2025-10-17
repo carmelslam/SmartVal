@@ -692,11 +692,48 @@ window.deleteDamageCenter = async function(centerId) {
     window.cleanOrphanedDamageCentersSummary();
   }
   
-  // SESSION 41: Clear current_center_totals
-  if (window.helper.damage_assessment?.current_center_totals) {
+  // SESSION 42: COMPREHENSIVE CLEANUP - Remove ALL traces of deleted center
+  console.log('🧹 SESSION 42: Starting comprehensive cleanup of deleted center...');
+  
+  // 1. Clear current_center_totals if it matches deleted center
+  if (window.helper.damage_assessment?.current_center_totals?.damage_center_id === damageCenterId) {
     window.helper.damage_assessment.current_center_totals = {};
-    console.log('✅ SESSION 41: Cleared current_center_totals');
+    console.log('✅ Cleared current_center_totals for deleted center');
   }
+  
+  // 2. Remove from parts_search.damage_centers_summary
+  if (window.helper.parts_search?.damage_centers_summary?.[damageCenterId]) {
+    delete window.helper.parts_search.damage_centers_summary[damageCenterId];
+    console.log('✅ Removed from parts_search.damage_centers_summary');
+  }
+  
+  // 3. Remove from parts_search.required_parts
+  if (window.helper.parts_search?.required_parts) {
+    const beforeCount = window.helper.parts_search.required_parts.length;
+    window.helper.parts_search.required_parts = window.helper.parts_search.required_parts.filter(part => {
+      const partCenterId = part.damage_center_id || part.damage_center_code;
+      return partCenterId !== damageCenterId;
+    });
+    const removed = beforeCount - window.helper.parts_search.required_parts.length;
+    if (removed > 0) console.log(`✅ Removed ${removed} parts from required_parts`);
+  }
+  
+  // 4. Remove from damage_centers array (legacy location)
+  if (window.helper.damage_centers && Array.isArray(window.helper.damage_centers)) {
+    const dcIndex = window.helper.damage_centers.findIndex(c => (c.Id || c.id) === damageCenterId);
+    if (dcIndex !== -1) {
+      window.helper.damage_centers.splice(dcIndex, 1);
+      console.log('✅ Removed from damage_centers array');
+    }
+  }
+  
+  // 5. Clear current_damage_center if it matches
+  if ((window.helper.current_damage_center?.Id || window.helper.current_damage_center?.id) === damageCenterId) {
+    window.helper.current_damage_center = {};
+    console.log('✅ Cleared current_damage_center');
+  }
+  
+  console.log('✅ SESSION 42: Comprehensive cleanup completed');
   
   // Remove the center
   window.helper.centers.splice(centerIndex, 1);
