@@ -5283,8 +5283,11 @@
       if (partsSubtotal) {
         const partsAmount = document.getElementById('partsAmount');
         const partsAmountWithVat = document.getElementById('partsAmountWithVat');
-        if (partsAmount) partsAmount.textContent = `₪${partsTotal.toLocaleString()}`;
-        if (partsAmountWithVat) partsAmountWithVat.textContent = `₪${(partsTotal * vatMultiplier).toLocaleString()}`;
+        // SESSION 41: Round to whole numbers (no decimals)
+        const roundedPartsTotal = Math.round(partsTotal);
+        const roundedPartsWithVat = Math.round(partsTotal * vatMultiplier);
+        if (partsAmount) partsAmount.textContent = `₪${roundedPartsTotal.toLocaleString()}`;
+        if (partsAmountWithVat) partsAmountWithVat.textContent = `₪${roundedPartsWithVat.toLocaleString()}`;
         partsSubtotal.style.display = partsTotal > 0 ? 'block' : 'none';
       }
       
@@ -6666,16 +6669,20 @@
         // Update moduleData with the iframe's calculated totals
         if (data.moduleType === 'parts' && data.total !== undefined) {
           console.log(`🔧 Updating parts total from iframe: ₪${data.total}`);
+          // SESSION 41: Round to whole numbers (no decimals)
+          const roundedTotal = Math.round(data.total);
+          const vatRate = (helper.calculations && helper.calculations.vat_rate) ? helper.calculations.vat_rate : 18;
+          const roundedTotalWithVat = Math.round(roundedTotal * (1 + vatRate / 100));
+          
           // Update parts total in wizard display
           const partsAmount = document.getElementById('partsAmount');
           const partsAmountWithVat = document.getElementById('partsAmountWithVat');
-          if (partsAmount) partsAmount.textContent = `₪${data.total.toLocaleString()}`;
-          const vatRate = (helper.calculations && helper.calculations.vat_rate) ? helper.calculations.vat_rate : 18;
-          if (partsAmountWithVat) partsAmountWithVat.textContent = `₪${(data.total * (1 + vatRate / 100)).toLocaleString()}`;
+          if (partsAmount) partsAmount.textContent = `₪${roundedTotal.toLocaleString()}`;
+          if (partsAmountWithVat) partsAmountWithVat.textContent = `₪${roundedTotalWithVat.toLocaleString()}`;
           
           // Update parts display visibility
           const partsSubtotal = document.getElementById('partsSubtotal');
-          if (partsSubtotal) partsSubtotal.style.display = data.total > 0 ? 'block' : 'none';
+          if (partsSubtotal) partsSubtotal.style.display = roundedTotal > 0 ? 'block' : 'none';
         }
         
         if (data.moduleType === 'repairs' && data.total !== undefined) {
@@ -7734,22 +7741,25 @@
         
         console.log(`🧮 Calculated parts total: ₪${partsTotal}`);
         
-        if (partsTotal > 0) {
+        // SESSION 41: Round to whole numbers (no decimals)
+        const roundedPartsTotal = Math.round(partsTotal);
+        
+        if (roundedPartsTotal > 0) {
           // Update the display elements
           const partsAmount = document.getElementById('partsAmount');
           const partsAmountWithVat = document.getElementById('partsAmountWithVat');
           const partsSubtotal = document.getElementById('partsSubtotal');
           
           if (partsAmount) {
-            partsAmount.textContent = `₪${partsTotal.toLocaleString()}`;
+            partsAmount.textContent = `₪${roundedPartsTotal.toLocaleString()}`;
             console.log('✅ Updated partsAmount display');
           }
           
           if (partsAmountWithVat) {
             const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
             const vatRate = (helper.calculations && helper.calculations.vat_rate) ? helper.calculations.vat_rate : 18;
-            const totalWithVat = partsTotal * (1 + vatRate / 100);
-            partsAmountWithVat.textContent = `₪${totalWithVat.toLocaleString()}`;
+            const roundedTotalWithVat = Math.round(roundedPartsTotal * (1 + vatRate / 100));
+            partsAmountWithVat.textContent = `₪${roundedTotalWithVat.toLocaleString()}`;
             console.log('✅ Updated partsAmountWithVat display');
           }
           
