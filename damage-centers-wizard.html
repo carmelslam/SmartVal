@@ -2037,6 +2037,31 @@
           }
           
           if (helper.current_damage_center && (helper.current_damage_center.Id || Object.keys(helper.current_damage_center).length > 0)) {
+            // SESSION 43 FIX: Recalculate meta fields from actual arrays before reading totals
+            if (helper.current_damage_center.Works && Array.isArray(helper.current_damage_center.Works.works)) {
+              helper.current_damage_center.Works.works_meta = {
+                total_items: helper.current_damage_center.Works.works.length,
+                total_cost: helper.current_damage_center.Works.works.reduce((sum, work) => sum + (parseFloat(work.cost) || 0), 0),
+                timestamp: new Date().toISOString()
+              };
+            }
+            
+            if (helper.current_damage_center.Parts && Array.isArray(helper.current_damage_center.Parts.parts_required)) {
+              helper.current_damage_center.Parts.parts_meta = {
+                total_items: helper.current_damage_center.Parts.parts_required.length,
+                total_cost: helper.current_damage_center.Parts.parts_required.reduce((sum, part) => sum + (parseFloat(part.total_cost) || 0), 0),
+                timestamp: new Date().toISOString()
+              };
+            }
+            
+            if (helper.current_damage_center.Repairs && Array.isArray(helper.current_damage_center.Repairs.repairs)) {
+              helper.current_damage_center.Repairs.repairs_meta = {
+                total_items: helper.current_damage_center.Repairs.repairs.length,
+                total_cost: helper.current_damage_center.Repairs.repairs.reduce((sum, repair) => sum + (parseFloat(repair.cost) || 0), 0),
+                timestamp: new Date().toISOString()
+              };
+            }
+            
             // Update the Summary with current totals
             const worksTotal = helper.current_damage_center.Works?.works_meta?.total_cost || 0;
             const partsTotal = helper.current_damage_center.Parts?.parts_meta?.total_cost || 0;
