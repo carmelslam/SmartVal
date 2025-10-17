@@ -27212,6 +27212,68 @@ teh damage_centers[0].Summary has decimals :
 }
 we need to define no decimals .
 
+
+damge_assessment is still empty :
+{
+  "summary": {
+    "total_works": 0,
+    "total_parts": 0,
+    "total_repairs": 0,
+    "total_without_vat": 0,
+    "total_with_vat": 0
+  },
+  "total_items": 0,
+  "last_updated": "2025-10-17T21:06:16.739Z",
+  "comprehensive": {
+    "centers": [
+      {
+        "location": "קדמת הרכב",
+        "description": "פגוש עקום, פנס ימני שבור",
+        "RepairNature": "החלפת פנס , תיקון וצביעה של הפגוש , צביעת פרונט",
+        "repair_nature": "החלפת פנס , תיקון וצביעה של הפגוש , צביעת פרונט",
+        "source": "damage_centers_wizard",
+        "last_updated": "2025-10-17T22:01:01.262Z"
+      }
+    ],
+    "totals": {
+      "all_centers_subtotal": 0,
+      "all_centers_vat": 0,
+      "all_centers_total": 0
+    },
+    "summary": {
+      "total_centers": 0,
+      "completed_centers": 0
+    }
+  },
+  "total_centers": 0,
+  "damage_centers": [
+    {
+      "Id": "dc_1760738335527_1",
+      "repair_nature": "החלפת פנס , תיקון וצביעה של הפגוש , צביעת פרונט",
+      "source": "damage_centers_wizard",
+      "last_updated": "2025-10-17T22:01:01.262Z"
+    }
+  ],
+  "current_center_id": "center_1760738461289_2",
+  "damage_centers_summary": {
+    "centers_count": 0
+  },
+  "totals_after_differentials": {
+    "Total parts": 0,
+    "Total works": 0,
+    "Total repairs": 0,
+    "Other": 0,
+    "Total with VAT": 0
+  },
+  "current_center_totals": {},
+  "statistics": {
+    "total_centers": 0,
+    "avg_cost_per_center": 0,
+    "most_expensive_center": null
+  },
+  "centers": []
+}
+
 **Status:** 🟡 IN PROGRESS - Primary fix applied, needs full testing  
 **Risk:** 🟢 LOW - Core fix is simple (1 line), other fixes are cleanup  
 **Next Session:** Full end-to-end testing of all scenarios
