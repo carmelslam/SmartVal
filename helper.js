@@ -707,6 +707,11 @@ window.deleteDamageCenter = async function(centerId) {
     }
   }
   
+  // SESSION 41: Clean orphaned entries from damage_assessment.damage_centers_summary
+  if (window.cleanOrphanedDamageCentersSummary) {
+    window.cleanOrphanedDamageCentersSummary();
+  }
+  
   // Remove the center
   window.helper.centers.splice(centerIndex, 1);
   

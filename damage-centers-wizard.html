@@ -3633,9 +3633,10 @@
               הערות: part.notes || '',
               זמינות: part.availability || 'זמין'
             }));
+            // SESSION 41: Use total_cost (includes quantity) NOT price (per-unit)
             helper.current_damage_center.Parts.parts_meta = {
               total_items: partsData.length,
-              total_cost: partsData.reduce((sum, part) => sum + (parseFloat(part.price) || 0), 0),
+              total_cost: partsData.reduce((sum, part) => sum + (parseFloat(part.total_cost) || 0), 0),
               timestamp: new Date().toISOString()
             };
             
@@ -3698,7 +3699,8 @@
               console.log(`✅ SESSION 40: Added ${newPartsWithContext.length} parts to required_parts`);
               
               // Update damage center summary
-              const totalCost = partsData.reduce((sum, part) => sum + (parseFloat(part.price) || 0), 0);
+              // SESSION 41: Use total_cost (includes quantity) NOT price (per-unit)
+              const totalCost = partsData.reduce((sum, part) => sum + (parseFloat(part.total_cost) || 0), 0);
               helper.parts_search.damage_centers_summary[activeCenterId] = {
                 damage_center_id: activeCenterId,
                 damage_center_number: damageCenterNumber,
