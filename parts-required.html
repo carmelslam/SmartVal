@@ -1544,24 +1544,28 @@ function savePartsData() {
         document.querySelector('.container').insertBefore(totalDisplay, document.querySelector('.footer'));
       }
       
+      // SESSION 41: Round totals to whole numbers (no decimals on page total)
+      const roundedTotal = Math.round(total);
+      const roundedTotalWithVat = Math.round(total * 1.17);
+      
       totalDisplay.innerHTML = `
         <div style="font-size: 18px; color: #2e7d32; margin-bottom: 5px;">סיכום חלפים</div>
-        <div style="font-size: 24px; color: #1b5e20;">₪${total.toLocaleString()}</div>
-        <div style="font-size: 14px; color: #424242;">כולל מע"מ: ₪${(total * 1.17).toLocaleString()}</div>
+        <div style="font-size: 24px; color: #1b5e20;">₪${roundedTotal.toLocaleString()}</div>
+        <div style="font-size: 14px; color: #424242;">כולל מע"מ: ₪${roundedTotalWithVat.toLocaleString()}</div>
       `;
       
       if (window.parent && window.parent !== window) {
         window.parent.postMessage({
           type: 'partsSubtotalUpdate',
           data: {
-            subtotal: total,
-            subtotal_with_vat: total * 1.17,
+            subtotal: roundedTotal,
+            subtotal_with_vat: roundedTotalWithVat,
             part_count: parts.length
           }
         }, '*');
       }
       
-      return { parts, total };
+      return { parts, total: roundedTotal };
     }
     
     // ✅ NEW: Send parts selection updates to wizard
