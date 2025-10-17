@@ -640,6 +640,7 @@ window.deleteDamageCenter = async function(centerId) {
   // SESSION 40: Delete all parts_required rows for this damage center from Supabase
   const centerToDelete = window.helper.centers[centerIndex];
   const damageCenterCode = centerToDelete.code || centerToDelete["Damage center Number"];
+  const damageCenterId = centerToDelete.Id || centerToDelete.id;
   
   if (damageCenterCode && window.supabaseClient) {
     try {
@@ -659,6 +660,12 @@ window.deleteDamageCenter = async function(centerId) {
     }
   } else {
     console.warn('⚠️ No damage_center_code or supabaseClient, skipping Supabase delete');
+  }
+  
+  // SESSION 40: Delete from parts_search.damage_centers_summary
+  if (damageCenterId && window.helper.parts_search?.damage_centers_summary) {
+    delete window.helper.parts_search.damage_centers_summary[damageCenterId];
+    console.log(`✅ SESSION 40: Deleted ${damageCenterId} from damage_centers_summary`);
   }
   
   // Remove the center
@@ -722,6 +729,34 @@ window.deleteDamageCenter = async function(centerId) {
   
   console.log(`✅ Damage center deleted and ${window.helper.centers.length} remaining centers renumbered sequentially`);
   return true;
+};
+
+// SESSION 40: Clean orphaned damage centers from damage_centers_summary
+window.cleanOrphanedDamageCentersSummary = function() {
+  if (!window.helper?.parts_search?.damage_centers_summary) {
+    return;
+  }
+  
+  const validCenterIds = (window.helper.centers || []).map(c => c.Id || c.id);
+  const summaryKeys = Object.keys(window.helper.parts_search.damage_centers_summary);
+  let cleanedCount = 0;
+  
+  summaryKeys.forEach(key => {
+    if (!validCenterIds.includes(key)) {
+      delete window.helper.parts_search.damage_centers_summary[key];
+      cleanedCount++;
+      console.log(`🗑️ SESSION 40: Removed orphaned damage center ${key} from summary`);
+    }
+  });
+  
+  if (cleanedCount > 0) {
+    console.log(`✅ SESSION 40: Cleaned ${cleanedCount} orphaned damage centers from summary`);
+    if (typeof saveHelperToAllStorageLocations === 'function') {
+      saveHelperToAllStorageLocations();
+    } else {
+      sessionStorage.setItem('helper', JSON.stringify(window.helper));
+    }
+  }
 };
 
 window.getNextDamageCenterNumber = function() {

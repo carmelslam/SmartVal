@@ -3656,34 +3656,30 @@
               
               console.log('Extracted center info:', { activeCenterId, damageCenterNumber, damageCenterName, damageCenterLocation });
               
-              // Initialize parts_search structure
+              // SESSION 40: Initialize parts_search structure
               helper.parts_search = helper.parts_search || {};
-              helper.parts_search.selected_parts = helper.parts_search.selected_parts || [];
+              helper.parts_search.required_parts = helper.parts_search.required_parts || [];
               helper.parts_search.damage_centers_summary = helper.parts_search.damage_centers_summary || {};
               
-              console.log('Parts search before save:', {
-                'selected_parts length': helper.parts_search.selected_parts.length,
+              console.log('SESSION 40: Parts search before save:', {
+                'required_parts length': helper.parts_search.required_parts?.length || 0,
                 'damage_centers_summary keys': Object.keys(helper.parts_search.damage_centers_summary)
               });
               
+              // SESSION 40: Save to required_parts (NOT selected_parts)
               // Remove existing parts for current damage center to avoid duplicates
-              helper.parts_search.selected_parts = helper.parts_search.selected_parts.filter(part => 
+              helper.parts_search.required_parts = helper.parts_search.required_parts.filter(part => 
                 part.damage_center_id !== activeCenterId
               );
               
-              // Add current parts with enhanced classification
+              // Add current parts with damage center context
               const newPartsWithContext = partsData.map(part => ({
                 ...part,
-                selected_at: new Date().toISOString(),
-                selected_in_module: 'parts_required',
+                saved_at: new Date().toISOString(),
                 damage_center_id: activeCenterId,
                 damage_center_number: damageCenterNumber,
                 damage_center_name: damageCenterName,
                 damage_center_location: damageCenterLocation,
-                assigned_to_center: true,
-                selection_mode: 'damage_center_integrated',
-                usage_context: 'damage_center_assignment',
-                entry_type: 'manual_entry',
                 case_context: {
                   plate: helper.vehicle?.plate || '',
                   case_id: helper.case_info?.case_id || '',
@@ -3692,8 +3688,9 @@
                 }
               }));
               
-              // Add new parts to accumulated array
-              helper.parts_search.selected_parts.push(...newPartsWithContext);
+              // Add new parts to required_parts array
+              helper.parts_search.required_parts.push(...newPartsWithContext);
+              console.log(`✅ SESSION 40: Added ${newPartsWithContext.length} parts to required_parts`);
               
               // Update damage center summary
               const totalCost = partsData.reduce((sum, part) => sum + (parseFloat(part.price) || 0), 0);
@@ -3721,8 +3718,9 @@
                 summary: `${damageCenterName} (${damageCenterLocation}): ${partsData.length} חלקים, ₪${totalCost.toFixed(2)}`
               };
               
-              console.log('✅ Step 5 - Parts registered in parts_search.selected_parts');
-              console.log('📊 Total parts_search.selected_parts:', helper.parts_search.selected_parts.length);
+              console.log('✅ SESSION 40: Step 5 - Parts registered in parts_search.required_parts');
+              console.log('📊 SESSION 40: Total parts_search.required_parts:', helper.parts_search.required_parts.length);
+              console.log('📊 SESSION 40: damage_centers_summary[' + activeCenterId + '].parts_list:', helper.parts_search.damage_centers_summary[activeCenterId].parts_list.length);
               
               // === PHASE 6: Update case_summary after parts save in wizard ===
               try {
@@ -6588,7 +6586,7 @@
     
     // ✅ NEW: Handle parts selection updates from Step 5  
     function handlePartsSelectionUpdate(data) {
-      console.log('🔧 Received parts selection update:', data);
+      console.log('🔧 SESSION 40: Received parts selection update:', data);
       
       try {
         // Update moduleData with selected parts
@@ -6600,9 +6598,11 @@
         // Store in helper
         let helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
         
+        // SESSION 40: Save to required_parts (NOT selected_parts)
+        // selected_parts is ONLY for parts search page selections
         if (helper.parts_search) {
-          helper.parts_search.selected_parts = data.selectedParts || [];
-          helper.parts_search.unselected_parts = data.unselectedParts || [];
+          helper.parts_search.required_parts = data.selectedParts || [];
+          console.log(`✅ SESSION 40: Saved ${data.selectedParts?.length || 0} parts to required_parts`);
         }
         
         sessionStorage.setItem('helper', JSON.stringify(helper));
