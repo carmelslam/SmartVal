@@ -2899,6 +2899,165 @@ function savePartsData() {
   
   <script>
     /**
+     * SESSION 41: Smart sync Supabase → helper.parts_search.required_parts
+     * Prevents duplicates using row_uuid as unique key
+     * Mirrors the selected_parts smart sync mechanism
+     * MUST be defined BEFORE initializeWithRetry
+     */
+    async function smartSyncRequiredParts() {
+      console.log('🔄 SESSION 41: Smart sync required_parts from Supabase...');
+      
+      if (!window.supabaseClient) {
+        console.warn('⚠️ SESSION 41: No Supabase client, skipping smart sync');
+        return;
+      }
+      
+      const helper = window.helper || JSON.parse(sessionStorage.getItem('helper') || '{}');
+      const caseId = helper?.case_info?.case_id || helper?.meta?.case_id;
+      const plate = helper?.vehicle?.plate || helper?.meta?.plate;
+      
+      if (!caseId || !plate) {
+        console.warn('⚠️ SESSION 41: Missing case_id or plate, skipping smart sync');
+        return;
+      }
+      
+      try {
+        // Fetch ALL parts_required for this case from Supabase
+        const { data: supabaseParts, error } = await window.supabaseClient
+          .from('parts_required')
+          .select('*')
+          .eq('case_id', caseId)
+          .eq('plate', plate)
+          .order('created_at', { ascending: true });
+        
+        if (error) {
+          console.error('❌ SESSION 41: Supabase load error:', error);
+          return;
+        }
+        
+        console.log(`📊 SESSION 41: Loaded ${supabaseParts?.length || 0} parts from Supabase`);
+        
+        // Initialize parts_search.required_parts if needed
+        if (!helper.parts_search) {
+          helper.parts_search = {};
+        }
+        if (!helper.parts_search.required_parts) {
+          helper.parts_search.required_parts = [];
+        }
+        
+        const helperParts = helper.parts_search.required_parts || [];
+        
+        console.log('🔍 SESSION 41: Smart sync - Supabase:', supabaseParts?.length || 0, 'Helper:', helperParts.length);
+        
+        // SESSION 41: Use ONLY row_uuid as unique key
+        // Each row_uuid is globally unique across all damage centers
+        const supabaseMap = new Map();
+        (supabaseParts || []).forEach(part => {
+          if (part.row_uuid) {
+            supabaseMap.set(part.row_uuid, part);
+          }
+        });
+        
+        // Create map of helper parts by row_uuid
+        const helperMap = new Map();
+        helperParts.forEach(part => {
+          if (part.row_uuid) {
+            helperMap.set(part.row_uuid, part);
+          }
+        });
+        
+        // Find differences
+        const toAdd = []; // In Supabase but not in helper
+        const toUpdate = []; // In both but with different data
+        const toRemove = []; // In helper but not in Supabase
+        
+        // Check Supabase parts
+        (supabaseParts || []).forEach(supabasePart => {
+          if (!supabasePart.row_uuid) return;
+          
+          if (!helperMap.has(supabasePart.row_uuid)) {
+            toAdd.push(supabasePart);
+          } else {
+            // Check if data differs (price, quantity, etc.)
+            const helperPart = helperMap.get(supabasePart.row_uuid);
+            if (helperPart.quantity !== supabasePart.quantity || 
+                helperPart.updated_price !== supabasePart.updated_price ||
+                helperPart.total_cost !== supabasePart.total_cost) {
+              toUpdate.push({ row_uuid: supabasePart.row_uuid, supabasePart, helperPart });
+            }
+          }
+        });
+        
+        // Check helper parts for removals
+        helperParts.forEach(helperPart => {
+          if (helperPart.row_uuid && !supabaseMap.has(helperPart.row_uuid)) {
+            toRemove.push(helperPart.row_uuid);
+          }
+        });
+        
+        console.log('📊 SESSION 41: Differences - Add:', toAdd.length, 'Update:', toUpdate.length, 'Remove:', toRemove.length);
+        
+        if (toAdd.length > 0 || toUpdate.length > 0 || toRemove.length > 0) {
+          // Apply changes
+          let updatedParts = [...helperParts];
+          
+          // Remove parts not in Supabase (deleted remotely)
+          if (toRemove.length > 0) {
+            updatedParts = updatedParts.filter(p => !toRemove.includes(p.row_uuid));
+            console.log('🗑️ SESSION 41: Removed', toRemove.length, 'parts not in Supabase');
+          }
+          
+          // Update existing parts with Supabase data
+          toUpdate.forEach(({ row_uuid, supabasePart }) => {
+            const index = updatedParts.findIndex(p => p.row_uuid === row_uuid);
+            if (index !== -1) {
+              // Merge Supabase data into helper part (Supabase is source of truth)
+              updatedParts[index] = {
+                ...updatedParts[index],
+                ...supabasePart,
+                synced_at: new Date().toISOString()
+              };
+            }
+          });
+          console.log('✏️ SESSION 41: Updated', toUpdate.length, 'parts with Supabase data');
+          
+          // Add new parts from Supabase
+          toAdd.forEach(supabasePart => {
+            updatedParts.push({
+              ...supabasePart,
+              synced_at: new Date().toISOString()
+            });
+          });
+          console.log('➕ SESSION 41: Added', toAdd.length, 'new parts from Supabase');
+          
+          // Update helper with merged data (no duplicates)
+          helper.parts_search.required_parts = updatedParts;
+          
+          // Save to sessionStorage
+          try {
+            sessionStorage.setItem('helper', JSON.stringify(helper));
+            window.helper = helper;
+            if (typeof globalHelper !== 'undefined') {
+              globalHelper = helper;
+            }
+            console.log('✅ SESSION 41: Smart sync complete - no duplicates');
+          } catch (e) {
+            console.error('❌ SESSION 41: Failed to save helper:', e);
+          }
+        } else {
+          console.log('✅ SESSION 41: Helper and Supabase already in sync - no changes needed');
+        }
+        
+      } catch (error) {
+        console.error('❌ SESSION 41: Smart sync error:', error);
+      }
+    }
+    
+    window.smartSyncRequiredParts = smartSyncRequiredParts;
+  </script>
+  
+  <script>
+    /**
      * SESSION 38: Load parts from Supabase
      * Supabase is source of truth
      */
@@ -3069,164 +3228,6 @@ function savePartsData() {
     window.loadPartsFromSupabase = loadPartsFromSupabase;
     window.addPartFromSupabaseData = addPartFromSupabaseData;
     window.overwriteHelperWithSupabaseData = overwriteHelperWithSupabaseData;
-  </script>
-  
-  <script>
-    /**
-     * SESSION 41: Smart sync Supabase → helper.parts_search.required_parts
-     * Prevents duplicates using row_uuid as unique key
-     * Mirrors the selected_parts smart sync mechanism
-     */
-    async function smartSyncRequiredParts() {
-      console.log('🔄 SESSION 41: Smart sync required_parts from Supabase...');
-      
-      if (!window.supabaseClient) {
-        console.warn('⚠️ SESSION 41: No Supabase client, skipping smart sync');
-        return;
-      }
-      
-      const helper = window.helper || JSON.parse(sessionStorage.getItem('helper') || '{}');
-      const caseId = helper?.case_info?.case_id || helper?.meta?.case_id;
-      const plate = helper?.vehicle?.plate || helper?.meta?.plate;
-      
-      if (!caseId || !plate) {
-        console.warn('⚠️ SESSION 41: Missing case_id or plate, skipping smart sync');
-        return;
-      }
-      
-      try {
-        // Fetch ALL parts_required for this case from Supabase
-        const { data: supabaseParts, error } = await window.supabaseClient
-          .from('parts_required')
-          .select('*')
-          .eq('case_id', caseId)
-          .eq('plate', plate)
-          .order('created_at', { ascending: true });
-        
-        if (error) {
-          console.error('❌ SESSION 41: Supabase load error:', error);
-          return;
-        }
-        
-        console.log(`📊 SESSION 41: Loaded ${supabaseParts?.length || 0} parts from Supabase`);
-        
-        // Initialize parts_search.required_parts if needed
-        if (!helper.parts_search) {
-          helper.parts_search = {};
-        }
-        if (!helper.parts_search.required_parts) {
-          helper.parts_search.required_parts = [];
-        }
-        
-        const helperParts = helper.parts_search.required_parts || [];
-        
-        console.log('🔍 SESSION 41: Smart sync - Supabase:', supabaseParts?.length || 0, 'Helper:', helperParts.length);
-        
-        // SESSION 41: Use ONLY row_uuid as unique key
-        // Each row_uuid is globally unique across all damage centers
-        const supabaseMap = new Map();
-        (supabaseParts || []).forEach(part => {
-          if (part.row_uuid) {
-            supabaseMap.set(part.row_uuid, part);
-          }
-        });
-        
-        // Create map of helper parts by row_uuid
-        const helperMap = new Map();
-        helperParts.forEach(part => {
-          if (part.row_uuid) {
-            helperMap.set(part.row_uuid, part);
-          }
-        });
-        
-        // Find differences
-        const toAdd = []; // In Supabase but not in helper
-        const toUpdate = []; // In both but with different data
-        const toRemove = []; // In helper but not in Supabase
-        
-        // Check Supabase parts
-        (supabaseParts || []).forEach(supabasePart => {
-          if (!supabasePart.row_uuid) return;
-          
-          if (!helperMap.has(supabasePart.row_uuid)) {
-            toAdd.push(supabasePart);
-          } else {
-            // Check if data differs (price, quantity, etc.)
-            const helperPart = helperMap.get(supabasePart.row_uuid);
-            if (helperPart.quantity !== supabasePart.quantity || 
-                helperPart.updated_price !== supabasePart.updated_price ||
-                helperPart.total_cost !== supabasePart.total_cost) {
-              toUpdate.push({ row_uuid: supabasePart.row_uuid, supabasePart, helperPart });
-            }
-          }
-        });
-        
-        // Check helper parts for removals
-        helperParts.forEach(helperPart => {
-          if (helperPart.row_uuid && !supabaseMap.has(helperPart.row_uuid)) {
-            toRemove.push(helperPart.row_uuid);
-          }
-        });
-        
-        console.log('📊 SESSION 41: Differences - Add:', toAdd.length, 'Update:', toUpdate.length, 'Remove:', toRemove.length);
-        
-        if (toAdd.length > 0 || toUpdate.length > 0 || toRemove.length > 0) {
-          // Apply changes
-          let updatedParts = [...helperParts];
-          
-          // Remove parts not in Supabase (deleted remotely)
-          if (toRemove.length > 0) {
-            updatedParts = updatedParts.filter(p => !toRemove.includes(p.row_uuid));
-            console.log('🗑️ SESSION 41: Removed', toRemove.length, 'parts not in Supabase');
-          }
-          
-          // Update existing parts with Supabase data
-          toUpdate.forEach(({ row_uuid, supabasePart }) => {
-            const index = updatedParts.findIndex(p => p.row_uuid === row_uuid);
-            if (index !== -1) {
-              // Merge Supabase data into helper part (Supabase is source of truth)
-              updatedParts[index] = {
-                ...updatedParts[index],
-                ...supabasePart,
-                synced_at: new Date().toISOString()
-              };
-            }
-          });
-          console.log('✏️ SESSION 41: Updated', toUpdate.length, 'parts with Supabase data');
-          
-          // Add new parts from Supabase
-          toAdd.forEach(supabasePart => {
-            updatedParts.push({
-              ...supabasePart,
-              synced_at: new Date().toISOString()
-            });
-          });
-          console.log('➕ SESSION 41: Added', toAdd.length, 'new parts from Supabase');
-          
-          // Update helper with merged data (no duplicates)
-          helper.parts_search.required_parts = updatedParts;
-          
-          // Save to sessionStorage
-          try {
-            sessionStorage.setItem('helper', JSON.stringify(helper));
-            window.helper = helper;
-            if (typeof globalHelper !== 'undefined') {
-              globalHelper = helper;
-            }
-            console.log('✅ SESSION 41: Smart sync complete - no duplicates');
-          } catch (e) {
-            console.error('❌ SESSION 41: Failed to save helper:', e);
-          }
-        } else {
-          console.log('✅ SESSION 41: Helper and Supabase already in sync - no changes needed');
-        }
-        
-      } catch (error) {
-        console.error('❌ SESSION 41: Smart sync error:', error);
-      }
-    }
-    
-    window.smartSyncRequiredParts = smartSyncRequiredParts;
   </script>
 </body>
 </html>
