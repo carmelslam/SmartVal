@@ -3666,11 +3666,16 @@
                 'damage_centers_summary keys': Object.keys(helper.parts_search.damage_centers_summary)
               });
               
-              // SESSION 40: Save to required_parts (NOT selected_parts)
-              // Remove existing parts for current damage center to avoid duplicates
-              helper.parts_search.required_parts = helper.parts_search.required_parts.filter(part => 
-                part.damage_center_id !== activeCenterId
-              );
+              // SESSION 41: Save to required_parts (NOT selected_parts)
+              // Remove duplicates by row_uuid to prevent same part appearing multiple times
+              const newRowUuids = partsData.map(p => p.row_uuid).filter(Boolean);
+              
+              helper.parts_search.required_parts = helper.parts_search.required_parts.filter(part => {
+                // Keep parts that are NOT in the current save batch (by row_uuid)
+                return !newRowUuids.includes(part.row_uuid);
+              });
+              
+              console.log(`🧹 SESSION 41: Removed ${newRowUuids.length} existing parts by row_uuid before adding updated versions`);
               
               // Add current parts with damage center context
               const newPartsWithContext = partsData.map(part => ({
@@ -3688,7 +3693,7 @@
                 }
               }));
               
-              // Add new parts to required_parts array
+              // Add new parts to required_parts array (no duplicates by row_uuid)
               helper.parts_search.required_parts.push(...newPartsWithContext);
               console.log(`✅ SESSION 40: Added ${newPartsWithContext.length} parts to required_parts`);
               
@@ -6598,11 +6603,23 @@
         // Store in helper
         let helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
         
-        // SESSION 40: Save to required_parts (NOT selected_parts)
+        // SESSION 41: Save to required_parts with duplicate prevention by row_uuid
         // selected_parts is ONLY for parts search page selections
         if (helper.parts_search) {
-          helper.parts_search.required_parts = data.selectedParts || [];
-          console.log(`✅ SESSION 40: Saved ${data.selectedParts?.length || 0} parts to required_parts`);
+          helper.parts_search.required_parts = helper.parts_search.required_parts || [];
+          
+          const incomingParts = data.selectedParts || [];
+          const incomingRowUuids = incomingParts.map(p => p.row_uuid).filter(Boolean);
+          
+          // Remove existing parts with same row_uuid
+          helper.parts_search.required_parts = helper.parts_search.required_parts.filter(part => {
+            return !incomingRowUuids.includes(part.row_uuid);
+          });
+          
+          // Add incoming parts (no duplicates)
+          helper.parts_search.required_parts.push(...incomingParts);
+          
+          console.log(`✅ SESSION 41: Updated ${incomingParts.length} parts in required_parts (no duplicates by row_uuid)`);
         }
         
         sessionStorage.setItem('helper', JSON.stringify(helper));
