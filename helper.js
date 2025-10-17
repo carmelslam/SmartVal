@@ -916,7 +916,7 @@ window.buildComprehensiveDamageAssessment = function() {
     
     if (allCenters.length === 0) {
       console.log('📊 No centers found - clearing assessment');
-      window.helper.damage_assessment.damage_centers_summary = {};
+      window.helper.damage_assessment.damage_centers_summary = { centers_count: 0 };
       window.helper.damage_assessment.totals = { 
         "Total works": 0, 
         "Total parts": 0, 
@@ -924,7 +924,19 @@ window.buildComprehensiveDamageAssessment = function() {
         "Total without VAT": 0, 
         "Total with VAT": 0 
       };
-      return { centers: [], totals: { all_centers_total: 0 }, summary: { total_centers: 0 } };
+      window.helper.damage_assessment.summary = {
+        total_works: 0,
+        total_parts: 0,
+        total_repairs: 0,
+        total_without_vat: 0,
+        total_with_vat: 0
+      };
+      window.helper.damage_assessment.comprehensive = {
+        centers: [],
+        totals: { all_centers_subtotal: 0, all_centers_vat: 0, all_centers_total: 0 },
+        summary: { total_centers: 0, completed_centers: 0 }
+      };
+      return window.helper.damage_assessment.comprehensive;
     }
     
     // ✅ CRITICAL FIX: Clear old damage_centers_summary completely
@@ -975,6 +987,18 @@ window.buildComprehensiveDamageAssessment = function() {
       "Total repairs": totalRepairs,
       "Total without VAT": totalWithoutVAT,
       "Total with VAT": totalWithVAT
+    };
+    
+    // Add centers_count to damage_centers_summary
+    window.helper.damage_assessment.damage_centers_summary.centers_count = allCenters.length;
+    
+    // Update damage_assessment.summary with current data
+    window.helper.damage_assessment.summary = {
+      total_works: totalWorks,
+      total_parts: totalParts,
+      total_repairs: totalRepairs,
+      total_without_vat: totalWithoutVAT,
+      total_with_vat: totalWithVAT
     };
     
     // Build comprehensive assessment structure
