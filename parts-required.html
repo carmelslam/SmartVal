@@ -553,6 +553,11 @@ function calculatePriceFields(row) {
   
   calculatePartsTotals();
   
+  // SESSION 40: Send update to wizard after price calculation
+  if (typeof sendPartsUpdateToWizard === 'function') {
+    sendPartsUpdateToWizard();
+  }
+  
   // SESSION 38: Save to Supabase after calculation
   if (typeof debouncedSave === 'function') {
     debouncedSave(row);
@@ -1563,6 +1568,12 @@ function savePartsData() {
       if (window.parent && window.parent.postMessage && window.parent !== window) {
         try {
           const partsData = calculatePartsTotals();
+          
+          console.log('📤 SESSION 40: sendPartsUpdateToWizard - Parts data:', {
+            partsCount: partsData.parts.length,
+            total: partsData.total,
+            firstPart: partsData.parts[0]
+          });
           
           // Separate selected and unselected parts
           const allSearchResults = [];
