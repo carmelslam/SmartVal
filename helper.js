@@ -639,51 +639,31 @@ window.deleteDamageCenter = async function(centerId) {
   
   // SESSION 40/41: Delete all parts_required rows for this damage center from Supabase
   const centerToDelete = window.helper.centers[centerIndex];
-  const damageCenterCode = centerToDelete.code || centerToDelete["Damage center Number"];
   const damageCenterId = centerToDelete.Id || centerToDelete.id;
   
   console.log('🔍 SESSION 41: Damage center to delete:', {
-    damageCenterCode,
     damageCenterId,
     centerToDelete: { ...centerToDelete }
   });
   
-  if (window.supabaseClient) {
+  if (window.supabaseClient && damageCenterId) {
     try {
-      // Try deleting by damage_center_code first
-      if (damageCenterCode) {
-        console.log(`🗑️ SESSION 41: Deleting parts by damage_center_code: ${damageCenterCode} from Supabase`);
-        const { data: deleted1, error: error1 } = await window.supabaseClient
-          .from('parts_required')
-          .delete()
-          .eq('damage_center_code', damageCenterCode);
-        
-        if (error1) {
-          console.error('❌ Supabase delete by code error:', error1);
-        } else {
-          console.log('✅ Deleted parts by damage_center_code from Supabase');
-        }
-      }
+      console.log(`🗑️ SESSION 41: Deleting parts by damage_center_code (Id): ${damageCenterId} from Supabase`);
+      const { data: deleted, error } = await window.supabaseClient
+        .from('parts_required')
+        .delete()
+        .eq('damage_center_code', damageCenterId);
       
-      // Also try deleting by damage_center_id as fallback
-      if (damageCenterId) {
-        console.log(`🗑️ SESSION 41: Deleting parts by damage_center_id: ${damageCenterId} from Supabase`);
-        const { data: deleted2, error: error2 } = await window.supabaseClient
-          .from('parts_required')
-          .delete()
-          .eq('damage_center_id', damageCenterId);
-        
-        if (error2) {
-          console.error('❌ Supabase delete by id error:', error2);
-        } else {
-          console.log('✅ Deleted parts by damage_center_id from Supabase');
-        }
+      if (error) {
+        console.error('❌ Supabase delete error:', error);
+      } else {
+        console.log('✅ Deleted all parts for damage center from Supabase:', deleted);
       }
     } catch (error) {
       console.error('❌ Failed to delete parts from Supabase:', error);
     }
   } else {
-    console.warn('⚠️ No supabaseClient, skipping Supabase delete');
+    console.warn('⚠️ No supabaseClient or damageCenterId, skipping Supabase delete');
   }
   
   // SESSION 40: Delete from parts_search.damage_centers_summary
