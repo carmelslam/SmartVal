@@ -692,6 +692,12 @@ window.deleteDamageCenter = async function(centerId) {
     window.cleanOrphanedDamageCentersSummary();
   }
   
+  // SESSION 41: Clear current_center_totals
+  if (window.helper.damage_assessment?.current_center_totals) {
+    window.helper.damage_assessment.current_center_totals = {};
+    console.log('✅ SESSION 41: Cleared current_center_totals');
+  }
+  
   // Remove the center
   window.helper.centers.splice(centerIndex, 1);
   
