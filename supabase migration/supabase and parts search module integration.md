@@ -26270,11 +26270,376 @@ damage_assessment.comprehensive.summary.total_centers  // Should be 1
 
 ---
 
-**Status:** 🟢 FIXED  
-**Confidence:** 🟢 HIGH - Root causes identified and fixed  
-**Risk:** 🟢 LOW - Minimal changes, targeted fixes  
-**Next Steps:** User acceptance testing with quantity > 1 parts
+**Status:** ⚠️ PARTIALLY FIXED - Additional issues discovered  
+**Confidence:** 🟡 MEDIUM - Session 41 fixed costs but more field issues found  
+**Risk:** 🟡 MEDIUM - Multiple data flow issues need addressing  
+**Next Steps:** Complete investigation and apply comprehensive fixes
 
 ---
 
-**END OF SESSION 41**
+## SESSION 41 FOLLOW-UP INVESTIGATION
+
+### USER REPORT
+After Session 41 "fixes", user reports:
+1. Most fields still display wrong data (not just costs)
+2. Wrong damage center counts persisting
+3. Some objects show decimals incorrectly
+4. Multiple data/cost mismatches across all 8 objects
+
+### DEEP INVESTIGATION - COMPLETE DATA FLOW ANALYSIS
+
+---
+
+## OBJECT 1: `parts_search.case_summary`
+
+**Location Created:** damage-centers-wizard.html:3772-3779
+
+**Complete Structure:**
+```javascript
+{
+  total_searches: 0,                          // ❌ HARDCODED to 0
+  total_results: allSearchResults.length,     // ❌ From helper.parts_search.search_results (may be stale)
+  selected_count: wizardModeParts.length,     // ✅ Counts wizard mode parts
+  unselected_count: unselectedParts.length,   // ❌ From helper.parts_search.unselected_parts (may be stale)
+  last_search: new Date().toISOString(),      // ✅ Current timestamp
+  estimated_total_cost: totalCost             // ⚠️ CALCULATED WRONG (see below)
+}
+```
+
+**Cost Calculation (Line 3765-3768):**
+```javascript
+const totalCost = wizardModeParts.reduce((sum, part) => {
+  const price = parseFloat(part.price) || 0;         // ❌ WRONG: Uses part.price (per-unit)
+  const quantity = parseInt(part.quantity) || 1;     
+  return sum + (price * quantity);                   // ❌ Should use part.total_cost directly
+}, 0);
+```
+
+**ISSUES:**
+1. ❌ Uses `part.price * quantity` instead of `part.total_cost`
+2. ❌ `total_results` from stale `search_results` array
+3. ❌ `unselected_count` from stale `unselected_parts` array
+4. ❌ `total_searches` hardcoded to 0 (meaningless)
+
+**Impact:** Shows wrong total cost and wrong counts
+
+---
+
+## OBJECT 2: `parts_search.damage_centers_summary`
+
+**Location Created:** damage-centers-wizard.html:3704-3726
+
+**Complete Structure:**
+```javascript
+{
+  damage_center_id: activeCenterId,           // ✅ Correct ID
+  damage_center_number: damageCenterNumber,   // ✅ Correct number
+  damage_center_name: damageCenterName,       // ✅ Correct name
+  damage_center_location: damageCenterLocation, // ✅ Correct location
+  parts_count: partsData.length,              // ✅ Correct count
+  total_cost: totalCost,                      // ✅ FIXED in Session 41 (uses part.total_cost)
+  parts_list: [                               // ⚠️ Individual parts - see below
+    {
+      name: part.name || part.part,           // ✅ Correct
+      description: part.description || ...,   // ✅ Correct
+      quantity: part.quantity || part.כמות,  // ✅ Correct
+      price: part.price,                      // ❌ WRONG: per-unit price NOT total
+      source: part.source                     // ✅ Correct
+    }
+  ],
+  last_updated: new Date().toISOString(),     // ✅ Correct
+  summary: `${damageCenterName}...`           // ✅ Correct (uses correct totalCost)
+}
+```
+
+**ISSUES:**
+1. ⚠️ Line 3720: `price: part.price` should be `price: part.updated_price` or `total_cost: part.total_cost`
+2. ⚠️ parts_list shows per-unit price, not actual cost per part
+3. ⚠️ Can contain ORPHANED entries if centers deleted (cleaned by cleanOrphanedDamageCentersSummary)
+
+**Impact:** Individual parts in parts_list show wrong prices (per-unit instead of updated/total)
+
+**User Issue:** Shows with decimals but has "correct data" - likely formatting issue with per-unit prices
+
+---
+
+## OBJECT 3: `damage_centers[item].Summary`
+
+**Location Created:** damage-centers-wizard.html:2049-2057 AND 3895-3901
+
+**Complete Structure:**
+```javascript
+{
+  "Total works": worksTotal,      // ✅ From Works.works_meta.total_cost
+  "Total parts": partsTotal,      // ✅ From Parts.parts_meta.total_cost (FIXED in Session 41)
+  "Total repairs": repairsTotal,  // ✅ From Repairs.repairs_meta.total_cost
+  "Subtotal": subtotal,           // ✅ Sum of above
+  "VAT percentage": vatPercentage,// ✅ From helper.calculations.vat_rate
+  "VAT amount": vatAmount,        // ✅ Calculated from subtotal
+  "Total with VAT": totalWithVat  // ✅ subtotal + vat
+}
+```
+
+**Data Sources (Line 2041-2043 and 3888-3890):**
+```javascript
+const worksTotal = helper.current_damage_center.Works?.works_meta?.total_cost || 0;
+const partsTotal = helper.current_damage_center.Parts?.parts_meta?.total_cost || 0;  // ✅ FIXED
+const repairsTotal = helper.current_damage_center.Repairs?.repairs_meta?.total_cost || 0;
+```
+
+**ISSUES:**
+1. ✅ Session 41 FIXED the parts_meta.total_cost calculation (line 3639)
+2. ⚠️ BUT if parts_meta.total_cost was calculated BEFORE Session 41 fix, old data persists
+3. ⚠️ Edit mode loads old Summary values from helper.centers[] (may have wrong data)
+
+**Impact:** Shows correct data ONLY if damage center created/edited AFTER Session 41 fix
+
+---
+
+## OBJECT 4: `damage_assessment.comprehensive.summary`
+
+**Location Created:** helper.js:910-913
+
+**Complete Structure:**
+```javascript
+{
+  total_centers: allCenters.length,               // ✅ CORRECT - counts helper.centers array
+  completed_centers: allCenters.filter(...).length // ✅ CORRECT - filters by status
+}
+```
+
+**Data Source:**
+```javascript
+const allCenters = window.helper.centers || [];  // Line 849
+```
+
+**ISSUES:**
+1. ✅ Count is CORRECT (reads from actual centers array)
+2. ❌ NO COST FIELDS in this object (only counts)
+
+**Impact:** Count should be correct, no cost data here
+
+---
+
+## OBJECT 5: `damage_assessment.comprehensive.totals`
+
+**Location Created:** helper.js:905-908
+
+**Complete Structure:**
+```javascript
+{
+  all_centers_subtotal: Math.round(totalWithoutVAT),  // ✅ Rounded sum
+  all_centers_vat: Math.round(totalWithVAT - totalWithoutVAT), // ✅ Rounded vat
+  all_centers_total: Math.round(totalWithVAT)         // ✅ Rounded total
+}
+```
+
+**Data Source (Line 860-891):**
+```javascript
+allCenters.forEach((center, index) => {
+  const works = parseFloat(center.Works?.works_meta?.total_cost || 0);
+  const parts = parseFloat(center.Parts?.parts_meta?.total_cost || 0);  // ⚠️ Reads parts_meta
+  const repairs = parseFloat(center.Repairs?.repairs_meta?.total_cost || 0);
+  // ... sum to totals
+});
+```
+
+**ISSUES:**
+1. ⚠️ Reads `parts_meta.total_cost` from each center
+2. ❌ If parts_meta was calculated with OLD Session 40 bug (using part.price), wrong data propagates
+3. ❌ buildComprehensiveDamageAssessment() only rebuilds when called explicitly
+4. ❌ Old centers with wrong parts_meta remain wrong until recalculated
+
+**Impact:** Shows wrong totals if any center has outdated parts_meta from BEFORE Session 41 fix
+
+---
+
+## OBJECT 6: `damage_assessment.damage_centers_summary`
+
+**Location Created:** helper.js:875-881
+
+**Complete Structure:**
+```javascript
+{
+  "Damage center 1": {
+    "Works": works,                   // ✅ From Works.works_meta.total_cost
+    "Parts": parts,                   // ⚠️ From Parts.parts_meta.total_cost
+    "Repairs": repairs,               // ✅ From Repairs.repairs_meta.total_cost
+    "Total without VAT": subtotal,    // ✅ Sum of above
+    "Total with VAT": total           // ✅ subtotal + vat
+  },
+  "Damage center 2": { ... },
+  // ...
+}
+```
+
+**Data Source (Line 866-868):**
+```javascript
+const works = parseFloat(center.Works?.works_meta?.total_cost || 0);
+const parts = parseFloat(center.Parts?.parts_meta?.total_cost || 0);  // ⚠️ Reads parts_meta
+const repairs = parseFloat(center.Repairs?.repairs_meta?.total_cost || 0);
+```
+
+**ISSUES:**
+1. ❌ Same issue as comprehensive.totals - reads potentially wrong parts_meta
+2. ❌ Can contain ORPHANED entries if not rebuilt after center deletion
+3. ⚠️ Sequential numbering ("Damage center 1", "Damage center 2") can mismatch actual center numbers
+4. ❌ Completely cleared and rebuilt (line 854) but uses wrong source data
+
+**Impact:** Shows wrong parts costs if source parts_meta is wrong, orphaned entries if not cleaned
+
+---
+
+## OBJECT 7: `damage_assessment.summary`
+
+**Location:** NOT FOUND in codebase
+
+**ISSUES:**
+1. ❌ This object does NOT exist in current helper.js
+2. ❌ May be created elsewhere or may be OBSOLETE field
+3. ⚠️ User reports it shows incorrect data - need to find where it's created
+
+**Impact:** UNKNOWN - object not found in main files
+
+---
+
+## OBJECT 8: `damage_assessment.totals_after_differentials`
+
+**Location Created:** final-report-builder.html:12700 and 17027
+
+**Complete Structure:**
+```javascript
+{
+  "Total parts": baseParts + differentials,     // ⚠️ Base from damage_assessment.totals
+  "Total works": baseWorks + differentials,     // ⚠️ Base from damage_assessment.totals
+  "Total repairs": baseRepairs + differentials, // ⚠️ Base from damage_assessment.totals
+  "Other": otherDifferentials,                  // ✅ From differentials
+  "Total with VAT": finalTotal                  // ⚠️ Calculated from wrong base
+}
+```
+
+**Data Source (final-report-builder.html:17027):**
+```javascript
+helper.damage_assessment.totals_after_differentials = {
+  'Total parts': helper.damage_assessment.totals?.['Total parts'] || 0,
+  'Total works': helper.damage_assessment.totals?.['Total works'] || 0,
+  'Total repairs': helper.damage_assessment.totals?.['Total repairs'] || 0,
+  // ... then differentials applied on top
+};
+```
+
+**ISSUES:**
+1. ❌ Uses `damage_assessment.totals` as base - which is WRONG if parts_meta is wrong
+2. ❌ Cascading error - wrong base + differentials = still wrong
+3. ⚠️ Only created in final-report-builder.html, not in wizard/helper
+4. ❌ No re-calculation when damage centers updated
+
+**Impact:** Wrong values because base totals are wrong
+
+---
+
+## ROOT CAUSE ANALYSIS - THE REAL PROBLEM
+
+### PRIMARY ROOT CAUSE: `parts_meta.total_cost` Calculation Timing
+
+**Session 41 fixed Line 3639:**
+```javascript
+// FIXED to use part.total_cost
+helper.current_damage_center.Parts.parts_meta = {
+  total_items: partsData.length,
+  total_cost: partsData.reduce((sum, part) => sum + (parseFloat(part.total_cost) || 0), 0),
+};
+```
+
+**BUT:**
+1. ❌ Any damage centers created BEFORE Session 41 fix still have WRONG parts_meta
+2. ❌ parts_meta is NOT recalculated when damage centers loaded from storage
+3. ❌ All downstream objects read from parts_meta → all show wrong data
+4. ❌ No migration/fix applied to existing data
+
+### SECONDARY ISSUES:
+
+**Issue 1: parts_list.price field (Line 3720)**
+```javascript
+price: part.price,  // ❌ Should be part.updated_price or part.total_cost
+```
+Shows per-unit price instead of actual cost
+
+**Issue 2: case_summary calculation (Line 3766-3768)**
+```javascript
+const totalCost = wizardModeParts.reduce((sum, part) => {
+  const price = parseFloat(part.price) || 0;  // ❌ Should use part.total_cost
+  const quantity = parseInt(part.quantity) || 1;
+  return sum + (price * quantity);
+}, 0);
+```
+Manually calculates price × quantity instead of using pre-calculated total_cost
+
+**Issue 3: Orphaned Entries**
+- parts_search.damage_centers_summary can have orphaned keys
+- damage_assessment.damage_centers_summary can have orphaned keys
+- cleanOrphanedDamageCentersSummary() exists but may not be called consistently
+
+**Issue 4: Stale Data**
+- case_summary uses helper.parts_search.search_results (stale)
+- case_summary uses helper.parts_search.unselected_parts (stale)
+- No refresh mechanism for these fields
+
+---
+
+## COMPREHENSIVE FIX PLAN
+
+### FIX 1: Recalculate parts_meta for ALL existing damage centers (CRITICAL)
+**File:** helper.js
+**Action:** Add migration function to recalculate parts_meta.total_cost for all centers
+**Why:** Existing centers have wrong parts_meta from before Session 41 fix
+
+### FIX 2: Fix parts_list.price field
+**File:** damage-centers-wizard.html:3720
+**Change:** `price: part.price` → `price: part.updated_price, total_cost: part.total_cost`
+**Why:** Should show actual cost per part, not per-unit price
+
+### FIX 3: Fix case_summary cost calculation
+**File:** damage-centers-wizard.html:3766-3768
+**Change:** Use `part.total_cost` instead of `part.price * quantity`
+**Why:** Don't recalculate what's already calculated correctly
+
+### FIX 4: Call buildComprehensiveDamageAssessment after every change
+**File:** damage-centers-wizard.html
+**Action:** Ensure rebuild called after save, edit, delete operations
+**Why:** Keeps damage_assessment objects in sync with centers[]
+
+### FIX 5: Clean orphaned entries consistently
+**File:** helper.js
+**Action:** Call cleanOrphanedDamageCentersSummary() in more places
+**Why:** Remove stale damage center references
+
+### FIX 6: Find and fix damage_assessment.summary
+**Action:** Search codebase for where this object is created
+**Why:** User reports it shows wrong data
+
+---
+
+## TESTING CHECKLIST
+
+After fixes:
+- [ ] Create NEW damage center with quantity=2 part → verify ALL 8 objects correct
+- [ ] EDIT existing old damage center → verify parts_meta recalculated
+- [ ] DELETE damage center → verify no orphaned entries in any object
+- [ ] Check case_summary.estimated_total_cost matches actual totals
+- [ ] Check parts_list individual prices show updated_price not per-unit price
+- [ ] Check damage_assessment objects all match centers[] data
+- [ ] Check totals_after_differentials has correct base values
+- [ ] Check all center counts = 1 after deleting extra centers
+
+---
+
+**NEXT STEPS:**
+1. User approval of fix plan
+2. Implement fixes in order (FIX 1 is most critical)
+3. Test each fix incrementally
+4. Verify no data loss or system breaks
+
+---
+
+**END OF SESSION 41 FOLLOW-UP INVESTIGATION**
