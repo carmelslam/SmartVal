@@ -4,7 +4,11 @@ console.log('🚀 FINAL_REPORT.JS STARTING TO LOAD...');
 
 import { MathEngine } from './math.js';
 import { sendToWebhook } from './webhook.js';
-import { getVehicleData, getDamageData, getValuationData, getFinancialData } from './helper.js';
+// ✅ SESSION 45 FIX: Use global window functions instead of imports (helper.js no longer exports)
+const getVehicleData = window.getVehicleData;
+const getDamageData = window.getDamageData;
+const getValuationData = window.getValuationData;
+const getFinancialData = window.getFinancialData;
 import { vaultLoader } from './vault-loader.js';
 
 const vault = window.vaultTexts || {};
