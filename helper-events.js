@@ -1,7 +1,10 @@
 // 🔄 Helper.js Event-Driven Extensions
 // Provides event-driven updates, auto-save, and consistent data integration
 
-import { helper, updateHelper, saveHelperToStorage } from './helper.js';
+// ✅ SESSION 45 FIX: Use global window functions instead of imports (helper.js no longer exports)
+const helper = window.helper;
+const updateHelper = window.updateHelper;
+const saveHelperToStorage = window.saveHelperToStorage;
 
 // Global event system
 class HelperEventBus {

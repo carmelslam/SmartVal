@@ -1821,19 +1821,6 @@
         console.log('✅ Initialized empty current_damage_center');
       }
       
-      // ✅ SESSION 45 FIX: Initialize damage_assessment.current_center_totals when current_damage_center exists
-      if (!helper.damage_assessment) helper.damage_assessment = {};
-      if (Object.keys(helper.current_damage_center).length > 0) {
-        helper.damage_assessment.current_center_totals = {};
-        console.log('✅ SESSION 45: Initialized current_center_totals for in-progress damage center');
-      } else {
-        // Clear current_center_totals when no damage center is being worked on
-        if (helper.damage_assessment.current_center_totals) {
-          delete helper.damage_assessment.current_center_totals;
-          console.log('✅ SESSION 45: Cleared current_center_totals - no damage center in progress');
-        }
-      }
-      
       // Sync to window.helper
       if (!window.helper) {
         window.helper = helper;
@@ -1867,13 +1854,6 @@
         // Load VAT percentage from helper calculations (centralized source)
         if (window.helper.calculations && window.helper.calculations.vat_rate) {
           vatPercentage = window.helper.calculations.vat_rate;
-        }
-        
-        // ✅ SESSION 45 FIX: Build damage_assessment on page load with existing damage centers
-        if (typeof window.buildComprehensiveDamageAssessment === 'function' && window.helper.damage_centers && window.helper.damage_centers.length > 0) {
-          console.log('🔄 SESSION 45: Building damage_assessment on page load...');
-          window.buildComprehensiveDamageAssessment();
-          console.log('✅ SESSION 45: damage_assessment built on page load');
         }
       }
       
@@ -4239,12 +4219,6 @@
             // Clear current_damage_center for next use
             helper.current_damage_center = {};
             
-            // ✅ SESSION 45: Clear current_center_totals when damage center is saved
-            if (helper.damage_assessment && helper.damage_assessment.current_center_totals) {
-              delete helper.damage_assessment.current_center_totals;
-              console.log('✅ SESSION 45: Cleared current_center_totals - damage center saved');
-            }
-            
             showUserNotification(`מוקד נזק ${damageCenterData.number} נשמר בהצלחה!`, 'success', 3000);
             
             // ✅ PERFORMANCE FIX: Auto-refresh to prevent wizard from becoming heavy
@@ -4597,11 +4571,11 @@
           const totalWithVat = total + vatAmount;
           
           // ✅ ENHANCED: Rich display like parts module
-          totalAmount.textContent = `₪${Math.round(totalWithVat).toLocaleString()}`;
+          totalAmount.textContent = `₪${totalWithVat.toLocaleString()}`;
           
           const vatBreakdown = document.getElementById('workVatBreakdown');
           if (vatBreakdown) {
-            vatBreakdown.textContent = `ללא מע"מ: ₪${Math.round(total).toLocaleString()} | כולל מע"מ: ₪${Math.round(totalWithVat).toLocaleString()}`;
+            vatBreakdown.textContent = `ללא מע"מ: ₪${total.toLocaleString()} | כולל מע"מ: ₪${totalWithVat.toLocaleString()}`;
           }
           
           totalDisplay.style.display = 'block';
@@ -5010,7 +4984,7 @@
         if (total > 0) {
           const vatAmount = total * (vatPercentage / 100);
           const totalWithVat = total + vatAmount;
-          totalAmount.textContent = `₪${Math.round(total).toLocaleString()} (כולל מע"מ: ₪${Math.round(totalWithVat).toLocaleString()})`;
+          totalAmount.textContent = `₪${total.toLocaleString()} (כולל מע"מ: ₪${totalWithVat.toLocaleString()})`;
           totalDisplay.style.display = 'block';
         } else {
           totalDisplay.style.display = 'none';
@@ -5141,7 +5115,7 @@
                 </div>
               </div>
               <div style="display: flex; align-items: center; gap: 15px;">
-                <div class="damage-center-total">${totalWithVat > 0 ? `₪${Math.round(totalWithVat).toLocaleString()}` : 'ללא עלות מחוברת'}</div>
+                <div class="damage-center-total">${totalWithVat > 0 ? `₪${totalWithVat.toLocaleString()}` : 'ללא עלות מחוברת'}</div>
                 <div class="collapse-icon" id="icon-${index}">▼</div>
               </div>
             </div>
@@ -5158,27 +5132,27 @@
               
               <div class="cost-breakdown-row">
                 <div class="cost-category-name">🔨 עבודות</div>
-                <div class="cost-amount">₪${Math.round(worksTotal).toLocaleString()}</div>
+                <div class="cost-amount">₪${worksTotal.toLocaleString()}</div>
               </div>
               
               <div class="cost-breakdown-row">
                 <div class="cost-category-name">🔧 חלקים</div>
-                <div class="cost-amount">₪${Math.round(partsTotal).toLocaleString()}</div>
+                <div class="cost-amount">₪${partsTotal.toLocaleString()}</div>
               </div>
               
               <div class="cost-breakdown-row">
                 <div class="cost-category-name">⚙️ תיקונים</div>
-                <div class="cost-amount">₪${Math.round(repairsTotal).toLocaleString()}</div>
+                <div class="cost-amount">₪${repairsTotal.toLocaleString()}</div>
               </div>
               
               <div class="cost-breakdown-row">
                 <div class="cost-category-name">סה"כ ללא מע"מ</div>
-                <div class="cost-amount">₪${Math.round(subtotal).toLocaleString()}</div>
+                <div class="cost-amount">₪${subtotal.toLocaleString()}</div>
               </div>
               
               <div class="cost-breakdown-row">
                 <div class="cost-category-name">סה"כ כולל מע"מ (18%)</div>
-                <div class="cost-amount" style="color: #dc2626; font-size: 18px;">₪${Math.round(totalWithVat).toLocaleString()}</div>
+                <div class="cost-amount" style="color: #dc2626; font-size: 18px;">₪${totalWithVat.toLocaleString()}</div>
               </div>
             </div>
           </div>
@@ -5223,7 +5197,7 @@
         centersTotalsHtml += `
           <div style="display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 16px;">
             <span>מוקד ${centerNumber} - ${location}:</span>
-            <strong>₪${Math.round(totalWithVat).toLocaleString()}</strong>
+            <strong>₪${totalWithVat.toLocaleString()}</strong>
           </div>
         `;
         
@@ -5237,10 +5211,10 @@
       const vatRate = (helper.calculations && helper.calculations.vat_rate) ? helper.calculations.vat_rate : 18;
       const grandTotalVATAmount = grandTotalWithVAT - grandTotalWithoutVAT;
       
-      document.getElementById('grandTotalWithoutVAT').textContent = `₪${Math.round(grandTotalWithoutVAT).toLocaleString()}`;
+      document.getElementById('grandTotalWithoutVAT').textContent = `₪${grandTotalWithoutVAT.toLocaleString()}`;
       document.getElementById('vatPercentageDisplay').textContent = vatRate;
-      document.getElementById('grandTotalVATAmount').textContent = `₪${Math.round(grandTotalVATAmount).toLocaleString()}`;
-      document.getElementById('grandTotalWithVAT').textContent = `₪${Math.round(grandTotalWithVAT).toLocaleString()}`;
+      document.getElementById('grandTotalVATAmount').textContent = `₪${grandTotalVATAmount.toLocaleString()}`;
+      document.getElementById('grandTotalWithVAT').textContent = `₪${grandTotalWithVAT.toLocaleString()}`;
     }
 
     // ✅ NEW: Toggle damage center collapse/expand
@@ -5338,13 +5312,13 @@
                 ${part.location ? `• מיקום: ${part.location}` : ''}
               </div>
             </div>
-            <div class="breakdown-item-cost">₪${Math.round(cost).toLocaleString()}</div>
+            <div class="breakdown-item-cost">₪${cost.toLocaleString()}</div>
           </div>
         `;
       });
       
       partsContainer.innerHTML = html;
-      partsTotalDisplay.textContent = `₪${Math.round(total).toLocaleString()}`;
+      partsTotalDisplay.textContent = `₪${total.toLocaleString()}`;
       
       console.log(`✅ Parts breakdown: ${parts.length} items, total: ₪${total}`);
     }
@@ -5378,13 +5352,13 @@
                 ${work.priority ? `• עדיפות: ${work.priority}` : ''}
               </div>
             </div>
-            <div class="breakdown-item-cost">₪${Math.round(cost).toLocaleString()}</div>
+            <div class="breakdown-item-cost">₪${cost.toLocaleString()}</div>
           </div>
         `;
       });
       
       worksContainer.innerHTML = html;
-      worksTotalDisplay.textContent = `₪${Math.round(total).toLocaleString()}`;
+      worksTotalDisplay.textContent = `₪${total.toLocaleString()}`;
       
       console.log(`✅ Works breakdown: ${works.length} items, total: ₪${total}`);
     }
@@ -5418,13 +5392,13 @@
                 ${repair.complexity ? `• מורכבות: ${repair.complexity}` : ''}
               </div>
             </div>
-            <div class="breakdown-item-cost">₪${Math.round(cost).toLocaleString()}</div>
+            <div class="breakdown-item-cost">₪${cost.toLocaleString()}</div>
           </div>
         `;
       });
       
       repairsContainer.innerHTML = html;
-      repairsTotalDisplay.textContent = `₪${Math.round(total).toLocaleString()}`;
+      repairsTotalDisplay.textContent = `₪${total.toLocaleString()}`;
       
       console.log(`✅ Repairs breakdown: ${repairs.length} items, total: ₪${total}`);
     }
@@ -5439,26 +5413,6 @@
       // SESSION 41: Use total_cost (includes quantity) NOT price (per unit)
       const currentPartsTotal = moduleData.parts.reduce((sum, part) => sum + (parseFloat(part.total_cost) || parseFloat(part.price) || 0), 0);
       const currentRepairsTotal = moduleData.repairs.reduce((sum, repair) => sum + (parseFloat(repair.cost) || 0), 0);
-      
-      // ✅ SESSION 45: Update current_center_totals for in-progress damage center
-      if (window.helper && window.helper.damage_assessment && window.helper.current_damage_center && Object.keys(window.helper.current_damage_center).length > 0) {
-        const subtotal = Math.round(currentWorkTotal + currentPartsTotal + currentRepairsTotal);
-        const vatAmount = Math.round(subtotal * (vatPercentage / 100));
-        const totalWithVat = Math.round(subtotal + vatAmount);
-        
-        window.helper.damage_assessment.current_center_totals = {
-          works: Math.round(currentWorkTotal),
-          parts: Math.round(currentPartsTotal),
-          repairs: Math.round(currentRepairsTotal),
-          subtotal: subtotal,
-          vat_amount: vatAmount,
-          total_with_vat: totalWithVat,
-          vat_rate: vatPercentage,
-          damage_center_id: damageCenterData.id || 'new',
-          last_updated: new Date().toISOString()
-        };
-        console.log('✅ SESSION 45: Updated current_center_totals:', window.helper.damage_assessment.current_center_totals);
-      }
       
       console.log('🧮 CURRENT CENTER ONLY totals:', {
         works: currentWorkTotal,
@@ -5475,9 +5429,9 @@
           const totalWithoutVatEl = document.getElementById('totalWithoutVat');
           const totalWithVatEl = document.getElementById('totalWithVat');
           
-          if (totalAmountEl) totalAmountEl.textContent = `₪${Math.round(totals.subtotal).toLocaleString()}`;
-          if (totalWithoutVatEl) totalWithoutVatEl.textContent = `₪${Math.round(totals.subtotal).toLocaleString()}`;
-          if (totalWithVatEl) totalWithVatEl.textContent = `₪${Math.round(totals.totalWithVat).toLocaleString()}`;
+          if (totalAmountEl) totalAmountEl.textContent = `₪${totals.subtotal.toLocaleString()}`;
+          if (totalWithoutVatEl) totalWithoutVatEl.textContent = `₪${totals.subtotal.toLocaleString()}`;
+          if (totalWithVatEl) totalWithVatEl.textContent = `₪${totals.totalWithVat.toLocaleString()}`;
           
           // ✅ DAMAGE CENTERS FIX: Use correct property names from helper API
           const workTotal = totals.works_subtotal || totals.workTotal || 0;
@@ -5513,9 +5467,9 @@
       const totalWithoutVatEl = document.getElementById('totalWithoutVat');
       const totalWithVatEl = document.getElementById('totalWithVat');
       
-      if (totalAmountEl) totalAmountEl.textContent = `₪${Math.round(subtotal).toLocaleString()}`;
-      if (totalWithoutVatEl) totalWithoutVatEl.textContent = `₪${Math.round(subtotal).toLocaleString()}`;
-      if (totalWithVatEl) totalWithVatEl.textContent = `₪${Math.round(totalWithVat).toLocaleString()}`;
+      if (totalAmountEl) totalAmountEl.textContent = `₪${subtotal.toLocaleString()}`;
+      if (totalWithoutVatEl) totalWithoutVatEl.textContent = `₪${subtotal.toLocaleString()}`;
+      if (totalWithVatEl) totalWithVatEl.textContent = `₪${totalWithVat.toLocaleString()}`;
       
       // Update individual subtotals in wizard
       updateModuleSubtotals(workTotal, partsTotal, repairsTotal);
@@ -5572,8 +5526,8 @@
       if (workSubtotal) {
         const workAmount = document.getElementById('workAmount');
         const workAmountWithVat = document.getElementById('workAmountWithVat');
-        if (workAmount) workAmount.textContent = `₪${Math.round(workTotal).toLocaleString()}`;
-        if (workAmountWithVat) workAmountWithVat.textContent = `₪${Math.round(workTotal * vatMultiplier).toLocaleString()}`;
+        if (workAmount) workAmount.textContent = `₪${workTotal.toLocaleString()}`;
+        if (workAmountWithVat) workAmountWithVat.textContent = `₪${(workTotal * vatMultiplier).toLocaleString()}`;
         workSubtotal.style.display = workTotal > 0 ? 'block' : 'none';
       }
       
@@ -5582,7 +5536,7 @@
       const workTotalAmount = document.getElementById('workTotalAmount');
       if (workTotalDisplay && workTotalAmount) {
         if (workTotal > 0) {
-          workTotalAmount.textContent = `₪${Math.round(workTotal).toLocaleString()}`;
+          workTotalAmount.textContent = `₪${workTotal.toLocaleString()}`;
           workTotalDisplay.style.display = 'block';
         } else {
           workTotalDisplay.style.display = 'none';
@@ -5607,8 +5561,8 @@
       if (repairsSubtotal) {
         const repairsAmount = document.getElementById('repairsAmount');
         const repairsAmountWithVat = document.getElementById('repairsAmountWithVat');
-        if (repairsAmount) repairsAmount.textContent = `₪${Math.round(repairsTotal).toLocaleString()}`;
-        if (repairsAmountWithVat) repairsAmountWithVat.textContent = `₪${Math.round(repairsTotal * vatMultiplier).toLocaleString()}`;
+        if (repairsAmount) repairsAmount.textContent = `₪${repairsTotal.toLocaleString()}`;
+        if (repairsAmountWithVat) repairsAmountWithVat.textContent = `₪${(repairsTotal * vatMultiplier).toLocaleString()}`;
         repairsSubtotal.style.display = repairsTotal > 0 ? 'block' : 'none';
       }
       
@@ -5617,7 +5571,7 @@
       const repairsTotalAmount = document.getElementById('repairsTotalAmount');
       if (repairsTotalDisplay && repairsTotalAmount) {
         if (repairsTotal > 0) {
-          repairsTotalAmount.textContent = `₪${Math.round(repairsTotal).toLocaleString()}`;
+          repairsTotalAmount.textContent = `₪${repairsTotal.toLocaleString()}`;
           repairsTotalDisplay.style.display = 'block';
         } else {
           repairsTotalDisplay.style.display = 'none';
@@ -6744,8 +6698,8 @@
         console.log(`💰 DEBUG: Set workAmount text to: ₪${roundedTotal.toLocaleString()}`);
       }
       if (workAmountWithVat) {
-        workAmountWithVat.textContent = `₪${Math.round(totalWithVat).toLocaleString()}`;
-        console.log(`💰 DEBUG: Set workAmountWithVat text to: ₪${Math.round(totalWithVat).toLocaleString()}`);
+        workAmountWithVat.textContent = `₪${totalWithVat.toLocaleString()}`;
+        console.log(`💰 DEBUG: Set workAmountWithVat text to: ₪${totalWithVat.toLocaleString()}`);
       }
       
       // ✅ DAMAGE CENTERS FIX: Always make subtotal visible when called (it means calculation happened)
@@ -6771,7 +6725,7 @@
       const partsAmountWithVat = document.getElementById('partsAmountWithVat');
       
       if (partsAmount) partsAmount.textContent = `₪${roundedTotal.toLocaleString()}`;
-      if (partsAmountWithVat) partsAmountWithVat.textContent = `₪${Math.round(totalWithVat).toLocaleString()}`;
+      if (partsAmountWithVat) partsAmountWithVat.textContent = `₪${totalWithVat.toLocaleString()}`;
       
       // Show/hide subtotal display based on amount
       const partsSubtotal = document.getElementById('partsSubtotal');
@@ -6792,7 +6746,7 @@
       const repairsAmountWithVat = document.getElementById('repairsAmountWithVat');
       
       if (repairsAmount) repairsAmount.textContent = `₪${roundedTotal.toLocaleString()}`;
-      if (repairsAmountWithVat) repairsAmountWithVat.textContent = `₪${Math.round(totalWithVat).toLocaleString()}`;
+      if (repairsAmountWithVat) repairsAmountWithVat.textContent = `₪${totalWithVat.toLocaleString()}`;
       
       // Show/hide subtotal display based on amount
       const repairsSubtotal = document.getElementById('repairsSubtotal');
@@ -7093,9 +7047,9 @@
           // Update repairs total in wizard display
           const repairsAmount = document.getElementById('repairsAmount');
           const repairsAmountWithVat = document.getElementById('repairsAmountWithVat');
-          if (repairsAmount) repairsAmount.textContent = `₪${Math.round(data.total).toLocaleString()}`;
+          if (repairsAmount) repairsAmount.textContent = `₪${data.total.toLocaleString()}`;
           const vatRate = (helper.calculations && helper.calculations.vat_rate) ? helper.calculations.vat_rate : 18;
-          if (repairsAmountWithVat) repairsAmountWithVat.textContent = `₪${Math.round(data.total * (1 + vatRate / 100)).toLocaleString()}`;
+          if (repairsAmountWithVat) repairsAmountWithVat.textContent = `₪${(data.total * (1 + vatRate / 100)).toLocaleString()}`;
           
           // Update repairs display visibility
           const repairsSubtotal = document.getElementById('repairsSubtotal');
@@ -7107,9 +7061,9 @@
           // Update works total in wizard display
           const worksAmount = document.getElementById('worksAmount');
           const worksAmountWithVat = document.getElementById('worksAmountWithVat');
-          if (worksAmount) worksAmount.textContent = `₪${Math.round(data.total).toLocaleString()}`;
+          if (worksAmount) worksAmount.textContent = `₪${data.total.toLocaleString()}`;
           const vatRate = (helper.calculations && helper.calculations.vat_rate) ? helper.calculations.vat_rate : 18;
-          if (worksAmountWithVat) worksAmountWithVat.textContent = `₪${Math.round(data.total * (1 + vatRate / 100)).toLocaleString()}`;
+          if (worksAmountWithVat) worksAmountWithVat.textContent = `₪${(data.total * (1 + vatRate / 100)).toLocaleString()}`;
           
           // Update works display visibility
           const worksSubtotal = document.getElementById('worksSubtotal');
@@ -7290,7 +7244,7 @@
           // Add total cost if available - FIXED: Use correct field names per documentation
           const totalCost = center.Summary?.["Total with VAT"] || center.calculations?.total_with_vat || center.totals?.total || 0;
           if (totalCost > 0) {
-            optionText += ` - ₪${Math.round(totalCost).toLocaleString()}`;
+            optionText += ` - ₪${totalCost.toLocaleString()}`;
           }
           
           option.textContent = optionText;
@@ -7613,7 +7567,7 @@
               ${description ? `<div style="font-size: 13px; color: #64748b; margin-bottom: 4px;">${description}${description.length >= 100 ? '...' : ''}</div>` : ''}
               ${center.RepairNature ? `<div style="font-size: 12px; color: #7c3aed; margin-bottom: 4px;"><strong>מהות התיקון:</strong> ${center.RepairNature.length >= 80 ? center.RepairNature.substring(0, 80) + '...' : center.RepairNature}</div>` : ''}
               <div style="font-size: 12px; color: #059669; font-weight: bold;">
-                ${totalCost > 0 ? `₪${Math.round(totalCost).toLocaleString()}` : 'ללא עלות מתועדת'}
+                ${totalCost > 0 ? `₪${totalCost.toLocaleString()}` : 'ללא עלות מתועדת'}
               </div>
             </div>
             <div style="color: #6b7280; font-size: 12px;">
@@ -8212,7 +8166,7 @@
           const workSubtotal = document.getElementById('workSubtotal');
           
           if (worksAmount) {
-            worksAmount.textContent = `₪${Math.round(worksTotal).toLocaleString()}`;
+            worksAmount.textContent = `₪${worksTotal.toLocaleString()}`;
             console.log('✅ Updated worksAmount display');
           }
           
@@ -8220,7 +8174,7 @@
             const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
             const vatRate = (helper.calculations && helper.calculations.vat_rate) ? helper.calculations.vat_rate : 18;
             const totalWithVat = worksTotal * (1 + vatRate / 100);
-            worksAmountWithVat.textContent = `₪${Math.round(totalWithVat).toLocaleString()}`;
+            worksAmountWithVat.textContent = `₪${totalWithVat.toLocaleString()}`;
             console.log('✅ Updated worksAmountWithVat display');
           }
           
@@ -8270,7 +8224,7 @@
           const repairsSubtotal = document.getElementById('repairsSubtotal');
           
           if (repairsAmount) {
-            repairsAmount.textContent = `₪${Math.round(repairsTotal).toLocaleString()}`;
+            repairsAmount.textContent = `₪${repairsTotal.toLocaleString()}`;
             console.log('✅ Updated repairsAmount display');
           }
           
@@ -8278,7 +8232,7 @@
             const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
             const vatRate = (helper.calculations && helper.calculations.vat_rate) ? helper.calculations.vat_rate : 18;
             const totalWithVat = repairsTotal * (1 + vatRate / 100);
-            repairsAmountWithVat.textContent = `₪${Math.round(totalWithVat).toLocaleString()}`;
+            repairsAmountWithVat.textContent = `₪${totalWithVat.toLocaleString()}`;
             console.log('✅ Updated repairsAmountWithVat display');
           }
           

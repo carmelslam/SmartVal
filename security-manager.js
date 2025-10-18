@@ -1,5 +1,8 @@
 // 🔒 Security Manager - Comprehensive Security Layer
-import { helper, updateHelper } from './helper.js';
+// ✅ SESSION 45 FIX: Use global window functions instead of imports (helper.js no longer exports)
+const helper = window.helper;
+const updateHelper = window.updateHelper;
+
 import { WEBHOOKS } from './webhook.js';
 import { supabaseHelperService } from './services/supabaseHelperService.js';
 
