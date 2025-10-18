@@ -6065,19 +6065,23 @@ if (document.readyState === 'loading') {
 // export { populateAllFormsWithRetry };
 
 // Data getter functions
-export function getDamageData() {
+// ❌ SESSION 45 FIX: Removed export - helper.js is not an ES6 module
+function getDamageData() {
   return window.helper?.damage_assessment || {};
 }
 
-export function getValuationData() {
+// ❌ SESSION 45 FIX: Removed export - helper.js is not an ES6 module
+function getValuationData() {
   return window.helper?.valuation || {};
 }
 
-export function getFinancialData() {
+// ❌ SESSION 45 FIX: Removed export - helper.js is not an ES6 module
+function getFinancialData() {
   return window.helper?.financials || {};
 }
 
-export function getVehicleData() {
+// ❌ SESSION 45 FIX: Removed export - helper.js is not an ES6 module
+function getVehicleData() {
   return window.helper?.vehicle || {};
 }
 
@@ -6299,13 +6303,15 @@ window.saveHelperToStorage = saveHelperToAllStorageLocations;
 // export const getPlateProtectionStatus = window.getPlateProtectionStatus;
 
 // ✅ ES6 EXPORTS RESTORED - system depends on these
-export const helper = window.helper;
-export const updateHelper = window.updateHelper;
-export const saveHelperToStorage = window.saveHelperToStorage;  
-export const broadcastHelperUpdate = window.broadcastHelperUpdate;
-export const processIncomingData = window.processIncomingData;
-export const refreshAllModuleForms = window.refreshAllModuleForms;
-export const markFieldAsManuallyModified = window.markFieldAsManuallyModified;
+// ❌ SESSION 45 FIX: Removed all exports - helper.js is not an ES6 module
+// These functions are already available on window object
+// export const helper = window.helper;
+// export const updateHelper = window.updateHelper;
+// export const saveHelperToStorage = window.saveHelperToStorage;  
+// export const broadcastHelperUpdate = window.broadcastHelperUpdate;
+// export const processIncomingData = window.processIncomingData;
+// export const refreshAllModuleForms = window.refreshAllModuleForms;
+// export const markFieldAsManuallyModified = window.markFieldAsManuallyModified;
 
 // ✅ ENHANCED CENTER MAPPING: Get centers with proper location mapping
 window.getCentersForDisplay = function() {
