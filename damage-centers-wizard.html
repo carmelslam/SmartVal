@@ -4062,6 +4062,11 @@
             }));
             console.log('✅ Updated damage_centers from damage_centers_wizard with source tracking');
             
+            // ✅ SESSION 44 CRITICAL FIX: ALSO sync to helper.estimate.damage_centers for estimator-builder.html
+            if (!helper.estimate) helper.estimate = {};
+            helper.estimate.damage_centers = helper.damage_centers;
+            console.log('✅ SESSION 44: Synced helper.damage_centers → helper.estimate.damage_centers for estimator');
+            
             // SESSION 41 FIX 4: Rebuild comprehensive damage assessment after save
             if (typeof window.buildComprehensiveDamageAssessment === 'function') {
               window.buildComprehensiveDamageAssessment();
@@ -4094,6 +4099,13 @@
       console.log('🔄 SESSION 43 DEBUG: helper.current_damage_center.Parts?.parts_required count:', helper.current_damage_center?.Parts?.parts_required?.length || 0);
       console.log('🔄 SESSION 43 DEBUG: helper.current_damage_center.Works?.works count:', helper.current_damage_center?.Works?.works?.length || 0);
       console.log('🔄 SESSION 43 DEBUG: helper.current_damage_center.Repairs?.repairs count:', helper.current_damage_center?.Repairs?.repairs?.length || 0);
+      
+      // ✅ SESSION 44 CRITICAL FIX: Sync to helper.estimate.damage_centers for estimator BEFORE saving
+      if (helper.damage_centers && helper.damage_centers.length > 0) {
+        if (!helper.estimate) helper.estimate = {};
+        helper.estimate.damage_centers = helper.damage_centers;
+        console.log('✅ SESSION 44: Synced to helper.estimate.damage_centers for estimator (all steps)');
+      }
       
       sessionStorage.setItem('helper', JSON.stringify(helper));
       console.log('✅ SESSION 43 DEBUG: sessionStorage saved');
