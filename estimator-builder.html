@@ -10095,20 +10095,29 @@
           source: 'estimator_damage_centers'
         };
         
-        // Method 7: Populate damage_assessment.damage_centers_summary (NOT autosynced - safe to add)
-        if (!window.helper.damage_assessment.damage_centers_summary) window.helper.damage_assessment.damage_centers_summary = {};
-        window.helper.damage_assessment.damage_centers_summary = {
-          centers_count: totals.centers_count,
-          total_parts_cost: totals.parts.value,
-          total_works_cost: totals.works.value,
-          total_repairs_cost: totals.repairs.value,
-          total_before_vat: totals.total_before_vat.value,
-          total_with_vat: totals.total_with_vat.value,
-          vat_rate: totals.vat_rate,
-          vat_amount: totals.vat_amount,
-          last_updated: new Date().toISOString(),
-          source: 'estimator_damage_centers'
-        };
+        // ✅ SESSION 44 FIX: Only populate if wizard hasn't already done it
+        // Check if damage_assessment came from wizard (has detailed structure with differentials)
+        const hasWizardDifferentials = window.helper.damage_assessment?.totals?.["Total before differentials"] !== undefined;
+        
+        if (!hasWizardDifferentials) {
+          // Method 7: Populate damage_assessment.damage_centers_summary (NOT autosynced - safe to add)
+          if (!window.helper.damage_assessment.damage_centers_summary) window.helper.damage_assessment.damage_centers_summary = {};
+          window.helper.damage_assessment.damage_centers_summary = {
+            centers_count: totals.centers_count,
+            total_parts_cost: totals.parts.value,
+            total_works_cost: totals.works.value,
+            total_repairs_cost: totals.repairs.value,
+            total_before_vat: totals.total_before_vat.value,
+            total_with_vat: totals.total_with_vat.value,
+            vat_rate: totals.vat_rate,
+            vat_amount: totals.vat_amount,
+            last_updated: new Date().toISOString(),
+            source: 'estimator_damage_centers'
+          };
+          console.log('⚠️ SESSION 44: Populated damage_assessment from estimator (wizard data not found)');
+        } else {
+          console.log('✅ SESSION 44: Skipping estimator damage_assessment - wizard data already exists');
+        }
         
         // Method 8: Populate damage_assessment.damage_centers (NOT autosynced - safe to add)
         // Preserve existing damage_centers if populated from final report, only initialize if empty
