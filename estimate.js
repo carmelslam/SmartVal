@@ -192,8 +192,10 @@ const EstimateEngine = {
   },
 
   renderSingleDamageCenter(center, index) {
-    const parts = center.parts || [];
-    const repairs = center.repairs || [];
+    // ✅ SESSION 44 FIX: Read from wizard's uppercase structure (Parts.parts_required, Repairs.repairs, Works.works)
+    const parts = center.Parts?.parts_required || center.parts || [];
+    const repairs = center.Repairs?.repairs || center.repairs || [];
+    const works = center.Works?.works || center.works || [];
     
     let html = `
       <div class="damage-center" data-center-id="${index}">
@@ -204,11 +206,11 @@ const EstimateEngine = {
         <div class="row">
           <div class="field">
             <label>מיקום הנזק:</label>
-            <input type="text" value="${center.location || ''}" name="location_${index}" class="estimate-field">
+            <input type="text" value="${center.Location || center.location || ''}" name="location_${index}" class="estimate-field">
           </div>
           <div class="field">
             <label>תיאור הנזק:</label>
-            <textarea name="description_${index}" class="estimate-field">${center.description || ''}</textarea>
+            <textarea name="description_${index}" class="estimate-field">${center.Description || center.description || ''}</textarea>
           </div>
         </div>
         
@@ -222,16 +224,23 @@ const EstimateEngine = {
     `;
 
     parts.forEach((part, partIndex) => {
+      // ✅ SESSION 44 FIX: Map wizard field names (part_name, description, updated_price, total_cost)
+      const partName = part.part_name || part.name || '';
+      const partDesc = part.description || part.desc || '';
+      const partPrice = part.updated_price || part.total_cost || part.price || 0;
+      const partSource = part.source || '';
+      
       html += `
         <tr>
-          <td><input type="text" value="${part.name || ''}" name="part_name_${index}_${partIndex}" class="estimate-field"></td>
-          <td><input type="text" value="${part.desc || ''}" name="part_desc_${index}_${partIndex}" class="estimate-field"></td>
-          <td><input type="number" value="${part.price || ''}" name="part_price_${index}_${partIndex}" class="estimate-field"></td>
+          <td><input type="text" value="${partName}" name="part_name_${index}_${partIndex}" class="estimate-field"></td>
+          <td><input type="text" value="${partDesc}" name="part_desc_${index}_${partIndex}" class="estimate-field"></td>
+          <td><input type="number" value="${partPrice}" name="part_price_${index}_${partIndex}" class="estimate-field"></td>
           <td>
             <select name="part_source_${index}_${partIndex}" class="estimate-field">
-              <option value="מקורי" ${part.source === 'מקורי' ? 'selected' : ''}>מקורי</option>
-              <option value="תחליפי" ${part.source === 'תחליפי' ? 'selected' : ''}>תחליפי</option>
-              <option value="משומש" ${part.source === 'משומש' ? 'selected' : ''}>משומש</option>
+              <option value="מקורי" ${partSource === 'מקורי' || partSource === 'original' ? 'selected' : ''}>מקורי</option>
+              <option value="תחליפי" ${partSource === 'תחליפי' || partSource === 'חליפי' ? 'selected' : ''}>תחליפי</option>
+              <option value="משומש" ${partSource === 'משומש' ? 'selected' : ''}>משומש</option>
+              <option value="manual" ${partSource === 'manual' ? 'selected' : ''}>ידני</option>
             </select>
           </td>
           <td><button type="button" onclick="this.closest('tr').remove()">הסר</button></td>
@@ -255,11 +264,16 @@ const EstimateEngine = {
     `;
 
     repairs.forEach((repair, repairIndex) => {
+      // ✅ SESSION 44 FIX: Map wizard repair field names
+      const repairName = repair.name || repair.repair_name || '';
+      const repairDesc = repair.description || repair.desc || '';
+      const repairCost = repair.cost || repair.total_cost || 0;
+      
       html += `
         <tr>
-          <td><input type="text" value="${repair.name || ''}" name="repair_name_${index}_${repairIndex}" class="estimate-field"></td>
-          <td><input type="text" value="${repair.desc || ''}" name="repair_desc_${index}_${repairIndex}" class="estimate-field"></td>
-          <td><input type="number" value="${repair.cost || ''}" name="repair_cost_${index}_${repairIndex}" class="estimate-field"></td>
+          <td><input type="text" value="${repairName}" name="repair_name_${index}_${repairIndex}" class="estimate-field"></td>
+          <td><input type="text" value="${repairDesc}" name="repair_desc_${index}_${repairIndex}" class="estimate-field"></td>
+          <td><input type="number" value="${repairCost}" name="repair_cost_${index}_${repairIndex}" class="estimate-field"></td>
           <td><button type="button" onclick="this.closest('tr').remove()">הסר</button></td>
         </tr>
       `;
