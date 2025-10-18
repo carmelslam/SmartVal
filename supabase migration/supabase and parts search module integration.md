@@ -27647,4 +27647,156 @@ sessionStorage (already saved) → estimate.js displays COMPLETE DATA ✅
 
 ---
 
+## Session 43 Update: Additional Findings - Edit Mode Issue NOT Resolved
+
+### Problem Persists
+
+After implementing three fixes (handlePartsSelectionUpdate immediate save, Step 1 preserve existing data, Step 7 update instead of duplicate), **edit mode STILL does not update helper.damage_centers** with changes from steps 3-7.
+
+### Console Log Analysis Results
+
+**Test Scenario:** User edited existing damage center #1, made changes in all steps, completed wizard to Step 7.
+
+**Key Findings from Console Logs:**
+
+1. **Step 1 (Location) - ✅ WORKING**
+   - Successfully loads existing center data
+   - Preserves Parts (2), Works (2), Repairs (1)
+   - Log: `🔧 SESSION 43: Loaded existing center data for edit mode`
+
+2. **Step 2 (Description) - ✅ WORKING**
+   - Description updates are saved
+   - This is the ONLY field that updates correctly
+
+3. **Steps 3-7 (Works, Parts Search, Parts Selection, Repairs, Final) - ❌ FAILING**
+   - `helper.current_damage_center.Parts.parts_required` count stays at 2 throughout all steps
+   - `helper.current_damage_center.Works.works` count stays at 2 throughout all steps
+   - Even though `handlePartsSelectionUpdate()` successfully saves new parts:
+     ```
+     Line 973: ✅ BUG FIX: Saved 1 parts to current_damage_center.Parts.parts_required
+     Line 1009: ✅ BUG FIX: Saved 2 parts to current_damage_center.Parts.parts_required
+     Line 1200: ✅ BUG FIX: Synced helper to sessionStorage and window.helper
+     ```
+   - But when Step 6 `saveCurrentStepData()` runs:
+     ```
+     Line 1286: 🔄 SESSION 43 DEBUG: helper.current_damage_center.Parts?.parts_required count: 2
+     ```
+   - The count is STILL 2 (old data), not the newly saved parts!
+
+4. **Step 7 Completes Successfully**
+   - Log shows: `✅ Updated damage_centers from damage_centers_wizard with source tracking`
+   - Wizard saves to sessionStorage
+   - NO errors in console
+
+### Root Cause Analysis
+
+**The Data Loss Point:** Between `handlePartsSelectionUpdate()` saving to sessionStorage and `saveCurrentStepData()` loading from sessionStorage, the data is getting RESET.
+
+**Evidence:**
+- **Line 1200:** `handlePartsSelectionUpdate()` saves 2 NEW parts to sessionStorage ✅
+- **Lines 1201-1221:** Helper.js functions run (`calculateComprehensiveTotals`, `calculateAllDamageCentersTotals`)
+- **Line 1269:** User clicks "Next" on Step 6
+- **Line 1279:** `saveCurrentStepData()` is called
+- **Line 1286:** Shows parts count = 2 (OLD data, not the NEW parts just saved!)
+
+**Potential Causes:**
+
+1. **helper.js Overwrites SessionStorage**
+   - helper.js has 15+ `sessionStorage.setItem('helper')` calls
+   - These functions run between parts save and step save
+   - One of them may be saving an OLD copy of helper, overwriting the NEW data
+
+2. **saveCurrentStepData() Loads Stale Data**
+   - Line 3404: `helper = JSON.parse(sessionStorage.getItem('helper') || '{}')`
+   - This reloads helper from sessionStorage at the START of the function
+   - If sessionStorage was overwritten by helper.js, this loads OLD data
+
+3. **window.helper vs sessionStorage Mismatch**
+   - `handlePartsSelectionUpdate()` updates both window.helper AND sessionStorage
+   - helper.js works with window.helper
+   - `saveCurrentStepData()` reloads from sessionStorage
+   - If helper.js modifies window.helper but doesn't sync to sessionStorage, then another function saves the OLD window.helper to sessionStorage, the NEW data is lost
+
+### Critical Questions for Next Session
+
+1. **Is the data actually in sessionStorage after Step 7 completes?**
+   - Need to run in browser console after Step 7:
+     ```javascript
+     const helper = JSON.parse(sessionStorage.getItem('helper'));
+     console.log('Parts in damage_centers[0]:', helper.damage_centers[0]?.Parts?.parts_required);
+     ```
+
+2. **Which helper.js function is overwriting sessionStorage?**
+   - Need to add logging to ALL `sessionStorage.setItem('helper')` calls in helper.js
+   - Track WHEN and WHAT is being saved
+
+3. **Why does only Description (Step 2) save correctly?**
+   - Step 2 doesn't involve iframes or complex calculations
+   - Steps 3-7 involve inline components, iframes, and helper.js calculations
+   - Something in those steps is causing the data loss
+
+### Attempted Fixes (Not Sufficient)
+
+**Fix 1:** `handlePartsSelectionUpdate()` immediate save with 25-field mapping
+- **Status:** Implemented but ineffective
+- **Reason:** Data gets overwritten AFTER this save
+
+**Fix 2:** Step 1 preserve existing Parts/Works/Repairs from `helper.centers`
+- **Status:** Implemented but ineffective  
+- **Reason:** Data is loaded correctly but lost in subsequent steps
+
+**Fix 3:** Step 7 update existing center instead of creating duplicate
+- **Status:** Implemented but ineffective
+- **Reason:** The data being updated is already stale/old
+
+**Fix 4:** Comprehensive console logging
+- **Status:** Implemented and working
+- **Result:** Revealed the data loss happens BETWEEN parts save and step save
+
+### Recommended Next Steps
+
+1. **Add sessionStorage tracking wrapper**
+   - Override `sessionStorage.setItem` globally
+   - Log EVERY save with stack trace
+   - Identify which function is overwriting the data
+
+2. **Compare window.helper vs sessionStorage**
+   - After parts save, compare both sources
+   - See which one has correct data
+   - Track when they diverge
+
+3. **Disable helper.js sessionStorage saves temporarily**
+   - Comment out all `sessionStorage.setItem` in helper.js
+   - Test if wizard saves work correctly
+   - Identify which helper.js function is the culprit
+
+4. **Alternative: Use ONLY window.helper**
+   - Stop reloading from sessionStorage in `saveCurrentStepData()`
+   - Use `window.helper` throughout the wizard
+   - Only save to sessionStorage at final Step 7
+   - This would eliminate the reload/overwrite issue
+
+### Session Impact
+
+**Time Spent:** 4+ hours  
+**Fixes Attempted:** 4  
+**Fixes Successful:** 0  
+**Problem Severity:** CRITICAL - Edit mode completely broken  
+**Data Loss:** Steps 3-7 changes are not persisted  
+**Only Working:** Step 2 (Description) updates  
+
+### Files Modified (Session 43)
+
+1. **damage-centers-wizard.html**
+   - Line 6647: `handlePartsSelectionUpdate()` - Added immediate 25-field mapping save
+   - Line 3424: Step 1 `saveCurrentStepData()` - Added existing data preservation in edit mode
+   - Line 3958: Step 7 `saveCurrentStepData()` - Added edit mode update logic instead of duplicate
+   - Line 4089: Added comprehensive debug logging for all saves
+
+2. **supabase and parts search module integration.md**
+   - Added Session 43 complete documentation
+   - Added Session 43 Update with findings
+
+---
+
 **END OF SESSION 43**
