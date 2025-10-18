@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <title>Rebuild Damage Assessment</title>
+</head>
+<body>
+    <h1>Rebuild Damage Assessment - Session 45 Fix</h1>
+    <button onclick="rebuildDamageAssessment()" style="padding: 20px; font-size: 18px; background: #4CAF50; color: white; border: none; cursor: pointer;">
+        🔄 Rebuild damage_assessment with Differentials
+    </button>
+    
+    <div id="output" style="margin-top: 20px; padding: 20px; background: #f5f5f5; font-family: monospace; white-space: pre-wrap;"></div>
+
+    <script src="helper.js"></script>
+    <script>
+        function rebuildDamageAssessment() {
+            const output = document.getElementById('output');
+            output.innerHTML = '🔄 Starting rebuild...\n\n';
+            
+            try {
+                // Load helper from sessionStorage
+                const helperRaw = sessionStorage.getItem('helper');
+                if (!helperRaw) {
+                    output.innerHTML += '❌ ERROR: No helper data found in sessionStorage!\n';
+                    return;
+                }
+                
+                window.helper = JSON.parse(helperRaw);
+                output.innerHTML += '✅ Loaded helper from sessionStorage\n';
+                output.innerHTML += `✅ Found ${window.helper.damage_centers?.length || 0} damage centers\n\n`;
+                
+                // Show current damage_assessment source
+                const currentSource = window.helper.damage_assessment?.totals?.source;
+                output.innerHTML += `📊 Current source: ${currentSource}\n`;
+                output.innerHTML += `📊 Current structure: ${window.helper.damage_assessment?.totals?.["Total before differentials"] ? 'HAS differentials ✅' : 'NO differentials ❌'}\n\n`;
+                
+                // Call buildComprehensiveDamageAssessment to rebuild
+                output.innerHTML += '🏗️ Calling buildComprehensiveDamageAssessment()...\n\n';
+                
+                if (typeof window.buildComprehensiveDamageAssessment === 'function') {
+                    window.buildComprehensiveDamageAssessment();
+                    
+                    // Save back to sessionStorage
+                    sessionStorage.setItem('helper', JSON.stringify(window.helper));
+                    output.innerHTML += '✅ Rebuilt damage_assessment\n';
+                    output.innerHTML += '✅ Saved to sessionStorage\n\n';
+                    
+                    // Show new structure
+                    const newSource = window.helper.damage_assessment?.totals?.source;
+                    const hasDifferentials = window.helper.damage_assessment?.totals?.["Total before differentials"] !== undefined;
+                    
+                    output.innerHTML += `📊 NEW source: ${newSource}\n`;
+                    output.innerHTML += `📊 NEW structure: ${hasDifferentials ? 'HAS differentials ✅' : 'NO differentials ❌'}\n\n`;
+                    
+                    if (hasDifferentials) {
+                        output.innerHTML += '🎉 SUCCESS! damage_assessment now has wizard differentials structure!\n\n';
+                        output.innerHTML += 'damage_assessment.totals:\n';
+                        output.innerHTML += JSON.stringify(window.helper.damage_assessment.totals, null, 2);
+                    } else {
+                        output.innerHTML += '⚠️ WARNING: Still no differentials. This means parts_meta is missing fields.\n\n';
+                        output.innerHTML += 'Checking first damage center parts_meta:\n';
+                        const firstCenter = window.helper.damage_centers?.[0];
+                        if (firstCenter) {
+                            output.innerHTML += JSON.stringify(firstCenter.Parts?.parts_meta, null, 2);
+                        }
+                    }
+                } else {
+                    output.innerHTML += '❌ ERROR: buildComprehensiveDamageAssessment function not found!\n';
+                }
+                
+            } catch (error) {
+                output.innerHTML += `❌ ERROR: ${error.message}\n`;
+                console.error(error);
+            }
+        }
+    </script>
+</body>
+</html>
