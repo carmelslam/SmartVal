@@ -3955,7 +3955,41 @@
               helper.centers = [];
             }
             
-            helper.centers.push(helper.current_damage_center);
+            // ✅ SESSION 43 FIX: Check if this is edit mode - update existing center instead of creating new
+            if (damageCenterData.mode === 'edit_existing' && damageCenterData.original_id) {
+              console.log('🔍 SESSION 43: Edit mode detected in Step 7 - looking for existing center to update');
+              console.log('🔍 SESSION 43: Looking for center with ID:', damageCenterData.original_id);
+              console.log('🔍 SESSION 43: Current centers:', helper.centers.map(c => ({id: c.Id || c.id, number: c["Damage center Number"] || c.number})));
+              
+              // Find and update existing center
+              const existingIndex = helper.centers.findIndex(center => 
+                center.Id === damageCenterData.original_id || 
+                center.id === damageCenterData.original_id ||
+                center["Damage center Number"] === damageCenterData.number
+              );
+              
+              if (existingIndex !== -1) {
+                // CRITICAL: Preserve the original damage center number when updating
+                const originalNumber = helper.centers[existingIndex]["Damage center Number"] || helper.centers[existingIndex].number;
+                helper.current_damage_center["Damage center Number"] = originalNumber;
+                if (helper.current_damage_center.number) {
+                  helper.current_damage_center.number = originalNumber;
+                }
+                
+                // Update existing center
+                helper.centers[existingIndex] = helper.current_damage_center;
+                console.log('✅ SESSION 43: Updated existing damage center at index:', existingIndex, 'preserved number:', originalNumber);
+              } else {
+                // Fallback: add as new if not found
+                helper.centers.push(helper.current_damage_center);
+                console.log('⚠️ SESSION 43: Could not find existing center to update, added as new');
+                console.log('⚠️ SESSION 43: Search criteria - ID:', damageCenterData.original_id, 'Number:', damageCenterData.number);
+              }
+            } else {
+              // Create new center
+              helper.centers.push(helper.current_damage_center);
+              console.log('✅ SESSION 43: Added new damage center');
+            }
             
             console.log('✅ Damage center moved to centers array:', {
               id: helper.current_damage_center.Id,
