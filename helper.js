@@ -942,98 +942,187 @@ window.buildComprehensiveDamageAssessment = function() {
       return window.helper.damage_assessment.comprehensive;
     }
     
-    console.log('⚠️ SESSION 45: No wizard differentials found - building with OLD structure for backward compatibility');
+    console.log('⚠️ SESSION 45: No wizard differentials found - building WITH differentials from damage_centers data');
     
     const allCenters = window.getDamageCenters();
+    const vatRate = (window.helper?.calculations?.vat_rate || 18);
     
     // Initialize damage_assessment structure
-    window.helper.damage_assessment = window.helper.damage_assessment || {};
-    
-    if (allCenters.length === 0) {
-      console.log('📊 No centers found - clearing assessment');
-      window.helper.damage_assessment.damage_centers_summary = { centers_count: 0 };
-      window.helper.damage_assessment.totals = { 
-        "Total works": 0, 
-        "Total parts": 0, 
-        "Total repairs": 0,
-        "Total without VAT": 0, 
-        "Total with VAT": 0 
-      };
-      window.helper.damage_assessment.summary = {
-        total_works: 0,
-        total_parts: 0,
-        total_repairs: 0,
-        total_without_vat: 0,
-        total_with_vat: 0
-      };
-      window.helper.damage_assessment.comprehensive = {
-        centers: [],
-        totals: { all_centers_subtotal: 0, all_centers_vat: 0, all_centers_total: 0 },
-        summary: { total_centers: 0, completed_centers: 0 }
-      };
-      return window.helper.damage_assessment.comprehensive;
-    }
-    
-    // ✅ CRITICAL FIX: Clear old damage_centers_summary completely
-    console.log('🧹 Clearing old damage_centers_summary...');
-    window.helper.damage_assessment.damage_centers_summary = {};
-    
-    // Initialize totals
-    let totalWorks = 0, totalParts = 0, totalRepairs = 0;
-    let totalWithoutVAT = 0, totalWithVAT = 0;
-    
-    // ✅ REBUILD: Create fresh damage_centers_summary with sequential numbering
-    allCenters.forEach((center, index) => {
-      const centerNumber = index + 1; // Sequential numbering (1, 2, 3, 4...)
-      const centerKey = `Damage center ${centerNumber}`;
-      
-      // Extract totals from center data
-      const works = parseFloat(center.Works?.works_meta?.total_cost || 0);
-      const parts = parseFloat(center.Parts?.parts_meta?.total_cost || 0);
-      const repairs = parseFloat(center.Repairs?.repairs_meta?.total_cost || 0);
-      const subtotal = works + parts + repairs;
-      const vatRate = (window.helper?.calculations?.vat_rate || 18) / 100; // Use system VAT rate
-      const vat = subtotal * vatRate;
-      const total = subtotal + vat;
-      
-      // Add to summary with sequential numbering
-      window.helper.damage_assessment.damage_centers_summary[centerKey] = {
-        "Works": works,
-        "Parts": parts,
-        "Repairs": repairs,
-        "Total without VAT": subtotal,
-        "Total with VAT": total
-      };
-      
-      // Add to grand totals
-      totalWorks += works;
-      totalParts += parts;
-      totalRepairs += repairs;
-      totalWithoutVAT += subtotal;
-      totalWithVAT += total;
-      
-      console.log(`✅ Added ${centerKey}: Works=${works}, Parts=${parts}, Repairs=${repairs}, Total=${total}`);
-    });
-    
-    // ✅ UPDATE: Store corrected totals
-    window.helper.damage_assessment.totals = {
-      "Total works": totalWorks,
-      "Total parts": totalParts,
-      "Total repairs": totalRepairs,
-      "Total without VAT": totalWithoutVAT,
-      "Total with VAT": totalWithVAT
+    window.helper.damage_assessment = {
+      damage_centers_summary: {},
+      summary: {},
+      totals: {},
+      totals_after_differentials: {}
     };
     
-    // Add centers_count to damage_centers_summary
-    window.helper.damage_assessment.damage_centers_summary.centers_count = allCenters.length;
+    if (allCenters.length === 0) {
+      console.log('📊 No centers found - returning empty assessment');
+      window.helper.damage_assessment.totals = {
+        "Total before differentials": 0,
+        "Total after differentials": 0,
+        "Total differentials value": 0,
+        "VAT amount": 0,
+        "Total with VAT": 0,
+        "vat_rate": vatRate,
+        "source": "helper_js_wizard_data"
+      };
+      return null;
+    }
     
-    // Update damage_assessment.summary with current data
+    // Accumulators for summary across all centers
+    let summaryAccumulators = {
+      works: { before: 0, after: 0, diff: 0, count: 0 },
+      parts: { before: 0, after: 0, diff: 0, count: 0 },
+      repairs: { before: 0, after: 0, diff: 0, count: 0 }
+    };
+    
+    let totalBeforeDifferentials = 0;
+    let totalAfterDifferentials = 0;
+    
+    // ✅ SESSION 45: Build damage_centers_summary with differentials structure (same as wizard)
+    allCenters.forEach((center, index) => {
+      const centerNumber = center["Damage center Number"] || (index + 1).toString();
+      const centerKey = `Damage center ${centerNumber}`;
+      
+      // Extract before/after/differentials from each category's meta
+      const worksData = {
+        before: parseFloat(center.Works?.works_meta?.total_cost_before_differentials || 0),
+        after: parseFloat(center.Works?.works_meta?.total_cost || 0),
+        diff: parseFloat(center.Works?.works_meta?.total_differentials_value || 0),
+        count: parseInt(center.Works?.works_meta?.total_items || 0)
+      };
+      
+      const partsData = {
+        before: parseFloat(center.Parts?.parts_meta?.total_cost_before_differentials || 0),
+        after: parseFloat(center.Parts?.parts_meta?.total_cost || 0),
+        diff: parseFloat(center.Parts?.parts_meta?.total_differentials_value || 0),
+        count: parseInt(center.Parts?.parts_meta?.total_items || 0)
+      };
+      
+      const repairsData = {
+        before: parseFloat(center.Repairs?.repairs_meta?.total_cost_before_differentials || 0),
+        after: parseFloat(center.Repairs?.repairs_meta?.total_cost || 0),
+        diff: parseFloat(center.Repairs?.repairs_meta?.total_differentials_value || 0),
+        count: parseInt(center.Repairs?.repairs_meta?.total_items || 0)
+      };
+      
+      const centerBeforeTotal = worksData.before + partsData.before + repairsData.before;
+      const centerAfterTotal = worksData.after + partsData.after + repairsData.after;
+      const centerDiffTotal = worksData.diff + partsData.diff + repairsData.diff;
+      const centerVAT = centerAfterTotal * (vatRate / 100);
+      const centerTotalWithVAT = centerAfterTotal + centerVAT;
+      
+      // Build per-center summary with differentials
+      window.helper.damage_assessment.damage_centers_summary[centerKey] = {
+        "Works": {
+          "before_differentials": worksData.before,
+          "after_differentials": worksData.after,
+          "differentials_value": worksData.diff,
+          "items_count": worksData.count
+        },
+        "Parts": {
+          "before_differentials": partsData.before,
+          "after_differentials": partsData.after,
+          "differentials_value": partsData.diff,
+          "items_count": partsData.count
+        },
+        "Repairs": {
+          "before_differentials": repairsData.before,
+          "after_differentials": repairsData.after,
+          "differentials_value": repairsData.diff,
+          "items_count": repairsData.count
+        },
+        "Subtotal before differentials": centerBeforeTotal,
+        "Subtotal after differentials": centerAfterTotal,
+        "Total differentials value": centerDiffTotal,
+        "VAT amount": centerVAT,
+        "Total with VAT": centerTotalWithVAT
+      };
+      
+      // Accumulate for summary
+      summaryAccumulators.works.before += worksData.before;
+      summaryAccumulators.works.after += worksData.after;
+      summaryAccumulators.works.diff += worksData.diff;
+      summaryAccumulators.works.count += worksData.count;
+      
+      summaryAccumulators.parts.before += partsData.before;
+      summaryAccumulators.parts.after += partsData.after;
+      summaryAccumulators.parts.diff += partsData.diff;
+      summaryAccumulators.parts.count += partsData.count;
+      
+      summaryAccumulators.repairs.before += repairsData.before;
+      summaryAccumulators.repairs.after += repairsData.after;
+      summaryAccumulators.repairs.diff += repairsData.diff;
+      summaryAccumulators.repairs.count += repairsData.count;
+      
+      totalBeforeDifferentials += centerBeforeTotal;
+      totalAfterDifferentials += centerAfterTotal;
+      
+      console.log(`✅ SESSION 45: Built ${centerKey} with differentials - Before: ₪${centerBeforeTotal}, After: ₪${centerAfterTotal}, Diff: ₪${centerDiffTotal}`);
+    });
+    
+    // Build summary object
     window.helper.damage_assessment.summary = {
-      total_works: totalWorks,
-      total_parts: totalParts,
-      total_repairs: totalRepairs,
-      total_without_vat: totalWithoutVAT,
-      total_with_vat: totalWithVAT
+      "Works": {
+        "before_differentials": summaryAccumulators.works.before,
+        "after_differentials": summaryAccumulators.works.after,
+        "differentials_value": summaryAccumulators.works.diff,
+        "items_count": summaryAccumulators.works.count
+      },
+      "Parts": {
+        "before_differentials": summaryAccumulators.parts.before,
+        "after_differentials": summaryAccumulators.parts.after,
+        "differentials_value": summaryAccumulators.parts.diff,
+        "items_count": summaryAccumulators.parts.count
+      },
+      "Repairs": {
+        "before_differentials": summaryAccumulators.repairs.before,
+        "after_differentials": summaryAccumulators.repairs.after,
+        "differentials_value": summaryAccumulators.repairs.diff,
+        "items_count": summaryAccumulators.repairs.count
+      }
+    };
+    
+    const totalDifferentialsValue = totalBeforeDifferentials - totalAfterDifferentials;
+    const vatAmount = totalAfterDifferentials * (vatRate / 100);
+    const totalWithVAT = totalAfterDifferentials + vatAmount;
+    
+    // Build totals object with differentials
+    window.helper.damage_assessment.totals = {
+      "Total before differentials": totalBeforeDifferentials,
+      "Total after differentials": totalAfterDifferentials,
+      "Total differentials value": totalDifferentialsValue,
+      "VAT amount": vatAmount,
+      "Total with VAT": totalWithVAT,
+      "vat_rate": vatRate,
+      "last_updated": new Date().toISOString(),
+      "source": "helper_js_wizard_data"
+    };
+    
+    // Build totals_after_differentials object
+    window.helper.damage_assessment.totals_after_differentials = {
+      "Parts": {
+        "before": summaryAccumulators.parts.before,
+        "after": summaryAccumulators.parts.after,
+        "differentials": summaryAccumulators.parts.diff
+      },
+      "Works": {
+        "before": summaryAccumulators.works.before,
+        "after": summaryAccumulators.works.after,
+        "differentials": summaryAccumulators.works.diff
+      },
+      "Repairs": {
+        "before": summaryAccumulators.repairs.before,
+        "after": summaryAccumulators.repairs.after,
+        "differentials": summaryAccumulators.repairs.diff
+      },
+      "Combined": {
+        "before": totalBeforeDifferentials,
+        "after": totalAfterDifferentials,
+        "differentials": totalDifferentialsValue,
+        "vat": vatAmount,
+        "total_with_vat": totalWithVAT
+      }
     };
     
     // Build comprehensive assessment structure

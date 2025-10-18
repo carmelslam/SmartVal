@@ -10095,52 +10095,12 @@
           source: 'estimator_damage_centers'
         };
         
-        // ✅ SESSION 44 FIX: Only populate if wizard hasn't already done it
-        // Check if damage_assessment came from wizard (has detailed structure with differentials)
-        const hasWizardDifferentials = window.helper.damage_assessment?.totals?.["Total before differentials"] !== undefined;
+        // ✅ SESSION 45 FIX: Estimator should NEVER write to damage_assessment!
+        // damage_assessment is a CORE SYSTEM DATA structure that ONLY wizard populates
+        // Estimator should ONLY read from it, never write to it
         
-        if (!hasWizardDifferentials) {
-          // Method 7: Populate damage_assessment.damage_centers_summary (NOT autosynced - safe to add)
-          if (!window.helper.damage_assessment.damage_centers_summary) window.helper.damage_assessment.damage_centers_summary = {};
-          window.helper.damage_assessment.damage_centers_summary = {
-            centers_count: totals.centers_count,
-            total_parts_cost: totals.parts.value,
-            total_works_cost: totals.works.value,
-            total_repairs_cost: totals.repairs.value,
-            total_before_vat: totals.total_before_vat.value,
-            total_with_vat: totals.total_with_vat.value,
-            vat_rate: totals.vat_rate,
-            vat_amount: totals.vat_amount,
-            last_updated: new Date().toISOString(),
-            source: 'estimator_damage_centers'
-          };
-          console.log('⚠️ SESSION 44: Populated damage_assessment from estimator (wizard data not found)');
-        } else {
-          console.log('✅ SESSION 44: Skipping estimator damage_assessment - wizard data already exists');
-        }
-        
-        // Method 8: Populate damage_assessment.damage_centers (NOT autosynced - safe to add)
-        // Preserve existing damage_centers if populated from final report, only initialize if empty
-        if (!window.helper.damage_assessment.damage_centers || window.helper.damage_assessment.damage_centers.length === 0) {
-          window.helper.damage_assessment.damage_centers = window.helper.estimate.damage_centers.map(center => ({
-            ...center,
-            source: 'estimator',
-            last_updated: new Date().toISOString()
-          }));
-          console.log('✅ Initialized damage_assessment.damage_centers from estimator');
-        } else {
-          console.log('⚠️ Preserving existing damage_assessment.damage_centers from final report');
-        }
-
-        // Method 9: Update damage_assessment.comprehensive.centers when RepairNature changes
-        if (!window.helper.damage_assessment.comprehensive) window.helper.damage_assessment.comprehensive = {};
-        window.helper.damage_assessment.comprehensive.centers = window.helper.centers.map(center => ({
-          location: center.Location || '',
-          description: center.Description || '',
-          RepairNature: center.RepairNature || '',
-          repair_nature: center.RepairNature || '' // Dual mapping for compatibility
-        }));
-        console.log('✅ Updated damage_assessment.comprehensive.centers with RepairNature data');
+        console.log('✅ SESSION 45: Estimator skipping damage_assessment write - this is wizard-only data');
+        console.log('✅ SESSION 45: If you need damage_assessment, it will be built by helper.js from wizard data');
         
         // Also save to sessionStorage
         sessionStorage.setItem('helper', JSON.stringify(window.helper));
