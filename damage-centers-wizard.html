@@ -4105,6 +4105,16 @@
       }
       window.helper = helper; // ✅ CRITICAL: Sync window.helper
       console.log('✅ Step data saved and window.helper synced for step:', currentStep);
+      
+      // ✅ SESSION 44 FIX: Dispatch event to notify other modules (like estimate.js) to refresh
+      window.dispatchEvent(new CustomEvent('helperUpdated', { 
+        detail: { 
+          source: 'damage_centers_wizard', 
+          step: currentStep,
+          damage_centers_count: helper.damage_centers?.length || 0
+        } 
+      }));
+      console.log('✅ SESSION 44: Dispatched helperUpdated event to notify other modules');
     }
     
     // ✅ CONVERTED: Inline work component (no more iframe needed)
@@ -6803,6 +6813,16 @@
         sessionStorage.setItem('helper', JSON.stringify(helper));
         window.helper = helper;
         console.log('✅ BUG FIX: Synced helper to sessionStorage and window.helper');
+        
+        // ✅ SESSION 44 FIX: Dispatch event to notify other modules (like estimate.js) to refresh
+        window.dispatchEvent(new CustomEvent('helperUpdated', { 
+          detail: { 
+            source: 'damage_centers_wizard_parts_update', 
+            parts_count: partsData.length,
+            damage_centers_count: helper.damage_centers?.length || 0
+          } 
+        }));
+        console.log('✅ SESSION 44: Dispatched helperUpdated event after parts update');
         
         // ✅ CRITICAL FIX: Update current damage center with selected parts
         if (damageCenterData.id && typeof window.updateDamageCenter === 'function') {

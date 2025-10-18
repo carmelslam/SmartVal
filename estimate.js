@@ -91,12 +91,35 @@ const EstimateEngine = {
       }
     });
 
+    // ✅ SESSION 44 FIX: Listen for helper updates from wizard
+    window.addEventListener('helperUpdated', (event) => {
+      console.log('📢 SESSION 44: Received helperUpdated event from wizard, refreshing estimate data...');
+      this.refreshFromStorage();
+    });
+
     // Auto-save on input changes
     document.addEventListener('input', (e) => {
       if (e.target.matches('.estimate-field')) {
         this.autoSave();
       }
     });
+  },
+
+  // ✅ SESSION 44 FIX: Refresh data from sessionStorage
+  refreshFromStorage() {
+    const raw = sessionStorage.getItem('helper');
+    if (!raw) {
+      console.error('❌ SESSION 44: Cannot refresh - helper missing from sessionStorage');
+      return;
+    }
+    
+    this.helper = JSON.parse(raw);
+    console.log('✅ SESSION 44: Refreshed helper from sessionStorage');
+    console.log('✅ SESSION 44: damage_centers count:', this.helper.damage_centers?.length || 0);
+    
+    // Re-render entire interface with fresh data
+    this.loadEstimateInterface();
+    console.log('✅ SESSION 44: Re-rendered estimate interface with updated data');
   },
 
   loadEstimateInterface() {
