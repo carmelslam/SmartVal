@@ -6657,6 +6657,75 @@
         // Store in helper
         let helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
         
+        // ✅ CRITICAL FIX: IMMEDIATELY save parts to helper.current_damage_center.Parts.parts_required
+        // This fixes the race condition where Step 7 saves before Step 5 data is processed
+        const partsData = data.selectedParts || [];
+        
+        if (helper.current_damage_center) {
+          console.log('🔧 BUG FIX: Immediately saving parts to current_damage_center.Parts.parts_required');
+          console.log(`🔧 BUG FIX: Processing ${partsData.length} parts with 25-field mapping`);
+          
+          // Use the SAME 25-field mapping as saveCurrentStepData case 5 (lines 3628-3673)
+          helper.current_damage_center.Parts.parts_required = partsData.map(part => ({
+            // Core identification (4 fields)
+            row_uuid: part.row_uuid || crypto.randomUUID(),
+            case_id: part.case_id || helper.current_damage_center.case_id || '',
+            plate: part.plate || helper.current_damage_center.plate || helper.vehicle?.plate || '',
+            damage_center_code: part.damage_center_code || helper.current_damage_center.code || '',
+            
+            // Part info (7 fields)
+            part_name: part.name || part.part || '',
+            description: part.description || part.תיאור || '',
+            pcode: part.pcode || part.catalog_code || part.part_number || '',
+            oem: part.oem || part['מספר OEM'] || '',
+            supplier_name: part.supplier || part.supplier_name || part.ספק || '',
+            part_family: part.part_family || '',
+            manufacturer: part.manufacturer || '',
+            
+            // Pricing (5 fields) - NO cascading fallbacks
+            price_per_unit: parseFloat(part.price_per_unit) || 0,
+            reduction_percentage: parseFloat(part.reduction_percentage || part.reduction) || 0,
+            wear_percentage: parseFloat(part.wear_percentage || part.wear) || 0,
+            updated_price: parseFloat(part.updated_price) || 0,
+            total_cost: parseFloat(part.total_cost) || 0,
+            
+            // Source (2 fields)
+            source: part.source || 'manual',
+            quantity: parseInt(part.quantity || part.כמות) || 1,
+            
+            // Vehicle info (7 fields) - Use helper.vehicle
+            make: helper.current_damage_center["Vehicle Make"] || helper.vehicle?.make || '',
+            model: helper.current_damage_center["Vehicle Model"] || helper.vehicle?.model || '',
+            year: helper.current_damage_center["Vehicle Year"] || helper.vehicle?.year || '',
+            trim: helper.current_damage_center["Vehicle Trim"] || helper.vehicle?.trim || '',
+            engine_code: helper.current_damage_center["Engine Code"] || helper.vehicle?.engine_code || '',
+            engine_type: helper.current_damage_center["Engine Type"] || helper.vehicle?.fuel_type || '',
+            vin: helper.current_damage_center["VIN"] || helper.vehicle?.vin || '',
+            
+            // Metadata (2 fields)
+            metadata: part.metadata || {},
+            updated_at: new Date().toISOString(),
+            
+            // Hebrew fields for reports ONLY (4 fields)
+            מחיר: parseFloat(part.updated_price) || 0,
+            מיקום: part.location || 'ישראל',
+            הערות: part.notes || '',
+            זמינות: part.availability || 'זמין'
+          }));
+          
+          // Calculate parts_meta with total_cost (includes quantity)
+          helper.current_damage_center.Parts.parts_meta = {
+            total_items: partsData.length,
+            total_cost: partsData.reduce((sum, part) => sum + (parseFloat(part.total_cost) || 0), 0),
+            timestamp: new Date().toISOString()
+          };
+          
+          console.log(`✅ BUG FIX: Saved ${partsData.length} parts to current_damage_center.Parts.parts_required`);
+          console.log(`✅ BUG FIX: Parts total cost: ₪${helper.current_damage_center.Parts.parts_meta.total_cost}`);
+        } else {
+          console.error('❌ BUG FIX: Cannot save parts - helper.current_damage_center is missing!');
+        }
+        
         // SESSION 41: Save to required_parts with duplicate prevention by row_uuid
         // selected_parts is ONLY for parts search page selections
         if (helper.parts_search) {
@@ -6676,7 +6745,10 @@
           console.log(`✅ SESSION 41: Updated ${incomingParts.length} parts in required_parts (no duplicates by row_uuid)`);
         }
         
+        // ✅ CRITICAL: Save to sessionStorage and sync window.helper IMMEDIATELY
         sessionStorage.setItem('helper', JSON.stringify(helper));
+        window.helper = helper;
+        console.log('✅ BUG FIX: Synced helper to sessionStorage and window.helper');
         
         // ✅ CRITICAL FIX: Update current damage center with selected parts
         if (damageCenterData.id && typeof window.updateDamageCenter === 'function') {
