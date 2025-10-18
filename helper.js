@@ -738,6 +738,15 @@ window.deleteDamageCenter = async function(centerId) {
   // Remove the center
   window.helper.centers.splice(centerIndex, 1);
   
+  // ✅ SESSION 45 FIX: Also sync to damage_centers immediately after removal
+  if (window.helper.damage_centers && Array.isArray(window.helper.damage_centers)) {
+    const dcIndex = window.helper.damage_centers.findIndex(c => (c.Id || c.id) === damageCenterId);
+    if (dcIndex !== -1) {
+      window.helper.damage_centers.splice(dcIndex, 1);
+      console.log('✅ SESSION 45: Removed from damage_centers array in sync with centers');
+    }
+  }
+  
   // ✅ SEQUENTIAL RENUMBERING: Renumber remaining centers to maintain sequential order
   console.log('🔢 Renumbering remaining damage centers sequentially...');
   window.helper.centers.forEach((center, index) => {
@@ -933,14 +942,7 @@ window.buildComprehensiveDamageAssessment = function() {
   try {
     console.log('🏗️ Building comprehensive damage assessment...');
     
-    // ✅ SESSION 45 FIX: Check if wizard already built damage_assessment with differentials
-    const hasWizardDifferentials = window.helper.damage_assessment?.totals?.["Total before differentials"] !== undefined;
-    
-    if (hasWizardDifferentials) {
-      console.log('✅ SESSION 45: Skipping rebuild - wizard differentials already exist');
-      console.log('✅ SESSION 45: damage_assessment.totals:', window.helper.damage_assessment.totals);
-      return window.helper.damage_assessment.comprehensive;
-    }
+    // ✅ SESSION 45 FIX: Always rebuild to ensure counts are accurate (no early return)
     
     console.log('⚠️ SESSION 45: No wizard differentials found - building WITH differentials from damage_centers data');
     
