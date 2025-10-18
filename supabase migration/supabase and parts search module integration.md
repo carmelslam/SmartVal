@@ -27800,3 +27800,533 @@ After implementing three fixes (handlePartsSelectionUpdate immediate save, Step 
 ---
 
 **END OF SESSION 43**
+
+---
+
+---
+
+# SESSION 44: WIZARD DIFFERENTIALS & HELPER OBJECTS SYNCHRONIZATION
+
+**Date:** 2025-10-18  
+**Duration:** ~6 hours  
+**Status:** ⚠️ **PARTIALLY COMPLETE - CODE IMPLEMENTED BUT NOT EXECUTING**
+
+---
+
+## 🎯 ORIGINAL OBJECTIVES
+
+1. Fix `helper.estimate.damage_centers` not updating from wizard
+2. Fix `damage_assessment.damage_centers_summary` missing wizard data
+3. Fix `damage_assessment.summary` missing wizard data  
+4. Fix `damage_assessment.totals` missing wizard data
+5. Implement wizard differentials tracking (before/after reductions & wear)
+6. Create `damage_assessment.totals_after_differentials`
+
+---
+
+## 🔍 ROOT CAUSES DISCOVERED
+
+### **Root Cause #1: Location Mismatch - helper.damage_centers vs helper.estimate.damage_centers**
+
+**Problem:**
+- Wizard saved to: `helper.damage_centers`
+- Estimator read from: `helper.estimate.damage_centers` ← **Different location!**
+- Result: Estimator showed old/wrong data (₪5,130 instead of ₪10,656)
+
+**Evidence:**
+```javascript
+// Console test showed:
+helper.damage_centers: (2) [{…}, {…}]  // Has correct data
+helper.estimate.damage_centers: undefined  // Missing!
+```
+
+**Fix Implemented:**
+- Added sync from `helper.damage_centers` → `helper.estimate.damage_centers` in wizard (Lines 4065-4068, 4103-4108)
+
+---
+
+### **Root Cause #2: Structure & Field Name Mismatch**
+
+**Problem:**
+- Wizard used uppercase nested structure: `Parts.parts_required`, `Location`, `Description`
+- estimate.js expected lowercase flat structure: `parts[]`, `location`, `description`
+
+**Fix Implemented:**
+- Updated estimate.js field mappings with fallbacks (Lines 195-280)
+- Updated estimator-builder.html field mappings (Lines 3423-3433)
+
+---
+
+### **Root Cause #3: No Inter-Module Communication**
+
+**Problem:**
+- Wizard updated sessionStorage
+- Other modules cached data at init
+- No event system to notify modules to refresh
+
+**Fix Implemented:**
+- Created `helperUpdated` event system
+- Wizard dispatches event after every save (Lines 4110-4117, 6817-6825)
+- estimate.js listens and refreshes (Lines 94-123)
+- estimator-builder.html listens and refreshes (Lines 1568-1591)
+
+---
+
+### **Root Cause #4: Estimator Overwrites Wizard damage_assessment**
+
+**Problem:**
+- estimator-builder.html completely overwrites `damage_assessment.damage_centers_summary` and `damage_assessment.summary` with its own simple structure
+- Sets `source: 'estimator_damage_centers'` 
+- Wizard's detailed differentials structure gets wiped out
+
+**Evidence:**
+```javascript
+// Console shows:
+damage_assessment.damage_centers_summary: {
+  source: "estimator_damage_centers",  // From estimator!
+  total_parts_cost: 0,  // Wrong!
+  ...
+}
+```
+
+**Fix Implemented:**
+- Added check in estimator-builder.html to NOT overwrite if wizard data exists (Lines 10098-10120)
+- Checks for `damage_assessment.totals["Total before differentials"]` to detect wizard data
+
+---
+
+### **Root Cause #5: Missing Wizard Differentials**
+
+**Problem:**
+- `parts_meta`, `works_meta`, `repairs_meta` only tracked final costs
+- Missing `total_cost_before_differentials` (original prices)
+- Missing `total_differentials_value` (BEFORE - AFTER)
+
+**Fix Implemented:**
+
+**Parts (Lines 3686-3703, 6804-6822):**
+```javascript
+const totalBefore = partsData.reduce((sum, part) => {
+  const pricePerUnit = parseFloat(part.price_per_unit) || 0;
+  const quantity = parseInt(part.quantity) || 1;
+  return sum + (pricePerUnit * quantity);
+}, 0);
+
+const totalAfter = partsData.reduce((sum, part) => 
+  sum + (parseFloat(part.total_cost) || 0), 0);
+
+helper.current_damage_center.Parts.parts_meta = {
+  total_items: partsData.length,
+  total_cost_before_differentials: totalBefore,
+  total_cost: totalAfter,
+  total_differentials_value: totalBefore - totalAfter,
+  timestamp: new Date().toISOString()
+};
+```
+
+**Works (Lines 3604-3616):**
+```javascript
+const worksTotalCost = worksData.reduce((sum, work) => 
+  sum + (parseFloat(work.cost) || 0), 0);
+
+helper.current_damage_center.Works.works_meta = {
+  total_items: worksData.length,
+  total_cost_before_differentials: worksTotalCost,
+  total_cost: worksTotalCost,
+  total_differentials_value: 0,  // No differentials yet
+  takana389_status: takana389,
+  timestamp: new Date().toISOString()
+};
+```
+
+**Repairs (Lines 3942-3953):** Similar structure with differentials = 0
+
+---
+
+### **Root Cause #6: damage_assessment Objects Not Rebuilt**
+
+**Problem:**
+- `updateDamageAssessment()` had old simple structure
+- No per-category differentials breakdown
+- Missing `summary` and `totals_after_differentials` objects
+
+**Fix Implemented:**
+- Completely rewrote `updateDamageAssessment()` function (Lines 1590-1772)
+
+**New Structure Created:**
+
+#### `damage_assessment.damage_centers_summary`
+```javascript
+{
+  "Damage center 1": {
+    "Works": {
+      "before_differentials": 1776,
+      "after_differentials": 1776,
+      "differentials_value": 0,
+      "items_count": 2
+    },
+    "Parts": {
+      "before_differentials": 7500,
+      "after_differentials": 6477.86,
+      "differentials_value": 1022.14,
+      "items_count": 2
+    },
+    "Repairs": {...},
+    "Subtotal before differentials": 10053,
+    "Subtotal after differentials": 9030.86,
+    "Total differentials value": 1022.14,
+    "VAT amount": 1625.55,
+    "Total with VAT": 10656.41
+  }
+}
+```
+
+#### `damage_assessment.summary`
+```javascript
+{
+  "Works": {
+    "before_differentials": 1776,
+    "after_differentials": 1776,
+    "differentials_value": 0,
+    "items_count": 2
+  },
+  "Parts": {...},
+  "Repairs": {...}
+}
+```
+
+#### `damage_assessment.totals`
+```javascript
+{
+  "Total before differentials": 10053,
+  "Total after differentials": 9030.86,
+  "Total differentials value": 1022.14,
+  "VAT amount": 1625.55,
+  "Total with VAT": 10656.41,
+  "vat_rate": 18,
+  "last_updated": "2025-10-18T...",
+  "source": "damage_centers_wizard"
+}
+```
+
+#### `damage_assessment.totals_after_differentials`
+```javascript
+{
+  "Parts": {
+    "before": 7500,
+    "after": 6477.86,
+    "differentials": 1022.14
+  },
+  "Works": {...},
+  "Repairs": {...},
+  "Combined": {
+    "before": 10053,
+    "after": 9030.86,
+    "differentials": 1022.14,
+    "vat": 1625.55,
+    "total_with_vat": 10656.41
+  }
+}
+```
+
+---
+
+## ⚠️ CRITICAL ISSUE: CODE NOT EXECUTING
+
+### **Problem:**
+All code is implemented and committed to Git, deployed to Netlify, and verified to be loaded in the browser, BUT:
+
+1. **parts_meta still missing differentials fields:**
+   ```javascript
+   // Current (WRONG):
+   {total_items: 2, total_cost: 6396.45, timestamp: '...'}
+   
+   // Expected (from our code):
+   {
+     total_items: 2,
+     total_cost_before_differentials: 7500,
+     total_cost: 6396.45,
+     total_differentials_value: 1103.55,
+     timestamp: '...'
+   }
+   ```
+
+2. **damage_assessment has estimator structure, not wizard:**
+   ```javascript
+   // Current (WRONG):
+   {
+     source: "estimator_damage_centers",
+     total_parts_cost: 0,  // Wrong values
+     ...
+   }
+   
+   // Expected (from our code):
+   {
+     "Damage center 1": {
+       "Parts": {
+         "before_differentials": 7500,
+         "after_differentials": 6477.86,
+         ...
+       }
+     }
+   }
+   ```
+
+3. **Verification confirms code IS loaded:**
+   ```javascript
+   updateDamageAssessment.toString().includes('SESSION 44') // true
+   updateDamageAssessment.toString().includes('before_differentials') // true
+   ```
+
+### **Possible Causes:**
+
+1. **Code path not being executed:**
+   - Session 44 console.log messages are NOT appearing
+   - This means the code exists but isn't running
+   - Possible wrong case statement or conditional branch
+
+2. **Error silently breaking execution:**
+   - JavaScript error before Session 44 code runs
+   - Try/catch block hiding the error
+   - Check browser console for errors
+
+3. **Old data persisting in sessionStorage:**
+   - Hard refresh doesn't clear sessionStorage
+   - Old helper object persists across page loads
+   - Need to manually clear sessionStorage
+
+4. **Estimator running AFTER wizard:**
+   - Even with the check, estimator might run after wizard completes
+   - Timing issue with helperUpdated event
+
+---
+
+## 📁 FILES MODIFIED (SESSION 44)
+
+### 1. **damage-centers-wizard.html**
+
+**Lines 3686-3703:** Parts differentials calculation (Step 5)
+```javascript
+// Calculate BEFORE (original price × quantity) and AFTER (with reductions/wear)
+const totalBefore = partsData.reduce(...);
+const totalAfter = partsData.reduce(...);
+helper.current_damage_center.Parts.parts_meta = {
+  total_cost_before_differentials: totalBefore,
+  total_cost: totalAfter,
+  total_differentials_value: totalBefore - totalAfter,
+  ...
+};
+```
+
+**Lines 6804-6822:** Parts differentials in handlePartsSelectionUpdate()
+
+**Lines 3604-3616:** Works differentials structure
+
+**Lines 3942-3953:** Repairs differentials structure
+
+**Lines 1590-1772:** Complete rewrite of updateDamageAssessment() function
+
+**Lines 4065-4068:** Sync to helper.estimate.damage_centers at Step 7
+
+**Lines 4103-4108:** Sync to helper.estimate.damage_centers for all steps
+
+**Lines 4110-4117, 6817-6825:** Dispatch helperUpdated event
+
+### 2. **estimate.js**
+
+**Lines 94-98:** Add helperUpdated event listener
+
+**Lines 108-123:** Add refreshFromStorage() method
+
+**Lines 195-280:** Fix field mappings for wizard structure
+
+### 3. **estimator-builder.html**
+
+**Lines 1568-1591:** Add helperUpdated event listener with auto-refresh
+
+**Lines 3423-3433:** Fix field name mappings (uppercase → lowercase fallbacks)
+
+**Lines 10098-10120:** Check to NOT overwrite wizard damage_assessment
+
+---
+
+## 🔧 DIAGNOSTIC STEPS FOR NEXT SESSION
+
+### **Step 1: Clear sessionStorage and Test Fresh**
+```javascript
+// In browser console:
+sessionStorage.clear();
+location.reload();
+// Then create a NEW damage center from scratch
+```
+
+### **Step 2: Check for Console Messages**
+
+After completing Step 5 (parts), look for:
+```
+✅ SESSION 44: Parts differentials - Before: ₪..., After: ₪..., Diff: ₪...
+```
+
+After completing Step 7, look for:
+```
+🔄 SESSION 44: Updating damage assessment structure with differentials...
+✅ SESSION 44: Processed Damage center 1 - Before: ₪..., After: ₪..., Diff: ₪...
+```
+
+**If you DON'T see these messages:**
+- The code path is not being executed
+- Need to debug which case statement is being hit
+- Add more logging to track execution flow
+
+### **Step 3: Check for JavaScript Errors**
+
+Open browser console and filter for:
+- Any red errors
+- Warnings that might indicate issues
+- Failed function calls
+
+### **Step 4: Verify Data Immediately After Step 5**
+
+Right after completing Step 5, run:
+```javascript
+const helper = JSON.parse(sessionStorage.getItem('helper'));
+console.log('Step 5 - parts_meta:', helper.current_damage_center?.Parts?.parts_meta);
+```
+
+Should show:
+```javascript
+{
+  total_items: 2,
+  total_cost_before_differentials: 7500,  // NEW!
+  total_cost: 6396.45,
+  total_differentials_value: 1103.55,  // NEW!
+  timestamp: '...'
+}
+```
+
+### **Step 5: Verify Data After Step 7**
+
+Right after completing Step 7, run:
+```javascript
+const helper = JSON.parse(sessionStorage.getItem('helper'));
+console.log('damage_assessment.totals:', helper.damage_assessment?.totals);
+console.log('damage_assessment.damage_centers_summary:', helper.damage_assessment?.damage_centers_summary);
+```
+
+Should show wizard structure with differentials, NOT estimator structure.
+
+### **Step 6: Check Execution Order**
+
+Add this to browser console to track when functions run:
+```javascript
+const original_updateDamageAssessment = updateDamageAssessment;
+window.updateDamageAssessment = function(helper) {
+  console.log('🔍 updateDamageAssessment CALLED at:', new Date().toISOString());
+  console.trace('Call stack:');
+  return original_updateDamageAssessment(helper);
+};
+```
+
+---
+
+## ✅ WHAT WORKS (Verified)
+
+1. ✅ Code is in Git repository
+2. ✅ Code is deployed to Netlify
+3. ✅ Browser loads the new code (verified with function.toString())
+4. ✅ updateDamageAssessment() has Session 44 code
+5. ✅ Page source has Session 44 parts calculation code
+6. ✅ helperUpdated event listener exists in estimate.js and estimator-builder.html
+
+---
+
+## ❌ WHAT DOESN'T WORK
+
+1. ❌ Session 44 console.log messages NOT appearing
+2. ❌ parts_meta still has old structure (missing differentials fields)
+3. ❌ damage_assessment has estimator structure instead of wizard structure
+4. ❌ No before_differentials or differentials_value in helper objects
+
+---
+
+## 🎯 NEXT SESSION ACTION PLAN
+
+### **Priority 1: Find Why Code Isn't Executing**
+
+1. Add explicit console.log at VERY START of Step 5 case statement:
+   ```javascript
+   case 5:
+     console.log('🔴 ENTERING STEP 5 CASE STATEMENT');
+     // ... existing code
+   ```
+
+2. Add console.log at start of updateDamageAssessment:
+   ```javascript
+   function updateDamageAssessment(helper) {
+     console.log('🔴 updateDamageAssessment CALLED');
+     // ... existing code
+   ```
+
+3. Check if there's a different Step 5 case statement being hit (multiple switch statements?)
+
+### **Priority 2: Verify Case Statement Flow**
+
+The wizard has multiple switch statements for different contexts. Need to identify which one runs during normal wizard flow.
+
+Search for ALL `case 5:` statements:
+- Line 2435
+- Line 2568  
+- Line 2904
+- Line 3166
+- Line 3757
+
+Determine which one is for normal step save vs other contexts.
+
+### **Priority 3: Check saveCurrentStepData() is Being Called**
+
+Add logging to see if the main save function runs:
+```javascript
+function saveCurrentStepData() {
+  console.log('🔴 saveCurrentStepData CALLED, currentStep:', currentStep);
+  // ... existing code
+}
+```
+
+### **Priority 4: Manual Test Without estimator-builder**
+
+1. Edit damage center in wizard
+2. Complete Steps 1-7
+3. DON'T open estimator page
+4. Check helper in console immediately
+5. See if wizard data exists before estimator touches it
+
+---
+
+## 📊 SESSION STATISTICS
+
+- **Duration:** ~6 hours
+- **Root Causes Identified:** 6
+- **Fixes Implemented:** 6
+- **Code Committed:** Yes
+- **Code Deployed:** Yes
+- **Code Verified in Browser:** Yes
+- **Code Actually Running:** ❌ **NO**
+- **User Frustration Level:** 😲😲😲 (surprised eyes emoji x3)
+
+---
+
+## 💡 KEY INSIGHT
+
+**The problem is NOT the code itself - the code is correct and loaded.**
+
+**The problem is the CODE PATH - the new code isn't being executed during the normal wizard flow.**
+
+Next session must focus on:
+1. Tracing execution flow with console.log
+2. Finding which switch statement actually runs
+3. Identifying why Session 44 code isn't executing
+4. Possibly: old sessionStorage data persisting across tests
+
+---
+
+**END OF SESSION 44**

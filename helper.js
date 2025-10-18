@@ -932,6 +932,18 @@ window.syncDamageAssessmentCenters = function() {
 window.buildComprehensiveDamageAssessment = function() {
   try {
     console.log('🏗️ Building comprehensive damage assessment...');
+    
+    // ✅ SESSION 45 FIX: Check if wizard already built damage_assessment with differentials
+    const hasWizardDifferentials = window.helper.damage_assessment?.totals?.["Total before differentials"] !== undefined;
+    
+    if (hasWizardDifferentials) {
+      console.log('✅ SESSION 45: Skipping rebuild - wizard differentials already exist');
+      console.log('✅ SESSION 45: damage_assessment.totals:', window.helper.damage_assessment.totals);
+      return window.helper.damage_assessment.comprehensive;
+    }
+    
+    console.log('⚠️ SESSION 45: No wizard differentials found - building with OLD structure for backward compatibility');
+    
     const allCenters = window.getDamageCenters();
     
     // Initialize damage_assessment structure
