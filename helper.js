@@ -1006,30 +1006,30 @@ window.buildComprehensiveDamageAssessment = function() {
         count: parseInt(center.Repairs?.repairs_meta?.total_items || 0)
       };
       
-      const centerBeforeTotal = worksData.before + partsData.before + repairsData.before;
-      const centerAfterTotal = worksData.after + partsData.after + repairsData.after;
-      const centerDiffTotal = worksData.diff + partsData.diff + repairsData.diff;
-      const centerVAT = centerAfterTotal * (vatRate / 100);
-      const centerTotalWithVAT = centerAfterTotal + centerVAT;
+      const centerBeforeTotal = Math.round(worksData.before + partsData.before + repairsData.before);
+      const centerAfterTotal = Math.round(worksData.after + partsData.after + repairsData.after);
+      const centerDiffTotal = Math.round(worksData.diff + partsData.diff + repairsData.diff);
+      const centerVAT = Math.round(centerAfterTotal * (vatRate / 100));
+      const centerTotalWithVAT = Math.round(centerAfterTotal + centerVAT);
       
       // Build per-center summary with differentials
       window.helper.damage_assessment.damage_centers_summary[centerKey] = {
         "Works": {
-          "before_differentials": worksData.before,
-          "after_differentials": worksData.after,
-          "differentials_value": worksData.diff,
+          "before_differentials": Math.round(worksData.before),
+          "after_differentials": Math.round(worksData.after),
+          "differentials_value": Math.round(worksData.diff),
           "items_count": worksData.count
         },
         "Parts": {
-          "before_differentials": partsData.before,
-          "after_differentials": partsData.after,
-          "differentials_value": partsData.diff,
+          "before_differentials": Math.round(partsData.before),
+          "after_differentials": Math.round(partsData.after),
+          "differentials_value": Math.round(partsData.diff),
           "items_count": partsData.count
         },
         "Repairs": {
-          "before_differentials": repairsData.before,
-          "after_differentials": repairsData.after,
-          "differentials_value": repairsData.diff,
+          "before_differentials": Math.round(repairsData.before),
+          "after_differentials": Math.round(repairsData.after),
+          "differentials_value": Math.round(repairsData.diff),
           "items_count": repairsData.count
         },
         "Subtotal before differentials": centerBeforeTotal,
@@ -1064,33 +1064,33 @@ window.buildComprehensiveDamageAssessment = function() {
     // Build summary object
     window.helper.damage_assessment.summary = {
       "Works": {
-        "before_differentials": summaryAccumulators.works.before,
-        "after_differentials": summaryAccumulators.works.after,
-        "differentials_value": summaryAccumulators.works.diff,
+        "before_differentials": Math.round(summaryAccumulators.works.before),
+        "after_differentials": Math.round(summaryAccumulators.works.after),
+        "differentials_value": Math.round(summaryAccumulators.works.diff),
         "items_count": summaryAccumulators.works.count
       },
       "Parts": {
-        "before_differentials": summaryAccumulators.parts.before,
-        "after_differentials": summaryAccumulators.parts.after,
-        "differentials_value": summaryAccumulators.parts.diff,
+        "before_differentials": Math.round(summaryAccumulators.parts.before),
+        "after_differentials": Math.round(summaryAccumulators.parts.after),
+        "differentials_value": Math.round(summaryAccumulators.parts.diff),
         "items_count": summaryAccumulators.parts.count
       },
       "Repairs": {
-        "before_differentials": summaryAccumulators.repairs.before,
-        "after_differentials": summaryAccumulators.repairs.after,
-        "differentials_value": summaryAccumulators.repairs.diff,
+        "before_differentials": Math.round(summaryAccumulators.repairs.before),
+        "after_differentials": Math.round(summaryAccumulators.repairs.after),
+        "differentials_value": Math.round(summaryAccumulators.repairs.diff),
         "items_count": summaryAccumulators.repairs.count
       }
     };
     
-    const totalDifferentialsValue = totalBeforeDifferentials - totalAfterDifferentials;
-    const vatAmount = totalAfterDifferentials * (vatRate / 100);
-    const totalWithVAT = totalAfterDifferentials + vatAmount;
+    const totalDifferentialsValue = Math.round(totalBeforeDifferentials - totalAfterDifferentials);
+    const vatAmount = Math.round(totalAfterDifferentials * (vatRate / 100));
+    const totalWithVAT = Math.round(totalAfterDifferentials + vatAmount);
     
     // Build totals object with differentials
     window.helper.damage_assessment.totals = {
-      "Total before differentials": totalBeforeDifferentials,
-      "Total after differentials": totalAfterDifferentials,
+      "Total before differentials": Math.round(totalBeforeDifferentials),
+      "Total after differentials": Math.round(totalAfterDifferentials),
       "Total differentials value": totalDifferentialsValue,
       "VAT amount": vatAmount,
       "Total with VAT": totalWithVAT,
@@ -1102,23 +1102,23 @@ window.buildComprehensiveDamageAssessment = function() {
     // Build totals_after_differentials object
     window.helper.damage_assessment.totals_after_differentials = {
       "Parts": {
-        "before": summaryAccumulators.parts.before,
-        "after": summaryAccumulators.parts.after,
-        "differentials": summaryAccumulators.parts.diff
+        "before": Math.round(summaryAccumulators.parts.before),
+        "after": Math.round(summaryAccumulators.parts.after),
+        "differentials": Math.round(summaryAccumulators.parts.diff)
       },
       "Works": {
-        "before": summaryAccumulators.works.before,
-        "after": summaryAccumulators.works.after,
-        "differentials": summaryAccumulators.works.diff
+        "before": Math.round(summaryAccumulators.works.before),
+        "after": Math.round(summaryAccumulators.works.after),
+        "differentials": Math.round(summaryAccumulators.works.diff)
       },
       "Repairs": {
-        "before": summaryAccumulators.repairs.before,
-        "after": summaryAccumulators.repairs.after,
-        "differentials": summaryAccumulators.repairs.diff
+        "before": Math.round(summaryAccumulators.repairs.before),
+        "after": Math.round(summaryAccumulators.repairs.after),
+        "differentials": Math.round(summaryAccumulators.repairs.diff)
       },
       "Combined": {
-        "before": totalBeforeDifferentials,
-        "after": totalAfterDifferentials,
+        "before": Math.round(totalBeforeDifferentials),
+        "after": Math.round(totalAfterDifferentials),
         "differentials": totalDifferentialsValue,
         "vat": vatAmount,
         "total_with_vat": totalWithVAT

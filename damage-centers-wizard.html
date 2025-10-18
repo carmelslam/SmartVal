@@ -1643,30 +1643,30 @@
           count: center.Repairs?.repairs_meta?.total_items || 0
         };
         
-        const centerSubtotalBefore = worksData.before + partsData.before + repairsData.before;
-        const centerSubtotalAfter = worksData.after + partsData.after + repairsData.after;
-        const centerTotalDiff = worksData.diff + partsData.diff + repairsData.diff;
-        const centerVAT = centerSubtotalAfter * (vatRate / 100);
-        const centerTotalWithVAT = centerSubtotalAfter + centerVAT;
+        const centerSubtotalBefore = Math.round(worksData.before + partsData.before + repairsData.before);
+        const centerSubtotalAfter = Math.round(worksData.after + partsData.after + repairsData.after);
+        const centerTotalDiff = Math.round(worksData.diff + partsData.diff + repairsData.diff);
+        const centerVAT = Math.round(centerSubtotalAfter * (vatRate / 100));
+        const centerTotalWithVAT = Math.round(centerSubtotalAfter + centerVAT);
         
         // Build damage_centers_summary for this center
         helper.damage_assessment.damage_centers_summary[centerKey] = {
           "Works": {
-            "before_differentials": worksData.before,
-            "after_differentials": worksData.after,
-            "differentials_value": worksData.diff,
+            "before_differentials": Math.round(worksData.before),
+            "after_differentials": Math.round(worksData.after),
+            "differentials_value": Math.round(worksData.diff),
             "items_count": worksData.count
           },
           "Parts": {
-            "before_differentials": partsData.before,
-            "after_differentials": partsData.after,
-            "differentials_value": partsData.diff,
+            "before_differentials": Math.round(partsData.before),
+            "after_differentials": Math.round(partsData.after),
+            "differentials_value": Math.round(partsData.diff),
             "items_count": partsData.count
           },
           "Repairs": {
-            "before_differentials": repairsData.before,
-            "after_differentials": repairsData.after,
-            "differentials_value": repairsData.diff,
+            "before_differentials": Math.round(repairsData.before),
+            "after_differentials": Math.round(repairsData.after),
+            "differentials_value": Math.round(repairsData.diff),
             "items_count": repairsData.count
           },
           "Subtotal before differentials": centerSubtotalBefore,
@@ -1701,33 +1701,33 @@
       // Build summary object (combined across all centers)
       helper.damage_assessment.summary = {
         "Works": {
-          "before_differentials": summaryAccumulators.works.before,
-          "after_differentials": summaryAccumulators.works.after,
-          "differentials_value": summaryAccumulators.works.diff,
+          "before_differentials": Math.round(summaryAccumulators.works.before),
+          "after_differentials": Math.round(summaryAccumulators.works.after),
+          "differentials_value": Math.round(summaryAccumulators.works.diff),
           "items_count": summaryAccumulators.works.count
         },
         "Parts": {
-          "before_differentials": summaryAccumulators.parts.before,
-          "after_differentials": summaryAccumulators.parts.after,
-          "differentials_value": summaryAccumulators.parts.diff,
+          "before_differentials": Math.round(summaryAccumulators.parts.before),
+          "after_differentials": Math.round(summaryAccumulators.parts.after),
+          "differentials_value": Math.round(summaryAccumulators.parts.diff),
           "items_count": summaryAccumulators.parts.count
         },
         "Repairs": {
-          "before_differentials": summaryAccumulators.repairs.before,
-          "after_differentials": summaryAccumulators.repairs.after,
-          "differentials_value": summaryAccumulators.repairs.diff,
+          "before_differentials": Math.round(summaryAccumulators.repairs.before),
+          "after_differentials": Math.round(summaryAccumulators.repairs.after),
+          "differentials_value": Math.round(summaryAccumulators.repairs.diff),
           "items_count": summaryAccumulators.repairs.count
         }
       };
       
       // Build totals object
-      const totalDifferentials = totalBeforeDifferentials - totalAfterDifferentials;
-      const totalVAT = totalAfterDifferentials * (vatRate / 100);
-      const totalWithVAT = totalAfterDifferentials + totalVAT;
+      const totalDifferentials = Math.round(totalBeforeDifferentials - totalAfterDifferentials);
+      const totalVAT = Math.round(totalAfterDifferentials * (vatRate / 100));
+      const totalWithVAT = Math.round(totalAfterDifferentials + totalVAT);
       
       helper.damage_assessment.totals = {
-        "Total before differentials": totalBeforeDifferentials,
-        "Total after differentials": totalAfterDifferentials,
+        "Total before differentials": Math.round(totalBeforeDifferentials),
+        "Total after differentials": Math.round(totalAfterDifferentials),
         "Total differentials value": totalDifferentials,
         "VAT amount": totalVAT,
         "Total with VAT": totalWithVAT,
@@ -2178,13 +2178,13 @@
             }
             
             // Update the Summary with current totals
-            const worksTotal = helper.current_damage_center.Works?.works_meta?.total_cost || 0;
-            const partsTotal = helper.current_damage_center.Parts?.parts_meta?.total_cost || 0;
-            const repairsTotal = helper.current_damage_center.Repairs?.repairs_meta?.total_cost || 0;
-            const subtotal = worksTotal + partsTotal + repairsTotal;
+            const worksTotal = Math.round(helper.current_damage_center.Works?.works_meta?.total_cost || 0);
+            const partsTotal = Math.round(helper.current_damage_center.Parts?.parts_meta?.total_cost || 0);
+            const repairsTotal = Math.round(helper.current_damage_center.Repairs?.repairs_meta?.total_cost || 0);
+            const subtotal = Math.round(worksTotal + partsTotal + repairsTotal);
             const vatPercentage = (helper.calculations && helper.calculations.vat_rate) ? helper.calculations.vat_rate : 18;
-            const vatAmount = subtotal * (vatPercentage / 100);
-            const totalWithVat = subtotal + vatAmount;
+            const vatAmount = Math.round(subtotal * (vatPercentage / 100));
+            const totalWithVat = Math.round(subtotal + vatAmount);
             
             helper.current_damage_center.Summary = {
               "Total works": worksTotal,
@@ -4078,12 +4078,12 @@
           
           if (helper.current_damage_center && helper.current_damage_center.Id) {
             // Update the Summary with current totals
-            const worksTotal = helper.current_damage_center.Works?.works_meta?.total_cost || 0;
-            const partsTotal = helper.current_damage_center.Parts?.parts_meta?.total_cost || 0;
-            const repairsTotal = helper.current_damage_center.Repairs?.repairs_meta?.total_cost || 0;
-            const subtotal = worksTotal + partsTotal + repairsTotal;
-            const vatAmount = subtotal * (vatPercentage / 100);
-            const totalWithVat = subtotal + vatAmount;
+            const worksTotal = Math.round(helper.current_damage_center.Works?.works_meta?.total_cost || 0);
+            const partsTotal = Math.round(helper.current_damage_center.Parts?.parts_meta?.total_cost || 0);
+            const repairsTotal = Math.round(helper.current_damage_center.Repairs?.repairs_meta?.total_cost || 0);
+            const subtotal = Math.round(worksTotal + partsTotal + repairsTotal);
+            const vatAmount = Math.round(subtotal * (vatPercentage / 100));
+            const totalWithVat = Math.round(subtotal + vatAmount);
             
             helper.current_damage_center.Summary = {
               "Total works": worksTotal,
