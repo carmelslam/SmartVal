@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <title>Migrate - Add Differentials to Existing Damage Centers</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        button { padding: 20px; font-size: 18px; background: #4CAF50; color: white; border: none; cursor: pointer; margin: 10px; }
+        #output { margin-top: 20px; padding: 20px; background: #f5f5f5; font-family: monospace; white-space: pre-wrap; max-height: 600px; overflow-y: auto; }
+        .warning { background: #fff3cd; padding: 15px; margin: 10px 0; border-left: 4px solid #ffc107; }
+    </style>
+</head>
+<body>
+    <h1>🔧 Migration Tool: Add Differentials to Existing Damage Centers</h1>
+    
+    <div class="warning">
+        <strong>⚠️ WARNING:</strong> This will modify your existing damage centers by adding differentials fields to parts_meta, works_meta, and repairs_meta. Make sure you understand what this does before clicking.
+    </div>
+    
+    <button onclick="migrateDamageCenters()">
+        🔄 Migrate Damage Centers - Add Differentials
+    </button>
+    
+    <button onclick="showCurrentData()">
+        📊 Show Current Data (No Changes)
+    </button>
+    
+    <div id="output"></div>
+
+    <script src="helper.js"></script>
+    <script>
+        function showCurrentData() {
+            const output = document.getElementById('output');
+            output.innerHTML = '📊 Loading current data...\n\n';
+            
+            const helperRaw = sessionStorage.getItem('helper');
+            if (!helperRaw) {
+                output.innerHTML += '❌ No helper data found\n';
+                return;
+            }
+            
+            const helper = JSON.parse(helperRaw);
+            output.innerHTML += `Found ${helper.damage_centers?.length || 0} damage centers\n\n`;
+            
+            helper.damage_centers?.forEach((center, idx) => {
+                output.innerHTML += `\n=== Damage Center ${idx + 1} ===\n`;
+                output.innerHTML += `Location: ${center.Location}\n`;
+                output.innerHTML += `Parts meta: ${JSON.stringify(center.Parts?.parts_meta, null, 2)}\n`;
+                output.innerHTML += `Works meta: ${JSON.stringify(center.Works?.works_meta, null, 2)}\n`;
+                output.innerHTML += `Repairs meta: ${JSON.stringify(center.Repairs?.repairs_meta, null, 2)}\n`;
+            });
+        }
+        
+        function migrateDamageCenters() {
+            const output = document.getElementById('output');
+            output.innerHTML = '🔄 Starting migration...\n\n';
+            
+            try {
+                // Load helper from sessionStorage
+                const helperRaw = sessionStorage.getItem('helper');
+                if (!helperRaw) {
+                    output.innerHTML += '❌ ERROR: No helper data found in sessionStorage!\n';
+                    return;
+                }
+                
+                window.helper = JSON.parse(helperRaw);
+                const centersCount = window.helper.damage_centers?.length || 0;
+                output.innerHTML += `✅ Loaded helper from sessionStorage\n`;
+                output.innerHTML += `✅ Found ${centersCount} damage centers\n\n`;
+                
+                if (centersCount === 0) {
+                    output.innerHTML += '⚠️ No damage centers to migrate\n';
+                    return;
+                }
+                
+                // Migrate each damage center
+                let migratedCount = 0;
+                
+                window.helper.damage_centers.forEach((center, index) => {
+                    output.innerHTML += `\n📦 Processing Damage Center ${index + 1}: ${center.Location}\n`;
+                    
+                    // ===== MIGRATE PARTS =====
+                    const parts = center.Parts?.parts_required || [];
+                    if (parts.length > 0) {
+                        // Calculate BEFORE (original price × quantity)
+                        const totalBefore = parts.reduce((sum, part) => {
+                            const pricePerUnit = parseFloat(part.price_per_unit) || 0;
+                            const quantity = parseInt(part.quantity) || 1;
+                            return sum + (pricePerUnit * quantity);
+                        }, 0);
+                        
+                        // Calculate AFTER (with reductions/wear)
+                        const totalAfter = parts.reduce((sum, part) => {
+                            return sum + (parseFloat(part.total_cost) || 0);
+                        }, 0);
+                        
+                        const differentials = totalBefore - totalAfter;
+                        
+                        // Update parts_meta
+                        if (!center.Parts.parts_meta) center.Parts.parts_meta = {};
+                        center.Parts.parts_meta.total_cost_before_differentials = totalBefore;
+                        center.Parts.parts_meta.total_cost = totalAfter;
+                        center.Parts.parts_meta.total_differentials_value = differentials;
+                        center.Parts.parts_meta.total_items = parts.length;
+                        
+                        output.innerHTML += `  ✅ Parts: Before=₪${totalBefore.toFixed(2)}, After=₪${totalAfter.toFixed(2)}, Diff=₪${differentials.toFixed(2)}\n`;
+                    }
+                    
+                    // ===== MIGRATE WORKS =====
+                    const works = center.Works?.works || [];
+                    if (works.length > 0) {
+                        const worksTotalCost = works.reduce((sum, work) => {
+                            return sum + (parseFloat(work.cost) || 0);
+                        }, 0);
+                        
+                        if (!center.Works.works_meta) center.Works.works_meta = {};
+                        center.Works.works_meta.total_cost_before_differentials = worksTotalCost;
+                        center.Works.works_meta.total_cost = worksTotalCost;
+                        center.Works.works_meta.total_differentials_value = 0; // No differentials for works yet
+                        center.Works.works_meta.total_items = works.length;
+                        
+                        output.innerHTML += `  ✅ Works: ₪${worksTotalCost.toFixed(2)} (no differentials)\n`;
+                    }
+                    
+                    // ===== MIGRATE REPAIRS =====
+                    const repairs = center.Repairs?.repairs || [];
+                    if (repairs.length > 0) {
+                        const repairsTotalCost = repairs.reduce((sum, repair) => {
+                            return sum + (parseFloat(repair.cost) || 0);
+                        }, 0);
+                        
+                        if (!center.Repairs.repairs_meta) center.Repairs.repairs_meta = {};
+                        center.Repairs.repairs_meta.total_cost_before_differentials = repairsTotalCost;
+                        center.Repairs.repairs_meta.total_cost = repairsTotalCost;
+                        center.Repairs.repairs_meta.total_differentials_value = 0; // No differentials for repairs yet
+                        center.Repairs.repairs_meta.total_items = repairs.length;
+                        
+                        output.innerHTML += `  ✅ Repairs: ₪${repairsTotalCost.toFixed(2)} (no differentials)\n`;
+                    }
+                    
+                    migratedCount++;
+                });
+                
+                // Also update helper.centers (internal wizard structure)
+                if (window.helper.centers && Array.isArray(window.helper.centers)) {
+                    window.helper.centers = window.helper.damage_centers;
+                    output.innerHTML += `\n✅ Synced to helper.centers\n`;
+                }
+                
+                output.innerHTML += `\n✅ Migrated ${migratedCount} damage centers\n`;
+                
+                // Now rebuild damage_assessment with new differentials
+                output.innerHTML += `\n🏗️ Rebuilding damage_assessment with differentials...\n`;
+                
+                if (typeof window.buildComprehensiveDamageAssessment === 'function') {
+                    window.buildComprehensiveDamageAssessment();
+                    output.innerHTML += `✅ Rebuilt damage_assessment\n`;
+                } else {
+                    output.innerHTML += `⚠️ buildComprehensiveDamageAssessment not found\n`;
+                }
+                
+                // Save back to sessionStorage
+                sessionStorage.setItem('helper', JSON.stringify(window.helper));
+                output.innerHTML += `✅ Saved to sessionStorage\n\n`;
+                
+                // Show final damage_assessment
+                const newSource = window.helper.damage_assessment?.totals?.source;
+                const hasDifferentials = window.helper.damage_assessment?.totals?.["Total before differentials"] !== undefined;
+                
+                output.innerHTML += `\n📊 FINAL RESULT:\n`;
+                output.innerHTML += `Source: ${newSource}\n`;
+                output.innerHTML += `Has differentials: ${hasDifferentials ? '✅ YES' : '❌ NO'}\n\n`;
+                
+                if (hasDifferentials) {
+                    output.innerHTML += `damage_assessment.totals:\n`;
+                    output.innerHTML += JSON.stringify(window.helper.damage_assessment.totals, null, 2);
+                    output.innerHTML += `\n\n🎉 SUCCESS! Migration complete. Refresh the page to see changes.\n`;
+                } else {
+                    output.innerHTML += `⚠️ WARNING: Migration ran but differentials still not showing\n`;
+                }
+                
+            } catch (error) {
+                output.innerHTML += `\n❌ ERROR: ${error.message}\n`;
+                output.innerHTML += error.stack;
+                console.error(error);
+            }
+        }
+    </script>
+</body>
+</html>
