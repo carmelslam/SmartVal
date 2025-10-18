@@ -1129,8 +1129,8 @@ window.buildComprehensiveDamageAssessment = function() {
     const assessment = {
       centers: allCenters,
       totals: { 
-        all_centers_subtotal: Math.round(totalWithoutVAT), 
-        all_centers_vat: Math.round(totalWithVAT - totalWithoutVAT), 
+        all_centers_subtotal: Math.round(totalAfterDifferentials), 
+        all_centers_vat: Math.round(vatAmount), 
         all_centers_total: Math.round(totalWithVAT) 
       },
       summary: { 
@@ -1143,10 +1143,13 @@ window.buildComprehensiveDamageAssessment = function() {
     window.helper.damage_assessment.comprehensive = assessment;
     window.helper.damage_assessment.last_updated = new Date().toISOString();
     
-    console.log('✅ Comprehensive damage assessment rebuilt:', {
+    console.log('✅ SESSION 45: damage_assessment rebuilt WITH differentials from wizard data:', {
       centersCount: allCenters.length,
+      totalBefore: totalBeforeDifferentials,
+      totalAfter: totalAfterDifferentials,
+      totalDiff: totalDifferentialsValue,
       totalWithVAT: totalWithVAT,
-      summaryKeys: Object.keys(window.helper.damage_assessment.damage_centers_summary)
+      source: 'helper_js_wizard_data'
     });
     
     return assessment;
