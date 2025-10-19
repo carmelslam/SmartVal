@@ -1129,24 +1129,31 @@
           const newReduction = parseFloat(document.getElementById('edit-reduction').value) || 0;
           const newWear = parseFloat(document.getElementById('edit-wear').value) || 0;
         
+          // Calculate total_cost with reductions (like wizard does)
+          const priceAfterReduction = newPrice * (1 - newReduction / 100);
+          const updatedPrice = priceAfterReduction * (1 - newWear / 100);
+          const totalCost = updatedPrice * newQuantity;
+          
           // Update Supabase if available (using correct column names from schema)
           if (window.supabase) {
             const supabaseData = {
-              pcode: newCatalogCode,  // catalog code goes to pcode column
-              oem: newCatalogCode,    // also update oem
+              pcode: newCatalogCode,
+              oem: newCatalogCode,
               part_name: newPartName,
               quantity: newQuantity,
               price_per_unit: newPrice,
-              price: newPrice,  // also update price column
+              price: newPrice,
               reduction_percentage: newReduction,
-              wear_percentage: newWear
+              wear_percentage: newWear,
+              updated_price: updatedPrice,  // price after reductions
+              total_cost: totalCost  // final total cost
             };
             
             const { error } = await window.supabase
               .from('parts_required')
               .update(supabaseData)
               .eq('plate', plate.replace(/-/g, ''))
-              .eq('damage_center_code', centerId)  // Fixed: damage_center_code not damage_center_id
+              .eq('damage_center_code', centerId)
               .eq('part_name', part.part_name || part.name);
             
             if (error) {
@@ -1155,7 +1162,7 @@
             }
           }
           
-          // Update helper data
+          // Update helper data with ALL calculated fields
           parts[partIndex] = {
             ...part,
             catalog_code: newCatalogCode,
@@ -1172,12 +1179,26 @@
             reduction_percentage: newReduction,
             reduction: newReduction,
             wear_percentage: newWear,
-            wear: newWear
+            wear: newWear,
+            updated_price: updatedPrice,
+            total_cost: totalCost  // THIS IS KEY - updates helper total_cost
           };
           
-          console.log('✅ SESSION 50: Part edited successfully');
+          console.log('✅ SESSION 50: Part edited successfully, total_cost:', totalCost);
           
           closeModal();
+          
+          // Trigger UI updates in final report if the function exists
+          if (typeof window.updatePartsRequiredUI === 'function') {
+            window.updatePartsRequiredUI();
+          }
+          if (typeof window.refreshFinalReportSections === 'function') {
+            window.refreshFinalReportSections();
+          }
+          if (typeof window.recalculateAllTotals === 'function') {
+            window.recalculateAllTotals();
+          }
+          
           tabsLoaded.required = false;
           loadRequiredParts();
           
