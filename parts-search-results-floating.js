@@ -556,8 +556,26 @@
   // SESSION 50: Refresh current tab data
   window.refreshPartsResults = function() {
     console.log('🔄 SESSION 50: Refreshing current tab:', currentTab);
+    
+    // Show loading indicator
+    const container = currentTab === 'required' ? document.getElementById('requiredPartsContainer') :
+                     currentTab === 'selected' ? document.getElementById('selectedPartsContainer') :
+                     document.getElementById('searchResultsContainer');
+    
+    if (container) {
+      container.innerHTML = `
+        <div class="no-results">
+          <div class="no-results-icon">🔄</div>
+          <div>מרענן נתונים...</div>
+        </div>
+      `;
+    }
+    
+    // Reload tab data
     tabsLoaded[currentTab] = false;
-    loadTabData(currentTab);
+    setTimeout(() => {
+      loadTabData(currentTab);
+    }, 100);
   };
 
   // SESSION 50: Remove unused export function (kept for compatibility but does nothing)
