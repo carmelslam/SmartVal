@@ -13181,10 +13181,10 @@
       const rowIndex = container.children.length;
       const rowHTML = `
         <div class="category-differential-row" data-index="${rowIndex}" style="background:white; border:1px solid #ddd; border-radius:4px; padding:8px; margin-bottom:8px;">
-          <div style="display:grid; grid-template-columns: 2fr 1fr; gap:8px; margin-bottom:8px;">
+          <div style="display:grid; grid-template-columns: 2fr 1fr 80px 100px; gap:8px; align-items:end;">
             <div>
-              <label style="font-size:11px; color:#666;">סיבה:</label>
-              <input type="text" class="category-diff-reason" placeholder="תיאור ההפרש" style="width:100%; padding:4px; border:1px solid #ddd; border-radius:3px; font-size:12px;">
+              <label style="font-size:11px; color:#666;">תיאור ההפרש:</label>
+              <input type="text" class="category-diff-description" placeholder="תיאור" style="width:100%; padding:4px; border:1px solid #ddd; border-radius:3px; font-size:12px;">
             </div>
             <div>
               <label style="font-size:11px; color:#666;">בחר קטגוריה:</label>
@@ -13195,8 +13195,10 @@
                 <option value="Repairs">תיקונים</option>
               </select>
             </div>
-          </div>
-          <div style="display:grid; grid-template-columns: 1fr; gap:8px;">
+            <div>
+              <label style="font-size:11px; color:#666;">אחוז:</label>
+              <input type="text" class="category-diff-percentage" value="0%" readonly style="width:100%; padding:4px; border:1px solid #ddd; border-radius:3px; font-size:12px; background:#f8f9fa; text-align:center;">
+            </div>
             <div>
               <label style="font-size:11px; color:#666;">סכום (ללא מע"מ):</label>
               <input type="number" class="category-diff-amount" value="0" min="0" step="1" style="width:100%; padding:4px; border:1px solid #ddd; border-radius:3px; font-size:12px;" oninput="updateCategoryDifferentialsTotal()">
@@ -13215,13 +13217,32 @@
       updateCategoryDifferentialsTotal();
     }
     
-    // SESSION 47: UPDATE CATEGORY DIFFERENTIALS TOTAL
+    // SESSION 47: UPDATE CATEGORY DIFFERENTIALS TOTAL AND PERCENTAGES
     function updateCategoryDifferentialsTotal() {
+      const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+      const damageAssessment = helper.damage_assessment?.summary || {};
+      
+      const categoryTotals = {
+        'Parts': parseFloat(damageAssessment.Parts?.before_differentials || 0),
+        'Works': parseFloat(damageAssessment.Works?.before_differentials || 0),
+        'Repairs': parseFloat(damageAssessment.Repairs?.before_differentials || 0)
+      };
+      
       const rows = document.querySelectorAll('.category-differential-row');
       let total = 0;
       
       rows.forEach(row => {
+        const type = row.querySelector('.category-diff-type')?.value || '';
         const amount = parseFloat(row.querySelector('.category-diff-amount')?.value) || 0;
+        const percentageField = row.querySelector('.category-diff-percentage');
+        
+        if (type && categoryTotals[type] > 0 && amount > 0) {
+          const percentage = ((amount / categoryTotals[type]) * 100).toFixed(1);
+          if (percentageField) percentageField.value = `${percentage}%`;
+        } else {
+          if (percentageField) percentageField.value = '0%';
+        }
+        
         total += amount;
       });
       
@@ -17194,7 +17215,7 @@
       const grandTotalWithoutVAT = Math.round(totalComponentWear + totalInvoiceDiff);
       
       const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
-      const vatRate = parseFloat(helper.damage_assessment?.totals?.vat_rate || 17);
+      const vatRate = parseFloat(helper.calculations?.vat_rate || 17);
       const grandTotalVAT = Math.round(grandTotalWithoutVAT * (vatRate / 100));
       const grandTotalWithVAT = Math.round(grandTotalWithoutVAT + grandTotalVAT);
       
@@ -17394,14 +17415,16 @@
       
       categoryDiffRows.forEach((row, index) => {
         const type = row.querySelector('.category-diff-type')?.value || '';
-        const reason = row.querySelector('.category-diff-reason')?.value || '';
+        const description = row.querySelector('.category-diff-description')?.value || '';
+        const percentage = row.querySelector('.category-diff-percentage')?.value || '0%';
         const amount = parseFloat(row.querySelector('.category-diff-amount')?.value) || 0;
         
         if (type && amount > 0) {
           categoryDifferentials.push({
             id: index + 1,
             type: type,
-            reason: reason,
+            description: description,
+            percentage: percentage,
             amount: amount
           });
         }
