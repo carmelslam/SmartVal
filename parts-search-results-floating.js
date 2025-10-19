@@ -1059,9 +1059,9 @@
     }
   };
   
-  // SESSION 50: TAB 2 - Load Selected Parts (Supabase or Helper fallback)
+  // SESSION 50: TAB 2 - Load Selected Parts (EXACT COPY from PiP getSelectedParts)
   async function loadSelectedParts() {
-    console.log('✅ SESSION 50: Loading selected parts...');
+    console.log('✅ SESSION 50: Loading selected parts (using PiP logic)...');
     const container = document.getElementById('selectedPartsContainer');
     
     try {
@@ -1070,8 +1070,6 @@
         container.innerHTML = '<div class="no-results">לא נמצא מספר רישוי</div>';
         return;
       }
-      
-      let selectedParts = [];
       
       // Wait for Supabase to load if not available yet
       if (!window.supabase) {
@@ -1085,46 +1083,41 @@
         await loadSupabaseClient();
       }
       
-      // Try Supabase first (exact query from PiP getSelectedParts)
-      if (window.supabase) {
-        // Get case_id from helper.parts_search.selected_parts (user feedback: Session 50)
-        const caseId = window.helper?.parts_search?.selected_parts?.[0]?.case_id || window.helper?.meta?.case_id;
-        const normalizedPlate = plate.replace(/-/g, '');
-        
-        console.log('🔍 SESSION 50: Querying Supabase for plate:', normalizedPlate, 'case_id:', caseId || 'N/A');
-        
-        const { data, error } = await window.supabase
-          .from('selected_parts')
-          .select('*')
-          .eq('plate', normalizedPlate)
-          .order('selected_at', { ascending: false });
-        
-        if (error) {
-          console.error('❌ SESSION 50: Supabase error:', error);
-          throw error;
+      if (!window.supabase) {
+        container.innerHTML = '<div class="no-results">⚠️ Supabase לא זמין</div>';
+        return;
+      }
+      
+      // EXACT COPY from getSelectedParts() - parts search.html:1441-1464
+      console.log('🔍 SESSION 50: Querying Supabase for plate:', plate);
+      
+      const { data, error } = await window.supabase
+        .from('selected_parts')
+        .select('*')
+        .eq('plate', plate)
+        .order('selected_at', { ascending: false });
+      
+      if (error) {
+        console.error('❌ SESSION 50: Supabase error:', error);
+        throw error;
+      }
+      
+      const selectedParts = data || [];
+      console.log(`📊 SESSION 50: Found ${selectedParts.length} selected parts for plate "${plate}"`);
+      
+      // Debug: If no results, check what plates exist
+      if (selectedParts.length === 0) {
+        try {
+          const { data: allPlates } = await window.supabase
+            .from('selected_parts')
+            .select('plate')
+            .limit(20);
+          const uniquePlates = [...new Set(allPlates?.map(p => p.plate) || [])];
+          console.log('🔍 SESSION 50: Available plates in selected_parts:', uniquePlates);
+          console.log('💡 Your query plate:', plate);
+        } catch (e) {
+          console.warn('Could not fetch debug plates:', e);
         }
-        
-        selectedParts = data || [];
-        console.log(`📊 SESSION 50: Found ${selectedParts.length} selected parts for plate "${normalizedPlate}"`);
-        
-        // Debug: If no results, check what plates exist
-        if (!selectedParts || selectedParts.length === 0) {
-          try {
-            const { data: allPlates } = await window.supabase
-              .from('selected_parts')
-              .select('plate')
-              .limit(20);
-            const uniquePlates = [...new Set(allPlates?.map(p => p.plate) || [])];
-            console.log('🔍 SESSION 50: Available plates in selected_parts:', uniquePlates);
-            console.log('💡 Your query plate:', normalizedPlate);
-          } catch (e) {
-            console.warn('Could not fetch debug plates:', e);
-          }
-        }
-      } else {
-        // Fallback: Use helper data if available
-        console.warn('⚠️ SESSION 50: Supabase not available, using helper data');
-        selectedParts = window.helper?.parts_search?.selected_parts || [];
       }
       
       if (!selectedParts || selectedParts.length === 0) {
@@ -1298,15 +1291,15 @@
     document.querySelectorAll('.part-checkbox').forEach(cb => cb.checked = checked);
   };
   
-  // SESSION 50: TAB 3 - Load Search Results from Supabase (like PiP)
+  // SESSION 50: TAB 3 - EXACT COPY from showAllSearchResults (parts search.html:4979-5125)
   async function loadSearchResults() {
-    console.log('📊 SESSION 50: Loading search results from Supabase...');
+    console.log('📊 SESSION 50: Loading search results (using PiP logic)...');
     const container = document.getElementById('searchResultsContainer');
     
     try {
       const plate = window.helper?.meta?.plate || window.helper?.vehicle?.plate;
       if (!plate) {
-        container.innerHTML = '<div class="no-results">לא נמצא מספר רישוי</div>';
+        container.innerHTML = '<div class="no-results">❌ לא נמצא מספר רישוי</div>';
         return;
       }
       
@@ -1317,54 +1310,66 @@
       }
       
       if (!window.supabase) {
-        console.warn('⚠️ SESSION 50: Supabase not available, using helper fallback');
-        loadSearchResultsFromHelper();
+        container.innerHTML = '<div class="no-results">⚠️ Supabase לא זמין</div>';
         return;
       }
       
-      // Normalize plate (remove dashes) - exact logic from PiP
+      // EXACT COPY from showAllSearchResults - Normalize plate (remove dashes)
       const normalizedPlate = plate.replace(/-/g, '');
       console.log('📋 SESSION 50: Normalized plate:', plate, '→', normalizedPlate);
       
-      // Step 1: Get case_id from helper.parts_search.selected_parts (user feedback: Session 50)
-      const caseUuid = window.helper?.parts_search?.selected_parts?.[0]?.case_id;
+      // Step 1: Get case_id from cases table (EXACT COPY from PiP)
+      const { data: casesData, error: caseError } = await window.supabase
+        .from('cases')
+        .select('id, filing_case_id')
+        .eq('plate', normalizedPlate)
+        .order('created_at', { ascending: false });
       
-      if (!caseUuid) {
-        console.log('⚠️ SESSION 50: No case_id found in helper.parts_search.selected_parts');
+      if (caseError) {
+        console.error('❌ SESSION 50: Failed to query cases:', caseError);
+        throw new Error(`Failed to query cases: ${caseError.message}`);
+      }
+      
+      const activeCase = casesData?.find(c => c.status === 'OPEN' || c.status === 'IN_PROGRESS') || casesData?.[0];
+      
+      if (!activeCase) {
+        console.error('❌ SESSION 50: No case found for plate:', plate);
         container.innerHTML = `
           <div class="no-results">
             <div class="no-results-icon">📦</div>
-            <div>לא נמצא מזהה תיק</div>
-            <div style="font-size: 12px; color: #999; margin-top: 8px;">יש לבחור חלק תחילה מתוצאות החיפוש</div>
+            <div>לא נמצא תיק עבור רכב זה</div>
           </div>
         `;
         return;
       }
       
-      console.log('✅ SESSION 50: Using case UUID from helper:', caseUuid);
+      const caseUuid = activeCase.id;
+      console.log('✅ SESSION 50: Found case UUID:', caseUuid);
       
-      // Step 2: Get sessions for this case
+      // Step 2: Get ALL sessions for this case (EXACT COPY from PiP)
       const { data: allSessions, error: sessionsError } = await window.supabase
         .from('parts_search_sessions')
         .select('id, plate, created_at')
         .eq('case_id', caseUuid);
       
-      if (sessionsError) {
-        console.error('❌ SESSION 50: Error loading sessions:', sessionsError);
-        throw sessionsError;
-      }
-      
       console.log(`📋 SESSION 50: Found ${allSessions?.length || 0} total sessions for case`);
       
-      // Filter sessions by normalized plate
+      // Filter sessions by plate (normalize both sides for comparison)
       const sessions = allSessions?.filter(session => {
         const sessionPlate = session.plate?.replace(/-/g, '') || '';
-        return sessionPlate === normalizedPlate;
+        const queryPlate = normalizedPlate;
+        return sessionPlate === queryPlate;
       }) || [];
       
       console.log(`✅ SESSION 50: Filtered to ${sessions.length} sessions matching plate`);
       
+      if (sessionsError) {
+        console.error('❌ SESSION 50: Error loading sessions:', sessionsError);
+        throw new Error('שגיאה בטעינת היסטוריית חיפושים: ' + sessionsError.message);
+      }
+      
       if (!sessions || sessions.length === 0) {
+        console.log('⚠️ SESSION 50: No search sessions found');
         container.innerHTML = `
           <div class="no-results">
             <div class="no-results-icon">📦</div>
@@ -1374,40 +1379,59 @@
         return;
       }
       
-      // Step 3: Get results for all sessions
+      // Step 3: Get results for all sessions using OR filter (EXACT COPY from PiP)
       const sessionIds = sessions.map(s => s.id);
       console.log('📋 SESSION 50: Querying results for session IDs:', sessionIds);
       
-      const { data: resultsData, error: resultsError } = await window.supabase
+      let query = window.supabase
         .from('parts_search_results')
-        .select('*')
-        .in('session_id', sessionIds)
-        .order('created_at', { ascending: false });
+        .select('*');
       
-      if (resultsError) {
-        console.error('❌ SESSION 50: Error loading results:', resultsError);
-        throw resultsError;
+      // Use or() filter with multiple session_id matches
+      if (sessionIds.length > 0) {
+        const orFilters = sessionIds.map(id => `session_id.eq.${id}`).join(',');
+        query = query.or(orFilters);
       }
       
-      const results = resultsData || [];
-      console.log(`📊 SESSION 50: Found ${results.length} total search results`);
+      const { data: searchResults, error: resultsError } = await query.order('created_at', { ascending: false });
       
-      // Flatten JSONB results arrays (each row has a 'results' JSONB field with array of parts)
-      const flattenedResults = [];
-      results.forEach(row => {
-        const resultsArray = row.results || [];
-        resultsArray.forEach(partResult => {
-          flattenedResults.push({
-            ...partResult,
-            search_date: row.created_at,
-            data_source: row.data_source || 'unknown',
-            session_id: row.session_id
-          });
+      if (resultsError) {
+        console.error('❌ SESSION 50: Error loading search results:', resultsError);
+        throw new Error('שגיאה בטעינת תוצאות חיפוש: ' + resultsError.message);
+      }
+      
+      console.log(`✅ SESSION 50: Loaded ${searchResults?.length || 0} search result records`);
+      
+      // Flatten all results from all searches (EXACT COPY from PiP lines 5078-5103)
+      let allResults = [];
+      let totalSearches = 0;
+      
+      if (searchResults && searchResults.length > 0) {
+        searchResults.forEach(record => {
+          totalSearches++;
+          console.log(`📦 SESSION 50: Processing record ${totalSearches}`);
+          
+          // The results are stored in the 'results' JSONB field
+          const results = record.results || [];
+          console.log(`  └─ Results array length: ${results.length}`);
+          
+          // Add metadata to each result
+          if (Array.isArray(results)) {
+            results.forEach(result => {
+              allResults.push({
+                ...result,
+                search_date: record.created_at,
+                search_session_id: record.session_id,
+                data_source: record.search_query?.data_source || record.data_source || 'catalog'
+              });
+            });
+          }
         });
-      });
+      }
       
-      console.log(`📊 SESSION 50: Flattened to ${flattenedResults.length} individual parts`);
-      displaySearchResults(flattenedResults, container);
+      console.log(`📊 SESSION 50: Total searches: ${totalSearches}, Total results: ${allResults.length}`);
+      
+      displaySearchResults(allResults, container);
       
     } catch (error) {
       console.error('❌ SESSION 50: Error in loadSearchResults:', error);
