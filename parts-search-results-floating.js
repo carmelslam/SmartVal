@@ -1085,20 +1085,42 @@
         await loadSupabaseClient();
       }
       
-      // Try Supabase first
+      // Try Supabase first (exact query from PiP getSelectedParts)
       if (window.supabase) {
-        console.log('✅ SESSION 50: Loading from Supabase selected_parts table');
+        // Get case_id from helper.parts_search.selected_parts (user feedback: Session 50)
+        const caseId = window.helper?.parts_search?.selected_parts?.[0]?.case_id || window.helper?.meta?.case_id;
+        const normalizedPlate = plate.replace(/-/g, '');
+        
+        console.log('🔍 SESSION 50: Querying Supabase for plate:', normalizedPlate, 'case_id:', caseId || 'N/A');
+        
         const { data, error } = await window.supabase
           .from('selected_parts')
           .select('*')
-          .eq('plate', plate.replace(/-/g, ''))
+          .eq('plate', normalizedPlate)
           .order('selected_at', { ascending: false });
         
         if (error) {
           console.error('❌ SESSION 50: Supabase error:', error);
           throw error;
         }
+        
         selectedParts = data || [];
+        console.log(`📊 SESSION 50: Found ${selectedParts.length} selected parts for plate "${normalizedPlate}"`);
+        
+        // Debug: If no results, check what plates exist
+        if (!selectedParts || selectedParts.length === 0) {
+          try {
+            const { data: allPlates } = await window.supabase
+              .from('selected_parts')
+              .select('plate')
+              .limit(20);
+            const uniquePlates = [...new Set(allPlates?.map(p => p.plate) || [])];
+            console.log('🔍 SESSION 50: Available plates in selected_parts:', uniquePlates);
+            console.log('💡 Your query plate:', normalizedPlate);
+          } catch (e) {
+            console.warn('Could not fetch debug plates:', e);
+          }
+        }
       } else {
         // Fallback: Use helper data if available
         console.warn('⚠️ SESSION 50: Supabase not available, using helper data');
@@ -1276,8 +1298,195 @@
     document.querySelectorAll('.part-checkbox').forEach(cb => cb.checked = checked);
   };
   
-  // SESSION 49: TAB 3 - Load Search Results (rename old function)
-  function loadSearchResults() {
+  // SESSION 50: TAB 3 - Load Search Results from Supabase (like PiP)
+  async function loadSearchResults() {
+    console.log('📊 SESSION 50: Loading search results from Supabase...');
+    const container = document.getElementById('searchResultsContainer');
+    
+    try {
+      const plate = window.helper?.meta?.plate || window.helper?.vehicle?.plate;
+      if (!plate) {
+        container.innerHTML = '<div class="no-results">לא נמצא מספר רישוי</div>';
+        return;
+      }
+      
+      // Wait for Supabase
+      if (!window.supabase) {
+        console.log('⏳ SESSION 50: Waiting for Supabase client for Tab 3...');
+        await loadSupabaseClient();
+      }
+      
+      if (!window.supabase) {
+        console.warn('⚠️ SESSION 50: Supabase not available, using helper fallback');
+        loadSearchResultsFromHelper();
+        return;
+      }
+      
+      // Normalize plate (remove dashes) - exact logic from PiP
+      const normalizedPlate = plate.replace(/-/g, '');
+      console.log('📋 SESSION 50: Normalized plate:', plate, '→', normalizedPlate);
+      
+      // Step 1: Get case_id from helper.parts_search.selected_parts (user feedback: Session 50)
+      const caseUuid = window.helper?.parts_search?.selected_parts?.[0]?.case_id;
+      
+      if (!caseUuid) {
+        console.log('⚠️ SESSION 50: No case_id found in helper.parts_search.selected_parts');
+        container.innerHTML = `
+          <div class="no-results">
+            <div class="no-results-icon">📦</div>
+            <div>לא נמצא מזהה תיק</div>
+            <div style="font-size: 12px; color: #999; margin-top: 8px;">יש לבחור חלק תחילה מתוצאות החיפוש</div>
+          </div>
+        `;
+        return;
+      }
+      
+      console.log('✅ SESSION 50: Using case UUID from helper:', caseUuid);
+      
+      // Step 2: Get sessions for this case
+      const { data: allSessions, error: sessionsError } = await window.supabase
+        .from('parts_search_sessions')
+        .select('id, plate, created_at')
+        .eq('case_id', caseUuid);
+      
+      if (sessionsError) {
+        console.error('❌ SESSION 50: Error loading sessions:', sessionsError);
+        throw sessionsError;
+      }
+      
+      console.log(`📋 SESSION 50: Found ${allSessions?.length || 0} total sessions for case`);
+      
+      // Filter sessions by normalized plate
+      const sessions = allSessions?.filter(session => {
+        const sessionPlate = session.plate?.replace(/-/g, '') || '';
+        return sessionPlate === normalizedPlate;
+      }) || [];
+      
+      console.log(`✅ SESSION 50: Filtered to ${sessions.length} sessions matching plate`);
+      
+      if (!sessions || sessions.length === 0) {
+        container.innerHTML = `
+          <div class="no-results">
+            <div class="no-results-icon">📦</div>
+            <div>לא נמצאו חיפושים עבור רכב זה</div>
+          </div>
+        `;
+        return;
+      }
+      
+      // Step 3: Get results for all sessions
+      const sessionIds = sessions.map(s => s.id);
+      console.log('📋 SESSION 50: Querying results for session IDs:', sessionIds);
+      
+      const { data: resultsData, error: resultsError } = await window.supabase
+        .from('parts_search_results')
+        .select('*')
+        .in('session_id', sessionIds)
+        .order('created_at', { ascending: false });
+      
+      if (resultsError) {
+        console.error('❌ SESSION 50: Error loading results:', resultsError);
+        throw resultsError;
+      }
+      
+      const results = resultsData || [];
+      console.log(`📊 SESSION 50: Found ${results.length} total search results`);
+      
+      // Flatten JSONB results arrays (each row has a 'results' JSONB field with array of parts)
+      const flattenedResults = [];
+      results.forEach(row => {
+        const resultsArray = row.results || [];
+        resultsArray.forEach(partResult => {
+          flattenedResults.push({
+            ...partResult,
+            search_date: row.created_at,
+            data_source: row.data_source || 'unknown',
+            session_id: row.session_id
+          });
+        });
+      });
+      
+      console.log(`📊 SESSION 50: Flattened to ${flattenedResults.length} individual parts`);
+      displaySearchResults(flattenedResults, container);
+      
+    } catch (error) {
+      console.error('❌ SESSION 50: Error in loadSearchResults:', error);
+      container.innerHTML = `<div class="no-results">שגיאה: ${error.message}</div>`;
+    }
+  }
+  
+  // SESSION 50: Display search results in Tab 3 (based on PiP createSearchResultsModal - lines 5128-5320)
+  function displaySearchResults(results, container) {
+    if (!results || results.length === 0) {
+      container.innerHTML = `
+        <div class="no-results">
+          <div class="no-results-icon">📦</div>
+          <div>לא נמצאו תוצאות חיפוש</div>
+        </div>
+      `;
+      return;
+    }
+    
+    // Build table rows (exact format from PiP lines 5161-5184)
+    const tableRows = results.map((result, index) => {
+      const price = parseFloat(result.price || result.cost || 0);
+      const formattedPrice = price ? `₪${price.toLocaleString('he-IL')}` : 'לא זמין';
+      const searchDate = result.search_date ? new Date(result.search_date).toLocaleDateString('he-IL', {
+        year: '2-digit', month: '2-digit', day: '2-digit'
+      }) : 'לא זמין';
+      const dataSource = result.data_source === 'catalog' ? 'קטלוגי' : 
+                        result.data_source === 'web' ? 'אינטרנט' : 
+                        result.data_source === 'ocr' ? 'OCR' : result.data_source || 'לא זמין';
+      
+      return `
+        <tr style="background: ${index % 2 === 0 ? '#f9fafb' : 'white'}; border-bottom: 1px solid #e5e7eb;">
+          <td style="padding: 10px; text-align: center; font-size: 11px; color: #6b7280;">${searchDate}</td>
+          <td style="padding: 10px; text-align: center; font-size: 11px;">
+            <span style="background: #dbeafe; color: #1e40af; padding: 4px 8px; border-radius: 6px; font-weight: 600; font-size: 10px;">
+              ${dataSource}
+            </span>
+          </td>
+          <td style="padding: 10px; text-align: center; font-size: 11px; font-weight: 600; color: #1f2937;">${result.supplier_name || result.supplier || 'לא זמין'}</td>
+          <td style="padding: 10px; text-align: center; font-size: 11px; font-family: monospace; color: #1e40af;">${result.pcode || result.oem || 'לא זמין'}</td>
+          <td style="padding: 10px; text-align: right; font-size: 11px; color: #1f2937;">${result.cat_num_desc || result.part_name || result.description || 'לא זמין'}</td>
+          <td style="padding: 10px; text-align: center; font-size: 11px; color: #6b7280;">${result.part_family || result.group || 'לא מוגדר'}</td>
+          <td style="padding: 10px; text-align: center; font-size: 11px; font-weight: 600; color: #059669;">${formattedPrice}</td>
+        </tr>
+      `;
+    }).join('');
+    
+    // Build full table (blue theme like PiP)
+    container.innerHTML = `
+      <div style="max-height: 500px; overflow-y: auto; overflow-x: auto;">
+        <table style="width: 100%; border-collapse: collapse; border: 1px solid #e5e7eb; direction: rtl;">
+          <thead style="background: #3b82f6; color: white; position: sticky; top: 0; z-index: 1;">
+            <tr>
+              <th style="padding: 10px; text-align: center; border: 1px solid #2563eb; width: 90px; font-size: 11px;">תאריך חיפוש</th>
+              <th style="padding: 10px; text-align: center; border: 1px solid #2563eb; width: 100px; font-size: 11px;">מקור נתונים</th>
+              <th style="padding: 10px; text-align: center; border: 1px solid #2563eb; width: 120px; font-size: 11px;">ספק</th>
+              <th style="padding: 10px; text-align: center; border: 1px solid #2563eb; width: 110px; font-size: 11px;">מק"ט</th>
+              <th style="padding: 10px; text-align: right; border: 1px solid #2563eb; min-width: 200px; font-size: 11px;">תיאור</th>
+              <th style="padding: 10px; text-align: center; border: 1px solid #2563eb; width: 120px; font-size: 11px;">משפחת חלק</th>
+              <th style="padding: 10px; text-align: center; border: 1px solid #2563eb; width: 100px; font-size: 11px;">מחיר</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${tableRows}
+          </tbody>
+        </table>
+      </div>
+      
+      <!-- Summary section -->
+      <div style="background: #eff6ff; padding: 12px 15px; margin-top: 10px; border: 2px solid #3b82f6; border-radius: 8px; display: flex; justify-content: space-between; align-items: center;">
+        <div style="font-size: 14px; font-weight: 600; color: #1e40af;">
+          📊 סה"כ תוצאות: <span style="color: #2563eb; font-size: 16px;">${results.length}</span>
+        </div>
+      </div>
+    `;
+  }
+  
+  // SESSION 50: Fallback to helper data if Supabase unavailable
+  function loadSearchResultsFromHelper() {
     const results = getPartsSearchResults();
     const summary = getSummaryData();
     const container = document.getElementById('searchResultsContainer');
