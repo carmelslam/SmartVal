@@ -13069,10 +13069,20 @@
                 <span id="totalInvoiceDifferentials" style="font-size:16px; font-weight:bold;">₪0</span>
               </div>
               
-              <!-- Black box: Grand total all differentials -->
+              <!-- Black boxes: Grand total all differentials (without VAT, VAT, with VAT) -->
+              <div style="background:#000; color:white; padding:10px; border-radius:6px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center;">
+                <span style="font-size:14px; font-weight:bold;">סה"כ כללי הפרשים (ללא מע"מ):</span>
+                <span id="grandTotalDifferentialsWithoutVAT" style="font-size:16px; font-weight:bold;">₪0</span>
+              </div>
+              
+              <div style="background:#000; color:white; padding:10px; border-radius:6px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center;">
+                <span style="font-size:14px; font-weight:bold;">מע"מ:</span>
+                <span id="grandTotalDifferentialsVAT" style="font-size:16px; font-weight:bold;">₪0</span>
+              </div>
+              
               <div style="background:#000; color:white; padding:12px; border-radius:6px; display:flex; justify-content:space-between; align-items:center;">
-                <span style="font-size:16px; font-weight:bold;">סה"כ כללי הפרשים:</span>
-                <span id="grandTotalDifferentials" style="font-size:18px; font-weight:bold;">₪0</span>
+                <span style="font-size:16px; font-weight:bold;">סה"כ כללי הפרשים (כולל מע"מ):</span>
+                <span id="grandTotalDifferentialsWithVAT" style="font-size:18px; font-weight:bold;">₪0</span>
               </div>
             </div>
             
@@ -17015,6 +17025,7 @@
     }
     
     // Real differential row functionality
+    // SESSION 47: SIMPLIFIED INVOICE DIFFERENTIAL ROW (NO VAT, NO DAMAGE CENTER)
     function createDifferentialRow(data = {}) {
       const div = document.createElement('div');
       div.className = 'differential-row';
@@ -17024,38 +17035,16 @@
       div.style.borderRadius = '8px';
       div.style.border = '1px solid #e2e8f0';
       
-      // Get VAT rate based on company selection
-      const vatRate = getVatRate();
-      const amount = data.amount || 0;
-      const vat = Math.round(amount * vatRate);
-      const totalWithVat = amount + vat;
+      const amount = data.amount_without_vat || data.amount || 0;
       
-      console.log('🔍 Creating differential row with data:', data);
-      
-      // Get available damage centers for dropdown
-      const helper = window.helper || {};
-      const damageCenters = helper.centers || [];
-      
-      let damageCenterOptions = '<option value="">בחר מוקד נזק</option>';
-      damageCenters.forEach((center, index) => {
-        const centerNumber = center['Damage center Number'] || (index + 1);
-        const centerLocation = center.Location || `מוקד ${centerNumber}`;
-        const isSelected = data.damage_center === centerNumber ? 'selected' : '';
-        damageCenterOptions += `<option value="${centerNumber}" ${isSelected}>מוקד ${centerNumber} - ${centerLocation}</option>`;
-      });
+      console.log('🔍 SESSION 47: Creating differential row with data:', data);
 
       div.innerHTML = `
-        <!-- Row 1: Details (4 fields) - Responsive -->
-        <div class="diff-details-row" style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 10px; margin-bottom: 15px;">
+        <!-- Row 1: Details (3 fields) - Responsive -->
+        <div class="diff-details-row" style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 15px;">
           <div>
             <label style="display: block; font-size: 12px; color: #64748b; margin-bottom: 4px;">חלק</label>
             <input type="text" class="diff-part" placeholder="הזן חלק" value="${data.part || ''}" style="width:100%; padding:10px; border-radius:6px; border:1px solid #cbd5e1; font-size:14px;">
-          </div>
-          <div>
-            <label style="display: block; font-size: 12px; color: #64748b; margin-bottom: 4px;">מוקד נזק</label>
-            <select class="diff-damage-center" onchange="updateDifferentialCalculations()" style="width:100%; padding:10px; border-radius:6px; border:1px solid #cbd5e1; font-size:14px;">
-              ${damageCenterOptions}
-            </select>
           </div>
           <div>
             <label style="display: block; font-size: 12px; color: #64748b; margin-bottom: 4px;">מהות ההפרש</label>
@@ -17075,19 +17064,11 @@
           </div>
         </div>
         
-        <!-- Row 2: Costs (3 fields) - Responsive -->
-        <div class="diff-costs-row" style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px;">
+        <!-- Row 2: Amount (1 field) - Responsive -->
+        <div class="diff-costs-row" style="display: grid; grid-template-columns: 1fr; gap: 10px;">
           <div>
-            <label style="display: block; font-size: 12px; color: #64748b; margin-bottom: 4px;">מחיר ללא מע״מ</label>
-            <input type="number" class="diff-amount" placeholder="0" value="${amount}" onchange="updateDifferentialCalculations()" style="width:100%; padding:10px; border-radius:6px; border:1px solid #cbd5e1; font-size:14px;">
-          </div>
-          <div>
-            <label style="display: block; font-size: 12px; color: #64748b; margin-bottom: 4px;">ערך מע״מ</label>
-            <input type="number" class="diff-vat" placeholder="0" value="${vat}" readonly style="width:100%; padding:10px; border-radius:6px; border:1px solid #cbd5e1; background:#f1f5f9; font-size:14px; color:#64748b;">
-          </div>
-          <div>
-            <label style="display: block; font-size: 12px; color: #64748b; margin-bottom: 4px;">מחיר עם מע״מ</label>
-            <input type="number" class="diff-total" placeholder="0" value="${totalWithVat}" readonly style="width:100%; padding:10px; border-radius:6px; border:1px solid #cbd5e1; background:#f1f5f9; font-size:14px; color:#64748b;">
+            <label style="display: block; font-size: 12px; color: #64748b; margin-bottom: 4px;">סכום (ללא מע״מ)</label>
+            <input type="number" class="diff-amount" placeholder="0" value="${amount}" onchange="updateDifferentialsSummary()" style="width:100%; padding:10px; border-radius:6px; border:1px solid #cbd5e1; font-size:14px;">
           </div>
         </div>
         
@@ -17124,36 +17105,24 @@
         </style>
       `;
       
-      // Add event listeners
+      // SESSION 47: Add event listeners (simplified - no VAT calculations)
       const amountInput = div.querySelector('.diff-amount');
-      const vatInput = div.querySelector('.diff-vat');
-      const totalInput = div.querySelector('.diff-total');
       const removeBtn = div.querySelector('.btn-remove');
       
       amountInput.addEventListener('input', function() {
-        const newAmount = parseFloat(this.value) || 0;
-        const newVat = Math.round(newAmount * vatRate);
-        const newTotal = newAmount + newVat;
-        
-        vatInput.value = newVat;
-        totalInput.value = newTotal;
-        
-        // Recalculate summary and auto-save
         updateDifferentialsSummary();
-        saveDifferentialsToHelper();
+        setTimeout(saveDifferentialsToHelper, 100);
       });
       
       // Add auto-save to text inputs with delay to ensure data is captured
       setTimeout(() => {
         const partField = div.querySelector('.diff-part');
-        const damageCenterDropdown = div.querySelector('.diff-damage-center');
         const natureDropdown = div.querySelector('.diff-nature-dropdown');
         const natureOtherField = div.querySelector('.diff-nature-other');
         const reasonField = div.querySelector('.diff-reason');
         
-        console.log('🔗 ATTACHING EVENT LISTENERS:', {
+        console.log('🔗 SESSION 47: ATTACHING EVENT LISTENERS:', {
           partField: !!partField,
-          damageCenterDropdown: !!damageCenterDropdown,
           natureDropdown: !!natureDropdown,
           natureOtherField: !!natureOtherField,
           reasonField: !!reasonField
@@ -17162,13 +17131,6 @@
         if (partField) {
           partField.addEventListener('input', (e) => {
             console.log('🔥 PART INPUT EVENT:', e.target.value);
-            setTimeout(saveDifferentialsToHelper, 100);
-          });
-        }
-        
-        if (damageCenterDropdown) {
-          damageCenterDropdown.addEventListener('change', (e) => {
-            console.log('🔥 DAMAGE CENTER DROPDOWN EVENT:', e.target.value);
             setTimeout(saveDifferentialsToHelper, 100);
           });
         }
@@ -17227,17 +17189,26 @@
       
       const totalComponentWear = Math.round(breakdown.totalReduction + breakdown.totalWear + categoryTotal);
       const totalInvoiceDiff = Math.round(invoiceTotal);
-      const grandTotal = Math.round(totalComponentWear + totalInvoiceDiff);
+      const grandTotalWithoutVAT = Math.round(totalComponentWear + totalInvoiceDiff);
+      
+      const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+      const vatRate = parseFloat(helper.damage_assessment?.totals?.vat_rate || 17);
+      const grandTotalVAT = Math.round(grandTotalWithoutVAT * (vatRate / 100));
+      const grandTotalWithVAT = Math.round(grandTotalWithoutVAT + grandTotalVAT);
       
       const componentWearEl = document.getElementById('totalComponentWear');
       const invoiceDiffEl = document.getElementById('totalInvoiceDifferentials');
-      const grandTotalEl = document.getElementById('grandTotalDifferentials');
+      const grandTotalWithoutVATEl = document.getElementById('grandTotalDifferentialsWithoutVAT');
+      const grandTotalVATEl = document.getElementById('grandTotalDifferentialsVAT');
+      const grandTotalWithVATEl = document.getElementById('grandTotalDifferentialsWithVAT');
       
       if (componentWearEl) componentWearEl.textContent = `₪${totalComponentWear.toLocaleString()}`;
       if (invoiceDiffEl) invoiceDiffEl.textContent = `₪${totalInvoiceDiff.toLocaleString()}`;
-      if (grandTotalEl) grandTotalEl.textContent = `₪${grandTotal.toLocaleString()}`;
+      if (grandTotalWithoutVATEl) grandTotalWithoutVATEl.textContent = `₪${grandTotalWithoutVAT.toLocaleString()}`;
+      if (grandTotalVATEl) grandTotalVATEl.textContent = `₪${grandTotalVAT.toLocaleString()}`;
+      if (grandTotalWithVATEl) grandTotalWithVATEl.textContent = `₪${grandTotalWithVAT.toLocaleString()}`;
       
-      console.log('📊 SESSION 47: Updated subtotals - Component: ₪', totalComponentWear, ', Invoice: ₪', totalInvoiceDiff, ', Grand: ₪', grandTotal);
+      console.log('📊 SESSION 47: Updated subtotals - Component: ₪', totalComponentWear, ', Invoice: ₪', totalInvoiceDiff, ', Grand (no VAT): ₪', grandTotalWithoutVAT, ', VAT: ₪', grandTotalVAT, ', Grand (with VAT): ₪', grandTotalWithVAT);
     }
     
     function toggleDifferentialsTable() {
@@ -17395,35 +17366,24 @@
       
       rows.forEach((row, index) => {
         const partField = row.querySelector('.diff-part');
-        const damageCenterField = row.querySelector('.diff-damage-center');
         const natureField = row.querySelector('.diff-nature');
         const reasonField = row.querySelector('.diff-reason');
         const amountField = row.querySelector('.diff-amount');
-        const vatField = row.querySelector('.diff-vat');
-        const totalField = row.querySelector('.diff-total');
         
         const part = partField?.value || '';
-        const damage_center = damageCenterField?.value || '';
         const nature = natureField?.value || '';
         const reason = reasonField?.value || '';
         const amount = parseFloat(amountField?.value) || 0;
-        const vat = parseFloat(vatField?.value) || 0;
-        const total = parseFloat(totalField?.value) || 0;
         
         differentialsData.push({
           id: index + 1,
           part: part,
-          damage_center: damage_center,
           nature: nature,
           reason: reason,
-          amount_without_vat: amount,
-          vat_amount: vat,
-          amount_with_vat: total
+          amount_without_vat: amount
         });
         
         totalAmount += amount;
-        totalVat += vat;
-        totalWithVat += total;
       });
       
       // SESSION 47: Collect category differentials
@@ -17452,6 +17412,11 @@
       if (!helper.final_report) helper.final_report = {};
       
       const breakdown = calculatePartsDifferentialsBreakdown();
+      const vatRate = parseFloat(helper.damage_assessment?.totals?.vat_rate || 17);
+      const categoryTotal = categoryDifferentials.reduce((sum, item) => sum + item.amount, 0);
+      const grandTotalWithoutVAT = totalAmount + breakdown.totalReduction + breakdown.totalWear + categoryTotal;
+      const grandTotalVAT = Math.round(grandTotalWithoutVAT * (vatRate / 100));
+      const grandTotalWithVAT = Math.round(grandTotalWithoutVAT + grandTotalVAT);
       
       helper.final_report.differential = {
         has_differentials: document.getElementById('hasDifferentials')?.checked || false,
@@ -17463,12 +17428,13 @@
         },
         summary: {
           invoice_total: totalAmount,
-          invoice_vat: totalVat,
-          invoice_total_with_vat: totalWithVat,
           parts_reductions_total: breakdown.totalReduction,
           parts_wear_total: breakdown.totalWear,
-          category_total: categoryDifferentials.reduce((sum, item) => sum + item.amount, 0),
-          grand_total: totalAmount + breakdown.totalReduction + breakdown.totalWear + categoryDifferentials.reduce((sum, item) => sum + item.amount, 0),
+          category_total: categoryTotal,
+          grand_total_without_vat: Math.round(grandTotalWithoutVAT),
+          grand_total_vat: grandTotalVAT,
+          grand_total_with_vat: grandTotalWithVAT,
+          vat_rate: vatRate,
           currency: '₪'
         },
         last_updated: new Date().toISOString()
