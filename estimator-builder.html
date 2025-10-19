@@ -9490,13 +9490,19 @@
 
     // CREATE EDITABLE PART ROW - FROM FINAL-REPORT-BUILDER
     function createEditablePartRow(part, centerIndex, partIndex) {
-      const partName = part?.name || '';
-      const partDesc = part?.desc || part?.description || part?.תיאור || '';
-      const partPrice = part?.price || 0;
-      const partSource = part?.source || part?.מקור || '';
+      // SESSION 49: Extract fields for new structure (catalog_code, part_name, quantity, total_price)
+      const catalogCode = part?.catalog_code || part?.catalogue_code || part?.part_code || part?.["קוד קטלוגי"] || '';
+      const partName = part?.name || part?.["שם חלק"] || '';
+      const quantity = part?.quantity || part?.qty || part?.["כמות"] || 1;
+      const totalPrice = part?.total_price || part?.["סה\"כ מחיר"] || part?.price || 0;
       
       return `
-        <div class="part-row" data-center="${centerIndex}" data-part="${partIndex}" style="display: grid; grid-template-columns: 2fr 2fr 1fr auto; gap: 8px; margin-bottom: 8px; padding: 8px; background: #f9f9f9; border-radius: 4px;">
+        <div class="part-row" data-center="${centerIndex}" data-part="${partIndex}" style="display: grid; grid-template-columns: 1.5fr 2fr 1fr 1fr auto; gap: 8px; margin-bottom: 8px; padding: 8px; background: #f9f9f9; border-radius: 4px;">
+          <div>
+            <label style="font-size: 12px; color: #666; margin-bottom: 2px; display: block;">קוד קטלוגי:</label>
+            <input type="text" value="${catalogCode}" placeholder="קוד קטלוגי" class="part-catalog-code" 
+                   style="width: 100%; padding: 6px; border: 1px solid #ddd; border-radius: 4px; font-size: 13px;" />
+          </div>
           <div style="position: relative;">
             <label style="font-size: 12px; color: #666; margin-bottom: 2px; display: block;">שם החלק:</label>
             <input type="text" value="${partName}" placeholder="שם החלק" class="part-name" 
@@ -9505,15 +9511,18 @@
             <div class="part-suggestions" style="position: absolute; top: 100%; left: 0; right: 0; background: white; border: 1px solid #ddd; border-top: none; border-radius: 0 0 4px 4px; display: none; z-index: 1000; max-height: 200px; overflow-y: auto;"></div>
           </div>
           <div>
-            <label style="font-size: 12px; color: #666; margin-bottom: 2px; display: block;">תיאור:</label>
-            <input type="text" value="${partDesc}" placeholder="תיאור החלק" class="part-desc" style="width: 100%; padding: 6px; border: 1px solid #ddd; border-radius: 4px; font-size: 13px;" />
+            <label style="font-size: 12px; color: #666; margin-bottom: 2px; display: block;">כמות:</label>
+            <input type="number" value="${quantity}" placeholder="כמות" class="part-quantity" min="1" 
+                   style="width: 100%; padding: 6px; border: 1px solid #ddd; border-radius: 4px; font-size: 13px;" />
           </div>
           <div>
-            <label style="font-size: 12px; color: #666; margin-bottom: 2px; display: block;">עלות (₪):</label>
-            <input type="number" value="${partPrice}" placeholder="0" class="part-price" style="width: 100%; padding: 6px; border: 1px solid #ddd; border-radius: 4px; font-size: 13px;" min="0" step="0.01" />
+            <label style="font-size: 12px; color: #666; margin-bottom: 2px; display: block;">סה"כ מחיר:</label>
+            <input type="number" value="${totalPrice}" placeholder="מחיר" class="part-total-price" 
+                   style="width: 100%; padding: 6px; border: 1px solid #ddd; border-radius: 4px; font-size: 13px;" />
           </div>
-          <button onclick="estimateRemovePartRow(${centerIndex}, ${partIndex})" style="background: #dc3545; color: white; border: none; padding: 6px 10px; border-radius: 4px; cursor: pointer; font-size: 12px; align-self: end;">מחק</button>
-          <input type="hidden" value="${partSource}" class="part-source" />
+          <div style="align-self: end;">
+            <button onclick="estimateRemovePartRow(${centerIndex}, ${partIndex})" style="background: #dc3545; color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 12px;">מחק</button>
+          </div>
         </div>
       `;
     }
