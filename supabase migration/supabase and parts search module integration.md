@@ -29269,3 +29269,439 @@ const totalCost = Math.round(parseFloat(totalCostText.replace(/[₪,]/g, '')) ||
 
 **END OF SESSION 46 DOCUMENTATION**
 
+---
+
+# SESSION 47: הפרשים (DIFFERENTIALS) SECTION RESTRUCTURE
+
+**Date:** 2025-10-19  
+**File:** `final-report-builder.html`  
+**Lines Modified:** ~500 lines (new functions + restructured HTML + updated logic)
+
+## Overview
+
+Completely restructured the הפרשים (Differentials) section from a single invoice-based table into a comprehensive 4-category system that auto-imports parts reductions/wear and allows manual category and invoice differentials.
+
+---
+
+## Task Breakdown
+
+### 1. **Create Parts Differentials Breakdown Calculator**
+
+**Function:** `calculatePartsDifferentialsBreakdown()` (lines 13272-13332)
+
+**Purpose:** Break down total parts differentials into reduction vs wear components by analyzing individual parts.
+
+**Logic:**
+```javascript
+- Loop through all helper.centers[].Parts.parts_required[]
+- For each part with reduction_percentage > 0:
+  - Calculate: (price_per_unit × reduction_percentage/100) × quantity
+  - Store: {centerName, partName, amount, percentage}
+  - Add to totalReduction
+  
+- For each part with wear_percentage > 0:
+  - Calculate: (price_after_reduction × wear_percentage/100) × quantity
+  - Store: {centerName, partName, amount, percentage}
+  - Add to totalWear
+
+- Return: {reductions[], wear[], totalReduction, totalWear}
+```
+
+**Data Source:**
+- `helper.centers[i].Parts.parts_required[j].price_per_unit`
+- `helper.centers[i].Parts.parts_required[j].reduction_percentage`
+- `helper.centers[i].Parts.parts_required[j].wear_percentage`
+- `helper.centers[i].Parts.parts_required[j].quantity`
+
+---
+
+### 2. **Restructure הפרשים Section HTML**
+
+**Function:** `createDifferentialsSection()` (lines 12976-13095)
+
+**Old Structure:**
+- Single checkbox to enable differentials
+- Single table for invoice differentials only
+- Simple subtotal (without VAT, VAT, with VAT)
+
+**New Structure (4 Categories):**
+
+#### Category 1: הנחת רכיב (Parts Reductions - Auto-imported - Red)
+- **Style:** Red border (#dc3545), light red background (#fff5f5)
+- **Collapsible:** Yes (default: expanded)
+- **Content:** Auto-populated list showing:
+  - Center Name (120px)
+  - Part Name (1fr)
+  - Percentage badge (60px) - highlighted with red background
+  - Amount (80px)
+- **Subtotal:** סה"כ הנחת רכיב
+- **Data Source:** `calculatePartsDifferentialsBreakdown().reductions`
+
+#### Category 2: בלאי רכיב (Parts Wear - Auto-imported - Red)
+- **Style:** Red border (#dc3545), light red background (#fff5f5)
+- **Collapsible:** Yes (default: expanded)
+- **Content:** Auto-populated list showing:
+  - Center Name (120px)
+  - Part Name (1fr)
+  - Percentage badge (60px) - highlighted with red background
+  - Amount (80px)
+- **Subtotal:** סה"כ בלאי רכיב
+- **Data Source:** `calculatePartsDifferentialsBreakdown().wear`
+
+#### Category 3: הפרשי קטגוריה (Category Differentials - Manual - Gray)
+- **Style:** Gray border (#6c757d), light gray background (#f8f9fa)
+- **Collapsible:** Yes (default: collapsed)
+- **Description:** "כל עבודות הפחתות כולל פירוקים והרכבות"
+- **Fields per row:**
+  - Category Dropdown (1fr): Parts/Works/Repairs
+  - Percentage (80px): Editable
+  - Category Value (120px): Auto-filled from `helper.damage_assessment.summary.{Category}.before_differentials`
+  - Amount (100px): User input
+- **Add Button:** "הוסף הפרש קטגוריה"
+- **Auto-calculation:** Percentage = (amount / category_value_before_differentials) × 100
+- **Data Source:** Manual user input
+
+#### Category 4: הפרשי חשבוניות (Invoice Differentials - Manual - Gray)
+- **Style:** Gray border (#6c757d), light gray background (#f1f1f1)
+- **Collapsible:** Yes (default: collapsed)
+- **Fields per row (SIMPLIFIED - NO VAT, NO DAMAGE CENTER):**
+  - Part (1fr)
+  - Nature dropdown (1fr): Parts/Works/Repairs/Other
+  - Reason (1fr)
+  - Amount without VAT (1fr): User input
+- **Add Button:** "הוסף הפרש"
+- **Data Source:** Manual user input
+
+**Subtotals Section:**
+1. **סה"כ בלאי רכיב** (Gray box): Total of reductions + wear + category differentials
+2. **סה"כ הפרשי חשבוניות** (Black box): Total of invoice differentials
+3. **Grand Totals (3 Black boxes):**
+   - סה"כ כללי הפרשים (ללא מע"מ): All differentials without VAT
+   - מע"מ: VAT amount (calculated from helper.calculations.vat_rate)
+   - סה"כ כללי הפרשים (כולל מע"מ): All differentials with VAT
+
+---
+
+### 3. **Create Rendering Functions**
+
+#### `renderPartsReductionsSection()` (lines 13098-13127)
+- Calls `calculatePartsDifferentialsBreakdown()`
+- Renders list of parts with reductions
+- Grid: `120px 1fr 60px 80px` (Center | Part | % | Amount)
+- Shows "אין הנחות רכיב" if empty
+- Updates `totalPartsReductions` display
+
+#### `renderPartsWearSection()` (lines 13129-13158)
+- Calls `calculatePartsDifferentialsBreakdown()`
+- Renders list of parts with wear
+- Grid: `120px 1fr 60px 80px` (Center | Part | % | Amount)
+- Shows "אין בלאי רכיב" if empty
+- Updates `totalPartsWear` display
+
+#### `toggleCollapsibleSection(contentId)` (lines 13160-13173)
+- Toggles visibility of collapsible sections
+- Updates toggle icon: ▼ (expanded) / ◀ (collapsed)
+
+#### `addCategoryDifferentialRow()` (lines 13176-13212)
+- Creates new category differential row
+- Grid: `1fr 80px 120px 100px` (Category | % | Value | Amount)
+- Percentage is editable
+- Category Value is readonly (auto-filled)
+
+#### `removeCategoryDifferentialRow(button)` (lines 13214-13218)
+- Removes category differential row
+- Recalculates totals
+
+#### `updateCategoryDifferentialsTotal()` (lines 13220-13258)
+- Reads category totals from `helper.damage_assessment.summary.{Parts|Works|Repairs}.before_differentials`
+- Auto-fills category value field when category is selected
+- Calculates percentage: `(amount / category_total) × 100`
+- Updates all subtotals
+
+#### `populateDamageCentersDropdown(selectElement)` (lines 13260-13272)
+- (Not used anymore - removed damage center field from invoice differentials)
+
+---
+
+### 4. **Update Subtotals Calculation**
+
+#### `updateAllDifferentialsSubtotals()` (lines 17219-17260)
+
+**Calculations:**
+```javascript
+1. totalComponentWear = reductions + wear + categoryDifferentials
+2. totalInvoiceDiff = sum of all invoice differential amounts
+3. grandTotalWithoutVAT = totalComponentWear + totalInvoiceDiff
+4. VAT Rate: Read from window.helper.calculations.vat_rate (priority) or helper.calculations.vat_rate
+5. grandTotalVAT = grandTotalWithoutVAT × (vatRate / 100)
+6. grandTotalWithVAT = grandTotalWithoutVAT + grandTotalVAT
+```
+
+**Updates:**
+- `totalComponentWear` display
+- `totalInvoiceDifferentials` display
+- `grandTotalDifferentialsWithoutVAT` display
+- `grandTotalDifferentialsVAT` display
+- `grandTotalDifferentialsWithVAT` display
+
+**VAT Rate Source:** `window.helper.calculations.vat_rate` → `helper.calculations.vat_rate` → fallback 18%
+
+---
+
+### 5. **Update Toggle Function**
+
+#### `toggleDifferentialsTable()` (lines 17262-17285)
+
+**Changed from:**
+- `differentialsTable` container
+
+**Changed to:**
+- `differentialsMainContainer`
+
+**When checkbox is checked:**
+- Shows main container
+- Calls `renderPartsReductionsSection()`
+- Calls `renderPartsWearSection()`
+- Calls `updateAllDifferentialsSubtotals()`
+
+---
+
+### 6. **Update Save Function**
+
+#### `saveDifferentialsToHelper()` (lines 17395-17477)
+
+**Old Structure:**
+```javascript
+helper.final_report.differential = {
+  has_differentials: boolean,
+  items: [{part, damage_center, nature, reason, amount, vat, total}],
+  summary: {total_amount_without_vat, total_vat, total_amount_with_vat}
+}
+```
+
+**New Structure:**
+```javascript
+helper.final_report.differential = {
+  has_differentials: boolean,
+  
+  invoice_items: [{
+    id, part, nature, reason, 
+    amount_without_vat  // NO VAT FIELDS, NO DAMAGE_CENTER
+  }],
+  
+  category_items: [{
+    id, type, percentage, category_value, amount
+  }],
+  
+  parts_breakdown: {
+    reductions: total,
+    wear: total
+  },
+  
+  summary: {
+    invoice_total,
+    parts_reductions_total,
+    parts_wear_total,
+    category_total,
+    grand_total_without_vat,
+    grand_total_vat,
+    grand_total_with_vat,
+    vat_rate,  // From helper.calculations.vat_rate
+    currency: '₪'
+  }
+}
+```
+
+**Collection Process:**
+1. Collect invoice items (NO damage_center, NO vat fields)
+2. Collect category items (type, percentage, category_value, amount)
+3. Calculate parts breakdown (reductions + wear from function)
+4. Calculate all totals with VAT
+
+---
+
+### 7. **Simplify Invoice Differential Row**
+
+#### `createDifferentialRow(data)` (lines 17028-17169)
+
+**Removed Fields:**
+- Damage Center dropdown
+- VAT amount field (diff-vat)
+- Total with VAT field (diff-total)
+
+**New Layout:**
+- Row 1: Part (1fr) | Nature (1fr) | Reason (1fr)
+- Row 2: Amount without VAT (1fr)
+
+**Event Listeners:**
+- Removed VAT calculation logic
+- Removed damage center change listener
+- Kept amount input → triggers `updateDifferentialsSummary()`
+
+---
+
+## UI/UX Improvements
+
+### Mobile Responsiveness
+- Grid layouts use `repeat(auto-fit, minmax(px, 1fr))` for automatic wrapping
+- Collapsible sections reduce screen clutter
+- All fields properly sized for mobile (min 44px touch targets)
+
+### Visual Hierarchy
+- **Red sections** = Auto-imported data (read-only lists)
+- **Gray sections** = Manual user input (editable forms)
+- **Black subtotal boxes** = Final calculations
+- Percentage badges with highlighted backgrounds for visibility
+
+### Field Order Logic
+1. **Parts Reductions/Wear:** Center Name → Part Name → Percentage → Amount
+2. **Category Differentials:** Category Dropdown → Percentage → Category Value → Amount
+3. **Invoice Differentials:** Part → Nature → Reason → Amount
+
+---
+
+## Data Flow
+
+```
+1. Parts Data Entry (parts-required.html)
+   ↓
+2. Save to helper.centers[].Parts.parts_required[]
+   ↓
+3. calculatePartsDifferentialsBreakdown() extracts reductions/wear
+   ↓
+4. renderPartsReductionsSection() + renderPartsWearSection() display
+   ↓
+5. User adds category/invoice differentials manually
+   ↓
+6. updateCategoryDifferentialsTotal() calculates percentages
+   ↓
+7. updateAllDifferentialsSubtotals() calculates all totals with VAT
+   ↓
+8. saveDifferentialsToHelper() saves complete structure
+   ↓
+9. helper.final_report.differential contains all 4 categories
+```
+
+---
+
+## Key Functions Modified
+
+| Function | Lines | Purpose |
+|----------|-------|---------|
+| `calculatePartsDifferentialsBreakdown()` | 13272-13332 | Calculate reduction vs wear breakdown |
+| `createDifferentialsSection()` | 12976-13095 | HTML structure for 4 categories |
+| `renderPartsReductionsSection()` | 13098-13127 | Render reduction items list |
+| `renderPartsWearSection()` | 13129-13158 | Render wear items list |
+| `toggleCollapsibleSection()` | 13160-13173 | Toggle section visibility |
+| `addCategoryDifferentialRow()` | 13176-13212 | Add manual category row |
+| `removeCategoryDifferentialRow()` | 13214-13218 | Remove category row |
+| `updateCategoryDifferentialsTotal()` | 13220-13258 | Calculate category % and totals |
+| `updateAllDifferentialsSubtotals()` | 17219-17260 | Calculate all subtotals with VAT |
+| `toggleDifferentialsTable()` | 17262-17285 | Show/hide differentials section |
+| `saveDifferentialsToHelper()` | 17395-17477 | Save new 4-category structure |
+| `updateDifferentialsSummary()` | 17504-17510 | Trigger subtotal recalculation |
+| `createDifferentialRow()` | 17028-17169 | Create simplified invoice row |
+
+---
+
+## Testing Scenarios
+
+### Scenario 1: Parts with Reductions
+1. Add parts in parts-required.html with reduction_percentage > 0
+2. Go to final-report-builder
+3. Enable differentials checkbox
+4. **Expected:** הנחת רכיב section shows all parts with reductions, percentages, and amounts
+
+### Scenario 2: Parts with Wear
+1. Add parts in parts-required.html with wear_percentage > 0
+2. Go to final-report-builder
+3. Enable differentials checkbox
+4. **Expected:** בלאי רכיב section shows all parts with wear, percentages, and amounts
+
+### Scenario 3: Category Differentials
+1. Click "הוסף הפרש קטגוריה"
+2. Select category (e.g., "חלקים")
+3. Enter amount (e.g., 1000)
+4. **Expected:** 
+   - Category value auto-fills from damage_assessment.summary.Parts.before_differentials
+   - Percentage auto-calculates
+   - Subtotals update
+
+### Scenario 4: Invoice Differentials
+1. Click "הוסף הפרש" in invoice section
+2. Enter part, nature, reason, amount
+3. **Expected:**
+   - No VAT fields visible
+   - No damage center field
+   - Only amount without VAT
+   - Subtotals update
+
+### Scenario 5: VAT Calculation
+1. Add any differentials
+2. Check saved data in helper.final_report.differential.summary
+3. **Expected:**
+   - grand_total_without_vat = sum of all differentials
+   - grand_total_vat = grand_total_without_vat × (vat_rate / 100)
+   - grand_total_with_vat = grand_total_without_vat + grand_total_vat
+   - vat_rate comes from helper.calculations.vat_rate (NOT hardcoded 17)
+
+---
+
+## Known Issues for Next Session
+
+### CRITICAL: VAT Rate Still Shows 17
+**Issue:** Even though code reads from `helper.calculations.vat_rate`, the saved value shows 17% instead of the actual VAT rate (18%).
+
+**Current Code (lines 17218, 17440):**
+```javascript
+const vatRate = parseFloat(window.helper?.calculations?.vat_rate || helper.calculations?.vat_rate || 18);
+```
+
+**Debug Steps Needed:**
+1. Check if `helper.calculations.vat_rate` exists in sessionStorage
+2. Check if `window.helper.calculations.vat_rate` is properly initialized
+3. Verify the console log output at line 17446 to see which source is being used
+4. Possible fix: Remove fallback and always read from calculations object
+
+**Location to Fix:**
+- Line 17218: `updateAllDifferentialsSubtotals()`
+- Line 17440: `saveDifferentialsToHelper()`
+
+**Suggestion:**
+```javascript
+// Instead of fallback, throw error if vat_rate doesn't exist
+const vatRate = parseFloat(window.helper?.calculations?.vat_rate || helper.calculations?.vat_rate);
+if (!vatRate) {
+  console.error('❌ VAT rate not found in helper.calculations.vat_rate');
+}
+```
+
+---
+
+## Completion Checklist
+
+- [x] Create calculatePartsDifferentialsBreakdown() function
+- [x] Restructure createDifferentialsSection() HTML to 4 categories
+- [x] Create renderPartsReductionsSection() function
+- [x] Create renderPartsWearSection() function
+- [x] Create toggleCollapsibleSection() function
+- [x] Create addCategoryDifferentialRow() function
+- [x] Create removeCategoryDifferentialRow() function
+- [x] Update updateCategoryDifferentialsTotal() with percentage calculation
+- [x] Update updateAllDifferentialsSubtotals() with VAT calculation
+- [x] Update toggleDifferentialsTable() to call render functions
+- [x] Update saveDifferentialsToHelper() to save 4-category structure
+- [x] Simplify createDifferentialRow() - remove VAT and damage center
+- [x] Update helper.final_report.differential data structure
+- [x] Add percentage column to parts reductions/wear lists
+- [x] Remove description field from category differentials
+- [x] Add category value field to category differentials
+- [x] Make percentage field editable (not readonly)
+- [x] Remove "Collapsable" badges from section titles
+- [x] Fix grid spacing (120px for center name instead of 2fr)
+- [ ] **Fix VAT rate to read from helper.calculations.vat_rate correctly**
+
+---
+
+**END OF SESSION 47 DOCUMENTATION**
+
