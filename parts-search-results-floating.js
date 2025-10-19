@@ -676,32 +676,55 @@
       
       // Create HTML for each damage center
       const groupsHTML = Object.values(groupedParts).map(group => {
-        const subtotal = group.parts.reduce((sum, part) => {
-          const price = parseFloat(part.price || part.cost || part.expected_cost || 0);
+        const subtotalBefore = group.parts.reduce((sum, part) => {
+          const price = parseFloat(part.price_per_unit || part.price || part.cost || part.expected_cost || 0);
           const qty = parseInt(part.quantity || part.qty || 1);
           return sum + (price * qty);
         }, 0);
         
-        const partsRows = group.parts.map((part, partIndex) => {
-          const price = parseFloat(part.price || part.cost || part.expected_cost || 0);
+        const subtotalAfter = group.parts.reduce((sum, part) => {
+          const pricePerUnit = parseFloat(part.price_per_unit || part.price || part.cost || part.expected_cost || 0);
+          const reduction = parseFloat(part.reduction || 0);
+          const wear = parseFloat(part.wear || 0);
           const qty = parseInt(part.quantity || part.qty || 1);
-          const total = price * qty;
+          const priceAfterReduction = pricePerUnit * (1 - reduction / 100);
+          const updatedPrice = priceAfterReduction * (1 - wear / 100);
+          return sum + (updatedPrice * qty);
+        }, 0);
+        
+        const partsRows = group.parts.map((part, partIndex) => {
+          const pricePerUnit = parseFloat(part.price_per_unit || part.price || part.cost || part.expected_cost || 0);
+          const reduction = parseFloat(part.reduction || 0);
+          const wear = parseFloat(part.wear || 0);
+          const qty = parseInt(part.quantity || part.qty || 1);
+          
+          const priceAfterReduction = pricePerUnit * (1 - reduction / 100);
+          const updatedPrice = priceAfterReduction * (1 - wear / 100);
+          const totalBeforeReductions = pricePerUnit * qty;
+          const totalAfterReductions = updatedPrice * qty;
           
           return `
             <tr>
-              <td>${partIndex + 1}</td>
-              <td>${part.catalog_code || part.pcode || part.oem || 'N/A'}</td>
-              <td style="text-align: right;">${part.part_name || part.name || 'N/A'}</td>
-              <td>${qty}</td>
-              <td>₪${price.toLocaleString('he-IL')}</td>
-              <td style="font-weight: bold;">₪${total.toLocaleString('he-IL')}</td>
-              <td>
+              <td style="text-align: center; padding: 8px;">${partIndex + 1}</td>
+              <td style="padding: 8px;">${part.catalog_code || part.pcode || part.oem || 'N/A'}</td>
+              <td style="text-align: right; padding: 8px;">${part.part_name || part.name || 'N/A'}</td>
+              <td style="text-align: center; padding: 8px;">${part.description || '-'}</td>
+              <td style="text-align: center; padding: 8px;">₪${pricePerUnit.toFixed(2)}</td>
+              <td style="text-align: center; padding: 8px;">${reduction}%</td>
+              <td style="text-align: center; padding: 8px;">${wear}%</td>
+              <td style="text-align: center; padding: 8px; font-weight: bold; color: #059669;">₪${updatedPrice.toFixed(2)}</td>
+              <td style="text-align: center; padding: 8px;">${qty}</td>
+              <td style="text-align: center; padding: 8px; background: #fef3c7;">₪${Math.round(totalBeforeReductions).toLocaleString('he-IL')}</td>
+              <td style="text-align: center; padding: 8px; font-weight: bold; background: #d1fae5;">₪${Math.round(totalAfterReductions).toLocaleString('he-IL')}</td>
+              <td style="text-align: center; padding: 8px;">${part.source || '-'}</td>
+              <td style="text-align: center; padding: 8px;">${part.supplier || part.supplier_name || '-'}</td>
+              <td style="text-align: center; padding: 8px; white-space: nowrap;">
                 <button onclick="editRequiredPart('${group.id}', ${partIndex})" 
-                        style="background: #f59e0b; color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer;">
+                        style="background: #f59e0b; color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; margin-left: 4px;">
                   ✏️
                 </button>
                 <button onclick="deleteRequiredPart('${group.id}', ${partIndex})" 
-                        style="background: #ef4444; color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; margin-right: 4px;">
+                        style="background: #ef4444; color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer;">
                   🗑️
                 </button>
               </td>
@@ -713,27 +736,35 @@
           <div class="damage-center-group">
             <div class="damage-center-header" onclick="toggleDamageCenterGroup('${group.id}')">
               <span>מרכז נזק #${group.number}: ${group.description}</span>
-              <span>${group.parts.length} חלקים • ₪${Math.round(subtotal).toLocaleString('he-IL')}</span>
+              <span>${group.parts.length} חלקים • לפני: ₪${Math.round(subtotalBefore).toLocaleString('he-IL')} • אחרי: ₪${Math.round(subtotalAfter).toLocaleString('he-IL')}</span>
             </div>
             <div id="group-${group.id}" style="display: block;">
-              <table class="damage-center-parts-table">
+              <table class="damage-center-parts-table" style="width: 100%; border-collapse: collapse;">
                 <thead>
-                  <tr>
-                    <th style="width: 40px;">#</th>
-                    <th style="width: 120px;">קוד קטלוגי</th>
-                    <th style="min-width: 200px;">שם החלק</th>
-                    <th style="width: 60px;">כמות</th>
-                    <th style="width: 100px;">מחיר יחידה</th>
-                    <th style="width: 100px;">סכום</th>
-                    <th style="width: 100px;">פעולות</th>
+                  <tr style="background: #28a745; color: white;">
+                    <th style="padding: 10px; text-align: center; width: 40px; border: 1px solid #fff;">#</th>
+                    <th style="padding: 10px; text-align: center; min-width: 100px; border: 1px solid #fff;">קוד קטלוגי</th>
+                    <th style="padding: 10px; text-align: right; min-width: 150px; border: 1px solid #fff;">שם החלק</th>
+                    <th style="padding: 10px; text-align: center; min-width: 120px; border: 1px solid #fff;">תיאור</th>
+                    <th style="padding: 10px; text-align: center; width: 90px; border: 1px solid #fff;">מחיר ליח׳</th>
+                    <th style="padding: 10px; text-align: center; width: 70px; border: 1px solid #fff;">הנחה %</th>
+                    <th style="padding: 10px; text-align: center; width: 70px; border: 1px solid #fff;">בלאי %</th>
+                    <th style="padding: 10px; text-align: center; width: 100px; border: 1px solid #fff;">מחיר מעודכן</th>
+                    <th style="padding: 10px; text-align: center; width: 60px; border: 1px solid #fff;">כמות</th>
+                    <th style="padding: 10px; text-align: center; width: 100px; background: #fbbf24; border: 1px solid #fff;">סה״כ לפני</th>
+                    <th style="padding: 10px; text-align: center; width: 100px; background: #10b981; border: 1px solid #fff;">סה״כ אחרי</th>
+                    <th style="padding: 10px; text-align: center; width: 100px; border: 1px solid #fff;">מקור</th>
+                    <th style="padding: 10px; text-align: center; width: 100px; border: 1px solid #fff;">ספק</th>
+                    <th style="padding: 10px; text-align: center; width: 120px; border: 1px solid #fff;">פעולות</th>
                   </tr>
                 </thead>
                 <tbody>
                   ${partsRows}
                 </tbody>
               </table>
-              <div class="damage-center-subtotal">
-                סה"כ מרכז נזק: ₪${Math.round(subtotal).toLocaleString('he-IL')}
+              <div class="damage-center-subtotal" style="display: flex; justify-content: space-between; padding: 15px; font-size: 16px;">
+                <div style="background: #fef3c7; padding: 8px 15px; border-radius: 5px;">סה"כ מרכז נזק לפני הפחתות: <strong>₪${Math.round(subtotalBefore).toLocaleString('he-IL')}</strong></div>
+                <div style="background: #d1fae5; padding: 8px 15px; border-radius: 5px; font-weight: bold;">סה"כ מרכז נזק אחרי הפחתות: <strong style="color: #059669;">₪${Math.round(subtotalAfter).toLocaleString('he-IL')}</strong></div>
               </div>
             </div>
           </div>
