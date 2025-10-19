@@ -13033,7 +13033,6 @@
                 <span id="categoryDifferentialsToggle" style="font-size:18px; color:#6c757d;">▼</span>
               </div>
               <div id="categoryDifferentialsContent" style="display:none;">
-                <p style="font-size:11px; color:#666; margin-bottom:8px;">כל עבודות הפחתות כולל פירוקים והרכבות</p>
                 <div id="categoryDifferentialsList">
                   <!-- Manual category differentials rows -->
                 </div>
@@ -13196,7 +13195,7 @@
               <input type="text" class="category-diff-percentage" value="0%" style="width:100%; padding:4px; border:1px solid #ddd; border-radius:3px; font-size:12px; text-align:center;">
             </div>
             <div>
-              <label style="font-size:11px; color:#666;">ערך הקטגוריה:</label>
+              <label style="font-size:11px; color:#666;">ערך ההנחה:</label>
               <input type="text" class="category-diff-category-value" value="₪0" readonly style="width:100%; padding:4px; border:1px solid #ddd; border-radius:3px; font-size:12px; background:#f8f9fa; text-align:center;">
             </div>
             <div>
@@ -13228,6 +13227,8 @@
         'Repairs': parseFloat(damageAssessment.Repairs?.before_differentials || 0)
       };
       
+      console.log('🔢 Category Totals:', categoryTotals);
+      
       const rows = document.querySelectorAll('.category-differential-row');
       let total = 0;
       
@@ -13237,23 +13238,30 @@
         const percentageField = row.querySelector('.category-diff-percentage');
         const categoryValueField = row.querySelector('.category-diff-category-value');
         
+        console.log('📝 Category row - Type:', type, ', Amount:', amount);
+        
         if (type && categoryTotals[type] > 0) {
-          if (categoryValueField) categoryValueField.value = `₪${Math.round(categoryTotals[type]).toLocaleString()}`;
+          const categoryValue = Math.round(categoryTotals[type]);
+          if (categoryValueField) categoryValueField.value = `₪${categoryValue.toLocaleString()}`;
+          console.log('✅ Set category value to:', categoryValue);
           
           if (amount > 0) {
             const percentage = ((amount / categoryTotals[type]) * 100).toFixed(1);
             if (percentageField) percentageField.value = `${percentage}%`;
+            console.log('✅ Calculated percentage:', percentage + '%');
           } else {
             if (percentageField) percentageField.value = '0%';
           }
         } else {
           if (categoryValueField) categoryValueField.value = '₪0';
           if (percentageField) percentageField.value = '0%';
+          console.log('⚠️ No category selected or category total is 0');
         }
         
         total += amount;
       });
       
+      console.log('💰 Total category differentials:', total);
       updateAllDifferentialsSubtotals();
     }
     
