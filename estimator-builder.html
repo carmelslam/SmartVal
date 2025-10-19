@@ -2525,7 +2525,8 @@
       
       // Calculate parts cost
       let partsCost = 0;
-      card.querySelectorAll('.part-price').forEach(input => {
+      // SESSION 49: Use .part-total-price instead of .part-price
+      card.querySelectorAll('.part-total-price').forEach(input => {
         partsCost += parseFloat(input.value) || 0;
       });
       
@@ -2757,27 +2758,28 @@
           const existingParts = existingCenter?.Parts?.parts || [];
           
           card.querySelectorAll('.part-row').forEach((row, partIndex) => {
+            // SESSION 49: Collect new fields (catalog_code, part_name, quantity, total_price)
+            const catalogCode = row.querySelector('.part-catalog-code')?.value || '';
             const name = row.querySelector('.part-name').value;
-            const desc = row.querySelector('.part-desc').value;
-            const price = row.querySelector('.part-price').value;
-            const source = row.querySelector('.part-source')?.value || 'תחליפי';
+            const quantity = parseInt(row.querySelector('.part-quantity')?.value) || 1;
+            const totalPrice = parseFloat(row.querySelector('.part-total-price')?.value) || 0;
             
             if (name.trim()) {
               // Get existing part data to preserve all fields (including Hebrew keys)
               const existingPart = existingParts[partIndex] || {};
               
-              // Merge existing data with new data (preserve all fields)
+              // SESSION 49: Merge with new field structure
               const partObject = {
-                ...existingPart,                     // Preserve all existing fields (Hebrew keys, etc.)
-                name: name,                          // Update name from UI
-                desc: desc,                          // Update description from UI
-                price: parseFloat(price) || 0,       // Update price from UI
-                source: source,                      // Update source from UI
-                // Also update Hebrew key equivalents if they exist
+                ...existingPart,                     // Preserve all existing fields
+                catalog_code: catalogCode,           // New: Catalog code
+                name: name,                          // Part name
+                quantity: quantity,                  // New: Quantity
+                total_price: totalPrice,             // New: Total price (after reductions/wear)
+                // Also update Hebrew key equivalents
+                "קוד קטלוגי": catalogCode,           // Hebrew: Catalog code
                 "שם חלק": name,                      // Hebrew: Part name
-                "תיאור": desc,                       // Hebrew: Description
-                "עלות": parseFloat(price) || 0,      // Hebrew: Cost
-                "מקור": source                       // Hebrew: Source
+                "כמות": quantity,                    // Hebrew: Quantity
+                "סה\"כ מחיר": totalPrice             // Hebrew: Total price
               };
               
               parts.push(partObject);
@@ -2844,8 +2846,8 @@
             }
           });
           
-          // Calculate costs using individual cost fields
-          const partsCost = parts.reduce((sum, part) => sum + (parseFloat(part.price) || 0), 0);
+          // SESSION 49: Calculate costs using total_price field
+          const partsCost = parts.reduce((sum, part) => sum + (parseFloat(part.total_price) || 0), 0);
           const workCost = works.reduce((sum, work) => sum + (parseFloat(work.cost) || 0), 0);
           const repairsCost = repairs.reduce((sum, repair) => sum + (parseFloat(repair.cost) || 0), 0);
           const totalCost = partsCost + workCost + repairsCost;
@@ -8139,8 +8141,18 @@
       const partPrice = part?.price || 0;
       const partSource = part?.source || 'תחליפי';
       
+      // SESSION 49: Extract fields for new structure (catalog_code, part_name, quantity, total_price)
+      const catalogCode = part?.catalog_code || part?.catalogue_code || part?.part_code || '';
+      const quantity = part?.quantity || part?.qty || 1;
+      const totalPrice = part?.total_price || part?.price || partPrice || 0;
+      
       return `
-        <div class="part-row" data-center="${centerIndex}" data-part="${partIndex}" style="display: grid; grid-template-columns: 2fr 2fr 1fr 1fr auto; gap: 8px; margin-bottom: 8px; padding: 8px; background: #f9f9f9; border-radius: 4px;">
+        <div class="part-row" data-center="${centerIndex}" data-part="${partIndex}" style="display: grid; grid-template-columns: 1.5fr 2fr 1fr 1fr auto; gap: 8px; margin-bottom: 8px; padding: 8px; background: #f9f9f9; border-radius: 4px;">
+          <div>
+            <label style="font-size: 12px; color: #666; margin-bottom: 2px; display: block;">קוד קטלוגי:</label>
+            <input type="text" value="${catalogCode}" placeholder="קוד קטלוגי" class="part-catalog-code" 
+                   style="width: 100%; padding: 6px; border: 1px solid #ddd; border-radius: 4px; font-size: 13px;" />
+          </div>
           <div style="position: relative;">
             <label style="font-size: 12px; color: #666; margin-bottom: 2px; display: block;">שם החלק:</label>
             <input type="text" value="${partName}" placeholder="שם החלק" class="part-name" 
@@ -8149,20 +8161,14 @@
             <div class="part-suggestions" style="position: absolute; top: 100%; left: 0; right: 0; background: white; border: 1px solid #ddd; border-top: none; border-radius: 0 0 4px 4px; display: none; z-index: 1000; max-height: 200px; overflow-y: auto;"></div>
           </div>
           <div>
-            <label style="font-size: 12px; color: #666; margin-bottom: 2px; display: block;">תיאור:</label>
-            <input type="text" value="${partDesc}" placeholder="תיאור החלק" class="part-desc" style="width: 100%; padding: 6px; border: 1px solid #ddd; border-radius: 4px; font-size: 13px;" />
+            <label style="font-size: 12px; color: #666; margin-bottom: 2px; display: block;">כמות:</label>
+            <input type="number" value="${quantity}" placeholder="כמות" class="part-quantity" min="1" 
+                   style="width: 100%; padding: 6px; border: 1px solid #ddd; border-radius: 4px; font-size: 13px;" />
           </div>
           <div>
-            <label style="font-size: 12px; color: #666; margin-bottom: 2px; display: block;">מחיר:</label>
-            <input type="number" value="${partPrice}" placeholder="מחיר" class="part-price" style="width: 100%; padding: 6px; border: 1px solid #ddd; border-radius: 4px; font-size: 13px;" />
-          </div>
-          <div>
-            <label style="font-size: 12px; color: #666; margin-bottom: 2px; display: block;">מקור:</label>
-            <select class="part-source" style="width: 100%; padding: 6px; border: 1px solid #ddd; border-radius: 4px; font-size: 13px;">
-              <option value="מקורי" ${partSource === 'מקורי' ? 'selected' : ''}>מקורי</option>
-              <option value="תחליפי" ${partSource === 'תחליפי' ? 'selected' : ''}>תחליפי</option>
-              <option value="משומש" ${partSource === 'משומש' ? 'selected' : ''}>משומש</option>
-            </select>
+            <label style="font-size: 12px; color: #666; margin-bottom: 2px; display: block;">סה"כ מחיר:</label>
+            <input type="number" value="${totalPrice}" placeholder="מחיר" class="part-total-price" 
+                   style="width: 100%; padding: 6px; border: 1px solid #ddd; border-radius: 4px; font-size: 13px;" />
           </div>
           <div style="align-self: end;">
             <button onclick="estimateRemovePartRow(${centerIndex}, ${partIndex})" style="background: #dc3545; color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 12px;">מחק</button>
@@ -9938,7 +9944,8 @@
       // Calculate totals from all damage centers
       document.querySelectorAll('.editable-damage-card').forEach(card => {
         // Parts
-        card.querySelectorAll('.part-row .part-price').forEach(input => {
+        // SESSION 49: Use .part-total-price instead of .part-price
+        card.querySelectorAll('.part-row .part-total-price').forEach(input => {
           totalParts += parseFloat(input.value) || 0;
         });
         
@@ -9987,7 +9994,8 @@
         
         document.querySelectorAll('.editable-damage-card').forEach(card => {
           // Parts
-          card.querySelectorAll('.part-row .part-price').forEach(input => {
+          // SESSION 49: Use .part-total-price instead of .part-price
+        card.querySelectorAll('.part-row .part-total-price').forEach(input => {
             totalParts += parseFloat(input.value) || 0;
           });
           
@@ -10125,7 +10133,8 @@
       let totalRepairs = 0;
       
       document.querySelectorAll('.editable-damage-card').forEach(card => {
-        card.querySelectorAll('.part-row .part-price').forEach(input => {
+        // SESSION 49: Use .part-total-price instead of .part-price
+        card.querySelectorAll('.part-row .part-total-price').forEach(input => {
           totalParts += parseFloat(input.value) || 0;
         });
         card.querySelectorAll('.work-row .work-cost').forEach(input => {
