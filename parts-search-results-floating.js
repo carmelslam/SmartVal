@@ -1,6 +1,67 @@
 (function () {
   if (document.getElementById("partsSearchResultsModal")) return;
 
+  // SESSION 50: Dynamically load Supabase client if not available
+  function loadSupabaseClient() {
+    return new Promise((resolve, reject) => {
+      // Check if already loaded
+      if (window.supabase) {
+        console.log('✅ Supabase client already available');
+        resolve(true);
+        return;
+      }
+      
+      // Check if script already exists
+      if (document.querySelector('script[src*="supabaseClient.js"]')) {
+        console.log('⏳ Supabase client script loading...');
+        // Wait for it to load
+        const checkInterval = setInterval(() => {
+          if (window.supabase) {
+            clearInterval(checkInterval);
+            console.log('✅ Supabase client loaded');
+            resolve(true);
+          }
+        }, 100);
+        
+        // Timeout after 5 seconds
+        setTimeout(() => {
+          clearInterval(checkInterval);
+          if (!window.supabase) {
+            console.warn('⚠️ Supabase client timeout');
+            resolve(false);
+          }
+        }, 5000);
+        return;
+      }
+      
+      // Load the script dynamically
+      console.log('📥 Loading Supabase client dynamically...');
+      const script = document.createElement('script');
+      script.src = './services/supabaseClient.js';
+      script.onload = () => {
+        console.log('✅ Supabase client script loaded');
+        // Wait a bit for initialization
+        setTimeout(() => {
+          if (window.supabase) {
+            console.log('✅ Supabase client initialized');
+            resolve(true);
+          } else {
+            console.warn('⚠️ Supabase client script loaded but window.supabase not available');
+            resolve(false);
+          }
+        }, 100);
+      };
+      script.onerror = (error) => {
+        console.error('❌ Failed to load Supabase client:', error);
+        resolve(false);
+      };
+      document.head.appendChild(script);
+    });
+  }
+  
+  // Initialize Supabase client on module load
+  loadSupabaseClient();
+
   const style = document.createElement("style");
   style.innerHTML = `
     #partsSearchResultsModal {
@@ -605,6 +666,12 @@
         return;
       }
       
+      // Wait for Supabase to load if needed
+      if (!window.supabase) {
+        console.log('⏳ SESSION 50: Waiting for Supabase client for Tab 1...');
+        await loadSupabaseClient();
+      }
+      
       // Get parts_required from Supabase (with fallback if Supabase not available)
       let requiredParts = [];
       
@@ -1005,6 +1072,18 @@
       }
       
       let selectedParts = [];
+      
+      // Wait for Supabase to load if not available yet
+      if (!window.supabase) {
+        container.innerHTML = `
+          <div class="no-results">
+            <div class="no-results-icon">🔄</div>
+            <div>טוען חיבור Supabase...</div>
+          </div>
+        `;
+        console.log('⏳ SESSION 50: Waiting for Supabase client...');
+        await loadSupabaseClient();
+      }
       
       // Try Supabase first
       if (window.supabase) {
