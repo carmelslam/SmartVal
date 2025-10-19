@@ -29200,5 +29200,49 @@ if (totalCostField) {
 
 ---
 
+## 🔢 Rounding: All Costs to Whole Numbers (No Decimals)
+
+**User Request:** All costs must be rounded - no decimals
+
+**Implementation:**
+
+**1. Calculation Function (Line 11357-11362):**
+```javascript
+// BEFORE:
+const totalCost = updatedPrice * quantity;
+updatedPriceField.value = updatedPrice.toFixed(2);
+totalCostField.value = `₪${totalCost.toFixed(2)}`;
+
+// AFTER:
+const totalCost = Math.round(updatedPrice * quantity);
+updatedPriceField.value = Math.round(updatedPrice);
+totalCostField.value = `₪${totalCost.toLocaleString()}`;
+```
+
+**2. Data Loading (Line 3815-3816):**
+```javascript
+const updatedPrice = Math.round(parseFloat(part?.updated_price || pricePerUnit));
+const totalCost = Math.round(parseFloat(part?.total_cost || (updatedPrice * quantity)));
+```
+
+**3. Display Field (Line 3874):**
+```javascript
+value="₪${totalCost.toLocaleString()}" placeholder="₪0"
+// Uses toLocaleString() for thousands separator (e.g., ₪1,530 instead of ₪1530)
+```
+
+**4. Saving Data (Line 11569):**
+```javascript
+const totalCost = Math.round(parseFloat(totalCostText.replace(/[₪,]/g, '')) || 0);
+```
+
+**Result:**
+- All displayed values: Whole numbers with thousands separator
+- All calculations: Rounded at each step
+- All saved values: Integers only
+- Example: 1469.95 → ₪1,470
+
+---
+
 **END OF SESSION 46 DOCUMENTATION**
 

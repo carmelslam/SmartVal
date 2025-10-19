@@ -3812,8 +3812,8 @@
       const reduction = parseFloat(part?.reduction_percentage || part?.reduction || 0);
       const wear = parseFloat(part?.wear_percentage || part?.wear || 0);
       const quantity = parseInt(part?.quantity || part?.כמות || 1);
-      const updatedPrice = parseFloat(part?.updated_price || pricePerUnit);
-      const totalCost = parseFloat(part?.total_cost || (updatedPrice * quantity));
+      const updatedPrice = Math.round(parseFloat(part?.updated_price || pricePerUnit));
+      const totalCost = Math.round(parseFloat(part?.total_cost || (updatedPrice * quantity)));
       const partSource = part?.source || part?.מקור || '';
       const catalogCode = part?.catalog_code || part?.pcode || part?.part_number || '';
       
@@ -3871,7 +3871,7 @@
             </div>
             <div>
               <label style="font-size: 11px; color: #666; margin-bottom: 2px; display: block;">סה"כ:</label>
-              <input type="text" value="₪${totalCost.toFixed(2)}" placeholder="₪0.00" class="part-total-cost" 
+              <input type="text" value="₪${totalCost.toLocaleString()}" placeholder="₪0" class="part-total-cost" 
                      style="width: 100%; padding: 6px; border: 1px solid #ddd; border-radius: 4px; font-size: 13px; background: #e8f5e9; font-weight: 600;" 
                      readonly />
             </div>
@@ -11337,7 +11337,7 @@
       window.open(partsSearchUrl, 'partsSearch', 'width=1000,height=700,scrollbars=yes,resizable=yes');
     }
 
-    // CALCULATE PART PRICE FIELDS - SESSION: Auto-calculate updated price and totals
+    // CALCULATE PART PRICE FIELDS - SESSION 46: Auto-calculate updated price and totals (ROUNDED)
     function calculatePartPriceFields(partRow) {
       if (!partRow) return;
       
@@ -11353,19 +11353,19 @@
       // Step 2: Apply wear
       const updatedPrice = afterReduction * (1 - wear / 100);
       
-      // Step 3: Calculate total cost
-      const totalCost = updatedPrice * quantity;
+      // Step 3: Calculate total cost - SESSION 46: ROUND all values (no decimals)
+      const totalCost = Math.round(updatedPrice * quantity);
       
       // Update hidden updated-price field
       const updatedPriceField = partRow.querySelector('.part-updated-price');
       if (updatedPriceField) {
-        updatedPriceField.value = updatedPrice.toFixed(2);
+        updatedPriceField.value = Math.round(updatedPrice);
       }
       
       // Update visible total cost field
       const totalCostField = partRow.querySelector('.part-total-cost');
       if (totalCostField) {
-        totalCostField.value = `₪${totalCost.toFixed(2)}`;
+        totalCostField.value = `₪${totalCost.toLocaleString()}`;
       }
       
       // Recalculate center totals
@@ -11566,7 +11566,7 @@
             
             const totalCostField = row.querySelector('.part-total-cost');
             const totalCostText = totalCostField ? totalCostField.value : '₪0';
-            const totalCost = parseFloat(totalCostText.replace(/[₪,]/g, '')) || 0;
+            const totalCost = Math.round(parseFloat(totalCostText.replace(/[₪,]/g, '')) || 0);
             
             const source = row.querySelector('.part-source')?.value || '';
             
