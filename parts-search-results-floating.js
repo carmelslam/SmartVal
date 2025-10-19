@@ -1129,23 +1129,24 @@
           const newReduction = parseFloat(document.getElementById('edit-reduction').value) || 0;
           const newWear = parseFloat(document.getElementById('edit-wear').value) || 0;
         
-          const updatedData = {
-            catalog_code: newCatalogCode,
-            part_name: newPartName,
-            quantity: newQuantity,
-            price: newPrice,
-            price_per_unit: newPrice,
-            reduction_percentage: newReduction,
-            wear_percentage: newWear
-          };
-          
-          // Update Supabase if available
+          // Update Supabase if available (using correct column names from schema)
           if (window.supabase) {
+            const supabaseData = {
+              pcode: newCatalogCode,  // catalog code goes to pcode column
+              oem: newCatalogCode,    // also update oem
+              part_name: newPartName,
+              quantity: newQuantity,
+              price_per_unit: newPrice,
+              price: newPrice,  // also update price column
+              reduction_percentage: newReduction,
+              wear_percentage: newWear
+            };
+            
             const { error } = await window.supabase
               .from('parts_required')
-              .update(updatedData)
+              .update(supabaseData)
               .eq('plate', plate.replace(/-/g, ''))
-              .eq('damage_center_id', centerId)
+              .eq('damage_center_code', centerId)  // Fixed: damage_center_code not damage_center_id
               .eq('part_name', part.part_name || part.name);
             
             if (error) {
