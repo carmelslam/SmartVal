@@ -13181,11 +13181,7 @@
       const rowIndex = container.children.length;
       const rowHTML = `
         <div class="category-differential-row" data-index="${rowIndex}" style="background:white; border:1px solid #ddd; border-radius:4px; padding:8px; margin-bottom:8px;">
-          <div style="display:grid; grid-template-columns: 2fr 1fr 80px 100px; gap:8px; align-items:end;">
-            <div>
-              <label style="font-size:11px; color:#666;">תיאור ההפרש:</label>
-              <input type="text" class="category-diff-description" placeholder="תיאור" style="width:100%; padding:4px; border:1px solid #ddd; border-radius:3px; font-size:12px;">
-            </div>
+          <div style="display:grid; grid-template-columns: 1fr 80px 120px 100px; gap:8px; align-items:end;">
             <div>
               <label style="font-size:11px; color:#666;">בחר קטגוריה:</label>
               <select class="category-diff-type" style="width:100%; padding:4px; border:1px solid #ddd; border-radius:3px; font-size:12px;" onchange="updateCategoryDifferentialsTotal()">
@@ -13197,7 +13193,11 @@
             </div>
             <div>
               <label style="font-size:11px; color:#666;">אחוז:</label>
-              <input type="text" class="category-diff-percentage" value="0%" readonly style="width:100%; padding:4px; border:1px solid #ddd; border-radius:3px; font-size:12px; background:#f8f9fa; text-align:center;">
+              <input type="text" class="category-diff-percentage" value="0%" style="width:100%; padding:4px; border:1px solid #ddd; border-radius:3px; font-size:12px; text-align:center;">
+            </div>
+            <div>
+              <label style="font-size:11px; color:#666;">ערך הקטגוריה:</label>
+              <input type="text" class="category-diff-category-value" value="₪0" readonly style="width:100%; padding:4px; border:1px solid #ddd; border-radius:3px; font-size:12px; background:#f8f9fa; text-align:center;">
             </div>
             <div>
               <label style="font-size:11px; color:#666;">סכום (ללא מע"מ):</label>
@@ -13235,11 +13235,19 @@
         const type = row.querySelector('.category-diff-type')?.value || '';
         const amount = parseFloat(row.querySelector('.category-diff-amount')?.value) || 0;
         const percentageField = row.querySelector('.category-diff-percentage');
+        const categoryValueField = row.querySelector('.category-diff-category-value');
         
-        if (type && categoryTotals[type] > 0 && amount > 0) {
-          const percentage = ((amount / categoryTotals[type]) * 100).toFixed(1);
-          if (percentageField) percentageField.value = `${percentage}%`;
+        if (type && categoryTotals[type] > 0) {
+          if (categoryValueField) categoryValueField.value = `₪${Math.round(categoryTotals[type]).toLocaleString()}`;
+          
+          if (amount > 0) {
+            const percentage = ((amount / categoryTotals[type]) * 100).toFixed(1);
+            if (percentageField) percentageField.value = `${percentage}%`;
+          } else {
+            if (percentageField) percentageField.value = '0%';
+          }
         } else {
+          if (categoryValueField) categoryValueField.value = '₪0';
           if (percentageField) percentageField.value = '0%';
         }
         
@@ -17415,16 +17423,16 @@
       
       categoryDiffRows.forEach((row, index) => {
         const type = row.querySelector('.category-diff-type')?.value || '';
-        const description = row.querySelector('.category-diff-description')?.value || '';
         const percentage = row.querySelector('.category-diff-percentage')?.value || '0%';
+        const categoryValue = row.querySelector('.category-diff-category-value')?.value || '₪0';
         const amount = parseFloat(row.querySelector('.category-diff-amount')?.value) || 0;
         
         if (type && amount > 0) {
           categoryDifferentials.push({
             id: index + 1,
             type: type,
-            description: description,
             percentage: percentage,
+            category_value: categoryValue,
             amount: amount
           });
         }
