@@ -12858,11 +12858,11 @@
         });
       }
       
-      // Check if we're using dual container layout
+      // SESSION 48: Check if we're using dual container layout (updated for new structure)
       const hasDifferentials = helper.final_report?.differential?.has_differentials && 
-                              helper.final_report?.differential?.summary &&
-                              (helper.final_report.differential.summary.total_amount_without_vat > 0 || 
-                               helper.final_report.differential.summary.total_amount_with_vat > 0);
+                              helper.final_report?.differential?.grand_total &&
+                              (helper.final_report.differential.grand_total.without_vat > 0 || 
+                               helper.final_report.differential.grand_total.with_vat > 0);
       
       if (hasDifferentials) {
         // Update ORIGINAL values (left container - כללי)
@@ -12884,12 +12884,19 @@
         const totalRepairsSubtotal = document.getElementById('totalRepairsSubtotal');
         const totalWithoutVatSubtotal = document.getElementById('totalWithoutVatSubtotal');
         const totalWithVatSubtotal = document.getElementById('totalWithVatSubtotal');
+        const totalDifferentialsDisplay = document.getElementById('totalDifferentialsDisplay');
         
         if (totalWorksSubtotal) totalWorksSubtotal.textContent = `₪${Math.round(finalTotalWorks).toLocaleString()}`;
         if (totalPartsSubtotal) totalPartsSubtotal.textContent = `₪${Math.round(finalTotalParts).toLocaleString()}`;
         if (totalRepairsSubtotal) totalRepairsSubtotal.textContent = `₪${Math.round(finalTotalRepairs).toLocaleString()}`;
         if (totalWithoutVatSubtotal) totalWithoutVatSubtotal.textContent = `₪${Math.round(finalTotalWithoutVat).toLocaleString()}`;
         if (totalWithVatSubtotal) totalWithVatSubtotal.textContent = `₪${Math.round(finalTotalWithVat).toLocaleString()}`;
+        
+        // SESSION 48: Display total differentials from helper
+        if (totalDifferentialsDisplay && helper.final_report?.differential?.grand_total) {
+          const differentialsTotal = helper.final_report.differential.grand_total.without_vat || 0;
+          totalDifferentialsDisplay.textContent = `₪${Math.round(differentialsTotal).toLocaleString()}`;
+        }
         
       } else {
         // Single container - use final values (which equals raw values when no differentials)
@@ -13483,6 +13490,11 @@
                     <div style="font-size: 9px; opacity: 0.9;">תיקונים</div>
                   </div>
                 </div>
+                <!-- SESSION 48: Add differentials total field -->
+                <div style="background: #fd7e14; color: white; padding: 6px; border-radius: 4px; text-align: center; margin-bottom: 6px;">
+                  <div style="font-size: 14px; font-weight: bold;" id="totalDifferentialsDisplay">₪0</div>
+                  <div style="font-size: 9px; opacity: 0.9;">הפרשים</div>
+                </div>
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px;">
                   <div style="background: #6c757d; color: white; padding: 8px; border-radius: 4px; text-align: center;">
                     <div style="font-size: 16px; font-weight: bold;" id="totalWithoutVatSubtotal">₪0</div>
@@ -13525,10 +13537,11 @@
       
       // Check current differential state
       const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+      // SESSION 48: Check using new grand_total structure
       const hasDifferentials = helper.final_report?.differential?.has_differentials && 
-                              helper.final_report?.differential?.summary &&
-                              (helper.final_report.differential.summary.total_amount_without_vat > 0 || 
-                               helper.final_report.differential.summary.total_amount_with_vat > 0);
+                              helper.final_report?.differential?.grand_total &&
+                              (helper.final_report.differential.grand_total.without_vat > 0 || 
+                               helper.final_report.differential.grand_total.with_vat > 0);
       
       // Find existing subtotal container and replace it
       const existingSubtotal = document.getElementById('damageCentersSubtotal');
@@ -13603,10 +13616,11 @@
         
         // Check if differentials exist to determine layout
         const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+        // SESSION 48: Check using new grand_total structure
         const hasDifferentials = helper.final_report?.differential?.has_differentials && 
-                                helper.final_report?.differential?.summary &&
-                                (helper.final_report.differential.summary.total_amount_without_vat > 0 || 
-                                 helper.final_report.differential.summary.total_amount_with_vat > 0);
+                                helper.final_report?.differential?.grand_total &&
+                                (helper.final_report.differential.grand_total.without_vat > 0 || 
+                                 helper.final_report.differential.grand_total.with_vat > 0);
         
         // Add subtotal section after differentials
         const subtotalHTML = createDamageCentersSubtotal(hasDifferentials);
