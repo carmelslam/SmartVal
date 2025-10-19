@@ -474,7 +474,6 @@
     <div class="results-buttons">
       <button class="results-btn close" onclick="togglePartsSearchResults()">סגור</button>
       <button class="results-btn refresh" onclick="refreshPartsResults()">רענן נתונים</button>
-      <button class="results-btn export" onclick="exportPartsResults()">יצא לקובץ</button>
     </div>
   `;
   document.body.appendChild(modal);
@@ -553,13 +552,15 @@
     
     tabsLoaded[tabName] = true;
   }
-
-  window.refreshPartsResults = function () {
-    // SESSION 49: Refresh current tab and mark as not loaded
+  
+  // SESSION 50: Refresh current tab data
+  window.refreshPartsResults = function() {
+    console.log('🔄 SESSION 50: Refreshing current tab:', currentTab);
     tabsLoaded[currentTab] = false;
     loadTabData(currentTab);
   };
 
+  // SESSION 50: Remove unused export function (kept for compatibility but does nothing)
   window.exportPartsResults = function () {
     try {
       const results = getPartsSearchResults();
@@ -698,7 +699,7 @@
       // Group parts by damage center
       const groupedParts = {};
       let totalParts = 0;
-      let totalCost = 0;
+      let totalCostAfterReductions = 0;
       
       // Process Supabase parts
       if (requiredParts && requiredParts.length > 0) {
@@ -719,8 +720,14 @@
           groupedParts[centerId].parts.push(part);
           totalParts++;
           
-          const partCost = (parseFloat(part.price || part.cost || part.expected_cost || 0)) * (parseInt(part.quantity || part.qty || 1));
-          totalCost += partCost;
+          // Calculate cost AFTER reductions (reduction % and wear %)
+          const pricePerUnit = parseFloat(part.price_per_unit || part.price || part.cost || part.expected_cost || 0);
+          const reduction = parseFloat(part.reduction_percentage || part.reduction || 0);
+          const wear = parseFloat(part.wear_percentage || part.wear || 0);
+          const qty = parseInt(part.quantity || part.qty || 1);
+          const priceAfterReduction = pricePerUnit * (1 - reduction / 100);
+          const updatedPrice = priceAfterReduction * (1 - wear / 100);
+          totalCostAfterReductions += (updatedPrice * qty);
         });
       }
       
@@ -751,8 +758,15 @@
             if (!exists) {
               groupedParts[centerId].parts.push(part);
               totalParts++;
-              const partCost = (parseFloat(part.price || part.cost || part.expected_cost || 0)) * (parseInt(part.quantity || part.qty || 1));
-              totalCost += partCost;
+              
+              // Calculate cost AFTER reductions (reduction % and wear %)
+              const pricePerUnit = parseFloat(part.price_per_unit || part.price || part.cost || part.expected_cost || 0);
+              const reduction = parseFloat(part.reduction_percentage || part.reduction || 0);
+              const wear = parseFloat(part.wear_percentage || part.wear || 0);
+              const qty = parseInt(part.quantity || part.qty || 1);
+              const priceAfterReduction = pricePerUnit * (1 - reduction / 100);
+              const updatedPrice = priceAfterReduction * (1 - wear / 100);
+              totalCostAfterReductions += (updatedPrice * qty);
             }
           });
         }
@@ -762,7 +776,7 @@
       const damageCentersCount = Object.keys(groupedParts).length;
       document.getElementById('totalDamageCenters').textContent = damageCentersCount;
       document.getElementById('totalRequiredParts').textContent = totalParts;
-      document.getElementById('totalRequiredCost').textContent = `₪${Math.round(totalCost).toLocaleString('he-IL')}`;
+      document.getElementById('totalRequiredCost').textContent = `₪${Math.round(totalCostAfterReductions).toLocaleString('he-IL')}`;
       
       // Display grouped parts
       if (damageCentersCount === 0) {
