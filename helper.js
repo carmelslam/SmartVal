@@ -3338,15 +3338,49 @@ window.helper = existingHelper || {
       depreciation: {},
       legal_disclaimer: {}
     },
+    // SESSION 48: Restructured to match 4-category UI sections
     differential: {
       has_differentials: false,
-      items: [],
-      summary: {
-        total_amount_without_vat: 0,
-        total_vat: 0,
-        total_amount_with_vat: 0,
+      
+      // SECTION 1: הנחת רכיב (Parts Reductions) - Auto-imported from parts_required
+      parts_reductions: {
+        items: [],  // [{damage_center, part_name, percentage, amount}]
+        total: 0
+      },
+      
+      // SECTION 2: בלאי רכיב (Parts Wear) - Auto-imported from parts_required
+      parts_wear: {
+        items: [],  // [{damage_center, part_name, percentage, amount}]
+        total: 0
+      },
+      
+      // SECTION 3: הפרשי קטגוריה (Category Differentials) - Manual entry
+      category_differentials: {
+        items: [],  // [{category_type, category_value, percentage, amount}]
+        total: 0
+      },
+      
+      // SECTION 4: הפרשי חשבוניות (Invoice Differentials) - Manual entry
+      invoice_differentials: {
+        items: [],  // [{part, nature, reason, amount_without_vat}]
+        total: 0
+      },
+      
+      // Subtotals
+      subtotals: {
+        component_wear_total: 0,  // Sum of reductions + wear + category
+        invoice_total: 0
+      },
+      
+      // Grand totals
+      grand_total: {
+        without_vat: 0,
+        vat_amount: 0,
+        with_vat: 0,
+        vat_rate: 18,
         currency: '₪'
       },
+      
       last_updated: ''
     }
   },

@@ -13284,6 +13284,9 @@
       
       console.log('💰 Total category differentials:', total);
       updateAllDifferentialsSubtotals();
+      
+      // SESSION 48: Auto-save after calculation
+      setTimeout(saveDifferentialsToHelper, 100);
     }
     
     // SESSION 47: POPULATE DAMAGE CENTERS DROPDOWN
@@ -17482,25 +17485,68 @@
       
       console.log('📊 SESSION 47: VAT Rate used for differentials:', vatRate, '% (from window.helper.calculations.vat_rate:', window.helper?.calculations?.vat_rate, ', helper.calculations.vat_rate:', helper.calculations?.vat_rate, ')');
       
+      // SESSION 48: REBUILD - Capture ALL sections with complete field data
       helper.final_report.differential = {
         has_differentials: document.getElementById('hasDifferentials')?.checked || false,
-        invoice_items: differentialsData,
-        category_items: categoryDifferentials,
-        parts_breakdown: {
-          reductions: breakdown.totalReduction,
-          wear: breakdown.totalWear
+        
+        // SECTION 1: הנחת רכיב (Parts Reductions) - Auto-imported
+        parts_reductions: {
+          items: breakdown.reductions.map(item => ({
+            damage_center: item.centerName,
+            part_name: item.partName,
+            percentage: item.percentage,
+            amount: item.amount
+          })),
+          total: breakdown.totalReduction
         },
-        summary: {
-          invoice_total: totalAmount,
-          parts_reductions_total: breakdown.totalReduction,
-          parts_wear_total: breakdown.totalWear,
-          category_total: categoryTotal,
-          grand_total_without_vat: Math.round(grandTotalWithoutVAT),
-          grand_total_vat: grandTotalVAT,
-          grand_total_with_vat: grandTotalWithVAT,
+        
+        // SECTION 2: בלאי רכיב (Parts Wear) - Auto-imported
+        parts_wear: {
+          items: breakdown.wear.map(item => ({
+            damage_center: item.centerName,
+            part_name: item.partName,
+            percentage: item.percentage,
+            amount: item.amount
+          })),
+          total: breakdown.totalWear
+        },
+        
+        // SECTION 3: הפרשי קטגוריה (Category Differentials) - Manual entry
+        category_differentials: {
+          items: categoryDifferentials.map(item => ({
+            category_type: item.type,
+            category_value: item.category_value,
+            percentage: item.percentage,
+            amount: item.amount
+          })),
+          total: categoryTotal
+        },
+        
+        // SECTION 4: הפרשי חשבוניות (Invoice Differentials) - Manual entry
+        invoice_differentials: {
+          items: differentialsData.map(item => ({
+            part: item.part,
+            nature: item.nature,
+            reason: item.reason,
+            amount_without_vat: item.amount_without_vat
+          })),
+          total: totalAmount
+        },
+        
+        // SUBTOTALS & SUMMARY
+        subtotals: {
+          component_wear_total: Math.round(breakdown.totalReduction + breakdown.totalWear + categoryTotal),
+          invoice_total: Math.round(totalAmount)
+        },
+        
+        grand_total: {
+          without_vat: Math.round(grandTotalWithoutVAT),
+          vat_amount: grandTotalVAT,
+          with_vat: grandTotalWithVAT,
           vat_rate: vatRate,
           currency: '₪'
         },
+        
         last_updated: new Date().toISOString()
       };
       
