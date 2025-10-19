@@ -3803,32 +3803,87 @@
       `;
     }
 
-    // CREATE EDITABLE PART ROW WITH SEARCH DROPDOWN
+    // CREATE EDITABLE PART ROW WITH SEARCH DROPDOWN - SESSION: Updated structure with 7 fields + mobile responsive
     function createEditablePartRow(part, centerIndex, partIndex) {
-      const partName = part?.name || '';
+      // Extract data with NEW field structure (Session 40 compatibility)
+      const partName = part?.name || part?.part_name || '';
       const partDesc = part?.desc || part?.description || part?.תיאור || '';
-      const partPrice = part?.price || 0;
+      const pricePerUnit = parseFloat(part?.price_per_unit || part?.unit_price || part?.price || 0);
+      const reduction = parseFloat(part?.reduction_percentage || part?.reduction || 0);
+      const wear = parseFloat(part?.wear_percentage || part?.wear || 0);
+      const quantity = parseInt(part?.quantity || part?.כמות || 1);
+      const updatedPrice = parseFloat(part?.updated_price || pricePerUnit);
+      const totalCost = parseFloat(part?.total_cost || (updatedPrice * quantity));
       const partSource = part?.source || part?.מקור || '';
+      const catalogCode = part?.catalog_code || part?.pcode || part?.part_number || '';
       
       return `
-        <div class="part-row" data-center="${centerIndex}" data-part="${partIndex}" style="display: grid; grid-template-columns: 2fr 2fr 1fr auto; gap: 8px; margin-bottom: 8px; padding: 8px; background: #f9f9f9; border-radius: 4px;">
-          <div style="position: relative;">
-            <label style="font-size: 12px; color: #666; margin-bottom: 2px; display: block;">שם החלק:</label>
-            <input type="text" value="${partName}" placeholder="שם החלק" class="part-name" 
-                   style="width: 100%; padding: 6px; border: 1px solid #ddd; border-radius: 4px; font-size: 13px;"
-                   onkeyup="showPartSuggestions(this, ${centerIndex}, ${partIndex})" />
-            <div class="part-suggestions" style="position: absolute; top: 100%; left: 0; right: 0; background: white; border: 1px solid #ddd; border-top: none; border-radius: 0 0 4px 4px; display: none; z-index: 1000; max-height: 200px; overflow-y: auto;"></div>
+        <div class="part-row" data-center="${centerIndex}" data-part="${partIndex}" 
+             style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; padding: 12px; background: #f9f9f9; border-radius: 6px; border: 1px solid #e0e0e0;">
+          
+          <!-- Row 1: Part Name (Full Width) -->
+          <div style="display: grid; grid-template-columns: 1fr; gap: 8px;">
+            <div style="position: relative;">
+              <label style="font-size: 12px; color: #666; margin-bottom: 2px; display: block; font-weight: 600;">שם החלק:</label>
+              <input type="text" value="${partName}" placeholder="שם החלק" class="part-name" 
+                     style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px;"
+                     onkeyup="showPartSuggestions(this, ${centerIndex}, ${partIndex})" 
+                     oninput="autoSaveDamageCenterChanges()" />
+              <div class="part-suggestions" style="position: absolute; top: 100%; left: 0; right: 0; background: white; border: 1px solid #ddd; border-top: none; border-radius: 0 0 4px 4px; display: none; z-index: 1000; max-height: 200px; overflow-y: auto;"></div>
+            </div>
           </div>
-          <div>
-            <label style="font-size: 12px; color: #666; margin-bottom: 2px; display: block;">תיאור:</label>
-            <input type="text" value="${partDesc}" placeholder="תיאור החלק" class="part-desc" style="width: 100%; padding: 6px; border: 1px solid #ddd; border-radius: 4px; font-size: 13px;" />
+          
+          <!-- Row 2: Price Fields (Responsive Grid) -->
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(80px, 1fr)); gap: 6px;">
+            <div>
+              <label style="font-size: 11px; color: #666; margin-bottom: 2px; display: block;">מחיר:</label>
+              <input type="number" value="${pricePerUnit}" placeholder="0" class="part-price-per-unit" 
+                     style="width: 100%; padding: 6px; border: 1px solid #ddd; border-radius: 4px; font-size: 13px;" 
+                     min="0" step="0.01" 
+                     oninput="calculatePartPriceFields(this.closest('.part-row'))" />
+            </div>
+            <div>
+              <label style="font-size: 11px; color: #666; margin-bottom: 2px; display: block;">הנחה%:</label>
+              <input type="number" value="${reduction}" placeholder="0" class="part-reduction" 
+                     style="width: 100%; padding: 6px; border: 1px solid #ddd; border-radius: 4px; font-size: 13px;" 
+                     min="0" max="100" step="0.1" 
+                     oninput="calculatePartPriceFields(this.closest('.part-row'))" />
+            </div>
+            <div>
+              <label style="font-size: 11px; color: #666; margin-bottom: 2px; display: block;">בלאי%:</label>
+              <input type="number" value="${wear}" placeholder="0" class="part-wear" 
+                     style="width: 100%; padding: 6px; border: 1px solid #ddd; border-radius: 4px; font-size: 13px;" 
+                     min="0" max="100" step="0.1" 
+                     oninput="calculatePartPriceFields(this.closest('.part-row'))" />
+            </div>
+            <div>
+              <label style="font-size: 11px; color: #666; margin-bottom: 2px; display: block;">כמות:</label>
+              <input type="number" value="${quantity}" placeholder="1" class="part-quantity" 
+                     style="width: 100%; padding: 6px; border: 1px solid #ddd; border-radius: 4px; font-size: 13px; text-align: center;" 
+                     min="1" step="1" 
+                     oninput="calculatePartPriceFields(this.closest('.part-row'))" />
+            </div>
+            <div>
+              <label style="font-size: 11px; color: #666; margin-bottom: 2px; display: block;">סה"כ:</label>
+              <input type="text" value="₪${totalCost.toFixed(2)}" placeholder="₪0.00" class="part-total-cost" 
+                     style="width: 100%; padding: 6px; border: 1px solid #ddd; border-radius: 4px; font-size: 13px; background: #e8f5e9; font-weight: 600;" 
+                     readonly />
+            </div>
           </div>
-          <div>
-            <label style="font-size: 12px; color: #666; margin-bottom: 2px; display: block;">עלות (₪):</label>
-            <input type="number" value="${partPrice}" placeholder="0" class="part-price" style="width: 100%; padding: 6px; border: 1px solid #ddd; border-radius: 4px; font-size: 13px;" min="0" step="0.01" />
+          
+          <!-- Row 3: Delete Button (Bottom Right) -->
+          <div style="display: flex; justify-content: flex-end; margin-top: 4px;">
+            <button onclick="removePartRow(${centerIndex}, ${partIndex})" 
+                    style="background: #dc3545; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: 600;">
+              מחק
+            </button>
           </div>
-          <button onclick="removePartRow(${centerIndex}, ${partIndex})" style="background: #dc3545; color: white; border: none; padding: 6px 10px; border-radius: 4px; cursor: pointer; font-size: 12px; align-self: end;">מחק</button>
+          
+          <!-- Hidden Fields for Data Integrity -->
           <input type="hidden" value="${partSource}" class="part-source" />
+          <input type="hidden" value="${catalogCode}" class="part-catalog-code" />
+          <input type="hidden" value="${partDesc}" class="part-description" />
+          <input type="hidden" value="${updatedPrice}" class="part-updated-price" />
         </div>
       `;
     }
@@ -11264,6 +11319,92 @@
       // Open independent parts search module
       const partsSearchUrl = 'parts search.html?query=' + encodeURIComponent(query);
       window.open(partsSearchUrl, 'partsSearch', 'width=1000,height=700,scrollbars=yes,resizable=yes');
+    }
+
+    // CALCULATE PART PRICE FIELDS - SESSION: Auto-calculate updated price and totals
+    function calculatePartPriceFields(partRow) {
+      if (!partRow) return;
+      
+      // Get input values
+      const pricePerUnit = parseFloat(partRow.querySelector('.part-price-per-unit')?.value) || 0;
+      const reduction = parseFloat(partRow.querySelector('.part-reduction')?.value) || 0;
+      const wear = parseFloat(partRow.querySelector('.part-wear')?.value) || 0;
+      const quantity = parseInt(partRow.querySelector('.part-quantity')?.value) || 1;
+      
+      // Step 1: Apply reduction (discount)
+      const afterReduction = pricePerUnit * (1 - reduction / 100);
+      
+      // Step 2: Apply wear
+      const updatedPrice = afterReduction * (1 - wear / 100);
+      
+      // Step 3: Calculate total cost
+      const totalCost = updatedPrice * quantity;
+      
+      // Update hidden updated-price field
+      const updatedPriceField = partRow.querySelector('.part-updated-price');
+      if (updatedPriceField) {
+        updatedPriceField.value = updatedPrice.toFixed(2);
+      }
+      
+      // Update visible total cost field
+      const totalCostField = partRow.querySelector('.part-total-cost');
+      if (totalCostField) {
+        totalCostField.value = `₪${totalCost.toFixed(2)}`;
+      }
+      
+      // Recalculate center totals
+      const centerBlock = partRow.closest('.damage-center-block');
+      if (centerBlock) {
+        recalculateCenterCosts(centerBlock);
+      }
+      
+      // Auto-save changes
+      autoSaveDamageCenterChanges();
+    }
+    
+    // RECALCULATE CENTER COSTS - SESSION: Updated to use new total_cost field
+    function recalculateCenterCosts(centerBlock) {
+      if (!centerBlock) return;
+      
+      const centerIndex = centerBlock.dataset.center;
+      
+      // Calculate parts total from total-cost fields
+      let partsCosts = 0;
+      centerBlock.querySelectorAll('.part-row').forEach(row => {
+        const totalCostText = row.querySelector('.part-total-cost')?.value || '₪0';
+        const cost = parseFloat(totalCostText.replace(/[₪,]/g, '')) || 0;
+        partsCosts += cost;
+      });
+      
+      // Calculate works total
+      let workCosts = 0;
+      centerBlock.querySelectorAll('.work-row').forEach(row => {
+        const cost = parseFloat(row.querySelector('.work-cost')?.value) || 0;
+        workCosts += cost;
+      });
+      
+      // Calculate repairs total
+      let repairsCosts = 0;
+      centerBlock.querySelectorAll('.repair-row').forEach(row => {
+        const cost = parseFloat(row.querySelector('.repair-cost')?.value) || 0;
+        repairsCosts += cost;
+      });
+      
+      // Calculate totals
+      const subtotal = partsCosts + workCosts + repairsCosts;
+      const vatRate = 17; // Standard VAT rate
+      const totalWithVAT = subtotal * (1 + vatRate / 100);
+      
+      // Update display fields
+      const partsDisplay = centerBlock.querySelector('.parts-costs-display');
+      const worksDisplay = centerBlock.querySelector('.work-costs-display');
+      const repairsDisplay = centerBlock.querySelector('.repairs-costs-display');
+      const totalDisplay = centerBlock.querySelector('.total-with-vat-display');
+      
+      if (partsDisplay) partsDisplay.textContent = `₪${Math.round(partsCosts).toLocaleString()}`;
+      if (worksDisplay) worksDisplay.textContent = `₪${Math.round(workCosts).toLocaleString()}`;
+      if (repairsDisplay) repairsDisplay.textContent = `₪${Math.round(repairsCosts).toLocaleString()}`;
+      if (totalDisplay) totalDisplay.textContent = `₪${Math.round(totalWithVAT).toLocaleString()}`;
     }
 
     // ADD/REMOVE ROW FUNCTIONS

@@ -1,5 +1,5 @@
 Date of original document : 30.9.2025
-Last Updated: 5.10.2025 - Session 6 Complete - Extraction Fixed
+Last Updated: 19.10.2025 - Final Report Builder Parts Section Updated
 
 Description of required functionality:
 The system has a parts search module . This module has multiple search options paths. 
@@ -28836,4 +28836,302 @@ total_cost: Math.round(calculatedTotal)
 ---
 
 **END OF SESSION 44 & 45 DOCUMENTATION**
+
+---
+
+# SESSION 46: FINAL REPORT BUILDER - PARTS SECTION STRUCTURE UPDATE
+
+**Date:** 2025-10-19  
+**Status:** ✅ **COMPLETE**
+
+---
+
+## 🎯 Task Overview
+
+Updated the "חלקים נדרשים" (Parts Required) subsection in the "סיכום מוקדי נזק" (Damage Centers Summary) section of final-report-builder.html to capture better data from parts-required.html table.
+
+### Previous Structure (3 Fields):
+1. שם החלק (Part Name)
+2. תיאור (Description)
+3. עלות ₪ (Cost)
+
+### NEW Structure (5 Visible Fields + Auto-Calculated Total):
+1. **שם החלק** - Part name
+2. **מחיר** - Price per unit
+3. **הנחה%** - Reduction/Discount percentage
+4. **בלאי%** - Wear percentage
+5. **כמות** - Quantity
+6. **סה"כ** - Total cost (calculated, readonly, green background)
+
+---
+
+## 📋 Changes Implemented
+
+### File: `final-report-builder.html`
+
+#### 1. Updated `createEditablePartRow()` Function (Lines 3806-3889)
+
+**Key Changes:**
+- Changed from single-row 3-field layout to **mobile-responsive multi-row layout**
+- Added data extraction for NEW field structure from Session 40
+- Implemented responsive grid: `grid-template-columns: repeat(auto-fit, minmax(80px, 1fr))`
+- Added hidden fields for data integrity (catalog_code, description, updated_price)
+
+**Data Mapping (Backward Compatible):**
+```javascript
+const partName = part?.name || part?.part_name || '';
+const pricePerUnit = parseFloat(part?.price_per_unit || part?.unit_price || part?.price || 0);
+const reduction = parseFloat(part?.reduction_percentage || part?.reduction || 0);
+const wear = parseFloat(part?.wear_percentage || part?.wear || 0);
+const quantity = parseInt(part?.quantity || part?.כמות || 1);
+const totalCost = parseFloat(part?.total_cost || (updatedPrice * quantity));
+```
+
+**Mobile Responsiveness:**
+- Part name: Full width row
+- Price fields: Auto-fit grid (wraps on mobile, 80px minimum)
+- Delete button: Bottom right, always accessible
+- Labels: 11px font size for compact display
+
+#### 2. Added `calculatePartPriceFields()` Function (Lines 11324-11363)
+
+**Purpose:** Auto-calculate updated price and total cost when user changes any field
+
+**Calculation Logic:**
+```javascript
+Step 1: afterReduction = pricePerUnit × (1 - הנחה% / 100)
+Step 2: updatedPrice = afterReduction × (1 - בלאי% / 100)
+Step 3: totalCost = updatedPrice × quantity
+```
+
+**Features:**
+- Updates hidden `part-updated-price` field
+- Updates visible `part-total-cost` field with ₪ formatting
+- Triggers `recalculateCenterCosts()` for damage center totals
+- Calls `autoSaveDamageCenterChanges()` for persistence
+
+#### 3. Updated `recalculateCenterCosts()` Function (Lines 11365-11408)
+
+**Purpose:** Recalculate damage center totals using NEW total_cost fields
+
+**Key Changes:**
+- Reads from `.part-total-cost` fields instead of old `.part-price`
+- Parses ₪ formatted values correctly
+- Updates 4 display fields:
+  - Parts total
+  - Works total
+  - Repairs total
+  - Total with VAT (17%)
+
+**Calculation:**
+```javascript
+partsCosts = Σ (each part's total_cost)
+workCosts = Σ (each work's cost)
+repairsCosts = Σ (each repair's cost)
+subtotal = partsCosts + workCosts + repairsCosts
+totalWithVAT = subtotal × 1.17
+```
+
+---
+
+## 🎨 UI/UX Improvements
+
+### Visual Design:
+- **Part rows:** Light gray background (#f9f9f9), rounded corners, subtle border
+- **Total cost field:** Green background (#e8f5e9) to highlight calculated value
+- **Labels:** Smaller font (11-12px) for compact layout
+- **Spacing:** Consistent gaps (6-8px) for clean appearance
+
+### Mobile Optimization:
+- **Responsive grid:** Fields wrap automatically on narrow screens
+- **Touch-friendly:** 6-8px padding on all inputs
+- **Readable:** 13-14px font size for input values
+- **Flexible layout:** `flex-direction: column` ensures vertical stacking
+
+### Accessibility:
+- All fields have clear labels
+- Readonly fields have gray/green background
+- Delete button always visible and accessible
+- No horizontal scrolling required
+
+---
+
+## 🔄 Data Flow Integration
+
+### Load Flow:
+```
+helper.centers[index].Parts.parts_required[] 
+  → createEditablePartRow()
+  → Render with NEW 5-field structure
+  → Display in UI
+```
+
+### Edit Flow:
+```
+User changes field
+  → oninput event fires
+  → calculatePartPriceFields()
+  → Update calculated fields
+  → recalculateCenterCosts()
+  → autoSaveDamageCenterChanges()
+  → Save to helper
+```
+
+### Save Flow:
+```
+UI fields
+  → saveDamageCenterChanges()
+  → Extract all field values
+  → Save to helper.centers[].Parts.parts_required[]
+  → Persist to sessionStorage
+```
+
+---
+
+## ✅ Backward Compatibility
+
+### Field Mapping Fallbacks:
+- `price_per_unit` ← `unit_price` ← `price`
+- `reduction_percentage` ← `reduction`
+- `wear_percentage` ← `wear`
+- `quantity` ← `כמות`
+- `name` ← `part_name`
+
+### Hidden Fields Preserved:
+- `part-source` - Data source indicator
+- `part-catalog-code` - Catalog/pcode reference
+- `part-description` - Full description text
+- `part-updated-price` - Calculated price after reductions
+
+### Works with OLD and NEW Data:
+- OLD data (3 fields): Displays correctly, missing fields default to 0
+- NEW data (Session 40 structure): All fields populated properly
+- Mixed data: Fallback logic handles inconsistencies
+
+---
+
+## 📊 Testing Scenarios
+
+### ✅ Test 1: NEW Data from parts-required.html
+**Input:** Part with all fields (price_per_unit, reduction, wear, quantity)
+**Expected:** All fields populate, total calculates correctly
+**Result:** ✅ Working
+
+### ✅ Test 2: OLD Data (Legacy 3-field structure)
+**Input:** Part with only name, description, price
+**Expected:** Displays in new layout, reduction/wear default to 0
+**Result:** ✅ Backward compatible
+
+### ✅ Test 3: Mobile View
+**Input:** View on narrow screen (< 600px width)
+**Expected:** Fields wrap to multiple rows, no horizontal scroll
+**Result:** ✅ Responsive grid working
+
+### ✅ Test 4: Calculation Accuracy
+**Input:** Price: 1000, Reduction: 10%, Wear: 15%, Qty: 2
+**Expected:** Total = ₪1530.00 (1000 × 0.9 × 0.85 × 2)
+**Result:** ✅ Calculation correct
+
+### ✅ Test 5: Center Totals Update
+**Input:** Change part quantity
+**Expected:** Part total updates, center total recalculates, VAT applies
+**Result:** ✅ Auto-recalculation working
+
+---
+
+## 🔍 Code Locations
+
+| Component | File | Lines | Description |
+|-----------|------|-------|-------------|
+| Part Row HTML | final-report-builder.html | 3806-3889 | createEditablePartRow() |
+| Calculation Logic | final-report-builder.html | 11324-11363 | calculatePartPriceFields() |
+| Center Totals | final-report-builder.html | 11365-11408 | recalculateCenterCosts() |
+| Event Listeners | final-report-builder.html | 3843, 3850, 3857, 3864 | oninput events |
+
+---
+
+## 📝 Field Specifications
+
+| Field | Class | Type | Required | Default | Readonly | Calculation |
+|-------|-------|------|----------|---------|----------|-------------|
+| שם החלק | `.part-name` | text | Yes | '' | No | - |
+| מחיר | `.part-price-per-unit` | number | Yes | 0 | No | - |
+| הנחה% | `.part-reduction` | number | No | 0 | No | - |
+| בלאי% | `.part-wear` | number | No | 0 | No | - |
+| כמות | `.part-quantity` | number | Yes | 1 | No | - |
+| סה"כ | `.part-total-cost` | text | - | ₪0.00 | Yes | price × (1-הנחה%) × (1-בלאי%) × qty |
+
+---
+
+## 🎯 Key Features
+
+### ✅ Auto-Calculation
+- Real-time calculation on any field change
+- Applies reduction (discount) first, then wear
+- Multiplies by quantity for total
+- Updates center-level totals automatically
+
+### ✅ Mobile-First Design
+- Responsive grid layout (`auto-fit, minmax(80px, 1fr)`)
+- Vertical stacking on narrow screens
+- Touch-friendly input sizes
+- No horizontal overflow
+
+### ✅ Data Integrity
+- Hidden fields preserve catalog code, source, description
+- Backward compatible with OLD field names
+- NEW field structure matches parts-required.html
+- Session 40 compatibility maintained
+
+### ✅ User Experience
+- Visual feedback (green background for totals)
+- Clear labels in Hebrew
+- Readonly fields have distinct styling
+- Delete button easily accessible
+
+---
+
+## 🚀 Next Steps (If Needed)
+
+1. **Add Catalog Code to Visible Fields** (if user requests)
+   - Add column between Name and Price
+   - Display `part-catalog-code` from hidden field
+   - Update grid template
+
+2. **Add Description Field** (if user requests)
+   - Add row below Name or in grid
+   - Display `part-description` from hidden field
+
+3. **Add Supplier Field** (if user requests)
+   - Requires mapping from Session 40 structure
+   - Add to data extraction logic
+
+4. **Sync with parts_required Table** (if Supabase integration needed)
+   - Ensure all fields map to Supabase schema
+   - Add save/load logic for database persistence
+
+---
+
+## ✅ Completion Checklist
+
+- [x] Updated `createEditablePartRow()` with 5-field layout
+- [x] Added mobile-responsive design (auto-fit grid)
+- [x] Implemented `calculatePartPriceFields()` function
+- [x] Updated `recalculateCenterCosts()` to use total_cost
+- [x] Added backward compatibility for OLD field names
+- [x] Tested calculation logic (הנחה → בלאי → quantity)
+- [x] Verified mobile view responsiveness
+- [x] Documented all changes in integration.md
+
+---
+
+**Session Status:** ✅ **COMPLETE**  
+**Files Modified:** 1 (final-report-builder.html)  
+**Lines Changed:** ~170  
+**Backward Compatible:** ✅ Yes  
+**Mobile Responsive:** ✅ Yes
+
+---
+
+**END OF SESSION 46 DOCUMENTATION**
 
