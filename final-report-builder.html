@@ -13196,7 +13196,7 @@
             </div>
             <div>
               <label style="font-size:11px; color:#666;">ערך ההנחה:</label>
-              <input type="text" class="category-diff-category-value" value="₪0" readonly style="width:100%; padding:4px; border:1px solid #ddd; border-radius:3px; font-size:12px; background:#f8f9fa; text-align:center;">
+              <input type="text" class="category-diff-category-value" value="₪0" placeholder="₪0" style="width:100%; padding:4px; border:1px solid #ddd; border-radius:3px; font-size:12px; text-align:center;" oninput="updateCategoryDifferentialsTotal()">
             </div>
             <div>
               <label style="font-size:11px; color:#666;">סכום (ללא מע"מ):</label>
@@ -13237,55 +13237,32 @@
       updateCategoryDifferentialsTotal();
     }
     
-    // SESSION 47: UPDATE CATEGORY DIFFERENTIALS TOTAL AND PERCENTAGES
+    // SESSION 48: SIMPLIFIED - Manual category value entry, auto-calculate percentage
     window.updateCategoryDifferentialsTotal = function updateCategoryDifferentialsTotal() {
-      const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
-      const damageAssessment = helper.damage_assessment?.summary || {};
-      
-      const categoryTotals = {
-        'Parts': parseFloat(damageAssessment.Parts?.before_differentials || 0),
-        'Works': parseFloat(damageAssessment.Works?.before_differentials || 0),
-        'Repairs': parseFloat(damageAssessment.Repairs?.before_differentials || 0)
-      };
-      
-      console.log('🔢 Category Totals:', categoryTotals);
-      
       const rows = document.querySelectorAll('.category-differential-row');
       let total = 0;
       
       rows.forEach(row => {
-        const type = row.querySelector('.category-diff-type')?.value || '';
         const amount = parseFloat(row.querySelector('.category-diff-amount')?.value) || 0;
+        const categoryValueInput = row.querySelector('.category-diff-category-value');
         const percentageField = row.querySelector('.category-diff-percentage');
-        const categoryValueField = row.querySelector('.category-diff-category-value');
         
-        console.log('📝 Category row - Type:', type, ', Amount:', amount);
+        // Get category value (user can manually edit it)
+        const categoryValueText = categoryValueInput?.value || '₪0';
+        const categoryValue = parseFloat(categoryValueText.replace(/[₪,]/g, '')) || 0;
         
-        if (type && categoryTotals[type] > 0) {
-          const categoryValue = Math.round(categoryTotals[type]);
-          if (categoryValueField) categoryValueField.value = `₪${categoryValue.toLocaleString()}`;
-          console.log('✅ Set category value to:', categoryValue);
-          
-          if (amount > 0) {
-            const percentage = ((amount / categoryTotals[type]) * 100).toFixed(1);
-            if (percentageField) percentageField.value = `${percentage}%`;
-            console.log('✅ Calculated percentage:', percentage + '%');
-          } else {
-            if (percentageField) percentageField.value = '0%';
-          }
+        // Calculate percentage if both values exist
+        if (amount > 0 && categoryValue > 0) {
+          const percentage = ((amount / categoryValue) * 100).toFixed(1);
+          if (percentageField) percentageField.value = `${percentage}%`;
         } else {
-          if (categoryValueField) categoryValueField.value = '₪0';
           if (percentageField) percentageField.value = '0%';
-          console.log('⚠️ No category selected or category total is 0');
         }
         
         total += amount;
       });
       
-      console.log('💰 Total category differentials:', total);
       updateAllDifferentialsSubtotals();
-      
-      // SESSION 48: Auto-save after calculation
       setTimeout(saveDifferentialsToHelper, 100);
     }
     
@@ -17449,17 +17426,29 @@
         totalAmount += amount;
       });
       
-      // SESSION 47: Collect category differentials
+      // SESSION 48: Collect category differentials with DETAILED logging
       const categoryDiffRows = document.querySelectorAll('.category-differential-row');
       const categoryDifferentials = [];
       
+      console.log('🔍 SESSION 48: Searching for category differential rows...');
+      console.log('   Found', categoryDiffRows.length, 'rows with class .category-differential-row');
+      
       categoryDiffRows.forEach((row, index) => {
-        const type = row.querySelector('.category-diff-type')?.value || '';
-        const percentage = row.querySelector('.category-diff-percentage')?.value || '0%';
-        const categoryValue = row.querySelector('.category-diff-category-value')?.value || '₪0';
-        const amount = parseFloat(row.querySelector('.category-diff-amount')?.value) || 0;
+        const typeEl = row.querySelector('.category-diff-type');
+        const percentageEl = row.querySelector('.category-diff-percentage');
+        const categoryValueEl = row.querySelector('.category-diff-category-value');
+        const amountEl = row.querySelector('.category-diff-amount');
         
-        if (type && amount > 0) {
+        const type = typeEl?.value || '';
+        const percentage = percentageEl?.value || '0%';
+        const categoryValue = categoryValueEl?.value || '₪0';
+        const amount = parseFloat(amountEl?.value) || 0;
+        
+        console.log(`   Row ${index}: type="${type}", amount=${amount}, percentage="${percentage}", categoryValue="${categoryValue}"`);
+        console.log(`   Elements found: type=${!!typeEl}, percentage=${!!percentageEl}, categoryValue=${!!categoryValueEl}, amount=${!!amountEl}`);
+        
+        // SESSION 48: Save ALL rows, not just ones with amount > 0
+        if (type) {
           categoryDifferentials.push({
             id: index + 1,
             type: type,
@@ -17467,10 +17456,14 @@
             category_value: categoryValue,
             amount: amount
           });
+          console.log(`   ✅ Saved row ${index} to categoryDifferentials`);
+        } else {
+          console.log(`   ⚠️ Skipped row ${index} - no category type selected`);
         }
       });
       
-      console.log('🔍 DEBUG: Found', categoryDifferentials.length, 'category differential rows to save');
+      console.log('📊 SESSION 48: Total category differentials to save:', categoryDifferentials.length);
+      console.log('📊 Category differentials data:', categoryDifferentials);
       
       // Save to helper.final_report.differential
       const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
