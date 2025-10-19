@@ -568,18 +568,25 @@
         return;
       }
       
-      // Get parts_required from Supabase
-      const { data: requiredParts, error } = await window.supabase
-        .from('parts_required')
-        .select('*')
-        .eq('plate', plate.replace(/-/g, ''));
+      // Get parts_required from Supabase (with fallback if Supabase not available)
+      let requiredParts = [];
       
-      if (error) {
-        console.error('❌ SESSION 49: Error loading required parts:', error);
-        throw error;
+      if (window.supabase) {
+        const { data, error } = await window.supabase
+          .from('parts_required')
+          .select('*')
+          .eq('plate', plate.replace(/-/g, ''));
+        
+        if (error) {
+          console.error('❌ SESSION 49: Error loading required parts:', error);
+          throw error;
+        }
+        
+        requiredParts = data || [];
+        console.log(`✅ SESSION 49: Loaded ${requiredParts.length} required parts from Supabase`);
+      } else {
+        console.warn('⚠️ SESSION 50: Supabase client not available, using helper data only');
       }
-      
-      console.log(`✅ SESSION 49: Loaded ${requiredParts?.length || 0} required parts from Supabase`);
       
       // Also check helper.centers for additional data
       const helperCenters = window.helper?.centers || [];
@@ -804,16 +811,21 @@
         price: parseFloat(newPrice) || 0
       };
       
-      const { error } = await window.supabase
-        .from('parts_required')
-        .update(updatedData)
-        .eq('plate', plate.replace(/-/g, ''))
-        .eq('damage_center_id', centerId)
-        .eq('part_name', part.part_name || part.name);
-      
-      if (error) {
-        console.error('❌ SESSION 50: Supabase update error:', error);
-        throw error;
+      // Update Supabase if available
+      if (window.supabase) {
+        const { error } = await window.supabase
+          .from('parts_required')
+          .update(updatedData)
+          .eq('plate', plate.replace(/-/g, ''))
+          .eq('damage_center_id', centerId)
+          .eq('part_name', part.part_name || part.name);
+        
+        if (error) {
+          console.error('❌ SESSION 50: Supabase update error:', error);
+          throw error;
+        }
+      } else {
+        console.warn('⚠️ SESSION 50: Supabase not available, updating helper only');
       }
       
       parts[partIndex] = {
@@ -870,17 +882,21 @@
         if (partIndex < parts.length) {
           const partToDelete = parts[partIndex];
           
-          // Delete from Supabase first
-          const { error } = await window.supabase
-            .from('parts_required')
-            .delete()
-            .eq('plate', plate.replace(/-/g, ''))
-            .eq('damage_center_id', centerId)
-            .eq('part_name', partToDelete.part_name || partToDelete.name);
-          
-          if (error) {
-            console.error('❌ SESSION 49: Supabase delete error:', error);
-            throw error;
+          // Delete from Supabase first (if available)
+          if (window.supabase) {
+            const { error } = await window.supabase
+              .from('parts_required')
+              .delete()
+              .eq('plate', plate.replace(/-/g, ''))
+              .eq('damage_center_id', centerId)
+              .eq('part_name', partToDelete.part_name || partToDelete.name);
+            
+            if (error) {
+              console.error('❌ SESSION 49: Supabase delete error:', error);
+              throw error;
+            }
+          } else {
+            console.warn('⚠️ SESSION 50: Supabase not available, deleting from helper only');
           }
           
           // Delete from helper
@@ -893,7 +909,7 @@
           tabsLoaded.required = false;
           loadRequiredParts();
           
-          console.log('✅ SESSION 49: Part deleted successfully');
+          console.log('✅ SESSION 50: Part deleted successfully');
         }
       }
     } catch (error) {
@@ -914,13 +930,22 @@
         return;
       }
       
-      const { data: selectedParts, error } = await window.supabase
-        .from('selected_parts')
-        .select('*')
-        .eq('plate', plate.replace(/-/g, ''))
-        .order('selected_at', { ascending: false });
+      let selectedParts = [];
       
-      if (error) throw error;
+      if (window.supabase) {
+        const { data, error } = await window.supabase
+          .from('selected_parts')
+          .select('*')
+          .eq('plate', plate.replace(/-/g, ''))
+          .order('selected_at', { ascending: false });
+        
+        if (error) throw error;
+        selectedParts = data || [];
+      } else {
+        console.warn('⚠️ SESSION 50: Supabase client not available');
+        container.innerHTML = '<div class="no-results">Supabase לא זמין - בדוק חיבור</div>';
+        return;
+      }
       
       if (!selectedParts || selectedParts.length === 0) {
         container.innerHTML = `
@@ -1007,6 +1032,11 @@
     if (!confirm('האם למחוק חלק נבחר זה?')) return;
     
     try {
+      if (!window.supabase) {
+        alert('Supabase לא זמין - לא ניתן למחוק');
+        return;
+      }
+      
       const { error } = await window.supabase
         .from('selected_parts')
         .delete()
@@ -1044,34 +1074,11 @@
         </div>
       `;
       
-      // Reset summary
-      document.getElementById('totalResults').textContent = '0';
-      document.getElementById('avgPrice').textContent = '₪0';
-      document.getElementById('minPrice').textContent = '₪0';
-      document.getElementById('maxPrice').textContent = '₪0';
-      document.getElementById('recommendedSection').style.display = 'none';
+      // SESSION 50: Tab 3 has NO statistics elements (user requested removal)
       return;
     }
 
-    // Calculate statistics
-    const prices = results.map(r => parseFloat(r.price || 0)).filter(p => p > 0);
-    const avgPrice = prices.length > 0 ? Math.round(prices.reduce((a, b) => a + b, 0) / prices.length) : 0;
-    const minPrice = prices.length > 0 ? Math.min(...prices) : 0;
-    const maxPrice = prices.length > 0 ? Math.max(...prices) : 0;
-
-    // Update summary
-    document.getElementById('totalResults').textContent = results.length;
-    document.getElementById('avgPrice').textContent = `₪${avgPrice.toLocaleString('he-IL')}`;
-    document.getElementById('minPrice').textContent = `₪${minPrice.toLocaleString('he-IL')}`;
-    document.getElementById('maxPrice').textContent = `₪${maxPrice.toLocaleString('he-IL')}`;
-
-    // Show recommendation if available
-    if (summary.recommended) {
-      document.getElementById('recommendedSection').style.display = 'block';
-      document.getElementById('recommendedText').textContent = summary.recommended;
-    } else {
-      document.getElementById('recommendedSection').style.display = 'none';
-    }
+    // SESSION 50: Tab 3 - NO statistics or recommendations (per user request)
 
     // Generate additional stats
     const suppliers = [...new Set(results.map(r => r.supplier).filter(Boolean))];
