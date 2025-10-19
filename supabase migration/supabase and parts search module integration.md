@@ -30554,6 +30554,44 @@ function loadSupabaseClient() {
 
 ---
 
+unresolved problem for session 52:
+
+Read sessions 47, 48, 49 carefully , summaries are in suppose migration folder and in integrtion.md:
+The problem is in the file estimator builder :
+Do not change anything on page or the initial code done by the sessions above - check what was broken or if its a persistence problem 
+The import of required parts to the estimator damage section  is broken - they stopped importing details 
+The error that was - after working on the estimator - the parts required html was cleared from costs and details , then the final report was cleared = I restored the part required and the final report restored but the estimate broke 
+Need to check if there is a conflict between the fina report and the estimator - it should not be - I built the system that those are two separated paths 
+
+Fix the parts floating screen width in the estimator page - to make it fit the page - for now its sliding outside the page 
+
+—————————————————————
+
+Final report builder :
+
+1. Calculations of the after differentials is not correct - the total before vat needs to be the original total minus the value of differentials
+2. The categories are also wrong in the after differentials - each category needs to to be the calculated value of the original category cost minus the differentials of the category in the category section 
+3. Parts - is more complicated because it needs to subtract the   הנחת רכיב  , the  בלאי רכיב  and the category differentials for parts 
+
+———————————————————
+General info page broke  in the course of 50-51 works :
+internal-browser.js:218 An iframe which has both allow-scripts and allow-same-origin for its sandbox attribute can escape its sandboxing.
+(anonymous) @ internal-browser.js:218
+(anonymous) @ internal-browser.js:867
+general_info.html:146 Uncaught SyntaxError: The requested module './helper.js' does not provide an export named 'broadcastHelperUpdate' (at general_info.html:146:36)
+general_info.html:435 Uncaught SyntaxError: The requested module './helper.js' does not provide an export named 'broadcastHelperUpdate' (at general_info.html:435:36)
+universal-data-capture.js:4 Uncaught SyntaxError: The requested module './helper.js' does not provide an export named 'helper' (at universal-data-capture.js:4:24)
+
+Upload Levi html broke  in the course of 50-51 works :
+internal-browser.js:218 An iframe which has both allow-scripts and allow-same-origin for its sandbox attribute can escape its sandboxing.
+(anonymous) @ internal-browser.js:218
+(anonymous) @ internal-browser.js:867
+upload-levi.html:1090 Uncaught SyntaxError: The requested module './helper.js' does not provide an export named 'updateHelper' (at upload-levi.html:1090:10)
+universal-data-capture.js:4 Uncaught SyntaxError: The requested module './helper.js' does not provide an export named 'helper' (at universal-data-capture.js:4:24)
+
+————————————————————
+
+
 **End of Session 51 Integration Summary**
 
 
