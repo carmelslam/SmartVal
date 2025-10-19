@@ -1118,63 +1118,124 @@
         return;
       }
       
+      // Calculate statistics (from PiP reference)
       const totalParts = selectedParts.length;
-      const totalCost = selectedParts.reduce((sum, part) => {
+      const subtotal = selectedParts.reduce((sum, part) => {
         const price = parseFloat(part.price || part.cost || part.expected_cost || 0);
         const qty = parseInt(part.quantity || part.qty || 1);
         return sum + (price * qty);
       }, 0);
-      const avgPrice = totalCost / totalParts;
+      const avgPrice = totalParts > 0 ? subtotal / totalParts : 0;
       
       document.getElementById('totalSelectedParts').textContent = totalParts;
       document.getElementById('avgSelectedPrice').textContent = `₪${Math.round(avgPrice).toLocaleString('he-IL')}`;
-      document.getElementById('totalSelectedCost').textContent = `₪${Math.round(totalCost).toLocaleString('he-IL')}`;
+      document.getElementById('totalSelectedCost').textContent = `₪${Math.round(subtotal).toLocaleString('he-IL')}`;
       
+      // Build table rows (exact format from PiP - lines 4727-4784)
       const tableRows = selectedParts.map((part, index) => {
         const price = parseFloat(part.price || part.cost || part.expected_cost || 0);
         const qty = parseInt(part.quantity || part.qty || 1);
-        const total = price * qty;
-        const selectedDate = part.selected_at ? new Date(part.selected_at).toLocaleDateString('he-IL') : 'N/A';
+        const calculatedPrice = price * qty;
         
         return `
-          <tr>
-            <td><input type="checkbox" class="selected-part-checkbox" data-part-id="${part.id}"></td>
-            <td>${index + 1}</td>
-            <td>${part.pcode || part.oem || 'N/A'}</td>
-            <td style="text-align: right;">${part.part_family || ''} ${part.part_name || part.name || 'N/A'}</td>
-            <td>${part.source || 'N/A'}</td>
-            <td>₪${price.toLocaleString('he-IL')}</td>
-            <td>${qty}</td>
-            <td style="font-weight: bold;">₪${total.toLocaleString('he-IL')}</td>
-            <td>${part.supplier || part.supplier_name || '-'}</td>
-            <td>${selectedDate}</td>
-            <td>
-              <button onclick="editSelectedPart('${part.id}')">✏️</button>
-              <button onclick="deleteSelectedPart('${part.id}')">🗑️</button>
-            </td>
-          </tr>
-        `;
-      }).join('');
+        <tr style="background: ${index % 2 === 0 ? '#f9fafb' : 'white'}; border-bottom: 1px solid #e5e7eb;">
+          <td style="padding: 10px; text-align: center; width: 40px;">
+            <input type="checkbox" class="part-checkbox" data-part-id="${part.id}" data-part-index="${index}" 
+                   style="width: 14px; height: 14px; cursor: pointer;">
+          </td>
+          <td style="padding: 8px; text-align: center; font-size: 11px; color: #6b7280;">
+            ${index + 1}
+          </td>
+          <td style="padding: 8px; text-align: center; font-size: 11px; color: #6b7280;">
+            ${part.pcode || part.oem || 'N/A'}
+          </td>
+          <td style="padding: 8px 10px; text-align: right; font-size: 11px; color: #1f2937;">
+            ${part.part_family || part.group || 'N/A'} - ${part.part_name || part.name || 'N/A'}
+          </td>
+          <td style="padding: 8px; text-align: center; font-size: 11px; color: #4b5563;">
+            ${part.source || 'N/A'}
+          </td>
+          <td style="padding: 8px; text-align: center; font-size: 11px; color: #059669; font-weight: 600;">
+            ${price ? '₪' + price.toLocaleString('he-IL', {minimumFractionDigits: 2}) : '-'}
+          </td>
+          <td style="padding: 8px; text-align: center; font-size: 11px; color: #1f2937;">
+            ${qty}
+          </td>
+          <td style="padding: 8px; text-align: center; font-size: 11px; color: #059669; font-weight: 700;">
+            ${calculatedPrice ? '₪' + calculatedPrice.toLocaleString('he-IL', {minimumFractionDigits: 2}) : '-'}
+          </td>
+          <td style="padding: 8px; text-align: center; font-size: 11px; color: #4b5563;">
+            ${part.supplier || part.supplier_name || '-'}
+          </td>
+          <td style="padding: 8px; text-align: center; font-size: 11px; color: #6b7280;">
+            ${part.selected_at ? new Date(part.selected_at).toLocaleDateString('he-IL', { 
+              year: '2-digit', month: '2-digit', day: '2-digit'
+            }) : 'N/A'}
+          </td>
+          <td style="padding: 8px; text-align: center; white-space: nowrap;">
+            <button onclick="editSelectedPartTab2(${index})" 
+                    style="background: #f59e0b; color: white; border: none; padding: 4px 8px; 
+                           border-radius: 4px; cursor: pointer; font-size: 11px; font-weight: 600; margin-left: 3px;"
+                    onmouseover="this.style.background='#d97706'" 
+                    onmouseout="this.style.background='#f59e0b'">
+              ✏️
+            </button>
+            <button onclick="deleteSelectedPartTab2('${part.id}', '${part.plate}')" 
+                    style="background: #ef4444; color: white; border: none; padding: 4px 8px; 
+                           border-radius: 4px; cursor: pointer; font-size: 11px; font-weight: 600;"
+                    onmouseover="this.style.background='#dc2626'" 
+                    onmouseout="this.style.background='#ef4444'">
+              🗑️
+            </button>
+          </td>
+        </tr>
+      `}).join('');
       
+      // Build full table with PiP styling (lines 4837-4860)
       container.innerHTML = `
-        <table class="parts-table">
-          <thead>
-            <tr>
-              <th><input type="checkbox" id="selectAllSelected" onclick="toggleSelectAllSelected(this.checked)"></th>
-              <th>#</th>
-              <th>קוד</th>
-              <th>שם החלק</th>
-              <th>מקור</th>
-              <th>מחיר</th>
-              <th>כמות</th>
-              <th>סכום</th>
-              <th>ספק</th>
-              <th>תאריך</th>
-              <th>פעולות</th>
-            </tr>
-          </thead>
-          <tbody>${tableRows}</tbody>
-        </table>
+        <div style="max-height: 500px; overflow-y: auto; overflow-x: auto;">
+          <table style="width: 100%; border-collapse: collapse; border: 1px solid #e5e7eb; direction: rtl;">
+            <thead style="background: #10b981; color: white; position: sticky; top: 0; z-index: 1;">
+              <tr>
+                <th style="padding: 8px; text-align: center; border: 1px solid #059669; width: 35px; font-size: 11px;">
+                  <input type="checkbox" id="selectAllParts" 
+                         style="width: 12px; height: 12px; cursor: pointer;"
+                         onchange="window.toggleSelectAllTab2(this.checked)">
+                </th>
+                <th style="padding: 8px; text-align: center; border: 1px solid #059669; width: 40px; font-size: 11px;">#</th>
+                <th style="padding: 8px; text-align: center; border: 1px solid #059669; width: 100px; font-size: 11px;">קוד</th>
+                <th style="padding: 8px 10px; text-align: right; border: 1px solid #059669; min-width: 200px; font-size: 11px;">שם החלק</th>
+                <th style="padding: 8px; text-align: center; border: 1px solid #059669; width: 80px; font-size: 11px;">מקור</th>
+                <th style="padding: 8px; text-align: center; border: 1px solid #059669; width: 80px; font-size: 11px;">מחיר</th>
+                <th style="padding: 8px; text-align: center; border: 1px solid #059669; width: 50px; font-size: 11px;">כמות</th>
+                <th style="padding: 8px; text-align: center; border: 1px solid #059669; width: 90px; font-size: 11px;">סכום</th>
+                <th style="padding: 8px; text-align: center; border: 1px solid #059669; width: 120px; font-size: 11px;">ספק</th>
+                <th style="padding: 8px; text-align: center; border: 1px solid #059669; width: 110px; font-size: 11px;">תאריך</th>
+                <th style="padding: 8px; text-align: center; border: 1px solid #059669; width: 140px; font-size: 11px;">פעולות</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${tableRows}
+            </tbody>
+          </table>
+        </div>
+        
+        <!-- Subtotal Section (lines 4863-4878) -->
+        <div style="background: #f0fdf4; padding: 15px; margin-top: 10px; border: 2px solid #10b981; border-radius: 8px; text-align: right; direction: rtl;">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div style="font-size: 16px; font-weight: 600; color: #1f2937;">
+              סה"כ עלות משוערת:
+            </div>
+            <div style="text-align: left;">
+              <div style="font-size: 18px; font-weight: 700; color: #059669;">
+                ₪${subtotal.toLocaleString('he-IL', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </div>
+              <div style="font-size: 12px; color: #6b7280; margin-top: 5px;">
+                ${totalParts} חלקים • המחירים הינם משוערים בלבד
+              </div>
+            </div>
+          </div>
+        </div>
       `;
     } catch (error) {
       console.error('❌ SESSION 50: Error loading selected parts:', error);
@@ -1182,11 +1243,12 @@
     }
   }
   
-  window.editSelectedPart = async function(partId) {
+  // SESSION 50: Tab 2 Helper Functions
+  window.editSelectedPartTab2 = async function(partIndex) {
     alert('עריכת חלק נבחר - תתווסף בהמשך');
   };
   
-  window.deleteSelectedPart = async function(partId) {
+  window.deleteSelectedPartTab2 = async function(partId, plate) {
     if (!confirm('האם למחוק חלק נבחר זה?')) return;
     
     try {
@@ -1202,6 +1264,7 @@
       
       if (error) throw error;
       
+      // Reload Tab 2
       tabsLoaded.selected = false;
       loadSelectedParts();
     } catch (error) {
@@ -1209,8 +1272,8 @@
     }
   };
   
-  window.toggleSelectAllSelected = function(checked) {
-    document.querySelectorAll('.selected-part-checkbox').forEach(cb => cb.checked = checked);
+  window.toggleSelectAllTab2 = function(checked) {
+    document.querySelectorAll('.part-checkbox').forEach(cb => cb.checked = checked);
   };
   
   // SESSION 49: TAB 3 - Load Search Results (rename old function)
