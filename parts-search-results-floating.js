@@ -207,56 +207,168 @@
       color: #666;
       margin-top: 3px;
     }
+    /* SESSION 49: Tab Navigation Styles */
+    .tabs-header {
+      display: flex;
+      gap: 0;
+      margin-bottom: 20px;
+      border-bottom: 2px solid #e9ecef;
+    }
+    .tab-btn {
+      flex: 1;
+      padding: 12px 20px;
+      border: none;
+      background: #f8f9fa;
+      color: #6c757d;
+      font-weight: bold;
+      font-size: 14px;
+      cursor: pointer;
+      border-bottom: 3px solid transparent;
+      transition: all 0.3s;
+    }
+    .tab-btn:hover {
+      background: #e9ecef;
+    }
+    .tab-btn.active {
+      background: #fff;
+      color: #0066cc;
+      border-bottom-color: #0066cc;
+    }
+    .tab-content {
+      display: none;
+    }
+    .tab-content.active {
+      display: block;
+    }
+    /* SESSION 49: Damage Center Group Styles */
+    .damage-center-group {
+      border: 2px solid #28a745;
+      border-radius: 8px;
+      margin-bottom: 15px;
+      overflow: hidden;
+    }
+    .damage-center-header {
+      background: #28a745;
+      color: white;
+      padding: 12px 15px;
+      font-weight: bold;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      cursor: pointer;
+    }
+    .damage-center-header:hover {
+      background: #218838;
+    }
+    .damage-center-parts-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    .damage-center-parts-table th {
+      background: #e8f5e9;
+      padding: 10px;
+      text-align: center;
+      font-size: 12px;
+      border-bottom: 2px solid #28a745;
+    }
+    .damage-center-parts-table td {
+      padding: 10px;
+      text-align: center;
+      font-size: 13px;
+      border-bottom: 1px solid #e9ecef;
+    }
+    .damage-center-parts-table tr:hover {
+      background: #f8f9fa;
+    }
+    .damage-center-subtotal {
+      background: #f0f9ff;
+      padding: 10px 15px;
+      font-weight: bold;
+      text-align: left;
+      border-top: 2px solid #28a745;
+    }
   `;
   document.head.appendChild(style);
 
   const modal = document.createElement("div");
   modal.id = "partsSearchResultsModal";
+  // SESSION 49: Restructured to 3-tab interface
   modal.innerHTML = `
     <div class="results-modal-title">
-      🔍 תוצאות חיפוש חלקים
+      🔍 מערכת ניהול חלקים
     </div>
     
-    <div class="results-summary" id="resultsSummary">
-      <div class="summary-grid">
-        <div class="summary-item">
-          <div class="summary-label">סה"כ תוצאות</div>
-          <div class="summary-value" id="totalResults">0</div>
-        </div>
-        <div class="summary-item">
-          <div class="summary-label">מחיר ממוצע</div>
-          <div class="summary-value" id="avgPrice">₪0</div>
-        </div>
-        <div class="summary-item">
-          <div class="summary-label">מחיר מינימלי</div>
-          <div class="summary-value" id="minPrice">₪0</div>
-        </div>
-        <div class="summary-item">
-          <div class="summary-label">מחיר מקסימלי</div>
-          <div class="summary-value" id="maxPrice">₪0</div>
+    <!-- SESSION 49: Tab Navigation -->
+    <div class="tabs-header">
+      <button class="tab-btn active" data-tab="required" onclick="switchPartsTab('required')">
+        📋 חלקים נדרשים
+      </button>
+      <button class="tab-btn" data-tab="selected" onclick="switchPartsTab('selected')">
+        ✅ חלקים נבחרים
+      </button>
+      <button class="tab-btn" data-tab="results" onclick="switchPartsTab('results')">
+        🔍 תוצאות חיפוש
+      </button>
+    </div>
+
+    <!-- SESSION 49: Tab 1 - Parts Required -->
+    <div class="tab-content active" id="tab-required">
+      <div class="results-summary" id="requiredSummary">
+        <div class="summary-grid">
+          <div class="summary-item">
+            <div class="summary-label">מרכזי נזק</div>
+            <div class="summary-value" id="totalDamageCenters">0</div>
+          </div>
+          <div class="summary-item">
+            <div class="summary-label">סה"כ חלקים</div>
+            <div class="summary-value" id="totalRequiredParts">0</div>
+          </div>
+          <div class="summary-item">
+            <div class="summary-label">עלות משוערת</div>
+            <div class="summary-value" id="totalRequiredCost">₪0</div>
+          </div>
         </div>
       </div>
-      
-      <div class="stats-grid" id="statsGrid">
-        <!-- Dynamic stats will be inserted here -->
+      <div class="search-results-container" id="requiredPartsContainer">
+        <div class="no-results">
+          <div class="no-results-icon">📋</div>
+          <div>אין חלקים נדרשים</div>
+        </div>
       </div>
     </div>
 
-    <div class="recommended-section" id="recommendedSection" style="display: none;">
-      <div class="recommended-title">
-        💡 המלצה מהמערכת
+    <!-- SESSION 49: Tab 2 - Selected Parts -->
+    <div class="tab-content" id="tab-selected" style="display: none;">
+      <div class="results-summary" id="selectedSummary">
+        <div class="summary-grid">
+          <div class="summary-item">
+            <div class="summary-label">סה"כ נבחרו</div>
+            <div class="summary-value" id="totalSelectedParts">0</div>
+          </div>
+          <div class="summary-item">
+            <div class="summary-label">מחיר ממוצע</div>
+            <div class="summary-value" id="avgSelectedPrice">₪0</div>
+          </div>
+          <div class="summary-item">
+            <div class="summary-label">עלות כוללת</div>
+            <div class="summary-value" id="totalSelectedCost">₪0</div>
+          </div>
+        </div>
       </div>
-      <div class="recommended-text" id="recommendedText">
-        <!-- Recommended text will be inserted here -->
+      <div class="search-results-container" id="selectedPartsContainer">
+        <div class="no-results">
+          <div class="no-results-icon">✅</div>
+          <div>אין חלקים נבחרים</div>
+        </div>
       </div>
     </div>
 
-    <div class="search-results-container" id="searchResultsContainer">
-      <div class="no-results">
-        <div class="no-results-icon">📦</div>
-        <div>אין תוצאות חיפוש זמינות</div>
-        <div style="font-size: 14px; margin-top: 10px; color: #999;">
-          בצע חיפוש חלקים כדי לראות תוצאות כאן
+    <!-- SESSION 49: Tab 3 - Search Results (NO STATISTICS) -->
+    <div class="tab-content" id="tab-results" style="display: none;">
+      <div class="search-results-container" id="searchResultsContainer">
+        <div class="no-results">
+          <div class="no-results-icon">🔍</div>
+          <div>אין תוצאות חיפוש זמינות</div>
         </div>
       </div>
     </div>
@@ -269,19 +381,85 @@
   `;
   document.body.appendChild(modal);
 
+  // SESSION 49: Tab state persistence
+  let currentTab = 'required';
+  let tabsLoaded = {
+    required: false,
+    selected: false,
+    results: false
+  };
+
   // Global functions
   window.togglePartsSearchResults = function () {
     const modal = document.getElementById("partsSearchResultsModal");
     if (modal.style.display === "none" || !modal.style.display) {
       modal.style.display = "block";
-      loadPartsSearchResults();
+      // SESSION 49: Load current tab if not already loaded
+      if (!tabsLoaded[currentTab]) {
+        loadTabData(currentTab);
+      }
     } else {
       modal.style.display = "none";
     }
   };
 
+  // SESSION 49: Tab switching function with persistence
+  window.switchPartsTab = function(tabName) {
+    console.log(`📑 SESSION 49: Switching to tab: ${tabName}`);
+    
+    // Update tab buttons
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+      if (btn.dataset.tab === tabName) {
+        btn.classList.add('active');
+      } else {
+        btn.classList.remove('active');
+      }
+    });
+    
+    // Update tab content
+    document.querySelectorAll('.tab-content').forEach(content => {
+      content.style.display = 'none';
+      content.classList.remove('active');
+    });
+    
+    const activeTab = document.getElementById(`tab-${tabName}`);
+    if (activeTab) {
+      activeTab.style.display = 'block';
+      activeTab.classList.add('active');
+    }
+    
+    // Update current tab
+    currentTab = tabName;
+    
+    // Load data if not already loaded (tab persistence)
+    if (!tabsLoaded[tabName]) {
+      loadTabData(tabName);
+    }
+  };
+
+  // SESSION 49: Load data for specific tab
+  function loadTabData(tabName) {
+    console.log(`🔄 SESSION 49: Loading data for tab: ${tabName}`);
+    
+    switch(tabName) {
+      case 'required':
+        loadRequiredParts();
+        break;
+      case 'selected':
+        loadSelectedParts();
+        break;
+      case 'results':
+        loadSearchResults();
+        break;
+    }
+    
+    tabsLoaded[tabName] = true;
+  }
+
   window.refreshPartsResults = function () {
-    loadPartsSearchResults();
+    // SESSION 49: Refresh current tab and mark as not loaded
+    tabsLoaded[currentTab] = false;
+    loadTabData(currentTab);
   };
 
   window.exportPartsResults = function () {
@@ -371,7 +549,298 @@
     }
   }
 
-  function loadPartsSearchResults() {
+  // SESSION 49: TAB 1 - Load Required Parts grouped by damage center
+  async function loadRequiredParts() {
+    console.log('📋 SESSION 49: Loading required parts...');
+    const container = document.getElementById('requiredPartsContainer');
+    
+    try {
+      // Get plate number
+      const plate = window.helper?.meta?.plate || window.helper?.vehicle?.plate;
+      
+      if (!plate) {
+        container.innerHTML = `
+          <div class="no-results">
+            <div class="no-results-icon">⚠️</div>
+            <div>לא נמצא מספר רישוי</div>
+          </div>
+        `;
+        return;
+      }
+      
+      // Get parts_required from Supabase
+      const { data: requiredParts, error } = await window.supabase
+        .from('parts_required')
+        .select('*')
+        .eq('plate', plate.replace(/-/g, ''));
+      
+      if (error) {
+        console.error('❌ SESSION 49: Error loading required parts:', error);
+        throw error;
+      }
+      
+      console.log(`✅ SESSION 49: Loaded ${requiredParts?.length || 0} required parts from Supabase`);
+      
+      // Also check helper.centers for additional data
+      const helperCenters = window.helper?.centers || [];
+      
+      // Group parts by damage center
+      const groupedParts = {};
+      let totalParts = 0;
+      let totalCost = 0;
+      
+      // Process Supabase parts
+      if (requiredParts && requiredParts.length > 0) {
+        requiredParts.forEach(part => {
+          const centerId = part.damage_center_id || 'unknown';
+          const centerNumber = part.damage_center_number || '?';
+          const centerDesc = part.damage_center_description || 'ללא תיאור';
+          
+          if (!groupedParts[centerId]) {
+            groupedParts[centerId] = {
+              id: centerId,
+              number: centerNumber,
+              description: centerDesc,
+              parts: []
+            };
+          }
+          
+          groupedParts[centerId].parts.push(part);
+          totalParts++;
+          
+          const partCost = (parseFloat(part.price || part.cost || part.expected_cost || 0)) * (parseInt(part.quantity || part.qty || 1));
+          totalCost += partCost;
+        });
+      }
+      
+      // Also process helper.centers if available
+      helperCenters.forEach((center, index) => {
+        const centerParts = center.Parts?.parts_required || center.Parts?.parts || [];
+        if (centerParts.length > 0) {
+          const centerId = center.Id || center.id || `center_${index}`;
+          const centerNumber = center["Damage center Number"] || center.number || (index + 1);
+          const centerDesc = center.Description || center.description || 'ללא תיאור';
+          
+          // Merge with existing or create new
+          if (!groupedParts[centerId]) {
+            groupedParts[centerId] = {
+              id: centerId,
+              number: centerNumber,
+              description: centerDesc,
+              parts: []
+            };
+          }
+          
+          // Add parts that aren't already there (avoid duplicates)
+          centerParts.forEach(part => {
+            const exists = groupedParts[centerId].parts.some(p => 
+              (p.pcode === part.pcode || p.oem === part.oem) && p.part_name === part.part_name
+            );
+            
+            if (!exists) {
+              groupedParts[centerId].parts.push(part);
+              totalParts++;
+              const partCost = (parseFloat(part.price || part.cost || part.expected_cost || 0)) * (parseInt(part.quantity || part.qty || 1));
+              totalCost += partCost;
+            }
+          });
+        }
+      });
+      
+      // Update statistics
+      const damageCentersCount = Object.keys(groupedParts).length;
+      document.getElementById('totalDamageCenters').textContent = damageCentersCount;
+      document.getElementById('totalRequiredParts').textContent = totalParts;
+      document.getElementById('totalRequiredCost').textContent = `₪${Math.round(totalCost).toLocaleString('he-IL')}`;
+      
+      // Display grouped parts
+      if (damageCentersCount === 0) {
+        container.innerHTML = `
+          <div class="no-results">
+            <div class="no-results-icon">📋</div>
+            <div>אין חלקים נדרשים</div>
+            <div style="font-size: 14px; margin-top: 10px; color: #999;">
+              הוסף חלקים למרכזי נזק דרך מודול החלקים הנדרשים
+            </div>
+          </div>
+        `;
+        return;
+      }
+      
+      // Create HTML for each damage center
+      const groupsHTML = Object.values(groupedParts).map(group => {
+        const subtotal = group.parts.reduce((sum, part) => {
+          const price = parseFloat(part.price || part.cost || part.expected_cost || 0);
+          const qty = parseInt(part.quantity || part.qty || 1);
+          return sum + (price * qty);
+        }, 0);
+        
+        const partsRows = group.parts.map((part, partIndex) => {
+          const price = parseFloat(part.price || part.cost || part.expected_cost || 0);
+          const qty = parseInt(part.quantity || part.qty || 1);
+          const total = price * qty;
+          
+          return `
+            <tr>
+              <td>${partIndex + 1}</td>
+              <td>${part.catalog_code || part.pcode || part.oem || 'N/A'}</td>
+              <td style="text-align: right;">${part.part_name || part.name || 'N/A'}</td>
+              <td>${qty}</td>
+              <td>₪${price.toLocaleString('he-IL')}</td>
+              <td style="font-weight: bold;">₪${total.toLocaleString('he-IL')}</td>
+              <td>
+                <button onclick="editRequiredPart('${group.id}', ${partIndex})" 
+                        style="background: #f59e0b; color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer;">
+                  ✏️
+                </button>
+                <button onclick="deleteRequiredPart('${group.id}', ${partIndex})" 
+                        style="background: #ef4444; color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; margin-right: 4px;">
+                  🗑️
+                </button>
+              </td>
+            </tr>
+          `;
+        }).join('');
+        
+        return `
+          <div class="damage-center-group">
+            <div class="damage-center-header" onclick="toggleDamageCenterGroup('${group.id}')">
+              <span>מרכז נזק #${group.number}: ${group.description}</span>
+              <span>${group.parts.length} חלקים • ₪${Math.round(subtotal).toLocaleString('he-IL')}</span>
+            </div>
+            <div id="group-${group.id}" style="display: block;">
+              <table class="damage-center-parts-table">
+                <thead>
+                  <tr>
+                    <th style="width: 40px;">#</th>
+                    <th style="width: 120px;">קוד קטלוגי</th>
+                    <th style="min-width: 200px;">שם החלק</th>
+                    <th style="width: 60px;">כמות</th>
+                    <th style="width: 100px;">מחיר יחידה</th>
+                    <th style="width: 100px;">סכום</th>
+                    <th style="width: 100px;">פעולות</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${partsRows}
+                </tbody>
+              </table>
+              <div class="damage-center-subtotal">
+                סה"כ מרכז נזק: ₪${Math.round(subtotal).toLocaleString('he-IL')}
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+      
+      container.innerHTML = groupsHTML;
+      console.log('✅ SESSION 49: Required parts loaded successfully');
+      
+    } catch (error) {
+      console.error('❌ SESSION 49: Error in loadRequiredParts:', error);
+      container.innerHTML = `
+        <div class="no-results">
+          <div class="no-results-icon">❌</div>
+          <div>שגיאה בטעינת חלקים נדרשים</div>
+          <div style="font-size: 14px; margin-top: 10px; color: #999;">
+            ${error.message}
+          </div>
+        </div>
+      `;
+    }
+  }
+  
+  // SESSION 49: TAB 1 HELPER - Toggle damage center group collapse
+  window.toggleDamageCenterGroup = function(groupId) {
+    const groupContent = document.getElementById(`group-${groupId}`);
+    if (groupContent) {
+      groupContent.style.display = groupContent.style.display === 'none' ? 'block' : 'none';
+    }
+  };
+  
+  // SESSION 49: TAB 1 HELPER - Edit required part
+  window.editRequiredPart = async function(centerId, partIndex) {
+    console.log(`✏️ SESSION 49: Edit part - Center: ${centerId}, Part: ${partIndex}`);
+    // Implementation for edit dialog coming next
+    alert('תכונת עריכה תתווסף בשלב הבא');
+  };
+  
+  // SESSION 49: TAB 1 HELPER - Delete required part
+  window.deleteRequiredPart = async function(centerId, partIndex) {
+    console.log(`🗑️ SESSION 49: Delete part - Center: ${centerId}, Part: ${partIndex}`);
+    
+    if (!confirm('האם למחוק חלק זה?')) {
+      return;
+    }
+    
+    try {
+      // Get plate
+      const plate = window.helper?.meta?.plate || window.helper?.vehicle?.plate;
+      if (!plate) {
+        alert('לא נמצא מספר רישוי');
+        return;
+      }
+      
+      // Find center in helper
+      const centerIndex = window.helper?.centers?.findIndex(c => 
+        (c.Id || c.id) === centerId
+      );
+      
+      if (centerIndex !== -1 && window.helper.centers[centerIndex]) {
+        const center = window.helper.centers[centerIndex];
+        const parts = center.Parts?.parts_required || center.Parts?.parts || [];
+        
+        if (partIndex < parts.length) {
+          const partToDelete = parts[partIndex];
+          
+          // Delete from Supabase first
+          const { error } = await window.supabase
+            .from('parts_required')
+            .delete()
+            .eq('plate', plate.replace(/-/g, ''))
+            .eq('damage_center_id', centerId)
+            .eq('part_name', partToDelete.part_name || partToDelete.name);
+          
+          if (error) {
+            console.error('❌ SESSION 49: Supabase delete error:', error);
+            throw error;
+          }
+          
+          // Delete from helper
+          parts.splice(partIndex, 1);
+          
+          // Update sessionStorage
+          sessionStorage.setItem('helper', JSON.stringify(window.helper));
+          
+          // Reload tab
+          tabsLoaded.required = false;
+          loadRequiredParts();
+          
+          console.log('✅ SESSION 49: Part deleted successfully');
+        }
+      }
+    } catch (error) {
+      console.error('❌ SESSION 49: Delete error:', error);
+      alert('שגיאה במחיקת החלק: ' + error.message);
+    }
+  };
+  
+  // SESSION 49: TAB 2 - Load Selected Parts from Supabase
+  async function loadSelectedParts() {
+    console.log('✅ SESSION 49: Loading selected parts...');
+    const container = document.getElementById('selectedPartsContainer');
+    
+    // Implementation coming next...
+    container.innerHTML = `
+      <div class="no-results">
+        <div class="no-results-icon">🔄</div>
+        <div>טוען חלקים נבחרים...</div>
+      </div>
+    `;
+  }
+  
+  // SESSION 49: TAB 3 - Load Search Results (rename old function)
+  function loadSearchResults() {
     const results = getPartsSearchResults();
     const summary = getSummaryData();
     const container = document.getElementById('searchResultsContainer');
@@ -643,12 +1112,12 @@
     }
   };
   
-  // Initialize allParts when results are loaded
-  const originalLoadPartsSearchResults = loadPartsSearchResults;
-  loadPartsSearchResults = function() {
-    originalLoadPartsSearchResults();
+  // SESSION 49: Initialize allParts when Tab 3 results are loaded
+  const originalLoadSearchResults = loadSearchResults;
+  loadSearchResults = function() {
+    originalLoadSearchResults();
     
-    // Update allParts array for selection functionality
+    // Update allParts array for selection functionality (Tab 3)
     allParts = getPartsSearchResults() || [];
     selectedParts.clear();
     updateSelectionSummary();
