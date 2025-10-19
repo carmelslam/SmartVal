@@ -1004,22 +1004,44 @@
         return;
       }
       
+      // Check if Supabase is available (with small delay for initialization)
+      if (!window.supabase) {
+        console.warn('⚠️ SESSION 50: Supabase client not available, waiting...');
+        container.innerHTML = `
+          <div class="no-results">
+            <div class="no-results-icon">🔄</div>
+            <div>ממתין לחיבור Supabase...</div>
+          </div>
+        `;
+        
+        // Wait 500ms and try again
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
+        if (!window.supabase) {
+          console.error('❌ SESSION 50: Supabase still not available');
+          container.innerHTML = `
+            <div class="no-results">
+              <div class="no-results-icon">❌</div>
+              <div style="margin-bottom: 10px;">Supabase לא זמין</div>
+              <div style="font-size: 12px; color: #666;">
+                יש לוודא שהסקריפט services/supabaseClient.js נטען בעמוד
+              </div>
+            </div>
+          `;
+          return;
+        }
+      }
+      
       let selectedParts = [];
       
-      if (window.supabase) {
-        const { data, error } = await window.supabase
-          .from('selected_parts')
-          .select('*')
-          .eq('plate', plate.replace(/-/g, ''))
-          .order('selected_at', { ascending: false });
-        
-        if (error) throw error;
-        selectedParts = data || [];
-      } else {
-        console.warn('⚠️ SESSION 50: Supabase client not available');
-        container.innerHTML = '<div class="no-results">Supabase לא זמין - בדוק חיבור</div>';
-        return;
-      }
+      const { data, error } = await window.supabase
+        .from('selected_parts')
+        .select('*')
+        .eq('plate', plate.replace(/-/g, ''))
+        .order('selected_at', { ascending: false });
+      
+      if (error) throw error;
+      selectedParts = data || [];
       
       if (!selectedParts || selectedParts.length === 0) {
         container.innerHTML = `
