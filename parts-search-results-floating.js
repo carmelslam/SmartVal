@@ -740,15 +740,15 @@
           const totalAfterReductions = updatedPrice * qty;
           
           return `
-            <tr style="border-bottom: 2px solid #e5e7eb;">
-              <td rowspan="2" style="text-align: center; padding: 12px; vertical-align: middle; font-weight: bold; border-left: 1px solid #e5e7eb;">${partIndex + 1}</td>
-              <td style="padding: 8px 12px; border-left: 1px solid #e5e7eb;">${part.catalog_code || part.pcode || part.oem || 'N/A'}</td>
-              <td colspan="2" style="text-align: right; padding: 8px 12px; font-weight: 600; border-left: 1px solid #e5e7eb;">${part.part_name || part.name || 'N/A'}</td>
-              <td style="text-align: center; padding: 8px 12px; border-left: 1px solid #e5e7eb;">₪${pricePerUnit.toFixed(2)}</td>
-              <td style="text-align: center; padding: 8px 12px; border-left: 1px solid #e5e7eb;">${reduction}%</td>
-              <td style="text-align: center; padding: 8px 12px; border-left: 1px solid #e5e7eb;">${wear}%</td>
-              <td rowspan="2" style="text-align: center; padding: 12px; vertical-align: middle; font-weight: bold; background: #d1fae5; color: #059669; font-size: 15px; border-left: 1px solid #e5e7eb;">₪${Math.round(totalAfterReductions).toLocaleString('he-IL')}</td>
-              <td rowspan="2" style="text-align: center; padding: 12px; vertical-align: middle; white-space: nowrap; border-left: 1px solid #e5e7eb;">
+            <tr style="border-bottom: 1px solid #e5e7eb;">
+              <td rowspan="2" style="text-align: center; padding: 12px; vertical-align: middle; font-weight: bold;">${partIndex + 1}</td>
+              <td style="padding: 8px 12px;">${part.catalog_code || part.pcode || part.oem || 'N/A'}</td>
+              <td colspan="2" style="text-align: right; padding: 8px 12px; font-weight: 600;">${part.part_name || part.name || 'N/A'}</td>
+              <td style="text-align: center; padding: 8px 12px;">₪${pricePerUnit.toFixed(2)}</td>
+              <td style="text-align: center; padding: 8px 12px;">${reduction}%</td>
+              <td style="text-align: center; padding: 8px 12px;">${wear}%</td>
+              <td rowspan="2" style="text-align: center; padding: 12px; vertical-align: middle; font-weight: bold; background: #d1fae5; color: #059669; font-size: 15px;">₪${Math.round(totalAfterReductions).toLocaleString('he-IL')}</td>
+              <td rowspan="2" style="text-align: center; padding: 12px; vertical-align: middle; white-space: nowrap;">
                 <button onclick="editRequiredPart('${group.id}', ${partIndex})" 
                         style="background: #f59e0b; color: white; border: none; padding: 6px 10px; border-radius: 4px; cursor: pointer; margin-bottom: 4px; display: block; width: 100%;">
                   ✏️ ערוך
@@ -759,20 +759,20 @@
                 </button>
               </td>
             </tr>
-            <tr style="border-bottom: 3px solid #28a745; background: #f8f9fa;">
-              <td style="padding: 8px 12px; font-size: 12px; color: #6c757d; border-left: 1px solid #e5e7eb;">
+            <tr style="border-bottom: 2px solid #28a745; background: #f8f9fa;">
+              <td style="padding: 8px 12px; font-size: 12px; color: #6c757d;">
                 <strong>מקור:</strong> ${part.source || '-'}
               </td>
-              <td style="padding: 8px 12px; font-size: 12px; color: #6c757d; border-left: 1px solid #e5e7eb;">
+              <td style="padding: 8px 12px; font-size: 12px; color: #6c757d;">
                 <strong>ספק:</strong> ${part.supplier || part.supplier_name || '-'}
               </td>
-              <td style="padding: 8px 12px; font-size: 12px; color: #6c757d; border-left: 1px solid #e5e7eb;">
+              <td style="padding: 8px 12px; font-size: 12px; color: #6c757d;">
                 <strong>כמות:</strong> ${qty}
               </td>
-              <td style="padding: 8px 12px; font-size: 12px; background: #fff3cd; border-left: 1px solid #e5e7eb;">
+              <td style="padding: 8px 12px; font-size: 12px; background: #fff3cd;">
                 <strong>מחיר לפני:</strong> ₪${pricePerUnit.toFixed(2)}
               </td>
-              <td colspan="2" style="padding: 8px 12px; font-size: 12px; background: #d1fae5; border-left: 1px solid #e5e7eb;">
+              <td colspan="2" style="padding: 8px 12px; font-size: 12px; background: #d1fae5;">
                 <strong>מחיר אחרי הפחתות:</strong> ₪${updatedPrice.toFixed(2)}
               </td>
             </tr>
@@ -787,17 +787,17 @@
             </div>
             <div id="group-${group.id}" style="display: block;">
               <div style="overflow-x: auto; -webkit-overflow-scrolling: touch;">
-                <table class="damage-center-parts-table" style="width: 100%; min-width: 800px; border-collapse: collapse; border: 2px solid #28a745; font-size: 14px;">
+                <table class="damage-center-parts-table" style="width: 100%; min-width: 800px; border-collapse: collapse; font-size: 14px;">
                   <thead>
-                    <tr style="background: #1e7e34; color: #ffffff;">
-                      <th style="padding: 12px; text-align: center; width: 50px; border: 1px solid #28a745; color: #ffffff; font-weight: bold;">#</th>
-                      <th style="padding: 12px; text-align: center; width: 120px; border: 1px solid #28a745; color: #ffffff; font-weight: bold;">קוד קטלוגי</th>
-                      <th colspan="2" style="padding: 12px; text-align: center; min-width: 200px; border: 1px solid #28a745; color: #ffffff; font-weight: bold;">שם החלק</th>
-                      <th style="padding: 12px; text-align: center; width: 100px; border: 1px solid #28a745; color: #ffffff; font-weight: bold;">מחיר לפני</th>
-                      <th style="padding: 12px; text-align: center; width: 80px; border: 1px solid #28a745; color: #ffffff; font-weight: bold;">הנחה %</th>
-                      <th style="padding: 12px; text-align: center; width: 80px; border: 1px solid #28a745; color: #ffffff; font-weight: bold;">בלאי %</th>
-                      <th style="padding: 12px; text-align: center; width: 120px; border: 1px solid #28a745; color: #ffffff; font-weight: bold;">סה״כ</th>
-                      <th style="padding: 12px; text-align: center; width: 120px; border: 1px solid #28a745; color: #ffffff; font-weight: bold;">פעולות</th>
+                    <tr style="background: transparent;">
+                      <th style="padding: 12px; text-align: center; width: 50px; color: #28a745; font-weight: bold; font-size: 15px;">#</th>
+                      <th style="padding: 12px; text-align: center; width: 120px; color: #28a745; font-weight: bold; font-size: 15px;">קוד קטלוגי</th>
+                      <th colspan="2" style="padding: 12px; text-align: center; min-width: 200px; color: #28a745; font-weight: bold; font-size: 15px;">שם החלק</th>
+                      <th style="padding: 12px; text-align: center; width: 100px; color: #28a745; font-weight: bold; font-size: 15px;">מחיר לפני</th>
+                      <th style="padding: 12px; text-align: center; width: 80px; color: #28a745; font-weight: bold; font-size: 15px;">הנחה %</th>
+                      <th style="padding: 12px; text-align: center; width: 80px; color: #28a745; font-weight: bold; font-size: 15px;">בלאי %</th>
+                      <th style="padding: 12px; text-align: center; width: 120px; color: #28a745; font-weight: bold; font-size: 15px;">סה״כ</th>
+                      <th style="padding: 12px; text-align: center; width: 120px; color: #28a745; font-weight: bold; font-size: 15px;">פעולות</th>
                     </tr>
                   </thead>
                   <tbody>
