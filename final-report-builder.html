@@ -11375,7 +11375,87 @@
       }
       
       // Auto-save changes
-      autoSaveDamageCenterChanges();
+      autoSaveDamageCenterChanges(partRow);
+    }
+    
+    // SESSION 50: Auto-save damage center part changes to helper AND Supabase (like floating screen)
+    async function autoSaveDamageCenterChanges(partRow) {
+      if (!partRow) return;
+      
+      try {
+        const centerIndex = parseInt(partRow.dataset.center);
+        const partIndex = parseInt(partRow.dataset.part);
+        
+        // Get updated values from form
+        const pcode = partRow.querySelector('.part-code')?.value || '';
+        const partName = partRow.querySelector('.part-name')?.value || '';
+        const quantity = parseInt(partRow.querySelector('.part-quantity')?.value) || 1;
+        const pricePerUnit = parseFloat(partRow.querySelector('.part-price-per-unit')?.value) || 0;
+        const reduction = parseFloat(partRow.querySelector('.part-reduction')?.value) || 0;
+        const wear = parseFloat(partRow.querySelector('.part-wear')?.value) || 0;
+        const updatedPrice = parseFloat(partRow.querySelector('.part-updated-price')?.value) || 0;
+        const totalCostText = partRow.querySelector('.part-total-cost')?.value || '₪0';
+        const totalCost = parseFloat(totalCostText.replace(/[₪,]/g, '')) || 0;
+        
+        // Update helper.centers[].Parts.parts_required[]
+        if (window.helper?.centers?.[centerIndex]?.Parts?.parts_required?.[partIndex]) {
+          const part = window.helper.centers[centerIndex].Parts.parts_required[partIndex];
+          
+          part.pcode = pcode;
+          part.oem = pcode;
+          part.catalog_code = pcode;
+          part.part_name = partName;
+          part.name = partName;
+          part.quantity = quantity;
+          part.qty = quantity;
+          part.price_per_unit = pricePerUnit;
+          part.price = pricePerUnit;
+          part.cost = pricePerUnit;
+          part.expected_cost = pricePerUnit;
+          part.reduction_percentage = reduction;
+          part.reduction = reduction;
+          part.wear_percentage = wear;
+          part.wear = wear;
+          part.updated_price = updatedPrice;
+          part.total_cost = totalCost;
+        }
+        
+        // Update Supabase if available
+        if (window.supabase && window.helper?.meta?.plate && window.helper?.centers?.[centerIndex]) {
+          const plate = window.helper.meta.plate;
+          const center = window.helper.centers[centerIndex];
+          const centerId = center.Id || center.id;
+          
+          const supabaseData = {
+            pcode: pcode,
+            oem: pcode,
+            part_name: partName,
+            quantity: quantity,
+            price_per_unit: pricePerUnit,
+            price: pricePerUnit,
+            reduction_percentage: reduction,
+            wear_percentage: wear,
+            updated_price: updatedPrice,
+            total_cost: totalCost
+          };
+          
+          const { error } = await window.supabase
+            .from('parts_required')
+            .update(supabaseData)
+            .eq('plate', plate.replace(/-/g, ''))
+            .eq('damage_center_code', centerId)
+            .eq('part_name', partName);
+          
+          if (error) {
+            console.error('❌ Supabase update error:', error);
+          } else {
+            console.log('✅ Part saved to Supabase:', partName);
+          }
+        }
+        
+      } catch (error) {
+        console.error('❌ Auto-save error:', error);
+      }
     }
     
     // RECALCULATE CENTER COSTS - SESSION: Updated to use new total_cost field
