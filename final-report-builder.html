@@ -11300,12 +11300,23 @@
       const partRow = document.querySelector(`.part-row[data-center="${centerIndex}"][data-part="${partIndex}"]`);
       if (partRow) {
         partRow.querySelector('.part-name').value = name;
-        partRow.querySelector('.part-desc').value = desc;
-        partRow.querySelector('.part-price').value = price;
-        partRow.querySelector('.part-source').value = source;
+        const descField = partRow.querySelector('.part-description');
+        if (descField) descField.value = desc;
+        
+        // SESSION 46 FIX: Set price_per_unit instead of old part-price
+        const priceField = partRow.querySelector('.part-price-per-unit');
+        if (priceField) {
+          priceField.value = price;
+          // Trigger calculation with new price
+          calculatePartPriceFields(partRow);
+        }
+        
+        const sourceField = partRow.querySelector('.part-source');
+        if (sourceField) sourceField.value = source;
         
         // Hide suggestions
-        partRow.querySelector('.part-suggestions').style.display = 'none';
+        const suggestions = partRow.querySelector('.part-suggestions');
+        if (suggestions) suggestions.style.display = 'none';
         
         // Trigger save and recalculation
         saveDamageCenterChanges();
@@ -11540,16 +11551,40 @@
           const centerDescription = card.querySelector('.damage-center-description').value;
           const centerRepairNature = card.querySelector('.damage-center-repair-nature')?.value || '';
           
-          // Collect parts
+          // Collect parts - SESSION 46 FIX: Use NEW field structure
           const parts = [];
           card.querySelectorAll('.part-row').forEach(row => {
-            const name = row.querySelector('.part-name').value;
-            const desc = row.querySelector('.part-desc').value;
-            const price = row.querySelector('.part-price').value;
-            const source = row.querySelector('.part-source').value;
+            const name = row.querySelector('.part-name')?.value || '';
+            const catalogCode = row.querySelector('.part-catalog-code-visible')?.value || '';
+            const descField = row.querySelector('.part-description');
+            const desc = descField ? descField.value : '';
+            
+            const pricePerUnit = parseFloat(row.querySelector('.part-price-per-unit')?.value) || 0;
+            const reduction = parseFloat(row.querySelector('.part-reduction')?.value) || 0;
+            const wear = parseFloat(row.querySelector('.part-wear')?.value) || 0;
+            const quantity = parseInt(row.querySelector('.part-quantity')?.value) || 1;
+            
+            const totalCostField = row.querySelector('.part-total-cost');
+            const totalCostText = totalCostField ? totalCostField.value : '₪0';
+            const totalCost = parseFloat(totalCostText.replace(/[₪,]/g, '')) || 0;
+            
+            const source = row.querySelector('.part-source')?.value || '';
             
             if (name.trim()) {
-              parts.push({ name, desc, price: parseFloat(price) || 0, source });
+              parts.push({ 
+                name, 
+                catalog_code: catalogCode,
+                pcode: catalogCode,
+                desc, 
+                description: desc,
+                price_per_unit: pricePerUnit,
+                reduction_percentage: reduction,
+                wear_percentage: wear,
+                quantity: quantity,
+                total_cost: totalCost,
+                price: totalCost, // Backward compatibility
+                source 
+              });
             }
           });
           
@@ -12018,8 +12053,13 @@
         // Calculate total cost for each damage center (parts + works + repairs)
         let partsCost = 0;
         card.querySelectorAll('.part-row').forEach(row => {
-          const price = parseFloat(row.querySelector('.part-price').value) || 0;
-          partsCost += price;
+          // SESSION 46 FIX: Use new .part-total-cost field instead of .part-price
+          const totalCostField = row.querySelector('.part-total-cost');
+          if (totalCostField) {
+            const totalCostText = totalCostField.value || '₪0';
+            const cost = parseFloat(totalCostText.replace(/[₪,]/g, '')) || 0;
+            partsCost += cost;
+          }
         });
         
         let workCost = 0;
@@ -12427,16 +12467,22 @@
             const targetRow = partRows[partIndex];
             
             if (targetRow && parts.length > 0) {
-              // Fill the first selected part into the target row
+              // Fill the first selected part into the target row - SESSION 46 FIX
               const firstPart = parts[0];
               const nameInput = targetRow.querySelector('.part-name');
-              const descInput = targetRow.querySelector('.part-desc');
-              const priceInput = targetRow.querySelector('.part-price');
+              const catalogInput = targetRow.querySelector('.part-catalog-code-visible');
+              const descInput = targetRow.querySelector('.part-description');
+              const priceInput = targetRow.querySelector('.part-price-per-unit');
               const sourceInput = targetRow.querySelector('.part-source');
               
               if (nameInput) nameInput.value = firstPart.name || '';
+              if (catalogInput) catalogInput.value = firstPart.pcode || firstPart.catalog_code || '';
               if (descInput) descInput.value = firstPart.description || '';
-              if (priceInput) priceInput.value = firstPart.price || '';
+              if (priceInput) {
+                priceInput.value = firstPart.price || firstPart.price_per_unit || '';
+                // Trigger calculation
+                calculatePartPriceFields(targetRow);
+              }
               if (sourceInput) sourceInput.value = firstPart.source || '';
               
               // Add additional parts if more than one selected

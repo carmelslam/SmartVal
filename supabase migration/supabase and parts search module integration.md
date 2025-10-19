@@ -29162,9 +29162,13 @@ if (totalCostField) {
 }
 ```
 
-**Lines Modified:**
-- Line 11978-11984: updateAllCostDisplays()
-- Line 12712-12718: updateDamageCentersSubtotal()
+**Functions Fixed (5 total):**
+1. Line 11978-11984: `updateAllCostDisplays()`
+2. Line 12021-12027: `updateSummaryTotalsFromDamageCenters()`
+3. Line 12712-12718: `updateDamageCentersSubtotal()`
+4. Line 11307-11312: `selectPartSuggestion()` - Now sets price_per_unit and triggers calculation
+5. Line 11556-11589: `saveDamageCenterChanges()` - Now saves all NEW fields with backward compatibility
+6. Line 12470-12486: Parts search message handler - Now fills NEW field structure
 
 ---
 
