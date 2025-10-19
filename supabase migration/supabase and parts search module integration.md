@@ -28855,13 +28855,14 @@ Updated the "חלקים נדרשים" (Parts Required) subsection in the "סיכ
 2. תיאור (Description)
 3. עלות ₪ (Cost)
 
-### NEW Structure (5 Visible Fields + Auto-Calculated Total):
-1. **שם החלק** - Part name
-2. **מחיר** - Price per unit
-3. **הנחה%** - Reduction/Discount percentage
-4. **בלאי%** - Wear percentage
-5. **כמות** - Quantity
-6. **סה"כ** - Total cost (calculated, readonly, green background)
+### NEW Structure (6 Visible Fields + Auto-Calculated Total):
+1. **מס. קטלוגי** - Catalog number (pcode/OEM)
+2. **שם החלק** - Part name
+3. **מחיר** - Price per unit
+4. **הנחה%** - Reduction/Discount percentage
+5. **בלאי%** - Wear percentage
+6. **כמות** - Quantity
+7. **סה"כ** - Total cost (calculated, readonly, green background)
 
 ---
 
@@ -29164,6 +29165,34 @@ if (totalCostField) {
 **Lines Modified:**
 - Line 11978-11984: updateAllCostDisplays()
 - Line 12712-12718: updateDamageCentersSubtotal()
+
+---
+
+## 📝 Enhancement: Added Catalog Number Field
+
+**User Request:** Add "מס. קטלוגי" (catalog number) field before part name
+
+**Implementation:**
+- Changed Row 1 from single full-width part name to 2-column grid
+- Column 1 (1fr): מס. קטלוגי - Catalog number
+- Column 2 (2fr): שם החלק - Part name (2x wider)
+
+**Layout:**
+```
+┌──────────────┬─────────────────────────────────┐
+│ מס. קטלוגי   │ שם החלק                         │
+│ [_________]  │ [_________________________]    │
+└──────────────┴─────────────────────────────────┘
+```
+
+**Data Source:**
+- `catalogCode = part?.catalog_code || part?.pcode || part?.part_number || ''`
+- Displays from parts-required.html catalog-code field
+- Auto-saves on input change
+
+**Class:** `.part-catalog-code-visible`
+
+**Line:** 3825-3831
 
 ---
 
