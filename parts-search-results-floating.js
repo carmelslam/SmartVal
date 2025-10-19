@@ -838,38 +838,20 @@
           const updatedPrice = priceAfterReduction * (1 - wear / 100);
           const totalAfterReductions = updatedPrice * qty;
           
-          const rowId = `part-${group.id}-${partIndex}`;
-          
           return `
-            <tr id="${rowId}" style="border-bottom: 1px solid #e5e7eb;">
+            <tr style="border-bottom: 1px solid #e5e7eb;">
               <td rowspan="2" style="text-align: center; padding: 12px; vertical-align: middle; font-weight: bold;">${partIndex + 1}</td>
-              <td style="padding: 8px 12px;">
-                <input type="text" id="${rowId}-code" value="${part.catalog_code || part.pcode || part.oem || ''}" 
-                       style="width: 100%; border: 1px solid #ddd; padding: 4px; border-radius: 3px;"
-                       onchange="savePartField('${group.id}', ${partIndex}, 'catalog_code', this.value)">
-              </td>
-              <td colspan="2" style="text-align: right; padding: 8px 12px;">
-                <input type="text" id="${rowId}-name" value="${part.part_name || part.name || ''}" 
-                       style="width: 100%; border: 1px solid #ddd; padding: 4px; border-radius: 3px;"
-                       onchange="savePartField('${group.id}', ${partIndex}, 'part_name', this.value)">
-              </td>
-              <td style="text-align: center; padding: 8px 12px;">
-                <input type="number" id="${rowId}-price" value="${pricePerUnit}" step="0.01"
-                       style="width: 80px; border: 1px solid #ddd; padding: 4px; border-radius: 3px; text-align: center;"
-                       onchange="savePartField('${group.id}', ${partIndex}, 'price', this.value)">
-              </td>
-              <td style="text-align: center; padding: 8px 12px;">
-                <input type="number" id="${rowId}-reduction" value="${reduction}" min="0" max="100"
-                       style="width: 60px; border: 1px solid #ddd; padding: 4px; border-radius: 3px; text-align: center;"
-                       onchange="savePartField('${group.id}', ${partIndex}, 'reduction_percentage', this.value)">%
-              </td>
-              <td style="text-align: center; padding: 8px 12px;">
-                <input type="number" id="${rowId}-wear" value="${wear}" min="0" max="100"
-                       style="width: 60px; border: 1px solid #ddd; padding: 4px; border-radius: 3px; text-align: center;"
-                       onchange="savePartField('${group.id}', ${partIndex}, 'wear_percentage', this.value)">%
-              </td>
+              <td style="padding: 8px 12px;">${part.catalog_code || part.pcode || part.oem || 'N/A'}</td>
+              <td colspan="2" style="text-align: right; padding: 8px 12px; font-weight: 600;">${part.part_name || part.name || 'N/A'}</td>
+              <td style="text-align: center; padding: 8px 12px;">₪${pricePerUnit.toFixed(2)}</td>
+              <td style="text-align: center; padding: 8px 12px;">${reduction}%</td>
+              <td style="text-align: center; padding: 8px 12px;">${wear}%</td>
               <td rowspan="2" style="text-align: center; padding: 12px; vertical-align: middle; font-weight: bold; background: #d1fae5; color: #059669; font-size: 15px;">₪${Math.round(totalAfterReductions).toLocaleString('he-IL')}</td>
               <td rowspan="2" style="text-align: center; padding: 12px; vertical-align: middle; white-space: nowrap;">
+                <button onclick="editRequiredPart('${group.id}', ${partIndex})" 
+                        style="background: #f59e0b; color: white; border: none; padding: 6px 10px; border-radius: 4px; cursor: pointer; margin-bottom: 4px; display: block; width: 100%;">
+                  ✏️ ערוך
+                </button>
                 <button onclick="deleteRequiredPart('${group.id}', ${partIndex})" 
                         style="background: #ef4444; color: white; border: none; padding: 6px 10px; border-radius: 4px; cursor: pointer; display: block; width: 100%;">
                   🗑️ מחק
@@ -884,10 +866,7 @@
                 <strong>ספק:</strong> ${part.supplier || part.supplier_name || '-'}
               </td>
               <td style="padding: 8px 12px; font-size: 12px; color: #6c757d;">
-                <strong>כמות:</strong> 
-                <input type="number" id="${rowId}-qty" value="${qty}" min="1"
-                       style="width: 50px; border: 1px solid #ddd; padding: 2px; border-radius: 3px; text-align: center;"
-                       onchange="savePartField('${group.id}', ${partIndex}, 'quantity', this.value)">
+                <strong>כמות:</strong> ${qty}
               </td>
               <td style="padding: 8px 12px; font-size: 12px; background: #fff3cd;">
                 <strong>מחיר לפני:</strong> ₪${pricePerUnit.toFixed(2)}
@@ -1043,9 +1022,9 @@
     }
   };
   
-  // SESSION 49: TAB 1 HELPER - Edit required part (OLD - KEEP FOR COMPATIBILITY)
+  // SESSION 50: TAB 1 HELPER - Edit required part with inline form
   window.editRequiredPart = async function(centerId, partIndex) {
-    console.log(`✏️ SESSION 49: Edit part - Center: ${centerId}, Part: ${partIndex}`);
+    console.log(`✏️ SESSION 50: Edit part - Center: ${centerId}, Part: ${partIndex}`);
     
     try {
       const plate = window.helper?.meta?.plate || window.helper?.vehicle?.plate;
@@ -1070,62 +1049,143 @@
       
       const part = parts[partIndex];
       
-      const newCatalogCode = prompt('קוד קטלוגי:', part.catalog_code || part.pcode || part.oem || '');
-      if (newCatalogCode === null) return;
+      // Create editable form modal
+      const editModal = document.createElement('div');
+      editModal.style.cssText = `
+        position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+        background: white; padding: 25px; border-radius: 12px; z-index: 20000;
+        box-shadow: 0 10px 40px rgba(0,0,0,0.3); min-width: 400px;
+      `;
       
-      const newPartName = prompt('שם החלק:', part.part_name || part.name || '');
-      if (newPartName === null) return;
+      editModal.innerHTML = `
+        <h3 style="margin: 0 0 20px 0; color: #28a745; text-align: right;">✏️ עריכת חלק</h3>
+        <div style="display: flex; flex-direction: column; gap: 12px; direction: rtl;">
+          <div>
+            <label style="display: block; margin-bottom: 5px; font-weight: bold;">קוד קטלוגי:</label>
+            <input type="text" id="edit-code" value="${part.catalog_code || part.pcode || part.oem || ''}" 
+                   style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+          </div>
+          <div>
+            <label style="display: block; margin-bottom: 5px; font-weight: bold;">שם החלק:</label>
+            <input type="text" id="edit-name" value="${part.part_name || part.name || ''}" 
+                   style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+          </div>
+          <div style="display: flex; gap: 10px;">
+            <div style="flex: 1;">
+              <label style="display: block; margin-bottom: 5px; font-weight: bold;">כמות:</label>
+              <input type="number" id="edit-qty" value="${part.quantity || part.qty || 1}" min="1"
+                     style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+            </div>
+            <div style="flex: 1;">
+              <label style="display: block; margin-bottom: 5px; font-weight: bold;">מחיר יחידה:</label>
+              <input type="number" id="edit-price" value="${part.price_per_unit || part.price || part.cost || 0}" step="0.01"
+                     style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+            </div>
+          </div>
+          <div style="display: flex; gap: 10px;">
+            <div style="flex: 1;">
+              <label style="display: block; margin-bottom: 5px; font-weight: bold;">הנחה %:</label>
+              <input type="number" id="edit-reduction" value="${part.reduction_percentage || part.reduction || 0}" min="0" max="100"
+                     style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+            </div>
+            <div style="flex: 1;">
+              <label style="display: block; margin-bottom: 5px; font-weight: bold;">בלאי %:</label>
+              <input type="number" id="edit-wear" value="${part.wear_percentage || part.wear || 0}" min="0" max="100"
+                     style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+            </div>
+          </div>
+        </div>
+        <div style="display: flex; gap: 10px; margin-top: 20px;">
+          <button id="save-edit-btn" style="flex: 1; background: #28a745; color: white; border: none; padding: 10px; 
+                                            border-radius: 6px; cursor: pointer; font-weight: bold;">💾 שמור</button>
+          <button id="cancel-edit-btn" style="flex: 1; background: #6c757d; color: white; border: none; padding: 10px; 
+                                              border-radius: 6px; cursor: pointer; font-weight: bold;">✖ ביטול</button>
+        </div>
+      `;
       
-      const newQuantity = prompt('כמות:', part.quantity || part.qty || '1');
-      if (newQuantity === null) return;
+      const backdrop = document.createElement('div');
+      backdrop.style.cssText = 'position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 19999;';
       
-      const newPrice = prompt('מחיר יחידה:', part.price || part.cost || part.expected_cost || '0');
-      if (newPrice === null) return;
+      document.body.appendChild(backdrop);
+      document.body.appendChild(editModal);
       
-      const updatedData = {
-        catalog_code: newCatalogCode.trim(),
-        part_name: newPartName.trim(),
-        quantity: parseInt(newQuantity) || 1,
-        price: parseFloat(newPrice) || 0
+      // Close modal function
+      const closeModal = () => {
+        backdrop.remove();
+        editModal.remove();
       };
       
-      // Update Supabase if available
-      if (window.supabase) {
-        const { error } = await window.supabase
-          .from('parts_required')
-          .update(updatedData)
-          .eq('plate', plate.replace(/-/g, ''))
-          .eq('damage_center_id', centerId)
-          .eq('part_name', part.part_name || part.name);
+      // Cancel button
+      document.getElementById('cancel-edit-btn').onclick = closeModal;
+      backdrop.onclick = closeModal;
+      
+      // Save button
+      document.getElementById('save-edit-btn').onclick = async () => {
+        try {
+          const newCatalogCode = document.getElementById('edit-code').value.trim();
+          const newPartName = document.getElementById('edit-name').value.trim();
+          const newQuantity = parseInt(document.getElementById('edit-qty').value) || 1;
+          const newPrice = parseFloat(document.getElementById('edit-price').value) || 0;
+          const newReduction = parseFloat(document.getElementById('edit-reduction').value) || 0;
+          const newWear = parseFloat(document.getElementById('edit-wear').value) || 0;
         
-        if (error) {
-          console.error('❌ SESSION 50: Supabase update error:', error);
-          throw error;
+          const updatedData = {
+            catalog_code: newCatalogCode,
+            part_name: newPartName,
+            quantity: newQuantity,
+            price: newPrice,
+            price_per_unit: newPrice,
+            reduction_percentage: newReduction,
+            wear_percentage: newWear
+          };
+          
+          // Update Supabase if available
+          if (window.supabase) {
+            const { error } = await window.supabase
+              .from('parts_required')
+              .update(updatedData)
+              .eq('plate', plate.replace(/-/g, ''))
+              .eq('damage_center_id', centerId)
+              .eq('part_name', part.part_name || part.name);
+            
+            if (error) {
+              console.error('❌ SESSION 50: Supabase update error:', error);
+              throw error;
+            }
+          }
+          
+          // Update helper data
+          parts[partIndex] = {
+            ...part,
+            catalog_code: newCatalogCode,
+            pcode: newCatalogCode,
+            oem: newCatalogCode,
+            part_name: newPartName,
+            name: newPartName,
+            quantity: newQuantity,
+            qty: newQuantity,
+            price: newPrice,
+            cost: newPrice,
+            expected_cost: newPrice,
+            price_per_unit: newPrice,
+            reduction_percentage: newReduction,
+            reduction: newReduction,
+            wear_percentage: newWear,
+            wear: newWear
+          };
+          
+          console.log('✅ SESSION 50: Part edited successfully');
+          
+          closeModal();
+          tabsLoaded.required = false;
+          loadRequiredParts();
+          
+        } catch (error) {
+          console.error('❌ SESSION 50: Edit error:', error);
+          alert('שגיאה בעריכת החלק: ' + error.message);
         }
-      } else {
-        console.warn('⚠️ SESSION 50: Supabase not available, updating helper only');
-      }
-      
-      parts[partIndex] = {
-        ...part,
-        catalog_code: updatedData.catalog_code,
-        pcode: updatedData.catalog_code,
-        oem: updatedData.catalog_code,
-        part_name: updatedData.part_name,
-        name: updatedData.part_name,
-        quantity: updatedData.quantity,
-        qty: updatedData.quantity,
-        price: updatedData.price,
-        cost: updatedData.price,
-        expected_cost: updatedData.price
       };
       
-      sessionStorage.setItem('helper', JSON.stringify(window.helper));
-      
-      tabsLoaded.required = false;
-      loadRequiredParts();
-      
-      console.log('✅ SESSION 50: Part edited successfully');
     } catch (error) {
       console.error('❌ SESSION 50: Edit error:', error);
       alert('שגיאה בעריכת החלק: ' + error.message);
