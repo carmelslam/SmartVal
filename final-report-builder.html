@@ -13076,26 +13076,28 @@
                 <span id="totalComponentWear" style="font-size:16px; font-weight:bold;">₪0</span>
               </div>
               
-              <!-- Black box: Total invoice differentials -->
-              <div style="background:#212529; color:white; padding:10px; border-radius:6px; margin-bottom:10px; display:flex; justify-content:space-between; align-items:center;">
+              <!-- SESSION 48: Changed to blue color matching section colors -->
+              <div style="background:#17a2b8; color:white; padding:10px; border-radius:6px; margin-bottom:15px; display:flex; justify-content:space-between; align-items:center;">
                 <span style="font-size:14px; font-weight:bold;">סה"כ הפרשי חשבוניות:</span>
                 <span id="totalInvoiceDifferentials" style="font-size:16px; font-weight:bold;">₪0</span>
               </div>
               
-              <!-- Black boxes: Grand total all differentials (without VAT, VAT, with VAT) -->
-              <div style="background:#000; color:white; padding:10px; border-radius:6px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center;">
-                <span style="font-size:14px; font-weight:bold;">סה"כ כללי הפרשים (ללא מע"מ):</span>
-                <span id="grandTotalDifferentialsWithoutVAT" style="font-size:16px; font-weight:bold;">₪0</span>
-              </div>
-              
-              <div style="background:#000; color:white; padding:10px; border-radius:6px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center;">
-                <span style="font-size:14px; font-weight:bold;">מע"מ:</span>
-                <span id="grandTotalDifferentialsVAT" style="font-size:16px; font-weight:bold;">₪0</span>
-              </div>
-              
-              <div style="background:#000; color:white; padding:12px; border-radius:6px; display:flex; justify-content:space-between; align-items:center;">
-                <span style="font-size:16px; font-weight:bold;">סה"כ כללי הפרשים (כולל מע"מ):</span>
-                <span id="grandTotalDifferentialsWithVAT" style="font-size:18px; font-weight:bold;">₪0</span>
+              <!-- SESSION 48: Grand totals in a nice bordered box -->
+              <div style="border:3px solid #000; border-radius:8px; padding:12px; background:#f8f9fa;">
+                <div style="background:#343a40; color:white; padding:10px; border-radius:6px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center;">
+                  <span style="font-size:14px; font-weight:bold;">סה"כ כללי הפרשים (ללא מע"מ):</span>
+                  <span id="grandTotalDifferentialsWithoutVAT" style="font-size:16px; font-weight:bold;">₪0</span>
+                </div>
+                
+                <div style="background:#495057; color:white; padding:10px; border-radius:6px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center;">
+                  <span style="font-size:14px; font-weight:bold;">מע"מ:</span>
+                  <span id="grandTotalDifferentialsVAT" style="font-size:16px; font-weight:bold;">₪0</span>
+                </div>
+                
+                <div style="background:#000; color:white; padding:14px; border-radius:6px; display:flex; justify-content:space-between; align-items:center; border:2px solid #ffc107;">
+                  <span style="font-size:16px; font-weight:bold;">סה"כ כללי הפרשים (כולל מע"מ):</span>
+                  <span id="grandTotalDifferentialsWithVAT" style="font-size:20px; font-weight:bold;">₪0</span>
+                </div>
               </div>
             </div>
             
@@ -13106,6 +13108,20 @@
           </div>
         </div>
       `;
+    }
+    
+    // SESSION 48: AUTO-CHECK DIFFERENTIALS CHECKBOX IF PARTS HAVE REDUCTIONS OR WEAR
+    function autoCheckDifferentialsIfNeeded() {
+      const breakdown = calculatePartsDifferentialsBreakdown();
+      const hasDifferentialsCheckbox = document.getElementById('hasDifferentials');
+      
+      if (breakdown.reductions.length > 0 || breakdown.wear.length > 0) {
+        if (hasDifferentialsCheckbox && !hasDifferentialsCheckbox.checked) {
+          hasDifferentialsCheckbox.checked = true;
+          toggleDifferentialsTable();
+          console.log('✅ SESSION 48: Auto-checked הפרשים checkbox - found imported reductions/wear');
+        }
+      }
     }
     
     // SESSION 47: RENDER PARTS REDUCTIONS LIST
@@ -13137,6 +13153,9 @@
       
       listContainer.innerHTML = html;
       totalContainer.textContent = `₪${breakdown.totalReduction.toLocaleString()}`;
+      
+      // SESSION 48: Auto-check checkbox after rendering
+      autoCheckDifferentialsIfNeeded();
     }
     
     // SESSION 47: RENDER PARTS WEAR LIST
