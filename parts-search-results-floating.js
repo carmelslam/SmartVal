@@ -761,8 +761,85 @@
   // SESSION 49: TAB 1 HELPER - Edit required part
   window.editRequiredPart = async function(centerId, partIndex) {
     console.log(`✏️ SESSION 49: Edit part - Center: ${centerId}, Part: ${partIndex}`);
-    // Implementation for edit dialog coming next
-    alert('תכונת עריכה תתווסף בשלב הבא');
+    
+    try {
+      const plate = window.helper?.meta?.plate || window.helper?.vehicle?.plate;
+      if (!plate) {
+        alert('לא נמצא מספר רישוי');
+        return;
+      }
+      
+      const centerIndex = window.helper?.centers?.findIndex(c => (c.Id || c.id) === centerId);
+      if (centerIndex === -1) {
+        alert('מרכז נזק לא נמצא');
+        return;
+      }
+      
+      const center = window.helper.centers[centerIndex];
+      const parts = center.Parts?.parts_required || center.Parts?.parts || [];
+      
+      if (partIndex >= parts.length) {
+        alert('חלק לא נמצא');
+        return;
+      }
+      
+      const part = parts[partIndex];
+      
+      const newCatalogCode = prompt('קוד קטלוגי:', part.catalog_code || part.pcode || part.oem || '');
+      if (newCatalogCode === null) return;
+      
+      const newPartName = prompt('שם החלק:', part.part_name || part.name || '');
+      if (newPartName === null) return;
+      
+      const newQuantity = prompt('כמות:', part.quantity || part.qty || '1');
+      if (newQuantity === null) return;
+      
+      const newPrice = prompt('מחיר יחידה:', part.price || part.cost || part.expected_cost || '0');
+      if (newPrice === null) return;
+      
+      const updatedData = {
+        catalog_code: newCatalogCode.trim(),
+        part_name: newPartName.trim(),
+        quantity: parseInt(newQuantity) || 1,
+        price: parseFloat(newPrice) || 0
+      };
+      
+      const { error } = await window.supabase
+        .from('parts_required')
+        .update(updatedData)
+        .eq('plate', plate.replace(/-/g, ''))
+        .eq('damage_center_id', centerId)
+        .eq('part_name', part.part_name || part.name);
+      
+      if (error) {
+        console.error('❌ SESSION 50: Supabase update error:', error);
+        throw error;
+      }
+      
+      parts[partIndex] = {
+        ...part,
+        catalog_code: updatedData.catalog_code,
+        pcode: updatedData.catalog_code,
+        oem: updatedData.catalog_code,
+        part_name: updatedData.part_name,
+        name: updatedData.part_name,
+        quantity: updatedData.quantity,
+        qty: updatedData.quantity,
+        price: updatedData.price,
+        cost: updatedData.price,
+        expected_cost: updatedData.price
+      };
+      
+      sessionStorage.setItem('helper', JSON.stringify(window.helper));
+      
+      tabsLoaded.required = false;
+      loadRequiredParts();
+      
+      console.log('✅ SESSION 50: Part edited successfully');
+    } catch (error) {
+      console.error('❌ SESSION 50: Edit error:', error);
+      alert('שגיאה בעריכת החלק: ' + error.message);
+    }
   };
   
   // SESSION 49: TAB 1 HELPER - Delete required part
@@ -825,19 +902,128 @@
     }
   };
   
-  // SESSION 49: TAB 2 - Load Selected Parts from Supabase
+  // SESSION 50: TAB 2 - Load Selected Parts from Supabase
   async function loadSelectedParts() {
-    console.log('✅ SESSION 49: Loading selected parts...');
+    console.log('✅ SESSION 50: Loading selected parts...');
     const container = document.getElementById('selectedPartsContainer');
     
-    // Implementation coming next...
-    container.innerHTML = `
-      <div class="no-results">
-        <div class="no-results-icon">🔄</div>
-        <div>טוען חלקים נבחרים...</div>
-      </div>
-    `;
+    try {
+      const plate = window.helper?.meta?.plate || window.helper?.vehicle?.plate;
+      if (!plate) {
+        container.innerHTML = '<div class="no-results">לא נמצא מספר רישוי</div>';
+        return;
+      }
+      
+      const { data: selectedParts, error } = await window.supabase
+        .from('selected_parts')
+        .select('*')
+        .eq('plate', plate.replace(/-/g, ''))
+        .order('selected_at', { ascending: false });
+      
+      if (error) throw error;
+      
+      if (!selectedParts || selectedParts.length === 0) {
+        container.innerHTML = `
+          <div class="no-results">
+            <div class="no-results-icon">📭</div>
+            <div>לא נמצאו חלקים נבחרים</div>
+          </div>
+        `;
+        document.getElementById('totalSelectedParts').textContent = '0';
+        document.getElementById('avgSelectedPrice').textContent = '₪0';
+        document.getElementById('totalSelectedCost').textContent = '₪0';
+        return;
+      }
+      
+      const totalParts = selectedParts.length;
+      const totalCost = selectedParts.reduce((sum, part) => {
+        const price = parseFloat(part.price || part.cost || part.expected_cost || 0);
+        const qty = parseInt(part.quantity || part.qty || 1);
+        return sum + (price * qty);
+      }, 0);
+      const avgPrice = totalCost / totalParts;
+      
+      document.getElementById('totalSelectedParts').textContent = totalParts;
+      document.getElementById('avgSelectedPrice').textContent = `₪${Math.round(avgPrice).toLocaleString('he-IL')}`;
+      document.getElementById('totalSelectedCost').textContent = `₪${Math.round(totalCost).toLocaleString('he-IL')}`;
+      
+      const tableRows = selectedParts.map((part, index) => {
+        const price = parseFloat(part.price || part.cost || part.expected_cost || 0);
+        const qty = parseInt(part.quantity || part.qty || 1);
+        const total = price * qty;
+        const selectedDate = part.selected_at ? new Date(part.selected_at).toLocaleDateString('he-IL') : 'N/A';
+        
+        return `
+          <tr>
+            <td><input type="checkbox" class="selected-part-checkbox" data-part-id="${part.id}"></td>
+            <td>${index + 1}</td>
+            <td>${part.pcode || part.oem || 'N/A'}</td>
+            <td style="text-align: right;">${part.part_family || ''} ${part.part_name || part.name || 'N/A'}</td>
+            <td>${part.source || 'N/A'}</td>
+            <td>₪${price.toLocaleString('he-IL')}</td>
+            <td>${qty}</td>
+            <td style="font-weight: bold;">₪${total.toLocaleString('he-IL')}</td>
+            <td>${part.supplier || part.supplier_name || '-'}</td>
+            <td>${selectedDate}</td>
+            <td>
+              <button onclick="editSelectedPart('${part.id}')">✏️</button>
+              <button onclick="deleteSelectedPart('${part.id}')">🗑️</button>
+            </td>
+          </tr>
+        `;
+      }).join('');
+      
+      container.innerHTML = `
+        <table class="parts-table">
+          <thead>
+            <tr>
+              <th><input type="checkbox" id="selectAllSelected" onclick="toggleSelectAllSelected(this.checked)"></th>
+              <th>#</th>
+              <th>קוד</th>
+              <th>שם החלק</th>
+              <th>מקור</th>
+              <th>מחיר</th>
+              <th>כמות</th>
+              <th>סכום</th>
+              <th>ספק</th>
+              <th>תאריך</th>
+              <th>פעולות</th>
+            </tr>
+          </thead>
+          <tbody>${tableRows}</tbody>
+        </table>
+      `;
+    } catch (error) {
+      console.error('❌ SESSION 50: Error loading selected parts:', error);
+      container.innerHTML = `<div class="no-results">שגיאה: ${error.message}</div>`;
+    }
   }
+  
+  window.editSelectedPart = async function(partId) {
+    alert('עריכת חלק נבחר - תתווסף בהמשך');
+  };
+  
+  window.deleteSelectedPart = async function(partId) {
+    if (!confirm('האם למחוק חלק נבחר זה?')) return;
+    
+    try {
+      const { error } = await window.supabase
+        .from('selected_parts')
+        .delete()
+        .eq('id', partId);
+      
+      if (error) throw error;
+      
+      tabsLoaded.selected = false;
+      loadSelectedParts();
+    } catch (error) {
+      alert('שגיאה במחיקה: ' + error.message);
+    }
+  };
+  
+  window.toggleSelectAllSelected = function(checked) {
+    document.querySelectorAll('.selected-part-checkbox').forEach(cb => cb.checked = checked);
+  };
   
   // SESSION 49: TAB 3 - Load Search Results (rename old function)
   function loadSearchResults() {
