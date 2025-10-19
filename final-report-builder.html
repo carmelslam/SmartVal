@@ -12785,6 +12785,20 @@
       let rawTotalWithoutVat = totalWorks + totalParts + totalRepairs;
       let rawTotalWithVat = rawTotalWithoutVat * (1 + (window.getHelperVatRate ? window.getHelperVatRate() : (typeof MathEngine !== 'undefined' && MathEngine.getVatRate ? MathEngine.getVatRate() : 18)) / 100);
       
+      // SESSION 48: Save category totals BEFORE differentials to helper.final_report
+      const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+      if (!helper.final_report) helper.final_report = {};
+      helper.final_report.category_totals_before_differentials = {
+        Parts: Math.round(totalParts),
+        Works: Math.round(totalWorks),
+        Repairs: Math.round(totalRepairs)
+      };
+      sessionStorage.setItem('helper', JSON.stringify(helper));
+      if (window.helper) {
+        if (!window.helper.final_report) window.helper.final_report = {};
+        window.helper.final_report.category_totals_before_differentials = helper.final_report.category_totals_before_differentials;
+      }
+      
       // Calculate category-specific differentials
       let finalTotalWorks = totalWorks;
       let finalTotalParts = totalParts;
@@ -13192,15 +13206,15 @@
             </div>
             <div>
               <label style="font-size:11px; color:#666;">אחוז:</label>
-              <input type="text" class="category-diff-percentage" value="0%" style="width:100%; padding:4px; border:1px solid #ddd; border-radius:3px; font-size:12px; text-align:center;">
+              <input type="text" class="category-diff-percentage" value="0%" placeholder="0%" style="width:100%; padding:4px; border:1px solid #ddd; border-radius:3px; font-size:12px; text-align:center;" oninput="updateCategoryDifferentialsTotal()">
             </div>
             <div>
               <label style="font-size:11px; color:#666;">ערך ההנחה:</label>
-              <input type="text" class="category-diff-category-value" value="₪0" placeholder="₪0" style="width:100%; padding:4px; border:1px solid #ddd; border-radius:3px; font-size:12px; text-align:center;" oninput="updateCategoryDifferentialsTotal()">
+              <input type="text" class="category-diff-category-value" value="₪0" readonly style="width:100%; padding:4px; border:1px solid #ddd; border-radius:3px; font-size:12px; background:#f8f9fa; text-align:center;">
             </div>
             <div>
               <label style="font-size:11px; color:#666;">סכום (ללא מע"מ):</label>
-              <input type="number" class="category-diff-amount" value="0" min="0" step="1" style="width:100%; padding:4px; border:1px solid #ddd; border-radius:3px; font-size:12px;" oninput="updateCategoryDifferentialsTotal()">
+              <input type="number" class="category-diff-amount" value="0" readonly style="width:100%; padding:4px; border:1px solid #ddd; border-radius:3px; font-size:12px; background:#f8f9fa; text-align:center;">
             </div>
           </div>
           <button type="button" onclick="removeCategoryDifferentialRow(this)" style="margin-top:6px; padding:4px 8px; font-size:11px; background:#dc3545; color:white; border:none; border-radius:3px; cursor:pointer;">מחק</button>
@@ -13237,29 +13251,49 @@
       updateCategoryDifferentialsTotal();
     }
     
-    // SESSION 48: SIMPLIFIED - Manual category value entry, auto-calculate percentage
+    // SESSION 48: User enters percentage → calculate ערך ההנחה and סכום
     window.updateCategoryDifferentialsTotal = function updateCategoryDifferentialsTotal() {
+      const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+      
+      // SESSION 48: Read from final_report.category_totals_before_differentials (built from UI)
+      const categoryTotalsFromUI = helper.final_report?.category_totals_before_differentials || {};
+      
+      const categoryOriginalCosts = {
+        'Parts': parseFloat(categoryTotalsFromUI.Parts || 0),
+        'Works': parseFloat(categoryTotalsFromUI.Works || 0),
+        'Repairs': parseFloat(categoryTotalsFromUI.Repairs || 0)
+      };
+      
       const rows = document.querySelectorAll('.category-differential-row');
       let total = 0;
       
       rows.forEach(row => {
-        const amount = parseFloat(row.querySelector('.category-diff-amount')?.value) || 0;
-        const categoryValueInput = row.querySelector('.category-diff-category-value');
-        const percentageField = row.querySelector('.category-diff-percentage');
+        const typeSelect = row.querySelector('.category-diff-type');
+        const percentageInput = row.querySelector('.category-diff-percentage');
+        const reductionValueInput = row.querySelector('.category-diff-category-value'); // ערך ההנחה
+        const updatedCostInput = row.querySelector('.category-diff-amount'); // סכום (ללא מע"מ)
         
-        // Get category value (user can manually edit it)
-        const categoryValueText = categoryValueInput?.value || '₪0';
-        const categoryValue = parseFloat(categoryValueText.replace(/[₪,]/g, '')) || 0;
+        const categoryType = typeSelect?.value || '';
+        const percentageText = percentageInput?.value || '0%';
+        const percentageNum = parseFloat(percentageText.replace('%', '')) || 0;
         
-        // Calculate percentage if both values exist
-        if (amount > 0 && categoryValue > 0) {
-          const percentage = ((amount / categoryValue) * 100).toFixed(1);
-          if (percentageField) percentageField.value = `${percentage}%`;
+        if (categoryType && categoryOriginalCosts[categoryType] > 0) {
+          const originalCost = categoryOriginalCosts[categoryType];
+          
+          // ערך ההנחה = percentage × original cost
+          const reductionValue = Math.round((percentageNum / 100) * originalCost);
+          
+          // סכום (ללא מע"מ) = original cost - ערך ההנחה
+          const updatedCost = Math.round(originalCost - reductionValue);
+          
+          if (reductionValueInput) reductionValueInput.value = `₪${reductionValue.toLocaleString()}`;
+          if (updatedCostInput) updatedCostInput.value = updatedCost;
+          
+          total += updatedCost;
         } else {
-          if (percentageField) percentageField.value = '0%';
+          if (reductionValueInput) reductionValueInput.value = '₪0';
+          if (updatedCostInput) updatedCostInput.value = 0;
         }
-        
-        total += amount;
       });
       
       updateAllDifferentialsSubtotals();
