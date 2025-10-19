@@ -992,7 +992,7 @@
     }
   };
   
-  // SESSION 50: TAB 2 - Load Selected Parts from Supabase
+  // SESSION 50: TAB 2 - Load Selected Parts (Supabase or Helper fallback)
   async function loadSelectedParts() {
     console.log('✅ SESSION 50: Loading selected parts...');
     const container = document.getElementById('selectedPartsContainer');
@@ -1004,44 +1004,27 @@
         return;
       }
       
-      // Check if Supabase is available (with small delay for initialization)
-      if (!window.supabase) {
-        console.warn('⚠️ SESSION 50: Supabase client not available, waiting...');
-        container.innerHTML = `
-          <div class="no-results">
-            <div class="no-results-icon">🔄</div>
-            <div>ממתין לחיבור Supabase...</div>
-          </div>
-        `;
-        
-        // Wait 500ms and try again
-        await new Promise(resolve => setTimeout(resolve, 500));
-        
-        if (!window.supabase) {
-          console.error('❌ SESSION 50: Supabase still not available');
-          container.innerHTML = `
-            <div class="no-results">
-              <div class="no-results-icon">❌</div>
-              <div style="margin-bottom: 10px;">Supabase לא זמין</div>
-              <div style="font-size: 12px; color: #666;">
-                יש לוודא שהסקריפט services/supabaseClient.js נטען בעמוד
-              </div>
-            </div>
-          `;
-          return;
-        }
-      }
-      
       let selectedParts = [];
       
-      const { data, error } = await window.supabase
-        .from('selected_parts')
-        .select('*')
-        .eq('plate', plate.replace(/-/g, ''))
-        .order('selected_at', { ascending: false });
-      
-      if (error) throw error;
-      selectedParts = data || [];
+      // Try Supabase first
+      if (window.supabase) {
+        console.log('✅ SESSION 50: Loading from Supabase selected_parts table');
+        const { data, error } = await window.supabase
+          .from('selected_parts')
+          .select('*')
+          .eq('plate', plate.replace(/-/g, ''))
+          .order('selected_at', { ascending: false });
+        
+        if (error) {
+          console.error('❌ SESSION 50: Supabase error:', error);
+          throw error;
+        }
+        selectedParts = data || [];
+      } else {
+        // Fallback: Use helper data if available
+        console.warn('⚠️ SESSION 50: Supabase not available, using helper data');
+        selectedParts = window.helper?.parts_search?.selected_parts || [];
+      }
       
       if (!selectedParts || selectedParts.length === 0) {
         container.innerHTML = `
