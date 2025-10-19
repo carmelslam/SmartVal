@@ -17657,8 +17657,9 @@
     }
     
     // Save differentials data with user feedback
+    // SESSION 48: Redirect to comprehensive save function
     function saveDifferentials() {
-      console.log('💾 SAVE DIFFERENTIALS BUTTON CLICKED!');
+      console.log('💾 SAVE DIFFERENTIALS BUTTON CLICKED - Calling saveDifferentialsToHelper()');
       const saveButton = document.querySelector('button[onclick="saveDifferentials()"]');
       
       // Show visual feedback
@@ -17668,78 +17669,21 @@
         saveButton.disabled = true;
       }
       
-      // Collect all differential row data
-      const rows = document.querySelectorAll('#differentialsRows .differential-row');
-      const differentialsData = [];
-      let totalAmount = 0;
-      let totalVat = 0;
-      let totalWithVat = 0;
-      
-      rows.forEach((row, index) => {
-        const part = row.querySelector('.diff-part')?.value || '';
-        const damage_center = row.querySelector('.diff-damage-center')?.value || '';
-        const nature = row.querySelector('.diff-nature')?.value || '';
-        const reason = row.querySelector('.diff-reason')?.value || '';
-        const amount = parseFloat(row.querySelector('.diff-amount')?.value) || 0;
-        const vat = parseFloat(row.querySelector('.diff-vat')?.value) || 0;
-        const total = parseFloat(row.querySelector('.diff-total')?.value) || 0;
-        
-        differentialsData.push({
-          id: index + 1,
-          part: part,
-          damage_center: damage_center,
-          nature: nature,
-          reason: reason,
-          amount_without_vat: amount,
-          vat_amount: vat,
-          amount_with_vat: total
-        });
-        
-        totalAmount += amount;
-        totalVat += vat;
-        totalWithVat += total;
-      });
-      
-      // Save to helper.final_report.differential
-      const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
-      if (!helper.final_report) helper.final_report = {};
-      
-      helper.final_report.differential = {
-        has_differentials: document.getElementById('hasDifferentials')?.checked || false,
-        items: differentialsData,
-        summary: {
-          total_amount_without_vat: totalAmount,
-          total_vat: totalVat,
-          total_amount_with_vat: totalWithVat,
-          currency: '₪'
-        },
-        last_updated: new Date().toISOString()
-      };
-      
-      sessionStorage.setItem('helper', JSON.stringify(helper));
-      
-      // CRITICAL FIX: Also update window.helper to prevent broadcastHelperUpdate from overwriting
-      if (window.helper) {
-        if (!window.helper.final_report) window.helper.final_report = {};
-        window.helper.final_report.differential = helper.final_report.differential;
-        console.log('🔄 Updated window.helper.final_report.differential to prevent broadcast overwrite');
-      }
-      
-      // Also update the legacy format for backward compatibility
-      updateDifferentialsSummary();
+      // Call the comprehensive save function
+      saveDifferentialsToHelper();
       
       // Show success message
-      console.log('✅ הפרשים saved successfully to helper.final_report.differential:', helper.final_report.differential);
-      
-      if (saveButton) {
-        saveButton.style.background = '#28a745';
-        saveButton.innerHTML = '✅ נשמר הפרשים!';
-        setTimeout(() => {
-          saveButton.innerHTML = 'שמור הפרשים';
+      setTimeout(() => {
+        if (saveButton) {
           saveButton.style.background = '#28a745';
-          saveButton.disabled = false;
-        }, 1500);
-      }
+          saveButton.innerHTML = '✅ נשמר הפרשים!';
+          setTimeout(() => {
+            saveButton.innerHTML = 'שמור הפרשים';
+            saveButton.style.background = '#28a745';
+            saveButton.disabled = false;
+          }, 1500);
+        }
+      }, 100);
     }
     
     // Update final report fields (agreement status and company report)
