@@ -13070,9 +13070,9 @@
             
             <!-- SUBTOTALS SECTION -->
             <div id="differentialsSubtotalsSection" style="margin-top:20px;">
-              <!-- Gray box: Total component wear (reductions + wear) -->
+              <!-- Gray box: Total component differentials (reductions + wear + category) -->
               <div style="background:#6c757d; color:white; padding:10px; border-radius:6px; margin-bottom:10px; display:flex; justify-content:space-between; align-items:center;">
-                <span style="font-size:14px; font-weight:bold;">סה"כ בלאי רכיב:</span>
+                <span style="font-size:14px; font-weight:bold;">סה"כ הפרשי רכיבים:</span>
                 <span id="totalComponentWear" style="font-size:16px; font-weight:bold;">₪0</span>
               </div>
               
@@ -17246,11 +17246,14 @@
     function updateAllDifferentialsSubtotals() {
       const breakdown = calculatePartsDifferentialsBreakdown();
       
+      // SESSION 48: Calculate category differentials from ערך ההנחה (reduction amounts)
       const categoryRows = document.querySelectorAll('.category-differential-row');
-      let categoryTotal = 0;
+      let categoryReductionTotal = 0;
       categoryRows.forEach(row => {
-        const amount = parseFloat(row.querySelector('.category-diff-amount')?.value) || 0;
-        categoryTotal += amount;
+        const reductionValueField = row.querySelector('.category-diff-category-value');
+        const reductionValueText = reductionValueField?.value || '₪0';
+        const reductionValue = parseFloat(reductionValueText.replace(/[₪,]/g, '')) || 0;
+        categoryReductionTotal += reductionValue;
       });
       
       const invoiceRows = document.querySelectorAll('.differential-row');
@@ -17261,9 +17264,10 @@
         invoiceTotal += amount;
       });
       
-      const totalComponentWear = Math.round(breakdown.totalReduction + breakdown.totalWear + categoryTotal);
+      // SESSION 48: Sum of all REDUCTION amounts (not totals after reduction)
+      const totalComponentDifferentials = Math.round(breakdown.totalReduction + breakdown.totalWear + categoryReductionTotal);
       const totalInvoiceDiff = Math.round(invoiceTotal);
-      const grandTotalWithoutVAT = Math.round(totalComponentWear + totalInvoiceDiff);
+      const grandTotalWithoutVAT = Math.round(totalComponentDifferentials + totalInvoiceDiff);
       
       const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
       const vatRate = parseFloat(window.helper?.calculations?.vat_rate || helper.calculations?.vat_rate || 18);
@@ -17276,7 +17280,7 @@
       const grandTotalVATEl = document.getElementById('grandTotalDifferentialsVAT');
       const grandTotalWithVATEl = document.getElementById('grandTotalDifferentialsWithVAT');
       
-      if (componentWearEl) componentWearEl.textContent = `₪${totalComponentWear.toLocaleString()}`;
+      if (componentWearEl) componentWearEl.textContent = `₪${totalComponentDifferentials.toLocaleString()}`;
       if (invoiceDiffEl) invoiceDiffEl.textContent = `₪${totalInvoiceDiff.toLocaleString()}`;
       if (grandTotalWithoutVATEl) grandTotalWithoutVATEl.textContent = `₪${grandTotalWithoutVAT.toLocaleString()}`;
       if (grandTotalVATEl) grandTotalVATEl.textContent = `₪${grandTotalVAT.toLocaleString()}`;
@@ -17510,8 +17514,14 @@
       
       const breakdown = calculatePartsDifferentialsBreakdown();
       const vatRate = parseFloat(window.helper?.calculations?.vat_rate || helper.calculations?.vat_rate || 18);
-      const categoryTotal = categoryDifferentials.reduce((sum, item) => sum + item.amount, 0);
-      const grandTotalWithoutVAT = totalAmount + breakdown.totalReduction + breakdown.totalWear + categoryTotal;
+      
+      // SESSION 48: Sum category_value (ערך ההנחה) not amount (סכום)
+      const categoryReductionTotal = categoryDifferentials.reduce((sum, item) => {
+        const reductionValue = parseFloat(String(item.category_value).replace(/[₪,]/g, '')) || 0;
+        return sum + reductionValue;
+      }, 0);
+      
+      const grandTotalWithoutVAT = totalAmount + breakdown.totalReduction + breakdown.totalWear + categoryReductionTotal;
       const grandTotalVAT = Math.round(grandTotalWithoutVAT * (vatRate / 100));
       const grandTotalWithVAT = Math.round(grandTotalWithoutVAT + grandTotalVAT);
       
@@ -17551,7 +17561,7 @@
             percentage: item.percentage,
             amount: item.amount
           })),
-          total: categoryTotal
+          total: categoryReductionTotal
         },
         
         // SECTION 4: הפרשי חשבוניות (Invoice Differentials) - Manual entry
@@ -17567,7 +17577,7 @@
         
         // SUBTOTALS & SUMMARY
         subtotals: {
-          component_wear_total: Math.round(breakdown.totalReduction + breakdown.totalWear + categoryTotal),
+          component_differentials_total: Math.round(breakdown.totalReduction + breakdown.totalWear + categoryReductionTotal),
           invoice_total: Math.round(totalAmount)
         },
         
