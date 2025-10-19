@@ -11975,8 +11975,13 @@
         // Recalculate costs for this card using individual cost fields
         let partsCost = 0;
         card.querySelectorAll('.part-row').forEach(row => {
-          const price = parseFloat(row.querySelector('.part-price').value) || 0;
-          partsCost += price;
+          // SESSION 46 FIX: Use new .part-total-cost field instead of .part-price
+          const totalCostField = row.querySelector('.part-total-cost');
+          if (totalCostField) {
+            const totalCostText = totalCostField.value || '₪0';
+            const cost = parseFloat(totalCostText.replace(/[₪,]/g, '')) || 0;
+            partsCost += cost;
+          }
         });
         
         let workCost = 0;
@@ -12703,10 +12708,14 @@
       
       // Calculate totals from all damage center cards
       document.querySelectorAll('.editable-damage-card').forEach(card => {
-        // Sum parts costs
+        // Sum parts costs - SESSION 46 FIX: Use new .part-total-cost field
         card.querySelectorAll('.part-row').forEach(row => {
-          const price = parseFloat(row.querySelector('.part-price').value) || 0;
-          totalParts += price;
+          const totalCostField = row.querySelector('.part-total-cost');
+          if (totalCostField) {
+            const totalCostText = totalCostField.value || '₪0';
+            const cost = parseFloat(totalCostText.replace(/[₪,]/g, '')) || 0;
+            totalParts += cost;
+          }
         });
         
         // Sum work costs

@@ -29127,9 +29127,43 @@ UI fields
 
 **Session Status:** ✅ **COMPLETE**  
 **Files Modified:** 1 (final-report-builder.html)  
-**Lines Changed:** ~170  
+**Lines Changed:** ~180  
 **Backward Compatible:** ✅ Yes  
 **Mobile Responsive:** ✅ Yes
+
+---
+
+## 🐛 Bug Fix: Updated Legacy Functions
+
+**Issue:** Two functions were still using old `.part-price` class that no longer exists
+
+**Functions Fixed:**
+1. `updateAllCostDisplays()` (Line 11973-11999)
+2. `updateDamageCentersSubtotal()` (Line 12705-12729)
+
+**Error:**
+```
+Uncaught TypeError: Cannot read properties of null (reading 'value')
+at final-report-builder.html:11978:68
+```
+
+**Solution:** Updated both functions to use new `.part-total-cost` field
+```javascript
+// OLD (broken):
+const price = parseFloat(row.querySelector('.part-price').value) || 0;
+
+// NEW (fixed):
+const totalCostField = row.querySelector('.part-total-cost');
+if (totalCostField) {
+  const totalCostText = totalCostField.value || '₪0';
+  const cost = parseFloat(totalCostText.replace(/[₪,]/g, '')) || 0;
+  totalParts += cost;
+}
+```
+
+**Lines Modified:**
+- Line 11978-11984: updateAllCostDisplays()
+- Line 12712-12718: updateDamageCentersSubtotal()
 
 ---
 
