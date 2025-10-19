@@ -12973,43 +12973,336 @@
       }
     }
     
-    // CREATE הפרשים SECTION FOR DAMAGE CENTERS AREA
+    // SESSION 47: CREATE הפרשים SECTION WITH 4 CATEGORIES
     function createDifferentialsSection() {
       return `
         <div class="form-section" id="differentialsSection" style="margin-top: 20px;">
           <h3>הפרשים</h3>
-          <label style="margin-bottom:5px;">האם קיימים הפרשים?
-            <input type="checkbox" id="hasDifferentials" style="width:auto; margin-left:6px;" onchange="toggleDifferentialsTable(); setTimeout(saveDifferentialsToHelper, 100);">
+          <label style="margin-bottom:10px; display:flex; align-items:center; gap:6px;">
+            <span style="background:#ff4444; color:white; padding:2px 6px; border-radius:3px; font-size:11px;">🔴</span>
+            האם קיימים הפרשים?
+            <input type="checkbox" id="hasDifferentials" style="width:auto; margin-right:6px;" onchange="toggleDifferentialsTable(); setTimeout(saveDifferentialsToHelper, 100);">
           </label>
           
-          <div id="differentialsTable" style="display:none; margin-top:15px;">
-            <!-- Mobile-optimized header - No static header needed for 2-row layout -->
-            <div id="differentialsRows"></div>
-            <button class="btn add" type="button" onclick="addDifferentialRow()">הוסף הפרש</button>
-          </div>
-          <div id="differentialsSummary" style="display:none; margin-top:15px;">
-            <div class="form-grid">
-              <div>
-                <label>סה"כ הפרשים (ללא מע"מ):</label>
-                <div class="readonly-box" id="totalDifferentials">₪0</div>
+          <div id="differentialsMainContainer" style="display:none; margin-top:15px;">
+            
+            <!-- CATEGORY 1: PARTS REDUCTIONS (AUTO-IMPORTED - RED) -->
+            <div id="partsReductionsSection" style="margin-bottom:15px; border:2px solid #dc3545; border-radius:6px; padding:10px; background:#fff5f5;">
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; cursor:pointer;" onclick="toggleCollapsibleSection('partsReductionsContent')">
+                <h4 style="margin:0; color:#dc3545; font-size:14px;">
+                  <span style="background:#dc3545; color:white; padding:2px 6px; border-radius:3px; font-size:10px; margin-left:6px;">🔴</span>
+                  הנחת רכיב
+                </h4>
+                <span id="partsReductionsToggle" style="font-size:18px; color:#dc3545;">▼</span>
               </div>
-              <div>
-                <label>סה"כ מע"מ:</label>
-                <div class="readonly-box" id="totalVAT">₪0</div>
-              </div>
-              <div>
-                <label>סה"כ הפרשים כולל מע"מ:</label>
-                <div class="readonly-box" id="totalDifferentialsWithVAT">₪0</div>
+              <div id="partsReductionsContent" style="display:block;">
+                <div id="partsReductionsList" style="font-size:12px; color:#666; margin-bottom:8px;">
+                  <!-- Auto-populated from parts reduction breakdown -->
+                </div>
+                <div style="background:#f8f9fa; padding:8px; border-radius:4px; text-align:left; font-weight:bold;">
+                  סה"כ הנחת רכיב: <span id="totalPartsReductions">₪0</span>
+                </div>
               </div>
             </div>
-          </div>
-          
-          <!-- Save button inside differentials section with proper styling -->
-          <div id="differentialsSaveSection" style="display:none; margin-top:15px; text-align:center;">
-            <button class="btn save" type="button" onclick="saveDifferentials()" style="background:#28a745; color:white; padding:10px 20px; border-radius:6px; border:none; font-size:14px; cursor:pointer; transition: all 0.3s ease;">שמור הפרשים</button>
+            
+            <!-- CATEGORY 2: PARTS WEAR (AUTO-IMPORTED - RED) -->
+            <div id="partsWearSection" style="margin-bottom:15px; border:2px solid #dc3545; border-radius:6px; padding:10px; background:#fff5f5;">
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; cursor:pointer;" onclick="toggleCollapsibleSection('partsWearContent')">
+                <h4 style="margin:0; color:#dc3545; font-size:14px;">
+                  <span style="background:#dc3545; color:white; padding:2px 6px; border-radius:3px; font-size:10px; margin-left:6px;">🔴</span>
+                  בלאי רכיב
+                </h4>
+                <span id="partsWearToggle" style="font-size:18px; color:#dc3545;">▼</span>
+              </div>
+              <div id="partsWearContent" style="display:block;">
+                <div id="partsWearList" style="font-size:12px; color:#666; margin-bottom:8px;">
+                  <!-- Auto-populated from parts wear breakdown -->
+                </div>
+                <div style="background:#f8f9fa; padding:8px; border-radius:4px; text-align:left; font-weight:bold;">
+                  סה"כ בלאי רכיב: <span id="totalPartsWear">₪0</span>
+                </div>
+              </div>
+            </div>
+            
+            <!-- CATEGORY 3: CATEGORY DIFFERENTIALS (MANUAL ENTRY - COLLAPSIBLE) -->
+            <div id="categoryDifferentialsSection" style="margin-bottom:15px; border:2px solid #6c757d; border-radius:6px; padding:10px; background:#f8f9fa;">
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; cursor:pointer;" onclick="toggleCollapsibleSection('categoryDifferentialsContent')">
+                <h4 style="margin:0; color:#6c757d; font-size:14px;">
+                  <span style="background:#6c757d; color:white; padding:2px 6px; border-radius:3px; font-size:10px; margin-left:6px;">Collapsable</span>
+                  הפרשי קטגוריה (סוג עבודה)
+                </h4>
+                <span id="categoryDifferentialsToggle" style="font-size:18px; color:#6c757d;">▼</span>
+              </div>
+              <div id="categoryDifferentialsContent" style="display:none;">
+                <p style="font-size:11px; color:#666; margin-bottom:8px;">כל עבודות הפחתות כולל פירוקים והרכבות</p>
+                <div id="categoryDifferentialsList">
+                  <!-- Manual category differentials rows -->
+                </div>
+                <button class="btn add" type="button" onclick="addCategoryDifferentialRow()" style="font-size:12px; padding:6px 12px;">הוסף הפרש קטגוריה</button>
+              </div>
+            </div>
+            
+            <!-- CATEGORY 4: INVOICE DIFFERENTIALS (EXISTING - GRAY) -->
+            <div id="invoiceDifferentialsSection" style="margin-bottom:15px; border:2px solid #6c757d; border-radius:6px; padding:10px; background:#f1f1f1;">
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; cursor:pointer;" onclick="toggleCollapsibleSection('invoiceDifferentialsContent')">
+                <h4 style="margin:0; color:#212529; font-size:14px;">
+                  <span style="background:#6c757d; color:white; padding:2px 6px; border-radius:3px; font-size:10px; margin-left:6px;">Collapsable</span>
+                  הפרשי חשבוניות (בלאי)
+                </h4>
+                <span id="invoiceDifferentialsToggle" style="font-size:18px; color:#212529;">▼</span>
+              </div>
+              <div id="invoiceDifferentialsContent" style="display:none;">
+                <div id="differentialsRows"></div>
+                <button class="btn add" type="button" onclick="addDifferentialRow()" style="font-size:12px; padding:6px 12px;">הוסף הפרש</button>
+              </div>
+            </div>
+            
+            <!-- SUBTOTALS SECTION -->
+            <div id="differentialsSubtotalsSection" style="margin-top:20px;">
+              <!-- Gray box: Total component wear (reductions + wear) -->
+              <div style="background:#6c757d; color:white; padding:10px; border-radius:6px; margin-bottom:10px; display:flex; justify-content:space-between; align-items:center;">
+                <span style="font-size:14px; font-weight:bold;">סה"כ בלאי רכיב:</span>
+                <span id="totalComponentWear" style="font-size:16px; font-weight:bold;">₪0</span>
+              </div>
+              
+              <!-- Black box: Total invoice differentials -->
+              <div style="background:#212529; color:white; padding:10px; border-radius:6px; margin-bottom:10px; display:flex; justify-content:space-between; align-items:center;">
+                <span style="font-size:14px; font-weight:bold;">סה"כ הפרשי חשבוניות:</span>
+                <span id="totalInvoiceDifferentials" style="font-size:16px; font-weight:bold;">₪0</span>
+              </div>
+              
+              <!-- Black box: Grand total all differentials -->
+              <div style="background:#000; color:white; padding:12px; border-radius:6px; display:flex; justify-content:space-between; align-items:center;">
+                <span style="font-size:16px; font-weight:bold;">סה"כ כללי הפרשים:</span>
+                <span id="grandTotalDifferentials" style="font-size:18px; font-weight:bold;">₪0</span>
+              </div>
+            </div>
+            
+            <!-- Save button -->
+            <div style="margin-top:15px; text-align:center;">
+              <button class="btn save" type="button" onclick="saveDifferentials()" style="background:#28a745; color:white; padding:10px 20px; border-radius:6px; border:none; font-size:14px; cursor:pointer;">שמור הפרשים</button>
+            </div>
           </div>
         </div>
       `;
+    }
+    
+    // SESSION 47: RENDER PARTS REDUCTIONS LIST
+    function renderPartsReductionsSection() {
+      const breakdown = calculatePartsDifferentialsBreakdown();
+      const listContainer = document.getElementById('partsReductionsList');
+      const totalContainer = document.getElementById('totalPartsReductions');
+      
+      if (!listContainer || !totalContainer) return;
+      
+      if (breakdown.reductions.length === 0) {
+        listContainer.innerHTML = '<p style="color:#999; font-style:italic;">אין הנחות רכיב</p>';
+        totalContainer.textContent = '₪0';
+        return;
+      }
+      
+      let html = '<div style="display:grid; gap:4px;">';
+      breakdown.reductions.forEach(item => {
+        html += `
+          <div style="display:grid; grid-template-columns: 2fr 1fr 80px; gap:6px; padding:4px; background:white; border-radius:3px; font-size:11px;">
+            <div style="color:#666;">${item.centerName}</div>
+            <div style="color:#333;">${item.partName}</div>
+            <div style="text-align:left; font-weight:bold; color:#dc3545;">₪${item.amount.toLocaleString()}</div>
+          </div>
+        `;
+      });
+      html += '</div>';
+      
+      listContainer.innerHTML = html;
+      totalContainer.textContent = `₪${breakdown.totalReduction.toLocaleString()}`;
+    }
+    
+    // SESSION 47: RENDER PARTS WEAR LIST
+    function renderPartsWearSection() {
+      const breakdown = calculatePartsDifferentialsBreakdown();
+      const listContainer = document.getElementById('partsWearList');
+      const totalContainer = document.getElementById('totalPartsWear');
+      
+      if (!listContainer || !totalContainer) return;
+      
+      if (breakdown.wear.length === 0) {
+        listContainer.innerHTML = '<p style="color:#999; font-style:italic;">אין בלאי רכיב</p>';
+        totalContainer.textContent = '₪0';
+        return;
+      }
+      
+      let html = '<div style="display:grid; gap:4px;">';
+      breakdown.wear.forEach(item => {
+        html += `
+          <div style="display:grid; grid-template-columns: 2fr 1fr 80px; gap:6px; padding:4px; background:white; border-radius:3px; font-size:11px;">
+            <div style="color:#666;">${item.centerName}</div>
+            <div style="color:#333;">${item.partName}</div>
+            <div style="text-align:left; font-weight:bold; color:#dc3545;">₪${item.amount.toLocaleString()}</div>
+          </div>
+        `;
+      });
+      html += '</div>';
+      
+      listContainer.innerHTML = html;
+      totalContainer.textContent = `₪${breakdown.totalWear.toLocaleString()}`;
+    }
+    
+    // SESSION 47: TOGGLE COLLAPSIBLE SECTIONS
+    function toggleCollapsibleSection(contentId) {
+      const content = document.getElementById(contentId);
+      const toggleIcon = document.getElementById(contentId.replace('Content', 'Toggle'));
+      
+      if (!content) return;
+      
+      if (content.style.display === 'none') {
+        content.style.display = 'block';
+        if (toggleIcon) toggleIcon.textContent = '▼';
+      } else {
+        content.style.display = 'none';
+        if (toggleIcon) toggleIcon.textContent = '◀';
+      }
+    }
+    
+    // SESSION 47: ADD CATEGORY DIFFERENTIAL ROW
+    function addCategoryDifferentialRow() {
+      const container = document.getElementById('categoryDifferentialsList');
+      if (!container) return;
+      
+      const rowIndex = container.children.length;
+      const rowHTML = `
+        <div class="category-differential-row" data-index="${rowIndex}" style="background:white; border:1px solid #ddd; border-radius:4px; padding:8px; margin-bottom:8px;">
+          <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap:8px; margin-bottom:8px;">
+            <div>
+              <label style="font-size:11px; color:#666;">מוקד נזק:</label>
+              <select class="category-diff-center" style="width:100%; padding:4px; border:1px solid #ddd; border-radius:3px; font-size:12px;" onchange="updateCategoryDifferentialsTotal()">
+                <option value="">בחר מוקד נזק</option>
+              </select>
+            </div>
+            <div>
+              <label style="font-size:11px; color:#666;">סוג עבודה:</label>
+              <select class="category-diff-type" style="width:100%; padding:4px; border:1px solid #ddd; border-radius:3px; font-size:12px;" onchange="updateCategoryDifferentialsTotal()">
+                <option value="">בחר סוג</option>
+                <option value="Parts">חלקים</option>
+                <option value="Works">עבודות</option>
+                <option value="Repairs">תיקונים</option>
+              </select>
+            </div>
+          </div>
+          <div style="display:grid; grid-template-columns: 2fr 1fr; gap:8px;">
+            <div>
+              <label style="font-size:11px; color:#666;">סיבה:</label>
+              <input type="text" class="category-diff-reason" placeholder="תיאור ההפרש" style="width:100%; padding:4px; border:1px solid #ddd; border-radius:3px; font-size:12px;">
+            </div>
+            <div>
+              <label style="font-size:11px; color:#666;">סכום (ללא מע"מ):</label>
+              <input type="number" class="category-diff-amount" value="0" min="0" step="1" style="width:100%; padding:4px; border:1px solid #ddd; border-radius:3px; font-size:12px;" oninput="updateCategoryDifferentialsTotal()">
+            </div>
+          </div>
+          <button type="button" onclick="removeCategoryDifferentialRow(this)" style="margin-top:6px; padding:4px 8px; font-size:11px; background:#dc3545; color:white; border:none; border-radius:3px; cursor:pointer;">מחק</button>
+        </div>
+      `;
+      
+      container.insertAdjacentHTML('beforeend', rowHTML);
+      
+      populateDamageCentersDropdown(container.children[rowIndex].querySelector('.category-diff-center'));
+    }
+    
+    // SESSION 47: REMOVE CATEGORY DIFFERENTIAL ROW
+    function removeCategoryDifferentialRow(button) {
+      button.closest('.category-differential-row').remove();
+      updateCategoryDifferentialsTotal();
+    }
+    
+    // SESSION 47: UPDATE CATEGORY DIFFERENTIALS TOTAL
+    function updateCategoryDifferentialsTotal() {
+      const rows = document.querySelectorAll('.category-differential-row');
+      let total = 0;
+      
+      rows.forEach(row => {
+        const amount = parseFloat(row.querySelector('.category-diff-amount')?.value) || 0;
+        total += amount;
+      });
+      
+      updateAllDifferentialsSubtotals();
+    }
+    
+    // SESSION 47: POPULATE DAMAGE CENTERS DROPDOWN
+    function populateDamageCentersDropdown(selectElement) {
+      if (!selectElement) return;
+      
+      const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+      const centers = helper.centers || [];
+      
+      let options = '<option value="">בחר מוקד נזק</option>';
+      centers.forEach((center, index) => {
+        const centerName = center["Damage center Name"] || center.name || `מוקד נזק ${index + 1}`;
+        options += `<option value="${index}">${centerName}</option>`;
+      });
+      
+      selectElement.innerHTML = options;
+    }
+    
+    // SESSION 47: CALCULATE PARTS DIFFERENTIALS BREAKDOWN (REDUCTION VS WEAR)
+    function calculatePartsDifferentialsBreakdown() {
+      const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+      const centers = helper.centers || [];
+      
+      const breakdown = {
+        reductions: [],
+        wear: [],
+        totalReduction: 0,
+        totalWear: 0
+      };
+      
+      centers.forEach((center, centerIndex) => {
+        const centerName = center["Damage center Name"] || center.name || `מוקד נזק ${centerIndex + 1}`;
+        const partsRequired = center.Parts?.parts_required || [];
+        
+        partsRequired.forEach((part, partIndex) => {
+          const pricePerUnit = parseFloat(part.price_per_unit || part.unit_price || part.price || 0);
+          const reductionPct = parseFloat(part.reduction_percentage || part.reduction || 0);
+          const wearPct = parseFloat(part.wear_percentage || part.wear || 0);
+          const quantity = parseInt(part.quantity || part.כמות || 1);
+          const partName = part.name || part.part_name || `חלק ${partIndex + 1}`;
+          
+          if (reductionPct > 0) {
+            const priceAfterReduction = pricePerUnit * (1 - reductionPct / 100);
+            const reductionAmount = Math.round((pricePerUnit - priceAfterReduction) * quantity);
+            
+            if (reductionAmount > 0) {
+              breakdown.reductions.push({
+                centerName,
+                partName,
+                amount: reductionAmount,
+                percentage: reductionPct
+              });
+              breakdown.totalReduction += reductionAmount;
+            }
+          }
+          
+          if (wearPct > 0) {
+            const priceAfterReduction = pricePerUnit * (1 - reductionPct / 100);
+            const priceAfterWear = priceAfterReduction * (1 - wearPct / 100);
+            const wearAmount = Math.round((priceAfterReduction - priceAfterWear) * quantity);
+            
+            if (wearAmount > 0) {
+              breakdown.wear.push({
+                centerName,
+                partName,
+                amount: wearAmount,
+                percentage: wearPct
+              });
+              breakdown.totalWear += wearAmount;
+            }
+          }
+        });
+      });
+      
+      breakdown.totalReduction = Math.round(breakdown.totalReduction);
+      breakdown.totalWear = Math.round(breakdown.totalWear);
+      
+      console.log('📊 SESSION 47: Parts differentials breakdown:', breakdown);
+      return breakdown;
     }
 
     // CREATE DAMAGE CENTERS SUBTOTAL SECTION
@@ -16923,16 +17216,47 @@
       return div;
     }
     
+    // SESSION 47: UPDATE ALL DIFFERENTIALS SUBTOTALS
+    function updateAllDifferentialsSubtotals() {
+      const breakdown = calculatePartsDifferentialsBreakdown();
+      
+      const categoryRows = document.querySelectorAll('.category-differential-row');
+      let categoryTotal = 0;
+      categoryRows.forEach(row => {
+        const amount = parseFloat(row.querySelector('.category-diff-amount')?.value) || 0;
+        categoryTotal += amount;
+      });
+      
+      const invoiceRows = document.querySelectorAll('.differential-row');
+      let invoiceTotal = 0;
+      invoiceRows.forEach(row => {
+        const amountField = row.querySelector('.diff-amount');
+        const amount = parseFloat(amountField?.value) || 0;
+        invoiceTotal += amount;
+      });
+      
+      const totalComponentWear = Math.round(breakdown.totalReduction + breakdown.totalWear + categoryTotal);
+      const totalInvoiceDiff = Math.round(invoiceTotal);
+      const grandTotal = Math.round(totalComponentWear + totalInvoiceDiff);
+      
+      const componentWearEl = document.getElementById('totalComponentWear');
+      const invoiceDiffEl = document.getElementById('totalInvoiceDifferentials');
+      const grandTotalEl = document.getElementById('grandTotalDifferentials');
+      
+      if (componentWearEl) componentWearEl.textContent = `₪${totalComponentWear.toLocaleString()}`;
+      if (invoiceDiffEl) invoiceDiffEl.textContent = `₪${totalInvoiceDiff.toLocaleString()}`;
+      if (grandTotalEl) grandTotalEl.textContent = `₪${grandTotal.toLocaleString()}`;
+      
+      console.log('📊 SESSION 47: Updated subtotals - Component: ₪', totalComponentWear, ', Invoice: ₪', totalInvoiceDiff, ', Grand: ₪', grandTotal);
+    }
+    
     function toggleDifferentialsTable() {
-      console.log('🔄 TOGGLE DIFFERENTIALS TABLE CALLED');
+      console.log('🔄 SESSION 47: TOGGLE DIFFERENTIALS TABLE CALLED');
       const checkbox = document.getElementById('hasDifferentials');
-      const table = document.getElementById('differentialsTable');
-      const summary = document.getElementById('differentialsSummary');
-      const saveSection = document.getElementById('differentialsSaveSection');
+      const mainContainer = document.getElementById('differentialsMainContainer');
       
       console.log('📋 Checkbox state:', checkbox?.checked);
       
-      // IMMEDIATE HELPER UPDATE - sync checkbox state to helper
       const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
       if (!helper.final_report) helper.final_report = {};
       if (!helper.final_report.differential) helper.final_report.differential = {};
@@ -16942,18 +17266,13 @@
       console.log('💾 Updated helper.final_report.differential.has_differentials =', checkbox?.checked);
       
       if (checkbox?.checked) {
-        if (table) table.style.display = 'block';
-        if (summary) summary.style.display = 'block';
-        if (saveSection) saveSection.style.display = 'block';
-        // Add first row automatically
-        const container = document.getElementById('differentialsRows');
-        if (container && container.children.length === 0) {
-          addDifferentialRow();
-        }
+        if (mainContainer) mainContainer.style.display = 'block';
+        
+        renderPartsReductionsSection();
+        renderPartsWearSection();
+        updateAllDifferentialsSubtotals();
       } else {
-        if (table) table.style.display = 'none';
-        if (summary) summary.style.display = 'none';
-        if (saveSection) saveSection.style.display = 'none';
+        if (mainContainer) mainContainer.style.display = 'none';
         // Clear all differential rows when hiding
         const container = document.getElementById('differentialsRows');
         if (container) {
@@ -17073,21 +17392,18 @@
       });
     }
     
-    // Auto-save differential data to helper
+    // SESSION 47: Auto-save differential data to helper (ENHANCED)
     function saveDifferentialsToHelper() {
-      console.log('🚀 SAVE DIFFERENTIALS FUNCTION CALLED!');
+      console.log('🚀 SESSION 47: SAVE DIFFERENTIALS FUNCTION CALLED!');
       const rows = document.querySelectorAll('#differentialsRows .differential-row');
       const differentialsData = [];
       let totalAmount = 0;
       let totalVat = 0;
       let totalWithVat = 0;
       
-      console.log('🔍 DEBUG: Found', rows.length, 'differential rows to save');
-      console.log('🔍 DEBUG: Container element:', document.querySelector('#differentialsRows'));
+      console.log('🔍 DEBUG: Found', rows.length, 'invoice differential rows to save');
       
       rows.forEach((row, index) => {
-        console.log(`🔍 DEBUG: Processing row ${index}:`, row);
-        
         const partField = row.querySelector('.diff-part');
         const damageCenterField = row.querySelector('.diff-damage-center');
         const natureField = row.querySelector('.diff-nature');
@@ -17096,16 +17412,6 @@
         const vatField = row.querySelector('.diff-vat');
         const totalField = row.querySelector('.diff-total');
         
-        console.log(`🔍 DEBUG: Row ${index} fields found:`, {
-          partField: !!partField,
-          damageCenterField: !!damageCenterField,
-          natureField: !!natureField,
-          reasonField: !!reasonField,
-          amountField: !!amountField,
-          vatField: !!vatField,
-          totalField: !!totalField
-        });
-        
         const part = partField?.value || '';
         const damage_center = damageCenterField?.value || '';
         const nature = natureField?.value || '';
@@ -17113,17 +17419,6 @@
         const amount = parseFloat(amountField?.value) || 0;
         const vat = parseFloat(vatField?.value) || 0;
         const total = parseFloat(totalField?.value) || 0;
-        
-        console.log(`🔍 DEBUG: Row ${index} values:`, {part, damage_center, nature, reason, amount, vat, total});
-        console.log(`🔍 DEBUG: Row ${index} raw field values:`, {
-          partRaw: partField?.value,
-          damageCenterRaw: damageCenterField?.value,
-          natureRaw: natureField?.value,
-          reasonRaw: reasonField?.value,
-          amountRaw: amountField?.value,
-          vatRaw: vatField?.value,
-          totalRaw: totalField?.value
-        });
         
         differentialsData.push({
           id: index + 1,
@@ -17141,17 +17436,51 @@
         totalWithVat += total;
       });
       
+      // SESSION 47: Collect category differentials
+      const categoryDiffRows = document.querySelectorAll('.category-differential-row');
+      const categoryDifferentials = [];
+      
+      categoryDiffRows.forEach((row, index) => {
+        const centerIndex = row.querySelector('.category-diff-center')?.value || '';
+        const type = row.querySelector('.category-diff-type')?.value || '';
+        const reason = row.querySelector('.category-diff-reason')?.value || '';
+        const amount = parseFloat(row.querySelector('.category-diff-amount')?.value) || 0;
+        
+        if (type && amount > 0) {
+          categoryDifferentials.push({
+            id: index + 1,
+            center_index: centerIndex,
+            type: type,
+            reason: reason,
+            amount: amount
+          });
+        }
+      });
+      
+      console.log('🔍 DEBUG: Found', categoryDifferentials.length, 'category differential rows to save');
+      
       // Save to helper.final_report.differential
       const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
       if (!helper.final_report) helper.final_report = {};
       
+      const breakdown = calculatePartsDifferentialsBreakdown();
+      
       helper.final_report.differential = {
         has_differentials: document.getElementById('hasDifferentials')?.checked || false,
-        items: differentialsData,
+        invoice_items: differentialsData,
+        category_items: categoryDifferentials,
+        parts_breakdown: {
+          reductions: breakdown.totalReduction,
+          wear: breakdown.totalWear
+        },
         summary: {
-          total_amount_without_vat: totalAmount,
-          total_vat: totalVat,
-          total_amount_with_vat: totalWithVat,
+          invoice_total: totalAmount,
+          invoice_vat: totalVat,
+          invoice_total_with_vat: totalWithVat,
+          parts_reductions_total: breakdown.totalReduction,
+          parts_wear_total: breakdown.totalWear,
+          category_total: categoryDifferentials.reduce((sum, item) => sum + item.amount, 0),
+          grand_total: totalAmount + breakdown.totalReduction + breakdown.totalWear + categoryDifferentials.reduce((sum, item) => sum + item.amount, 0),
           currency: '₪'
         },
         last_updated: new Date().toISOString()
@@ -17183,36 +17512,10 @@
     }
     
     function updateDifferentialsSummary() {
-      const rows = document.querySelectorAll('#differentialsRows .differential-row');
-      let totalAmount = 0;
-      let totalVat = 0;
-      let totalWithVat = 0;
+      console.log('🔄 SESSION 47: updateDifferentialsSummary called');
       
-      rows.forEach(row => {
-        const amount = parseFloat(row.querySelector('.diff-amount').value) || 0;
-        const vat = parseFloat(row.querySelector('.diff-vat').value) || 0;
-        const total = parseFloat(row.querySelector('.diff-total').value) || 0;
-        
-        totalAmount += amount;
-        totalVat += vat;
-        totalWithVat += total;
-      });
+      updateAllDifferentialsSubtotals();
       
-      // Update summary display if it exists
-      const summarySection = document.getElementById('differentialsSummary');
-      if (summarySection) {
-        summarySection.style.display = rows.length > 0 ? 'block' : 'none';
-        
-        const totalDiffField = document.getElementById('totalDifferentials');
-        const totalVatField = document.getElementById('totalVAT');
-        const totalWithVatField = document.getElementById('totalDifferentialsWithVAT');
-        
-        if (totalDiffField) totalDiffField.textContent = `₪${totalAmount.toLocaleString()}`;
-        if (totalVatField) totalVatField.textContent = `₪${totalVat.toLocaleString()}`;
-        if (totalWithVatField) totalWithVatField.textContent = `₪${totalWithVat.toLocaleString()}`;
-      }
-      
-      // Update damage centers after differential calculations
       updateDifferentialCalculations();
     }
     
