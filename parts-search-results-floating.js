@@ -838,20 +838,38 @@
           const updatedPrice = priceAfterReduction * (1 - wear / 100);
           const totalAfterReductions = updatedPrice * qty;
           
+          const rowId = `part-${group.id}-${partIndex}`;
+          
           return `
-            <tr style="border-bottom: 1px solid #e5e7eb;">
+            <tr id="${rowId}" style="border-bottom: 1px solid #e5e7eb;">
               <td rowspan="2" style="text-align: center; padding: 12px; vertical-align: middle; font-weight: bold;">${partIndex + 1}</td>
-              <td style="padding: 8px 12px;">${part.catalog_code || part.pcode || part.oem || 'N/A'}</td>
-              <td colspan="2" style="text-align: right; padding: 8px 12px; font-weight: 600;">${part.part_name || part.name || 'N/A'}</td>
-              <td style="text-align: center; padding: 8px 12px;">₪${pricePerUnit.toFixed(2)}</td>
-              <td style="text-align: center; padding: 8px 12px;">${reduction}%</td>
-              <td style="text-align: center; padding: 8px 12px;">${wear}%</td>
+              <td style="padding: 8px 12px;">
+                <input type="text" id="${rowId}-code" value="${part.catalog_code || part.pcode || part.oem || ''}" 
+                       style="width: 100%; border: 1px solid #ddd; padding: 4px; border-radius: 3px;"
+                       onchange="savePartField('${group.id}', ${partIndex}, 'catalog_code', this.value)">
+              </td>
+              <td colspan="2" style="text-align: right; padding: 8px 12px;">
+                <input type="text" id="${rowId}-name" value="${part.part_name || part.name || ''}" 
+                       style="width: 100%; border: 1px solid #ddd; padding: 4px; border-radius: 3px;"
+                       onchange="savePartField('${group.id}', ${partIndex}, 'part_name', this.value)">
+              </td>
+              <td style="text-align: center; padding: 8px 12px;">
+                <input type="number" id="${rowId}-price" value="${pricePerUnit}" step="0.01"
+                       style="width: 80px; border: 1px solid #ddd; padding: 4px; border-radius: 3px; text-align: center;"
+                       onchange="savePartField('${group.id}', ${partIndex}, 'price', this.value)">
+              </td>
+              <td style="text-align: center; padding: 8px 12px;">
+                <input type="number" id="${rowId}-reduction" value="${reduction}" min="0" max="100"
+                       style="width: 60px; border: 1px solid #ddd; padding: 4px; border-radius: 3px; text-align: center;"
+                       onchange="savePartField('${group.id}', ${partIndex}, 'reduction_percentage', this.value)">%
+              </td>
+              <td style="text-align: center; padding: 8px 12px;">
+                <input type="number" id="${rowId}-wear" value="${wear}" min="0" max="100"
+                       style="width: 60px; border: 1px solid #ddd; padding: 4px; border-radius: 3px; text-align: center;"
+                       onchange="savePartField('${group.id}', ${partIndex}, 'wear_percentage', this.value)">%
+              </td>
               <td rowspan="2" style="text-align: center; padding: 12px; vertical-align: middle; font-weight: bold; background: #d1fae5; color: #059669; font-size: 15px;">₪${Math.round(totalAfterReductions).toLocaleString('he-IL')}</td>
               <td rowspan="2" style="text-align: center; padding: 12px; vertical-align: middle; white-space: nowrap;">
-                <button onclick="editRequiredPart('${group.id}', ${partIndex})" 
-                        style="background: #f59e0b; color: white; border: none; padding: 6px 10px; border-radius: 4px; cursor: pointer; margin-bottom: 4px; display: block; width: 100%;">
-                  ✏️ ערוך
-                </button>
                 <button onclick="deleteRequiredPart('${group.id}', ${partIndex})" 
                         style="background: #ef4444; color: white; border: none; padding: 6px 10px; border-radius: 4px; cursor: pointer; display: block; width: 100%;">
                   🗑️ מחק
@@ -866,7 +884,10 @@
                 <strong>ספק:</strong> ${part.supplier || part.supplier_name || '-'}
               </td>
               <td style="padding: 8px 12px; font-size: 12px; color: #6c757d;">
-                <strong>כמות:</strong> ${qty}
+                <strong>כמות:</strong> 
+                <input type="number" id="${rowId}-qty" value="${qty}" min="1"
+                       style="width: 50px; border: 1px solid #ddd; padding: 2px; border-radius: 3px; text-align: center;"
+                       onchange="savePartField('${group.id}', ${partIndex}, 'quantity', this.value)">
               </td>
               <td style="padding: 8px 12px; font-size: 12px; background: #fff3cd;">
                 <strong>מחיר לפני:</strong> ₪${pricePerUnit.toFixed(2)}
@@ -938,7 +959,91 @@
     }
   };
   
-  // SESSION 49: TAB 1 HELPER - Edit required part
+  // SESSION 50: TAB 1 - Save individual field (inline editing)
+  window.savePartField = async function(centerId, partIndex, fieldName, newValue) {
+    console.log(`💾 SESSION 50: Saving field - Center: ${centerId}, Part: ${partIndex}, Field: ${fieldName}, Value: ${newValue}`);
+    
+    try {
+      const plate = window.helper?.meta?.plate || window.helper?.vehicle?.plate;
+      if (!plate) {
+        alert('לא נמצא מספר רישוי');
+        return;
+      }
+      
+      const centerIndex = window.helper?.centers?.findIndex(c => (c.Id || c.id) === centerId);
+      if (centerIndex === -1) {
+        alert('מרכז נזק לא נמצא');
+        return;
+      }
+      
+      const center = window.helper.centers[centerIndex];
+      const parts = center.Parts?.parts_required || center.Parts?.parts || [];
+      
+      if (partIndex >= parts.length) {
+        alert('חלק לא נמצא');
+        return;
+      }
+      
+      const part = parts[partIndex];
+      
+      // Parse value based on field type
+      let parsedValue = newValue;
+      if (fieldName === 'quantity') {
+        parsedValue = parseInt(newValue) || 1;
+      } else if (fieldName === 'price' || fieldName === 'reduction_percentage' || fieldName === 'wear_percentage') {
+        parsedValue = parseFloat(newValue) || 0;
+      } else {
+        parsedValue = newValue.trim();
+      }
+      
+      // Update Supabase if available
+      if (window.supabase) {
+        const updateData = {};
+        updateData[fieldName] = parsedValue;
+        
+        const { error } = await window.supabase
+          .from('parts_required')
+          .update(updateData)
+          .eq('plate', plate.replace(/-/g, ''))
+          .eq('damage_center_id', centerId)
+          .eq('part_name', part.part_name || part.name);
+        
+        if (error) {
+          console.error('❌ SESSION 50: Supabase update error:', error);
+          throw error;
+        }
+      }
+      
+      // Update helper data
+      part[fieldName] = parsedValue;
+      
+      // Also update common field aliases
+      if (fieldName === 'catalog_code') {
+        part.pcode = parsedValue;
+        part.oem = parsedValue;
+      } else if (fieldName === 'part_name') {
+        part.name = parsedValue;
+      } else if (fieldName === 'quantity') {
+        part.qty = parsedValue;
+      } else if (fieldName === 'price') {
+        part.cost = parsedValue;
+        part.expected_cost = parsedValue;
+        part.price_per_unit = parsedValue;
+      }
+      
+      console.log('✅ SESSION 50: Field saved successfully');
+      
+      // Refresh to update calculations
+      tabsLoaded.required = false;
+      loadRequiredParts();
+      
+    } catch (error) {
+      console.error('❌ SESSION 50: Save error:', error);
+      alert('שגיאה בשמירה: ' + error.message);
+    }
+  };
+  
+  // SESSION 49: TAB 1 HELPER - Edit required part (OLD - KEEP FOR COMPATIBILITY)
   window.editRequiredPart = async function(centerId, partIndex) {
     console.log(`✏️ SESSION 49: Edit part - Center: ${centerId}, Part: ${partIndex}`);
     
