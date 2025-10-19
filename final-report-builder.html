@@ -13028,8 +13028,7 @@
             <div id="categoryDifferentialsSection" style="margin-bottom:15px; border:2px solid #6c757d; border-radius:6px; padding:10px; background:#f8f9fa;">
               <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; cursor:pointer;" onclick="toggleCollapsibleSection('categoryDifferentialsContent')">
                 <h4 style="margin:0; color:#6c757d; font-size:14px;">
-                  <span style="background:#6c757d; color:white; padding:2px 6px; border-radius:3px; font-size:10px; margin-left:6px;">Collapsable</span>
-                  הפרשי קטגוריה (סוג עבודה)
+                  הפרשי קטגוריה
                 </h4>
                 <span id="categoryDifferentialsToggle" style="font-size:18px; color:#6c757d;">▼</span>
               </div>
@@ -13171,28 +13170,22 @@
       const rowIndex = container.children.length;
       const rowHTML = `
         <div class="category-differential-row" data-index="${rowIndex}" style="background:white; border:1px solid #ddd; border-radius:4px; padding:8px; margin-bottom:8px;">
-          <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap:8px; margin-bottom:8px;">
+          <div style="display:grid; grid-template-columns: 2fr 1fr; gap:8px; margin-bottom:8px;">
             <div>
-              <label style="font-size:11px; color:#666;">מוקד נזק:</label>
-              <select class="category-diff-center" style="width:100%; padding:4px; border:1px solid #ddd; border-radius:3px; font-size:12px;" onchange="updateCategoryDifferentialsTotal()">
-                <option value="">בחר מוקד נזק</option>
-              </select>
+              <label style="font-size:11px; color:#666;">סיבה:</label>
+              <input type="text" class="category-diff-reason" placeholder="תיאור ההפרש" style="width:100%; padding:4px; border:1px solid #ddd; border-radius:3px; font-size:12px;">
             </div>
             <div>
-              <label style="font-size:11px; color:#666;">סוג עבודה:</label>
+              <label style="font-size:11px; color:#666;">בחר קטגוריה:</label>
               <select class="category-diff-type" style="width:100%; padding:4px; border:1px solid #ddd; border-radius:3px; font-size:12px;" onchange="updateCategoryDifferentialsTotal()">
-                <option value="">בחר סוג</option>
+                <option value="">בחר</option>
                 <option value="Parts">חלקים</option>
                 <option value="Works">עבודות</option>
                 <option value="Repairs">תיקונים</option>
               </select>
             </div>
           </div>
-          <div style="display:grid; grid-template-columns: 2fr 1fr; gap:8px;">
-            <div>
-              <label style="font-size:11px; color:#666;">סיבה:</label>
-              <input type="text" class="category-diff-reason" placeholder="תיאור ההפרש" style="width:100%; padding:4px; border:1px solid #ddd; border-radius:3px; font-size:12px;">
-            </div>
+          <div style="display:grid; grid-template-columns: 1fr; gap:8px;">
             <div>
               <label style="font-size:11px; color:#666;">סכום (ללא מע"מ):</label>
               <input type="number" class="category-diff-amount" value="0" min="0" step="1" style="width:100%; padding:4px; border:1px solid #ddd; border-radius:3px; font-size:12px;" oninput="updateCategoryDifferentialsTotal()">
@@ -13203,8 +13196,6 @@
       `;
       
       container.insertAdjacentHTML('beforeend', rowHTML);
-      
-      populateDamageCentersDropdown(container.children[rowIndex].querySelector('.category-diff-center'));
     }
     
     // SESSION 47: REMOVE CATEGORY DIFFERENTIAL ROW
@@ -17441,7 +17432,6 @@
       const categoryDifferentials = [];
       
       categoryDiffRows.forEach((row, index) => {
-        const centerIndex = row.querySelector('.category-diff-center')?.value || '';
         const type = row.querySelector('.category-diff-type')?.value || '';
         const reason = row.querySelector('.category-diff-reason')?.value || '';
         const amount = parseFloat(row.querySelector('.category-diff-amount')?.value) || 0;
@@ -17449,7 +17439,6 @@
         if (type && amount > 0) {
           categoryDifferentials.push({
             id: index + 1,
-            center_index: centerIndex,
             type: type,
             reason: reason,
             amount: amount
