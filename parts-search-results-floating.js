@@ -8,12 +8,12 @@
       top: 50px;
       left: 50%;
       transform: translateX(-50%);
-      max-width: 750px;
-      width: 80vw;
+      max-width: 95vw;
+      width: 90vw;
       max-height: 85vh;
       background: white;
       border: 1px solid #0066cc;
-      padding: 25px;
+      padding: 15px;
       z-index: 9999;
       box-shadow: 0 0 25px rgba(0,0,0,0.3);
       direction: rtl;
@@ -21,6 +21,43 @@
       border-radius: 12px;
       display: none;
       overflow-y: auto;
+      overflow-x: auto;
+    }
+    
+    @media (max-width: 768px) {
+      #partsSearchResultsModal {
+        top: 10px;
+        left: 5px;
+        right: 5px;
+        transform: none;
+        width: calc(100% - 10px);
+        max-width: none;
+        padding: 10px;
+        max-height: 90vh;
+      }
+      
+      .damage-center-parts-table {
+        font-size: 11px !important;
+      }
+      
+      .damage-center-parts-table th,
+      .damage-center-parts-table td {
+        padding: 6px 4px !important;
+      }
+      
+      .damage-center-header {
+        font-size: 13px !important;
+        padding: 10px !important;
+      }
+      
+      .tabs-header {
+        flex-wrap: wrap;
+      }
+      
+      .tab-btn {
+        font-size: 12px !important;
+        padding: 8px 12px !important;
+      }
     }
     .results-modal-title {
       font-size: 24px;
@@ -749,23 +786,25 @@
               <span>${group.parts.length} חלקים • לפני: ₪${Math.round(subtotalBefore).toLocaleString('he-IL')} • אחרי: ₪${Math.round(subtotalAfter).toLocaleString('he-IL')}</span>
             </div>
             <div id="group-${group.id}" style="display: block;">
-              <table class="damage-center-parts-table" style="width: 100%; border-collapse: collapse; border: 2px solid #28a745;">
-                <thead>
-                  <tr style="background: #28a745; color: white;">
-                    <th style="padding: 12px; text-align: center; width: 50px; border: 1px solid #fff;">#</th>
-                    <th style="padding: 12px; text-align: center; width: 120px; border: 1px solid #fff;">קוד קטלוגי</th>
-                    <th colspan="2" style="padding: 12px; text-align: center; min-width: 200px; border: 1px solid #fff;">שם החלק</th>
-                    <th style="padding: 12px; text-align: center; width: 100px; border: 1px solid #fff;">מחיר לפני</th>
-                    <th style="padding: 12px; text-align: center; width: 80px; border: 1px solid #fff;">הנחה %</th>
-                    <th style="padding: 12px; text-align: center; width: 80px; border: 1px solid #fff;">בלאי %</th>
-                    <th style="padding: 12px; text-align: center; width: 120px; border: 1px solid #fff;">סה״כ</th>
-                    <th style="padding: 12px; text-align: center; width: 120px; border: 1px solid #fff;">פעולות</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  ${partsRows}
-                </tbody>
-              </table>
+              <div style="overflow-x: auto; -webkit-overflow-scrolling: touch;">
+                <table class="damage-center-parts-table" style="width: 100%; min-width: 800px; border-collapse: collapse; border: 2px solid #28a745; font-size: 14px;">
+                  <thead>
+                    <tr style="background: #1e7e34; color: #ffffff;">
+                      <th style="padding: 12px; text-align: center; width: 50px; border: 1px solid #28a745; color: #ffffff; font-weight: bold;">#</th>
+                      <th style="padding: 12px; text-align: center; width: 120px; border: 1px solid #28a745; color: #ffffff; font-weight: bold;">קוד קטלוגי</th>
+                      <th colspan="2" style="padding: 12px; text-align: center; min-width: 200px; border: 1px solid #28a745; color: #ffffff; font-weight: bold;">שם החלק</th>
+                      <th style="padding: 12px; text-align: center; width: 100px; border: 1px solid #28a745; color: #ffffff; font-weight: bold;">מחיר לפני</th>
+                      <th style="padding: 12px; text-align: center; width: 80px; border: 1px solid #28a745; color: #ffffff; font-weight: bold;">הנחה %</th>
+                      <th style="padding: 12px; text-align: center; width: 80px; border: 1px solid #28a745; color: #ffffff; font-weight: bold;">בלאי %</th>
+                      <th style="padding: 12px; text-align: center; width: 120px; border: 1px solid #28a745; color: #ffffff; font-weight: bold;">סה״כ</th>
+                      <th style="padding: 12px; text-align: center; width: 120px; border: 1px solid #28a745; color: #ffffff; font-weight: bold;">פעולות</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    ${partsRows}
+                  </tbody>
+                </table>
+              </div>
               <div class="damage-center-subtotal" style="display: flex; justify-content: space-between; padding: 15px; font-size: 16px;">
                 <div style="background: #fef3c7; padding: 8px 15px; border-radius: 5px;">סה"כ מרכז נזק לפני הפחתות: <strong>₪${Math.round(subtotalBefore).toLocaleString('he-IL')}</strong></div>
                 <div style="background: #d1fae5; padding: 8px 15px; border-radius: 5px; font-weight: bold;">סה"כ מרכז נזק אחרי הפחתות: <strong style="color: #059669;">₪${Math.round(subtotalAfter).toLocaleString('he-IL')}</strong></div>
