@@ -11426,8 +11426,13 @@
           const plate = window.helper.meta.plate;
           const normalizedPlate = plate.replace(/-/g, '');
           const center = window.helper.centers[centerIndex];
-          const centerId = center["Damage center Number"] || center.Id || center.id || `מוקד ${centerIndex + 1}`;
           const part = window.helper.centers[centerIndex].Parts.parts_required[partIndex];
+          
+          // Get damage center code - preserve existing or generate from center number
+          let centerId = part.damage_center_code || center.code || center["Damage center Number"];
+          if (centerId && !centerId.includes('מוקד')) {
+            centerId = `מוקד ${centerId}`;
+          }
           
           // Get case UUID from Supabase cases table (not filing_case_id string)
           let caseUuid = part.case_id || ''; // Preserve if already exists
