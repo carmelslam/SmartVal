@@ -637,23 +637,69 @@ function savePartsData() {
   const allParts = [];
 
   document.querySelectorAll("#partsList .row").forEach(row => {
+    // ✅ SESSION 54 FIX: Read ALL UI fields including pricing, reductions, IDs
+    const rowUuid = row.getAttribute('data-row-uuid') || '';
     const name = row.querySelector(".name")?.value.trim() || '';
+    const pcode = row.querySelector('.catalog-code')?.value.trim() || '';
     const desc = row.querySelector(".description")?.value.trim() || '';
+    const pricePerUnit = parseFloat(row.querySelector('.price-per-unit')?.value) || 0;
+    const reduction = parseFloat(row.querySelector('.reduction')?.value) || 0;
+    const wear = parseFloat(row.querySelector('.wear')?.value) || 0;
+    const updatedPriceRaw = row.querySelector('.updated-price')?.value || '₪0';
+    const updatedPrice = parseFloat(updatedPriceRaw.replace(/[^0-9.-]/g, '')) || 0;
     const quantity = parseInt(row.querySelector(".quantity")?.value) || 1;
-    const priceRaw = row.querySelector(".price")?.value.trim() || '';
-    const price = priceRaw.replace('₪', '').trim();
+    const totalCostRaw = row.querySelector('.total-cost')?.value || '₪0';
+    const totalCost = parseFloat(totalCostRaw.replace(/[^0-9.-]/g, '')) || 0;
     const source = row.querySelector(".source")?.value || '';
+    const supplier = row.querySelector('.supplier')?.value.trim() || '';
     
-    // ✅ CHANGED: Include quantity in parts data
-    if (name || desc || price || source) {
+    // ✅ SESSION 54 FIX: Include ALL fields with complete structure
+    if (name || desc) {
       allParts.push({ 
+        // Identification fields
+        row_uuid: rowUuid,
+        case_id: window.currentCaseId || window.helper?.current_damage_center?.case_id || window.helper?.case_info?.case_id || '',
+        damage_center_code: window.currentDamageCenterCode || window.helper?.current_damage_center?.code || '',
+        plate: window.helper?.vehicle?.plate || window.helper?.meta?.plate || '',
+        
+        // Part info with aliases
         part: name,
         name: name,
+        part_name: name,
+        pcode: pcode,
+        catalog_code: pcode,
+        oem: pcode,
         desc: desc,
         description: desc,
+        supplier: supplier,
+        supplier_name: supplier,
+        
+        // Pricing fields with all required calculations
+        price_per_unit: pricePerUnit,
+        price: pricePerUnit,
+        reduction_percentage: reduction,
+        reduction: reduction,
+        wear_percentage: wear,
+        wear: wear,
+        updated_price: updatedPrice,
+        total_cost: totalCost,
+        cost: totalCost,
+        
+        // Other fields
+        source: source,
         quantity: quantity,
-        price, 
-        source 
+        qty: quantity,
+        
+        // Metadata
+        updated_at: new Date().toISOString(),
+        
+        // Vehicle info
+        make: window.helper?.vehicle?.manufacturer || window.helper?.vehicle?.make || '',
+        model: window.helper?.vehicle?.model || '',
+        year: window.helper?.vehicle?.year || '',
+        trim: window.helper?.vehicle?.trim || '',
+        engine_type: window.helper?.vehicle?.fuel_type || window.helper?.vehicle?.engine_type || '',
+        vin: window.helper?.vehicle?.vin || ''
       });
     }
   });
