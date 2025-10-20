@@ -49,6 +49,13 @@ function formatCaseId(caseId) {
 function init() {
   console.log('💰 Fee Module: Initializing with CORE helper field integration...');
   
+  // SESSION 56: Ensure window.helper exists before accessing it
+  if (!window.helper) {
+    console.error('❌ window.helper not available - waiting for helper.js to load...');
+    setTimeout(init, 100); // Retry after 100ms
+    return;
+  }
+  
   // Initialize financials section if not exists
   if (!window.helper.financials) {
     window.helper.financials = {};
