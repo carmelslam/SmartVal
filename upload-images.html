@@ -3,7 +3,8 @@
 <head>
 <meta charset="utf-8"/>
 <script type="module" src="./webhook.js"></script>
-<script type="module" src="./helper.js"></script>
+<!-- SESSION 56: Load helper.js as regular script (not ES6 module) -->
+<script src="./helper.js"></script>
 <title>העלאת תמונות</title>
 <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
 <style>
@@ -750,7 +751,8 @@
 </div>
 <script type="module">
 import { sendToWebhook, getWebhook } from './webhook.js';
-import { updateHelper } from './helper.js';
+// SESSION 56: helper.js is NOT an ES6 module - use window.updateHelper
+// import { updateHelper } from './helper.js';
 
 // Enhanced Image Upload System
 class ImageUploadManager {
@@ -1126,8 +1128,10 @@ class ImageUploadManager {
       // Update session storage
       sessionStorage.setItem('helper', JSON.stringify(helper));
       
-      // Update via helper system
-      updateHelper(helper);
+      // SESSION 56: Update via helper system with correct parameters
+      if (typeof window.updateHelper === 'function') {
+        window.updateHelper('images', helper.images, 'upload-images');
+      }
       
     } catch (e) {
       console.warn('Could not update helper with images:', e);
