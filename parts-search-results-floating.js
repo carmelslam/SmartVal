@@ -722,9 +722,10 @@
       // Process Supabase parts
       if (requiredParts && requiredParts.length > 0) {
         requiredParts.forEach(part => {
-          const centerId = part.damage_center_id || 'unknown';
-          const centerNumber = part.damage_center_number || '?';
-          const centerDesc = part.damage_center_description || 'ללא תיאור';
+          // ✅ SESSION 55 FIX: Use damage_center_code (the actual column in Supabase)
+          const centerId = part.damage_center_code || 'unknown';
+          const centerNumber = part.damage_center_code?.match(/\d+$/)?.[0] || '?';
+          const centerDesc = 'ללא תיאור';
           
           if (!groupedParts[centerId]) {
             groupedParts[centerId] = {
