@@ -3672,6 +3672,7 @@
       
       // Centers structure (from wizard) vs damage_blocks structure (from expertise)
       const adaptedBlock = {
+        Id: center.Id || center.id || center.code || center.damage_center_code || '',
         damage_center_name: center.Location || center.damage_center_name || `מוקד נזק ${index + 1}`,
         // Extract just the number if it contains the full text
         damage_center_number: (() => {
@@ -3709,8 +3710,14 @@
         adaptedBlock.repairs = center.Repairs;
       }
       
-      console.log(`✅ Adapted block ${index}:`, adaptedBlock);
-      console.log(`📋 Parts found: ${adaptedBlock.parts.length}, Works found: ${adaptedBlock.works.length}`);
+      console.log(`✅ SESSION 56: Adapted block ${index}:`, adaptedBlock);
+      console.log(`  📋 Parts found: ${adaptedBlock.parts.length}, Works found: ${adaptedBlock.works.length}`);
+      console.log(`  🆔 ID preserved: ${adaptedBlock.Id || 'MISSING!'}`);
+      
+      if (!adaptedBlock.Id) {
+        console.warn(`⚠️ SESSION 56: Center ${index} has NO ID after adaptation!`);
+        console.warn('  Original center object:', center);
+      }
       
       return adaptedBlock;
     }
@@ -10975,6 +10982,8 @@
           console.log('ℹ️ SESSION 56: No damage centers in helper, skipping ID initialization');
           return;
         }
+        
+        console.log(`📊 SESSION 56: Found ${helper.centers.length} centers in helper:`, helper.centers);
         
         const centersNeedingIds = helper.centers.filter((center, index) => {
           const hasId = !!(center.Id || center.id || center.code);
