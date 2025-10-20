@@ -2713,14 +2713,42 @@ function savePartsData() {
         }
       }
       
-      const caseId = window.currentCaseId || window.helper?.case_info?.case_id || window.helper?.meta?.case_id;
+      // ✅ SESSION 55 FIX: Get case UUID from Supabase (not filing case ID string)
       const plate = window.helper?.vehicle?.plate || window.helper?.meta?.plate || globalHelper?.meta?.plate || globalHelper?.vehicle?.plate;
+      const normalizedPlate = plate ? plate.replace(/-/g, '') : '';
+      
+      let caseUuid = window.currentCaseId;
+      // If currentCaseId is a filing ID (not UUID), lookup the real UUID
+      if (caseUuid && !caseUuid.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
+        caseUuid = null; // Reset, will lookup below
+      }
+      
+      if (!caseUuid && normalizedPlate && window.supabase) {
+        try {
+          const { data: caseData } = await window.supabase
+            .from('cases')
+            .select('id')
+            .eq('plate', normalizedPlate)
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .single();
+          caseUuid = caseData?.id || null;
+          if (caseUuid) {
+            window.currentCaseId = caseUuid; // Cache for future use
+          }
+        } catch (err) {
+          console.warn('Could not lookup case UUID:', err);
+        }
+      }
+      
       const damageCenterCode = window.currentDamageCenterCode || 
+                              window.helper?.current_damage_center?.Id ||
+                              window.helper?.current_damage_center?.id ||
                               window.helper?.current_damage_center?.code ||
                               sessionStorage.getItem('active_damage_center_code');
       
-      if (!caseId || !plate || !damageCenterCode) {
-        console.error('❌ Missing required IDs:', { caseId, plate, damageCenterCode }, 'Helper:', {
+      if (!caseUuid || !plate || !damageCenterCode) {
+        console.error('❌ Missing required IDs:', { caseUuid, plate, damageCenterCode }, 'Helper:', {
           case_info: window.helper?.case_info,
           meta: window.helper?.meta,
           current_damage_center: window.helper?.current_damage_center
@@ -2762,8 +2790,8 @@ function savePartsData() {
       
       const supabaseData = {
         row_uuid: rowUuid,
-        case_id: caseId,
-        plate: plate,
+        case_id: caseUuid,
+        plate: normalizedPlate,
         damage_center_code: damageCenterCode,
         
         part_name: partName,
