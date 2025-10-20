@@ -1,5 +1,6 @@
 // fee-module.js
-import { helper, getFinancialData } from './helper.js';
+// SESSION 56: helper.js is NOT an ES6 module - use window.helper
+// import { helper, getFinancialData } from './helper.js';
 import { MathEngine } from './math.js';
 import { updateHelperWithEvents, helperEvents, HelperUtils } from './helper-events.js';
 
@@ -49,11 +50,11 @@ function init() {
   console.log('💰 Fee Module: Initializing with CORE helper field integration...');
   
   // Initialize financials section if not exists
-  if (!helper.financials) {
-    helper.financials = {};
+  if (!window.helper.financials) {
+    window.helper.financials = {};
   }
-  if (!helper.financials.fees) {
-    helper.financials.fees = {
+  if (!window.helper.financials.fees) {
+    window.helper.financials.fees = {
       travel: { total: 0, count: 0, unit_price: 0, distance_km: 0, fuel_cost: 0, tolls: 0, description: '' },
       photography: { total: 0, count: 0, unit_price: 0, equipment_cost: 0, processing_time: 0, description: '' },
       office: { total: 0, fixed_fee: 0, percentage: 0, overhead_cost: 0, administrative_time: 0, description: '' },
@@ -64,8 +65,8 @@ function init() {
   }
   
   // Ensure calculations subsection always exists
-  if (!helper.financials.fees.calculations) {
-    helper.financials.fees.calculations = {
+  if (!window.helper.financials.fees.calculations) {
+    window.helper.financials.fees.calculations = {
       fees_subtotal: 0,
       total_before_vat: 0,
       vat_rate: 0,
@@ -76,12 +77,12 @@ function init() {
     };
   }
   
-  const meta = helper.meta || {};
-  const vehicle = helper.vehicle || {};
-  const stakeholders = helper.stakeholders || {};
-  const case_info = helper.case_info || {};
-  const fees = helper.financials.fees;
-  const vatRate = window.getHelperVatRate ? window.getHelperVatRate() : (MathEngine.getVatRate ? MathEngine.getVatRate() : (helper.vat || 18));
+  const meta = window.helper.meta || {};
+  const vehicle = window.helper.vehicle || {};
+  const stakeholders = window.helper.stakeholders || {};
+  const case_info = window.helper.case_info || {};
+  const fees = window.helper.financials.fees;
+  const vatRate = window.getHelperVatRate ? window.getHelperVatRate() : (MathEngine.getVatRate ? MathEngine.getVatRate() : (window.helper.vat || 18));
 
   // Populate fields from helper data - no direct DOM manipulation
   const plateValue = vehicle.plate || meta.plate || '...';
@@ -94,8 +95,8 @@ function init() {
   
   // Update helper with formatted case ID
   if (formattedCaseId && formattedCaseId !== rawCaseId) {
-    if (!helper.case_info) helper.case_info = {};
-    helper.case_info.case_id = formattedCaseId;
+    if (!window.helper.case_info) window.helper.case_info = {};
+    window.helper.case_info.case_id = formattedCaseId;
   }
   $('issueDate').innerText = new Date().toISOString().split('T')[0];
   
@@ -148,14 +149,14 @@ function calculateFees() {
   const vatRate = parseFloat($('vat_rate').value) || (window.getHelperVatRate ? window.getHelperVatRate() : MathEngine.getVatRate());
 
   // Write values to helper structure
-  helper.financials.fees.travel.total = travelFee;
-  helper.financials.fees.photography.total = mediaFee;
-  helper.financials.fees.office.total = officeFee;
-  helper.financials.fees.assessment.hourly_rate = hourRate;
+  window.helper.financials.fees.travel.total = travelFee;
+  window.helper.financials.fees.photography.total = mediaFee;
+  window.helper.financials.fees.office.total = officeFee;
+  window.helper.financials.fees.assessment.hourly_rate = hourRate;
   
   // Calculate assessment total if hours are defined
-  if (helper.financials.fees.assessment.hours > 0) {
-    helper.financials.fees.assessment.total = hourRate * helper.financials.fees.assessment.hours;
+  if (window.helper.financials.fees.assessment.hours > 0) {
+    window.helper.financials.fees.assessment.total = hourRate * window.helper.financials.fees.assessment.hours;
   }
 
   const fees = {
@@ -170,8 +171,8 @@ function calculateFees() {
   const total = Math.round(subtotal + vatAmount);
 
   // Ensure calculations subsection exists before setting properties
-  if (!helper.financials.fees.calculations) {
-    helper.financials.fees.calculations = {
+  if (!window.helper.financials.fees.calculations) {
+    window.helper.financials.fees.calculations = {
       fees_subtotal: 0,
       total_before_vat: 0,
       vat_rate: 0,
@@ -183,19 +184,19 @@ function calculateFees() {
   }
 
   // Update helper calculations subsection with all calculated values
-  helper.financials.fees.calculations.fees_subtotal = subtotal;
-  helper.financials.fees.calculations.total_before_vat = subtotal;
-  helper.financials.fees.calculations.vat_rate = vatRate;
-  helper.financials.fees.calculations.vat_amount = vatAmount;
-  helper.financials.fees.calculations.total_with_vat = total;
-  helper.financials.fees.calculations.calculation_timestamp = new Date().toISOString();
+  window.helper.financials.fees.calculations.fees_subtotal = subtotal;
+  window.helper.financials.fees.calculations.total_before_vat = subtotal;
+  window.helper.financials.fees.calculations.vat_rate = vatRate;
+  window.helper.financials.fees.calculations.vat_amount = vatAmount;
+  window.helper.financials.fees.calculations.total_with_vat = total;
+  window.helper.financials.fees.calculations.calculation_timestamp = new Date().toISOString();
 
   // Update display fields
   $('total_before_vat').value = subtotal;
   $('vat_amount').value = vatAmount;
   $('total_with_vat').value = total;
 
-  console.log('💰 Fee calculations updated in helper.financials.fees.calculations:', helper.financials.fees.calculations);
+  console.log('💰 Fee calculations updated in helper.financials.fees.calculations:', window.helper.financials.fees.calculations);
 }
 
 function saveFees() {
@@ -203,30 +204,30 @@ function saveFees() {
 
   // All fee data is now stored in helper.financials.fees with calculations in subsection
   // Add additional metadata to helper
-  if (!helper.meta) helper.meta = {};
-  helper.meta.last_fee_update = new Date().toISOString();
-  helper.meta.fee_module_completed = true;
+  if (!window.helper.meta) window.helper.meta = {};
+  window.helper.meta.last_fee_update = new Date().toISOString();
+  window.helper.meta.fee_module_completed = true;
 
   // Add completion notes to calculations subsection
-  helper.financials.fees.calculations.calculation_notes = 'Fee module completed successfully';
+  window.helper.financials.fees.calculations.calculation_notes = 'Fee module completed successfully';
 
   // Create summary data object for event system compatibility
-  const rawCaseId = helper.case_info?.case_id || helper.meta?.case_number || '';
+  const rawCaseId = window.helper.case_info?.case_id || window.helper.meta?.case_number || '';
   const formattedCaseId = formatCaseId(rawCaseId);
   
   const feesData = {
     case_id: formattedCaseId,
     issue_date: new Date().toISOString().split('T')[0],
-    fees_summary: helper.financials.fees,
-    calculations: helper.financials.fees.calculations,
+    fees_summary: window.helper.financials.fees,
+    calculations: window.helper.financials.fees.calculations,
     completed_by: 'fee-module'
   };
 
   // Use event-driven update
   updateHelperWithEvents('fees', feesData, 'fee-module');
   
-  console.log('💰 Fee data saved to helper.financials.fees:', helper.financials.fees);
-  console.log('📊 Calculations saved to helper.financials.fees.calculations:', helper.financials.fees.calculations);
+  console.log('💰 Fee data saved to helper.financials.fees:', window.helper.financials.fees);
+  console.log('📊 Calculations saved to helper.financials.fees.calculations:', window.helper.financials.fees.calculations);
   showSuccessAndValidation();
 }
 
