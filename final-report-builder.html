@@ -20313,10 +20313,19 @@
         plateInput.addEventListener('keyup', window.forcePlateInputAsText);
         plateInput.addEventListener('blur', window.forcePlateInputAsText);
         
-        // Monitor for autofill
-        setInterval(function() {
+        // SESSION 52 FIX: Monitor for autofill but stop after 20 checks (10 seconds)
+        let autofillCheckCount = 0;
+        const autofillInterval = setInterval(function() {
+          autofillCheckCount++;
+          
           if (plateInput.value && plateInput.style.webkitTextSecurity !== 'none') {
             window.forcePlateInputAsText();
+          }
+          
+          // Stop checking after 20 attempts (10 seconds) or if field is properly configured
+          if (autofillCheckCount >= 20 || (plateInput.style.webkitTextSecurity === 'none' && plateInput.type === 'text')) {
+            clearInterval(autofillInterval);
+            console.log('✅ Plate input autofill monitoring stopped after', autofillCheckCount, 'checks');
           }
         }, 500);
         
