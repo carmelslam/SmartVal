@@ -3725,6 +3725,9 @@
       const repairsCosts = workCosts + partsCosts;
       const totalWithVAT = repairsCosts * (1 + (window.getHelperVatRate ? window.getHelperVatRate() : (typeof MathEngine !== 'undefined' && MathEngine.getVatRate ? MathEngine.getVatRate() : 18)) / 100);
       
+      const centerId = block.Id || block.id || block.code || block.damage_center_code || '';
+      console.log(`🆔 SESSION 56: Creating card ${index} with ID: ${centerId}`);
+      
       // Get existing parts, works, repairs from block
       const parts = block.parts || [];
       const works = block.works || [];
@@ -3735,7 +3738,7 @@
       console.log(`🔨 Works content:`, works);
       
       return `
-        <div class="editable-damage-card" data-center-index="${index}" style="background: white; border-radius: 8px; padding: 15px; border: 1px solid #e2e8f0; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+        <div class="editable-damage-card" data-center-index="${index}" data-center-id="${centerId}" style="background: white; border-radius: 8px; padding: 15px; border: 1px solid #e2e8f0; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
           <!-- Card Header -->
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
             <div style="display: flex; align-items: center; gap: 8px;">
@@ -11506,26 +11509,29 @@
         }
         
         // ✅ SESSION 54 FIX: Upsert to Supabase (INSERT new parts, UPDATE existing)
-        if (window.supabase && window.helper?.meta?.plate && window.helper?.centers?.[centerIndex]) {
+        if (window.supabase && window.helper?.meta?.plate) {
           const plate = window.helper.meta.plate;
           const normalizedPlate = plate.replace(/-/g, '');
-          const center = window.helper.centers[centerIndex];
           
-          // ✅ SESSION 55 FIX: ALWAYS use existing center ID, NEVER generate new one
-          // New parts added in UI must use the same damage center ID as existing parts
-          const centerId = center.Id || center.id || center.code;
+          const centerCard = partRow.closest('.editable-damage-card');
+          const centerIdFromDOM = centerCard?.dataset?.centerId || '';
           
-          console.log(`🔍 SESSION 55 DEBUG: Saving part to center ${centerIndex}:`, {
-            centerId,
-            centerObject: center,
-            hasId: !!center.Id,
-            hasLowercaseId: !!center.id,
-            hasCode: !!center.code
+          const center = window.helper?.centers?.[centerIndex] || {};
+          const centerIdFromHelper = center.Id || center.id || center.code || '';
+          
+          const centerId = centerIdFromDOM || centerIdFromHelper;
+          
+          console.log(`🔍 SESSION 56 FIX: Saving part to center ${centerIndex}:`, {
+            centerIdFromDOM,
+            centerIdFromHelper,
+            finalCenterId: centerId,
+            centerObject: center
           });
           
           if (!centerId) {
-            console.error('❌ Cannot save part - damage center has no ID:', center);
-            console.error('❌ This means helper.centers[] is not properly initialized with damage center IDs');
+            console.error('❌ SESSION 56: Cannot save part - no damage center ID found in DOM or helper');
+            console.error('  DOM data-center-id:', centerIdFromDOM);
+            console.error('  Helper center:', center);
             return;
           }
           
@@ -11894,10 +11900,19 @@
           const repairsCost = repairs.reduce((sum, repair) => sum + (parseFloat(repair.cost) || 0), 0);
           const totalCost = partsCost + workCost + repairsCost;
           
+          const centerIdFromDOM = card.dataset?.centerId || '';
+          const centerIdFromHelper = existingCenter?.Id || existingCenter?.id || '';
+          const centerId = centerIdFromDOM || centerIdFromHelper || `dc_${Date.now()}_${index + 1}`;
+          
+          console.log(`🆔 SESSION 56: saveDamageCenterChanges center ${index} ID resolution:`, {
+            fromDOM: centerIdFromDOM,
+            fromHelper: centerIdFromHelper,
+            final: centerId
+          });
+          
           // Create center object in helper.centers format (source of truth)
-          // ✅ SESSION 55 FIX: Preserve existing center ID, don't regenerate
           const centerObject = {
-            Id: existingCenter?.Id || existingCenter?.id || `dc_${Date.now()}_${index + 1}`,
+            Id: centerId,
             "Damage center Number": centerNumber || (index + 1),
             Location: centerLocation,
             Description: centerDescription,
