@@ -376,9 +376,59 @@ Always check if UUID already exists before generating new one to avoid breaking 
 
 ---
 
-**Status**: ✅ All errors fixed, upsert working correctly  
-**Next Task**: Test with real data, then apply same fixes to estimator-builder.html
+## CRITICAL OUTSTANDING ISSUE
+
+### Problem: Adding parts in final-report-builder creates NEW damage centers
+
+**Root Cause**: `window.helper.centers[]` is undefined or doesn't contain damage center IDs
+
+**What Happens**:
+1. User adds part in UI (damage center 1)
+2. `autoSaveDamageCenterChanges()` tries to get `center.Id` from `helper.centers[0]`
+3. But `helper.centers` is undefined → `center.Id` is undefined
+4. Code generates NEW ID: `dc_${Date.now()}_1`
+5. Part saves to Supabase with WRONG/NEW damage center ID
+6. Floating screen shows "phantom" damage centers
+
+**Current State**:
+- ✅ Fixed: Use existing center ID (don't generate new)
+- ✅ Fixed: Wizard sends correct ID to parts-required iframe  
+- ✅ Fixed: Preserve center ID in `saveDamageCenterChanges()`
+- ❌ **BROKEN**: `window.helper.centers[]` not populated with IDs on page load
+
+**Solution Required**:
+When final-report-builder.html loads, it MUST:
+1. Load `window.helper` from sessionStorage
+2. If `helper.centers[]` exists but lacks IDs, load IDs from Supabase `parts_required` table
+3. Group parts by `damage_center_code` to get unique center IDs
+4. Update `helper.centers[].Id` with the correct `dc_xxx` IDs
+5. Save updated helper to sessionStorage and window.helper
+
+**Code Location**: `DOMContentLoaded` handler around line 10966-10969
+
+**Alternative Solution**:
+Call `saveDamageCenterChanges()` immediately after loading UI to populate helper from DOM, ensuring IDs are preserved from existing parts.
 
 ---
 
-**End of Session 55 Summary (Task 1)**
+## Additional Issues Found
+
+### Issue 2: Delete Part doesn't remove from Supabase
+
+**File**: `final-report-builder.html`  
+**Function**: `removePartRow()`  
+**Problem**: Only removes from DOM, doesn't delete from Supabase  
+**Solution**: Add Supabase delete query using `row_uuid`
+
+### Issue 3: Floating Screen shows duplicate centers
+
+**Status**: ✅ FIXED (use Supabase only, not helper as fallback)
+
+---
+
+**Status**: ⚠️ PARTIALLY FIXED - Core upsert works but helper initialization broken  
+**Next Session**: Fix `window.helper.centers[]` initialization with damage center IDs from Supabase
+
+---
+
+**End of Session 55 Summary**
