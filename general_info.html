@@ -266,12 +266,12 @@
         });
       }
       
-      // Import helper module and populate OTHER fields (excluding damage_date_new from auto-population)
+      // SESSION 56: helper.js is NOT an ES6 module - use window.refreshAllModuleForms
       import('./helper.js').then(helperModule => {
         
-        if (typeof helperModule.refreshAllModuleForms === 'function') {
+        if (typeof window.refreshAllModuleForms === 'function') {
           console.log('🔄 Calling refreshAllModuleForms...');
-          helperModule.refreshAllModuleForms();
+          window.refreshAllModuleForms();
           console.log('✅ General info fields auto-populated from helper');
           
           // 🔧 PRESERVE: Don't let auto-population interfere with damage date field
@@ -484,13 +484,13 @@
           fieldIds.forEach(fieldId => {
             const field = document.getElementById(fieldId);
             if (field && !field.value) {
-              // ✅ MANUAL OVERRIDE PROTECTION: Check if field was manually modified
+              // SESSION 56: helper.js doesn't have isFieldManuallyModified - skip this check
               import('./helper.js').then(module => {
-                if (module.isFieldManuallyModified && module.isFieldManuallyModified(fieldId)) {
-                  console.log(`⏭️ Skipping auto-fill for ${fieldId} - manually modified`);
-                  skippedCount++;
-                  return;
-                }
+                // if (window.isFieldManuallyModified && window.isFieldManuallyModified(fieldId)) {
+                //   console.log(`⏭️ Skipping auto-fill for ${fieldId} - manually modified`);
+                //   skippedCount++;
+                //   return;
+                // }
                 
                 field.value = carData[dataKey];
                 field.style.background = '#e8f5e8'; // Light green to indicate auto-filled
@@ -573,7 +573,9 @@
                 }
                 
                 import('./helper.js').then(module => {
-                  module.markFieldAsManuallyModified(fieldId, this.value, 'general_info');
+                  if (typeof window.markFieldAsManuallyModified === 'function') {
+                    window.markFieldAsManuallyModified(fieldId, this.value, 'general_info');
+                  }
                 }).catch(error => {
                   console.error('Error importing helper for manual override:', error);
                 });
@@ -590,7 +592,9 @@
           element.addEventListener('blur', function() {
             if (this.dataset.userFocused === 'true' && this.value !== this.defaultValue) {
               import('./helper.js').then(module => {
-                module.markFieldAsManuallyModified(fieldId, this.value, 'general_info');
+                if (typeof window.markFieldAsManuallyModified === 'function') {
+                  window.markFieldAsManuallyModified(fieldId, this.value, 'general_info');
+                }
               }).catch(error => {
                 console.error('Error importing helper for manual override:', error);
               });
