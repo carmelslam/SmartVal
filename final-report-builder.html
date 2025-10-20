@@ -11901,8 +11901,23 @@
           const totalCost = partsCost + workCost + repairsCost;
           
           const centerIdFromDOM = card.dataset?.centerId || '';
-          const centerIdFromHelper = existingCenter?.Id || existingCenter?.id || '';
-          const centerId = centerIdFromDOM || centerIdFromHelper || `dc_${Date.now()}_${index + 1}`;
+          const centerIdFromHelper = existingCenter?.Id || existingCenter?.id || existingCenter?.code || '';
+          let centerId = centerIdFromDOM || centerIdFromHelper;
+          
+          if (!centerId) {
+            console.warn(`⚠️ SESSION 56: Center ${index} has NO ID from DOM or helper.`);
+            console.warn('  Checking if this center already has parts in helper with damage_center_code...');
+            
+            const existingParts = existingCenter?.Parts?.parts_required || [];
+            if (existingParts.length > 0 && existingParts[0].damage_center_code) {
+              centerId = existingParts[0].damage_center_code;
+              console.log(`✅ SESSION 56: Found ID from existing parts: ${centerId}`);
+            } else {
+              console.warn(`⚠️ SESSION 56: No existing parts with ID. Center ${index} will not be saved to prevent phantom centers.`);
+              console.warn('  This center must be created/edited in wizard first to get a proper ID.');
+              return;
+            }
+          }
           
           console.log(`🆔 SESSION 56: saveDamageCenterChanges center ${index} ID resolution:`, {
             fromDOM: centerIdFromDOM,
