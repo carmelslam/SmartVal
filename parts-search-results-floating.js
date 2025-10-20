@@ -711,8 +711,8 @@
         console.warn('⚠️ SESSION 50: Supabase client not available, using helper data only');
       }
       
-      // Also check helper.centers for additional data
-      const helperCenters = window.helper?.centers || [];
+      // ✅ SESSION 55 FIX: Only use helper as fallback when Supabase has NO data
+      const helperCenters = (window.supabase && requiredParts.length > 0) ? [] : (window.helper?.centers || []);
       
       // Group parts by damage center
       const groupedParts = {};
