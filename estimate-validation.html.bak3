@@ -1025,11 +1025,11 @@
       try {
         const helper = JSON.parse(helperData);
         console.log('🔍 Helper data structure:', {
-          hasEstimate: !!window.helper.estimate,
-          hasCarDetails: !!window.helper.car_details,
-          hasClient: !!window.helper.client,
-          hasMeta: !!window.helper.meta,
-          hasExpertise: !!window.helper.expertise,
+          hasEstimate: !!helper.estimate,
+          hasCarDetails: !!helper.car_details,
+          hasClient: !!helper.client,
+          hasMeta: !!helper.meta,
+          hasExpertise: !!helper.expertise,
           keys: Object.keys(helper)
         });
       } catch (e) {
@@ -1263,10 +1263,10 @@
         }
         
         // Ensure basic helper structure exists
-        if (!window.helper.estimate) window.helper.estimate = {};
-        if (!window.helper.car_details) window.helper.car_details = {};
-        if (!window.helper.client) window.helper.client = {};
-        if (!window.helper.meta) window.helper.meta = {};
+        if (!helper.estimate) helper.estimate = {};
+        if (!helper.car_details) helper.car_details = {};
+        if (!helper.client) helper.client = {};
+        if (!helper.meta) helper.meta = {};
         
         if (!builderState || Object.keys(builderState).length === 0) {
           console.warn('⚠️ No builder state found, using helper data directly');
@@ -1536,7 +1536,7 @@
     }
     
     function extractEstimateTotals(helper) {
-      const damageBlocks = window.helper.expertise?.damage_blocks || [];
+      const damageBlocks = helper.expertise?.damage_blocks || [];
       let totals = {
         parts_cost: 0,
         work_cost: 0,
@@ -1581,8 +1581,8 @@
         let legalText = '';
         
         // Try to get legal text from estimate.summary.legal_text
-        if (window.helper.estimate && window.helper.estimate.summary && window.helper.estimate.summary.legal_text) {
-          legalText = window.helper.estimate.summary.legal_text;
+        if (helper.estimate && helper.estimate.summary && helper.estimate.summary.legal_text) {
+          legalText = helper.estimate.summary.legal_text;
           console.log('✅ Found legal text from estimate.summary.legal_text');
         } else {
           console.log('⚠️ No legal text found in estimate.summary.legal_text');
@@ -1905,9 +1905,9 @@
       console.log('🔍 Validating all adjustments from helper data');
       
       // A. Validate Levi adjustments (from levi_report)
-      if (helper?.levi_report?.adjustments && window.helper.levi_report.adjustments.length > 0) {
-        console.log('🔍 Validating Levi adjustments:', window.helper.levi_report.adjustments.length);
-        window.helper.levi_report.adjustments.forEach((adjustment, index) => {
+      if (helper?.levi_report?.adjustments && helper.levi_report.adjustments.length > 0) {
+        console.log('🔍 Validating Levi adjustments:', helper.levi_report.adjustments.length);
+        helper.levi_report.adjustments.forEach((adjustment, index) => {
           const adjFieldKey = `levi_adj_levi_${index}`;
           const adjValue = getCurrentFieldValue(adjFieldKey);
           
@@ -1929,9 +1929,9 @@
       }
       
       // B. Validate custom adjustments (from levi.custom_adjustments)
-      if (helper?.levi?.custom_adjustments && window.helper.levi.custom_adjustments.length > 0) {
-        console.log('🔍 Validating custom adjustments:', window.helper.levi.custom_adjustments.length);
-        window.helper.levi.custom_adjustments.forEach((adjustment, index) => {
+      if (helper?.levi?.custom_adjustments && helper.levi.custom_adjustments.length > 0) {
+        console.log('🔍 Validating custom adjustments:', helper.levi.custom_adjustments.length);
+        helper.levi.custom_adjustments.forEach((adjustment, index) => {
           const adjFieldKey = `levi_adj_custom_${index}`;
           const adjValue = getCurrentFieldValue(adjFieldKey);
           
@@ -1956,9 +1956,9 @@
       }
       
       // C. Validate market value adjustments (from custom_adjustments.full_market_adjustments)
-      if (helper?.custom_adjustments?.full_market_adjustments && window.helper.custom_adjustments.full_market_adjustments.length > 0) {
-        console.log('🔍 Validating market value adjustments:', window.helper.custom_adjustments.full_market_adjustments.length);
-        window.helper.custom_adjustments.full_market_adjustments.forEach((adjustment, index) => {
+      if (helper?.custom_adjustments?.full_market_adjustments && helper.custom_adjustments.full_market_adjustments.length > 0) {
+        console.log('🔍 Validating market value adjustments:', helper.custom_adjustments.full_market_adjustments.length);
+        helper.custom_adjustments.full_market_adjustments.forEach((adjustment, index) => {
           const adjFieldKey = `levi_adj_market_${index}`;
           const adjValue = getCurrentFieldValue(adjFieldKey);
           
@@ -1992,9 +1992,9 @@
       let totalAdjustments = 0;
       
       // Try to get adjustments from market value calculation (custom_adjustments.full_market_adjustments)
-      if (window.helper.custom_adjustments?.full_market_adjustments) {
-        console.log('🔍 Reading adjustments from market value section:', window.helper.custom_adjustments.full_market_adjustments);
-        window.helper.custom_adjustments.full_market_adjustments.forEach(adjustment => {
+      if (helper.custom_adjustments?.full_market_adjustments) {
+        console.log('🔍 Reading adjustments from market value section:', helper.custom_adjustments.full_market_adjustments);
+        helper.custom_adjustments.full_market_adjustments.forEach(adjustment => {
           if (adjustment.value && !isNaN(adjustment.value)) {
             totalAdjustments += parseFloat(adjustment.value);
           }
@@ -2038,7 +2038,7 @@
       const issues = [];
       const validItems = [];
       
-      console.log('🔍 Depreciation validation - checking window.helper.estimate data');
+      console.log('🔍 Depreciation validation - checking helper.estimate data');
       
       const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
       
@@ -2105,7 +2105,7 @@
       const issues = [];
       const validItems = [];
       
-      console.log('🔍 Damage validation - checking window.helper.estimate data');
+      console.log('🔍 Damage validation - checking helper.estimate data');
       
       const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
       
@@ -2520,37 +2520,37 @@
       
       switch(fieldKey) {
         case 'plate':
-          window.helper.plate = newValue;
+          helper.plate = newValue;
           break;
         case 'manufacturer':
-          window.helper.manufacturer = newValue;
+          helper.manufacturer = newValue;
           break;
         case 'model':
-          window.helper.model = newValue;
+          helper.model = newValue;
           break;
         case 'year':
-          window.helper.year = newValue;
+          helper.year = newValue;
           break;
         case 'owner_name':
-          window.helper.owner = newValue;
+          helper.owner = newValue;
           break;
         case 'insurance':
-          window.helper.insurance_company = newValue;
+          helper.insurance_company = newValue;
           break;
         
         // Levi fields
         case 'levi_base_price':
           const basePrice = parseFloat(newValue.replace(/[₪,]/g, '')) || 0;
-          if (!window.helper.levi_report) window.helper.levi_report = {};
-          window.helper.levi_report.base_price = basePrice;
-          window.helper.base_price = basePrice; // Fallback location
+          if (!helper.levi_report) helper.levi_report = {};
+          helper.levi_report.base_price = basePrice;
+          helper.base_price = basePrice; // Fallback location
           break;
         case 'levi_market_value':
           const marketValue = parseFloat(newValue.replace(/[₪,]/g, '')) || 0;
-          if (!window.helper.levi_report) window.helper.levi_report = {};
-          window.helper.levi_report.final_price = marketValue;
-          window.helper.levi_report.market_value = marketValue;
-          window.helper.market_value = marketValue; // Fallback location
+          if (!helper.levi_report) helper.levi_report = {};
+          helper.levi_report.final_price = marketValue;
+          helper.levi_report.market_value = marketValue;
+          helper.market_value = marketValue; // Fallback location
           break;
         
         // Levi adjustment fields (dynamic)
@@ -2558,9 +2558,9 @@
           if (fieldKey.startsWith('levi_adj_')) {
             const adjKey = fieldKey.replace('levi_adj_', '').replace(/_/g, ' ');
             const adjValue = parseFloat(newValue.replace(/[₪,+-]/g, '')) || 0;
-            if (!window.helper.levi_report) window.helper.levi_report = {};
-            if (!window.helper.levi_report.adjustments) window.helper.levi_report.adjustments = {};
-            window.helper.levi_report.adjustments[adjKey] = {
+            if (!helper.levi_report) helper.levi_report = {};
+            if (!helper.levi_report.adjustments) helper.levi_report.adjustments = {};
+            helper.levi_report.adjustments[adjKey] = {
               value: adjValue,
               percentage: 0 // Can be updated if needed
             };
@@ -3051,21 +3051,21 @@
       let helperMarketValue = '';
       
       // Search for base price in all possible locations
-      if (window.helper.vehicle_value_base) helperBasePrice = window.helper.vehicle_value_base;
-      else if (window.helper.levi?.base_price) helperBasePrice = window.helper.levi.base_price;
-      else if (window.helper.levi_report?.base_price) helperBasePrice = window.helper.levi_report.base_price;
-      else if (window.helper.car_details?.base_price) helperBasePrice = window.helper.car_details.base_price;
-      else if (window.helper.base_price) helperBasePrice = window.helper.base_price;
-      else if (window.helper.expertise?.levi_report?.base_price) helperBasePrice = window.helper.expertise.levi_report.base_price;
+      if (helper.vehicle_value_base) helperBasePrice = helper.vehicle_value_base;
+      else if (helper.levi?.base_price) helperBasePrice = helper.levi.base_price;
+      else if (helper.levi_report?.base_price) helperBasePrice = helper.levi_report.base_price;
+      else if (helper.car_details?.base_price) helperBasePrice = helper.car_details.base_price;
+      else if (helper.base_price) helperBasePrice = helper.base_price;
+      else if (helper.expertise?.levi_report?.base_price) helperBasePrice = helper.expertise.levi_report.base_price;
       
       // Search for market value in all possible locations
-      if (window.helper.calculations?.market_value) helperMarketValue = window.helper.calculations.market_value;
-      else if (window.helper.levi?.market_value) helperMarketValue = window.helper.levi.market_value;
-      else if (window.helper.levi_report?.final_price) helperMarketValue = window.helper.levi_report.final_price;
-      else if (window.helper.levi_report?.market_value) helperMarketValue = window.helper.levi_report.market_value;
-      else if (window.helper.market_value) helperMarketValue = window.helper.market_value;
-      else if (window.helper.expertise?.levi_report?.final_price) helperMarketValue = window.helper.expertise.levi_report.final_price;
-      else if (window.helper.car_details?.market_value) helperMarketValue = window.helper.car_details.market_value;
+      if (helper.calculations?.market_value) helperMarketValue = helper.calculations.market_value;
+      else if (helper.levi?.market_value) helperMarketValue = helper.levi.market_value;
+      else if (helper.levi_report?.final_price) helperMarketValue = helper.levi_report.final_price;
+      else if (helper.levi_report?.market_value) helperMarketValue = helper.levi_report.market_value;
+      else if (helper.market_value) helperMarketValue = helper.market_value;
+      else if (helper.expertise?.levi_report?.final_price) helperMarketValue = helper.expertise.levi_report.final_price;
+      else if (helper.car_details?.market_value) helperMarketValue = helper.car_details.market_value;
       
       // Priority 3: Try to get from builder session state
       const builderState = sessionStorage.getItem('builderCurrentState');
@@ -3084,7 +3084,7 @@
       
       // Priority 4: Try to get from any numeric field that looks like price data
       if (!helperBasePrice && !helperMarketValue) {
-        console.log('🔍 DEBUGGING: Searching for any numeric price-like fields in window.helper...');
+        console.log('🔍 DEBUGGING: Searching for any numeric price-like fields in helper...');
         const searchForPrices = (obj, path = '') => {
           for (const [key, value] of Object.entries(obj)) {
             if (typeof value === 'object' && value !== null) {
@@ -3114,10 +3114,10 @@
         finalBasePrice: basePrice,
         finalMarketValue: marketValue,
         helperKeys: Object.keys(helper),
-        hasCalculations: !!window.helper.calculations,
-        hasLevi: !!window.helper.levi,
-        hasLeviReport: !!window.helper.levi_report,
-        hasExpertise: !!window.helper.expertise
+        hasCalculations: !!helper.calculations,
+        hasLevi: !!helper.levi,
+        hasLeviReport: !!helper.levi_report,
+        hasExpertise: !!helper.expertise
       });
       
       return {
@@ -3135,7 +3135,7 @@
       // Get helper data directly
       const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
       
-      // Simple direct field mapping to window.helper.estimate - matching final-report-builder.html structure
+      // Simple direct field mapping to helper.estimate - matching final-report-builder.html structure
       let depreciationHTML = '';
       
       // 1. מוקדי נזק (bulk depreciation items)
@@ -3213,12 +3213,12 @@
       
       // Get helper data directly
       const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
-      console.log('🔍 Helper loaded:', !!helper, 'expertise:', !!window.helper.expertise);
+      console.log('🔍 Helper loaded:', !!helper, 'expertise:', !!helper.expertise);
       
       // DEBUG: Log the specific paths to see what exists
-      console.log('🔍 window.helper.estimate.totals:', window.helper.estimate?.totals);
-      console.log('🔍 window.helper.estimate.calculations:', window.helper.estimate?.calculations);  
-      console.log('🔍 window.helper.expertise.damage_blocks:', window.helper.expertise?.damage_blocks);
+      console.log('🔍 helper.estimate.totals:', helper.estimate?.totals);
+      console.log('🔍 helper.estimate.calculations:', helper.estimate?.calculations);  
+      console.log('🔍 helper.expertise.damage_blocks:', helper.expertise?.damage_blocks);
       console.log('🔍 Direct values from validation function:', {
         worksFormatted: helper?.estimate?.totals?.damage_centers?.works?.formatted,
         partsFormatted: helper?.estimate?.totals?.damage_centers?.parts?.formatted,
@@ -3345,7 +3345,7 @@
       
       // Get helper data directly
       const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
-      console.log('🔍 Helper loaded for estimate:', !!helper, 'estimate:', !!window.helper.estimate);
+      console.log('🔍 Helper loaded for estimate:', !!helper, 'estimate:', !!helper.estimate);
       
       // Calculate values with proper currency formatting
       const totalBeforeVat = helper?.estimate?.totals?.damage_centers?.total_before_vat?.formatted || 'לא זמין';
@@ -3542,8 +3542,8 @@
         const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
         
         // Remove any existing validation data
-        if (window.helper.estimate?.validation) {
-          delete window.helper.estimate.validation;
+        if (helper.estimate?.validation) {
+          delete helper.estimate.validation;
         }
         
         // Clear session storage validation
@@ -3679,10 +3679,10 @@
         const totalSections = Object.keys(estimateValidationProgress).length;
         
         // Ensure estimate object exists
-        if (!window.helper.estimate) window.helper.estimate = {};
+        if (!helper.estimate) helper.estimate = {};
         
-        // Update validation data nested inside window.helper.estimate (workflow-specific)
-        window.helper.estimate.validation = {
+        // Update validation data nested inside helper.estimate (workflow-specific)
+        helper.estimate.validation = {
           completed_sections: completedSections,
           legal_text: document.getElementById('legal-text-content')?.value || '',
           validated_at: new Date().toISOString(),
@@ -4097,20 +4097,20 @@
           const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
           
           // Priority 1: calculations.vat_rate
-          if (window.helper.calculations && window.helper.calculations.vat_rate) {
-            vatRate = parseFloat(window.helper.calculations.vat_rate);
+          if (helper.calculations && helper.calculations.vat_rate) {
+            vatRate = parseFloat(helper.calculations.vat_rate);
             console.log(`📊 Using VAT rate from calculations.vat_rate: ${vatRate}%`);
           }
           // Priority 2: estimate.summary.vat_rate.current
-          else if (window.helper.estimate && window.helper.estimate.summary && 
-                   window.helper.estimate.summary.vat_rate && 
-                   window.helper.estimate.summary.vat_rate.current !== undefined) {
-            vatRate = parseFloat(window.helper.estimate.summary.vat_rate.current);
+          else if (helper.estimate && helper.estimate.summary && 
+                   helper.estimate.summary.vat_rate && 
+                   helper.estimate.summary.vat_rate.current !== undefined) {
+            vatRate = parseFloat(helper.estimate.summary.vat_rate.current);
             console.log(`📊 Using VAT rate from estimate.summary.vat_rate.current: ${vatRate}%`);
           }
           // Priority 3: estimate.summary.vat_rate (direct)
-          else if (window.helper.estimate && window.helper.estimate.summary && window.helper.estimate.summary.vat_rate) {
-            vatRate = parseFloat(window.helper.estimate.summary.vat_rate);
+          else if (helper.estimate && helper.estimate.summary && helper.estimate.summary.vat_rate) {
+            vatRate = parseFloat(helper.estimate.summary.vat_rate);
             console.log(`📊 Using VAT rate from estimate.summary.vat_rate: ${vatRate}%`);
           }
           // Fallback: sessionStorage
