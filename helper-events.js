@@ -1,10 +1,11 @@
 // 🔄 Helper.js Event-Driven Extensions
 // Provides event-driven updates, auto-save, and consistent data integration
 
-// ✅ SESSION 45 FIX: Use global window functions instead of imports (helper.js no longer exports)
-const helper = window.helper;
-const updateHelper = window.updateHelper;
-const saveHelperToStorage = window.saveHelperToStorage;
+// ✅ SESSION 53 FIX: Access window functions dynamically (avoid undefined at load time)
+// Don't assign to const - access window.* directly when needed
+// const helper = window.helper;  // ❌ May not exist yet at load time
+// const updateHelper = window.updateHelper;  // ❌ May not exist yet
+// const saveHelperToStorage = window.saveHelperToStorage;  // ❌ May not exist yet
 
 // Global event system
 class HelperEventBus {
@@ -38,7 +39,7 @@ class HelperEventBus {
       data,
       source,
       timestamp: new Date().toISOString(),
-      helper: helper // Reference to current helper state
+      helper: window.helper // Reference to current helper state
     };
 
     // Notify section-specific listeners
@@ -79,9 +80,13 @@ class HelperEventBus {
     // Set new timer
     const timer = setTimeout(() => {
       try {
-        saveHelperToStorage();
-        this.emit('auto_saved', { section }, 'helper-events');
-        console.log(`Auto-saved helper data for section: ${section}`);
+        if (typeof window.saveHelperToStorage === 'function') {
+          window.saveHelperToStorage();
+          this.emit('auto_saved', { section }, 'helper-events');
+          console.log(`Auto-saved helper data for section: ${section}`);
+        } else {
+          console.warn('⚠️ saveHelperToStorage not available yet');
+        }
       } catch (error) {
         console.error('Auto-save failed:', error);
         this.emit('auto_save_failed', { section, error: error.message }, 'helper-events');
@@ -110,7 +115,11 @@ export const helperEvents = new HelperEventBus();
 
 // Enhanced updateHelper with events
 export function updateHelperWithEvents(section, data, source = 'unknown') {
-  const success = updateHelper(section, data);
+  if (typeof window.updateHelper !== 'function') {
+    console.warn('⚠️ updateHelper not available yet');
+    return false;
+  }
+  const success = window.updateHelper(section, data);
   if (success) {
     helperEvents.emit(section, data, source);
   }
@@ -139,7 +148,7 @@ export function bindFormToHelper(formElement, section, options = {}) {
     if (!fieldName || exclude.includes(fieldName)) return;
 
     // Load initial value from helper
-    const currentValue = getNestedValue(helper[section], fieldName);
+    const currentValue = getNestedValue(window.helper?.[section], fieldName);
     if (currentValue !== undefined && currentValue !== input.value) {
       input.value = currentValue;
     }
@@ -213,11 +222,11 @@ export function setupCrossModuleSync() {
   helperEvents.on('vehicle', (eventData) => {
     // Sync to car_details and meta sections
     if (eventData.data.plate) {
-      updateHelper('meta', { plate: eventData.data.plate });
-      updateHelper('car_details', { plate: eventData.data.plate });
+      window.updateHelper && window.updateHelper('meta', { plate: eventData.data.plate });
+      window.updateHelper && window.updateHelper('car_details', { plate: eventData.data.plate });
     }
     if (eventData.data.manufacturer || eventData.data.model) {
-      updateHelper('car_details', {
+      window.updateHelper && window.updateHelper('car_details', {
         manufacturer: eventData.data.manufacturer,
         model: eventData.data.model
       });
@@ -234,18 +243,18 @@ export function setupCrossModuleSync() {
     if (eventData.data.year) vehicleData.year = eventData.data.year;
     
     if (Object.keys(vehicleData).length > 0) {
-      updateHelper('vehicle', vehicleData);
+      window.updateHelper && window.updateHelper('vehicle', vehicleData);
     }
   });
 
   // Levi data synchronization
   helperEvents.on('levisummary', (eventData) => {
     // Sync to expertise section
-    updateHelper('expertise', { levi_report: eventData.data });
+    window.updateHelper && window.updateHelper('expertise', { levi_report: eventData.data });
     
     // Update vehicle valuation if present
     if (eventData.data.final_price) {
-      updateHelper('vehicle', { market_value: eventData.data.final_price });
+      window.updateHelper && window.updateHelper('vehicle', { market_value: eventData.data.final_price });
     }
   });
 
@@ -253,12 +262,12 @@ export function setupCrossModuleSync() {
   helperEvents.on('expertise', (eventData) => {
     // Sync Levi data
     if (eventData.data.levi_report) {
-      updateHelper('levisummary', eventData.data.levi_report);
+      window.updateHelper && window.updateHelper('levisummary', eventData.data.levi_report);
     }
     
     // Sync damage blocks
     if (eventData.data.damage_blocks) {
-      updateHelper('damage_centers', eventData.data.damage_blocks);
+      window.updateHelper && window.updateHelper('damage_centers', eventData.data.damage_blocks);
     }
   });
 
@@ -274,12 +283,12 @@ export function setupStorageSync() {
         
         // Merge new data without overwriting local changes
         Object.keys(newData).forEach(section => {
-          if (JSON.stringify(helper[section]) !== JSON.stringify(newData[section])) {
+          if (JSON.stringify(window.helper?.[section]) !== JSON.stringify(newData[section])) {
             // Emit update event for each changed section
             helperEvents.emit(section, newData[section], 'storage_sync');
             
             // Update local helper
-            helper[section] = newData[section];
+            if (window.helper) window.helper[section] = newData[section];
           }
         });
         
@@ -314,7 +323,7 @@ export function validateSection(section, showErrors = false) {
   const rules = validationRules[section];
   if (!rules) return { isValid: true, errors: [] };
 
-  const data = helper[section] || {};
+  const data = window.helper?.[section] || {};
   const errors = [];
 
   Object.keys(rules).forEach(field => {
@@ -413,8 +422,8 @@ export const HelperUtils = {
   createDataSummary(sections = []) {
     const summary = {};
     sections.forEach(section => {
-      if (helper[section]) {
-        summary[section] = { ...helper[section] };
+      if (window.helper?.[section]) {
+        summary[section] = { ...window.helper[section] };
       }
     });
     return summary;
