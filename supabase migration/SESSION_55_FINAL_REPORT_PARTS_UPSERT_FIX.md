@@ -375,7 +375,6 @@ Always check if UUID already exists before generating new one to avoid breaking 
 - **Session 39**: Original Supabase schema documentation
 
 ---
-
 ## CRITICAL OUTSTANDING ISSUE
 
 ### Problem: Adding parts in final-report-builder creates NEW damage centers
