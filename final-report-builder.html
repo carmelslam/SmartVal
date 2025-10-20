@@ -11703,12 +11703,40 @@
       setTimeout(addDamageCenterEventListeners, 50);
     }
 
-    function removePartRow(centerIndex, partIndex) {
+    async function removePartRow(centerIndex, partIndex) {
       const partRow = document.querySelector(`.part-row[data-center="${centerIndex}"][data-part="${partIndex}"]`);
-      if (partRow) {
-        partRow.remove();
-        saveDamageCenterChanges();
+      if (!partRow) return;
+      
+      // SESSION 56 FIX: Delete from Supabase BEFORE removing from DOM
+      const helper = window.helper || {};
+      const part = helper.centers?.[centerIndex]?.Parts?.parts_required?.[partIndex];
+      
+      if (part && part.row_uuid && window.supabase) {
+        console.log(`🗑️ SESSION 56: Deleting part from Supabase, row_uuid: ${part.row_uuid}`);
+        
+        try {
+          const { error } = await window.supabase
+            .from('parts_required')
+            .delete()
+            .eq('row_uuid', part.row_uuid);
+          
+          if (error) {
+            console.error('❌ SESSION 56: Error deleting part from Supabase:', error);
+          } else {
+            console.log('✅ SESSION 56: Part deleted from Supabase successfully');
+          }
+        } catch (err) {
+          console.error('❌ SESSION 56: Exception deleting part:', err);
+        }
+      } else {
+        console.warn('⚠️ SESSION 56: No row_uuid found for part, skipping Supabase delete');
       }
+      
+      // Remove from DOM
+      partRow.remove();
+      
+      // Update helper
+      saveDamageCenterChanges();
     }
 
     function removeWorkRow(centerIndex, workIndex) {
