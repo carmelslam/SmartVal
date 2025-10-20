@@ -143,7 +143,8 @@
     import { sendToWebhook } from './webhook.js';
     import { updateHelperWithEvents } from './helper-events.js';
     import { decryptPassword } from './auth.js';
-    import { helper, updateHelper, broadcastHelperUpdate } from './helper.js'; // Unified helper system
+    // SESSION 56: helper.js is NOT an ES6 module - use window.updateHelper, window.helper
+    // import { helper, updateHelper, broadcastHelperUpdate } from './helper.js';
     
     document.getElementById("insuranceCompany").addEventListener("change", function () {
       const otherInsurance = document.getElementById("otherInsuranceCompany");
@@ -234,10 +235,10 @@
           console.log('🔥 DIRECT: Damage date changed to:', this.value);
           
           if (this.value) {
-            // Try updateHelper first
-            if (typeof updateHelper === 'function') {
-              updateHelper('case_info', { damage_date: this.value }, 'general_info_direct');
-              updateHelper('meta', { damage_date_manual: true }, 'general_info_direct');
+            // Try window.updateHelper first
+            if (typeof window.updateHelper === 'function') {
+              window.updateHelper('case_info', { damage_date: this.value }, 'general_info_direct');
+              window.updateHelper('meta', { damage_date_manual: true }, 'general_info_direct');
               console.log('🔥 DIRECT: Saved damage date via updateHelper:', this.value);
             } else {
               console.error('❌ DIRECT: updateHelper function not found!');
@@ -382,12 +383,12 @@
         };
         
         // Update helper sections
-        updateHelper('stakeholders', stakeholdersData, 'general_info');
-        updateHelper('vehicle', vehicleData, 'general_info');
-        updateHelper('case_info', caseData, 'general_info');
+        window.updateHelper('stakeholders', stakeholdersData, 'general_info');
+        window.updateHelper('vehicle', vehicleData, 'general_info');
+        window.updateHelper('case_info', caseData, 'general_info');
         
         // Also update meta for completeness
-        updateHelper('meta', {
+        window.updateHelper('meta', {
           last_updated: new Date().toISOString(),
           source: 'general_info_form'
         }, 'general_info');
@@ -431,8 +432,8 @@
   <script src="assistant-floating.js"></script>
   <script src="onesignal-integration.js"></script>
   <script type="module">
-    // Import unified helper system for auto-fill
-    import { helper, updateHelper, broadcastHelperUpdate } from './helper.js';
+    // SESSION 56: helper.js is NOT an ES6 module - use window.helper, window.updateHelper
+    // import { helper, updateHelper, broadcastHelperUpdate } from './helper.js';
     
     console.log('🚀 General info page loaded - checking for car data and auto-filling...');
     
@@ -511,8 +512,8 @@
         console.log(`✅ Auto-fill complete: ${filledCount} filled, ${skippedCount} skipped (manual override)`);
         
         // Update helper with the form data
-        updateHelper('car_details', carData);
-        updateHelper('meta', {
+        window.updateHelper('car_details', carData);
+        window.updateHelper('meta', {
           plate: carData.plate,
           owner_name: carData.owner,
           inspection_location: carData.location
@@ -565,8 +566,8 @@
                 // Special handling for damage_date_independent field
                 if (fieldId === 'damage_date_independent' && this.value) {
                   console.log('🔥 SIMPLE: User entered damage date:', this.value);
-                  updateHelper('meta', { damage_date_manual: true }, 'general_info');
-                  updateHelper('case_info', { damage_date: this.value }, 'general_info');
+                  window.updateHelper('meta', { damage_date_manual: true }, 'general_info');
+                  window.updateHelper('case_info', { damage_date: this.value }, 'general_info');
                   console.log('🔥 SIMPLE: Damage date saved to helper.case_info.damage_date:', this.value);
                   console.log('🔥 SIMPLE: Current helper.case_info:', window.helper?.case_info);
                 }
