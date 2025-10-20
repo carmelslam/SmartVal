@@ -2758,7 +2758,7 @@
           // Collect parts - PRESERVE EXISTING DATA  
           const parts = [];
           const existingCenter = window.helper.centers ? window.helper.centers[index] : null;
-          const existingParts = existingCenter?.Parts?.parts || [];
+          const existingParts = existingCenter?.Parts?.parts_required || [];  // ✅ SESSION 54 FIX: Read from parts_required
           
           card.querySelectorAll('.part-row').forEach((row, partIndex) => {
             // SESSION 49: Collect new fields (catalog_code, part_name, quantity, total_price)
@@ -2771,18 +2771,53 @@
               // Get existing part data to preserve all fields (including Hebrew keys)
               const existingPart = existingParts[partIndex] || {};
               
-              // SESSION 49: Merge with new field structure
+              // ✅ SESSION 54 FIX: Complete field structure with all 25+ required fields
               const partObject = {
-                ...existingPart,                     // Preserve all existing fields
-                catalog_code: catalogCode,           // New: Catalog code
-                name: name,                          // Part name
-                quantity: quantity,                  // New: Quantity
-                total_price: totalPrice,             // New: Total price (after reductions/wear)
-                // Also update Hebrew key equivalents
-                "קוד קטלוגי": catalogCode,           // Hebrew: Catalog code
-                "שם חלק": name,                      // Hebrew: Part name
-                "כמות": quantity,                    // Hebrew: Quantity
-                "סה\"כ מחיר": totalPrice             // Hebrew: Total price
+                ...existingPart,  // Preserve ALL existing fields first
+                
+                // Update from DOM
+                catalog_code: catalogCode,
+                pcode: catalogCode,  // Alias
+                oem: catalogCode,  // Alias
+                name: name,
+                part_name: name,  // Alias
+                quantity: quantity,
+                qty: quantity,  // Alias
+                
+                // Preserve calculated fields
+                price_per_unit: existingPart.price_per_unit || totalPrice,
+                price: existingPart.price || totalPrice,
+                reduction_percentage: existingPart.reduction_percentage || 0,
+                reduction: existingPart.reduction || 0,
+                wear_percentage: existingPart.wear_percentage || 0,
+                wear: existingPart.wear || 0,
+                updated_price: existingPart.updated_price || totalPrice,
+                total_cost: totalPrice,  // ✅ CORRECT field name
+                cost: totalPrice,
+                
+                // Preserve metadata
+                description: existingPart.description || existingPart.desc || name,
+                desc: existingPart.desc || existingPart.description || name,
+                source: existingPart.source || 'manual',
+                manufacturer: existingPart.manufacturer || '',
+                supplier_name: existingPart.supplier_name || '',
+                
+                // Preserve Supabase fields
+                row_uuid: existingPart.row_uuid || '',
+                case_id: existingPart.case_id || '',
+                plate: existingPart.plate || window.helper?.meta?.plate || '',
+                damage_center_code: existingPart.damage_center_code || '',
+                part_family: existingPart.part_family || '',
+                
+                // Preserve vehicle context
+                make: existingPart.make || window.helper?.vehicle?.manufacturer || '',
+                model: existingPart.model || window.helper?.vehicle?.model || '',
+                year: existingPart.year || window.helper?.vehicle?.year || '',
+                trim: existingPart.trim || window.helper?.vehicle?.trim || '',
+                engine_type: existingPart.engine_type || window.helper?.vehicle?.engine_type || '',
+                
+                // Timestamp
+                updated_at: new Date().toISOString()
               };
               
               parts.push(partObject);
@@ -2849,8 +2884,8 @@
             }
           });
           
-          // SESSION 49: Calculate costs using total_price field
-          const partsCost = parts.reduce((sum, part) => sum + (parseFloat(part.total_price) || 0), 0);
+          // ✅ SESSION 54 FIX: Calculate costs using total_cost field
+          const partsCost = parts.reduce((sum, part) => sum + (parseFloat(part.total_cost) || 0), 0);
           const workCost = works.reduce((sum, work) => sum + (parseFloat(work.cost) || 0), 0);
           const repairsCost = repairs.reduce((sum, repair) => sum + (parseFloat(repair.cost) || 0), 0);
           const totalCost = partsCost + workCost + repairsCost;
