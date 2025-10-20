@@ -2593,6 +2593,15 @@ function savePartsData() {
       const row = document.createElement("div");
       row.className = "row";
       row.setAttribute("data-row-index", index);
+      
+      // SESSION 56 FIX: Store row_uuid to prevent duplicates when editing
+      if (part.row_uuid) {
+        row.setAttribute("data-row-uuid", part.row_uuid);
+        console.log(`  🆔 SESSION 56: Stored row_uuid ${part.row_uuid} for part "${part.name}"`);
+      } else {
+        console.warn(`  ⚠️ SESSION 56: Part "${part.name}" has no row_uuid - will generate new one on save`);
+      }
+      
       row.innerHTML = `
         <div class="input-wrap">
               <input type="text" class="name" placeholder="שם החלק" value="${part.name || part.part || ''}" oninput="suggestPart(this); autoSaveOnChange(this)">
