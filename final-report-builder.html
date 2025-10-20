@@ -12886,56 +12886,87 @@
       let finalTotalWithoutVat = rawTotalWithoutVat;
       let finalTotalWithVat = rawTotalWithVat;
       
-      // SESSION 48: helper already declared above at line 12789, reuse it
-      if (helper.final_report?.differential?.has_differentials && helper.final_report?.differential?.items) {
-        const differentialItems = helper.final_report.differential.items;
+      // SESSION 52: FIX - Extract ALL differential components from helper.final_report.differential
+      if (helper.final_report?.differential?.has_differentials) {
+        console.log('🔍 SESSION 52: Extracting all differential components...');
         
-        // Calculate category-specific differential totals
-        let worksDiff = 0, partsDiff = 0, repairsDiff = 0, otherDiff = 0;
-        let worksDiffWithVat = 0, partsDiffWithVat = 0, repairsDiffWithVat = 0, otherDiffWithVat = 0;
+        // 1. Extract parts reductions (הנחת רכיב)
+        const partsReductionsTotal = helper.final_report.differential.parts_reductions?.total || 0;
+        console.log('   הנחת רכיב (Parts Reductions):', partsReductionsTotal);
         
-        differentialItems.forEach(item => {
-          const amount = item.amount_without_vat || 0;
-          const amountWithVat = item.amount_with_vat || 0;
+        // 2. Extract parts wear (בלאי רכיב)
+        const partsWearTotal = helper.final_report.differential.parts_wear?.total || 0;
+        console.log('   בלאי רכיב (Parts Wear):', partsWearTotal);
+        
+        // 3. Extract category differentials and sum by category type
+        const categoryDiffItems = helper.final_report.differential.category_differentials?.items || [];
+        let categoryDiffForParts = 0;
+        let categoryDiffForWorks = 0;
+        let categoryDiffForRepairs = 0;
+        
+        categoryDiffItems.forEach(item => {
+          // Extract the reduction value from category_value field (e.g., "₪134")
+          const reductionValue = parseFloat(String(item.category_value || '0').replace(/[₪,]/g, '')) || 0;
+          const categoryType = item.category_type || item.type || '';
           
-          switch(item.nature) {
-            case 'works':
-              worksDiff += amount;
-              worksDiffWithVat += amountWithVat;
-              break;
-            case 'parts':
-              partsDiff += amount;
-              partsDiffWithVat += amountWithVat;
-              break;
-            case 'repairs':
-              repairsDiff += amount;
-              repairsDiffWithVat += amountWithVat;
-              break;
-            default:
-              otherDiff += amount;
-              otherDiffWithVat += amountWithVat;
-              break;
+          console.log(`   Category Diff: ${categoryType} = ₪${reductionValue}`);
+          
+          if (categoryType === 'Parts' || categoryType === 'חלקים') {
+            categoryDiffForParts += reductionValue;
+          } else if (categoryType === 'Works' || categoryType === 'עבודות') {
+            categoryDiffForWorks += reductionValue;
+          } else if (categoryType === 'Repairs' || categoryType === 'תיקונים') {
+            categoryDiffForRepairs += reductionValue;
           }
         });
         
-        // Apply category-specific differentials
-        finalTotalWorks = Math.max(0, totalWorks - worksDiff);
-        finalTotalParts = Math.max(0, totalParts - partsDiff);
-        finalTotalRepairs = Math.max(0, totalRepairs - repairsDiff);
+        console.log('   Category Differentials - Parts:', categoryDiffForParts, ', Works:', categoryDiffForWorks, ', Repairs:', categoryDiffForRepairs);
         
-        // Recalculate totals with category-specific deductions
-        const finalRawTotal = finalTotalWorks + finalTotalParts + finalTotalRepairs;
-        finalTotalWithoutVat = finalRawTotal - otherDiff; // Other differentials affect overall total
+        // 4. Extract invoice differentials by nature
+        const invoiceDiffItems = helper.final_report.differential.invoice_differentials?.items || [];
+        let invoicePartsDiff = 0;
+        let invoiceWorksDiff = 0;
+        let invoiceRepairsDiff = 0;
         
-        // Apply VAT to the final amount (after subtracting "other" differentials without VAT)
-        const vatRate = window.getHelperVatRate ? window.getHelperVatRate() : (typeof MathEngine !== 'undefined' && MathEngine.getVatRate ? MathEngine.getVatRate() : 18);
-        finalTotalWithVat = finalTotalWithoutVat * (1 + vatRate / 100);
-        
-        console.log('📉 Applying category-specific differentials:', {
-          worksDiff, partsDiff, repairsDiff, otherDiff,
-          finalTotalWorks, finalTotalParts, finalTotalRepairs,
-          finalTotalWithoutVat, finalTotalWithVat
+        invoiceDiffItems.forEach(item => {
+          const amount = item.amount_without_vat || item.amount || 0;
+          const nature = item.nature || '';
+          
+          if (nature === 'parts' || nature === 'חלקים') {
+            invoicePartsDiff += amount;
+          } else if (nature === 'works' || nature === 'עבודות') {
+            invoiceWorksDiff += amount;
+          } else if (nature === 'repairs' || nature === 'תיקונים') {
+            invoiceRepairsDiff += amount;
+          }
         });
+        
+        console.log('   Invoice Differentials - Parts:', invoicePartsDiff, ', Works:', invoiceWorksDiff, ', Repairs:', invoiceRepairsDiff);
+        
+        // SESSION 52: Apply CORRECT formulas for each category
+        // Parts = Original - הנחת רכיב - בלאי רכיב - Category Diff (Parts) - Invoice Diff (parts)
+        finalTotalParts = Math.max(0, totalParts - partsReductionsTotal - partsWearTotal - categoryDiffForParts - invoicePartsDiff);
+        
+        // Works = Original - Category Diff (Works) - Invoice Diff (works)
+        finalTotalWorks = Math.max(0, totalWorks - categoryDiffForWorks - invoiceWorksDiff);
+        
+        // Repairs = Original - Category Diff (Repairs) - Invoice Diff (repairs)
+        finalTotalRepairs = Math.max(0, totalRepairs - categoryDiffForRepairs - invoiceRepairsDiff);
+        
+        // SESSION 52: FIX - Total Without VAT = sum of category finals (already includes all differentials)
+        finalTotalWithoutVat = finalTotalParts + finalTotalWorks + finalTotalRepairs;
+        
+        // Apply VAT to the final amount
+        const vatRate = window.getHelperVatRate ? window.getHelperVatRate() : (typeof MathEngine !== 'undefined' && MathEngine.getVatRate ? MathEngine.getVatRate() : 18);
+        finalTotalWithVat = Math.round(finalTotalWithoutVat * (1 + vatRate / 100));
+        
+        console.log('📉 SESSION 52: Applied ALL differentials correctly:');
+        console.log('   Original - Parts:', totalParts, ', Works:', totalWorks, ', Repairs:', totalRepairs, ', Total:', rawTotalWithoutVat);
+        console.log('   Differentials - Parts:', (partsReductionsTotal + partsWearTotal + categoryDiffForParts + invoicePartsDiff));
+        console.log('                - Works:', (categoryDiffForWorks + invoiceWorksDiff));
+        console.log('                - Repairs:', (categoryDiffForRepairs + invoiceRepairsDiff));
+        console.log('   Final (after) - Parts:', finalTotalParts, ', Works:', finalTotalWorks, ', Repairs:', finalTotalRepairs);
+        console.log('   Final Total Without VAT:', finalTotalWithoutVat, ', With VAT:', finalTotalWithVat);
       }
       
       // SESSION 48: Check if we're using dual container layout (updated for new structure)
