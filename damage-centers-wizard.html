@@ -6937,12 +6937,19 @@
         // This fixes the race condition where Step 7 saves before Step 5 data is processed
         const partsData = data.selectedParts || [];
         
-        if (helper.current_damage_center) {
-          console.log('🔧 BUG FIX: Immediately saving parts to current_damage_center.Parts.parts_required');
-          console.log(`🔧 BUG FIX: Processing ${partsData.length} parts with 25-field mapping`);
-          
-          // Use the SAME 25-field mapping as saveCurrentStepData case 5 (lines 3628-3673)
-          helper.current_damage_center.Parts.parts_required = partsData.map(part => ({
+        // ✅ SESSION 55 FIX: Initialize current_damage_center if missing
+        if (!helper.current_damage_center) {
+          helper.current_damage_center = {};
+        }
+        if (!helper.current_damage_center.Parts) {
+          helper.current_damage_center.Parts = {};
+        }
+        
+        console.log('🔧 BUG FIX: Immediately saving parts to current_damage_center.Parts.parts_required');
+        console.log(`🔧 BUG FIX: Processing ${partsData.length} parts with 25-field mapping`);
+        
+        // Use the SAME 25-field mapping as saveCurrentStepData case 5 (lines 3628-3673)
+        helper.current_damage_center.Parts.parts_required = partsData.map(part => ({
             // Core identification (4 fields)
             row_uuid: part.row_uuid || crypto.randomUUID(),
             case_id: part.case_id || helper.current_damage_center.case_id || '',
@@ -6998,6 +7005,11 @@
           
           const totalAfter = partsData.reduce((sum, part) => sum + (parseFloat(part.total_cost) || 0), 0);
           
+          // ✅ SESSION 55 FIX: Ensure Parts object exists before saving meta
+          if (!helper.current_damage_center.Parts) {
+            helper.current_damage_center.Parts = {};
+          }
+          
           helper.current_damage_center.Parts.parts_meta = {
             total_items: partsData.length,
             total_cost_before_differentials: Math.round(totalBefore),
@@ -7008,9 +7020,6 @@
           
           console.log(`✅ SESSION 44: Parts differentials - Before: ₪${totalBefore}, After: ₪${totalAfter}, Diff: ₪${totalBefore - totalAfter}`);
           console.log(`✅ BUG FIX: Saved ${partsData.length} parts to current_damage_center.Parts.parts_required`);
-        } else {
-          console.error('❌ BUG FIX: Cannot save parts - helper.current_damage_center is missing!');
-        }
         
         // SESSION 41: Save to required_parts with duplicate prevention by row_uuid
         // selected_parts is ONLY for parts search page selections
