@@ -11429,8 +11429,22 @@
           const centerId = center["Damage center Number"] || center.Id || center.id || `מוקד ${centerIndex + 1}`;
           const part = window.helper.centers[centerIndex].Parts.parts_required[partIndex];
           
-          // Get case_id from helper
-          const caseId = window.helper?.case_info?.case_id || window.helper?.meta?.case_id || '';
+          // Get case UUID from Supabase cases table (not filing_case_id string)
+          let caseUuid = part.case_id || ''; // Preserve if already exists
+          if (!caseUuid) {
+            try {
+              const { data: caseData } = await window.supabase
+                .from('cases')
+                .select('id')
+                .eq('plate', normalizedPlate)
+                .order('created_at', { ascending: false })
+                .limit(1)
+                .single();
+              caseUuid = caseData?.id || '';
+            } catch (err) {
+              console.warn('Could not lookup case UUID, skipping case_id field');
+            }
+          }
           
           // Generate or preserve row_uuid (required for upsert)
           const rowUuid = part.row_uuid || `${normalizedPlate}_${centerId}_${partName}_${Date.now()}`.replace(/\s+/g, '_');
@@ -11458,7 +11472,7 @@
             // Preserve existing fields
             description: part.description || part.desc || '',
             source: part.source || 'manual',
-            case_id: caseId,
+            case_id: caseUuid || null,
             
             // Vehicle context
             make: window.helper?.vehicle?.manufacturer || '',
