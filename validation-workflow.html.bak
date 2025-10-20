@@ -1295,8 +1295,8 @@
 
   <!-- Enhanced JavaScript Implementation -->
   <script type="module">
-    // SESSION 56: window.helper.js is NOT an ES6 module - use window.helper
-    // import { helper } from './window.helper.js';
+    // SESSION 56: helper.js is NOT an ES6 module - use window.helper
+    // import { helper } from './helper.js';
     import { sendToWebhook } from './webhook.js';
     
     // Authentication check
@@ -1782,10 +1782,10 @@
       
       // Create damage centers HTML
       const damageCentersHtml = centers.map((center, index) => {
-        // Get location from window.helper.centers.(list).Location
+        // Get location from helper.centers.(list).Location
         const centerLocation = center.Location || center.location || center.description || 'לא צוין';
         
-        // Get costs from window.helper.damage_assessment.damage_centers_summary - it's an object with keys like "Damage center 1"
+        // Get costs from helper.damage_assessment.damage_centers_summary - it's an object with keys like "Damage center 1"
         const centerKey = `Damage center ${index + 1}`;
         const summaryData = damageCentersSummary[centerKey] || {};
         
@@ -1931,7 +1931,7 @@
       const helper = window.helper || {};
       const calculations = window.helper.calculations || {};
       
-      // שווי בסיס לוי יצחק - from window.helper.valuation.base_price
+      // שווי בסיס לוי יצחק - from helper.valuation.base_price
       const basePrice = (() => {
         if (!valuation.base_price) return 'לא זמין';
         const priceStr = String(valuation.base_price);
@@ -1944,11 +1944,11 @@
       })();
       document.getElementById('levi-base-value').textContent = basePrice;
       
-      // התאמות מחיר (-/+) - from window.helper.calculations.final_adjustments_value  
+      // התאמות מחיר (-/+) - from helper.calculations.final_adjustments_value  
       document.getElementById('levi-adjustments-value').textContent = 
-        window.helper.calculations?.final_adjustments_value ? `₪${parseInt(window.helper.calculations.final_adjustments_value).toLocaleString()}` : '₪0';
+        helper.calculations?.final_adjustments_value ? `₪${parseInt(helper.calculations.final_adjustments_value).toLocaleString()}` : '₪0';
       
-      // שווי סופי מעודכן - from window.helper.calculations.full_market_value
+      // שווי סופי מעודכן - from helper.calculations.full_market_value
       document.getElementById('levi-final-value').textContent = 
         calculations.full_market_value ? `₪${parseInt(calculations.full_market_value).toLocaleString()}` : 'NaN';
       
@@ -1970,12 +1970,12 @@
     
     function updateDamageSummary(damage) {
       const helper = window.helper || {};
-      const totals = window.helper.damage_assessment?.totals || {};
-      const totalsAfterDifferentials = window.helper.damage_assessment?.totals_after_differentials || {};
-      const totalClaim = window.helper.claim?.total_claim || 0;
+      const totals = helper.damage_assessment?.totals || {};
+      const totalsAfterDifferentials = helper.damage_assessment?.totals_after_differentials || {};
+      const totalClaim = helper.claim?.total_claim || 0;
       
       // Check if differentials exist to determine which data to use
-      const differential = window.helper.final_report?.differential || {};
+      const differential = helper.final_report?.differential || {};
       const hasDifferentials = differential.has_differentials || false;
       
       if (hasDifferentials && Object.keys(totalsAfterDifferentials).length > 0) {
@@ -2045,8 +2045,8 @@
       console.log('📋 Summary validation - Final type:', currentReportType);
       console.log('📋 Final report full object:', finalReport);
       console.log('📋 Helper object paths check:', {
-        'window.helper.final_report': !!window.helper?.final_report,
-        'window.helper.final_report.dropdown_type': window.helper?.final_report?.dropdown_type,
+        'helper.final_report': !!window.helper?.final_report,
+        'helper.final_report.dropdown_type': window.helper?.final_report?.dropdown_type,
         'conversion_result': englishReportType
       });
       
@@ -2283,16 +2283,16 @@
     
     // ===== DATA SOURCE FUNCTIONS - MIRROR BUILDER'S EXACT CALCULATIONS =====
     
-    // Market Value - Mirrors builder's window.helper.calculations.full_market_value source
+    // Market Value - Mirrors builder's helper.calculations.full_market_value source
     function getMarketValueForValidation(helper) {
-      const marketValue = window.helper.calculations?.full_market_value || 0;
+      const marketValue = helper.calculations?.full_market_value || 0;
       return marketValue > 0 ? `₪${marketValue.toLocaleString()}` : '₪0';
     }
     
-    // Total Claim - Get from window.helper.final_report.summary first, then fallback to calculated
+    // Total Claim - Get from helper.final_report.summary first, then fallback to calculated
     function getTotalClaimForValidation(helper) {
       // First try to get from final_report.summary where the data actually exists
-      const summary = window.helper.final_report?.summary || {};
+      const summary = helper.final_report?.summary || {};
       const summaryTotalClaim = summary.total_claim || summary.sumClaimPrivate || summary.sumClaimGlobal;
       
       if (summaryTotalClaim) {
@@ -2300,9 +2300,9 @@
         return summaryTotalClaim.toString().includes('₪') ? summaryTotalClaim : `₪${summaryTotalClaim}`;
       }
       
-      // Fallback to builder's logic: window.helper.damage_centers_summary.total_cost or damage_assessment.totals
-      const claimFromSummary = window.helper.damage_centers_summary?.total_cost;
-      const claimFromTotals = window.helper.damage_assessment?.totals?.['Total with VAT'];
+      // Fallback to builder's logic: helper.damage_centers_summary.total_cost or damage_assessment.totals
+      const claimFromSummary = helper.damage_centers_summary?.total_cost;
+      const claimFromTotals = helper.damage_assessment?.totals?.['Total with VAT'];
       const totalClaim = claimFromSummary || claimFromTotals || 0;
       return totalClaim > 0 ? `₪${totalClaim.toLocaleString()}` : '₪0';
     }
@@ -2310,7 +2310,7 @@
     // Depreciation Compensation - Get from summary first, then fallback to depreciation
     function getDepreciationCompensationForValidation(helper) {
       // First try to get from final_report.summary where the data actually exists
-      const summary = window.helper.final_report?.summary || {};
+      const summary = helper.final_report?.summary || {};
       const summaryDepComp = summary.depreciation_compensation || summary.depCompensationPrivate || summary.depCompensationGlobal;
       
       if (summaryDepComp) {
@@ -2318,13 +2318,13 @@
       }
       
       // Fallback to builder's logic
-      const depValue = window.helper.depreciation?.globalDepValue || 0;
+      const depValue = helper.depreciation?.globalDepValue || 0;
       return depValue > 0 ? `₪${depValue.toLocaleString()}` : '₪0';
     }
     
     // Adjustments Info - Get from summary, shows actual adjustment value for info
     function getAdjustmentsInfoForValidation(helper) {
-      const summary = window.helper.final_report?.summary || {};
+      const summary = helper.final_report?.summary || {};
       const adjustmentInfo = summary.adjustmentsInfoPrivate || summary.adjustments_value;
       
       if (adjustmentInfo) {
@@ -2336,7 +2336,7 @@
     
     // Adjustments - Get from summary first, then calculate
     function getAdjustmentsForValidation(helper) {
-      const summary = window.helper.final_report?.summary || {};
+      const summary = helper.final_report?.summary || {};
       const summaryAdjustments = summary.adjustments_value;
       
       if (summaryAdjustments !== undefined && summaryAdjustments !== null) {
@@ -2344,17 +2344,17 @@
       }
       
       // Fallback: Use calculations.final_adjustments_value if summary is not populated
-      if (window.helper.calculations?.final_adjustments_value !== undefined && window.helper.calculations?.final_adjustments_value !== null) {
-        return `₪${window.helper.calculations.final_adjustments_value.toLocaleString()}`;
+      if (helper.calculations?.final_adjustments_value !== undefined && helper.calculations?.final_adjustments_value !== null) {
+        return `₪${helper.calculations.final_adjustments_value.toLocaleString()}`;
       }
       
       // Fallback: Calculate total adjustments from Levi and custom adjustments
       let total = 0;
-      if (window.helper.levi?.adjustments) {
-        total += window.helper.levi.adjustments.reduce((sum, adj) => sum + (parseFloat(adj.value) || 0), 0);
+      if (helper.levi?.adjustments) {
+        total += helper.levi.adjustments.reduce((sum, adj) => sum + (parseFloat(adj.value) || 0), 0);
       }
-      if (window.helper.levi?.custom_adjustments) {
-        total += window.helper.levi.custom_adjustments.reduce((sum, adj) => sum + (parseFloat(adj.value) || 0), 0);
+      if (helper.levi?.custom_adjustments) {
+        total += helper.levi.custom_adjustments.reduce((sum, adj) => sum + (parseFloat(adj.value) || 0), 0);
       }
       return `₪${total.toLocaleString()}`;
     }
@@ -2369,7 +2369,7 @@
       }
       
       // Fallback: Calculate
-      const marketValue = parseFloat(window.helper.calculations?.full_market_value || 0);
+      const marketValue = parseFloat(helper.calculations?.full_market_value || 0);
       const claim = parseFloat(getTotalClaimForValidation(helper).replace(/[^\d]/g, '') || 0);
       const dep = parseFloat(getDepreciationCompensationForValidation(helper).replace(/[^\d]/g, '') || 0);
       const adj = parseFloat(getAdjustmentsForValidation(helper).replace(/[^\d]/g, '') || 0);
@@ -2395,7 +2395,7 @@
       }
       
       // Fallback: Calculate market value - sale value
-      const marketValue = parseFloat(window.helper.calculations?.full_market_value || 0);
+      const marketValue = parseFloat(helper.calculations?.full_market_value || 0);
       const saleValue = parseFloat((summary.sale_value_damaged || '0').toString().replace(/[^\d]/g, '') || 0);
       const total = marketValue - saleValue;
       return total > 0 ? `₪${total.toLocaleString()}` : '₪0';
@@ -2439,7 +2439,7 @@
       }
       
       // Fallback: Calculate market value - salvage + towing
-      const marketValue = parseFloat(window.helper.calculations?.full_market_value || 0);
+      const marketValue = parseFloat(helper.calculations?.full_market_value || 0);
       const salvage = parseFloat(getSalvageValueForValidation(helper, summary).replace(/[^\d]/g, '') || 0);
       const towing = parseFloat(getTowingStorageForValidation(helper, summary).replace(/[^\d]/g, '') || 0);
       const total = marketValue - salvage + towing;
@@ -2864,9 +2864,9 @@
     
     function validateVehicleSection() {
       const helper = window.helper || {};
-      const case_info = window.helper.case_info || {};
-      const vehicle = window.helper.vehicle || {};
-      const stakeholders = window.helper.stakeholders || {};
+      const case_info = helper.case_info || {};
+      const vehicle = helper.vehicle || {};
+      const stakeholders = helper.stakeholders || {};
       
       // Check required fields
       return !!(case_info.case_id && 
@@ -2877,7 +2877,7 @@
     
     function validateReportTypeSection() {
       const helper = window.helper || {};
-      const final_report = window.helper.final_report || {};
+      const final_report = helper.final_report || {};
       
       // Check if dropdown_type is selected
       const reportType = final_report.dropdown_type;
@@ -2892,7 +2892,7 @@
     
     function validateLeviSection() {
       const helper = window.helper || {};
-      const valuation = window.helper.valuation || {};
+      const valuation = helper.valuation || {};
       
       // Extract numeric values from formatted prices
       const basePrice = valuation.base_price ? 
@@ -2921,14 +2921,14 @@
     
     function validateDamageSection() {
       const helper = window.helper || {};
-      const centers = window.helper.centers || [];
+      const centers = helper.centers || [];
       
       return centers.length > 0;
     }
     
     function validateFeesSection() {
       const helper = window.helper || {};
-      const fees = window.helper.financials?.fees || {};
+      const fees = helper.financials?.fees || {};
       const calculations = fees.calculations || {};
       
       return !!(calculations.total_with_vat && 
@@ -2937,7 +2937,7 @@
     
     function validateSummarySection() {
       const helper = window.helper || {};
-      const summary = window.helper.final_report?.summary || {};
+      const summary = helper.final_report?.summary || {};
       
       // Use the same validation functions that the display uses
       const marketValue = getMarketValueForValidation(helper);
@@ -2950,7 +2950,7 @@
       const hasGlobalTotal = globalTotal && globalTotal !== '₪0' && !globalTotal.includes('לא זמין');
       
       // Check garage days are reasonable
-      const garageDays = window.helper.depreciation?.garageDays || 0;
+      const garageDays = helper.depreciation?.garageDays || 0;
       const hasReasonableGarageDays = garageDays >= 0 && garageDays <= 365;
       
       // Check we have essential data
@@ -3074,10 +3074,10 @@
         const totalSections = 7; // vehicle, report-type, levi, damage, depreciation, fees, summary
         
         // Ensure final_report object exists
-        if (!window.helper.final_report) window.helper.final_report = {};
+        if (!helper.final_report) helper.final_report = {};
         
         // Create comprehensive validation log for final report workflow
-        window.helper.final_report.validation = {
+        helper.final_report.validation = {
           completed_sections: completedSections,
           legal_text: '', // Final report doesn't have editable legal text like estimate
           validated_at: new Date().toISOString(),
@@ -3106,7 +3106,7 @@
         };
 
         // Debug: Confirm validation object was created
-        console.log('🔍 Debug - validation object created:', window.helper.final_report.validation);
+        console.log('🔍 Debug - validation object created:', helper.final_report.validation);
         
         // Save updated helper back to session storage
         sessionStorage.setItem('helper', JSON.stringify(helper));
@@ -3123,7 +3123,7 @@
         // Enhanced success message with progress info
         const progressText = `${completedSections.length}/${totalSections} סעיפים אומתו`;
         console.log(`✅ Validation data saved successfully: ${progressText}`);
-        console.log('📁 Final report validation log created:', window.helper.final_report.validation);
+        console.log('📁 Final report validation log created:', helper.final_report.validation);
         
       } catch (error) {
         console.error('Save validation error:', error);
@@ -3740,7 +3740,7 @@
   </script>
   
   <script type="module" src="./helper-events.js"></script>
-  <script type="module" src="./window.helper.js"></script>
+  <script type="module" src="./helper.js"></script>
   <script src="internal-browser.js"></script>
   <script src="logout-sound.js"></script>
   <script src="assistant-floating.js"></script>
