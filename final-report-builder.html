@@ -13052,13 +13052,18 @@
       
       // Calculate totals from all damage center cards
       document.querySelectorAll('.editable-damage-card').forEach(card => {
-        // Sum parts costs - SESSION 46 FIX: Use new .part-total-cost field
+        // Sum parts costs - SESSION 56 FIX: Use ORIGINAL price × quantity for RIGHT window (כללי)
+        // RIGHT window shows original prices BEFORE discounts/wear
+        // LEFT window (after differentials) will apply reductions separately
         card.querySelectorAll('.part-row').forEach(row => {
-          const totalCostField = row.querySelector('.part-total-cost');
-          if (totalCostField) {
-            const totalCostText = totalCostField.value || '₪0';
-            const cost = parseFloat(totalCostText.replace(/[₪,]/g, '')) || 0;
-            totalParts += cost;
+          const pricePerUnitField = row.querySelector('.part-price-per-unit');
+          const quantityField = row.querySelector('.part-quantity');
+          
+          if (pricePerUnitField && quantityField) {
+            const pricePerUnit = parseFloat(pricePerUnitField.value) || 0;
+            const quantity = parseInt(quantityField.value) || 1;
+            const originalCost = pricePerUnit * quantity;
+            totalParts += originalCost;
           }
         });
         
@@ -13077,6 +13082,12 @@
       
       let rawTotalWithoutVat = totalWorks + totalParts + totalRepairs;
       let rawTotalWithVat = rawTotalWithoutVat * (1 + (window.getHelperVatRate ? window.getHelperVatRate() : (typeof MathEngine !== 'undefined' && MathEngine.getVatRate ? MathEngine.getVatRate() : 18)) / 100);
+      
+      console.log('📊 SESSION 56: RIGHT window (כללי) calculation:');
+      console.log('  Parts (original מחיר × כמות):', Math.round(totalParts));
+      console.log('  Works:', Math.round(totalWorks));
+      console.log('  Repairs:', Math.round(totalRepairs));
+      console.log('  Total (no discounts applied):', Math.round(rawTotalWithoutVat));
       
       // SESSION 48: Save category totals BEFORE differentials to helper.final_report
       const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
