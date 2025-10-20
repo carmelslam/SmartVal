@@ -1,7 +1,8 @@
 // 🔄 Universal Data Capture System - Real-time input monitoring for ALL modules
 // Ensures all UI inputs are automatically captured and saved to helper/session storage
 
-import { updateHelper, helper } from './helper.js';
+// SESSION 56: helper.js is NOT an ES6 module - use window.updateHelper instead
+// import { updateHelper, helper } from './helper.js';
 
 class UniversalDataCapture {
   constructor() {
@@ -205,8 +206,8 @@ class UniversalDataCapture {
       }
       current[pathParts[pathParts.length - 1]] = value;
       
-      // Update the helper
-      updateHelper(section, updateData, 'universal_capture');
+      // SESSION 56: Use window.updateHelper (helper.js is not an ES6 module)
+      window.updateHelper(section, updateData, 'universal_capture');
       
       console.log(`✅ Helper updated successfully: ${helperPath}`);
       
@@ -308,7 +309,8 @@ class UniversalDataCapture {
     
     // Apply all updates
     sectionUpdates.forEach((updateData, section) => {
-      updateHelper(section, updateData, 'universal_capture_sync');
+      // SESSION 56: Use window.updateHelper (helper.js is not an ES6 module)
+      window.updateHelper(section, updateData, 'universal_capture_sync');
       console.log(`✅ Synced section: ${section}`, updateData);
     });
     
