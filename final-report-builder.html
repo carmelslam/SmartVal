@@ -11426,10 +11426,26 @@
           const plate = window.helper.meta.plate;
           const normalizedPlate = plate.replace(/-/g, '');
           const center = window.helper.centers[centerIndex];
-          const part = window.helper.centers[centerIndex].Parts.parts_required[partIndex];
           
-          // Get damage center ID - use actual unique ID from center (dc_xxx), NOT display label
-          const centerId = part.damage_center_code || center.Id || center.id || center.code || `dc_${Date.now()}_${centerIndex + 1}`;
+          // ✅ SESSION 55 FIX: ALWAYS use existing center ID, NEVER generate new one
+          // New parts added in UI must use the same damage center ID as existing parts
+          const centerId = center.Id || center.id || center.code;
+          
+          console.log(`🔍 SESSION 55 DEBUG: Saving part to center ${centerIndex}:`, {
+            centerId,
+            centerObject: center,
+            hasId: !!center.Id,
+            hasLowercaseId: !!center.id,
+            hasCode: !!center.code
+          });
+          
+          if (!centerId) {
+            console.error('❌ Cannot save part - damage center has no ID:', center);
+            console.error('❌ This means helper.centers[] is not properly initialized with damage center IDs');
+            return;
+          }
+          
+          const part = window.helper.centers[centerIndex].Parts?.parts_required?.[partIndex] || {};
           
           // Get case UUID from Supabase cases table (not filing_case_id string)
           let caseUuid = part.case_id || ''; // Preserve if already exists
