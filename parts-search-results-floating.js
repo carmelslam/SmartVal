@@ -754,9 +754,10 @@
       helperCenters.forEach((center, index) => {
         const centerParts = center.Parts?.parts_required || center.Parts?.parts || [];
         if (centerParts.length > 0) {
-          const centerId = center.Id || center.id || `center_${index}`;
+          // ✅ SESSION 55 FIX: Use same ID as Supabase (center.Id should match damage_center_code)
+          const centerId = center.Id || center.id || center.code || `center_${index}`;
           const centerNumber = center["Damage center Number"] || center.number || (index + 1);
-          const centerDesc = center.Description || center.description || 'ללא תיאור';
+          const centerDesc = center.Description || center.description || center.Location || 'ללא תיאור';
           
           // Merge with existing or create new
           if (!groupedParts[centerId]) {
