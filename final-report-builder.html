@@ -11421,36 +11421,66 @@
           part.total_cost = totalCost;
         }
         
-        // Update Supabase if available
+        // ✅ SESSION 54 FIX: Upsert to Supabase (INSERT new parts, UPDATE existing)
         if (window.supabase && window.helper?.meta?.plate && window.helper?.centers?.[centerIndex]) {
           const plate = window.helper.meta.plate;
+          const normalizedPlate = plate.replace(/-/g, '');
           const center = window.helper.centers[centerIndex];
-          const centerId = center.Id || center.id;
+          const centerId = center["Damage center Number"] || center.Id || center.id || `מוקד ${centerIndex + 1}`;
+          const part = window.helper.centers[centerIndex].Parts.parts_required[partIndex];
+          
+          // Get case_id from helper
+          const caseId = window.helper?.case_info?.case_id || window.helper?.meta?.case_id || '';
           
           const supabaseData = {
+            // Primary keys for upsert
+            plate: normalizedPlate,
+            damage_center_code: centerId,
+            part_name: partName,
+            
+            // All other fields
             pcode: pcode,
             oem: pcode,
-            part_name: partName,
+            catalog_code: pcode,
             quantity: quantity,
+            qty: quantity,
             price_per_unit: pricePerUnit,
             price: pricePerUnit,
             reduction_percentage: reduction,
+            reduction: reduction,
             wear_percentage: wear,
+            wear: wear,
             updated_price: updatedPrice,
-            total_cost: totalCost
+            total_cost: totalCost,
+            cost: totalCost,
+            
+            // Preserve existing fields
+            description: part.description || part.desc || '',
+            source: part.source || 'manual',
+            row_uuid: part.row_uuid || '',
+            case_id: caseId,
+            
+            // Vehicle context
+            make: window.helper?.vehicle?.manufacturer || '',
+            model: window.helper?.vehicle?.model || '',
+            year: window.helper?.vehicle?.year || '',
+            
+            // Timestamp
+            updated_at: new Date().toISOString()
           };
           
+          // Use upsert with onConflict to INSERT or UPDATE
           const { error } = await window.supabase
             .from('parts_required')
-            .update(supabaseData)
-            .eq('plate', plate.replace(/-/g, ''))
-            .eq('damage_center_code', centerId)
-            .eq('part_name', partName);
+            .upsert(supabaseData, { 
+              onConflict: 'plate,damage_center_code,part_name',
+              ignoreDuplicates: false 
+            });
           
           if (error) {
-            console.error('❌ Supabase update error:', error);
+            console.error('❌ Supabase upsert error:', error);
           } else {
-            console.log('✅ Part saved to Supabase:', partName);
+            console.log('✅ Part upserted to Supabase:', partName, '(center:', centerId, ')');
           }
         }
         
