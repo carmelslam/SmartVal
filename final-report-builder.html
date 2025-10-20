@@ -10962,12 +10962,96 @@
       }
     }
 
+    async function initializeDamageCenterIds() {
+      try {
+        console.log('🔍 SESSION 56: Initializing damage center IDs from Supabase...');
+        
+        const helper = window.helper || {};
+        
+        if (!helper.centers || helper.centers.length === 0) {
+          console.log('ℹ️ SESSION 56: No damage centers in helper, skipping ID initialization');
+          return;
+        }
+        
+        const centersNeedingIds = helper.centers.filter((center, index) => {
+          const hasId = !!(center.Id || center.id || center.code);
+          if (!hasId) {
+            console.log(`⚠️ SESSION 56: Center ${index} missing ID:`, center);
+          }
+          return !hasId;
+        });
+        
+        if (centersNeedingIds.length === 0) {
+          console.log('✅ SESSION 56: All damage centers already have IDs');
+          return;
+        }
+        
+        console.log(`🔧 SESSION 56: ${centersNeedingIds.length} centers need IDs, querying Supabase...`);
+        
+        const plate = helper.meta?.plate || helper.vehicle?.plate || helper.car_details?.plate;
+        if (!plate) {
+          console.warn('⚠️ SESSION 56: No plate number found, cannot query Supabase');
+          return;
+        }
+        
+        const normalizedPlate = plate.replace(/-/g, '');
+        
+        if (!window.supabase) {
+          console.warn('⚠️ SESSION 56: Supabase not available, cannot load damage center IDs');
+          return;
+        }
+        
+        const { data: partsData, error } = await window.supabase
+          .from('parts_required')
+          .select('damage_center_code, part_name, plate')
+          .eq('plate', normalizedPlate);
+        
+        if (error) {
+          console.error('❌ SESSION 56: Error querying Supabase parts_required:', error);
+          return;
+        }
+        
+        if (!partsData || partsData.length === 0) {
+          console.log('ℹ️ SESSION 56: No parts found in Supabase for this plate');
+          return;
+        }
+        
+        const uniqueCenterCodes = [...new Set(partsData.map(p => p.damage_center_code).filter(Boolean))];
+        console.log(`📋 SESSION 56: Found ${uniqueCenterCodes.length} unique damage center codes in Supabase:`, uniqueCenterCodes);
+        
+        uniqueCenterCodes.sort();
+        
+        helper.centers.forEach((center, index) => {
+          if (center.Id || center.id || center.code) {
+            return;
+          }
+          
+          if (uniqueCenterCodes[index]) {
+            center.Id = uniqueCenterCodes[index];
+            console.log(`✅ SESSION 56: Assigned ID to center ${index}: ${center.Id}`);
+          } else {
+            console.warn(`⚠️ SESSION 56: No matching Supabase ID for center ${index}, will generate on save`);
+          }
+        });
+        
+        sessionStorage.setItem('helper', JSON.stringify(helper));
+        window.helper = helper;
+        
+        console.log('✅ SESSION 56: Damage center IDs initialized successfully');
+        
+      } catch (error) {
+        console.error('❌ SESSION 56: Error initializing damage center IDs:', error);
+      }
+    }
+
     // Initialize on load - FIXED ORDER
-    document.addEventListener('DOMContentLoaded', () => {
+    document.addEventListener('DOMContentLoaded', async () => {
       
       // Initialize window.helper from sessionStorage FIRST
       window.helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
       console.log('🚀 Initialized window.helper from sessionStorage:', window.helper);
+      
+      await initializeDamageCenterIds();
       
       // Debug depreciation data locations
       console.log('🔍 DEBUG - Depreciation data locations:');
