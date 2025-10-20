@@ -11631,9 +11631,12 @@
           const centerDescription = card.querySelector('.damage-center-description').value;
           const centerRepairNature = card.querySelector('.damage-center-repair-nature')?.value || '';
           
-          // Collect parts - SESSION 46 FIX: Use NEW field structure
+          // Collect parts - SESSION 54 FIX: PRESERVE existing data like repairs
           const parts = [];
-          card.querySelectorAll('.part-row').forEach(row => {
+          const existingCenter = helper.centers ? helper.centers[index] : null;
+          const existingParts = existingCenter?.Parts?.parts_required || [];
+          
+          card.querySelectorAll('.part-row').forEach((row, partIndex) => {
             const name = row.querySelector('.part-name')?.value || '';
             const catalogCode = row.querySelector('.part-catalog-code-visible')?.value || '';
             const descField = row.querySelector('.part-description');
@@ -11651,20 +11654,34 @@
             const source = row.querySelector('.part-source')?.value || '';
             
             if (name.trim()) {
-              parts.push({ 
-                name, 
-                catalog_code: catalogCode,
+              // Get existing part data to preserve all fields
+              const existingPart = existingParts[partIndex] || {};
+              
+              // ✅ SESSION 54 FIX: Merge existing data with new data (preserve all fields)
+              const partObject = {
+                ...existingPart,                    // Preserve ALL existing fields first
+                name: name,                         // Update from UI
+                part_name: name,
+                catalog_code: catalogCode,          // Update from UI
                 pcode: catalogCode,
-                desc, 
+                oem: catalogCode,
+                desc: desc,                         // Update from UI
                 description: desc,
-                price_per_unit: pricePerUnit,
-                reduction_percentage: reduction,
-                wear_percentage: wear,
-                quantity: quantity,
-                total_cost: totalCost,
-                price: totalCost, // Backward compatibility
-                source 
-              });
+                price_per_unit: pricePerUnit,       // Update from UI
+                reduction_percentage: reduction,    // Update from UI
+                reduction: reduction,
+                wear_percentage: wear,              // Update from UI
+                wear: wear,
+                quantity: quantity,                 // Update from UI
+                qty: quantity,
+                total_cost: totalCost,              // Update from UI
+                cost: totalCost,
+                price: pricePerUnit,                // For backward compatibility
+                source: source,                     // Update from UI
+                updated_at: new Date().toISOString()
+              };
+              
+              parts.push(partObject);
             }
           });
           
