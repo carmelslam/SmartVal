@@ -11432,8 +11432,14 @@
           // Get case_id from helper
           const caseId = window.helper?.case_info?.case_id || window.helper?.meta?.case_id || '';
           
+          // Generate or preserve row_uuid (required for upsert)
+          const rowUuid = part.row_uuid || `${normalizedPlate}_${centerId}_${partName}_${Date.now()}`.replace(/\s+/g, '_');
+          
           const supabaseData = {
-            // Primary keys for upsert
+            // ✅ SESSION 54 FIX: row_uuid is the PRIMARY KEY for upsert
+            row_uuid: rowUuid,
+            
+            // Required fields
             plate: normalizedPlate,
             damage_center_code: centerId,
             part_name: partName,
@@ -11457,7 +11463,6 @@
             // Preserve existing fields
             description: part.description || part.desc || '',
             source: part.source || 'manual',
-            row_uuid: part.row_uuid || '',
             case_id: caseId,
             
             // Vehicle context
@@ -11469,11 +11474,17 @@
             updated_at: new Date().toISOString()
           };
           
-          // Use upsert with onConflict to INSERT or UPDATE
+          // ✅ SESSION 54 FIX: Update helper with row_uuid
+          if (!part.row_uuid) {
+            part.row_uuid = rowUuid;
+            window.helper.centers[centerIndex].Parts.parts_required[partIndex].row_uuid = rowUuid;
+          }
+          
+          // Use upsert with row_uuid as conflict key (as per Session 39 docs)
           const { error } = await window.supabase
             .from('parts_required')
             .upsert(supabaseData, { 
-              onConflict: 'plate,damage_center_code,part_name',
+              onConflict: 'row_uuid',
               ignoreDuplicates: false 
             });
           
