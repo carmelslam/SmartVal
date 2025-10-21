@@ -711,21 +711,33 @@
         console.warn('⚠️ SESSION 50: Supabase client not available, using helper data only');
       }
       
-      // ✅ SESSION 55 FIX: Only use helper as fallback when Supabase has NO data
-      const helperCenters = (window.supabase && requiredParts.length > 0) ? [] : (window.helper?.centers || []);
+      // SESSION 61: ALWAYS get helper.centers for metadata (description)
+      const helperCenters = window.helper?.centers || [];
       
       // Group parts by damage center
       const groupedParts = {};
       let totalParts = 0;
       let totalCostAfterReductions = 0;
       
+      // SESSION 61: Build metadata map from helper.centers first (for descriptions)
+      const centerMetadata = {};
+      helperCenters.forEach((center, index) => {
+        const centerId = center.Id || center.id || center.code || `center_${index}`;
+        centerMetadata[centerId] = {
+          number: center["Damage center Number"] || center.number || (index + 1),
+          description: center.Description || center.description || center.Location || 'ללא תיאור'
+        };
+      });
+      
       // Process Supabase parts
       if (requiredParts && requiredParts.length > 0) {
         requiredParts.forEach(part => {
           // ✅ SESSION 55 FIX: Use damage_center_code (the actual column in Supabase)
           const centerId = part.damage_center_code || 'unknown';
-          const centerNumber = part.damage_center_code?.match(/\d+$/)?.[0] || '?';
-          const centerDesc = 'ללא תיאור';
+          // SESSION 61: Get description from helper metadata, fallback to 'ללא תיאור'
+          const metadata = centerMetadata[centerId] || {};
+          const centerNumber = metadata.number || part.damage_center_code?.match(/\d+$/)?.[0] || '?';
+          const centerDesc = metadata.description || 'ללא תיאור';
           
           if (!groupedParts[centerId]) {
             groupedParts[centerId] = {
@@ -750,7 +762,7 @@
         });
       }
       
-      // Also process helper.centers if available
+      // SESSION 61: Also process helper.centers for parts not in Supabase
       helperCenters.forEach((center, index) => {
         const centerParts = center.Parts?.parts_required || center.Parts?.parts || [];
         if (centerParts.length > 0) {
