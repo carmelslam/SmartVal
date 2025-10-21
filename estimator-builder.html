@@ -2794,12 +2794,31 @@
     // Save damage center changes with feedback
     // FIXED DAMAGE CENTERS SAVE FUNCTION - Using DOM-First Pattern from estimate-builder.html
     // ✅ SESSION 57 FIX: Made async to support Supabase sync
+    // 🔍 SESSION 61: Save guard variables
+    let isSavingDamageCenters = false;
+    let lastSaveTime = 0;
+    
     window.saveDamageCenterChanges = async function saveDamageCenterChanges() {
       // Don't save during initialization
       if (isInitializing) {
         console.log('⏸️ Skipping save during initialization');
         return true;
       }
+      
+      // 🔍 SESSION 61 FIX: Prevent duplicate saves within 2 seconds
+      const now = Date.now();
+      if (isSavingDamageCenters) {
+        console.warn('⚠️ SESSION 61: Save already in progress, skipping');
+        return false;
+      }
+      if (now - lastSaveTime < 2000) {
+        console.warn(`⚠️ SESSION 61: Last save was ${Math.round((now - lastSaveTime) / 1000)}s ago, skipping (2s debounce)`);
+        return false;
+      }
+      
+      isSavingDamageCenters = true;
+      lastSaveTime = now;
+      console.log('✅ SESSION 61: Starting save operation');
       
       try {
         // 🔧 CRITICAL: Use window.helper directly (not const) to ensure we're updating the live object
@@ -2871,10 +2890,31 @@
             if (name.trim()) {
               // ✅ SESSION 60 CRITICAL FIX: Match part by row_uuid (from DOM), NOT by index!
               // This prevents duplicates when DOM order != helper.centers order
+              // 🔍 SESSION 61 DEBUG: Check what UUID we get from DOM
               const rowUuidFromDOM = row.getAttribute('data-row-uuid') || row.dataset.rowUuid;
+              
+              console.log(`🔍 SESSION 61: Processing part "${name}" (index ${partIndex})`);
+              console.log(`  rowUuidFromDOM: "${rowUuidFromDOM}" (type: ${typeof rowUuidFromDOM}, empty: ${!rowUuidFromDOM || rowUuidFromDOM === ''})`);
+              
               const existingPart = rowUuidFromDOM 
                 ? existingParts.find(p => p.row_uuid === rowUuidFromDOM) || {}
                 : {};
+              
+              if (rowUuidFromDOM && existingPart && existingPart.row_uuid) {
+                console.log(`  ✅ Matched existing part by UUID: ${existingPart.row_uuid}`);
+              } else if (rowUuidFromDOM && (!existingPart || !existingPart.row_uuid)) {
+                console.warn(`  ⚠️ UUID "${rowUuidFromDOM}" from DOM but NO matching part found in existingParts!`);
+                console.warn(`  This is a NEW part - will use UUID from DOM.`);
+              } else {
+                console.warn(`  ⚠️ NO UUID in DOM! This should NOT happen after SESSION 61 fix.`);
+              }
+              
+              // 🔍 SESSION 61 CRITICAL FIX: If no UUID in DOM, SKIP this part
+              if (!rowUuidFromDOM || rowUuidFromDOM === '') {
+                console.error(`❌ SESSION 61: SKIPPING part "${name}" - no UUID in DOM!`);
+                console.error(`  This part was not rendered correctly. Check createEditablePartRow().`);
+                return; // SKIP - don't save without UUID
+              }
               
               // ✅ SESSION 57 FIX: Get center ID from DOM first, then helper (Session 56 pattern)
               const centerCard = card;
@@ -2914,8 +2954,8 @@
                 manufacturer: existingPart.manufacturer || '',
                 supplier_name: existingPart.supplier_name || '',
                 
-                // ✅ SESSION 60 FINAL FIX: Simple - preserve existing or generate new
-                row_uuid: existingPart.row_uuid || crypto.randomUUID(),
+                // ✅ SESSION 61 CRITICAL FIX: Use UUID from DOM (already validated above)
+                row_uuid: rowUuidFromDOM,
                 case_id: existingPart.case_id || window.helper?.case_info?.supabase_case_id || '',  // ✅ SESSION 59: Use helper.case_info.supabase_case_id (Supabase UUID, NOT filing ref!)
                 plate: existingPart.plate || (window.helper?.meta?.plate || '').replace(/-/g, ''),
                 damage_center_code: existingPart.damage_center_code || centerId,
@@ -3265,10 +3305,15 @@
         // Update damage centers totals display
         setTimeout(updateDamageCentersSubtotal, 100);
         
+        console.log('✅ SESSION 61: Save operation completed successfully');
         return true;
       } catch (error) {
-        console.error('Error saving damage center changes:', error);
+        console.error('❌ SESSION 61: Error saving damage center changes:', error);
         return false;
+      } finally {
+        // 🔍 SESSION 61: Reset save guard
+        isSavingDamageCenters = false;
+        console.log('🔓 SESSION 61: Save guard released');
       }
     }
 
@@ -9832,7 +9877,20 @@
       console.log(`  📋 SESSION 59: Extracted: catalog="${catalogCode}", name="${partName}", price_per_unit=${pricePerUnit}, qty=${quantity}, calculated_total=${totalCost}`);
       
       // ✅ SESSION 60 CRITICAL: Add data-row-uuid attribute for UUID matching
-      const rowUuid = part?.row_uuid || '';
+      // 🔍 SESSION 61 FIX: Generate UUID if missing - don't leave empty!
+      let rowUuid = part?.row_uuid;
+      
+      if (!rowUuid || rowUuid === '') {
+        rowUuid = crypto.randomUUID();
+        console.warn(`⚠️ SESSION 61: Part "${partName}" has NO row_uuid! Generated new: ${rowUuid}`);
+        console.warn(`  Original part object:`, part);
+        // Update the part object in helper if it exists
+        if (part) {
+          part.row_uuid = rowUuid;
+        }
+      } else {
+        console.log(`✅ SESSION 61: Part "${partName}" has row_uuid: ${rowUuid}`);
+      }
       
       return `
         <div class="part-row" data-center="${centerIndex}" data-part="${partIndex}" data-row-uuid="${rowUuid}" style="display: grid; grid-template-columns: 1.5fr 2fr 1fr 1fr 1fr auto; gap: 8px; margin-bottom: 8px; padding: 8px; background: #f9f9f9; border-radius: 4px;">
