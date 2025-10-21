@@ -2712,34 +2712,19 @@
           totalClaimDiv.innerText = formattedClaim;
         }
         
-        // Load totalClaimGross field from original damage_assessment.totals["Total with VAT"] 
+        // Load totalClaimGross field from damage_assessment.totals["Total with VAT"] 
         const totalClaimGrossField = document.getElementById('totalClaimGross');
+        let totalClaimGrossValue = helper.damage_assessment?.totals?.["Total with VAT"] || 0;
+        
         if (totalClaimGrossField) {
-          let totalWithVAT = helper.damage_assessment?.totals?.["Total with VAT"] || 0;
-          let source = 'totals["Total with VAT"]';
-          
-          // Fallback to damage_assessment.summary.total_with_vat if totals doesn't exist
-          if (!totalWithVAT && helper.damage_assessment?.summary?.total_with_vat) {
-            totalWithVAT = helper.damage_assessment.summary.total_with_vat;
-            source = 'summary.total_with_vat';
-          }
-          
-          totalClaimGrossField.value = totalWithVAT ? `₪${totalWithVAT.toLocaleString()}` : '';
+          totalClaimGrossField.value = totalClaimGrossValue ? `₪${totalClaimGrossValue.toLocaleString()}` : '';
         }
         
-        // Load authorizedClaim field - read from SAME source as totalClaimGross
+        // Load authorizedClaim field - SAME source as totalClaimGross (NO fallback)
         const authorizedClaimField = document.getElementById('authorizedClaim');
         if (authorizedClaimField) {
-          // SAME mapping as totalClaimGross
-          let totalWithVAT = helper.damage_assessment?.totals?.["Total with VAT"] || 0;
-          
-          // Fallback to summary if totals doesn't exist
-          if (!totalWithVAT && helper.damage_assessment?.summary?.total_with_vat) {
-            totalWithVAT = helper.damage_assessment.summary.total_with_vat;
-          }
-          
-          const useValue = totalWithVAT ? `₪${totalWithVAT.toLocaleString()}` : '';
-          const numericValue = totalWithVAT;
+          const useValue = totalClaimGrossValue ? `₪${totalClaimGrossValue.toLocaleString()}` : '';
+          const numericValue = totalClaimGrossValue;
           
           authorizedClaimField.value = useValue;
           
