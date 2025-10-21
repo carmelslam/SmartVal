@@ -2869,8 +2869,12 @@
             const totalCost = parseFloat(row.querySelector('.part-total-cost')?.value) || 0;  // ✅ Read calculated value
             
             if (name.trim()) {
-              // Get existing part data to preserve all fields (including Hebrew keys)
-              const existingPart = existingParts[partIndex] || {};
+              // ✅ SESSION 60 CRITICAL FIX: Match part by row_uuid (from DOM), NOT by index!
+              // This prevents duplicates when DOM order != helper.centers order
+              const rowUuidFromDOM = row.getAttribute('data-row-uuid') || row.dataset.rowUuid;
+              const existingPart = rowUuidFromDOM 
+                ? existingParts.find(p => p.row_uuid === rowUuidFromDOM) || {}
+                : {};
               
               // ✅ SESSION 57 FIX: Get center ID from DOM first, then helper (Session 56 pattern)
               const centerCard = card;
@@ -9827,8 +9831,11 @@
       
       console.log(`  📋 SESSION 59: Extracted: catalog="${catalogCode}", name="${partName}", price_per_unit=${pricePerUnit}, qty=${quantity}, calculated_total=${totalCost}`);
       
+      // ✅ SESSION 60 CRITICAL: Add data-row-uuid attribute for UUID matching
+      const rowUuid = part?.row_uuid || '';
+      
       return `
-        <div class="part-row" data-center="${centerIndex}" data-part="${partIndex}" style="display: grid; grid-template-columns: 1.5fr 2fr 1fr 1fr 1fr auto; gap: 8px; margin-bottom: 8px; padding: 8px; background: #f9f9f9; border-radius: 4px;">
+        <div class="part-row" data-center="${centerIndex}" data-part="${partIndex}" data-row-uuid="${rowUuid}" style="display: grid; grid-template-columns: 1.5fr 2fr 1fr 1fr 1fr auto; gap: 8px; margin-bottom: 8px; padding: 8px; background: #f9f9f9; border-radius: 4px;">
           <div>
             <label style="font-size: 12px; color: #666; margin-bottom: 2px; display: block;">קוד קטלוגי:</label>
             <input type="text" value="${catalogCode}" placeholder="קוד קטלוגי" class="part-catalog-code" 
