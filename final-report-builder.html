@@ -2730,33 +2730,16 @@
         // Load authorizedClaim field - read from SAME source as totalClaimGross
         const authorizedClaimField = document.getElementById('authorizedClaim');
         if (authorizedClaimField) {
-          let useValue = '';
-          let numericValue = 0;
+          // SAME mapping as totalClaimGross
+          let totalWithVAT = helper.damage_assessment?.totals?.["Total with VAT"] || 0;
           
-          // Use SAME mapping as totalClaimGross: damage_assessment.totals["Total with VAT"]
-          if (helper.damage_assessment?.totals?.["Total with VAT"]) {
-            numericValue = helper.damage_assessment.totals["Total with VAT"];
-            useValue = `₪${numericValue.toLocaleString()}`;
-            console.log('✅ Using original totals for authorizedClaim:', numericValue);
+          // Fallback to summary if totals doesn't exist
+          if (!totalWithVAT && helper.damage_assessment?.summary?.total_with_vat) {
+            totalWithVAT = helper.damage_assessment.summary.total_with_vat;
           }
-          // Priority 3: Check for manually saved values
-          else {
-            const savedClaimValue = helper.claims_data?.total_claim;
-            const savedCalculationValue = helper.calculations?.total_damage;
-            
-            if (savedClaimValue && savedClaimValue !== '' && savedClaimValue !== '0' && savedClaimValue !== '00') {
-              useValue = savedClaimValue;
-              numericValue = parseFloat(savedClaimValue.replace(/[₪,]/g, '')) || 0;
-            } else if (savedCalculationValue && savedCalculationValue > 0) {
-              numericValue = savedCalculationValue;
-              useValue = `₪${numericValue.toLocaleString()}`;
-            } else {
-              // Final fallback to damage_centers_summary
-              let totalWithVAT = helper.damage_centers_summary?.total_cost || 0;
-              numericValue = totalWithVAT;
-              useValue = totalWithVAT ? `₪${totalWithVAT.toLocaleString()}` : '';
-            }
-          }
+          
+          const useValue = totalWithVAT ? `₪${totalWithVAT.toLocaleString()}` : '';
+          const numericValue = totalWithVAT;
           
           authorizedClaimField.value = useValue;
           
