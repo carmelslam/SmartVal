@@ -32631,3 +32631,437 @@ git checkout HEAD -- estimator-builder.html
 **Next Session**: Session 60 = RESTORE + re-apply working fixes only
 
 POSTMORTEM_EOF < /dev/null
+---
+
+# SESSION 59 IMPLEMENTATION SUMMARY
+
+**Date**: 2025-10-21  
+**Status**: ⚠️ PARTIAL SUCCESS - Git restore required, then re-apply working fixes  
+**Files Modified**: estimator-builder.html
+
+---
+
+## Task Overview
+
+### Task 1: Fix Case UUID Assignment (NULL values in Supabase)
+**Problem**: Parts saved with NULL case_id instead of Supabase UUID  
+**Root Cause**: Using `helper.meta.case_id` (filing reference "YC-22184003-2025") instead of actual UUID  
+**Solution**: Use `helper.case_info.supabase_case_id` with fallback lookup
+
+### Task 2: Add Price Per Unit Field to Estimator UI
+**Problem**: Estimator UI missing price_per_unit field, total_cost not calculated locally  
+**Current UI**: קוד קטלוגי, שם החלק, כמות, סה״כ מחיר (4 fields)  
+**Desired UI**: קוד קטלוגי, שם החלק, מחיר ליחידה, כמות, סה״כ מחיר (5 fields, total calculated)
+
+---
+
+## Successful Changes (KEEP THESE)
+
+### 1. Case UUID Fix in saveDamageCenterChanges() 
+**File**: estimator-builder.html  
+**Line**: 2915
+
+```javascript
+// ✅ BEFORE:
+case_id: existingPart.case_id || '',
+
+// ✅ AFTER (SESSION 59 - WORKING):
+case_id: existingPart.case_id || window.helper?.case_info?.supabase_case_id || '',
+```
+
+**Impact**: Parts now correctly assigned to case using actual Supabase UUID
+
+---
+
+### 2. Case UUID Lookup in syncPartsToSupabase()
+**File**: estimator-builder.html  
+**Lines**: 3270-3288
+
+```javascript
+// ✅ SESSION 59: Get case UUID from helper (helper.case_info.supabase_case_id = actual Supabase UUID)
+let caseUuid = helper.case_info?.supabase_case_id || null;
+
+// Fallback: Lookup from Supabase cases table if not in helper
+if (\!caseUuid && helper.meta?.plate) {
+  try {
+    const normalizedPlate = (helper.meta.plate || '').replace(/-/g, '');
+    const { data: caseData } = await window.supabase
+      .from('cases')
+      .select('id')
+      .eq('plate', normalizedPlate)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .single();
+    caseUuid = caseData?.id || null;
+    console.log('✅ SESSION 59: Looked up case UUID from Supabase:', caseUuid);
+  } catch (err) {
+    console.warn('⚠️ SESSION 59: Could not lookup case UUID, will use NULL:', err.message);
+  }
+}
+```
+
+**Impact**: Provides reliable case UUID lookup with fallback mechanism
+
+---
+
+### 3. 5-Field UI Layout with Price Per Unit
+**File**: estimator-builder.html  
+**Lines**: 9772-9822
+
+**Changes**:
+- Changed grid from 4 columns to 5 columns
+- Added price_per_unit input field (מחיר ליחידה)
+- Made total_cost readonly with gray background
+- Attached onchange handlers to recalculate total
+
+```javascript
+function createEditablePartRow(part, centerIndex, partIndex) {
+  const catalogCode = part?.catalog_code || part?.pcode || '';
+  const partName = part?.name || part?.part_name || '';
+  const pricePerUnit = part?.price_per_unit || part?.price || 0;  // ✅ NEW
+  const quantity = part?.quantity || part?.qty || 1;
+  const totalCost = pricePerUnit * quantity;  // ✅ CALCULATED
+  
+  return `
+    <div class="part-row" style="grid-template-columns: 1.5fr 2fr 1fr 1fr 1fr auto;">
+      <\!-- Field 1: Catalog Code -->
+      <input type="text" value="${catalogCode}" class="part-catalog-code" />
+      
+      <\!-- Field 2: Part Name -->
+      <input type="text" value="${partName}" class="part-name" />
+      
+      <\!-- ✅ Field 3: Price Per Unit (NEW) -->
+      <input type="number" value="${pricePerUnit}" class="part-price-per-unit" 
+             onchange="estimatorRecalculatePartTotal(${centerIndex}, ${partIndex})" />
+      
+      <\!-- Field 4: Quantity -->
+      <input type="number" value="${quantity}" class="part-quantity"
+             onchange="estimatorRecalculatePartTotal(${centerIndex}, ${partIndex})" />
+      
+      <\!-- ✅ Field 5: Total Cost (CALCULATED - Read-only) -->
+      <input type="number" value="${totalCost}" class="part-total-cost" readonly
+             style="background-color: #f5f5f5;" />
+    </div>
+  `;
+}
+```
+
+**Impact**: UI now shows 5 fields with automatic total calculation
+
+---
+
+### 4. Calculation Function
+**File**: estimator-builder.html  
+**Lines**: 9824-9849
+
+```javascript
+window.estimatorRecalculatePartTotal = function(centerIndex, partIndex) {
+  const row = document.querySelector(`.part-row[data-center="${centerIndex}"][data-part="${partIndex}"]`);
+  if (\!row) return;
+  
+  const pricePerUnit = parseFloat(row.querySelector('.part-price-per-unit')?.value) || 0;
+  const quantity = parseInt(row.querySelector('.part-quantity')?.value) || 1;
+  const total = pricePerUnit * quantity;
+  
+  row.querySelector('.part-total-cost').value = total.toFixed(2);
+  console.log(`✅ SESSION 59: Recalculated part total: ${pricePerUnit} × ${quantity} = ${total}`);
+};
+```
+
+**Impact**: Total recalculates when price or quantity changes
+
+---
+
+### 5. Save price_per_unit in saveDamageCenterChanges()
+**File**: estimator-builder.html  
+**Lines**: 2867-2869, 2892-2897
+
+```javascript
+// ✅ Read from UI:
+const pricePerUnit = parseFloat(row.querySelector('.part-price-per-unit')?.value) || 0;
+const quantity = parseInt(row.querySelector('.part-quantity')?.value) || 1;
+const totalCost = parseFloat(row.querySelector('.part-total-cost')?.value) || 0;
+
+// ✅ Store in part object:
+const partObject = {
+  ...existingPart,
+  price_per_unit: pricePerUnit,  // ✅ NEW
+  price: pricePerUnit,            // Alias
+  quantity: quantity,
+  qty: quantity,
+  total_cost: totalCost,          // ✅ Calculated value
+  cost: totalCost
+};
+```
+
+**Impact**: price_per_unit now saved to helper and Supabase
+
+---
+
+## Failed Changes (DELETE THESE - CATASTROPHIC FAILURES)
+
+### ❌ FAILURE 1: reloadPartsFromSupabase() Function
+**File**: estimator-builder.html  
+**Lines**: 3366-3424
+
+**What it does**:
+1. Queries all parts by plate from Supabase
+2. Groups by `damage_center_code`
+3. Overwrites `center.Parts.parts_required` with grouped parts
+
+**Why it breaks**:
+- Center IDs fragile: `center.Id || center.id || center.code`
+- If `centerId` ≠ `part.damage_center_code` exactly → parts orphaned
+- Overwrites `parts_required` with empty array → ALL PARTS LOST
+- Violates Session 54 dual-save pattern (never reload mid-session)
+- Violates Session 56 index-based association pattern
+
+**Evidence**:
+- Adding part creates NEW center instead of adding to existing
+- Deleting part deletes ALL old parts
+- Final-report broken (loads corrupted sessionStorage)
+
+**DELETE**: Entire function (lines 3366-3424)
+
+---
+
+### ❌ FAILURE 2: Call to reloadPartsFromSupabase() After Every Save
+**File**: estimator-builder.html  
+**Line**: 3221
+
+```javascript
+await syncPartsToSupabase();
+await reloadPartsFromSupabase();  // ❌ DESTROYS DATA
+sessionStorage.setItem('helper', JSON.stringify(window.helper));
+```
+
+**Why it breaks**: Every save triggers reload → ID mismatch → data loss → saves corrupted data
+
+**DELETE**: Remove call to `reloadPartsFromSupabase()`
+
+---
+
+### ❌ FAILURE 3: Modified estimateRemovePartRow() with Reload
+**File**: estimator-builder.html  
+**Lines**: 10035-10077
+
+**Original (working)**:
+```javascript
+window.estimateRemovePartRow = function(centerIndex, partIndex) {
+  const row = document.querySelector(`[data-center="${centerIndex}"][data-part="${partIndex}"]`);
+  if (row) row.remove();
+};
+```
+
+**Session 59 (broken)**:
+```javascript
+window.estimateRemovePartRow = async function(centerIndex, partIndex) {
+  // Deletes from Supabase
+  await window.supabase.from('parts_required').delete().eq('row_uuid', part.row_uuid);
+  row.remove();
+  
+  // ❌ CALLS BROKEN RELOAD:
+  await reloadPartsFromSupabase();
+  sessionStorage.setItem('helper', JSON.stringify(window.helper));
+};
+```
+
+**Why it breaks**: Triggers broken reload, orphaning remaining parts
+
+**RESTORE**: To original simple version (just remove DOM element)
+
+---
+
+## Root Cause Analysis
+
+### The Actual Problem
+User reported: "Floating screen shows only new part after adding in estimator"
+
+**User's explanation**: "Parts floating screen takes data from supa, and fallback to centers - even though both locations have all the parts - the floating screen deleted all the data in it and shows just the added part"
+
+### My Misinterpretation
+I thought: Floating screen needs to query Supabase and reload parts  
+**WRONG**: User was describing display PRIORITY, not missing functionality
+
+### What User Actually Meant
+Display wasn't refreshing after save completes to show updated parts list
+
+### Correct Solution (Not Implemented)
+Just add ONE line after save to refresh display:
+```javascript
+setTimeout(() => loadDamageCentersSummary(window.helper), 150);
+```
+
+### What I Did Instead
+Created 150+ lines of code:
+- Full Supabase reload function with ID matching
+- Called after every save
+- Called after every delete
+- Modified delete function to be async
+
+**Result**: Catastrophic failure affecting 3 systems
+
+---
+
+## System Impact Assessment
+
+### Systems Broken
+1. **Estimator**: Adding part creates new center, deleting part deletes all
+2. **Final-Report**: Loads corrupted sessionStorage, broken parts display
+3. **Wizard**: Corrupted data in helper.centers
+4. **SessionStorage**: Corrupted with bad center-part associations
+
+### Data Integrity Issues
+- Parts orphaned from centers (ID mismatch)
+- center.Parts.parts_required overwritten with empty arrays
+- Case UUID preserved (working fix not affected)
+- price_per_unit UI preserved (working fix not affected)
+
+---
+
+## Restoration Plan
+
+### Step 1: Git Restore
+```bash
+cd "/Users/carmelcayouf/Library/Mobile Documents/com~apple~CloudDocs/1A Yaron Automation/IntegratedAppBuild/System Building Team/code/new code /SmartVal"
+git checkout HEAD -- estimator-builder.html
+```
+
+### Step 2: Re-apply ONLY Working Fixes
+
+**Fix 1 - Line 2915**: Case UUID in saveDamageCenterChanges()
+```javascript
+case_id: existingPart.case_id || window.helper?.case_info?.supabase_case_id || '',
+```
+
+**Fix 2 - Lines 3270-3288**: Case UUID lookup in syncPartsToSupabase()
+```javascript
+let caseUuid = helper.case_info?.supabase_case_id || null;
+if (\!caseUuid && helper.meta?.plate) {
+  // Lookup from cases table...
+}
+```
+
+**Fix 3 - Lines 9772-9822**: 5-field UI layout
+```javascript
+function createEditablePartRow(part, centerIndex, partIndex) {
+  // Grid with 5 columns
+  // price_per_unit input
+  // total_cost readonly
+}
+```
+
+**Fix 4 - Lines 9824-9849**: Calculation function
+```javascript
+window.estimatorRecalculatePartTotal = function(centerIndex, partIndex) {
+  // Recalculate total = price_per_unit × quantity
+};
+```
+
+**Fix 5 - Lines 2867-2897**: Save price_per_unit
+```javascript
+const pricePerUnit = parseFloat(row.querySelector('.part-price-per-unit')?.value) || 0;
+partObject.price_per_unit = pricePerUnit;
+```
+
+### Step 3: Add Correct Display Refresh (1 line)
+After `syncPartsToSupabase()` completes, add:
+```javascript
+setTimeout(() => loadDamageCentersSummary(window.helper), 150);
+```
+
+### Step 4: Clear Corrupted SessionStorage
+In browser console:
+```javascript
+sessionStorage.removeItem('helper');
+```
+Then reload wizard to recreate clean helper
+
+### Step 5: Verify All Systems
+- [ ] Estimator: Add part to existing center
+- [ ] Estimator: Delete part doesn't affect others
+- [ ] Final-report: Displays all parts correctly
+- [ ] Wizard: Center-part associations intact
+- [ ] Supabase: case_id populated with UUID
+- [ ] UI: 5 fields with calculation working
+
+---
+
+## Lessons Learned
+
+### 1. Read User Feedback Carefully
+"Takes data from supa, fallback to centers" = display priority, NOT missing query
+
+### 2. Understand Before Implementing
+Should have asked: "What specific behavior is broken?" instead of assuming
+
+### 3. Test Incrementally
+All changes applied together → couldn't isolate which broke system
+
+### 4. Respect Architecture Patterns
+- Session 54: Dual-save (save to helper AND Supabase, never reload mid-session)
+- Session 56: Index-based association (NOT ID string matching)
+- Session 57: Field standardization (total_cost, price_per_unit)
+
+### 5. Never Overwrite Arrays
+```javascript
+// ❌ WRONG:
+center.Parts.parts_required = groupedParts;
+
+// ✅ RIGHT:
+center.Parts.parts_required.push(newPart);
+```
+
+### 6. Center ID Fragility
+Multiple sources: `Id`, `id`, `code`, `damage_center_code` → string matching fails
+
+### 7. One Line vs 150 Lines
+Correct fix: 1 line (refresh display)  
+My "fix": 150 lines (reload everything with ID matching) → broke 3 systems
+
+### 8. Don't Touch Core Functions
+`estimateRemovePartRow()` was working, modifying it broke delete functionality
+
+---
+
+## Success Metrics
+
+### What Worked
+✅ Case UUID assignment (helper.case_info.supabase_case_id)  
+✅ Case UUID fallback lookup from cases table  
+✅ 5-field UI layout with price_per_unit  
+✅ Automatic total calculation (price × quantity)  
+✅ Save price_per_unit to helper and Supabase  
+
+### What Failed
+❌ Display refresh (over-engineered with full reload)  
+❌ Center-part association (ID matching broke index-based pattern)  
+❌ Data preservation (overwrote parts_required arrays)  
+❌ System stability (broke estimator, final-report, wizard)  
+
+---
+
+## Next Session Tasks (Session 60)
+
+1. **Git restore** estimator-builder.html
+2. **Re-apply** 5 working fixes manually
+3. **Add** 1-line display refresh (correct solution)
+4. **Clear** corrupted sessionStorage
+5. **Test** all systems end-to-end
+6. **Verify** no duplicates in Supabase parts_required
+7. **Document** successful restoration
+
+---
+
+**Status**: ⚠️ READY FOR RESTORATION  
+**Working Fixes**: 5 (case UUID, price_per_unit UI, calculation)  
+**Failed Fixes**: 3 (reload function, save call, delete modification)  
+**Systems Affected**: Estimator, Final-Report, Wizard, SessionStorage  
+**Restoration Method**: Git restore + selective re-apply  
+**Estimated Restoration Time**: 15 minutes
+
+---
+
+**End of Session 59 Summary**
+
+SUMMARY_EOF < /dev/null
