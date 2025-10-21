@@ -2947,12 +2947,13 @@
                 wear: existingPart.wear || 0,
                 updated_price: existingPart.updated_price || pricePerUnit,  // Will be calculated when reductions added
                 
-                // Preserve metadata
+                // Preserve metadata - SESSION 61: Only preserve, don't set defaults for fields not in UI
                 description: existingPart.description || existingPart.desc || name,
                 desc: existingPart.desc || existingPart.description || name,
-                source: existingPart.source || 'manual',
-                manufacturer: existingPart.manufacturer || '',
-                supplier_name: existingPart.supplier_name || '',
+                // SESSION 61: Preserve source/manufacturer/supplier_name from existing data (not in UI)
+                ...(existingPart.source && { source: existingPart.source }),
+                ...(existingPart.manufacturer && { manufacturer: existingPart.manufacturer }),
+                ...(existingPart.supplier_name && { supplier_name: existingPart.supplier_name }),
                 
                 // ✅ SESSION 61 CRITICAL FIX: Use UUID from DOM (already validated above)
                 row_uuid: rowUuidFromDOM,
