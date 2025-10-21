@@ -10223,9 +10223,9 @@
       if (partsCost === null) {
         partsCost = 0;
         card.querySelectorAll('.part-row').forEach(row => {
-          // SESSION 49: Use .part-total-price instead of .part-price
-          const priceField = row.querySelector('.part-total-price');
-          const price = priceField ? parseFloat(priceField.value) || 0 : 0;
+          // SESSION 61 FIX: Use .part-total-cost (correct class name) and round
+          const priceField = row.querySelector('.part-total-cost');
+          const price = priceField ? Math.round(parseFloat(priceField.value) || 0) : 0;
           partsCost += price;
         });
       }
@@ -10233,7 +10233,7 @@
       if (worksCost === null) {
         worksCost = 0;
         card.querySelectorAll('.work-row').forEach(row => {
-          const cost = parseFloat(row.querySelector('.work-cost').value) || 0;
+          const cost = Math.round(parseFloat(row.querySelector('.work-cost').value) || 0);
           worksCost += cost;
         });
       }
@@ -10241,10 +10241,15 @@
       if (repairsCost === null) {
         repairsCost = 0;
         card.querySelectorAll('.repair-row').forEach(row => {
-          const cost = parseFloat(row.querySelector('.repair-cost').value) || 0;
+          const cost = Math.round(parseFloat(row.querySelector('.repair-cost').value) || 0);
           repairsCost += cost;
         });
       }
+      
+      // Round totals
+      partsCost = Math.round(partsCost);
+      worksCost = Math.round(worksCost);
+      repairsCost = Math.round(repairsCost);
       
       // Update display
       const partsDisplay = card.querySelector('.parts-costs-display');
@@ -10259,9 +10264,9 @@
       // Calculate total with VAT
       const totalCost = partsCost + worksCost + repairsCost;
       const vatRate = (window.getHelperVatRate ? window.getHelperVatRate() / 100 : 0.17);
-      const totalWithVAT = totalCost * (1 + vatRate);
+      const totalWithVAT = Math.round(totalCost * (1 + vatRate));
       
-      if (totalDisplay) totalDisplay.textContent = `₪${Math.round(totalWithVAT).toLocaleString()}`;
+      if (totalDisplay) totalDisplay.textContent = `₪${totalWithVAT.toLocaleString()}`;
     }
 
     // UPDATE ALL COST DISPLAYS
