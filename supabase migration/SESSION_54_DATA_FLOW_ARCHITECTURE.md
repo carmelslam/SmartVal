@@ -59,7 +59,7 @@ Every part in `helper.centers[].Parts.parts_required[]` MUST have:
 {
   // === IDENTIFICATION (4 fields) ===
   row_uuid: "unique_identifier",              // PRIMARY KEY for Supabase
-  case_id: "YC-22184003-2025",               // Case identifier
+  case_id: "YC-22184003-2025",               // Case identifier- this is not the case id in supabase - its just a filing refrrence 
   damage_center_code: "מוקד 1",               // Damage center identifier
   plate: "22184003",                          // Vehicle plate (normalized)
   
