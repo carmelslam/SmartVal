@@ -2861,11 +2861,12 @@
           const existingParts = existingCenter?.Parts?.parts_required || [];  // ✅ SESSION 54 FIX: Read from parts_required
           
           card.querySelectorAll('.part-row').forEach((row, partIndex) => {
-            // SESSION 49: Collect new fields (catalog_code, part_name, quantity, total_price)
+            // ✅ SESSION 59: Read ALL 5 fields from UI (added price_per_unit)
             const catalogCode = row.querySelector('.part-catalog-code')?.value || '';
             const name = row.querySelector('.part-name').value;
+            const pricePerUnit = parseFloat(row.querySelector('.part-price-per-unit')?.value) || 0;  // ✅ NEW
             const quantity = parseInt(row.querySelector('.part-quantity')?.value) || 1;
-            const totalPrice = parseFloat(row.querySelector('.part-total-price')?.value) || 0;
+            const totalCost = parseFloat(row.querySelector('.part-total-cost')?.value) || 0;  // ✅ Read calculated value
             
             if (name.trim()) {
               // Get existing part data to preserve all fields (including Hebrew keys)
@@ -2881,25 +2882,26 @@
               const partObject = {
                 ...existingPart,  // Preserve ALL existing fields first
                 
-                // Update from DOM
+                // Update from DOM (Session 59 fields)
                 catalog_code: catalogCode,
                 pcode: catalogCode,  // Alias
                 oem: catalogCode,  // Alias
                 name: name,
                 part_name: name,  // Alias
+                part: name,  // Alias
+                price_per_unit: pricePerUnit,  // ✅ SESSION 59: Store per-unit price from UI
+                price: pricePerUnit,  // Alias
                 quantity: quantity,
                 qty: quantity,  // Alias
+                total_cost: totalCost,  // ✅ SESSION 59: Store calculated total
+                cost: totalCost,  // Alias
                 
-                // Preserve calculated fields
-                price_per_unit: existingPart.price_per_unit || totalPrice,
-                price: existingPart.price || totalPrice,
+                // Preserve calculation fields for future use
                 reduction_percentage: existingPart.reduction_percentage || 0,
                 reduction: existingPart.reduction || 0,
                 wear_percentage: existingPart.wear_percentage || 0,
                 wear: existingPart.wear || 0,
-                updated_price: existingPart.updated_price || totalPrice,
-                total_cost: totalPrice,  // ✅ CORRECT field name
-                cost: totalPrice,
+                updated_price: existingPart.updated_price || pricePerUnit,  // Will be calculated when reductions added
                 
                 // Preserve metadata
                 description: existingPart.description || existingPart.desc || name,
@@ -2908,9 +2910,9 @@
                 manufacturer: existingPart.manufacturer || '',
                 supplier_name: existingPart.supplier_name || '',
                 
-                // ✅ SESSION 57 FIX: Supabase fields - generate row_uuid and assign damage_center_code
+                // ✅ SESSION 57 & 59 FIX: Supabase fields - generate row_uuid and assign case_id from helper.meta
                 row_uuid: existingPart.row_uuid || crypto.randomUUID(),
-                case_id: existingPart.case_id || '',
+                case_id: existingPart.case_id || window.helper?.meta?.case_id || '',  // ✅ SESSION 59: Use helper.meta.case_id
                 plate: existingPart.plate || (window.helper?.meta?.plate || '').replace(/-/g, ''),
                 damage_center_code: existingPart.damage_center_code || centerId,
                 part_family: existingPart.part_family || '',
@@ -3252,17 +3254,36 @@
       }
     }
 
-    // ✅ SESSION 57: Sync parts to Supabase (dual-save pattern from Session 54/55)
+    // ✅ SESSION 57 & 59: Sync parts to Supabase (dual-save pattern from Session 54/55)
     async function syncPartsToSupabase() {
       if (!window.supabase) {
-        console.warn('⚠️ SESSION 57: Supabase not available, skipping parts sync');
+        console.warn('⚠️ SESSION 59: Supabase not available, skipping parts sync');
         return;
       }
       
-      console.log('💾 SESSION 57: Syncing parts to Supabase...');
+      console.log('💾 SESSION 59: Syncing parts to Supabase...');
       
       const helper = window.helper || {};
       const centers = helper.centers || [];
+      
+      // ✅ SESSION 59: Get case UUID from Supabase cases table (pattern from final-report)
+      let caseUuid = helper.meta?.case_id || null;
+      if (!caseUuid && helper.meta?.plate) {
+        try {
+          const normalizedPlate = (helper.meta.plate || '').replace(/-/g, '');
+          const { data: caseData } = await window.supabase
+            .from('cases')
+            .select('id')
+            .eq('plate', normalizedPlate)
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .single();
+          caseUuid = caseData?.id || null;
+          console.log('✅ SESSION 59: Looked up case UUID from Supabase:', caseUuid);
+        } catch (err) {
+          console.warn('⚠️ SESSION 59: Could not lookup case UUID, will use NULL:', err.message);
+        }
+      }
       
       for (const center of centers) {
         const parts = center.Parts?.parts_required || [];
@@ -3270,7 +3291,7 @@
         for (const part of parts) {
           // Skip parts without required fields
           if (!part.row_uuid || !part.damage_center_code) {
-            console.warn('⚠️ SESSION 57: Skipping part without row_uuid or damage_center_code:', part);
+            console.warn('⚠️ SESSION 59: Skipping part without row_uuid or damage_center_code:', part);
             continue;
           }
           
@@ -3285,7 +3306,7 @@
             pcode: part.pcode || part.catalog_code || '',
             oem: part.oem || part.catalog_code || '',
             
-            // Pricing fields
+            // ✅ SESSION 59: Pricing fields with price_per_unit support
             quantity: part.quantity || 1,
             price_per_unit: part.price_per_unit || 0,
             price: part.price || part.price_per_unit || 0,
@@ -3294,10 +3315,12 @@
             updated_price: part.updated_price || part.price_per_unit || 0,
             total_cost: part.total_cost || 0,
             
+            // ✅ SESSION 59 FIX: Use looked-up case UUID (prevents NULL and duplicates)
+            case_id: part.case_id || caseUuid || null,
+            
             // Metadata
             description: part.description || part.desc || '',
             source: part.source || 'manual',
-            case_id: part.case_id || null,
             supplier_name: part.supplier_name || '',
             part_family: part.part_family || '',
             
@@ -3322,17 +3345,17 @@
               });
             
             if (error) {
-              console.error(`❌ SESSION 57: Error upserting part ${part.row_uuid}:`, error);
+              console.error(`❌ SESSION 59: Error upserting part ${part.row_uuid}:`, error);
             } else {
-              console.log(`✅ SESSION 57: Synced part ${part.row_uuid} to Supabase`);
+              console.log(`✅ SESSION 59: Synced part ${part.row_uuid} to Supabase (case_id: ${supabaseData.case_id})`);
             }
           } catch (err) {
-            console.error(`❌ SESSION 57: Exception upserting part:`, err);
+            console.error(`❌ SESSION 59: Exception upserting part:`, err);
           }
         }
       }
       
-      console.log('✅ SESSION 57: Parts sync to Supabase complete');
+      console.log('✅ SESSION 59: Parts sync to Supabase complete');
     }
 
     window.saveDamageCenterChangesWithFeedback = function(event) {
@@ -9770,19 +9793,21 @@
 
     // CREATE EDITABLE PART ROW - FROM FINAL-REPORT-BUILDER
     function createEditablePartRow(part, centerIndex, partIndex) {
-      console.log(`🔍 SESSION 57: Creating part row ${partIndex} for center ${centerIndex}:`, part);
+      console.log(`🔍 SESSION 59: Creating part row ${partIndex} for center ${centerIndex}:`, part);
       
-      // SESSION 49 + SESSION 57: Extract fields with Session 54 field names (total_cost, part_name, pcode)
+      // ✅ SESSION 59: Extract ALL 5 fields including price_per_unit
       const catalogCode = part?.catalog_code || part?.pcode || part?.catalogue_code || part?.part_code || part?.["קוד קטלוגי"] || '';
       const partName = part?.name || part?.part_name || part?.["שם חלק"] || '';
+      const pricePerUnit = part?.price_per_unit || part?.price || 0;  // ✅ NEW FIELD
       const quantity = part?.quantity || part?.qty || part?.["כמות"] || 1;
-      // ✅ SESSION 57 FIX: Use total_cost (Session 54 standard), not total_price
-      const totalPrice = part?.total_cost || part?.cost || part?.total_price || part?.["סה\"כ מחיר"] || part?.price || 0;
       
-      console.log(`  📋 Extracted: name="${partName}", catalog="${catalogCode}", qty=${quantity}, price=${totalPrice}`);
+      // ✅ SESSION 59: Calculate total (not editable, derived from price_per_unit × quantity)
+      const totalCost = pricePerUnit * quantity;
+      
+      console.log(`  📋 SESSION 59: Extracted: catalog="${catalogCode}", name="${partName}", price_per_unit=${pricePerUnit}, qty=${quantity}, calculated_total=${totalCost}`);
       
       return `
-        <div class="part-row" data-center="${centerIndex}" data-part="${partIndex}" style="display: grid; grid-template-columns: 1.5fr 2fr 1fr 1fr auto; gap: 8px; margin-bottom: 8px; padding: 8px; background: #f9f9f9; border-radius: 4px;">
+        <div class="part-row" data-center="${centerIndex}" data-part="${partIndex}" style="display: grid; grid-template-columns: 1.5fr 2fr 1fr 1fr 1fr auto; gap: 8px; margin-bottom: 8px; padding: 8px; background: #f9f9f9; border-radius: 4px;">
           <div>
             <label style="font-size: 12px; color: #666; margin-bottom: 2px; display: block;">קוד קטלוגי:</label>
             <input type="text" value="${catalogCode}" placeholder="קוד קטלוגי" class="part-catalog-code" 
@@ -9796,14 +9821,21 @@
             <div class="part-suggestions" style="position: absolute; top: 100%; left: 0; right: 0; background: white; border: 1px solid #ddd; border-top: none; border-radius: 0 0 4px 4px; display: none; z-index: 1000; max-height: 200px; overflow-y: auto;"></div>
           </div>
           <div>
+            <label style="font-size: 12px; color: #666; margin-bottom: 2px; display: block;">מחיר ליחידה:</label>
+            <input type="number" value="${pricePerUnit}" placeholder="מחיר ליחידה" class="part-price-per-unit" step="0.01"
+                   style="width: 100%; padding: 6px; border: 1px solid #ddd; border-radius: 4px; font-size: 13px;"
+                   onchange="estimatorRecalculatePartTotal(${centerIndex}, ${partIndex})" />
+          </div>
+          <div>
             <label style="font-size: 12px; color: #666; margin-bottom: 2px; display: block;">כמות:</label>
             <input type="number" value="${quantity}" placeholder="כמות" class="part-quantity" min="1" 
-                   style="width: 100%; padding: 6px; border: 1px solid #ddd; border-radius: 4px; font-size: 13px;" />
+                   style="width: 100%; padding: 6px; border: 1px solid #ddd; border-radius: 4px; font-size: 13px;"
+                   onchange="estimatorRecalculatePartTotal(${centerIndex}, ${partIndex})" />
           </div>
           <div>
             <label style="font-size: 12px; color: #666; margin-bottom: 2px; display: block;">סה"כ מחיר:</label>
-            <input type="number" value="${totalPrice}" placeholder="מחיר" class="part-total-price" 
-                   style="width: 100%; padding: 6px; border: 1px solid #ddd; border-radius: 4px; font-size: 13px;" />
+            <input type="number" value="${totalCost}" placeholder="מחיר" class="part-total-cost" readonly
+                   style="width: 100%; padding: 6px; border: 1px solid #ddd; border-radius: 4px; font-size: 13px; background-color: #f5f5f5; cursor: not-allowed;" />
           </div>
           <div style="align-self: end;">
             <button onclick="estimateRemovePartRow(${centerIndex}, ${partIndex})" style="background: #dc3545; color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 12px;">מחק</button>
@@ -9811,6 +9843,33 @@
         </div>
       `;
     }
+
+    // ✅ SESSION 59: Calculate and update part total when price or quantity changes
+    window.estimatorRecalculatePartTotal = function(centerIndex, partIndex) {
+      const row = document.querySelector(`.part-row[data-center="${centerIndex}"][data-part="${partIndex}"]`);
+      if (!row) {
+        console.error(`❌ SESSION 59: Part row not found: center=${centerIndex}, part=${partIndex}`);
+        return;
+      }
+      
+      // Read current values
+      const pricePerUnit = parseFloat(row.querySelector('.part-price-per-unit')?.value) || 0;
+      const quantity = parseInt(row.querySelector('.part-quantity')?.value) || 1;
+      
+      // ✅ Basic calculation (Session 59: price_per_unit × quantity)
+      let total = pricePerUnit * quantity;
+      
+      // 🚀 FUTURE: Apply reduction and wear from data attributes (Session 54 formula)
+      // const reduction = parseFloat(row.dataset.reduction) || 0;
+      // const wear = parseFloat(row.dataset.wear) || 0;
+      // const updatedPrice = pricePerUnit * (1 - reduction/100) * (1 - wear/100);
+      // total = updatedPrice * quantity;
+      
+      // Update total field
+      row.querySelector('.part-total-cost').value = total.toFixed(2);
+      
+      console.log(`✅ SESSION 59: Recalculated part total: ${pricePerUnit} × ${quantity} = ${total}`);
+    };
 
     // CREATE EDITABLE WORK ROW WITH DROPDOWN - FROM FINAL-REPORT-BUILDER
     function createEditableWorkRow(work, centerIndex, workIndex) {
