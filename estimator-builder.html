@@ -10083,6 +10083,14 @@
       try {
         const damageCentersContent = document.getElementById('damageCentersContent');
         
+        console.log('🔍 SESSION 57 DEBUG: loadDamageCentersSummary called');
+        console.log('  helper.centers:', helper.centers);
+        console.log('  helper.centers length:', helper.centers?.length);
+        if (helper.centers && helper.centers.length > 0) {
+          console.log('  First center Parts:', helper.centers[0].Parts);
+          console.log('  First center Parts.parts_required:', helper.centers[0].Parts?.parts_required);
+        }
+        
         const damageCenters = helper.centers || 
                              helper.damage_centers || 
                              helper.expertise?.damage_blocks || [];
@@ -10124,6 +10132,9 @@
 
     function adaptCenterToBlock(center, index) {
       const adaptedBlock = {
+        // ✅ SESSION 57 FIX: Preserve ID field FIRST (from Session 56 pattern)
+        Id: center.Id || center.id || center.code || center.damage_center_code || '',
+        
         damage_center_name: center.Location || center.damage_center_name || `מוקד נזק ${index + 1}`,
         damage_center_number: (() => {
           const num = center["Damage center Number"] || center.damage_center_number || (index + 1);
@@ -10152,6 +10163,17 @@
       }
       if (Array.isArray(center.Repairs) && adaptedBlock.repairs.length === 0) {
         adaptedBlock.repairs = center.Repairs;
+      }
+      
+      console.log(`✅ SESSION 57: Adapted block ${index}:`, adaptedBlock);
+      console.log(`  🆔 ID preserved: ${adaptedBlock.Id || 'MISSING!'}`);
+      console.log(`📋 Parts found: ${adaptedBlock.parts.length}, Works found: ${adaptedBlock.works.length}`);
+      console.log(`  🔍 Parts array:`, adaptedBlock.parts);
+      console.log(`  🔍 Original center.Parts:`, center.Parts);
+      
+      if (!adaptedBlock.Id) {
+        console.warn(`⚠️ SESSION 57: Center ${index} has NO ID after adaptation!`);
+        console.warn('  Original center object:', center);
       }
       
       return adaptedBlock;
