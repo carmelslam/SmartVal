@@ -18823,30 +18823,23 @@
         return;
       }
       
-      // Get original sum from damage_assessment.totals
-      const originalSum = window.helper?.damage_assessment?.totals?.["Total without VAT"] || 0;
+      // Get original sum from displayed "Total without VAT" value
+      const totalWithoutVatElement = document.querySelector('#damageCentersSummary .summary-total[style*="font-size:16px"]');
+      let originalSum = 0;
+      
+      if (totalWithoutVatElement) {
+        const text = totalWithoutVatElement.textContent || '';
+        originalSum = parseFloat(text.replace(/[₪,]/g, '')) || 0;
+      }
       
       // Get VAT rate (NEVER hardcode!)
       const vatRate = window.helper?.calculations?.vat_rate || 0.17;
       
-      console.log('🔍 SESSION 62 Debug:', {
-        originalSum,
-        vatRate,
-        percentage,
-        helperVatRate: window.helper?.calculations?.vat_rate
-      });
-      
       // Calculate values (SESSION 62: Round all to whole numbers)
       const discountValue = Math.round(originalSum * (percentage / 100));
       const totalAfterDiscount = Math.round(originalSum - discountValue);
-      const totalWithVAT = Math.round(totalAfterDiscount * (1 + vatRate));
-      
-      console.log('🔍 SESSION 62 Calculated:', {
-        discountValue,
-        totalAfterDiscount,
-        totalWithVAT,
-        formula: `${totalAfterDiscount} * (1 + ${vatRate}) = ${totalWithVAT}`
-      });
+      const vatAmount = Math.round(totalAfterDiscount * vatRate);
+      const totalWithVAT = totalAfterDiscount + vatAmount;
       
       // Update UI display fields
       const caseOriginalSum = document.getElementById('caseOriginalSum');
