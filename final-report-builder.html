@@ -3827,8 +3827,20 @@
       const partSource = part?.source || part?.מקור || '';
       const catalogCode = part?.catalog_code || part?.pcode || part?.part_number || '';
       
+      // 🔍 SESSION 61 FIX: Generate UUID if missing - don't leave empty!
+      let rowUuid = part?.row_uuid;
+      if (!rowUuid || rowUuid === '') {
+        rowUuid = crypto.randomUUID();
+        console.warn(`⚠️ SESSION 61 FINAL-REPORT: Part "${partName}" has NO row_uuid! Generated new: ${rowUuid}`);
+        if (part) {
+          part.row_uuid = rowUuid;
+        }
+      } else {
+        console.log(`✅ SESSION 61 FINAL-REPORT: Part "${partName}" has row_uuid: ${rowUuid}`);
+      }
+      
       return `
-        <div class="part-row" data-center="${centerIndex}" data-part="${partIndex}" 
+        <div class="part-row" data-center="${centerIndex}" data-part="${partIndex}" data-row-uuid="${rowUuid}" 
              style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; padding: 12px; background: #f9f9f9; border-radius: 6px; border: 1px solid #e0e0e0;">
           
           <!-- Row 1: Catalog Number + Part Name (Responsive Grid) -->
@@ -11798,8 +11810,27 @@
       setTimeout(addDamageCenterEventListeners, 100);
     }
 
+    // 🔍 SESSION 61: Save guard variables for final-report
+    let isSavingDamageCentersFinalReport = false;
+    let lastSaveTimeFinalReport = 0;
+    
     // SAVE DAMAGE CENTER CHANGES TO HELPER
     function saveDamageCenterChanges() {
+      // 🔍 SESSION 61 FIX: Prevent duplicate saves within 2 seconds
+      const now = Date.now();
+      if (isSavingDamageCentersFinalReport) {
+        console.warn('⚠️ SESSION 61 FINAL-REPORT: Save already in progress, skipping');
+        return false;
+      }
+      if (now - lastSaveTimeFinalReport < 2000) {
+        console.warn(`⚠️ SESSION 61 FINAL-REPORT: Last save was ${Math.round((now - lastSaveTimeFinalReport) / 1000)}s ago, skipping (2s debounce)`);
+        return false;
+      }
+      
+      isSavingDamageCentersFinalReport = true;
+      lastSaveTimeFinalReport = now;
+      console.log('✅ SESSION 61 FINAL-REPORT: Starting save operation');
+      
       try {
         // 🔧 2-WAY DATA FLOW: Save back to helper.centers (the source of truth)
         const helper = window.helper || {};
@@ -11863,12 +11894,32 @@
             const source = row.querySelector('.part-source')?.value || '';
             
             if (name.trim()) {
-              // Get existing part data to preserve all fields
-              const existingPart = existingParts[partIndex] || {};
+              // 🔍 SESSION 61 FIX: Get UUID from DOM and validate
+              const rowUuidFromDOM = row.getAttribute('data-row-uuid') || row.dataset.rowUuid;
+              
+              console.log(`🔍 SESSION 61 FINAL-REPORT: Processing part "${name}" (index ${partIndex})`);
+              console.log(`  rowUuidFromDOM: "${rowUuidFromDOM}" (empty: ${!rowUuidFromDOM || rowUuidFromDOM === ''})`);
+              
+              // CRITICAL: Skip parts without UUID
+              if (!rowUuidFromDOM || rowUuidFromDOM === '') {
+                console.error(`❌ SESSION 61 FINAL-REPORT: SKIPPING part "${name}" - no UUID in DOM!`);
+                return;
+              }
+              
+              // Match by UUID (not index!)
+              const existingPart = existingParts.find(p => p.row_uuid === rowUuidFromDOM) || {};
+              
+              if (existingPart && existingPart.row_uuid) {
+                console.log(`  ✅ Matched existing part by UUID: ${existingPart.row_uuid}`);
+              } else {
+                console.warn(`  ⚠️ UUID "${rowUuidFromDOM}" from DOM but NO matching part - this is a NEW part`);
+              }
               
               // ✅ SESSION 54 FIX: Merge existing data with new data (preserve all fields)
+              // 🔍 SESSION 61 CRITICAL FIX: Use UUID from DOM (already validated above)
               const partObject = {
                 ...existingPart,                    // Preserve ALL existing fields first
+                row_uuid: rowUuidFromDOM,           // ✅ SESSION 61: Use UUID from DOM
                 name: name,                         // Update from UI
                 part_name: name,
                 catalog_code: catalogCode,          // Update from UI
@@ -12100,9 +12151,14 @@
         triggerFloatingScreenRefresh();
         
         console.log('Damage centers saved:', helper.expertise.damage_blocks);
+        console.log('✅ SESSION 61 FINAL-REPORT: Save operation completed successfully');
         
       } catch (error) {
-        console.error('Error saving damage center changes:', error);
+        console.error('❌ SESSION 61 FINAL-REPORT: Error saving damage center changes:', error);
+      } finally {
+        // 🔍 SESSION 61: Reset save guard
+        isSavingDamageCentersFinalReport = false;
+        console.log('🔓 SESSION 61 FINAL-REPORT: Save guard released');
       }
     }
     
