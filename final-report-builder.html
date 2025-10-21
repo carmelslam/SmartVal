@@ -11563,13 +11563,22 @@
             }
           }
           
-          // Generate or preserve row_uuid (required for upsert)
-          // Use crypto.randomUUID() for proper UUID format
-          const rowUuid = part.row_uuid || crypto.randomUUID();
+          // ✅ SESSION 60 TASK 3: ONLY preserve existing row_uuid, NEVER regenerate
+          // If part doesn't have row_uuid, it means it's truly new (should have been created in wizard/parts-required)
+          const rowUuid = part.row_uuid;
+          
+          if (!rowUuid) {
+            console.error('❌ SESSION 60: Part missing row_uuid! This should have been created in wizard. Part:', partName);
+            // Generate ONLY for truly new parts (shouldn't happen in normal flow)
+            const newUuid = crypto.randomUUID();
+            part.row_uuid = newUuid;
+            window.helper.centers[centerIndex].Parts.parts_required[partIndex].row_uuid = newUuid;
+            console.warn('⚠️ SESSION 60: Generated emergency UUID:', newUuid);
+          }
           
           const supabaseData = {
             // ✅ SESSION 54 FIX: row_uuid is the PRIMARY KEY for upsert
-            row_uuid: rowUuid,
+            row_uuid: rowUuid || part.row_uuid,
             
             // Required fields
             plate: normalizedPlate,
@@ -11601,11 +11610,8 @@
             updated_at: new Date().toISOString()
           };
           
-          // ✅ SESSION 54 FIX: Update helper with row_uuid
-          if (!part.row_uuid) {
-            part.row_uuid = rowUuid;
-            window.helper.centers[centerIndex].Parts.parts_required[partIndex].row_uuid = rowUuid;
-          }
+          // ❌ SESSION 60 TASK 3: REMOVED - Don't update helper.row_uuid here (already done above if needed)
+          // This code block was causing duplicate UUIDs by updating helper after Supabase save
           
           // Use upsert with row_uuid as conflict key (as per Session 39 docs)
           const { error } = await window.supabase

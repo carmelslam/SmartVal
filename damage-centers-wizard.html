@@ -3785,7 +3785,12 @@
             // SESSION 40: CLEAN structure - 25 fields, NO duplicates
             helper.current_damage_center.Parts.parts_required = partsData.map(part => ({
               // Core identification (4 fields)
-              row_uuid: part.row_uuid || crypto.randomUUID(),
+              // ✅ SESSION 60 TASK 3: PRESERVE existing row_uuid, NEVER regenerate
+              row_uuid: part.row_uuid || (() => {
+                const newUuid = crypto.randomUUID();
+                console.warn('⚠️ SESSION 60: Part missing row_uuid in wizard, generating:', newUuid, 'Part:', part.name);
+                return newUuid;
+              })(),
               case_id: part.case_id || helper.current_damage_center.case_id || '',
               plate: part.plate || helper.current_damage_center.plate || helper.vehicle?.plate || '',
               damage_center_code: part.damage_center_code || helper.current_damage_center.code || '',
@@ -6952,7 +6957,12 @@
         // Use the SAME 25-field mapping as saveCurrentStepData case 5 (lines 3628-3673)
         helper.current_damage_center.Parts.parts_required = partsData.map(part => ({
             // Core identification (4 fields)
-            row_uuid: part.row_uuid || crypto.randomUUID(),
+            // ✅ SESSION 60 TASK 3: PRESERVE existing row_uuid, NEVER regenerate
+            row_uuid: part.row_uuid || (() => {
+              const newUuid = crypto.randomUUID();
+              console.warn('⚠️ SESSION 60: Part missing row_uuid in wizard message handler, generating:', newUuid, 'Part:', part.name);
+              return newUuid;
+            })(),
             case_id: part.case_id || helper.current_damage_center.case_id || '',
             plate: part.plate || helper.current_damage_center.plate || helper.vehicle?.plate || '',
             damage_center_code: part.damage_center_code || helper.current_damage_center.code || '',

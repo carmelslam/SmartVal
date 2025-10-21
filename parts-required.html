@@ -638,7 +638,14 @@ function savePartsData() {
 
   document.querySelectorAll("#partsList .row").forEach(row => {
     // ✅ SESSION 54 FIX: Read ALL UI fields including pricing, reductions, IDs
-    const rowUuid = row.getAttribute('data-row-uuid') || '';
+    // ✅ SESSION 60 TASK 3: Preserve existing row_uuid or generate NEW one ONLY for new parts
+    let rowUuid = row.getAttribute('data-row-uuid');
+    if (!rowUuid) {
+      // Generate new UUID ONLY if this is truly a new part (no existing UUID in DOM)
+      rowUuid = crypto.randomUUID();
+      row.setAttribute('data-row-uuid', rowUuid);
+      console.log('✅ SESSION 60: Generated new row_uuid for new part:', rowUuid);
+    }
     const name = row.querySelector(".name")?.value.trim() || '';
     const pcode = row.querySelector('.catalog-code')?.value.trim() || '';
     const desc = row.querySelector(".description")?.value.trim() || '';
@@ -1699,7 +1706,12 @@ function savePartsData() {
       
       const rowIndex = partsList.children.length;
       newRow.setAttribute('data-row-index', rowIndex);
-      newRow.setAttribute('data-row-uuid', partData.row_uuid || crypto.randomUUID());
+      // ✅ SESSION 60 TASK 3: Preserve existing row_uuid or generate for NEW part
+      const rowUuid = partData.row_uuid || crypto.randomUUID();
+      newRow.setAttribute('data-row-uuid', rowUuid);
+      if (!partData.row_uuid) {
+        console.log('✅ SESSION 60: Generated row_uuid for new part from data:', rowUuid);
+      }
       
       // SESSION 39: Parse pricing fields with EXTENSIVE fallback for old/new data
       // Try NEW fields first, then OLD fields, then defaults
@@ -2765,10 +2777,16 @@ function savePartsData() {
         return;
       }
       
-      let rowUuid = row.dataset.rowUuid;
+      // ✅ SESSION 60 TASK 3: CRITICAL - Preserve row_uuid from DOM data attribute
+      let rowUuid = row.dataset.rowUuid || row.getAttribute('data-row-uuid');
       if (!rowUuid) {
+        // Only generate if truly missing (new part)
         rowUuid = crypto.randomUUID();
         row.dataset.rowUuid = rowUuid;
+        row.setAttribute('data-row-uuid', rowUuid);
+        console.log('✅ SESSION 60: Generated row_uuid for save:', rowUuid);
+      } else {
+        console.log('✅ SESSION 60: Preserving existing row_uuid:', rowUuid);
       }
       
       const partName = row.querySelector('.name')?.value || '';
