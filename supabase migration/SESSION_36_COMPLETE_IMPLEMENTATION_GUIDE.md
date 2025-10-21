@@ -1079,3 +1079,259 @@ Before marking complete:
 **End of Session 36 Implementation Guide**
 
 Session 37: Start with Task 1 (SQL migration), then proceed in order through Task 8. Test thoroughly after each task. Good luck!
+
+**SESSION 57 TASK**
+ESTIMATOR BUILDER - CRITICAL BUG FIX TASK
+⚠️ CRITICAL WARNINGS & CONSTRAINTS
+ABSOLUTE DO NOTS:
+* ❌ DO NOT modify any code from sessions 36-56 these sessions built working functionality
+* ❌ DO NOT change page structure or UI layout (except the width overflow fix)
+* ❌ DO NOT refactor or "improve" working logic
+* ❌ This is a RESTORATION task, not a development task
+THIS IS A DEBUGGING MISSION - PRESERVE WHAT WORKS, FIX WHAT BROKE
+
+📚 Required Reading (MANDATORY BEFORE STARTING)
+You MUST read these sessions to understand the system:
+1. Sessions 36-56 - Full session summaries
+2. Location: supabase migration folder
+3. Key document: supabase and parts search module integration.md
+4. Critical reference: Session 55-56 files about damage center ID handling
+Why this matters: The estimator and final report are TWO SEPARATE PATHS that both write to damage centers. Understanding how they were designed to coexist is essential.
+
+🔴 CRITICAL ISSUE #1: Parts Data Deletion Bug
+Problem Description
+SEVERE: Adding a new part in the estimator UI DELETES ALL EXISTING PARTS in the damage center and replaces them with only the newly added part.
+What Happened (Timeline)
+1. User worked on estimator
+2. "Parts required" HTML was cleared (lost costs and details)
+3. Final report was also cleared
+4. User restored "parts required" section → final report auto-restored ✅
+5. BUT estimator broke ❌
+6. Now: Adding any part = deletes all existing parts
+Root Cause Hypothesis
+JSON structure mismatch between:
+* Final report builder's "add part" JSON structure
+* Estimator's "add part" JSON structure
+* Damage centers id problem 
+When estimator sends differently structured JSON, it OVERWRITES instead of APPENDS.
+
+Investigation Steps for Issue #1
+Step 1: Capture & Compare JSON Structures
+Create a comparison table:
+Source	Action	JSON Structure	Damage Center ID	Behavior
+Final Report Builder	Add Part	{...}	dc_xxx	✅ Appends correctly
+Estimator	Add Part	{...}	dc_???	❌ Overwrites/deletes
+How to capture:
+// Add console.log to both modules before sending to damage centers
+console.log('JSON being sent:', JSON.stringify(partData, null, 2));
+console.log('Target damage center ID:', damageCenterId);
+Step 2: Verify Damage Center ID Consistency
+CRITICAL REFERENCE: Check sessions documentation about damage center ID handling
+Verify:
+* [ ] Estimator receives correct damage center ID when loading parts
+* [ ] Estimator preserves the same damage center ID when adding new parts
+* [ ] New part is added to the same damage center displayed in UI
+* [ ] No accidental creation of new damage center IDs
+Common mistakes:
+* Creating a new damage center instead of updating existing one
+* Wrong ID reference causing write to different damage center
+* ID not being passed through the add part function
+Step 3: Check JSON Field Matching
+The estimator's JSON must EXACTLY MATCH the final report's JSON structure, field by field:
+// Required fields (example - verify from final report code):
+{
+    "row_uuid": "cd4296d8-1dde-4dbb-9624-b8c16534670f",
+    "case_id": "c52af5d6-3b78-47b8-88a2-d2553ee3e1af",
+    "plate": "221-84-003",
+    "damage_center_code": "dc_1760973785017_1",
+    "part_name": "כנף קד' שמ' - קורולה קרוס 022-",
+    "description": "כנף קד' שמ' - קורולה קרוס 022-",
+    "pcode": "VB42074012",
+    "oem": "",
+    "supplier_name": "מ.פינס בע",
+    "part_family": "",
+    "manufacturer": "",
+    "price_per_unit": 5998.96,
+    "reduction_percentage": 0,
+    "wear_percentage": 4,
+    "updated_price": 5759,
+    "total_cost": 11518,
+    "source": "חליפי",
+    "quantity": 2,
+    "make": "",
+    "model": "COROLLA CROSS",
+    "year": "2022",
+    "trim": "ADVENTURE",
+    "engine_code": "",
+    "engine_type": "בנזין",
+    "vin": "",
+    "metadata": {},
+    "updated_at": "2025-10-20T16:28:47.539Z",
+    "מחיר": 5759,
+    "מיקום": "ישראל",
+    "הערות": "",
+    "זמינות": "זמין"
+}
+If fields are missing or named differently → data corruption
+
+Required Fix for Issue #1
+CORRECT BEHAVIOR:
+1. On Import from Centers:
+    * Estimator receives complete JSON from damage centers
+    * Captures entire JSON structure
+    * Displays only needed fields in UI (hide unnecessary ones)
+    * Stores complete data in memory
+2. On Add New Part:
+    * Constructs JSON matching final report's exact structure
+    * Includes same damage center ID from imported data
+    * Sends to helper.estimator AND damage centers
+    * APPENDS to existing parts (does not replace)
+    * Sends to Supabase with correct damage center ID
+3. Verification:
+    * Part appears in estimator UI ✅
+    * Part appears in damage centers ✅
+    * Part appears in final report ✅
+    * Existing parts remain intact ✅
+    * Part is usable system-wide ✅
+
+🔴 CRITICAL ISSUE #2: Import Problem
+Problem Description
+The import of required parts to "estimator damage section" is broken - parts stopped importing details properly.
+Investigation Checklist
+* [ ] Read the import approach documentation from sessions 36-56
+* [ ] Check if data exists in damage centers (verify in Supabase)
+* [ ] Verify damage center ID is correct when importing
+* [ ] Check if import function is reading all required fields
+* [ ] Verify mapping between damage center data and UI fields
+* [ ] Test with known working damage center data
+Required Fix for Issue #2
+Change the mapping to capture original costs per item:
+Current (broken): May be importing calculated totals or missing price data
+Required:
+// For each part, capture:
+{
+  original_price_per_unit: part.price,  // Individual item price
+  quantity: part.quantity,
+  discount_percent: part.discount || 0,
+  wear_percent: part.wear || 0
+  // Do NOT import pre-calculated total
+}
+Change total cost to ON-PAGE calculation:
+// Calculate in UI, not from imported data
+total_cost = price_per_unit × quantity × (1 - discount%) × (1 - wear%)
+Why: Total cost from damage centers may be outdated or calculated differently. Always recalculate on page to ensure accuracy.
+
+🔴 ISSUE #3: UI Width Overflow
+Problem
+Parts floating section slides outside page boundaries.
+Required Fix
+/* Apply to parts container */
+.parts-container {
+  max-width: 100%;
+  overflow-x: auto;  /* Allow horizontal scroll if needed */
+  box-sizing: border-box;
+}
+
+/* Or make content responsive */
+.parts-container {
+  width: 100%;
+  display: flex;
+  flex-wrap: wrap;  /* Wrap to next line if too wide */
+}
+Test on:
+* Desktop wide screen
+* Laptop (1366px)
+* Tablet landscape
+* Ensure no horizontal page scroll
+
+🔍 Debugging Methodology
+Phase 1: Understanding (30 min)
+1. Read sessions 36-56 summaries
+2. Read supabase integration docs
+3. Map out data flow: Damage Centers ↔ Estimator ↔ Final Report
+4. Identify separation between two paths
+Phase 2: Data Investigation (45 min)
+1. Check Supabase: Verify damage center data structure
+2. Inspect helper.estimator object structure
+3. Console.log all JSON being sent/received
+4. Compare with final report's JSON structure
+5. Verify damage center IDs match across operations
+Phase 3: Code Analysis (60 min)
+1. Locate "add part" function in estimator
+2. Locate "import parts" function in estimator
+3. Compare with final report's equivalent functions
+4. Identify structural differences
+5. Check for overwrite vs append logic
+Phase 4: Targeted Fixes (90 min)
+1. Fix JSON structure to match final report
+2. Fix damage center ID handling
+3. Fix import mapping for original prices
+4. Change total to on-page calculation
+5. Fix width overflow
+6. Test each fix individually
+Phase 5: Integration Testing (30 min)
+1. Test: Import parts from damage center
+2. Test: Add new part in estimator
+3. Test: Verify existing parts remain
+4. Test: Check Supabase data
+5. Test: Verify in final report
+6. Test: UI responsiveness
+
+✅ Success Criteria
+Issue #1 Fixed:
+* [ ] Adding part in estimator does NOT delete existing parts
+* [ ] New part appears alongside existing parts
+* [ ] Correct damage center ID preserved
+* [ ] Data properly saved to Supabase
+* [ ] Part visible in final report
+Issue #2 Fixed:
+* [ ] Parts import with all details from damage centers
+* [ ] Original price per unit correctly displayed
+* [ ] Total cost calculated on page (price × quantity)
+* [ ] Discount and wear percentages imported correctly
+Issue #3 Fixed:
+* [ ] Parts section fits within page boundaries
+* [ ] No horizontal page overflow
+* [ ] Responsive on all screen sizes
+System Integrity:
+* [ ] Final report still works independently
+* [ ] Estimator works independently
+* [ ] Both can read/write to damage centers without conflict
+* [ ] No regression in sessions 47-51 functionality
+
+🚨 Red Flags to Watch For
+If you see any of these, STOP and investigate:
+1. New damage center created when adding part → ID handling broken
+2. Empty arrays in Supabase after add → Overwrite instead of append
+3. Missing fields in imported data → Mapping incomplete
+4. Different JSON structure than final report → Will cause conflicts
+5. Total costs not matching calculations → Using imported totals instead of calculating
+
+📝 Suggested Testing Sequence
+1. Start with clean damage center with 3 existing parts
+2. Open estimator
+3. Verify 3 parts import correctly with all details
+4. Add 4th part via estimator UI
+5. Check: All 4 parts visible in estimator ✅
+6. Check Supabase: damage center has 4 parts ✅
+7. Open final report: see all 4 parts ✅
+8. Add 5th part via final report
+9. Refresh estimator: see all 5 parts ✅
+10. Verify width fits on different screens ✅
+
+💡 Key Insights from Architecture
+The System Design:
+* Two separate paths: Estimator & Final Report
+* Shared storage: Both write to damage centers
+* Independence: Neither should break the other
+* Data flow: Centers → Helper → UI → Centers (round trip)
+Why it broke:
+* Something in sessions 47-51 changed how estimator writes to centers
+* JSON structure diverged from final report's structure
+* Likely an overwrite operation instead of append/merge
+The fix:
+* Align JSON structures between both paths
+* Ensure append behavior, not overwrite
+* Preserve damage center ID consistency
+* Calculate totals on page, not from import
+
