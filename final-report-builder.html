@@ -13346,22 +13346,12 @@
       
       console.log('📊 Saved totals_after_differentials to helper:', helper.damage_assessment.totals_after_differentials);
       
-      // Update authorizedClaim field - always update whether differentials exist or not
+      // Update authorizedClaim field - ALWAYS use original totals (NOT after differentials)
       const authorizedClaimField = document.getElementById('authorizedClaim');
       if (authorizedClaimField) {
-        let claimTotal, claimValue;
-        
-        if (hasDifferentials) {
-          // Use after-differentials value when differentials exist
-          claimTotal = helper.damage_assessment.totals_after_differentials["Total with VAT"];
-          claimValue = `₪${claimTotal.toLocaleString()}`;
-          console.log('🔄 Updated authorizedClaim to after-differentials value:', claimTotal);
-        } else {
-          // Use original totals when no differentials
-          claimTotal = helper.damage_assessment?.totals?.["Total with VAT"] || finalTotalWithVat;
-          claimValue = `₪${claimTotal.toLocaleString()}`;
-          console.log('🔄 Updated authorizedClaim to original value (no differentials):', claimTotal);
-        }
+        // Always use original totals, same as totalClaimGross
+        const claimTotal = helper.damage_assessment?.totals?.["Total with VAT"] || 0;
+        const claimValue = claimTotal ? `₪${claimTotal.toLocaleString()}` : '';
         
         authorizedClaimField.value = claimValue;
         
