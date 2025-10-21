@@ -31549,3 +31549,877 @@ function createEditablePartRow(part, centerIndex, partIndex) {
 
 **Status**: ✅ FIXES IMPLEMENTED  
 **Next Step**: User testing - refresh estimator page and verify parts now render with data
+
+---
+---
+---
+
+# Session 59: Case UUID Association & Price Per Unit UI Enhancement
+
+**Date**: 2025-10-21  
+**Session**: 59  
+**Status**: ⏳ PENDING IMPLEMENTATION  
+**Previous Session**: Session 58 - Fixed parts rendering with duplicate functions
+
+---
+
+## Executive Summary
+
+Session 59 addresses two critical issues discovered after Session 58's successful parts rendering fix:
+
+1. **CRITICAL DATA INTEGRITY BUG**: Neither final-report-builder.html nor estimator-builder.html properly assign the case UUID (case_id) to parts when saving to Supabase. This causes:
+   - Duplicate parts entries with NULL case_id values
+   - Loss of case association across system operations
+   - Data integrity violations in parts_required table
+
+2. **UI ENHANCEMENT REQUEST**: Add price_per_unit field to estimator parts UI and convert total_cost to a locally calculated field (price_per_unit × quantity). This:
+   - Provides better price transparency
+   - Enables future reduction% and wear% calculations
+   - Matches final-report UI functionality (5-field layout vs current 4-field)
+
+**Evidence**:
+- Screenshot shows Supabase parts_required table with NULL case_id values across multiple rows
+- Same damage_center_code appearing multiple times indicates duplication problem
+- User's annotated screenshot shows current 4-field estimator UI needs price_per_unit addition
+
+**Impact**:
+- **Issue #1**: HIGH SEVERITY - Data duplication, broken relational integrity
+- **Issue #2**: MEDIUM SEVERITY - UX improvement, future-proofs calculation system
+
+---
+
+## Problem 1: Case UUID Not Being Assigned to Parts
+
+### Current Behavior (BROKEN)
+
+**File**: `estimator-builder.html`
+
+**Line 2913** - Falls back to empty string:
+```javascript
+case_id: existingPart.case_id || '',  // ❌ Empty string if not in existing part!
+```
+
+**Line 3300** - Falls back to NULL in Supabase sync:
+```javascript
+case_id: part.case_id || null,  // ❌ NULL creates duplicate entries!
+```
+
+**File**: `final-report-builder.html` (needs investigation)
+- Likely has same issue in part creation/update logic
+- Must apply same fix pattern as estimator
+
+### Evidence of Problem
+
+**Supabase Screenshot Analysis**:
+```
+| id (uuid)                              | case_id | damage_center_code  |
+|---------------------------------------|---------|---------------------|
+| 8aea35a4-7194-4485-bd44-fa0b7e8dc361  | NULL    | dc_1760973925975_2  |
+| 340f229f-b4f7-4a3a-b61a-11d94632ed1a  | NULL    | dc_1760973925975_2  |
+| 5795abd4-8c19-4503-81a8-a597a1e0a216  | NULL    | dc_1760973925975_2  |
+| a765df21-e91e-4082-93ea-bfe90b7027f4  | NULL    | dc_1760973785017_1  |
+```
+
+**Problem Indicators**:
+- All case_id values are NULL
+- Multiple rows with same damage_center_code
+- Indicates parts being duplicated on each save instead of updating
+
+### Root Cause Analysis
+
+**Missing Case UUID Source**: The code falls back to empty/null when `existingPart.case_id` is not present, but it SHOULD:
+1. Look up the actual case UUID from helper object
+2. Assign it to EVERY part operation (create, update, sync)
+
+**Likely Case UUID Locations** (needs investigation):
+- `helper.case_info.case_id` (filing reference, NOT Supabase UUID)
+- `helper.meta.case_id` (possible Supabase UUID storage)
+- Need to check Session 54 architecture for actual location
+
+**Impact on System**:
+- Parts lose association with case
+- Queries by case_id return NULL
+- Duplicate parts accumulate in database
+- Cannot distinguish parts from different cases with same damage center
+
+### Investigation Required
+
+**Step 1**: Find actual case UUID in helper structure
+```javascript
+// Possible locations to check:
+console.log('helper.case_info:', window.helper.case_info);
+console.log('helper.meta:', window.helper.meta);
+console.log('helper.claims_data:', window.helper.claims_data);
+
+// Look for UUID pattern: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+```
+
+**Step 2**: Trace where case UUID is initially set
+- Check final-report-builder.html initialization
+- Check estimator-builder.html initialization
+- Check damage-centers-wizard.html context sending
+
+**Step 3**: Verify case UUID flow
+```
+Wizard Initial Context
+    ↓
+helper object (case UUID stored here)
+    ↓
+Final Report/Estimator (must read UUID)
+    ↓
+Part Creation/Update (must assign UUID)
+    ↓
+Supabase Sync (must include UUID)
+```
+
+### Fix Specification - Estimator
+
+**File**: `estimator-builder.html`
+
+**FIX 1: Line 2913** - Replace fallback with actual case UUID lookup
+```javascript
+// ❌ BEFORE (Session 58):
+case_id: existingPart.case_id || '',
+
+// ✅ AFTER (Session 59):
+case_id: existingPart.case_id || window.helper?.meta?.case_uuid || window.helper?.case_info?.case_uuid || '',
+```
+
+**FIX 2: Line 3300** - Same fix in syncPartsToSupabase()
+```javascript
+// ❌ BEFORE (Session 58):
+case_id: part.case_id || null,
+
+// ✅ AFTER (Session 59):
+case_id: part.case_id || window.helper?.meta?.case_uuid || window.helper?.case_info?.case_uuid || null,
+```
+
+**FIX 3: Add helper validation** at function start
+```javascript
+async function saveDamageCenterChanges() {
+  // ✅ SESSION 59: Validate case UUID exists
+  const caseUuid = window.helper?.meta?.case_uuid || window.helper?.case_info?.case_uuid;
+  if (!caseUuid) {
+    console.error('❌ SESSION 59: No case UUID found in helper!', window.helper);
+    alert('Error: Case UUID missing. Cannot save parts.');
+    return;
+  }
+  
+  console.log('✅ SESSION 59: Using case UUID:', caseUuid);
+  
+  // ... rest of function
+}
+```
+
+### Fix Specification - Final Report
+
+**File**: `final-report-builder.html`
+
+**Investigation Locations** (find these patterns):
+1. Part creation in `saveDamageCenterChanges()`
+2. Part update in `autoSaveDamageCenterChanges()`
+3. Supabase sync in any upsert operations
+
+**Apply Same Pattern**:
+```javascript
+// Find all instances of:
+case_id: part.case_id || 
+
+// Replace with:
+case_id: part.case_id || window.helper?.meta?.case_uuid || window.helper?.case_info?.case_uuid ||
+```
+
+**Search Commands**:
+```bash
+# Find all case_id assignments in final-report
+grep -n "case_id:" final-report-builder.html
+
+# Check for fallback patterns
+grep -n "case_id.*||" final-report-builder.html
+```
+
+### Testing Procedure - Case UUID Fix
+
+**Test 1: Verify Case UUID Exists**
+```javascript
+// Open browser console in final-report or estimator
+console.log('Case UUID test:', {
+  'helper.meta.case_uuid': window.helper?.meta?.case_uuid,
+  'helper.case_info.case_uuid': window.helper?.case_info?.case_uuid,
+  'helper.case_info.case_id': window.helper?.case_info?.case_id
+});
+
+// ✅ SUCCESS: Should show a UUID value
+// ❌ FAIL: All undefined - need different location
+```
+
+**Test 2: Add New Part**
+1. Open estimator-builder.html
+2. Add a new part in any damage center
+3. Save changes
+4. Check Supabase parts_required table
+5. ✅ SUCCESS: New row has case_id populated
+6. ❌ FAIL: case_id is still NULL
+
+**Test 3: Update Existing Part**
+1. Edit an existing part (change name or price)
+2. Save changes
+3. Check Supabase - verify row UPDATED (not duplicated)
+4. ✅ SUCCESS: Same row_uuid, case_id preserved
+5. ❌ FAIL: New duplicate row created with NULL case_id
+
+**Test 4: Cross-Module Consistency**
+1. Add part in final-report-builder
+2. Check Supabase - case_id should be populated
+3. Edit same part in estimator-builder
+4. Check Supabase - case_id should be PRESERVED
+5. ✅ SUCCESS: case_id consistent across both modules
+
+**Test 5: Query by Case**
+```sql
+-- Run in Supabase SQL editor
+SELECT case_id, damage_center_code, part_name, total_cost
+FROM parts_required
+WHERE case_id IS NOT NULL
+ORDER BY case_id, damage_center_code;
+
+-- ✅ SUCCESS: All parts have valid case_id
+-- ❌ FAIL: Still seeing NULL values
+```
+
+---
+
+## Problem 2: Add Price Per Unit Field to Estimator UI
+
+### Current Behavior (4-Field Layout)
+
+**File**: `estimator-builder.html`
+
+**Line 9772-9811**: `createEditablePartRow()` - Current structure
+```javascript
+function createEditablePartRow(part, centerIndex, partIndex) {
+  // Current 4 fields extracted:
+  const catalogCode = part?.catalog_code || part?.pcode || '';
+  const partName = part?.name || part?.part_name || '';
+  const quantity = part?.quantity || part?.qty || 1;
+  const totalPrice = part?.total_cost || part?.cost || 0;  // ← Currently editable
+  
+  return `
+    <div class="part-row" style="
+      display: grid;
+      grid-template-columns: 1.5fr 2fr 1fr 1fr auto;  /* ← 4 fields + delete button */
+      ...
+    ">
+      <div><label>קוד קטלוגי:</label><input class="part-catalog-code" value="${catalogCode}" /></div>
+      <div><label>שם החלק:</label><input class="part-name" value="${partName}" /></div>
+      <div><label>כמות:</label><input class="part-quantity" value="${quantity}" /></div>
+      <div><label>סה"כ מחיר:</label><input class="part-total-price" value="${totalPrice}" /></div>
+      <button onclick="estimateRemovePartRow(${centerIndex}, ${partIndex})">מחק</button>
+    </div>
+  `;
+}
+```
+
+**Current Field Order** (Hebrew labels):
+1. קוד קטלוגי (Catalog Code) - editable
+2. שם החלק (Part Name) - editable
+3. כמות (Quantity) - editable
+4. סה״כ מחיר (Total Price) - editable ❌ SHOULD BE CALCULATED
+
+### Desired Behavior (5-Field Layout)
+
+**New Field Order**:
+1. קוד קטלוגי (Catalog Code) - editable
+2. שם החלק (Part Name) - editable
+3. **מחיר ליחידה (Price Per Unit)** - editable ✅ NEW FIELD
+4. כמות (Quantity) - editable
+5. סה״כ מחיר (Total Cost) - **CALCULATED** ✅ CHANGED BEHAVIOR
+
+**Calculation Formula**:
+```javascript
+// Basic calculation (Session 59):
+total_cost = price_per_unit × quantity
+
+// Future calculation (will support Session 54 formula):
+// updated_price = price_per_unit × (1 - reduction%) × (1 - wear%)
+// total_cost = updated_price × quantity
+```
+
+**User's Requirements** (from annotated screenshot):
+- "add unit price : centers[item].Parts.parts[item].price_per_unit"
+- "make on page claclultion: price per unitX quantity"
+
+### Session 54 Architecture Reference
+
+**Field Priority from Session 54** (lines 78-90):
+```javascript
+{
+  price_per_unit: 500,      // ✅ Primary field - per-unit BEFORE reductions
+  price: 500,               // Alias
+  reduction_percentage: 10, // Future support
+  reduction: 10,            // Alias
+  wear_percentage: 5,       // Future support
+  wear: 5,                  // Alias
+  updated_price: 427.5,     // After reduction & wear
+  total_cost: 855,          // ✅ Final calculated: updated_price × quantity
+  cost: 855,                // Alias
+  quantity: 2,
+  qty: 2                    // Alias
+}
+```
+
+**Calculation Steps** (Session 54 lines 112-130):
+```javascript
+// Step 1: Apply reduction (future)
+priceAfterReduction = price_per_unit × (1 - reduction_percentage / 100)
+
+// Step 2: Apply wear (future)
+priceAfterWear = priceAfterReduction × (1 - wear_percentage / 100)
+
+// Step 3: Store as updated_price
+updated_price = priceAfterWear
+
+// Step 4: Calculate total cost
+total_cost = updated_price × quantity
+```
+
+**For Session 59 (Simplified)**:
+```javascript
+// No reductions yet, so:
+updated_price = price_per_unit
+total_cost = price_per_unit × quantity
+```
+
+### Fix Specification - UI Update
+
+**File**: `estimator-builder.html`
+
+**FIX 1: Line 9772-9811** - Update createEditablePartRow()
+
+```javascript
+function createEditablePartRow(part, centerIndex, partIndex) {
+  console.log(`🔍 SESSION 59: Creating part row ${partIndex} for center ${centerIndex}:`, part);
+  
+  // ✅ SESSION 59: Extract ALL 5 fields (added price_per_unit)
+  const catalogCode = part?.catalog_code || part?.pcode || '';
+  const partName = part?.name || part?.part_name || '';
+  const pricePerUnit = part?.price_per_unit || part?.price || 0;  // ✅ NEW
+  const quantity = part?.quantity || part?.qty || 1;
+  
+  // ✅ SESSION 59: Calculate total (not editable input)
+  const totalCost = pricePerUnit * quantity;
+  
+  console.log(`  📋 Extracted: catalog="${catalogCode}", name="${partName}", price_per_unit=${pricePerUnit}, qty=${quantity}, calculated_total=${totalCost}`);
+  
+  return `
+    <div class="part-row" 
+         data-center="${centerIndex}" 
+         data-part="${partIndex}" 
+         style="
+           display: grid;
+           grid-template-columns: 1.5fr 2fr 1fr 1fr 1fr auto;  /* ✅ Changed from 4 to 5 fields */
+           gap: 10px;
+           align-items: center;
+           padding: 10px;
+           border-bottom: 1px solid #e0e0e0;
+         ">
+      
+      <!-- Field 1: Catalog Code -->
+      <div>
+        <label>קוד קטלוגי:</label>
+        <input type="text" 
+               value="${catalogCode}" 
+               class="part-catalog-code"
+               onchange="estimatorRecalculatePartTotal(${centerIndex}, ${partIndex})" />
+      </div>
+      
+      <!-- Field 2: Part Name -->
+      <div>
+        <label>שם החלק:</label>
+        <input type="text" 
+               value="${partName}" 
+               class="part-name" />
+      </div>
+      
+      <!-- ✅ Field 3: Price Per Unit (NEW) -->
+      <div>
+        <label>מחיר ליחידה:</label>
+        <input type="number" 
+               value="${pricePerUnit}" 
+               class="part-price-per-unit"
+               step="0.01"
+               onchange="estimatorRecalculatePartTotal(${centerIndex}, ${partIndex})" />
+      </div>
+      
+      <!-- Field 4: Quantity -->
+      <div>
+        <label>כמות:</label>
+        <input type="number" 
+               value="${quantity}" 
+               class="part-quantity"
+               onchange="estimatorRecalculatePartTotal(${centerIndex}, ${partIndex})" />
+      </div>
+      
+      <!-- ✅ Field 5: Total Cost (CALCULATED - Read-only) -->
+      <div>
+        <label>סה"כ מחיר:</label>
+        <input type="number" 
+               value="${totalCost}" 
+               class="part-total-cost"
+               readonly
+               style="background-color: #f5f5f5; cursor: not-allowed;" />
+      </div>
+      
+      <!-- Delete Button -->
+      <button onclick="estimateRemovePartRow(${centerIndex}, ${partIndex})" 
+              style="background: #e74c3c; color: white; border: none; padding: 5px 10px; cursor: pointer;">
+        מחק
+      </button>
+    </div>
+  `;
+}
+```
+
+**FIX 2: Add Calculation Function** (insert after createEditablePartRow)
+
+```javascript
+/**
+ * SESSION 59: Calculate and update part total when price or quantity changes
+ * Future-proofed for reduction% and wear% (Session 54 formula)
+ */
+window.estimatorRecalculatePartTotal = function(centerIndex, partIndex) {
+  const row = document.querySelector(`.part-row[data-center="${centerIndex}"][data-part="${partIndex}"]`);
+  if (!row) {
+    console.error(`❌ SESSION 59: Part row not found: center=${centerIndex}, part=${partIndex}`);
+    return;
+  }
+  
+  // Read current values
+  const pricePerUnit = parseFloat(row.querySelector('.part-price-per-unit')?.value) || 0;
+  const quantity = parseInt(row.querySelector('.part-quantity')?.value) || 1;
+  
+  // ✅ Basic calculation (Session 59)
+  let total = pricePerUnit * quantity;
+  
+  // 🚀 FUTURE: Apply reduction and wear from hidden fields (Session 54 formula)
+  // const reduction = parseFloat(row.dataset.reduction) || 0;
+  // const wear = parseFloat(row.dataset.wear) || 0;
+  // const updatedPrice = pricePerUnit * (1 - reduction/100) * (1 - wear/100);
+  // total = updatedPrice * quantity;
+  
+  // Update total field
+  row.querySelector('.part-total-cost').value = total.toFixed(2);
+  
+  console.log(`✅ SESSION 59: Recalculated part total: ${pricePerUnit} × ${quantity} = ${total}`);
+};
+```
+
+### Fix Specification - Save Logic Update
+
+**File**: `estimator-builder.html`
+
+**FIX 3: Line ~2900** - Update saveDamageCenterChanges() to read new field
+
+**Find this section** (current code reads 4 fields):
+```javascript
+card.querySelectorAll('.part-row').forEach((row, partIndex) => {
+  const catalogCode = row.querySelector('.part-catalog-code')?.value || '';
+  const name = row.querySelector('.part-name')?.value || '';
+  const quantity = parseInt(row.querySelector('.part-quantity')?.value) || 1;
+  const totalPrice = parseFloat(row.querySelector('.part-total-price')?.value) || 0;
+  
+  // ... create partObject
+});
+```
+
+**Replace with** (read 5 fields + preserve calculation):
+```javascript
+card.querySelectorAll('.part-row').forEach((row, partIndex) => {
+  // Read from UI
+  const catalogCode = row.querySelector('.part-catalog-code')?.value || '';
+  const name = row.querySelector('.part-name')?.value || '';
+  const pricePerUnit = parseFloat(row.querySelector('.part-price-per-unit')?.value) || 0;  // ✅ NEW
+  const quantity = parseInt(row.querySelector('.part-quantity')?.value) || 1;
+  const totalCost = parseFloat(row.querySelector('.part-total-cost')?.value) || 0;  // ✅ Read calculated value
+  
+  if (name.trim()) {
+    // Get existing part data
+    const existingPart = existingParts[partIndex] || {};
+    
+    const partObject = {
+      ...existingPart,  // ✅ Preserve ALL existing fields
+      
+      // Update from UI (Session 59 fields)
+      catalog_code: catalogCode,
+      pcode: catalogCode,
+      oem: catalogCode,
+      name: name,
+      part_name: name,
+      part: name,
+      price_per_unit: pricePerUnit,  // ✅ NEW - Store per-unit price
+      price: pricePerUnit,            // Alias
+      quantity: quantity,
+      qty: quantity,
+      total_cost: totalCost,          // ✅ Store calculated total
+      cost: totalCost,
+      
+      // ✅ SESSION 59: Ensure case_id assigned
+      case_id: existingPart.case_id || window.helper?.meta?.case_uuid || window.helper?.case_info?.case_uuid || '',
+      
+      // Preserve calculation fields for future use
+      reduction_percentage: existingPart.reduction_percentage || 0,
+      reduction: existingPart.reduction || 0,
+      wear_percentage: existingPart.wear_percentage || 0,
+      wear: existingPart.wear || 0,
+      updated_price: existingPart.updated_price || pricePerUnit,  // Will be calculated when reductions added
+      
+      // Preserve metadata
+      row_uuid: existingPart.row_uuid || '',
+      damage_center_code: existingPart.damage_center_code || centerId,
+      plate: existingPart.plate || window.helper?.meta?.plate || '',
+      
+      updated_at: new Date().toISOString()
+    };
+    
+    parts.push(partObject);
+  }
+});
+```
+
+**FIX 4: Line 3300** - Update syncPartsToSupabase() to include price_per_unit
+
+**Find the upsert call**:
+```javascript
+await window.supabase
+  .from('parts_required')
+  .upsert({
+    row_uuid: rowUuid,
+    plate: normalizedPlate,
+    damage_center_code: centerId,
+    part_name: part.name,
+    catalog_code: part.catalog_code,
+    quantity: part.quantity,
+    // ... other fields
+  }, { onConflict: 'row_uuid' });
+```
+
+**Add price_per_unit to upsert**:
+```javascript
+await window.supabase
+  .from('parts_required')
+  .upsert({
+    row_uuid: rowUuid,
+    plate: normalizedPlate,
+    damage_center_code: centerId,
+    case_id: part.case_id || window.helper?.meta?.case_uuid || null,  // ✅ SESSION 59 FIX
+    part_name: part.name,
+    catalog_code: part.catalog_code,
+    pcode: part.catalog_code,
+    price_per_unit: part.price_per_unit || part.price || 0,  // ✅ SESSION 59 NEW FIELD
+    quantity: part.quantity,
+    total_cost: part.total_cost || 0,
+    reduction_percentage: part.reduction_percentage || 0,
+    wear_percentage: part.wear_percentage || 0,
+    updated_price: part.updated_price || part.price_per_unit || 0,
+    // ... all other fields
+    updated_at: new Date().toISOString()
+  }, { 
+    onConflict: 'row_uuid',
+    ignoreDuplicates: false 
+  });
+```
+
+### Testing Procedure - UI Enhancement
+
+**Test 1: Field Rendering**
+1. Open estimator-builder.html with existing parts
+2. Verify 5 fields render: קוד, שם, מחיר ליחידה, כמות, סה״כ
+3. ✅ SUCCESS: All 5 fields visible with correct labels
+4. ❌ FAIL: Layout broken or fields missing
+
+**Test 2: Calculation on Load**
+1. Open estimator with part having price_per_unit=100, quantity=3
+2. Verify total_cost field shows 300
+3. ✅ SUCCESS: Calculation correct on initial render
+4. ❌ FAIL: Shows 0 or wrong value
+
+**Test 3: Live Calculation - Change Price**
+1. Edit price_per_unit from 100 to 150
+2. Verify total_cost auto-updates to 450
+3. ✅ SUCCESS: Total recalculates immediately
+4. ❌ FAIL: Total doesn't update
+
+**Test 4: Live Calculation - Change Quantity**
+1. Edit quantity from 3 to 5
+2. Verify total_cost auto-updates to 750 (150 × 5)
+3. ✅ SUCCESS: Total recalculates immediately
+4. ❌ FAIL: Total doesn't update
+
+**Test 5: Read-Only Total**
+1. Try to edit total_cost field directly
+2. ✅ SUCCESS: Field is read-only, cursor shows "not-allowed"
+4. ❌ FAIL: Can edit total directly
+
+**Test 6: Save to Helper**
+1. Edit price_per_unit and quantity
+2. Click save
+3. Check window.helper.centers[0].Parts.parts_required[0]
+4. Verify price_per_unit and total_cost both saved correctly
+5. ✅ SUCCESS: Both fields present in helper
+6. ❌ FAIL: price_per_unit missing or total_cost wrong
+
+**Test 7: Save to Supabase**
+1. Edit part and save
+2. Check Supabase parts_required table
+3. Verify row has both price_per_unit and total_cost columns populated
+4. ✅ SUCCESS: Both values in database
+5. ❌ FAIL: price_per_unit NULL or 0
+
+**Test 8: Reload Persistence**
+1. Edit part with price_per_unit=200, quantity=4, total=800
+2. Save and close page
+3. Reopen estimator
+4. Verify all 3 values load correctly
+5. ✅ SUCCESS: All fields persist across reload
+6. ❌ FAIL: price_per_unit lost or total reverts to old value
+
+---
+
+## Integration Testing Checklist
+
+### Cross-Module Testing
+
+**Test 1: Wizard → Estimator → Final Report Flow**
+1. Add part in damage-centers-wizard with price_per_unit=500
+2. Go to estimator-builder
+3. Verify part shows with price_per_unit field
+4. Edit quantity from 1 to 2
+5. Verify total calculates to 1000
+6. Save estimator
+7. Go to final-report-builder
+8. Verify part still has price_per_unit=500, total_cost=1000
+9. ✅ SUCCESS: Data flows correctly through all modules
+
+**Test 2: Case UUID Consistency Across Modules**
+1. Open final-report, add new part
+2. Check Supabase - case_id should be populated
+3. Open estimator, edit same part
+4. Check Supabase - case_id should be PRESERVED (same value)
+5. ✅ SUCCESS: case_id consistent across both modules
+
+**Test 3: No Duplicate Parts After Edits**
+1. Note current row count in Supabase parts_required
+2. Edit part in estimator and save
+3. Edit same part in final-report and save
+4. Check Supabase row count
+5. ✅ SUCCESS: Row count unchanged (updates, not inserts)
+6. ❌ FAIL: Extra rows created
+
+### Regression Testing (Session 57/58 Fixes)
+
+**Test 4: Parts Still Render After Session 59 Changes**
+1. Load estimator with existing parts
+2. Verify all parts render with data (not empty fields)
+3. Verify works and repairs still render correctly
+4. ✅ SUCCESS: No regression in rendering logic
+
+**Test 5: Duplicate Functions Still Work**
+1. Check console for debug logs from Session 57/58
+2. Verify logs from createEditablePartRow() appear
+3. Verify logs from adaptCenterToBlock() appear
+4. ✅ SUCCESS: Both function sets still executing
+
+---
+
+## Red Flags & Warnings
+
+### ⚠️ WARNING 1: Case UUID Location Unknown
+
+**Problem**: We don't yet know exact location of case UUID in helper object
+
+**Investigation Needed**:
+```javascript
+// Run in console to find case UUID:
+console.log(JSON.stringify(window.helper, null, 2));
+
+// Search for UUID pattern: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+// Check these locations:
+// - helper.meta.case_uuid
+// - helper.case_info.case_uuid  
+// - helper.claims_data.case_uuid
+```
+
+**Risk**: If case UUID location is wrong, fix won't work
+
+**Mitigation**: Add console.error if UUID not found (included in FIX 3)
+
+### ⚠️ WARNING 2: Final Report May Have Multiple Part Save Locations
+
+**Problem**: Final-report has both `saveDamageCenterChanges()` and `autoSaveDamageCenterChanges()`
+
+**Risk**: Fixing one function but not the other = partial fix
+
+**Mitigation**: Use grep to find ALL instances of case_id assignment:
+```bash
+grep -n "case_id:" final-report-builder.html | grep -v "// "
+```
+
+### ⚠️ WARNING 3: Grid Layout May Break on Small Screens
+
+**Problem**: 5-field grid (1.5fr 2fr 1fr 1fr 1fr) may overflow on narrow viewports
+
+**Risk**: UI becomes unusable on smaller screens
+
+**Mitigation**: Add responsive CSS or make grid scrollable:
+```css
+.part-row {
+  min-width: 800px;  /* Force minimum width */
+}
+.damage-center-parts {
+  overflow-x: auto;  /* Enable horizontal scroll if needed */
+}
+```
+
+### ⚠️ WARNING 4: Existing Parts May Not Have price_per_unit
+
+**Problem**: Parts created before Session 59 won't have price_per_unit field
+
+**Risk**: Shows 0 or NaN for old parts
+
+**Mitigation**: Fallback to total_cost in extraction (already in FIX 1):
+```javascript
+const pricePerUnit = part?.price_per_unit || part?.price || (part?.total_cost / part?.quantity) || 0;
+```
+
+### ⚠️ WARNING 5: Read-Only Field May Confuse Users
+
+**Problem**: Users might expect to edit total_cost directly (old behavior)
+
+**Risk**: User confusion, perceived as bug
+
+**Mitigation**: Add visual indicator (already in FIX 1):
+- Gray background color
+- "not-allowed" cursor
+- Consider adding tooltip: "מחושב אוטומטית" (Calculated automatically)
+
+---
+
+## Code Change Summary
+
+### Files to Modify
+
+| File                          | Changes                                     | Priority  |
+|-------------------------------|---------------------------------------------|-----------|
+| estimator-builder.html        | Lines ~2900, ~3300, 9772-9811 + new function | CRITICAL |
+| final-report-builder.html     | Find and fix all case_id assignments       | CRITICAL |
+
+### Functions to Update
+
+| Function                          | File                    | Change Type          |
+|-----------------------------------|-------------------------|----------------------|
+| createEditablePartRow()           | estimator-builder.html  | UI + calculation     |
+| estimatorRecalculatePartTotal()   | estimator-builder.html  | NEW FUNCTION         |
+| saveDamageCenterChanges()         | estimator-builder.html  | Read price_per_unit  |
+| syncPartsToSupabase()             | estimator-builder.html  | Save price_per_unit + case_id |
+| saveDamageCenterChanges()         | final-report-builder.html | Fix case_id        |
+| autoSaveDamageCenterChanges()     | final-report-builder.html | Fix case_id        |
+
+### New Fields Added
+
+| Field Name       | Type   | Editable | Calculated | Stored in Helper | Stored in Supabase |
+|------------------|--------|----------|------------|------------------|--------------------|
+| price_per_unit   | number | Yes      | No         | Yes              | Yes                |
+| total_cost       | number | No       | Yes        | Yes              | Yes                |
+
+---
+
+## Implementation Order
+
+### Phase 1: Investigation (15 minutes)
+1. ✅ Find case UUID location in helper object
+2. ✅ Identify all case_id assignment locations in final-report
+3. ✅ Document current price_per_unit values in test data
+
+### Phase 2: Estimator Fixes (30 minutes)
+1. ✅ FIX 1: Update createEditablePartRow() with 5-field layout
+2. ✅ FIX 2: Add estimatorRecalculatePartTotal() function
+3. ✅ FIX 3: Update saveDamageCenterChanges() to read price_per_unit
+4. ✅ FIX 4: Update syncPartsToSupabase() with case_id + price_per_unit
+5. ✅ Test: Verify UI renders and calculates correctly
+
+### Phase 3: Final Report Fixes (20 minutes)
+1. ✅ Apply case_id fix to all part save locations
+2. ✅ Test: Verify no NULL case_id values after save
+3. ✅ Test: Verify no duplicate parts created
+
+### Phase 4: Integration Testing (20 minutes)
+1. ✅ Test complete workflow: Wizard → Estimator → Final Report
+2. ✅ Test case_id consistency across modules
+3. ✅ Test price_per_unit persistence across modules
+4. ✅ Test calculation accuracy with various inputs
+
+### Phase 5: Regression Testing (15 minutes)
+1. ✅ Verify Session 57/58 fixes still work (parts rendering)
+2. ✅ Verify works and repairs unaffected
+3. ✅ Verify console logs from previous sessions still appear
+
+**Total Estimated Time**: 100 minutes (~1.5 hours)
+
+---
+
+## Success Criteria
+
+### ✅ Issue #1 Fixed (Case UUID)
+- [ ] All new parts have case_id populated in Supabase
+- [ ] Editing existing parts preserves case_id (no NULL overwrites)
+- [ ] No duplicate parts after multiple edits
+- [ ] SQL query `SELECT * FROM parts_required WHERE case_id IS NULL` returns 0 rows
+
+### ✅ Issue #2 Fixed (Price Per Unit UI)
+- [ ] Estimator UI shows 5 fields (not 4)
+- [ ] price_per_unit field is editable
+- [ ] total_cost field is read-only with gray background
+- [ ] total_cost auto-calculates when price or quantity changes
+- [ ] Calculation formula: total = price_per_unit × quantity
+- [ ] price_per_unit persists in helper.centers[].Parts.parts_required[]
+- [ ] price_per_unit persists in Supabase parts_required table
+
+### ✅ No Regressions
+- [ ] Parts still render correctly (Session 57/58 fixes preserved)
+- [ ] Works and repairs still render correctly
+- [ ] Final report parts UI unaffected by estimator changes
+- [ ] Floating screen updates still work
+
+### ✅ Documentation Complete
+- [ ] Session 59 summary written with all fixes documented
+- [ ] Code snippets included for all changes
+- [ ] Testing procedures documented
+- [ ] Red flags and warnings clearly stated
+
+---
+
+## Next Steps (After Session 59)
+
+### Future Enhancements (NOT in Session 59 scope)
+
+**Enhancement 1: Add Reduction & Wear Fields to Estimator** (Session 60?)
+- Add 2 more fields: reduction_percentage, wear_percentage
+- Update calculation: `updated_price = price_per_unit × (1 - reduction/100) × (1 - wear/100)`
+- Update total: `total_cost = updated_price × quantity`
+- Match final-report UI completely (7 fields)
+
+**Enhancement 2: Bulk Price Update** (Session 61?)
+- Add "Apply % change to all parts" button
+- Useful for insurance negotiations
+- Update all price_per_unit values proportionally
+
+**Enhancement 3: Price History Tracking** (Session 62?)
+- Store price changes in separate table
+- Show "Original: 500 → Current: 450" in UI
+- Useful for audit trail
+
+---
+
+**Status**: ⏳ AWAITING USER APPROVAL  
+**Next Action**: User reviews plan, approves implementation  
+**Implementation Target**: Session 59 execution phase
