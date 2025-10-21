@@ -1492,6 +1492,9 @@
     </div> <!-- Close depreciationContent -->
     <br><br>
 
+    <!-- SESSION 62: Case Reduction Section Placeholder -->
+    <div id="caseReductionPlaceholder"></div>
+
     <!-- COLLAPSIBLE PRICE DATA -->
     <div class="form-section">
       <button class="collapsible-btn" type="button" onclick="toggleSection('priceData')">נתוני תביעה (הצג/הסתר)</button>
@@ -14094,10 +14097,6 @@
         const differentialsHTML = createDifferentialsSection();
         document.getElementById('editableDamageCenters').insertAdjacentHTML('afterend', differentialsHTML);
         
-        // SESSION 62: Add case reduction section after differentials
-        const caseReductionHTML = createCaseReductionSection();
-        document.getElementById('differentialsSection').insertAdjacentHTML('afterend', caseReductionHTML);
-        
         // Check if differentials exist to determine layout
         const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
         // SESSION 48: Check using new grand_total structure
@@ -14106,9 +14105,13 @@
                                 (helper.final_report.differential.grand_total.without_vat > 0 || 
                                  helper.final_report.differential.grand_total.with_vat > 0);
         
-        // Add subtotal section after case reduction
+        // Add subtotal section after differentials
         const subtotalHTML = createDamageCentersSubtotal(hasDifferentials);
-        document.getElementById('caseReductionSection').insertAdjacentHTML('afterend', subtotalHTML);
+        document.getElementById('differentialsSection').insertAdjacentHTML('afterend', subtotalHTML);
+        
+        // SESSION 62: Add case reduction section before נתוני תביעה
+        const caseReductionHTML = createCaseReductionSection();
+        document.getElementById('caseReductionPlaceholder').insertAdjacentHTML('afterend', caseReductionHTML);
         
         // Reposition save button after subtotal is added
         setTimeout(repositionDamageCentersSaveButton, 100);
@@ -18826,10 +18829,10 @@
       // Get VAT rate (NEVER hardcode!)
       const vatRate = window.helper?.calculations?.vat_rate || 0.17;
       
-      // Calculate values
-      const discountValue = originalSum * (percentage / 100);
-      const totalAfterDiscount = originalSum - discountValue;
-      const totalWithVAT = totalAfterDiscount * (1 + vatRate);
+      // Calculate values (SESSION 62: Round all to whole numbers)
+      const discountValue = Math.round(originalSum * (percentage / 100));
+      const totalAfterDiscount = Math.round(originalSum - discountValue);
+      const totalWithVAT = Math.round(totalAfterDiscount * (1 + vatRate));
       
       // Update UI display fields
       const caseOriginalSum = document.getElementById('caseOriginalSum');
@@ -18870,9 +18873,9 @@
     // Helper function for currency formatting (using existing pattern)
     function formatCurrency(value) {
       if (typeof value !== 'number') value = parseFloat(value) || 0;
-      return '₪' + value.toLocaleString('he-IL', {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2
+      return '₪' + Math.round(value).toLocaleString('he-IL', {
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 0
       });
     }
     
