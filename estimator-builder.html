@@ -3217,11 +3217,15 @@
         // ✅ SESSION 57 FIX: Sync all parts to Supabase (dual-save pattern from Session 54)
         await syncPartsToSupabase();
         
-        // ✅ SESSION 59 FIX: Reload parts FROM Supabase back into helper.centers (to get ALL parts, not just DOM)
-        await reloadPartsFromSupabase();
+        // ❌ SESSION 60: Removed reloadPartsFromSupabase() - broke center-part associations (Session 59 mistake)
         
         // 🔥 CRITICAL: Save to sessionStorage - ensure we're saving the updated window.helper
         sessionStorage.setItem('helper', JSON.stringify(window.helper));
+        
+        // ✅ SESSION 60: Refresh display after save (correct fix for floating screen)
+        if (typeof loadDamageCentersSummary === 'function') {
+          setTimeout(() => loadDamageCentersSummary(window.helper), 150);
+        }
         
         // Only update depreciation section if no user data exists (preserve user input)
         if (typeof updateDepreciationFromDamageCenters === 'function') {
@@ -3363,65 +3367,10 @@
       console.log('✅ SESSION 59: Parts sync to Supabase complete');
     }
 
-    // ✅ SESSION 59: Reload parts FROM Supabase back into helper.centers (fixes floating screen showing only new part)
-    async function reloadPartsFromSupabase() {
-      if (!window.supabase) {
-        console.warn('⚠️ SESSION 59: Supabase not available, skipping parts reload');
-        return;
-      }
-      
-      console.log('🔄 SESSION 59: Reloading ALL parts from Supabase into helper.centers...');
-      
-      const helper = window.helper || {};
-      const centers = helper.centers || [];
-      
-      // Get plate for querying
-      const plate = (helper.meta?.plate || '').replace(/-/g, '');
-      if (!plate) {
-        console.warn('⚠️ SESSION 59: No plate found, cannot reload parts from Supabase');
-        return;
-      }
-      
-      try {
-        // Query ALL parts for this plate from Supabase
-        const { data: allParts, error } = await window.supabase
-          .from('parts_required')
-          .select('*')
-          .eq('plate', plate);
-        
-        if (error) {
-          console.error('❌ SESSION 59: Error querying parts from Supabase:', error);
-          return;
-        }
-        
-        console.log(`✅ SESSION 59: Loaded ${allParts?.length || 0} parts from Supabase`);
-        
-        // Group parts by damage_center_code
-        const partsByCenter = {};
-        (allParts || []).forEach(part => {
-          const centerCode = part.damage_center_code;
-          if (!partsByCenter[centerCode]) {
-            partsByCenter[centerCode] = [];
-          }
-          partsByCenter[centerCode].push(part);
-        });
-        
-        // Update each center in helper.centers with ALL parts from Supabase
-        centers.forEach(center => {
-          const centerId = center.Id || center.id || center.code || center.damage_center_code;
-          const partsForThisCenter = partsByCenter[centerId] || [];
-          
-          if (!center.Parts) center.Parts = {};
-          center.Parts.parts_required = partsForThisCenter;
-          
-          console.log(`  📋 CENTER ${centerId}: Loaded ${partsForThisCenter.length} parts from Supabase`);
-        });
-        
-        console.log('✅ SESSION 59: Parts reload from Supabase complete');
-      } catch (err) {
-        console.error('❌ SESSION 59: Exception reloading parts from Supabase:', err);
-      }
-    }
+    // ❌ SESSION 60: DELETED reloadPartsFromSupabase() - Catastrophic Session 59 mistake
+    // Root cause: ID string matching was fragile (center.Id vs part.damage_center_code mismatch)
+    // Result: Overwrote parts_required with empty arrays, orphaned parts, broke 3 systems
+    // Correct fix: Just refresh display after save (see line 3226 above)
 
     window.saveDamageCenterChangesWithFeedback = function(event) {
       console.log('🔘 Save button clicked');
@@ -10062,18 +10011,9 @@
       // Remove from DOM
       row.remove();
       
-      // ✅ SESSION 59: Reload ALL parts from Supabase to sync helper.centers
-      if (typeof reloadPartsFromSupabase === 'function') {
-        await reloadPartsFromSupabase();
-        
-        // Save updated helper to sessionStorage
-        sessionStorage.setItem('helper', JSON.stringify(window.helper));
-        
-        // Refresh display
-        if (typeof loadDamageCentersSummary === 'function') {
-          loadDamageCentersSummary(window.helper);
-        }
-      }
+      // ❌ SESSION 60: Removed reloadPartsFromSupabase() call - it's been deleted
+      // Instead: Update helper.centers directly, save, and refresh display
+      // (Will be implemented in TASK 2)
     };
 
     window.estimateRemoveWorkRow = function(centerIndex, workIndex) {
