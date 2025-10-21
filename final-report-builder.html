@@ -13547,6 +13547,56 @@
       `;
     }
     
+    // ========================================
+    // SESSION 62: CASE REDUCTION SECTION (הנחת תיק)
+    // ========================================
+    function createCaseReductionSection() {
+      return `
+        <!-- SESSION 62: Case Reduction Section (הנחת תיק) -->
+        <div class="form-section" id="caseReductionSection" style="margin-top: 20px;">
+          <h3>הנחת תיק</h3>
+          
+          <label style="margin-bottom:10px; display:flex; align-items:center; gap:6px;">
+            <span style="background:#17a2b8; color:white; padding:2px 6px; border-radius:3px; font-size:11px;">💰</span>
+            האם קיימת הנחת תיק?
+            <input type="checkbox" id="hasCaseReduction" style="width:auto; margin-right:6px;" 
+                   onchange="toggleCaseReductionTable();">
+          </label>
+          
+          <div id="caseReductionContainer" style="display:none; margin-top:15px;">
+            <div style="margin-bottom:15px; border:2px solid #17a2b8; border-radius:6px; padding:10px; background:#e7f4f9;">
+              <table style="width:100%; border-collapse:collapse; font-size:13px;">
+                <thead>
+                  <tr style="background:#17a2b8; color:white;">
+                    <th style="padding:8px; text-align:right;">שם שורה</th>
+                    <th style="padding:8px; text-align:right; width:100px;">אחוז</th>
+                    <th style="padding:8px; text-align:right; width:120px;">סכום מקורי</th>
+                    <th style="padding:8px; text-align:right; width:120px;">ערך ההנחה</th>
+                    <th style="padding:8px; text-align:right; width:120px;">סכום סופי</th>
+                    <th style="padding:8px; text-align:right; width:140px;">כולל מע"מ</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr style="background:white;">
+                    <td style="padding:8px; border:1px solid #ddd;">הנחת תיק</td>
+                    <td style="padding:8px; border:1px solid #ddd;">
+                      <input type="number" id="caseReductionPercentage" min="0" max="100" step="0.01" value="0" 
+                             style="width:100%; text-align:center; padding:4px; border-radius:4px; border:1px solid #ccc;"
+                             oninput="calculateCaseReduction();">
+                    </td>
+                    <td style="padding:8px; border:1px solid #ddd; font-weight:bold;" id="caseOriginalSum">₪0.00</td>
+                    <td style="padding:8px; border:1px solid #ddd; font-weight:bold; color:#dc3545;" id="caseDiscountValue">₪0.00</td>
+                    <td style="padding:8px; border:1px solid #ddd; font-weight:bold; color:#28a745;" id="caseTotalAfter">₪0.00</td>
+                    <td style="padding:8px; border:1px solid #ddd; font-weight:bold; color:#17a2b8;" id="caseTotalWithVAT">₪0.00</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+    
     // SESSION 48: AUTO-CHECK DIFFERENTIALS CHECKBOX IF PARTS HAVE REDUCTIONS OR WEAR
     function autoCheckDifferentialsIfNeeded() {
       const breakdown = calculatePartsDifferentialsBreakdown();
@@ -14044,6 +14094,10 @@
         const differentialsHTML = createDifferentialsSection();
         document.getElementById('editableDamageCenters').insertAdjacentHTML('afterend', differentialsHTML);
         
+        // SESSION 62: Add case reduction section after differentials
+        const caseReductionHTML = createCaseReductionSection();
+        document.getElementById('differentialsSection').insertAdjacentHTML('afterend', caseReductionHTML);
+        
         // Check if differentials exist to determine layout
         const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
         // SESSION 48: Check using new grand_total structure
@@ -14052,9 +14106,9 @@
                                 (helper.final_report.differential.grand_total.without_vat > 0 || 
                                  helper.final_report.differential.grand_total.with_vat > 0);
         
-        // Add subtotal section after differentials
+        // Add subtotal section after case reduction
         const subtotalHTML = createDamageCentersSubtotal(hasDifferentials);
-        document.getElementById('differentialsSection').insertAdjacentHTML('afterend', subtotalHTML);
+        document.getElementById('caseReductionSection').insertAdjacentHTML('afterend', subtotalHTML);
         
         // Reposition save button after subtotal is added
         setTimeout(repositionDamageCentersSaveButton, 100);
@@ -18696,6 +18750,160 @@
       updateDifferentialsSummary();
     }
 
+    // ========================================
+    // SESSION 62: CASE REDUCTION FUNCTIONS (הנחת תיק)
+    // ========================================
+    
+    // Toggle Case Reduction Section
+    function toggleCaseReductionTable() {
+      const checkbox = document.getElementById('hasCaseReduction');
+      const container = document.getElementById('caseReductionContainer');
+      
+      if (!checkbox || !container) {
+        console.warn('⚠️ SESSION 62: Case reduction elements not found');
+        return;
+      }
+      
+      if (checkbox.checked) {
+        container.style.display = 'block';
+        
+        // Initialize helper structure if needed
+        if (!window.helper.final_report) window.helper.final_report = {};
+        if (!window.helper.final_report.total_case_reduction) {
+          window.helper.final_report.total_case_reduction = {
+            enabled: true,
+            percentage: 0,
+            original_sum: 0,
+            discount_value: 0,
+            total_after_discount: 0,
+            total_claim: 0
+          };
+        } else {
+          window.helper.final_report.total_case_reduction.enabled = true;
+        }
+        
+        // Load existing values if present
+        const savedPercentage = window.helper.final_report.total_case_reduction.percentage || 0;
+        document.getElementById('caseReductionPercentage').value = savedPercentage;
+        
+        // Calculate initial values
+        calculateCaseReduction();
+        
+        console.log('✅ SESSION 62: Case reduction enabled');
+      } else {
+        container.style.display = 'none';
+        if (window.helper.final_report?.total_case_reduction) {
+          window.helper.final_report.total_case_reduction.enabled = false;
+        }
+        console.log('❌ SESSION 62: Case reduction disabled');
+      }
+    }
+    
+    // Calculate Case Reduction Values
+    function calculateCaseReduction() {
+      // Get percentage input
+      const percentageInput = document.getElementById('caseReductionPercentage');
+      if (!percentageInput) {
+        console.warn('⚠️ SESSION 62: Percentage input not found');
+        return;
+      }
+      
+      const percentage = parseFloat(percentageInput.value) || 0;
+      
+      // Validate percentage (0-100)
+      if (percentage < 0) {
+        percentageInput.value = 0;
+        return;
+      }
+      if (percentage > 100) {
+        percentageInput.value = 100;
+        return;
+      }
+      
+      // Get original sum from damage_assessment.totals
+      const originalSum = window.helper?.damage_assessment?.totals?.["Total without VAT"] || 0;
+      
+      // Get VAT rate (NEVER hardcode!)
+      const vatRate = window.helper?.calculations?.vat_rate || 0.17;
+      
+      // Calculate values
+      const discountValue = originalSum * (percentage / 100);
+      const totalAfterDiscount = originalSum - discountValue;
+      const totalWithVAT = totalAfterDiscount * (1 + vatRate);
+      
+      // Update UI display fields
+      const caseOriginalSum = document.getElementById('caseOriginalSum');
+      const caseDiscountValue = document.getElementById('caseDiscountValue');
+      const caseTotalAfter = document.getElementById('caseTotalAfter');
+      const caseTotalWithVAT = document.getElementById('caseTotalWithVAT');
+      
+      if (caseOriginalSum) caseOriginalSum.textContent = formatCurrency(originalSum);
+      if (caseDiscountValue) caseDiscountValue.textContent = formatCurrency(discountValue);
+      if (caseTotalAfter) caseTotalAfter.textContent = formatCurrency(totalAfterDiscount);
+      if (caseTotalWithVAT) caseTotalWithVAT.textContent = formatCurrency(totalWithVAT);
+      
+      // Update helper.final_report.total_case_reduction
+      if (!window.helper.final_report) window.helper.final_report = {};
+      window.helper.final_report.total_case_reduction = {
+        enabled: document.getElementById('hasCaseReduction')?.checked || false,
+        percentage: percentage,
+        original_sum: originalSum,
+        discount_value: discountValue,
+        total_after_discount: totalAfterDiscount,
+        total_claim: totalWithVAT
+      };
+      
+      // ⭐ SESSION 62: Also update helper.claims_data.total_claim_after_case_reduction
+      if (!window.helper.claims_data) window.helper.claims_data = {};
+      window.helper.claims_data.total_claim_after_case_reduction = totalWithVAT;
+      
+      console.log('✅ SESSION 62: Case reduction calculated:', {
+        percentage: percentage + '%',
+        original: originalSum,
+        discount: discountValue,
+        final: totalWithVAT,
+        saved_to_final_report: window.helper.final_report.total_case_reduction.total_claim,
+        saved_to_claims_data: window.helper.claims_data.total_claim_after_case_reduction
+      });
+    }
+    
+    // Helper function for currency formatting (using existing pattern)
+    function formatCurrency(value) {
+      if (typeof value !== 'number') value = parseFloat(value) || 0;
+      return '₪' + value.toLocaleString('he-IL', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+      });
+    }
+    
+    // Load Case Reduction from Helper
+    function loadCaseReductionFromHelper() {
+      if (!window.helper?.final_report?.total_case_reduction) {
+        console.log('ℹ️ SESSION 62: No saved case reduction data found');
+        return;
+      }
+      
+      const data = window.helper.final_report.total_case_reduction;
+      const checkbox = document.getElementById('hasCaseReduction');
+      const percentageInput = document.getElementById('caseReductionPercentage');
+      
+      if (checkbox && data.enabled) {
+        checkbox.checked = true;
+        toggleCaseReductionTable();
+      }
+      
+      if (percentageInput && data.percentage) {
+        percentageInput.value = data.percentage;
+        calculateCaseReduction();
+      }
+      
+      console.log('✅ SESSION 62: Loaded case reduction from helper:', data);
+    }
+    
+    // ========================================
+    // END SESSION 62 CASE REDUCTION FUNCTIONS
+    // ========================================
+
     // Create Levi adjustment row
     function createLeviAdjustmentRow(name, value) {
       const row = document.createElement('div');
@@ -20155,6 +20363,10 @@
       console.log('📖 Loading saved differential data...');
       setTimeout(loadDifferentialData, 1000); // Increased delay to ensure all other loading is complete
       
+      // SESSION 62: Load case reduction data
+      console.log('📖 Loading saved case reduction data...');
+      setTimeout(loadCaseReductionFromHelper, 1000);
+      
       // Initialize differential fields visibility based on checkbox state
       setTimeout(() => {
         toggleDifferentialsTable(); // This will properly show/hide the "לאחר הפרשים" fields
@@ -20169,6 +20381,10 @@
     window.addEventListener('load', function() {
       console.log('📖 Loading differential data after full page load...');
       setTimeout(loadDifferentialData, 500);
+      
+      // SESSION 62: Also load case reduction after full page load
+      console.log('📖 Loading case reduction data after full page load...');
+      setTimeout(loadCaseReductionFromHelper, 500);
     });
     
     // Auto-trigger calculation refresh when key data changes
