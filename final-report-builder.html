@@ -11570,17 +11570,14 @@
             }
           }
           
-          // ✅ SESSION 60 TASK 3: ONLY preserve existing row_uuid, NEVER regenerate
-          // If part doesn't have row_uuid, it means it's truly new (should have been created in wizard/parts-required)
-          const rowUuid = part.row_uuid;
+          // ✅ SESSION 60 FINAL FIX: Simple - preserve existing or generate new
+          let rowUuid = part.row_uuid;
           
           if (!rowUuid) {
-            console.error('❌ SESSION 60: Part missing row_uuid! This should have been created in wizard. Part:', partName);
-            // Generate ONLY for truly new parts (shouldn't happen in normal flow)
-            const newUuid = crypto.randomUUID();
-            part.row_uuid = newUuid;
-            window.helper.centers[centerIndex].Parts.parts_required[partIndex].row_uuid = newUuid;
-            console.warn('⚠️ SESSION 60: Generated emergency UUID:', newUuid);
+            rowUuid = crypto.randomUUID();
+            part.row_uuid = rowUuid;
+            window.helper.centers[centerIndex].Parts.parts_required[partIndex].row_uuid = rowUuid;
+            console.log('✅ SESSION 60: Generated UUID for new/existing part without one:', partName, rowUuid);
           }
           
           const supabaseData = {

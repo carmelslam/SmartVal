@@ -3785,12 +3785,8 @@
             // SESSION 40: CLEAN structure - 25 fields, NO duplicates
             helper.current_damage_center.Parts.parts_required = partsData.map(part => ({
               // Core identification (4 fields)
-              // ✅ SESSION 60 EMERGENCY FIX 2: If row_uuid missing, return empty to trigger Supabase error
-              // This alerts us to data flow bug instead of silently creating duplicates
-              row_uuid: part.row_uuid || (() => {
-                console.error('❌ CRITICAL: Part from parts-required missing row_uuid! This will cause Supabase error.', part);
-                return ''; // Empty UUID will cause Supabase error - this is INTENTIONAL
-              })(),
+              // ✅ SESSION 60 FINAL FIX: Simple - preserve existing or generate new
+              row_uuid: part.row_uuid || crypto.randomUUID(),
               case_id: part.case_id || helper.current_damage_center.case_id || '',
               plate: part.plate || helper.current_damage_center.plate || helper.vehicle?.plate || '',
               damage_center_code: part.damage_center_code || helper.current_damage_center.code || '',
@@ -6957,11 +6953,8 @@
         // Use the SAME 25-field mapping as saveCurrentStepData case 5 (lines 3628-3673)
         helper.current_damage_center.Parts.parts_required = partsData.map(part => ({
             // Core identification (4 fields)
-            // ✅ SESSION 60 EMERGENCY FIX 2: If row_uuid missing, return empty to trigger Supabase error
-            row_uuid: part.row_uuid || (() => {
-              console.error('❌ CRITICAL: Part missing row_uuid in wizard message handler! This will cause Supabase error.', part);
-              return ''; // Empty UUID will cause Supabase error - this is INTENTIONAL
-            })(),
+            // ✅ SESSION 60 FINAL FIX: Simple - preserve existing or generate new
+            row_uuid: part.row_uuid || crypto.randomUUID(),
             case_id: part.case_id || helper.current_damage_center.case_id || '',
             plate: part.plate || helper.current_damage_center.plate || helper.vehicle?.plate || '',
             damage_center_code: part.damage_center_code || helper.current_damage_center.code || '',
