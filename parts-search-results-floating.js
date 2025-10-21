@@ -825,7 +825,10 @@
       }
       
       // Create HTML for each damage center
-      const groupsHTML = Object.values(groupedParts).map(group => {
+      // SESSION 61: Sort by center number to ensure correct order (1, 2, 3...)
+      const groupsHTML = Object.values(groupedParts)
+        .sort((a, b) => parseInt(a.number) - parseInt(b.number))
+        .map(group => {
         const subtotalBefore = group.parts.reduce((sum, part) => {
           const price = parseFloat(part.price_per_unit || part.price || part.cost || part.expected_cost || 0);
           const qty = parseInt(part.quantity || part.qty || 1);
