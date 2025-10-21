@@ -343,6 +343,17 @@
       margin-bottom: 15px;
       background: white;
       box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+      /* ✅ SESSION 57 FIX: Prevent width overflow */
+      max-width: 100%;
+      overflow-x: auto;
+      box-sizing: border-box;
+    }
+    
+    /* ✅ SESSION 57 FIX: Ensure parts/works/repairs lists don't overflow */
+    .parts-list, .works-list, .repairs-list {
+      max-width: 100%;
+      overflow-x: auto;
+      box-sizing: border-box;
     }
 
     .damage-center-header {
@@ -1560,8 +1571,96 @@
       }
     }
 
+    // ✅ SESSION 57: Initialize damage center IDs from Supabase (copied from final-report-builder.html)
+    async function initializeDamageCenterIds() {
+      try {
+        console.log('🔍 SESSION 57: Initializing damage center IDs from Supabase...');
+        
+        const helper = window.helper || {};
+        
+        if (!helper.centers || helper.centers.length === 0) {
+          console.log('ℹ️ SESSION 57: No damage centers in helper, skipping ID initialization');
+          return;
+        }
+        
+        console.log(`📊 SESSION 57: Found ${helper.centers.length} centers in helper:`, helper.centers);
+        
+        const centersNeedingIds = helper.centers.filter((center, index) => {
+          const hasId = !!(center.Id || center.id || center.code);
+          if (!hasId) {
+            console.log(`⚠️ SESSION 57: Center ${index} missing ID:`, center);
+          }
+          return !hasId;
+        });
+        
+        if (centersNeedingIds.length === 0) {
+          console.log('✅ SESSION 57: All damage centers already have IDs');
+          return;
+        }
+        
+        console.log(`🔧 SESSION 57: ${centersNeedingIds.length} centers need IDs, querying Supabase...`);
+        
+        const plate = helper.meta?.plate || helper.vehicle?.plate || helper.car_details?.plate;
+        if (!plate) {
+          console.warn('⚠️ SESSION 57: No plate number found, cannot query Supabase');
+          return;
+        }
+        
+        const normalizedPlate = plate.replace(/-/g, '');
+        
+        if (!window.supabase) {
+          console.warn('⚠️ SESSION 57: Supabase not available, cannot load damage center IDs');
+          return;
+        }
+        
+        const { data: partsData, error } = await window.supabase
+          .from('parts_required')
+          .select('damage_center_code, part_name, plate')
+          .eq('plate', normalizedPlate);
+        
+        if (error) {
+          console.error('❌ SESSION 57: Error querying Supabase parts_required:', error);
+          return;
+        }
+        
+        if (!partsData || partsData.length === 0) {
+          console.log('ℹ️ SESSION 57: No parts found in Supabase for this plate');
+          return;
+        }
+        
+        const uniqueCenterCodes = [...new Set(partsData.map(p => p.damage_center_code).filter(Boolean))];
+        console.log(`📋 SESSION 57: Found ${uniqueCenterCodes.length} unique damage center codes in Supabase:`, uniqueCenterCodes);
+        
+        uniqueCenterCodes.sort();
+        
+        helper.centers.forEach((center, index) => {
+          if (center.Id || center.id || center.code) {
+            return;
+          }
+          
+          if (uniqueCenterCodes[index]) {
+            center.Id = uniqueCenterCodes[index];
+            console.log(`✅ SESSION 57: Assigned ID to center ${index}: ${center.Id}`);
+          } else {
+            console.warn(`⚠️ SESSION 57: No matching Supabase ID for center ${index}`);
+          }
+        });
+        
+        sessionStorage.setItem('helper', JSON.stringify(helper));
+        window.helper = helper;
+        
+        console.log('✅ SESSION 57: Damage center IDs initialized successfully');
+        
+      } catch (error) {
+        console.error('❌ SESSION 57: Error initializing damage center IDs:', error);
+      }
+    }
+
     // Single DOMContentLoaded handler
-    document.addEventListener('DOMContentLoaded', function() {
+    document.addEventListener('DOMContentLoaded', async function() {
+      // ✅ SESSION 57: Initialize damage center IDs BEFORE rendering
+      await initializeDamageCenterIds();
+      
       initializeEstimateBuilder();
     });
 
@@ -2771,6 +2870,12 @@
               // Get existing part data to preserve all fields (including Hebrew keys)
               const existingPart = existingParts[partIndex] || {};
               
+              // ✅ SESSION 57 FIX: Get center ID from DOM first, then helper (Session 56 pattern)
+              const centerCard = card;
+              const centerIdFromDOM = centerCard?.dataset?.centerId || '';
+              const centerIdFromHelper = existingCenter?.Id || existingCenter?.id || existingCenter?.code || '';
+              const centerId = centerIdFromDOM || centerIdFromHelper;
+              
               // ✅ SESSION 54 FIX: Complete field structure with all 25+ required fields
               const partObject = {
                 ...existingPart,  // Preserve ALL existing fields first
@@ -2802,11 +2907,11 @@
                 manufacturer: existingPart.manufacturer || '',
                 supplier_name: existingPart.supplier_name || '',
                 
-                // Preserve Supabase fields
-                row_uuid: existingPart.row_uuid || '',
+                // ✅ SESSION 57 FIX: Supabase fields - generate row_uuid and assign damage_center_code
+                row_uuid: existingPart.row_uuid || crypto.randomUUID(),
                 case_id: existingPart.case_id || '',
-                plate: existingPart.plate || window.helper?.meta?.plate || '',
-                damage_center_code: existingPart.damage_center_code || '',
+                plate: existingPart.plate || (window.helper?.meta?.plate || '').replace(/-/g, ''),
+                damage_center_code: existingPart.damage_center_code || centerId,
                 part_family: existingPart.part_family || '',
                 
                 // Preserve vehicle context
@@ -2942,8 +3047,27 @@
               "Total with VAT": totalCost * (1 + (window.getHelperVatRate ? window.getHelperVatRate() : 18) / 100)
             },
             
-            // Ensure ID exists (generate only if not present)
-            Id: existingCenterData.Id || `dc_${Date.now()}_${index + 1}`
+            // ✅ SESSION 57 FIX: Read ID from DOM first, then helper - NEVER generate (Session 56 pattern)
+            Id: (() => {
+              const centerCard = card;
+              const centerIdFromDOM = centerCard?.dataset?.centerId || '';
+              const centerIdFromHelper = existingCenterData.Id || existingCenterData.id || existingCenterData.code || '';
+              const centerId = centerIdFromDOM || centerIdFromHelper;
+              
+              // If no ID, try to find from existing parts
+              if (!centerId) {
+                const existingParts = existingCenterData?.Parts?.parts_required || [];
+                if (existingParts.length > 0 && existingParts[0].damage_center_code) {
+                  console.log(`✅ SESSION 57: Found ID from existing parts: ${existingParts[0].damage_center_code}`);
+                  return existingParts[0].damage_center_code;
+                }
+                console.warn(`⚠️ SESSION 57: Center ${index} has NO ID from DOM, helper, or parts`);
+                return ''; // Return empty, don't generate
+              }
+              
+              console.log(`🆔 SESSION 57: Center ${index} ID resolution: DOM=${centerIdFromDOM}, Helper=${centerIdFromHelper}, Final=${centerId}`);
+              return centerId;
+            })()
           };
           
           // 🔥 Add to temporary collections (not directly to helper)
@@ -3003,7 +3127,8 @@
         // 🆕 ALWAYS update helper.damage_centers from estimator (helper.centers is king)
         // Map to the complex structure that final report expects
         window.helper.damage_centers = collectedCenters.map((center, index) => ({
-          "Id": center.Id || `dc_${Date.now()}_${index + 1}`,
+          // ✅ SESSION 57 FIX: Use center.Id directly - NEVER generate (Session 56 pattern)
+          "Id": center.Id || '',
           "Damage center Number": center["Damage center Number"] || (index + 1).toString(),
           "Location": center.Location || '',
           "Description": center.Description || '',
@@ -3086,6 +3211,9 @@
         // 🆕 ESTIMATE WORKFLOW: Save totals from summary container
         saveDamageCentersTotals();
         
+        // ✅ SESSION 57 FIX: Sync all parts to Supabase (dual-save pattern from Session 54)
+        await syncPartsToSupabase();
+        
         // 🔥 CRITICAL: Save to sessionStorage - ensure we're saving the updated window.helper
         sessionStorage.setItem('helper', JSON.stringify(window.helper));
         
@@ -3121,6 +3249,89 @@
         console.error('Error saving damage center changes:', error);
         return false;
       }
+    }
+
+    // ✅ SESSION 57: Sync parts to Supabase (dual-save pattern from Session 54/55)
+    async function syncPartsToSupabase() {
+      if (!window.supabase) {
+        console.warn('⚠️ SESSION 57: Supabase not available, skipping parts sync');
+        return;
+      }
+      
+      console.log('💾 SESSION 57: Syncing parts to Supabase...');
+      
+      const helper = window.helper || {};
+      const centers = helper.centers || [];
+      
+      for (const center of centers) {
+        const parts = center.Parts?.parts_required || [];
+        
+        for (const part of parts) {
+          // Skip parts without required fields
+          if (!part.row_uuid || !part.damage_center_code) {
+            console.warn('⚠️ SESSION 57: Skipping part without row_uuid or damage_center_code:', part);
+            continue;
+          }
+          
+          // Prepare Supabase data (only fields that exist in schema)
+          const supabaseData = {
+            row_uuid: part.row_uuid,
+            plate: part.plate || '',
+            damage_center_code: part.damage_center_code,
+            part_name: part.part_name || part.name || '',
+            
+            // Catalog fields (use pcode, not catalog_code)
+            pcode: part.pcode || part.catalog_code || '',
+            oem: part.oem || part.catalog_code || '',
+            
+            // Pricing fields
+            quantity: part.quantity || 1,
+            price_per_unit: part.price_per_unit || 0,
+            price: part.price || part.price_per_unit || 0,
+            reduction_percentage: part.reduction_percentage || 0,
+            wear_percentage: part.wear_percentage || 0,
+            updated_price: part.updated_price || part.price_per_unit || 0,
+            total_cost: part.total_cost || 0,
+            
+            // Metadata
+            description: part.description || part.desc || '',
+            source: part.source || 'manual',
+            case_id: part.case_id || null,
+            supplier_name: part.supplier_name || '',
+            part_family: part.part_family || '',
+            
+            // Vehicle context
+            make: part.make || '',
+            model: part.model || '',
+            year: part.year || '',
+            trim: part.trim || '',
+            engine_type: part.engine_type || '',
+            vin: part.vin || '',
+            
+            // Timestamp
+            updated_at: new Date().toISOString()
+          };
+          
+          try {
+            const { error } = await window.supabase
+              .from('parts_required')
+              .upsert(supabaseData, {
+                onConflict: 'row_uuid',
+                ignoreDuplicates: false
+              });
+            
+            if (error) {
+              console.error(`❌ SESSION 57: Error upserting part ${part.row_uuid}:`, error);
+            } else {
+              console.log(`✅ SESSION 57: Synced part ${part.row_uuid} to Supabase`);
+            }
+          } catch (err) {
+            console.error(`❌ SESSION 57: Exception upserting part:`, err);
+          }
+        }
+      }
+      
+      console.log('✅ SESSION 57: Parts sync to Supabase complete');
     }
 
     window.saveDamageCenterChangesWithFeedback = function(event) {
@@ -8057,6 +8268,9 @@
     // Adapt centers data structure to damage block structure for compatibility
     function adaptCenterToBlock(center, index) {
       const adaptedBlock = {
+        // ✅ SESSION 57 FIX: Preserve ID field FIRST (from Session 56 pattern)
+        Id: center.Id || center.id || center.code || center.damage_center_code || '',
+        
         damage_center_name: center.Location || center.damage_center_name || `מוקד נזק ${index + 1}`,
         damage_center_number: (() => {
           const num = center["Damage center Number"] || center.damage_center_number || (index + 1);
@@ -8088,8 +8302,14 @@
         adaptedBlock.repairs = center.Repairs;
       }
       
-      console.log(`✅ Adapted block ${index}:`, adaptedBlock);
+      console.log(`✅ SESSION 57: Adapted block ${index}:`, adaptedBlock);
+      console.log(`  🆔 ID preserved: ${adaptedBlock.Id || 'MISSING!'}`);
       console.log(`📋 Parts found: ${adaptedBlock.parts.length}, Works found: ${adaptedBlock.works.length}`);
+      
+      if (!adaptedBlock.Id) {
+        console.warn(`⚠️ SESSION 57: Center ${index} has NO ID after adaptation!`);
+        console.warn('  Original center object:', center);
+      }
       
       return adaptedBlock;
     }
@@ -8098,6 +8318,10 @@
     function createEditableDamageCenterCard(block, index) {
       const centerNum = block.damage_center_number || (index + 1);
       const centerLocation = block.damage_center_name || block.Location || `מוקד נזק ${centerNum}`;
+      
+      // ✅ SESSION 57 FIX: Extract and log ID (from Session 56 pattern)
+      const centerId = block.Id || block.id || block.code || block.damage_center_code || '';
+      console.log(`🆔 SESSION 57: Creating card ${index} with ID: ${centerId}`);
       
       // Get VAT rate
       const vatRate = window.getHelperVatRate ? window.getHelperVatRate() / 100 : 0.17;
@@ -8117,7 +8341,9 @@
       const repairs = block.repairs || [];
       
       return `
-        <div class="damage-center-card" data-center-index="${index}">
+        <div class="damage-center-card editable-damage-card" 
+             data-center-index="${index}"
+             data-center-id="${centerId}">
           <div class="damage-center-header">
             <h4>מוקד נזק מס' ${centerNum}</h4>
             <button onclick="estimateRemoveDamageCenter(${index})" style="background: #dc3545; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer;">מחק</button>
