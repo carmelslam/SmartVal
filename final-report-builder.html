@@ -2727,20 +2727,14 @@
           totalClaimGrossField.value = totalWithVAT ? `₪${totalWithVAT.toLocaleString()}` : '';
         }
         
-        // Load authorizedClaim field - prioritize totals_after_differentials, then check saved data
+        // Load authorizedClaim field - read from SAME source as totalClaimGross
         const authorizedClaimField = document.getElementById('authorizedClaim');
         if (authorizedClaimField) {
           let useValue = '';
           let numericValue = 0;
           
-          // Priority 1: Check for totals_after_differentials first (most current data)
-          if (helper.damage_assessment?.totals_after_differentials?.["Total with VAT"]) {
-            numericValue = helper.damage_assessment.totals_after_differentials["Total with VAT"];
-            useValue = `₪${numericValue.toLocaleString()}`;
-            console.log('✅ Using totals_after_differentials for authorizedClaim:', numericValue);
-          }
-          // Priority 2: Fallback to original totals
-          else if (helper.damage_assessment?.totals?.["Total with VAT"]) {
+          // Use SAME mapping as totalClaimGross: damage_assessment.totals["Total with VAT"]
+          if (helper.damage_assessment?.totals?.["Total with VAT"]) {
             numericValue = helper.damage_assessment.totals["Total with VAT"];
             useValue = `₪${numericValue.toLocaleString()}`;
             console.log('✅ Using original totals for authorizedClaim:', numericValue);
