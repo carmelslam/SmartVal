@@ -3224,8 +3224,15 @@
         sessionStorage.setItem('helper', JSON.stringify(window.helper));
         
         // ✅ SESSION 60: Refresh display after save (correct fix for floating screen)
+        // ✅ SESSION 60 EMERGENCY FIX 3: Don't refresh if actively editing/adding parts (prevents disappearing rows)
         if (typeof loadDamageCentersSummary === 'function') {
-          setTimeout(() => loadDamageCentersSummary(window.helper), 150);
+          const hasActiveInput = document.activeElement && 
+                                 (document.activeElement.classList.contains('part-name') ||
+                                  document.activeElement.classList.contains('part-catalog-code') ||
+                                  document.activeElement.closest('.part-row'));
+          if (!hasActiveInput) {
+            setTimeout(() => loadDamageCentersSummary(window.helper), 150);
+          }
         }
         
         // Only update depreciation section if no user data exists (preserve user input)

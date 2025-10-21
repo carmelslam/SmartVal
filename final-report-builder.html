@@ -11544,7 +11544,14 @@
             return;
           }
           
-          const part = window.helper.centers[centerIndex].Parts?.parts_required?.[partIndex] || {};
+          // ✅ SESSION 60 EMERGENCY FIX 1: Don't use || {} - check if part actually exists
+          const part = window.helper.centers[centerIndex]?.Parts?.parts_required?.[partIndex];
+          
+          if (!part) {
+            console.error('❌ SESSION 60: Part not found in helper.centers at index', centerIndex, partIndex);
+            console.error('  Available parts:', window.helper.centers[centerIndex]?.Parts?.parts_required);
+            return; // Exit early - can't save part that doesn't exist
+          }
           
           // Get case UUID from Supabase cases table (not filing_case_id string)
           let caseUuid = part.case_id || ''; // Preserve if already exists
