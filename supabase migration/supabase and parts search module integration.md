@@ -34030,4 +34030,290 @@ Integration:
 
 **End of Session 62 Summary**
 
+---
+
+## SESSION 62 CONTINUATION - IMPLEMENTATION REPORT
+
+**Date:** 21.10.2025  
+**File Modified:** `final-report-builder.html`  
+**Tasks Completed:** 2 (Case Reduction Section + Field Mapping Fix)
+
+---
+
+### TASK 1: הנחת תיק (Case Reduction Section) Implementation
+
+#### Summary
+Added a new "Case Reduction" section to final-report-builder.html that allows users to apply a percentage-based discount to the total case value. Positioned before the "נתוני תביעה" section with auto-save functionality.
+
+#### Changes Made
+
+**1. HTML Structure (Lines 13553-13601)**
+- Created `createCaseReductionSection()` function
+- Blue theme (#17a2b8) to distinguish from red differential sections
+- Checkbox toggle with unchecked default state
+- Table with 6 columns:
+  - שם שורה (Row name): Static "הנחת תיק"
+  - אחוז (Percentage): User input 0-100, integer only
+  - סכום מקורי (Original sum): From `damage_assessment.totals["Total without VAT"]`
+  - ערך ההנחה (Discount value): Calculated on-page
+  - סכום סופי (Final sum): Calculated on-page
+  - כולל מע"מ (Including VAT): Calculated on-page
+
+**2. JavaScript Functions**
+
+**toggleCaseReductionTable() (Lines 18758-18807)**
+- Shows/hides panel based on checkbox state
+- Initializes helper structure on enable
+- Loads saved percentage value if exists
+- Auto-saves to sessionStorage on toggle
+
+**calculateCaseReduction() (Lines 18806-18889)**
+- Gets original sum from `damage_assessment.totals["Total without VAT"]`
+- Gets VAT rate from `calculations.vat_rate` (NEVER hardcoded)
+- Handles VAT rate conversion: if > 1, divides by 100 (e.g., 17 → 0.17)
+- **All calculations rounded to whole numbers (no decimals)**
+- Calculation chain:
+  ```javascript
+  discountValue = Math.round(originalSum × (percentage / 100))
+  totalAfterDiscount = Math.round(originalSum - discountValue)
+  vatAmount = Math.round(totalAfterDiscount × vatRate)
+  totalWithVAT = totalAfterDiscount + vatAmount
+  ```
+- **Dual storage pattern:**
+  - Primary: `helper.final_report.total_case_reduction.total_claim`
+  - Secondary: `helper.claims_data.total_claim_after_case_reduction`
+  - Both locations synchronized on every calculation
+- Auto-saves to sessionStorage on every calculation
+
+**loadCaseReductionFromHelper() (Lines 18901-18922)**
+- Loads saved data on page initialization
+- Restores checkbox state and percentage value
+- Triggers calculation to populate all fields
+
+**formatCurrency() (Lines 18891-18898)**
+- Hebrew locale formatting
+- **No decimals** (minimumFractionDigits: 0)
+- Rounds all values before display
+
+**3. Integration Points**
+
+**Render Flow (Line 14114)**
+```javascript
+const caseReductionHTML = createCaseReductionSection();
+document.getElementById('caseReductionPlaceholder').insertAdjacentHTML('afterend', caseReductionHTML);
+```
+- Placeholder div added at line 1496 (before נתוני תביעה section)
+- Section inserted dynamically during render
+
+**Page Load (Lines 20366-20368, 20385-20387)**
+- DOMContentLoaded: calls `loadCaseReductionFromHelper()` after 1000ms
+- window.load: calls `loadCaseReductionFromHelper()` after 500ms
+- Same pattern as differential data loading
+
+**4. Data Structure**
+
+**helper.final_report.total_case_reduction:**
+```javascript
+{
+  enabled: boolean,              // Checkbox state
+  percentage: number,            // User input (0-100)
+  original_sum: number,          // From damage_assessment.totals["Total without VAT"]
+  discount_value: number,        // Calculated (rounded)
+  total_after_discount: number,  // Calculated (rounded)
+  total_claim: number           // Calculated (rounded)
+}
+```
+
+**helper.claims_data.total_claim_after_case_reduction:**
+- Single value (number)
+- Mirrors `total_claim` from above for convenience
+
+#### Key Design Decisions
+
+1. **No Decimals:** All calculations use `Math.round()` before storing/displaying
+2. **Auto-Save:** No save button needed - updates sessionStorage on every change
+3. **VAT Rate Handling:** Converts percentage (17) to decimal (0.17) automatically
+4. **Dual Storage:** Convenience alias in claims_data for easy access
+5. **Position:** Before נתוני תביעה (not after differentials as originally planned)
+6. **On-Page Calculations:** All values calculated from displayed fields in real-time
+
+---
+
+### TASK 2: Field Mapping Fix - סה"כ תביעה (מאושר)
+
+#### Summary
+Changed the data source for the "סה״כ תביעה (מאושר)" field in the "אחוז הנזק הגולמי" section to match the "סה״כ עלות נזקים" field source, ensuring both read from the same location.
+
+#### Problem
+The field was being overridden by the differentials save function, which checked if differentials existed and used different data sources:
+- With differentials: `damage_assessment.totals_after_differentials["Total with VAT"]`
+- Without differentials: `damage_assessment.totals["Total with VAT"]`
+
+This caused the field to show different values based on differentials state, even though the requirement was to always read from the original totals.
+
+#### Changes Made
+
+**1. loadSummaryFieldsFromHelper() Function (Lines 2715-2742)**
+
+**Before:**
+```javascript
+// Complex fallback logic
+if (helper.damage_assessment?.totals_after_differentials?.["Total with VAT"]) {
+  numericValue = helper.damage_assessment.totals_after_differentials["Total with VAT"];
+} else if (helper.damage_assessment?.totals?.["Total with VAT"]) {
+  numericValue = helper.damage_assessment.totals["Total with VAT"];
+} else {
+  // Multiple fallbacks to claims_data, calculations, damage_centers_summary
+}
+```
+
+**After:**
+```javascript
+// Simple - same as totalClaimGross
+const totalClaimGrossField = document.getElementById('totalClaimGross');
+let totalClaimGrossValue = helper.damage_assessment?.totals?.["Total with VAT"] || 0;
+
+if (totalClaimGrossField) {
+  totalClaimGrossField.value = totalClaimGrossValue ? `₪${totalClaimGrossValue.toLocaleString()}` : '';
+}
+
+const authorizedClaimField = document.getElementById('authorizedClaim');
+if (authorizedClaimField) {
+  const useValue = totalClaimGrossValue ? `₪${totalClaimGrossValue.toLocaleString()}` : '';
+  const numericValue = totalClaimGrossValue;
+  authorizedClaimField.value = useValue;
+}
+```
+
+**2. Differentials Save Function (Lines 13349-13356)**
+
+**Before:**
+```javascript
+if (hasDifferentials) {
+  // Use after-differentials value when differentials exist
+  claimTotal = helper.damage_assessment.totals_after_differentials["Total with VAT"];
+  claimValue = `₪${claimTotal.toLocaleString()}`;
+  console.log('🔄 Updated authorizedClaim to after-differentials value:', claimTotal);
+} else {
+  // Use original totals when no differentials
+  claimTotal = helper.damage_assessment?.totals?.["Total with VAT"] || finalTotalWithVat;
+  claimValue = `₪${claimTotal.toLocaleString()}`;
+  console.log('🔄 Updated authorizedClaim to original value (no differentials):', claimTotal);
+}
+```
+
+**After:**
+```javascript
+// ALWAYS use original totals (NOT after differentials)
+const claimTotal = helper.damage_assessment?.totals?.["Total with VAT"] || 0;
+const claimValue = claimTotal ? `₪${claimTotal.toLocaleString()}` : '';
+authorizedClaimField.value = claimValue;
+```
+
+#### How Old System Worked (For Restoration Reference)
+
+**Old Mapping Logic:**
+
+The field "סה״כ תביעה (מאושר)" had a **conditional mapping** based on whether differentials existed:
+
+**Priority 1 - Check Differentials:**
+```javascript
+if (helper.damage_assessment?.totals_after_differentials?.["Total with VAT"]) {
+  // Use post-differentials value
+  value = totals_after_differentials["Total with VAT"]
+}
+```
+
+**Priority 2 - Original Totals:**
+```javascript
+else if (helper.damage_assessment?.totals?.["Total with VAT"]) {
+  // Use original value (same as totalClaimGross)
+  value = totals["Total with VAT"]
+}
+```
+
+**Priority 3 - Saved Manual Values:**
+```javascript
+else {
+  const savedClaimValue = helper.claims_data?.total_claim;
+  const savedCalculationValue = helper.calculations?.total_damage;
+  
+  if (savedClaimValue && savedClaimValue !== '' && savedClaimValue !== '0') {
+    value = savedClaimValue
+  } else if (savedCalculationValue > 0) {
+    value = savedCalculationValue
+  }
+}
+```
+
+**Priority 4 - Final Fallback:**
+```javascript
+else {
+  // Use damage centers summary
+  value = helper.damage_centers_summary?.total_cost || 0
+}
+```
+
+**Differentials Save Function Check:**
+
+When saving differentials (function around line 13300), the system checked:
+```javascript
+if (hasDifferentials) {
+  // Differentials exist - use calculated after-differentials value
+  authorizedClaim = damage_assessment.totals_after_differentials["Total with VAT"]
+} else {
+  // No differentials - use original totals
+  authorizedClaim = damage_assessment.totals["Total with VAT"]
+}
+```
+
+**Why This Was Changed:**
+
+1. **Inconsistency:** Field would show different values based on differentials state
+2. **Override Issue:** Differentials save function would override the initial load value
+3. **User Request:** Both fields should always show the same source (original totals)
+4. **Simplicity:** Single source of truth is easier to maintain
+
+**To Restore Old Behavior:**
+
+1. Revert lines 2723-2742 to use the priority fallback chain
+2. Revert lines 13349-13356 to use the `hasDifferentials` conditional check
+3. The field will then dynamically switch between original totals and post-differentials totals
+
+---
+
+### Files Modified
+- `final-report-builder.html`
+  - Lines 1496: Added placeholder div
+  - Lines 2715-2742: Simplified field mapping
+  - Lines 13349-13356: Removed conditional differentials check
+  - Lines 13553-13601: Case reduction HTML
+  - Lines 14114: Section insertion
+  - Lines 18758-18922: Case reduction JavaScript functions
+  - Lines 20366-20368, 20385-20387: Load function integration
+
+### Testing Checklist
+- ✅ Case reduction checkbox toggles panel
+- ✅ Percentage input (0-100) validates correctly
+- ✅ All calculations rounded to whole numbers (no decimals)
+- ✅ VAT rate conversion handles both 17 and 0.17 formats
+- ✅ Dual storage synchronized (final_report + claims_data)
+- ✅ Auto-save to sessionStorage works
+- ✅ Section positioned before נתוני תביעה
+- ✅ Field סה"כ תביעה (מאושר) matches סה״כ עלות נזקים source
+- ✅ Field stays editable for manual override
+- ✅ Data persists on page reload
+
+### Constraints Honored
+- ❌ No hardcoded VAT rate
+- ❌ No breaking changes to differentials section
+- ❌ No deletion of existing functionality
+- ❌ No touching UUID logic from Session 61
+- ✅ Auto-save (no manual save trigger needed)
+- ✅ Simple implementation (minimal code changes)
+
+**End of Session 62 Continuation Report**
+
+---
+
 SUMMARY_EOF < /dev/null
