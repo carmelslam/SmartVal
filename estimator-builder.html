@@ -2910,9 +2910,9 @@
                 manufacturer: existingPart.manufacturer || '',
                 supplier_name: existingPart.supplier_name || '',
                 
-                // ✅ SESSION 57 & 59 FIX: Supabase fields - generate row_uuid and assign case_id from helper.meta
+                // ✅ SESSION 57 & 59 FIX: Supabase fields - row_uuid and case_id
                 row_uuid: existingPart.row_uuid || crypto.randomUUID(),
-                case_id: existingPart.case_id || window.helper?.meta?.case_id || '',  // ✅ SESSION 59: Use helper.meta.case_id
+                case_id: existingPart.case_id || window.helper?.case_info?.supabase_case_id || '',  // ✅ SESSION 59: Use helper.case_info.supabase_case_id (Supabase UUID, NOT filing ref!)
                 plate: existingPart.plate || (window.helper?.meta?.plate || '').replace(/-/g, ''),
                 damage_center_code: existingPart.damage_center_code || centerId,
                 part_family: existingPart.part_family || '',
@@ -3266,8 +3266,10 @@
       const helper = window.helper || {};
       const centers = helper.centers || [];
       
-      // ✅ SESSION 59: Get case UUID from Supabase cases table (pattern from final-report)
-      let caseUuid = helper.meta?.case_id || null;
+      // ✅ SESSION 59: Get case UUID from helper (helper.case_info.supabase_case_id = actual Supabase UUID)
+      let caseUuid = helper.case_info?.supabase_case_id || null;
+      
+      // Fallback: Lookup from Supabase cases table if not in helper
       if (!caseUuid && helper.meta?.plate) {
         try {
           const normalizedPlate = (helper.meta.plate || '').replace(/-/g, '');
