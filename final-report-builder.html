@@ -18827,13 +18827,27 @@
       const originalSum = window.helper?.damage_assessment?.totals?.["Total without VAT"] || 0;
       
       // Get VAT rate (NEVER hardcode!)
-      const vatRate = window.helper?.calculations?.vat_rate || 0.17;
+      let vatRate = window.helper?.calculations?.vat_rate;
+      
+      // If vat_rate is stored as percentage (e.g., 17), convert to decimal (0.17)
+      if (vatRate > 1) {
+        vatRate = vatRate / 100;
+      }
+      
+      // Fallback to 0.17 if not found
+      if (!vatRate) {
+        vatRate = 0.17;
+      }
+      
+      console.log('🔍 VAT Rate:', vatRate, 'from helper:', window.helper?.calculations?.vat_rate);
       
       // Calculate values (SESSION 62: Round all to whole numbers)
       const discountValue = Math.round(originalSum * (percentage / 100));
       const totalAfterDiscount = Math.round(originalSum - discountValue);
       const vatAmount = Math.round(totalAfterDiscount * vatRate);
       const totalWithVAT = totalAfterDiscount + vatAmount;
+      
+      console.log('🔍 Calculations:', { originalSum, discountValue, totalAfterDiscount, vatAmount, totalWithVAT });
       
       // Update UI display fields
       const caseOriginalSum = document.getElementById('caseOriginalSum');
