@@ -10011,9 +10011,24 @@
       // Remove from DOM
       row.remove();
       
-      // ❌ SESSION 60: Removed reloadPartsFromSupabase() call - it's been deleted
-      // Instead: Update helper.centers directly, save, and refresh display
-      // (Will be implemented in TASK 2)
+      // ✅ SESSION 60 TASK 2: Update helper.centers directly (dual-save pattern)
+      if (helper.centers && helper.centers[centerIndex]) {
+        const partsArray = helper.centers[centerIndex].Parts?.parts_required || [];
+        
+        // Remove part by index
+        helper.centers[centerIndex].Parts.parts_required = partsArray.filter((p, i) => i !== partIndex);
+        
+        console.log(`✅ SESSION 60: Removed part at index ${partIndex} from helper.centers[${centerIndex}]`);
+        
+        // Save updated helper to sessionStorage
+        sessionStorage.setItem('helper', JSON.stringify(window.helper));
+        window.helper = helper;
+        
+        // Refresh display to show updated parts list
+        if (typeof loadDamageCentersSummary === 'function') {
+          setTimeout(() => loadDamageCentersSummary(window.helper), 150);
+        }
+      }
     };
 
     window.estimateRemoveWorkRow = function(centerIndex, workIndex) {
