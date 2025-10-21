@@ -32423,3 +32423,211 @@ const pricePerUnit = part?.price_per_unit || part?.price || (part?.total_cost / 
 **Status**: ⏳ AWAITING USER APPROVAL  
 **Next Action**: User reviews plan, approves implementation  
 **Implementation Target**: Session 59 execution phase
+---
+---
+---
+
+# Session 59: CRITICAL FAILURES & SYSTEM BREAKAGE - POST-MORTEM
+
+**Date**: 2025-10-21  
+**Session**: 59 (FAILED - REQUIRES GIT RESTORE)  
+**Status**: ❌ BROKEN - Multiple critical failures that destroyed Sessions 54, 56, and 57 work  
+**Severity**: CRITICAL - System broken, parts not associating with correct damage centers
+
+---
+
+## Executive Summary - What Went Wrong
+
+Session 59 attempted to fix three issues:
+1. Case UUID using filing reference instead of Supabase UUID (YC-22184003-2025 vs actual UUID)
+2. Add price_per_unit field to estimator UI
+3. Fix floating screen showing only new part instead of all parts
+
+**Result**: Successfully fixed issues #1 and #2, but CATASTROPHICALLY broke the entire parts-to-centers association system while trying to fix issue #3.
+
+**Critical Error**: Added a `reloadPartsFromSupabase()` function that overwrites `helper.centers` with parts grouped by `damage_center_code`, breaking the association between parts and their actual centers.
+
+**Systems Broken**:
+- Estimator: Adding part creates NEW center instead of adding to existing
+- Estimator: Deleting part deletes ALL old parts, keeps only new part  
+- Final-report: Parts not associating correctly (was working before)
+- Wizard: Data corrupted with incomplete centers
+- SessionStorage: Corrupted state persists across page loads
+
+---
+
+## What I Broke - Detailed Analysis
+
+### CATASTROPHIC FAILURE: reloadPartsFromSupabase() Function
+
+**Added at Lines 3366-3424 in estimator-builder.html**
+
+This function:
+1. Queries ALL parts from Supabase by plate
+2. Groups parts by `damage_center_code`
+3. Matches grouped parts to centers by ID
+4. OVERWRITES `center.Parts.parts_required` with matched parts
+
+**The Critical Bug**:
+```javascript
+centers.forEach(center => {
+  const centerId = center.Id || center.id || center.code || center.damage_center_code;
+  const partsForThisCenter = partsByCenter[centerId] || [];
+  
+  // ❌ THIS LINE DESTROYS EVERYTHING:
+  center.Parts.parts_required = partsForThisCenter;
+});
+```
+
+**Why This Breaks Everything**:
+
+1. **ID Mismatch = Data Loss**: If `center.Id` is "מוקד 1" but `part.damage_center_code` is "dc_1760973925975_2", they don't match. Result: `partsForThisCenter = []` and ALL parts for that center are lost.
+
+2. **Orphaned Parts**: Parts in Supabase with `damage_center_code` that doesn't match ANY center ID get grouped but never assigned. They're lost.
+
+3. **Index-Based Association Destroyed**: Sessions 54-57 carefully maintained `helper.centers[centerIndex].Parts.parts_required[partIndex]` array structure. This function tries to re-associate by string matching IDs, which fails.
+
+### COMPOUNDING FAILURE: Called After Every Save
+
+**Added at Line 3221**:
+```javascript
+await syncPartsToSupabase();
+await reloadPartsFromSupabase();  // ❌ DESTROYS DATA ON EVERY SAVE
+sessionStorage.setItem('helper', JSON.stringify(window.helper));
+```
+
+**Result**: Every save triggers the broken reload, corrupting data, saving corruption to sessionStorage, which then loads on page refresh = permanent corruption.
+
+### THIRD FAILURE: Modified Delete Function
+
+**Lines 10035-10077**: Changed simple DOM deletion to delete from Supabase + reload all parts.
+
+**Result**: Deleting one part triggers broken reload → all other parts orphaned → sessionStorage saves corrupted state.
+
+---
+
+## Evidence - User's Reports
+
+**After adding part**:
+> "the parts floating screen deleted all the data in it and shows just the added part from the estimator ui"
+
+**After deleting part**:
+> "deleting the added part in the estimator - kept the added part and deleted all the old parts - centers was changed to one part but supabase kept all 3"
+
+**Cascading failures**:
+> "final report parts changed to have just the estimator added part and also deleted the old parts - that means the wizard also changed"
+
+**Permanent corruption**:
+> "it can't be deleted - it re appears on page load - suggesting maybe that the problem is likely the sessionstorage"
+
+---
+
+## Root Cause - What I Misunderstood
+
+**User said**: "floating screen takes data from supa, and fallback to centers"
+
+**I interpreted**: Floating screen needs NEW Supabase query on every refresh
+
+**User meant**: Floating screen's PRIORITY should be: display from Supabase if available, fallback to centers - but it's not showing all data after save
+
+**Actual problem**: Display not refreshed after save completes
+
+**Correct fix**: ONE LINE:
+```javascript
+// After save completes:
+setTimeout(() => loadDamageCentersSummary(window.helper), 150);
+```
+
+That's it. No Supabase reload. No ID matching. No overwriting arrays.
+
+---
+
+## What Should Be Restored
+
+### DELETE THESE COMPLETELY:
+1. **Lines 3366-3424**: Entire `reloadPartsFromSupabase()` function
+2. **Line 3221**: Call to `await reloadPartsFromSupabase();`
+3. **Lines 10035-10077**: Modified `estimateRemovePartRow` function
+
+### KEEP THESE (Working Fixes):
+1. **Line 2915**: `case_id: existingPart.case_id || window.helper?.case_info?.supabase_case_id || ''`
+2. **Lines 3270-3288**: Case UUID lookup in `syncPartsToSupabase()`
+3. **Lines 9772-9822**: 5-field UI with price_per_unit
+4. **Lines 9824-9849**: `estimatorRecalculatePartTotal()` function
+5. **Lines 2867-2869, 2892-2897**: Reading/storing price_per_unit
+
+### RESTORE estimateRemovePartRow to:
+```javascript
+window.estimateRemovePartRow = function(centerIndex, partIndex) {
+  const row = document.querySelector(`[data-center="${centerIndex}"][data-part="${partIndex}"]`);
+  if (row) {
+    row.remove();
+  }
+};
+```
+
+---
+
+## Critical Lessons - Never Repeat
+
+### 1. NEVER Overwrite helper.centers with Grouped Data
+String-matching IDs is FRAGILE. Use array indices, not ID matching.
+
+### 2. NEVER Reload from Supabase Mid-Session
+Pattern: Load on page init → edit in memory → save to Supabase → reload on NEXT page load
+NOT: Save → reload → save → reload (creates corruption loop)
+
+### 3. Center ID Matching is BROKEN by Design
+IDs come from: `Id`, `id`, `code`, `damage_center_code` (4 different sources\!)
+Parts have: `damage_center_code` (set during save)
+These WILL mismatch → associations break
+
+### 4. Test Incrementally
+I added 3 changes untested:
+- New function (untested)
+- Called after every save (untested)  
+- Modified delete (untested)
+= All deployed together = catastrophic failure
+
+Should have been: Add → test → integrate → test → modify → test
+
+### 5. Don't Touch Core Functions
+`saveDamageCenterChanges` and `estimateRemovePartRow` refined over 3 sessions (54, 56, 57).
+Modifying them breaks established patterns.
+
+### 6. Read User Carefully
+User described PRIORITY not IMPLEMENTATION.
+I jumped to solution without understanding actual problem.
+
+### 7. Established Patterns Exist for Reason
+- Session 54: Dual-save pattern
+- Session 56: ID preservation  
+- Session 57: Field standardization
+Ignoring these = breaking system
+
+### 8. One Change At A Time
+50 lines of working fixes became 150+ lines with 3 broken systems.
+
+---
+
+## Git Restore Commands
+
+```bash
+# Restore estimator-builder.html
+git checkout HEAD -- estimator-builder.html
+
+# Then manually re-apply ONLY:
+# - Line 2915: case_id fix
+# - Lines 3270-3288: case UUID lookup
+# - Lines 9772-9849: price_per_unit UI
+# - Lines 2867-2897: price_per_unit save logic
+```
+
+---
+
+**Status**: ❌ FAILED - REQUIRES IMMEDIATE GIT RESTORE
+**Systems Affected**: Estimator, Final-Report, Wizard, SessionStorage
+**Data Integrity**: COMPROMISED - parts orphaned, centers corrupted
+**Next Session**: Session 60 = RESTORE + re-apply working fixes only
+
+POSTMORTEM_EOF < /dev/null
