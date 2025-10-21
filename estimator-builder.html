@@ -10032,10 +10032,47 @@
       }
     };
 
-    window.estimateRemovePartRow = function(centerIndex, partIndex) {
-      const row = document.querySelector(`[data-center="${centerIndex}"][data-part="${partIndex}"]`);
-      if (row) {
-        row.remove();
+    window.estimateRemovePartRow = async function(centerIndex, partIndex) {
+      const row = document.querySelector(`.part-row[data-center="${centerIndex}"][data-part="${partIndex}"]`);
+      if (!row) return;
+      
+      // ✅ SESSION 59 FIX: Delete from helper.centers AND Supabase, then reload
+      const helper = window.helper || {};
+      const center = helper.centers?.[centerIndex];
+      const part = center?.Parts?.parts_required?.[partIndex];
+      
+      if (part && part.row_uuid && window.supabase) {
+        console.log(`🗑️ SESSION 59: Deleting part ${part.row_uuid} from Supabase...`);
+        
+        // Delete from Supabase
+        const { error } = await window.supabase
+          .from('parts_required')
+          .delete()
+          .eq('row_uuid', part.row_uuid);
+        
+        if (error) {
+          console.error('❌ SESSION 59: Error deleting part from Supabase:', error);
+          alert('שגיאה במחיקת החלק מהמערכת');
+          return;
+        }
+        
+        console.log('✅ SESSION 59: Part deleted from Supabase');
+      }
+      
+      // Remove from DOM
+      row.remove();
+      
+      // ✅ SESSION 59: Reload ALL parts from Supabase to sync helper.centers
+      if (typeof reloadPartsFromSupabase === 'function') {
+        await reloadPartsFromSupabase();
+        
+        // Save updated helper to sessionStorage
+        sessionStorage.setItem('helper', JSON.stringify(window.helper));
+        
+        // Refresh display
+        if (typeof loadDamageCentersSummary === 'function') {
+          loadDamageCentersSummary(window.helper);
+        }
       }
     };
 
