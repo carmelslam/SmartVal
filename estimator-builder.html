@@ -8411,15 +8411,20 @@
     
     // CREATE EDITABLE PART ROW
     function createEditablePartRow(part, centerIndex, partIndex) {
-      const partName = part?.name || '';
+      console.log(`🔍 SESSION 57: Creating part row ${partIndex} for center ${centerIndex}:`, part);
+      
+      const partName = part?.name || part?.part_name || '';
       const partDesc = part?.desc || part?.description || '';
       const partPrice = part?.price || 0;
       const partSource = part?.source || 'תחליפי';
       
-      // SESSION 49: Extract fields for new structure (catalog_code, part_name, quantity, total_price)
-      const catalogCode = part?.catalog_code || part?.catalogue_code || part?.part_code || '';
+      // SESSION 49: Extract fields for new structure (catalog_code, part_name, quantity, total_cost)
+      const catalogCode = part?.catalog_code || part?.pcode || part?.catalogue_code || part?.part_code || '';
       const quantity = part?.quantity || part?.qty || 1;
-      const totalPrice = part?.total_price || part?.price || partPrice || 0;
+      // ✅ SESSION 57 FIX: Use total_cost (Session 54 standard)
+      const totalPrice = part?.total_cost || part?.cost || part?.total_price || part?.price || partPrice || 0;
+      
+      console.log(`  📋 Extracted: name="${partName}", catalog="${catalogCode}", qty=${quantity}, price=${totalPrice}`);
       
       return `
         <div class="part-row" data-center="${centerIndex}" data-part="${partIndex}" style="display: grid; grid-template-columns: 1.5fr 2fr 1fr 1fr auto; gap: 8px; margin-bottom: 8px; padding: 8px; background: #f9f9f9; border-radius: 4px;">
