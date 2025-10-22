@@ -1,10 +1,38 @@
 // Logout sound functionality for system-wide use
-(function() {
+(async function() {
   'use strict';
 
   // Prevent multiple initializations
   if (window.logoutSoundLoaded) return;
   window.logoutSoundLoaded = true;
+  
+  // Load dependencies if not already available
+  if (!window.supabase) {
+    try {
+      const { supabase } = await import('./lib/supabaseClient.js');
+      window.supabase = supabase;
+    } catch (err) {
+      console.warn('⚠️ Could not load supabase client:', err);
+    }
+  }
+  
+  if (!window.supabaseHelperService) {
+    try {
+      const { supabaseHelperService } = await import('./services/supabaseHelperService.js');
+      window.supabaseHelperService = supabaseHelperService;
+    } catch (err) {
+      console.warn('⚠️ Could not load supabaseHelperService:', err);
+    }
+  }
+  
+  if (!window.WEBHOOKS) {
+    try {
+      const { WEBHOOKS } = await import('./webhook.js');
+      window.WEBHOOKS = WEBHOOKS;
+    } catch (err) {
+      console.warn('⚠️ Could not load WEBHOOKS:', err);
+    }
+  }
 
   // Initialize car driving away sound for logout
   let carDrivingAwaySound = null;
@@ -22,8 +50,8 @@
     console.log('🔊 Failed to initialize car driving away sound:', e.message);
   }
   
-  // Global logout function with driving away sound
-  window.logoutWithSound = function() {
+  // Global logout function with driving away sound and Supabase backup
+  window.logoutWithSound = async function() {
     console.log('🚗 Logout initiated with driving away sound');
     
     // Play driving away sound
@@ -33,38 +61,94 @@
       );
     }
     
-    // Use proper logout logic that preserves helper data
-    if (window.securityManager && window.securityManager.logout) {
-      // Show logout message briefly on current page
-      showLogoutMessage();
-      
-      // Call proper logout after sound duration (approximately 2.5 seconds)
-      setTimeout(() => {
-        window.securityManager.logout();
-      }, 2500);
-    } else {
-      // Fallback - preserve helper data manually
-      const helperData = sessionStorage.getItem('helper');
-      
-      // Clear only auth-related session data, preserve helper
-      sessionStorage.removeItem('auth');
-      sessionStorage.removeItem('loginTime');
-      sessionStorage.removeItem('lastActivityTime');
-      
-      // Save helper data to localStorage for persistence
-      if (helperData) {
+    // Show logout message
+    showLogoutMessage();
+    
+    // Preserve helper data and save to Supabase
+    const helperData = sessionStorage.getItem('helper');
+    
+    if (helperData) {
+      try {
+        const helper = JSON.parse(helperData);
+        const plate = helper?.meta?.plate;
+        const supabaseCaseId = helper?.case_info?.supabase_case_id;
+        
+        // Query Supabase for next version number
+        let version = 1;
+        if (supabaseCaseId && window.supabase) {
+          try {
+            const { data: maxVer } = await window.supabase
+              .from('case_helper')
+              .select('version')
+              .eq('case_id', supabaseCaseId)
+              .order('version', { ascending: false })
+              .limit(1)
+              .single();
+            
+            version = (maxVer?.version || 0) + 1;
+            console.log(`📊 Next version for logout: ${version}`);
+          } catch (err) {
+            console.warn('⚠️ Version query failed, defaulting to 1:', err);
+          }
+        } else {
+          console.log('⚠️ No supabase_case_id or supabase client, using version 1');
+        }
+        
+        const timestamp = new Date().toISOString();
+        
+        // Send to Make.com webhook
+        if (window.WEBHOOKS && window.WEBHOOKS.HELPER_EXPORT) {
+          const payload = {
+            type: 'logout_backup',
+            plate_helper_timestamp: `${plate}_helper_v${version}`,
+            helper_data: helper,
+            logout_time: timestamp,
+            reason: 'auto_logout'
+          };
+          
+          fetch(window.WEBHOOKS.HELPER_EXPORT, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          }).catch(err => console.warn('Failed to send to Make.com:', err));
+        }
+        
+        // Save to Supabase (non-blocking)
+        if (window.supabaseHelperService && plate) {
+          window.supabaseHelperService.saveHelper({
+            plate: plate,
+            helperData: helper,
+            helperName: `${plate}_helper_v${version}`,
+            timestamp: timestamp
+          }).then(result => {
+            if (result.success) {
+              console.log(`✅ Helper v${version} backed up to Supabase`);
+            } else {
+              console.log('⚠️ Supabase backup failed (Make.com still worked)');
+            }
+          }).catch(err => {
+            console.warn('⚠️ Supabase backup error (non-critical):', err);
+          });
+        }
+        
+        // Save to localStorage for persistence
         localStorage.setItem('lastCaseData', helperData);
-        localStorage.setItem('lastCaseTimestamp', new Date().toISOString());
+        localStorage.setItem('lastCaseTimestamp', timestamp);
+        
+      } catch (error) {
+        console.error('Error saving helper data on logout:', error);
       }
-      
-      // Show logout message briefly on current page
-      showLogoutMessage();
-      
-      // Redirect after sound duration (approximately 2.5 seconds)
-      setTimeout(() => {
-        window.location.href = 'index.html';
-      }, 2500);
     }
+    
+    // Clear only auth-related session data
+    sessionStorage.removeItem('auth');
+    sessionStorage.removeItem('loginTime');
+    sessionStorage.removeItem('lastActivityTime');
+    
+    // Redirect after sound duration (approximately 2.5 seconds)
+    setTimeout(() => {
+      window.location.href = 'index.html';
+    }, 2500);
   };
 
   function showLogoutMessage() {
