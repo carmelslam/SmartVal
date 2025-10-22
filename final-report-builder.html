@@ -1070,12 +1070,7 @@
       
       <form id="builderLoadCaseForm" onsubmit="event.preventDefault(); const plateInput = document.getElementById('builderPlateInput'); if (plateInput && typeof loadExistingCaseForBuilder === 'function') { loadExistingCaseForBuilder(); }" autocomplete="off">
         
-        <div style="display:grid; grid-template-columns:1fr; gap:15px; margin-bottom:15px; max-width: 300px;">
-          <div>
-            <label>סיסמת גישה (מתמלאת אוטומטית):</label>
-            <input type="text" id="builderPasswordInput" placeholder="סיסמת אימות לעמוד" autocomplete="off" readonly onfocus="this.removeAttribute('readonly')">
-          </div>
-        </div>
+        <!-- Password field removed - using Supabase auth instead -->
         
         <div style="text-align:center; margin-bottom:15px;">
           <button type="submit" id="builderLoadCaseBtn" class="load-case-btn">
@@ -15224,48 +15219,32 @@
     window.loadExistingCaseForBuilder = async function() {
       const plateNumber = document.getElementById('builderPlateInput').value.trim();
       
-      // Get password - check if it's masked by password-prefill.js
-      const passwordField = document.getElementById('builderPasswordInput');
-      const actualPassword = passwordField.getAttribute('data-actual-password');
-      const password = actualPassword || passwordField.value.trim();
-      
       if (!plateNumber) {
         alert('אנא הכנס מספר רכב');
         return;
       }
       
-      // Validate authentication (Supabase or legacy)
-      if (password) {
-        try {
-          const authData = sessionStorage.getItem("auth");
-          if (authData) {
-            // Check if Supabase auth
-            try {
-              const auth = JSON.parse(authData);
-              if (auth.user && auth.session) {
-                console.log('✅ Supabase auth validated for report load');
-                // Skip password validation for Supabase auth
-              } else {
-                throw new Error('Not Supabase auth');
-              }
-            } catch (e) {
-              // Legacy password system
-              const { decryptPassword } = await import('./auth.js');
-              const storedPassword = await decryptPassword(authData);
-              if (password !== storedPassword) {
-                alert('סיסמה שגויה');
-                return;
-              }
-            }
-          } else {
-            alert('אין אימות נתונים זמין');
-            return;
-          }
-        } catch (error) {
-          console.error('Error validating auth:', error);
-          alert('שגיאה באימות הזדהות');
+      // Validate Supabase authentication
+      const authData = sessionStorage.getItem("auth");
+      if (!authData) {
+        alert('אין אימות - אנא התחבר מחדש');
+        window.location.href = 'index.html';
+        return;
+      }
+      
+      try {
+        const auth = JSON.parse(authData);
+        if (!auth.user || !auth.session) {
+          alert('אימות לא תקין - אנא התחבר מחדש');
+          window.location.href = 'index.html';
           return;
         }
+        console.log('✅ Supabase auth validated for report load');
+      } catch (error) {
+        console.error('Error validating auth:', error);
+        alert('שגיאה באימות - אנא התחבר מחדש');
+        window.location.href = 'index.html';
+        return;
       }
       
       const loadBtn = document.getElementById('builderLoadCaseBtn');
