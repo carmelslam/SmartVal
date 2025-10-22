@@ -87,23 +87,49 @@
         
         // Query Supabase for next version number
         let version = 1;
-        if (supabaseCaseId && window.supabase) {
+        let actualCaseId = supabaseCaseId;
+        
+        // If no supabase_case_id, try to find case by plate
+        if (!actualCaseId && plate && window.supabase) {
+          try {
+            const { data: caseData } = await window.supabase
+              .from('cases')
+              .select('id')
+              .eq('plate', plate)
+              .or('status.eq.OPEN,status.eq.IN_PROGRESS')
+              .limit(1)
+              .single();
+            
+            if (caseData) {
+              actualCaseId = caseData.id;
+              console.log(`📁 Found case by plate: ${actualCaseId}`);
+              
+              // Update helper with the case_id for future use
+              helper.case_info = helper.case_info || {};
+              helper.case_info.supabase_case_id = actualCaseId;
+            }
+          } catch (err) {
+            console.warn('⚠️ Could not find case by plate:', err);
+          }
+        }
+        
+        if (actualCaseId && window.supabase) {
           try {
             const { data: maxVer } = await window.supabase
               .from('case_helper')
               .select('version')
-              .eq('case_id', supabaseCaseId)
+              .eq('case_id', actualCaseId)
               .order('version', { ascending: false })
               .limit(1)
               .single();
             
             version = (maxVer?.version || 0) + 1;
-            console.log(`📊 Next version for logout: ${version}`);
+            console.log(`📊 Next version for logout: ${version} (case: ${actualCaseId})`);
           } catch (err) {
             console.warn('⚠️ Version query failed, defaulting to 1:', err);
           }
         } else {
-          console.log('⚠️ No supabase_case_id or supabase client, using version 1');
+          console.log('⚠️ No case_id found, using version 1');
         }
         
         const timestamp = new Date().toISOString();
