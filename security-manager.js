@@ -4,6 +4,7 @@ const helper = window.helper;
 const updateHelper = window.updateHelper;
 
 import { WEBHOOKS } from './webhook.js';
+import { supabase } from './lib/supabaseClient.js';
 import { supabaseHelperService } from './services/supabaseHelperService.js';
 
 class SecurityManager {
@@ -522,7 +523,7 @@ class SecurityManager {
       try {
         // Query Supabase for next version number
         let version = 1;
-        if (supabaseCaseId && typeof supabase !== 'undefined') {
+        if (supabaseCaseId) {
           try {
             const { data: maxVer } = await supabase
               .from('case_helper')
@@ -535,8 +536,10 @@ class SecurityManager {
             version = (maxVer?.version || 0) + 1;
             console.log(`📊 Next version for logout: ${version}`);
           } catch (err) {
-            console.warn('Version query failed, defaulting to 1:', err);
+            console.warn('⚠️ Version query failed, defaulting to 1:', err);
           }
+        } else {
+          console.log('⚠️ No supabase_case_id found, using version 1');
         }
         
         const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
