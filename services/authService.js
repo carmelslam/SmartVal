@@ -152,23 +152,52 @@ class AuthService {
    */
   async changePassword(newPassword) {
     try {
+      console.log('🔐 Changing password...');
+      
       const { error } = await supabase.auth.updateUser({
         password: newPassword
       });
 
       if (error) {
+        console.error('❌ Supabase password update failed:', error);
         return { success: false, error: this.translateAuthError(error.message) };
       }
 
-      // Update must_change_password flag if it was set
-      if (this.currentProfile?.must_change_password) {
-        await supabase
-          .from('profiles')
-          .update({ must_change_password: false })
-          .eq('user_id', this.currentUser.id);
-        
-        // Update local profile
+      // Get current user ID
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        console.error('❌ No current user found');
+        return { success: false, error: 'משתמש לא נמצא' };
+      }
+
+      console.log('✅ Password updated in auth, now updating profile flag for user:', user.id);
+
+      // ALWAYS update must_change_password flag to false
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .update({ must_change_password: false })
+        .eq('user_id', user.id);
+      
+      if (profileError) {
+        console.error('⚠️ Failed to update profile flag:', profileError);
+        // Don't fail the whole operation, password was still changed
+      } else {
+        console.log('✅ Profile flag updated successfully');
+      }
+      
+      // Update local profile if exists
+      if (this.currentProfile) {
         this.currentProfile.must_change_password = false;
+      }
+      
+      // Update sessionStorage
+      const authData = sessionStorage.getItem('auth');
+      if (authData) {
+        const parsed = JSON.parse(authData);
+        if (parsed.profile) {
+          parsed.profile.must_change_password = false;
+          sessionStorage.setItem('auth', JSON.stringify(parsed));
+        }
       }
 
       console.log('✅ Password changed successfully');

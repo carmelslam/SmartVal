@@ -1,25 +1,46 @@
 // Password Prefill System for User Modules
-// This script automatically prefills password fields across all user modules
-// NOT for admin or dev modules
+// Updated for Supabase Authentication
+// This script validates Supabase auth session - NO MORE PASSWORD PREFILLING
+// Password-based security replaced with session-based authentication
 
-console.log('🔑 Password prefill system loaded');
+console.log('🔑 Auth validation system loaded (Supabase)');
 
-// Global function to prefill passwords across all modules (not admin/dev)
+// Global function to validate Supabase authentication
 window.prefillUserPassword = function() {
   // Skip if this is an admin or dev module
   if (window.location.pathname.includes('admin') || 
       window.location.pathname.includes('dev') ||
       document.title.includes('Admin') ||
       document.title.includes('Dev')) {
-    console.log('🔑 Skipping password prefill - Admin/Dev module detected');
+    console.log('🔑 Skipping auth check - Admin/Dev module detected');
     return;
   }
   
+  console.log('🔐 Checking Supabase authentication...');
+  
+  // Check for Supabase auth session
+  const authData = sessionStorage.getItem('auth');
+  
+  if (authData) {
+    try {
+      const auth = JSON.parse(authData);
+      if (auth.user && auth.session) {
+        console.log('✅ Valid Supabase session found for:', auth.user.email);
+        return; // User is authenticated, allow access
+      }
+    } catch (e) {
+      console.error('❌ Error parsing auth data:', e);
+    }
+  }
+  
+  // FALLBACK: Check for old password system (for backwards compatibility during migration)
   const prefillPassword = sessionStorage.getItem('prefillPassword') || 
                           sessionStorage.getItem('mainGatePassword') || 
                           sessionStorage.getItem('originalPassword');
   
   if (prefillPassword) {
+    console.log('⚠️ Using legacy password system (deprecated)');
+    // Allow old system to work during transition
     // Find all password inputs in the page (common IDs used across modules)
     const passwordSelectors = [
       '#passwordInput',
