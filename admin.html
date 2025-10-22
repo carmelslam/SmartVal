@@ -1264,45 +1264,22 @@
         // Generate temporary password
         const tempPassword = Math.random().toString(36).slice(-8) + Math.random().toString(36).toUpperCase().slice(-4);
         
-        // Create user in Supabase Auth
-        const authResponse = await fetch('https://nvqrptokmwdhvpiufrad.supabase.co/auth/v1/admin/users', {
-          method: 'POST',
-          headers: {
-            'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im52cXJwdG9rbXdkaHZwaXVmcmFkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTYwMzU0ODUsImV4cCI6MjA3MTYxMTQ4NX0.yvFalmZE7Xpvo_j6wzRj44Pa7Bx9LQegcyLzbz3QL5s',
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            email,
-            password: tempPassword,
-            email_confirm: true
-          })
+        // Create user via RPC function (server-side)
+        const { data, error } = await supabase.rpc('create_user_account', {
+          p_email: email,
+          p_password: tempPassword,
+          p_name: name,
+          p_phone: phone,
+          p_role: role,
+          p_org_id: currentProfile.org_id
         });
         
-        if (!authResponse.ok) {
-          const errorData = await authResponse.json();
-          throw new Error(errorData.msg || 'יצירת משתמש נכשלה');
+        if (error) {
+          throw new Error(error.message || 'יצירת משתמש נכשלה');
         }
         
-        const authData = await authResponse.json();
-        
-        // Create profile in profiles table
-        const { error: profileError } = await supabase
-          .from('profiles')
-          .insert({
-            user_id: authData.id,
-            name,
-            email,
-            phone,
-            role,
-            org_id: currentProfile.org_id,
-            status: 'active',
-            must_change_password: true,
-            created_by: currentProfile.user_id
-          });
-        
-        if (profileError) {
-          statusDiv.innerHTML = `<p style="color: #dc3545;">שגיאה ביצירת פרופיל: ${profileError.message}</p>`;
-          return;
+        if (!data.success) {
+          throw new Error(data.error || 'יצירת משתמש נכשלה');
         }
         
         statusDiv.innerHTML = `
