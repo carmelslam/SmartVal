@@ -146,7 +146,7 @@ Assigns all existing cases in database to the developer user.
 
 <p dir="rtl">אם לא ביקשת איפוס סיסמה, התעלם מהודעה זו והסיסמה שלך תישאר ללא שינוי.</p>
 
-<p dir="rtl">בברכה,<br>מערכת SmartVal</p>
+<p>בברכה,<br>ירון כיוף - שמאות וייעוץ</p>
 ```
 
 ---

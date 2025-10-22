@@ -1850,6 +1850,10 @@
         const auth = JSON.parse(authData);
         if (auth.user && auth.session) {
           console.log('✅ Valid Supabase session for:', auth.user.email);
+          
+          // CRITICAL: Prevent any unauthorized redirects after this point
+          window.__finalReportBuilderAuthVerified = true;
+          console.log('🔒 Page lock engaged - redirects blocked');
         } else {
           console.log('⚠️ Using legacy auth system');
         }
@@ -1857,6 +1861,22 @@
         console.log('⚠️ Using legacy auth system (non-JSON)');
       }
     }
+    
+    // CRITICAL: Override window.location.href to prevent unwanted redirects
+    const originalLocationSetter = Object.getOwnPropertyDescriptor(window.location, 'href').set;
+    Object.defineProperty(window.location, 'href', {
+      set: function(value) {
+        if (window.__finalReportBuilderAuthVerified && value.includes('index.html')) {
+          console.error('🚫 BLOCKED: Attempted redirect to index.html after auth verification');
+          console.trace('Redirect blocked from:');
+          return; // Block the redirect
+        }
+        originalLocationSetter.call(window.location, value);
+      },
+      get: function() {
+        return window.location.toString();
+      }
+    });
 
     // FLOATING SCREENS TOGGLE FUNCTION - COPIED FROM DEPRECIATION MODULE
 
