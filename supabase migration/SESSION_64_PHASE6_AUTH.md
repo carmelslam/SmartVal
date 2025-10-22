@@ -105,7 +105,8 @@ Run these in order in the Supabase SQL Editor:
 1. **Create admin-user-management.html** - User CRUD interface
 2. **Update selection.html** - Remove admin hub password, add role-based access
 3. **Update open-cases.html** - Capture created_by user ID
-4. **Update supabaseHelperService.js** - Capture updated_by user ID
+4. **Update admin page = remove dev password and autherize access by role**
+5. **Update supabaseHelperService.js** - Capture updated_by user ID
 
 ### Medium Priority
 5. **Create caseAccessService.js** - Role-based case filtering

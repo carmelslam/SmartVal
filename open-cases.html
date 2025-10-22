@@ -316,21 +316,29 @@
     // Initialize page
     document.getElementById("date").value = new Date().toISOString().split("T")[0];
 
-    const encryptedPassword = sessionStorage.getItem("auth");
-    if (!encryptedPassword) {
+    // Check Supabase authentication
+    const authData = sessionStorage.getItem("auth");
+    if (!authData) {
       alert("גישה חסומה. התחבר קודם דרך הדף הראשי.");
       window.location.href = "index.html";
     }
 
-    // Handle async password decryption properly
+    // Validate Supabase session
     let password = null;
     (async () => {
       try {
-        password = await decryptPassword(encryptedPassword);
-        console.log('✅ Password decrypted successfully');
+        const auth = JSON.parse(authData);
+        if (auth.user && auth.session) {
+          console.log('✅ Valid Supabase session for:', auth.user.email);
+          // No password needed for Supabase auth
+        } else {
+          // Try old password decryption as fallback
+          password = await decryptPassword(authData);
+          console.log('✅ Using legacy password system');
+        }
       } catch (error) {
-        console.error('❌ Password decryption failed:', error);
-        alert("שגיאה בפענוח הסיסמה");
+        console.error('❌ Auth validation failed:', error);
+        alert("שגיאה באימות הזדהות");
         window.location.href = "index.html";
       }
     })();
