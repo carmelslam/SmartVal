@@ -1314,6 +1314,26 @@
       if (modal) modal.style.display = 'none';
     };
     
+    window.copyCredentials = function() {
+      const statusDiv = document.getElementById('userFormStatus');
+      const email = statusDiv.getAttribute('data-email');
+      const password = statusDiv.getAttribute('data-password');
+      
+      if (!email || !password) {
+        alert('שגיאה: לא נמצאו פרטי התחברות');
+        return;
+      }
+      
+      const credentialsText = `שם משתמש: ${email}\nסיסמה: ${password}`;
+      
+      navigator.clipboard.writeText(credentialsText).then(() => {
+        alert('✅ פרטי התחברות הועתקו!\n\nשלח אותם למשתמש דרך WhatsApp או ערוץ מאובטח אחר.');
+      }).catch(err => {
+        console.error('Failed to copy:', err);
+        alert('שגיאה בהעתקה. העתק ידנית:\n\n' + credentialsText);
+      });
+    };
+    
     window.createNewUser = async function() {
       const name = document.getElementById('newUserName').value.trim();
       const email = document.getElementById('newUserEmail').value.trim();
@@ -1377,7 +1397,9 @@
         }
         
         // Display credentials with copy functionality
-        const credentialsText = `שם משתמש: ${email}\nסיסמה: ${tempPassword}`;
+        // Store credentials in a data attribute to avoid escaping issues
+        statusDiv.setAttribute('data-email', email);
+        statusDiv.setAttribute('data-password', tempPassword);
         
         statusDiv.innerHTML = `
           <div style="background: #d4edda; border: 2px solid #28a745; border-radius: 8px; padding: 15px; margin: 10px 0;">
@@ -1386,7 +1408,7 @@
               <p style="margin: 5px 0; color: #333;"><strong>שם משתמש:</strong> <span style="color: #0066cc; font-family: monospace;">${email}</span></p>
               <p style="margin: 5px 0; color: #333;"><strong>סיסמה זמנית:</strong> <span style="color: #dc3545; font-family: monospace; font-size: 16px;">${tempPassword}</span></p>
             </div>
-            <button onclick="navigator.clipboard.writeText('${credentialsText}').then(() => alert('פרטי התחברות הועתקו!'))" 
+            <button onclick="copyCredentials()" 
                     style="background: #007bff; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-size: 14px; margin-top: 8px; margin-left: 8px;">
               📋 העתק פרטי התחברות
             </button>
