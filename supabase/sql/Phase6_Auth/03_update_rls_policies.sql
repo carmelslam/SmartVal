@@ -7,25 +7,27 @@
 -- PART 1: Helper Function to Get User Role
 -- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
--- Create function to get current user's role
-CREATE OR REPLACE FUNCTION auth.user_role()
+-- Create function to get current user's role (in public schema)
+CREATE OR REPLACE FUNCTION public.get_user_role()
 RETURNS TEXT
 LANGUAGE SQL
+SECURITY DEFINER
 STABLE
 AS $$
   SELECT role
-  FROM profiles
+  FROM public.profiles
   WHERE user_id = auth.uid();
 $$;
 
--- Create function to check if user is admin or developer
-CREATE OR REPLACE FUNCTION auth.is_admin_or_dev()
+-- Create function to check if user is admin or developer (in public schema)
+CREATE OR REPLACE FUNCTION public.is_admin_or_dev()
 RETURNS BOOLEAN
 LANGUAGE SQL
+SECURITY DEFINER
 STABLE
 AS $$
   SELECT role IN ('admin', 'developer')
-  FROM profiles
+  FROM public.profiles
   WHERE user_id = auth.uid();
 $$;
 
@@ -46,12 +48,12 @@ USING (auth.uid() = user_id);
 -- Allow admin/developer to view all profiles
 CREATE POLICY "Admin/Dev can view all profiles"
 ON profiles FOR SELECT
-USING (auth.is_admin_or_dev());
+USING (public.is_admin_or_dev());
 
 -- Allow admin/developer to create new users
 CREATE POLICY "Admin/Dev can create users"
 ON profiles FOR INSERT
-WITH CHECK (auth.is_admin_or_dev());
+WITH CHECK (public.is_admin_or_dev());
 
 -- Allow users to update their own profile (limited fields)
 CREATE POLICY "Users can update own profile"
@@ -62,7 +64,7 @@ WITH CHECK (auth.uid() = user_id);
 -- Allow admin/developer to update any profile
 CREATE POLICY "Admin/Dev can update all profiles"
 ON profiles FOR UPDATE
-USING (auth.is_admin_or_dev());
+USING (public.is_admin_or_dev());
 
 -- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 -- PART 3: Update Cases Table Policies
@@ -77,7 +79,7 @@ DROP POLICY IF EXISTS "All users can update cases" ON cases;
 CREATE POLICY "Role-based case viewing"
 ON cases FOR SELECT
 USING (
-  CASE auth.user_role()
+  CASE public.get_user_role()
     WHEN 'developer' THEN true  -- Developer sees all
     WHEN 'admin' THEN true      -- Admin sees all
     WHEN 'assistant' THEN true  -- Assistant sees all (view-only)
@@ -90,14 +92,14 @@ USING (
 CREATE POLICY "Authorized users can create cases"
 ON cases FOR INSERT
 WITH CHECK (
-  auth.user_role() IN ('assessor', 'admin', 'developer')
+  public.get_user_role() IN ('assessor', 'admin', 'developer')
 );
 
 -- UPDATE: Admins/developers can edit all, assessors can edit own
 CREATE POLICY "Role-based case editing"
 ON cases FOR UPDATE
 USING (
-  CASE auth.user_role()
+  CASE public.get_user_role()
     WHEN 'developer' THEN true
     WHEN 'admin' THEN true
     WHEN 'assessor' THEN created_by = auth.uid()
@@ -108,7 +110,7 @@ USING (
 -- DELETE: Only admin/developer can delete
 CREATE POLICY "Admin/Dev can delete cases"
 ON cases FOR DELETE
-USING (auth.is_admin_or_dev());
+USING (public.is_admin_or_dev());
 
 -- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 -- PART 4: Update Case Helper Policies (follows case access)
@@ -127,7 +129,7 @@ USING (
     SELECT 1 FROM cases
     WHERE cases.id = case_helper.case_id
     AND (
-      CASE auth.user_role()
+      CASE public.get_user_role()
         WHEN 'developer' THEN true
         WHEN 'admin' THEN true
         WHEN 'assistant' THEN true
@@ -146,8 +148,8 @@ WITH CHECK (
     SELECT 1 FROM cases
     WHERE cases.id = case_helper.case_id
     AND (
-      auth.user_role() IN ('developer', 'admin')
-      OR (auth.user_role() = 'assessor' AND cases.created_by = auth.uid())
+      public.get_user_role() IN ('developer', 'admin')
+      OR (public.get_user_role() = 'assessor' AND cases.created_by = auth.uid())
     )
   )
 );
@@ -160,8 +162,8 @@ USING (
     SELECT 1 FROM cases
     WHERE cases.id = case_helper.case_id
     AND (
-      auth.user_role() IN ('developer', 'admin')
-      OR (auth.user_role() = 'assessor' AND cases.created_by = auth.uid())
+      public.get_user_role() IN ('developer', 'admin')
+      OR (public.get_user_role() = 'assessor' AND cases.created_by = auth.uid())
     )
   )
 );
@@ -169,7 +171,7 @@ USING (
 -- DELETE: Only admin/developer
 CREATE POLICY "Admin/Dev can delete helpers"
 ON case_helper FOR DELETE
-USING (auth.is_admin_or_dev());
+USING (public.is_admin_or_dev());
 
 -- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 -- PART 5: Update Helper Versions Policies (read-only for most)
@@ -186,7 +188,7 @@ USING (
     SELECT 1 FROM cases
     WHERE cases.id = helper_versions.case_id
     AND (
-      CASE auth.user_role()
+      CASE public.get_user_role()
         WHEN 'developer' THEN true
         WHEN 'admin' THEN true
         WHEN 'assistant' THEN true
@@ -216,7 +218,7 @@ USING (
     SELECT 1 FROM cases
     WHERE cases.id = parts_required.case_id
     AND (
-      CASE auth.user_role()
+      CASE public.get_user_role()
         WHEN 'developer' THEN true
         WHEN 'admin' THEN true
         WHEN 'assistant' THEN true
@@ -235,8 +237,8 @@ USING (
     SELECT 1 FROM cases
     WHERE cases.id = parts_required.case_id
     AND (
-      auth.user_role() IN ('developer', 'admin')
-      OR (auth.user_role() = 'assessor' AND cases.created_by = auth.uid())
+      public.get_user_role() IN ('developer', 'admin')
+      OR (public.get_user_role() = 'assessor' AND cases.created_by = auth.uid())
     )
   )
 );
@@ -253,7 +255,7 @@ USING (auth.uid() IS NOT NULL);
 -- Only developer can modify org
 CREATE POLICY "Developer can modify org"
 ON orgs FOR ALL
-USING (auth.user_role() = 'developer');
+USING (public.get_user_role() = 'developer');
 
 -- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 -- PART 8: Verification
