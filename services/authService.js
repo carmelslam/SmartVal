@@ -265,6 +265,12 @@ class AuthService {
         return false;
       }
 
+      // Check if session has user object
+      if (!session.user || !session.user.id) {
+        console.log('⚠️ Session missing user data');
+        return false;
+      }
+
       // Verify profile still exists and is active
       const { data: profile, error } = await supabase
         .from('profiles')

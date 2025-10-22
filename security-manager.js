@@ -432,10 +432,16 @@ class SecurityManager {
 
   async validateSession() {
     // Phase 6: Use Supabase Auth session validation
-    const isValid = await authService.validateSession();
-    
-    if (!isValid) {
-      this.logout();
+    try {
+      const isValid = await authService.validateSession();
+      
+      if (!isValid) {
+        this.logout();
+        return false;
+      }
+    } catch (error) {
+      console.error('❌ validateSession error:', error);
+      // Don't logout on validation error - just return false
       return false;
     }
     
