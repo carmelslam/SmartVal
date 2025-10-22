@@ -1756,6 +1756,40 @@
   <script src="legal-text-engine.js"></script>
   
   <script>
+    // 🔒 CRITICAL: Block any redirects to index.html IMMEDIATELY on page load
+    (function() {
+      console.log('🔒 Installing redirect blocker...');
+      
+      // Monitor for navigation attempts
+      window.addEventListener('beforeunload', function(e) {
+        console.error('🚫 PAGE UNLOAD DETECTED');
+        console.trace('Unload from:');
+      });
+      
+      // Intercept location.replace
+      const originalReplace = window.location.replace;
+      window.location.replace = function(url) {
+        if (url && (url.includes('index.html') || url.includes('/index.html'))) {
+          console.error('🚫 BLOCKED: location.replace() to:', url);
+          console.trace('Replace blocked from:');
+          return;
+        }
+        return originalReplace.call(window.location, url);
+      };
+      
+      // Intercept location.assign
+      const originalAssign = window.location.assign;
+      window.location.assign = function(url) {
+        if (url && (url.includes('index.html') || url.includes('/index.html'))) {
+          console.error('🚫 BLOCKED: location.assign() to:', url);
+          console.trace('Assign blocked from:');
+          return;
+        }
+        return originalAssign.call(window.location, url);
+      };
+      
+      console.log('✅ Redirect blocker installed');
+    })();
 
     // GROSS SECTION IMPORT STATE TRACKING
     let grossSectionImportState = {
@@ -1862,21 +1896,36 @@
       }
     }
     
-    // CRITICAL: Override window.location.href to prevent unwanted redirects
-    const originalLocationSetter = Object.getOwnPropertyDescriptor(window.location, 'href').set;
-    Object.defineProperty(window.location, 'href', {
-      set: function(value) {
-        if (window.__finalReportBuilderAuthVerified && value.includes('index.html')) {
-          console.error('🚫 BLOCKED: Attempted redirect to index.html after auth verification');
-          console.trace('Redirect blocked from:');
-          return; // Block the redirect
-        }
-        originalLocationSetter.call(window.location, value);
-      },
-      get: function() {
-        return window.location.toString();
+    // CRITICAL: Monitor for redirect attempts with beforeunload
+    window.addEventListener('beforeunload', function(e) {
+      if (window.__finalReportBuilderAuthVerified) {
+        console.error('🚫 PAGE UNLOAD DETECTED - Something is trying to leave final-report-builder');
+        console.trace('Unload triggered from:');
+        // This won't prevent unload but will show us what's happening
       }
     });
+    
+    // Intercept navigation by wrapping window.location.replace and window.location.assign
+    const originalReplace = window.location.replace;
+    const originalAssign = window.location.assign;
+    
+    window.location.replace = function(url) {
+      if (window.__finalReportBuilderAuthVerified && url && url.includes('index.html')) {
+        console.error('🚫 BLOCKED: location.replace() to index.html');
+        console.trace('Replace blocked from:');
+        return;
+      }
+      return originalReplace.call(window.location, url);
+    };
+    
+    window.location.assign = function(url) {
+      if (window.__finalReportBuilderAuthVerified && url && url.includes('index.html')) {
+        console.error('🚫 BLOCKED: location.assign() to index.html');
+        console.trace('Assign blocked from:');
+        return;
+      }
+      return originalAssign.call(window.location, url);
+    };
 
     // FLOATING SCREENS TOGGLE FUNCTION - COPIED FROM DEPRECIATION MODULE
 
