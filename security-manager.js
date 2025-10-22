@@ -404,8 +404,11 @@ class SecurityManager {
       });
     });
     
-    // Check session validity on page load
-    this.validateSession();
+    // Check session validity on page load - but don't block page load
+    // Run validation in background, only logout if clearly invalid
+    setTimeout(() => {
+      this.validateSession();
+    }, 1000); // Delay 1 second to let page finish loading
   }
 
   resetSessionTimeout() {
@@ -431,17 +434,28 @@ class SecurityManager {
   }
 
   async validateSession() {
+    // First check if auth data exists in sessionStorage
+    const authData = sessionStorage.getItem('auth');
+    if (!authData) {
+      console.log('⚠️ No auth data in sessionStorage - logging out');
+      this.logout();
+      return false;
+    }
+    
     // Phase 6: Use Supabase Auth session validation
     try {
       const isValid = await authService.validateSession();
       
       if (!isValid) {
+        console.log('⚠️ Supabase session invalid - logging out');
         this.logout();
         return false;
       }
     } catch (error) {
       console.error('❌ validateSession error:', error);
-      // Don't logout on validation error - just return false
+      // Don't logout on validation error - user might have temporary network issue
+      // Only log warning and return false (timeout will handle persistent issues)
+      console.warn('⚠️ Session validation failed but not logging out (could be temporary)');
       return false;
     }
     
