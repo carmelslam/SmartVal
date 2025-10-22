@@ -99,28 +99,40 @@ export const supabaseHelperService = {
    * Find existing case or create new one
    */
   async findOrCreateCase(plate, helperData) {
-    // First, try to find existing open case
+    // Normalize plate - remove dashes and special characters
+    const normalizedPlate = plate.replace(/[-\/\s]/g, '');
+    
+    // First, try to find existing open case (search by normalized plate)
     const { data: existingCases } = await supabase
       .from('cases')
       .select('id, plate, status')
-      .eq('plate', plate)
+      .eq('plate', normalizedPlate)
       .or('status.eq.OPEN,status.eq.IN_PROGRESS');
       
     if (existingCases && existingCases.length > 0) {
       const existingCase = existingCases[0];
-      console.log(`📁 Found existing case for plate ${plate}`);
+      console.log(`📁 Found existing case for plate ${normalizedPlate}`);
       return existingCase;
     }
     
-    // Create new case
-    const ownerName = helperData?.case_info?.customer_name || 
-                     helperData?.stakeholders?.customer?.name || 
+    // Create new case - extract owner name from multiple possible locations
+    const ownerName = helperData?.stakeholders?.owner?.name || 
+                     helperData?.stakeholders?.customer?.name ||
+                     helperData?.case_info?.owner_name ||
+                     helperData?.case_info?.customer_name || 
                      'Unknown';
+    
+    console.log('🔍 Owner name extracted:', ownerName, 'from helper:', {
+      stakeholders_owner: helperData?.stakeholders?.owner?.name,
+      stakeholders_customer: helperData?.stakeholders?.customer?.name,
+      case_info_owner: helperData?.case_info?.owner_name,
+      case_info_customer: helperData?.case_info?.customer_name
+    });
     
     const { data: newCase, error } = await supabase
       .from('cases')
       .insert({
-        plate: plate,
+        plate: normalizedPlate,  // Store normalized plate without dashes
         owner_name: ownerName,
         status: 'OPEN',
         created_at: new Date().toISOString()
@@ -133,7 +145,7 @@ export const supabaseHelperService = {
       return null;
     }
     
-    console.log(`✅ Created new case for plate ${plate}`);
+    console.log(`✅ Created new case for plate ${normalizedPlate} with owner: ${ownerName}`);
     return newCase;
   },
   

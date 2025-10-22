@@ -70,8 +70,13 @@
     if (helperData) {
       try {
         const helper = JSON.parse(helperData);
-        const plate = helper?.meta?.plate;
+        let plate = helper?.meta?.plate;
         const supabaseCaseId = helper?.case_info?.supabase_case_id;
+        
+        // Normalize plate - remove dashes and special characters
+        if (plate) {
+          plate = plate.replace(/[-\/\s]/g, '');
+        }
         
         // Query Supabase for next version number
         let version = 1;
