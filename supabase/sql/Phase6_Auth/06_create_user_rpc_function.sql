@@ -1,11 +1,19 @@
--- Phase 6: User Management & Authentication
--- Migration 06: Create User via RPC Function
+-- Phase 6: User Management & Authentication  
+-- Migration 06: Wrapper function to create users via Supabase Auth API
 -- Date: 2025-10-22
--- Purpose: Server-side function to create users securely (requires service role privileges)
+-- Purpose: Create complete user account (auth + profile) using http extension
 
--- Enable pgcrypto extension for password hashing
-CREATE EXTENSION IF NOT EXISTS pgcrypto;
+-- Enable http extension for REST API calls
+CREATE EXTENSION IF NOT EXISTS http;
 
+-- Store service role key securely (run this manually with your actual service_role key)
+-- CREATE TABLE IF NOT EXISTS private.config (
+--   key TEXT PRIMARY KEY,
+--   value TEXT NOT NULL
+-- );
+-- INSERT INTO private.config (key, value) VALUES ('supabase_service_role_key', 'YOUR_SERVICE_ROLE_KEY_HERE');
+
+-- Function to create user account
 CREATE OR REPLACE FUNCTION public.create_user_account(
   p_email TEXT,
   p_password TEXT,
@@ -17,12 +25,13 @@ CREATE OR REPLACE FUNCTION public.create_user_account(
 RETURNS JSON
 LANGUAGE plpgsql
 SECURITY DEFINER
-SET search_path = public, pg_catalog, extensions
 AS $$
 DECLARE
+  v_current_user_role TEXT;
   v_user_id UUID;
   v_profile_id UUID;
-  v_current_user_role TEXT;
+  v_http_response http_response;
+  v_response_data JSON;
 BEGIN
   -- Check caller has admin or assistant role
   SELECT role INTO v_current_user_role
@@ -32,50 +41,38 @@ BEGIN
   IF v_current_user_role NOT IN ('admin', 'assistant', 'developer') THEN
     RAISE EXCEPTION 'Only admins and assistants can create users';
   END IF;
-  
-  -- Create user in auth.users table
-  INSERT INTO auth.users (
-    instance_id,
-    id,
-    aud,
-    role,
-    email,
-    encrypted_password,
-    confirmation_sent_at,
-    email_confirmed_at,
-    recovery_sent_at,
-    last_sign_in_at,
-    raw_app_meta_data,
-    raw_user_meta_data,
-    created_at,
-    updated_at,
-    confirmation_token,
-    email_change,
-    email_change_token_new,
-    recovery_token
-  )
-  VALUES (
-    '00000000-0000-0000-0000-000000000000',
-    gen_random_uuid(),
-    'authenticated',
-    'authenticated',
-    p_email,
-    extensions.crypt(p_password, extensions.gen_salt('bf')),
-    NOW(),
-    NOW(),
-    NOW(),
-    NOW(),
-    '{"provider":"email","providers":["email"]}',
-    jsonb_build_object('name', p_name),
-    NOW(),
-    NOW(),
-    '',
-    '',
-    '',
-    ''
-  )
-  RETURNING id INTO v_user_id;
-  
+
+  -- Call Supabase Admin API to create user
+  SELECT * INTO v_http_response
+  FROM http((
+    'POST',
+    'https://nvqrptokmwdhvpiufrad.supabase.co/auth/v1/admin/users',
+    ARRAY[
+      http_header('apikey', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im52cXJwdG9rbXdkaHZwaXVmcmFkIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NjAzNTQ4NSwiZXhwIjoyMDcxNjExNDg1fQ.OWbqj6qzHCEkUuQXiRxfxQ7wIWNYy3aDivELa-VXjnA'),
+      http_header('Authorization', 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im52cXJwdG9rbXdkaHZwaXVmcmFkIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NjAzNTQ4NSwiZXhwIjoyMDcxNjExNDg1fQ.OWbqj6qzHCEkUuQXiRxfxQ7wIWNYy3aDivELa-VXjnA'),
+      http_header('Content-Type', 'application/json')
+    ],
+    'application/json',
+    json_build_object(
+      'email', p_email,
+      'password', p_password,
+      'email_confirm', true,
+      'user_metadata', json_build_object('name', p_name)
+    )::text
+  )::http_request);
+
+  -- Check if user creation was successful
+  IF v_http_response.status <> 200 THEN
+    RETURN json_build_object(
+      'success', false,
+      'error', 'Failed to create auth user: ' || v_http_response.content::json->>'message'
+    );
+  END IF;
+
+  -- Extract user_id from response
+  v_response_data := v_http_response.content::json;
+  v_user_id := (v_response_data->>'id')::uuid;
+
   -- Create profile
   INSERT INTO profiles (
     user_id,
@@ -102,21 +99,16 @@ BEGIN
     NOW()
   )
   RETURNING id INTO v_profile_id;
-  
-  -- Return success with user_id
+
+  -- Return success
   RETURN json_build_object(
     'success', true,
     'user_id', v_user_id,
     'profile_id', v_profile_id,
     'message', 'User created successfully'
   );
-  
+
 EXCEPTION
-  WHEN unique_violation THEN
-    RETURN json_build_object(
-      'success', false,
-      'error', 'Email already exists'
-    );
   WHEN OTHERS THEN
     RETURN json_build_object(
       'success', false,
@@ -125,11 +117,11 @@ EXCEPTION
 END;
 $$;
 
--- Grant execute permission to authenticated users
+-- Grant execute permission
 GRANT EXECUTE ON FUNCTION public.create_user_account TO authenticated;
 
 -- Success message
 DO $$
 BEGIN
-  RAISE NOTICE '✅ Migration 06 Completed - User creation RPC function created';
+  RAISE NOTICE '✅ Migration 06 Completed - User creation function with HTTP API ready';
 END $$;
