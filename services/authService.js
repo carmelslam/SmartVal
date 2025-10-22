@@ -72,12 +72,16 @@ class AuthService {
       this.currentProfile = profile;
 
       // Store in sessionStorage for page persistence
+      const loginTime = new Date().toISOString();
       sessionStorage.setItem('auth', JSON.stringify({
         user: authData.user,
         session: authData.session,
         profile: profile,
-        loginTime: new Date().toISOString()
+        loginTime: loginTime
       }));
+      sessionStorage.setItem('loginTime', loginTime); // For backwards compatibility
+      sessionStorage.setItem('loginSuccess', 'true'); // For backwards compatibility
+      sessionStorage.setItem('sessionStart', Date.now().toString()); // For backwards compatibility
       sessionStorage.setItem('lastActivityTime', Date.now().toString());
 
       // Update last_login timestamp
@@ -121,6 +125,9 @@ class AuthService {
 
       // Clear session storage (auth only, preserve helper for backup)
       sessionStorage.removeItem('auth');
+      sessionStorage.removeItem('loginTime');
+      sessionStorage.removeItem('loginSuccess');
+      sessionStorage.removeItem('sessionStart');
       sessionStorage.removeItem('lastActivityTime');
 
       // Stop session monitoring
