@@ -115,18 +115,23 @@ export const supabaseHelperService = {
       return existingCase;
     }
     
-    // Create new case - extract owner name from multiple possible locations
+    // Create new case - extract owner name and location from multiple possible locations
     const ownerName = helperData?.stakeholders?.owner?.name || 
                      helperData?.stakeholders?.customer?.name ||
                      helperData?.case_info?.owner_name ||
                      helperData?.case_info?.customer_name || 
                      'Unknown';
     
+    const inspectionLocation = helperData?.case_info?.inspection_location ||
+                              helperData?.meta?.location ||
+                              null;
+    
     console.log('🔍 Owner name extracted:', ownerName, 'from helper:', {
       stakeholders_owner: helperData?.stakeholders?.owner?.name,
       stakeholders_customer: helperData?.stakeholders?.customer?.name,
       case_info_owner: helperData?.case_info?.owner_name,
-      case_info_customer: helperData?.case_info?.customer_name
+      case_info_customer: helperData?.case_info?.customer_name,
+      inspection_location: inspectionLocation
     });
     
     const { data: newCase, error } = await supabase
@@ -134,6 +139,7 @@ export const supabaseHelperService = {
       .insert({
         plate: normalizedPlate,  // Store normalized plate without dashes
         owner_name: ownerName,
+        inspection_location: inspectionLocation,
         status: 'OPEN',
         created_at: new Date().toISOString()
       })
