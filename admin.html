@@ -1326,18 +1326,22 @@
         const { supabase } = await import('./lib/supabaseClient.js');
         
         // Always use Yaron org for users created from UI
-        const { data: yaronOrg } = await supabase
+        const { data: yaronOrg, error: orgError } = await supabase
           .from('orgs')
           .select('id')
           .eq('name', 'ירון כיוף - שמאות וייעוץ')
           .single();
         
-        if (!yaronOrg) {
-          throw new Error('לא נמצא ארגון ירון כיוף');
+        console.log('Org lookup result:', { yaronOrg, orgError });
+        
+        if (orgError || !yaronOrg) {
+          throw new Error(`לא נמצא ארגון ירון כיוף: ${orgError?.message || 'לא נמצא'}`);
         }
         
-        // Generate temporary password
+        // Generate temporary password (min 8 chars with uppercase and lowercase)
         const tempPassword = Math.random().toString(36).slice(-8) + Math.random().toString(36).toUpperCase().slice(-4);
+        
+        console.log('Creating user with org_id:', yaronOrg.id);
         
         // Create user via RPC function (server-side)
         const { data, error } = await supabase.rpc('create_user_account', {
@@ -1349,6 +1353,8 @@
           p_org_id: yaronOrg.id
         });
         
+        console.log('RPC result:', { data, error });
+        
         if (error) {
           throw new Error(error.message || 'יצירת משתמש נכשלה');
         }
@@ -1357,16 +1363,30 @@
           throw new Error(data.error || 'יצירת משתמש נכשלה');
         }
         
+        // Display credentials with copy functionality
+        const credentialsText = `שם משתמש: ${email}\nסיסמה: ${tempPassword}`;
+        
         statusDiv.innerHTML = `
-          <p style="color: #28a745;">✅ משתמש נוצר בהצלחה!</p>
-          <p style="font-size: 12px; color: #17a2b8;">סיסמה זמנית: <strong>${tempPassword}</strong></p>
-          <p style="font-size: 12px; color: #999;">שמור סיסמה זו ושלח למשתמש</p>
+          <div style="background: #d4edda; border: 2px solid #28a745; border-radius: 8px; padding: 15px; margin: 10px 0;">
+            <p style="color: #155724; font-size: 14px; font-weight: bold; margin: 0 0 10px 0;">✅ משתמש נוצר בהצלחה!</p>
+            <div style="background: white; padding: 12px; border-radius: 6px; margin: 8px 0;">
+              <p style="margin: 5px 0; color: #333;"><strong>שם משתמש:</strong> <span style="color: #0066cc; font-family: monospace;">${email}</span></p>
+              <p style="margin: 5px 0; color: #333;"><strong>סיסמה זמנית:</strong> <span style="color: #dc3545; font-family: monospace; font-size: 16px;">${tempPassword}</span></p>
+            </div>
+            <button onclick="navigator.clipboard.writeText('${credentialsText}').then(() => alert('פרטי התחברות הועתקו!'))" 
+                    style="background: #007bff; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-size: 14px; margin-top: 8px;">
+              📋 העתק פרטי התחברות
+            </button>
+            <p style="font-size: 11px; color: #666; margin-top: 10px;">
+              ⚠️ שלח פרטי התחברות למשתמש דרך WhatsApp או ערוץ מאובטח אחר
+            </p>
+          </div>
         `;
         
+        // Don't auto-close - let admin copy credentials
         setTimeout(() => {
-          closeUserForm();
           loadUserManagement();
-        }, 3000);
+        }, 500)
         
       } catch (error) {
         console.error('Error creating user:', error);
