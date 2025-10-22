@@ -1192,17 +1192,9 @@
                 </select>
               </div>
               
-              ${currentProfile.role === 'developer' ? `
-              <div style="margin-bottom: 15px;" id="orgSelectionDiv">
-                <label style="display: block; margin-bottom: 5px; font-weight: bold;">ארגון:</label>
-                <select id="newUserOrg" 
-                        style="width: 100%; padding: 10px; background: #3a3a3a; color: #e0e0e0; border: 1px solid #555; border-radius: 4px; box-sizing: border-box;">
-                  <option value="">טוען ארגונים...</option>
-                </select>
-              </div>` : ''}
-              
               <div style="background: #1a365d; padding: 12px; border-radius: 6px; margin: 15px 0; border: 1px solid #3b82f6; font-size: 13px;">
                 <strong style="color: #3b82f6;">ℹ️ הערה:</strong> סיסמה זמנית תוצג כאן. שמור אותה ושלח למשתמש (אימייל אוטומטי לא פועל כרגע).
+                <br><span style="font-size: 11px; color: #94a3b8;">ארגון: ירון כיוף - שמאות וייעוץ</span>
               </div>
               
               <div id="userFormStatus" style="margin: 15px 0; text-align: center;"></div>
@@ -1232,7 +1224,7 @@
       }
     };
     
-    window.showAddUserForm = async function() {
+    window.showAddUserForm = function() {
       const modal = document.getElementById('userFormModal');
       if (modal) {
         modal.style.display = 'flex';
@@ -1241,32 +1233,6 @@
         document.getElementById('newUserPhone').value = '';
         document.getElementById('newUserRole').value = 'assessor';
         document.getElementById('userFormStatus').innerHTML = '';
-        
-        // Load organizations if developer
-        const { authService } = await import('./services/authService.js');
-        const currentProfile = authService.getCurrentProfile();
-        
-        if (currentProfile.role === 'developer') {
-          const orgSelect = document.getElementById('newUserOrg');
-          if (orgSelect) {
-            const { supabase } = await import('./lib/supabaseClient.js');
-            const { data: orgs } = await supabase.from('orgs').select('id, name').order('name');
-            
-            console.log('Loaded organizations:', orgs);
-            
-            orgSelect.innerHTML = orgs.map(org => 
-              `<option value="${org.id}">${org.name}</option>`
-            ).join('');
-            
-            // Default to Yaron org
-            const yaronOrg = orgs.find(o => o.name === 'ירון כיוף - שמאות וייעוץ');
-            console.log('Yaron org found:', yaronOrg);
-            if (yaronOrg) {
-              orgSelect.value = yaronOrg.id;
-              console.log('Set default org to Yaron:', yaronOrg.id);
-            }
-          }
-        }
       }
     };
     
@@ -1291,21 +1257,16 @@
       
       try {
         const { supabase } = await import('./lib/supabaseClient.js');
-        const { authService } = await import('./services/authService.js');
         
-        // Get current user profile
-        const currentProfile = authService.getCurrentProfile();
+        // Always use Yaron org for users created from UI
+        const { data: yaronOrg } = await supabase
+          .from('orgs')
+          .select('id')
+          .eq('name', 'ירון כיוף - שמאות וייעוץ')
+          .single();
         
-        // Determine org_id: developer can choose, admin/assistant use their own org
-        let orgId = currentProfile.org_id;
-        if (currentProfile.role === 'developer') {
-          const orgSelect = document.getElementById('newUserOrg');
-          if (orgSelect && orgSelect.value) {
-            orgId = orgSelect.value;
-          }
-          console.log('Developer creating user - Selected org:', orgId, 'from dropdown:', orgSelect?.value);
-        } else {
-          console.log('Admin/Assistant creating user - Using their org:', orgId);
+        if (!yaronOrg) {
+          throw new Error('לא נמצא ארגון ירון כיוף');
         }
         
         // Generate temporary password
@@ -1318,7 +1279,7 @@
           p_name: name,
           p_phone: phone,
           p_role: role,
-          p_org_id: orgId
+          p_org_id: yaronOrg.id
         });
         
         if (error) {
