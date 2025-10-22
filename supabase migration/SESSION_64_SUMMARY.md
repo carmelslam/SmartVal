@@ -62,9 +62,9 @@
 
 ---
 
-## 🐛 Issues Fixed During Session
+## 🐛 Issues Fixed During Sessions 64 & 65
 
-### Issue 1: Auth Schema Permission Error
+### Issue 1: Auth Schema Permission Error (Session 64)
 **Problem:** `ERROR: 42501: permission denied for schema auth`  
 **Cause:** Tried to create functions in `auth` schema (requires superuser)  
 **Fix:** Moved functions to `public` schema:
@@ -72,34 +72,81 @@
 - `auth.is_admin_or_dev()` → `public.is_admin_or_dev()`
 - Updated all policy references throughout migration 03
 
-### Issue 2: Organization Setup
+### Issue 2: Organization Setup (Session 64)
 **Clarification:** Developer belongs to Evalix, client users belong to Yaron org  
 **Resolution:** Migration 02 creates both orgs, links developer to Evalix
 
+### Issue 3: Missing Auth API in Supabase Client (Session 65)
+**Problem:** `TypeError: Cannot read properties of undefined (reading 'signInWithPassword')`  
+**Cause:** `lib/supabaseClient.js` only had `from()`, `rpc()`, `channel()` - missing entire Auth API  
+**Fix:** Added complete Supabase Auth API to client:
+- `auth.signInWithPassword()` - for login
+- `auth.signOut()` - for logout
+- `auth.getSession()` - session checking
+- `auth.getUser()` - get current user
+- `auth.resetPasswordForEmail()` - password reset
+- `auth.updateUser()` - change password
+
+### Issue 4: Selection Page Logout Loop (Session 65)
+**Problem:** User logs in successfully but immediately gets logged out when reaching selection.html  
+**Cause:** `selection.html` checking for separate sessionStorage items (`loginTime`, `loginSuccess`, `sessionStart`) that new authService stored only inside `auth` JSON  
+**Fix:** Updated authService.js to set backwards-compatible sessionStorage items:
+```javascript
+sessionStorage.setItem('loginTime', loginTime);
+sessionStorage.setItem('loginSuccess', 'true');
+sessionStorage.setItem('sessionStart', Date.now().toString());
+```
+
+### Issue 5: Email Provider Rate Limit (Session 65)
+**Problem:** `email rate limit exceeded` when trying password reset  
+**Cause:** Supabase default email provider has strict rate limits  
+**Solution:** User configured custom SMTP (Office@yc-shamaut.co.il via Microsoft)  
+**Status:** SMTP configured but still encountering issues - marked as low priority to address later
+
+### Issue 6: User Management Table Layout Problems (Session 65)
+**Problem:** Table extending outside page boundaries, headers not visible, email column missing  
+**Multiple issues:**
+1. Table headers had light text on light background (barely visible)
+2. Email column header was missing entirely
+3. User management content extending beyond main page width (white overlay outside red borders)
+4. Table too wide for page layout
+
+**Fixes Applied:**
+1. **Header Visibility:** Changed table header background to dark (#1a1a1a) with orange text (#ff6b35)
+2. **Email Column:** Added "אימייל" header and restored email data display
+3. **Page Width:** Increased admin-container from 1400px to **1800px max-width** (98% viewport)
+4. **Table Sizing:** Reduced font sizes (headers 12px, data 10-11px, buttons 10px)
+5. **Container Fix:** Added `box-sizing: border-box` and `max-width: 100%` to table container
+6. **Mobile Responsive:** Added specific mobile styles for user management table (smaller fonts on <768px)
+
+**Result:** Table now fits perfectly within page boundaries, all headers visible, email column populates correctly
+
 ---
 
-## 📋 Next Steps (After Session)
+## 📋 Next Steps (After Sessions 64 & 65)
 
-### Immediate (Complete Migrations)
-1. ✅ Run Migration 03 (with fixed public schema functions)
-2. ⏳ Run Migration 04 (assign existing cases)
-3. ⏳ Test login with email/password
+### Completed in Session 65 ✅
+1. ✅ All 4 SQL migrations run successfully
+2. ✅ Login working with email/password (carmel.cayouf@gmail.com)
+3. ✅ User Management UI added to Admin Hub
+4. ✅ User list, create, activate/deactivate functions implemented
 
 ### High Priority (Next Session)
-1. Create `admin-user-management.html` - User CRUD interface
-2. Update `selection.html` - Remove admin password, add role-based access
-3. Update `open-cases.html` - Capture `created_by` user ID
-4. Update `supabaseHelperService.js` - Capture `updated_by` user ID
+1. **Test user creation flow** - Create a test user and verify email/password work
+2. **Update selection.html** - Remove old admin password prompt, add role-based button visibility
+3. **Update open-cases.html** - Capture `created_by` user ID when creating new cases
+4. **Update supabaseHelperService.js** - Capture `updated_by` user ID on helper saves
 
 ### Medium Priority
-5. Create `caseAccessService.js` - Role-based case filtering
-6. Update `logout-sound.js` - Integrate with Supabase Auth
+5. Create `caseAccessService.js` - Role-based case filtering (assessors see only own cases)
+6. Update `logout-sound.js` - Ensure compatibility with Supabase Auth
 7. Remove `password-prefill.js` - No longer needed
 
 ### Testing
-8. Test complete auth flow
-9. Test role-based access
+8. Test complete auth flow with different roles
+9. Test role-based access (developer vs admin vs assessor vs assistant)
 10. Test case filtering by role
+11. Fix SMTP email sending (low priority)
 
 ---
 
@@ -116,7 +163,7 @@
 
 ## 📁 Files Modified/Created
 
-### Created (9 files)
+### Created (Session 64 - 9 files)
 1. `supabase/sql/Phase6_Auth/01_update_profiles_table.sql`
 2. `supabase/sql/Phase6_Auth/02_create_org_and_dev_user.sql`
 3. `supabase/sql/Phase6_Auth/03_update_rls_policies.sql`
@@ -126,9 +173,22 @@
 7. `supabase migration/SESSION_64_PHASE6_AUTH.md`
 8. `supabase migration/SESSION_64_SUMMARY.md` (this file)
 
-### Modified (2 files)
+### Modified (Session 64 - 2 files)
 1. `index.html` - Email/password login
 2. `security-manager.js` - Supabase Auth integration
+
+### Modified (Session 65 - 3 files)
+1. **`lib/supabaseClient.js`** - Added complete Auth API (signInWithPassword, signOut, getSession, resetPassword, updateUser)
+2. **`services/authService.js`** - Added backwards-compatible sessionStorage items for selection.html
+3. **`admin.html`** - Added User Management section with full CRUD:
+   - Added "👥 ניהול משתמשים" nav button
+   - Created user management section (loadUserManagement function)
+   - User table with columns: name, email, phone, role, org, status, actions
+   - Add user form with modal dialog
+   - Create user function (generates temp password)
+   - Toggle user status (activate/deactivate)
+   - Increased admin page width to 1800px (98% viewport)
+   - Mobile responsive layout
 
 ---
 
@@ -167,14 +227,17 @@
 ## 🔄 Migration Status
 
 ```
-Phase 6 Progress: 60%
+Phase 6 Progress: 85%
 
-Database Setup:    [████████████████████████░░░░] 80%
-Code Integration:  [████████████░░░░░░░░░░░░░░░░] 40%
-Testing:           [░░░░░░░░░░░░░░░░░░░░░░░░░░░░]  0%
+Database Setup:    [████████████████████████████] 100% ✅
+Code Integration:  [████████████████████████░░░░]  85% 🔄
+Testing:           [████████░░░░░░░░░░░░░░░░░░░░]  30% 🔄
 ```
 
-**Estimated Completion:** 2-3 hours (next session)
+**Session 64:** Database migrations, auth service, login page  
+**Session 65:** Auth API implementation, login fix, user management UI  
+**Remaining:** Role-based access, case filtering, final testing  
+**Estimated Completion:** 1-2 hours (next session)
 
 ---
 
