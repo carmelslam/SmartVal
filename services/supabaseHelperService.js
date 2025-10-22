@@ -100,14 +100,14 @@ export const supabaseHelperService = {
    */
   async findOrCreateCase(plate, helperData) {
     // First, try to find existing open case
-    const { data: existingCase } = await supabase
+    const { data: existingCases } = await supabase
       .from('cases')
       .select('id, plate, status')
       .eq('plate', plate)
-      .in('status', ['OPEN', 'IN_PROGRESS'])
-      .single();
+      .or('status.eq.OPEN,status.eq.IN_PROGRESS');
       
-    if (existingCase) {
+    if (existingCases && existingCases.length > 0) {
+      const existingCase = existingCases[0];
       console.log(`📁 Found existing case for plate ${plate}`);
       return existingCase;
     }
