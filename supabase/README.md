@@ -2,6 +2,20 @@
 
 This folder contains all SQL scripts, database functions, and migration files for the SmartVal Supabase integration.
 
+## 📊 Current Phase Status
+
+**Active Phase:** Phase 6 - User Management & Authentication  
+**Status:** 🟡 IN PROGRESS (Foundation Complete)  
+**Last Session:** 67 (2025-10-22)  
+**Next Session:** 68 (Pending)
+
+**Quick Links:**
+- [Phase 6 Overview](sql/Phase6_Auth/README.md)
+- [Session 67 Bug Fixes](sql/Phase6_Auth/SESSION_67_AUTH_FIXES.md)
+- [Session 68 TODO](sql/Phase6_Auth/SESSION_68_PHASE6_TODO.md)
+
+---
+
 ## 📁 Directory Structure
 
 ### `/sql/` - Database Scripts
