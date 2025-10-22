@@ -391,7 +391,7 @@ INSERT INTO storage.buckets (id, name, public) VALUES
 
 
 
-### Phase 5: New Modules parts and invoices
+### Phase 5: New Modules parts and invoices **PARTS MODULE IS COMPLETE**
 **read the following documents also : Parts module and supabase.md and Parts module and supabase.md** 
 1. based on parts Catalog and search UI in Supabase - use the current parts search module - parts search.html and use the parts search results json : read the following architecture first:
     1. Read the parts module logic.md in documentation - pay attention to the differences brought in this updated version 
