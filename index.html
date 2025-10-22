@@ -90,13 +90,42 @@
       margin-bottom: 20px;
       color: #64748b;
     }
+    input[type="email"],
     input[type="password"] {
       padding: 12px;
       font-size: 16px;
       width: 100%;
       border: 1px solid #64748b;
       border-radius: 8px;
-      margin-bottom: 20px;
+      margin-bottom: 15px;
+      box-sizing: border-box;
+    }
+    input[type="email"]::placeholder,
+    input[type="password"]::placeholder {
+      text-align: right;
+    }
+    .forgot-password {
+      text-align: center;
+      margin-top: 15px;
+    }
+    .forgot-password a {
+      color: #1e3a8a;
+      text-decoration: none;
+      font-size: 14px;
+      cursor: pointer;
+    }
+    .forgot-password a:hover {
+      text-decoration: underline;
+    }
+    .error-message {
+      color: #dc2626;
+      font-size: 14px;
+      margin-bottom: 15px;
+      text-align: center;
+      display: none;
+    }
+    .error-message.show {
+      display: block;
     }
     button {
       padding: 12px 20px;
@@ -135,8 +164,13 @@
     <h1>ירון כיוף שמאות - פורטל</h1>
     <h2>שמאות והערכת נזקי רכב ורכוש</h2>
     <form id="loginForm" onsubmit="login(event); return false;">
-      <input type="password" id="password" placeholder="הזן סיסמה" autocomplete="off" />
+      <div class="error-message" id="errorMessage"></div>
+      <input type="email" id="email" placeholder="אימייל" autocomplete="email" required />
+      <input type="password" id="password" placeholder="סיסמה" autocomplete="current-password" required />
       <button type="submit">כניסה</button>
+      <div class="forgot-password">
+        <a onclick="showForgotPassword()">שכחתי סיסמה</a>
+      </div>
     </form>
     <div class="footer">All rights reserved © Carmel Cayouf</div>
     <div class="watermark">ירון כיוף - שמאות והערכת נזקי רכב ורכוש</div>
@@ -145,10 +179,8 @@
   <script type="module">
   console.log("🚀 Loading index.html script...");
   
-  // Import proper encryption from auth.js
-  import { encryptPassword } from './auth.js';
-  // Import webhook functionality
-  import { sendToWebhook } from './webhook.js';
+  // Import Supabase Auth Service
+  import { authService } from './services/authService.js';
   
   async function initPush() {
     try {
@@ -280,11 +312,15 @@
     if (event) event.preventDefault();
     console.log("🔥 LOGIN FUNCTION CALLED!");
     
-    const pass = document.getElementById("password").value.trim();
-    console.log("🔑 Password length:", pass.length);
+    const email = document.getElementById("email").value.trim();
+    const password = document.getElementById("password").value.trim();
+    const errorMessage = document.getElementById("errorMessage");
     
-    if (!pass) {
-      alert("נא להזין סיסמה");
+    // Hide previous errors
+    errorMessage.classList.remove("show");
+    
+    if (!email || !password) {
+      showError("נא למלא את כל השדות");
       return;
     }
 
@@ -293,131 +329,93 @@
     submitBtn.textContent = "מתחבר...";
     submitBtn.disabled = true;
 
-    console.log("🔐 Starting login process with password:", pass.substring(0, 3) + "***");
+    console.log("🔐 Starting Supabase Auth login process...");
 
     try {
-      console.log("📡 Sending webhook request to Make.com...");
-      console.log("📡 Using PASSWORD_PAGE webhook");
-      console.log("📡 Payload:", { password: pass.substring(0, 3) + "***" });
+      // Login with Supabase Auth
+      const result = await authService.login(email, password);
       
-      const webhookResponse = await sendToWebhook('PASSWORD_PAGE', { password: pass });
-      
-      console.log("📨 Webhook response:", webhookResponse);
-      
-      // sendToWebhook returns the parsed response data directly
-      // Check for success based on the response content
-      const responseText = typeof webhookResponse === 'string' ? webhookResponse : 
-                          webhookResponse?.message || 
-                          JSON.stringify(webhookResponse);
-      
-      console.log("📩 Response data:", responseText);
-      
-      // Check for success in multiple ways
-      const isSuccess = webhookResponse?.success === true ||
-                       webhookResponse?.status === 'success' ||
-                       (typeof responseText === 'string' && (
-                         responseText.toLowerCase().includes("success") ||
-                         responseText.toLowerCase().includes("approved") ||
-                         responseText.toLowerCase().includes("valid")
-                       ));
-      
-      console.log("✅ Login success check:", isSuccess);
-
-      if (isSuccess) {
-        console.log("🔑 Authentication successful, encrypting password...");
-        
-        try {
-          const encryptedPass = await encryptPassword(pass);
-          console.log("🔒 Password encrypted successfully");
-          
-          // Preserve helper data before clearing session
-          const helperData = sessionStorage.getItem('helper');
-          
-          // Clear only auth-related session data, preserve helper
-          sessionStorage.removeItem("auth");
-          sessionStorage.removeItem("sessionStart");
-          sessionStorage.removeItem("loginTime");
-          sessionStorage.removeItem("lastActivityTime");
-          sessionStorage.removeItem("loginSuccess");
-          sessionStorage.removeItem("originalPassword");
-          
-          // Set new session data
-          sessionStorage.setItem("auth", encryptedPass);
-          const now = Date.now();
-          sessionStorage.setItem("sessionStart", now.toString());
-          sessionStorage.setItem("loginTime", now.toString());
-          sessionStorage.setItem("lastActivityTime", now.toString());
-          sessionStorage.setItem("loginSuccess", "true");
-          sessionStorage.setItem("originalPassword", pass); // For debugging
-          
-          // Restore helper data if it existed
-          if (helperData) {
-            sessionStorage.setItem('helper', helperData);
-            console.log('✅ Preserved existing helper data during login');
-          }
-          
-          // Restore last case data if available (and no current helper data)
-          if (!helperData && window.securityManager && typeof window.securityManager.restoreLastCaseData === 'function') {
-            const restored = window.securityManager.restoreLastCaseData();
-            if (restored) {
-              console.log('✅ Restored previous case data after login');
-            }
-          }
-          
-          console.log("💾 Session data saved to sessionStorage");
-          console.log("💾 Auth token:", encryptedPass.substring(0, 50) + "...");
-          
-          // Test sessionStorage immediately
-          const testAuth = sessionStorage.getItem("auth");
-          if (!testAuth) {
-            throw new Error("Failed to save auth to sessionStorage");
-          }
-          console.log("✅ SessionStorage verification passed");
-          
-          console.log("🚀 Starting navigation process...");
-          
-          // Update UI to show success immediately
-          submitBtn.textContent = "🚗 מצליח! מעביר...";
-          submitBtn.style.background = "#28a745";
-          
-          // Play car ignition sound (non-blocking)
-          if (carIgnitionSound) {
-            carIgnitionSound.play().catch(e => console.log("🔊 Car ignition audio skipped:", e.message));
-          }
-          
-          // Initialize push notifications after navigation (non-blocking)
-          // Moved to post-login pages to avoid timing issues
-          console.log("📱 Push notifications will initialize on next page");
-          
-          // Start logo animation and smooth transition
-          startSuccessAnimation();
-          
-          // Navigate after animation completes
-          setTimeout(() => {
-            console.log("✅ Navigating to selection page...");
-            window.location.href = 'selection.html';
-          }, 1500); // Wait for animation to complete
-          
-        } catch (encryptError) {
-          console.error("🔐 Encryption failed:", encryptError);
-          alert("שגיאה בהצפנת הסיסמה: " + encryptError.message);
-        }
-        
-      } else {
-        console.log("❌ Authentication failed");
-        alert("סיסמה לא מאומתת ❌\nResponse: " + text);
+      if (!result.success) {
+        console.log("❌ Authentication failed:", result.error);
+        showError(result.error);
+        return;
       }
+
+      console.log("✅ Authentication successful!", {
+        name: result.profile.name,
+        role: result.profile.role
+      });
+
+      // Check if user must change password
+      if (result.mustChangePassword) {
+        console.log("⚠️ User must change password");
+        // Redirect to password change page
+        window.location.href = 'change-password.html';
+        return;
+      }
+
+      // Update UI to show success immediately
+      submitBtn.textContent = "🚗 מצליח! מעביר...";
+      submitBtn.style.background = "#28a745";
+      
+      // Play car ignition sound (non-blocking)
+      if (carIgnitionSound) {
+        carIgnitionSound.play().catch(e => console.log("🔊 Car ignition audio skipped:", e.message));
+      }
+      
+      // Start logo animation and smooth transition
+      startSuccessAnimation();
+      
+      // Start session monitoring
+      authService.startSessionMonitoring(() => {
+        alert("הפגישה הסתיימה עקב חוסר פעילות.");
+        window.location.href = "index.html";
+      });
+      
+      // Navigate after animation completes
+      setTimeout(() => {
+        console.log("✅ Navigating to selection page...");
+        window.location.href = 'selection.html';
+      }, 1500); // Wait for animation to complete
+      
     } catch (err) {
       console.error("🚨 Login error:", err);
-      console.error("🚨 Error details:", {
-        name: err.name,
-        message: err.message,
-        stack: err.stack
-      });
-      alert("שגיאת חיבור מול Make.com ❌\n" + err.message);
+      showError("שגיאה בהתחברות - נסה שוב");
     } finally {
       submitBtn.textContent = originalText;
       submitBtn.disabled = false;
+    }
+  }
+
+  // Show error message helper
+  function showError(message) {
+    const errorMessage = document.getElementById("errorMessage");
+    errorMessage.textContent = message;
+    errorMessage.classList.add("show");
+  }
+
+  // Forgot password handler
+  window.showForgotPassword = async function() {
+    const email = document.getElementById("email").value.trim();
+    
+    if (!email) {
+      showError("נא להזין כתובת אימייל תחילה");
+      return;
+    }
+
+    const confirmed = confirm(`האם לשלוח קישור לאיפוס סיסמה לכתובת:\n${email}?`);
+    if (!confirmed) return;
+
+    try {
+      const result = await authService.resetPassword(email);
+      
+      if (result.success) {
+        alert("נשלח אימייל לאיפוס סיסמה.\nבדוק את תיבת הדואר שלך.");
+      } else {
+        showError(result.error);
+      }
+    } catch (error) {
+      showError("שגיאה בשליחת אימייל");
     }
   }
   
@@ -429,52 +427,16 @@
   document.addEventListener('DOMContentLoaded', function() {
     console.log("DOM ready, setting up login handlers");
     
-    const passwordField = document.getElementById("password");
-    if (passwordField) {
-      // Focus on password field
-      passwordField.focus();
+    const emailField = document.getElementById("email");
+    if (emailField) {
+      // Focus on email field
+      emailField.focus();
     }
     
     // Show current URL for debugging
     console.log("🌐 Current URL:", window.location.href);
     console.log("🌐 Current origin:", window.location.origin);
   });
-
-  // Idle logout timer (15 min) - Synchronized with security-manager.js
-  let logoutTimer;
-  function resetTimer() {
-    clearTimeout(logoutTimer);
-    logoutTimer = setTimeout(() => {
-      // Use proper logout logic that preserves helper data
-      if (window.securityManager && window.securityManager.logout) {
-        window.securityManager.logout();
-      } else {
-        // Fallback - preserve helper data manually
-        const helperData = sessionStorage.getItem('helper');
-        
-        // Clear only auth-related session data, preserve helper
-        sessionStorage.removeItem('auth');
-        sessionStorage.removeItem('loginTime');
-        sessionStorage.removeItem('lastActivityTime');
-        sessionStorage.removeItem('sessionStart');
-        sessionStorage.removeItem('loginSuccess');
-        sessionStorage.removeItem('originalPassword');
-        
-        // Save helper data to localStorage for persistence
-        if (helperData) {
-          localStorage.setItem('lastCaseData', helperData);
-          localStorage.setItem('lastCaseTimestamp', new Date().toISOString());
-        }
-      }
-      
-      alert("הפגישה הסתיימה עקב חוסר פעילות.");
-      window.location.href = "index.html";
-    }, 15 * 60 * 1000); // Fixed: Changed from 10 to 15 minutes to match security-manager.js
-  }
-  ["click", "mousemove", "keydown", "scroll"].forEach(evt => {
-    document.addEventListener(evt, resetTimer, true);
-  });
-  resetTimer();
   </script>
 </body>
 </html>

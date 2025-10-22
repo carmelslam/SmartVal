@@ -1,11 +1,13 @@
 // 🔒 Security Manager - Comprehensive Security Layer
 // ✅ SESSION 45 FIX: Use global window functions instead of imports (helper.js no longer exports)
+// ✅ PHASE 6: Integrated with Supabase Auth for user authentication
 const helper = window.helper;
 const updateHelper = window.updateHelper;
 
 import { WEBHOOKS } from './webhook.js';
 import { supabase } from './lib/supabaseClient.js';
 import { supabaseHelperService } from './services/supabaseHelperService.js';
+import { authService } from './services/authService.js';
 
 class SecurityManager {
   constructor() {
@@ -428,14 +430,16 @@ class SecurityManager {
     this.logout();
   }
 
-  validateSession() {
-    const auth = sessionStorage.getItem('auth');
-    const lastActivityTime = sessionStorage.getItem('lastActivityTime');
+  async validateSession() {
+    // Phase 6: Use Supabase Auth session validation
+    const isValid = await authService.validateSession();
     
-    if (!auth) {
+    if (!isValid) {
       this.logout();
       return false;
     }
+    
+    const lastActivityTime = sessionStorage.getItem('lastActivityTime');
     
     // If no lastActivityTime, set it to now (for backward compatibility)
     if (!lastActivityTime) {
@@ -512,90 +516,14 @@ class SecurityManager {
   }
 
   async logout() {
-    // Preserve helper data before logout
-    const helperData = sessionStorage.getItem('helper');
-    const helper = JSON.parse(helperData || '{}');
-    const plate = helper?.meta?.plate || 'unknown';
-    const supabaseCaseId = helper?.case_info?.supabase_case_id;
+    console.log('🔒 Security Manager: Logout initiated');
     
-    // Send helper data to Make.com if it exists
-    if (helperData) {
-      try {
-        // Query Supabase for next version number
-        let version = 1;
-        if (supabaseCaseId) {
-          try {
-            const { data: maxVer } = await supabase
-              .from('case_helper')
-              .select('version')
-              .eq('case_id', supabaseCaseId)
-              .order('version', { ascending: false })
-              .limit(1)
-              .single();
-            
-            version = (maxVer?.version || 0) + 1;
-            console.log(`📊 Next version for logout: ${version}`);
-          } catch (err) {
-            console.warn('⚠️ Version query failed, defaulting to 1:', err);
-          }
-        } else {
-          console.log('⚠️ No supabase_case_id found, using version 1');
-        }
-        
-        const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-        const payload = {
-          type: 'logout_backup',
-          plate_helper_timestamp: `${plate}_helper_v${version}`,
-          helper_data: helper,
-          logout_time: timestamp,
-          reason: 'auto_logout'
-        };
-        
-        // Send to Make.com webhook (PRIMARY)
-        const webhookUrl = WEBHOOKS.HELPER_EXPORT;
-        fetch(webhookUrl, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload)
-        }).catch(err => console.warn('Failed to send logout backup:', err));
-        
-        // PHASE 2: Also save to Supabase (BACKUP)
-        // This is non-blocking and won't affect Make.com flow
-        supabaseHelperService.saveHelper({
-          plate: plate,
-          helperData: helper,
-          helperName: payload.plate_helper_timestamp,
-          timestamp: timestamp
-        }).then(result => {
-          if (result.success) {
-            console.log(`✅ Helper v${version} backed up to Supabase`);
-          } else {
-            console.log('⚠️ Supabase backup failed (Make.com still worked)');
-          }
-        }).catch(err => {
-          console.warn('⚠️ Supabase backup error (non-critical):', err);
-        });
-        
-        // Save to localStorage for persistence
-        localStorage.setItem('lastCaseData', helperData);
-        localStorage.setItem('lastCaseTimestamp', timestamp);
-        
-      } catch (error) {
-        console.error('Error saving helper data on logout:', error);
-      }
-    }
-    
-    // Clear only auth-related session data, keep helper data
-    sessionStorage.removeItem('auth');
-    sessionStorage.removeItem('loginTime');
-    sessionStorage.removeItem('lastActivityTime');
-    
-    // Don't clear helper data - it will persist
-    // sessionStorage.removeItem('helper'); // REMOVED - data should persist
+    // Delegate to authService for proper Supabase logout
+    // Note: Helper backup is handled by logout-sound.js universal function
+    await authService.logout();
     
     this.logSecurityEvent('user_logout', {
-      timestamp: new Date(),
-      data_preserved: !!helperData
+      timestamp: new Date()
     });
     
     // Redirect to login page
