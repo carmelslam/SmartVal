@@ -6,6 +6,31 @@
 
 ---
 
+guildelines:
+1. Roles :
+    1. Admin - all authorizations - access to all cases - cant change code and configurations
+    2. Assessor - open case, edit case , access just to the case he made 
+    3. Assistant : admin hub, view cases, cant edit or delete cases , auth to all administrative tools in the admin hub 
+    4. Developer - all authorizations - access to all cases - can change code and configurations 
+2. One organization :  ירון כיוף - שמאות וייעוץ
+3. Migration Strategy:
+    1. No existing users 
+    2. Admin or dev. add users and give auth
+    3. System creates a temporary username and password that needs to cube changed on first login from user 
+4. Authentication Method:  OTP
+5. User Data: What profile fields do you need?
+    1. Name 
+    2. Phone number
+    3.  Email (required for auth)
+    4.  Role 
+6.  Access Control:
+    1.  Should users only see their own cases? Yes 
+    2.  Or should all users in org see all cases? No - to see another case admin needs to transfer case  from one user to another or  share case between users
+    3.  Should admin see all cases across all orgs? Of course  and have full control on edit , delete and everuthomg .admnn has no constrains but activities he makes are logged under his user 
+7.  Current Cases: What should happen to existing cases in database? assign  to dev.
+8. . Session Behavior: Keep current 15-minute timeout or adjust for authenticated users?  Keep and enforce 15 min log out 
+
+
 ## Overview
 
 This phase migrates the system from single-password authentication to Supabase Auth with role-based access control.
