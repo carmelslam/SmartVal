@@ -3,6 +3,9 @@
 -- Date: 2025-10-22
 -- Purpose: Server-side function to create users securely (requires service role privileges)
 
+-- Enable pgcrypto extension for password hashing
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
+
 CREATE OR REPLACE FUNCTION public.create_user_account(
   p_email TEXT,
   p_password TEXT,
