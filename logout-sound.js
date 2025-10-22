@@ -73,6 +73,13 @@
         let plate = helper?.meta?.plate;
         const supabaseCaseId = helper?.case_info?.supabase_case_id;
         
+        console.log('🔍 Logout - Helper state:', {
+          plate: plate,
+          supabaseCaseId: supabaseCaseId,
+          hasSupabaseClient: !!window.supabase,
+          case_info: helper?.case_info
+        });
+        
         // Normalize plate - remove dashes and special characters
         if (plate) {
           plate = plate.replace(/[-\/\s]/g, '');
