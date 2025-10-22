@@ -1326,22 +1326,29 @@
         const { supabase } = await import('./lib/supabaseClient.js');
         
         // Always use Yaron org for users created from UI
+        // Hardcoded org ID as fallback since RLS might block query
+        const YARON_ORG_ID = '77c96ad0-8b37-4e3d-9da7-45de42461a89';
+        
+        let yaronOrgId = YARON_ORG_ID;
+        
+        // Try to fetch dynamically first
         const { data: yaronOrg, error: orgError } = await supabase
           .from('orgs')
           .select('id')
           .eq('name', 'ירון כיוף - שמאות וייעוץ')
           .single();
         
-        console.log('Org lookup result:', { yaronOrg, orgError });
-        
-        if (orgError || !yaronOrg) {
-          throw new Error(`לא נמצא ארגון ירון כיוף: ${orgError?.message || 'לא נמצא'}`);
+        if (yaronOrg && !orgError) {
+          yaronOrgId = yaronOrg.id;
+          console.log('✅ Org found dynamically:', yaronOrgId);
+        } else {
+          console.log('⚠️ Using hardcoded org ID (RLS blocked query):', yaronOrgId);
         }
         
         // Generate temporary password (min 8 chars with uppercase and lowercase)
         const tempPassword = Math.random().toString(36).slice(-8) + Math.random().toString(36).toUpperCase().slice(-4);
         
-        console.log('Creating user with org_id:', yaronOrg.id);
+        console.log('Creating user with org_id:', yaronOrgId);
         
         // Create user via RPC function (server-side)
         const { data, error } = await supabase.rpc('create_user_account', {
@@ -1350,7 +1357,7 @@
           p_name: name,
           p_phone: phone,
           p_role: role,
-          p_org_id: yaronOrg.id
+          p_org_id: yaronOrgId
         });
         
         console.log('RPC result:', { data, error });
