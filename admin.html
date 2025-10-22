@@ -1192,8 +1192,17 @@
                 </select>
               </div>
               
+              ${currentProfile.role === 'developer' ? `
+              <div style="margin-bottom: 15px;" id="orgSelectionDiv">
+                <label style="display: block; margin-bottom: 5px; font-weight: bold;">ארגון:</label>
+                <select id="newUserOrg" 
+                        style="width: 100%; padding: 10px; background: #3a3a3a; color: #e0e0e0; border: 1px solid #555; border-radius: 4px; box-sizing: border-box;">
+                  <option value="">טוען ארגונים...</option>
+                </select>
+              </div>` : ''}
+              
               <div style="background: #1a365d; padding: 12px; border-radius: 6px; margin: 15px 0; border: 1px solid #3b82f6; font-size: 13px;">
-                <strong style="color: #3b82f6;">ℹ️ הערה:</strong> סיסמה זמנית תישלח למשתמש באימייל. המשתמש יתבקש לשנות אותה בכניסה הראשונה.
+                <strong style="color: #3b82f6;">ℹ️ הערה:</strong> סיסמה זמנית תוצג כאן. שמור אותה ושלח למשתמש (אימייל אוטומטי לא פועל כרגע).
               </div>
               
               <div id="userFormStatus" style="margin: 15px 0; text-align: center;"></div>
@@ -1223,7 +1232,7 @@
       }
     };
     
-    window.showAddUserForm = function() {
+    window.showAddUserForm = async function() {
       const modal = document.getElementById('userFormModal');
       if (modal) {
         modal.style.display = 'flex';
@@ -1232,6 +1241,26 @@
         document.getElementById('newUserPhone').value = '';
         document.getElementById('newUserRole').value = 'assessor';
         document.getElementById('userFormStatus').innerHTML = '';
+        
+        // Load organizations if developer
+        const { authService } = await import('./services/authService.js');
+        const currentProfile = authService.getCurrentProfile();
+        
+        if (currentProfile.role === 'developer') {
+          const orgSelect = document.getElementById('newUserOrg');
+          if (orgSelect) {
+            const { supabase } = await import('./lib/supabaseClient.js');
+            const { data: orgs } = await supabase.from('orgs').select('id, name').order('name');
+            
+            orgSelect.innerHTML = orgs.map(org => 
+              `<option value="${org.id}">${org.name}</option>`
+            ).join('');
+            
+            // Default to Yaron org
+            const yaronOrg = orgs.find(o => o.name === 'ירון כיוף - שמאות וייעוץ');
+            if (yaronOrg) orgSelect.value = yaronOrg.id;
+          }
+        }
       }
     };
     
@@ -1258,8 +1287,17 @@
         const { supabase } = await import('./lib/supabaseClient.js');
         const { authService } = await import('./services/authService.js');
         
-        // Get current user profile for org_id
+        // Get current user profile
         const currentProfile = authService.getCurrentProfile();
+        
+        // Determine org_id: developer can choose, admin/assistant use their own org
+        let orgId = currentProfile.org_id;
+        if (currentProfile.role === 'developer') {
+          const orgSelect = document.getElementById('newUserOrg');
+          if (orgSelect && orgSelect.value) {
+            orgId = orgSelect.value;
+          }
+        }
         
         // Generate temporary password
         const tempPassword = Math.random().toString(36).slice(-8) + Math.random().toString(36).toUpperCase().slice(-4);
@@ -1271,7 +1309,7 @@
           p_name: name,
           p_phone: phone,
           p_role: role,
-          p_org_id: currentProfile.org_id
+          p_org_id: orgId
         });
         
         if (error) {
