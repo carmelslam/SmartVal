@@ -17,7 +17,7 @@ CREATE OR REPLACE FUNCTION public.create_user_account(
 RETURNS JSON
 LANGUAGE plpgsql
 SECURITY DEFINER
-SET search_path = public
+SET search_path = public, pg_catalog, extensions
 AS $$
 DECLARE
   v_user_id UUID;
@@ -41,6 +41,7 @@ BEGIN
     role,
     email,
     encrypted_password,
+    confirmation_sent_at,
     email_confirmed_at,
     recovery_sent_at,
     last_sign_in_at,
@@ -59,7 +60,8 @@ BEGIN
     'authenticated',
     'authenticated',
     p_email,
-    crypt(p_password, gen_salt('bf')),
+    extensions.crypt(p_password, extensions.gen_salt('bf')),
+    NOW(),
     NOW(),
     NOW(),
     NOW(),
