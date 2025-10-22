@@ -6,12 +6,11 @@
 -- Enable http extension for REST API calls
 CREATE EXTENSION IF NOT EXISTS http;
 
--- Store service role key securely (run this manually with your actual service_role key)
--- CREATE TABLE IF NOT EXISTS private.config (
---   key TEXT PRIMARY KEY,
---   value TEXT NOT NULL
--- );
--- INSERT INTO private.config (key, value) VALUES ('supabase_service_role_key', 'YOUR_SERVICE_ROLE_KEY_HERE');
+-- IMPORTANT: Before running this migration, you MUST:
+-- 1. Go to Supabase Dashboard → Settings → API
+-- 2. Copy the "service_role" key (NOT the anon key)
+-- 3. Replace YOUR_SERVICE_ROLE_KEY_HERE below with your actual service_role key
+-- 4. The service_role key should look like: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOi...
 
 -- Function to create user account
 CREATE OR REPLACE FUNCTION public.create_user_account(
@@ -31,7 +30,7 @@ DECLARE
   v_user_id UUID;
   v_profile_id UUID;
   v_http_response http_response;
-  v_response_data JSON;
+  v_response_data JSONB;
 BEGIN
   -- Check caller has admin or assistant role
   SELECT role INTO v_current_user_role
@@ -48,8 +47,8 @@ BEGIN
     'POST',
     'https://nvqrptokmwdhvpiufrad.supabase.co/auth/v1/admin/users',
     ARRAY[
-      http_header('apikey', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im52cXJwdG9rbXdkaHZwaXVmcmFkIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NjAzNTQ4NSwiZXhwIjoyMDcxNjExNDg1fQ.OWbqj6qzHCEkUuQXiRxfxQ7wIWNYy3aDivELa-VXjnA'),
-      http_header('Authorization', 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im52cXJwdG9rbXdkaHZwaXVmcmFkIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NjAzNTQ4NSwiZXhwIjoyMDcxNjExNDg1fQ.OWbqj6qzHCEkUuQXiRxfxQ7wIWNYy3aDivELa-VXjnA'),
+      http_header('apikey', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im52cXJwdG9rbXdkaHZwaXVmcmFkIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NjAzNTQ4NSwiZXhwIjoyMDcxNjExNDg1fQ.3lnf8ypdzRmzX8ePEiOAAUUET_ADH_4nuiuHqVjFqyY'),
+      http_header('Authorization', 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im52cXJwdG9rbXdkaHZwaXVmcmFkIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NjAzNTQ4NSwiZXhwIjoyMDcxNjExNDg1fQ.3lnf8ypdzRmzX8ePEiOAAUUET_ADH_4nuiuHqVjFqyY'),
       http_header('Content-Type', 'application/json')
     ],
     'application/json',
@@ -62,15 +61,15 @@ BEGIN
   )::http_request);
 
   -- Check if user creation was successful
-  IF v_http_response.status <> 200 THEN
+  IF v_http_response.status <> 200 AND v_http_response.status <> 201 THEN
     RETURN json_build_object(
       'success', false,
-      'error', 'Failed to create auth user: ' || v_http_response.content::json->>'message'
+      'error', 'Failed to create auth user. Status: ' || v_http_response.status || '. Response: ' || v_http_response.content
     );
   END IF;
 
   -- Extract user_id from response
-  v_response_data := v_http_response.content::json;
+  v_response_data := v_http_response.content::jsonb;
   v_user_id := (v_response_data->>'id')::uuid;
 
   -- Create profile
