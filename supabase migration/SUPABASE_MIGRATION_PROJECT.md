@@ -382,12 +382,16 @@ INSERT INTO storage.buckets (id, name, public) VALUES
 התיק נפתח: dd/mm/yyyy
 עדכון אחרון:  dd/mm/yyyy
 סה"כ גיבויים: n
+
+**not fixed yet :**
 7. in admin hub add delete case from supabase (שרת) and give 2 step confirmation
 8. admin hub preview version history status showing wrong information -**not fixed**
+
+
 **MOST IMPORTANT - HIGH PRIORITY TASKS :** 
-9. **VERY IMPORTANT** *helper is not creating another version , its staying on v1 in supabase - NEW VERSIONS ARE NOT BEING SAVED AND ARE REVERTED TO V1* -**not fixed**
-10.**OPEN CASE PAGE  open-cases.html DOESNT TRIGGER A NEW CASE CREATION IN SUPABASE - CASE ID - PLATE IN : CASES, CASE_HELPER, HELPER_VERSIONS TABLES**
-11. ADD A SAVE FUNCTION TO SAVE HELPER IN TEH VERSIONS ON LOG OUT/ CLOSED SESSION - OR THE BEST WAY TO DO THAT - I DONT KNOW **SUGGEST** for now closing a session or logout doesnt save  the helper to supabase .
+*9. **VERY IMPORTANT** *helper is not creating another version , its staying on v1 in supabase - NEW VERSIONS ARE NOT BEING SAVED AND ARE REVERTED TO V1* -** fixed**
+10.**OPEN CASE PAGE  open-cases.html DOESNT TRIGGER A NEW CASE CREATION IN SUPABASE - CASE ID - PLATE IN : CASES, CASE_HELPER, HELPER_VERSIONS TABLES** FIXED
+11. ADD A SAVE FUNCTION TO SAVE HELPER IN TEH VERSIONS ON LOG OUT/ CLOSED SESSION - OR THE BEST WAY TO DO THAT - I DONT KNOW **SUGGEST** for now closing a session or logout doesnt save  the helper to supabase* FIXED
 
 
 
@@ -490,7 +494,8 @@ ask for tracking tables clarifications and current formats.
 
 
 **### Phase 10 : connect the load report on modules to supabase**
-1. final report builder and estimate builder have reload case, ourpose : to reload existing reports.
+1. expertise report, final report builder and estimate builder ned to be saved as pdf in teh documents, in supabase
+final report builder and estimate builderhave reload case, ourpose : to reload existing reports.
 2. Restored case on selection page P populates the plate window in estimator builder and the fina report builder in the window טען תיק קיים
 3. The buttons of the report retrieval will call the actual report of the plate from supabase buckets
 4. REPORTS PDF STORAGE AND EXPORT TO MAKE.COM - CREATE A NEW TABLE/BUCKET FOR REPORTS : ASSOCIAATED BY CASE_ID AND PLATE - WITH CURRRENT (TRUE/FALSE) DETECTION.

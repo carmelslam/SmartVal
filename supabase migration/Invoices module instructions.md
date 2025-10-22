@@ -3,6 +3,22 @@
 ## Project Overview
 You are tasked with creating a comprehensive invoice processing module that integrates OCR capabilities, damage center management, and real-time cost validation. This module will handle invoice uploads, process them through OCR, and allow users to map invoice items to damage centers with full editing capabilities.
 
+General:
+1. Insert a damage centers iframe, the idea is to inspect the fields of works, parts and repairs of each  damage center, the behavior should be like this - a flow behavior:
+    1. Upload invoice for OCR 
+    2. Receive returned webhook
+    3. Prompt user to validate costs 
+    4. Opens editable damage centers iframe 
+    5. When the user chooses a field , he writes one letter, a list of all the works , parts and repairs that included in the invoice and was OCRed and stored in the helper will appear , user chooses a line 
+    6. Once an item from the invoice OCR is selected , al the fields in for that item are updated from the invoice mainly : the name of the work, repair or part- description/ serial number  if available - costs without vat . The user can edit the fields also .
+    7. What is important is that saving the updated damage centers actual costs (from the invoice) will update the helper.canters damage center according to the center the user updated, if non is updated or modified, the original centers will stay as is .
+    8. One the user saves , the modified and updated damage centers and costs will be the only truth for costs (claim value) and for selected parts and works .
+    9. Creating a universal table for the invoice floating screen display . 
+    10. Standardization js that standerizes different format of invoices and creates a unified display
+
+Task breakdown: 
+
+
 ## Technical Architecture & Requirements
 
 ### Core Technologies
