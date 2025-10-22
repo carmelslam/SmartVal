@@ -74,6 +74,7 @@ class AuthService {
       // Store in sessionStorage for page persistence
       sessionStorage.setItem('auth', JSON.stringify({
         user: authData.user,
+        session: authData.session,
         profile: profile,
         loginTime: new Date().toISOString()
       }));
