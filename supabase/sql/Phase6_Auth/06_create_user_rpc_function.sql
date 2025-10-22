@@ -97,7 +97,7 @@ BEGIN
     auth.uid(),
     NOW()
   )
-  RETURNING id INTO v_profile_id;
+  RETURNING user_id INTO v_profile_id;
 
   -- Return success
   RETURN json_build_object(
