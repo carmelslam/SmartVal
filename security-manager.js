@@ -513,16 +513,37 @@ class SecurityManager {
   async logout() {
     // Preserve helper data before logout
     const helperData = sessionStorage.getItem('helper');
-    const plate = JSON.parse(helperData || '{}')?.meta?.plate || 'unknown';
+    const helper = JSON.parse(helperData || '{}');
+    const plate = helper?.meta?.plate || 'unknown';
+    const supabaseCaseId = helper?.case_info?.supabase_case_id;
     
     // Send helper data to Make.com if it exists
     if (helperData) {
       try {
+        // Query Supabase for next version number
+        let version = 1;
+        if (supabaseCaseId && typeof supabase !== 'undefined') {
+          try {
+            const { data: maxVer } = await supabase
+              .from('case_helper')
+              .select('version')
+              .eq('case_id', supabaseCaseId)
+              .order('version', { ascending: false })
+              .limit(1)
+              .single();
+            
+            version = (maxVer?.version || 0) + 1;
+            console.log(`📊 Next version for logout: ${version}`);
+          } catch (err) {
+            console.warn('Version query failed, defaulting to 1:', err);
+          }
+        }
+        
         const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
         const payload = {
           type: 'logout_backup',
-          plate_helper_timestamp: `${plate}_helper_${timestamp}`,
-          helper_data: JSON.parse(helperData),
+          plate_helper_timestamp: `${plate}_helper_v${version}`,
+          helper_data: helper,
           logout_time: timestamp,
           reason: 'auto_logout'
         };
@@ -539,12 +560,12 @@ class SecurityManager {
         // This is non-blocking and won't affect Make.com flow
         supabaseHelperService.saveHelper({
           plate: plate,
-          helperData: JSON.parse(helperData),
+          helperData: helper,
           helperName: payload.plate_helper_timestamp,
           timestamp: timestamp
         }).then(result => {
           if (result.success) {
-            console.log('✅ Helper backed up to Supabase');
+            console.log(`✅ Helper v${version} backed up to Supabase`);
           } else {
             console.log('⚠️ Supabase backup failed (Make.com still worked)');
           }

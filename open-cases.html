@@ -674,6 +674,41 @@
           console.error('❌ Error saving data to helper:', error);
         }
         
+        // Create case in Supabase and save initial version
+        try {
+          console.log('📤 Creating case in Supabase...');
+          
+          // Step 1: Find or create case
+          const caseResult = await window.supabaseHelperService.findOrCreateCase(
+            normalizedPlate,
+            window.helper
+          );
+          
+          if (caseResult && caseResult.id) {
+            // Step 2: Store UUID in correct location
+            window.helper.case_info.supabase_case_id = caseResult.id;
+            console.log('✅ Case created with UUID:', caseResult.id);
+            
+            // Step 3: Save initial version (v1)
+            const saveResult = await window.supabaseHelperService.saveHelper({
+              plate: normalizedPlate,
+              helperData: window.helper,
+              helperName: `${normalizedPlate}_helper_v1`,
+              timestamp: new Date().toISOString()
+            });
+            
+            if (saveResult.success) {
+              console.log('✅ Initial version (v1) saved to Supabase');
+            }
+            
+            // Step 4: Update sessionStorage with supabase_case_id
+            sessionStorage.setItem('helper', JSON.stringify(window.helper));
+          }
+        } catch (err) {
+          console.error('⚠️ Supabase initialization failed (non-critical):', err);
+          // Non-blocking - case can still work locally
+        }
+        
         document.getElementById("feedback").innerText = "הבקשה נשלחה בהצלחה";
         document.getElementById("feedback").style.display = "block";
         // Show success message and continue button
