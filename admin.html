@@ -1813,6 +1813,10 @@
           return;
         }
         
+        // Get current user's org
+        const authData = JSON.parse(sessionStorage.getItem('auth'));
+        const currentUserOrgId = authData?.profile?.org_id;
+        
         const { data: cases, error } = await supabase
           .from('cases')
           .select(`
@@ -1820,13 +1824,24 @@
             plate,
             owner_name,
             created_at,
-            created_by,
-            profiles:created_by (
-              name,
-              role
-            )
+            created_by
           `)
           .order('created_at', { ascending: false });
+        
+        if (error) throw error;
+        
+        // Manually fetch owner details for each case
+        const caseIds = cases.map(c => c.created_by);
+        const { data: owners } = await supabase
+          .from('profiles')
+          .select('user_id, name, role, org_id')
+          .filter('user_id', 'in', `(${caseIds.join(',')})`);
+        
+        // Map owners to cases
+        cases.forEach(caseItem => {
+          const owner = owners?.find(o => o.user_id === caseItem.created_by);
+          caseItem.owner = owner;
+        });
         
         if (error) throw error;
         
@@ -1860,17 +1875,17 @@
           html += `
                 <tr style="border-bottom: 1px solid #444;">
                   <td style="padding: 10px; color: #e0e0e0; font-weight: bold;">${caseItem.plate || 'לא ידוע'}</td>
-                  <td style="padding: 10px; color: #e0e0e0;">${caseItem.profiles?.name || 'לא ידוע'}</td>
-                  <td style="padding: 10px; color: #e0e0e0;">${roleNames[caseItem.profiles?.role] || 'לא ידוע'}</td>
+                  <td style="padding: 10px; color: #e0e0e0;">${caseItem.owner?.name || 'לא ידוע'}</td>
+                  <td style="padding: 10px; color: #e0e0e0;">${roleNames[caseItem.owner?.role] || 'לא ידוע'}</td>
                   <td style="padding: 10px; color: #e0e0e0;">${new Date(caseItem.created_at).toLocaleDateString('he-IL')}</td>
                   <td style="padding: 10px; text-align: center;">
-                    <button onclick="showCollaboratorModal('${caseItem.plate}', '${caseItem.id}', '${caseItem.created_by}')"
+                    <button onclick="showCollaboratorModal('${caseItem.plate}', '${caseItem.id}', '${caseItem.created_by}', '${caseItem.owner?.org_id || currentUserOrgId}')"
                             style="padding: 6px 12px; background: #3b82f6; color: white; border: none; border-radius: 4px; cursor: pointer; margin-left: 5px;"
                             onmouseover="this.style.background='#2563eb'"
                             onmouseout="this.style.background='#3b82f6'">
                       👥 ניהול שותפים
                     </button>
-                    <button onclick="showTransferModal('${caseItem.plate}', '${caseItem.created_by}')"
+                    <button onclick="showTransferModal('${caseItem.plate}', '${caseItem.created_by}', '${caseItem.owner?.org_id || currentUserOrgId}')"
                             style="padding: 6px 12px; background: #ef4444; color: white; border: none; border-radius: 4px; cursor: pointer;"
                             onmouseover="this.style.background='#dc2626'"
                             onmouseout="this.style.background='#ef4444'">
@@ -1972,16 +1987,17 @@
     };
     
     // Collaborator Management Functions
-    window.showCollaboratorModal = async function(plate, caseId, ownerId) {
+    window.showCollaboratorModal = async function(plate, caseId, ownerId, orgId) {
       window.currentCollaboratorPlate = plate;
       window.currentCollaboratorCaseId = caseId;
       window.currentCollaboratorOwnerId = ownerId;
+      window.currentCollaboratorOrgId = orgId;
       
       document.getElementById('collaboratorPlate').textContent = plate;
       document.getElementById('collaboratorModal').style.display = 'flex';
       
       await loadCurrentCollaborators(plate);
-      await loadAvailableUsers(ownerId);
+      await loadAvailableUsers(ownerId, orgId);
     };
     
     async function loadCurrentCollaborators(plate) {
@@ -2036,7 +2052,7 @@
       }
     }
     
-    async function loadAvailableUsers(ownerId) {
+    async function loadAvailableUsers(ownerId, orgId) {
       const select = document.getElementById('newCollaboratorSelect');
       select.innerHTML = '<option value="">בחר משתמש...</option>';
       
@@ -2045,8 +2061,9 @@
         
         const { data: allUsers, error } = await supabase
           .from('profiles')
-          .select('user_id, name, role, status')
-          .eq('status', 'active');
+          .select('user_id, name, role, status, org_id')
+          .eq('status', 'active')
+          .eq('org_id', orgId);
         
         if (error) {
           console.error('Error loading users:', error);
@@ -2054,7 +2071,7 @@
         }
         
         const users = allUsers.filter(user => 
-          ['assessor', 'admin', 'developer'].includes(user.role) && 
+          ['assessor', 'admin'].includes(user.role) && 
           user.user_id !== ownerId
         );
         
@@ -2138,7 +2155,7 @@
       window.currentCollaboratorOwnerId = null;
     };
     
-    window.showTransferModal = async function(plate, currentOwnerId) {
+    window.showTransferModal = async function(plate, currentOwnerId, orgId) {
       window.currentTransferPlate = plate;
       document.getElementById('transferPlate').textContent = plate;
       
@@ -2147,8 +2164,9 @@
         
         const { data: allUsers, error } = await supabase
           .from('profiles')
-          .select('user_id, name, role, status')
-          .eq('status', 'active');
+          .select('user_id, name, role, status, org_id')
+          .eq('status', 'active')
+          .eq('org_id', orgId);
         
         if (error) {
           alert('שגיאה בטעינת משתמשים');
@@ -2156,7 +2174,7 @@
         }
         
         const users = allUsers.filter(user => 
-          ['assessor', 'admin', 'developer'].includes(user.role) && 
+          ['assessor', 'admin'].includes(user.role) && 
           user.user_id !== currentOwnerId
         );
         
