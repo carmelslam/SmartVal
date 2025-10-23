@@ -242,15 +242,29 @@
 
         statusDiv.textContent = '⏳ מקבל מזהה התראות...';
 
-        // Get OneSignal ID with retry
+        // Get OneSignal ID with retry - try multiple API methods
         let onesignalId = null;
         attempts = 0;
         while (!onesignalId && attempts < 10) {
           try {
-            onesignalId = await OneSignal.User.getOnesignalId();
-            if (onesignalId) break;
+            // Try multiple methods for compatibility
+            if (OneSignal.User && typeof OneSignal.User.getOnesignalId === 'function') {
+              onesignalId = await OneSignal.User.getOnesignalId();
+            } else if (OneSignal.User && OneSignal.User.PushSubscription) {
+              onesignalId = OneSignal.User.PushSubscription.id;
+              if (!onesignalId && typeof OneSignal.User.PushSubscription.getIdAsync === 'function') {
+                onesignalId = await OneSignal.User.PushSubscription.getIdAsync();
+              }
+            } else if (typeof OneSignal.getUserId === 'function') {
+              onesignalId = await OneSignal.getUserId();
+            }
+
+            if (onesignalId) {
+              console.log('🔔 Sync: Got ID via method at attempt', attempts + 1);
+              break;
+            }
           } catch (e) {
-            console.log('🔔 Sync: Retry getting OneSignal ID, attempt', attempts + 1);
+            console.log('🔔 Sync: Retry getting OneSignal ID, attempt', attempts + 1, ':', e.message);
           }
           await new Promise(resolve => setTimeout(resolve, 1000));
           attempts++;
