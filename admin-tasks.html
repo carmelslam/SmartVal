@@ -974,14 +974,22 @@
     };
 
     // Load tasks
-    async function loadTasks() {
+    async function loadTasks(includeArchived = false) {
       try {
-        // Get all tasks
-        const { data: tasks, error: tasksError } = await supabase
+        // Get tasks (exclude archived by default)
+        let query = supabase
           .from('tasks')
           .select('*')
-          .order('created_at', { ascending: false })
-          .limit(50);
+          .order('created_at', { ascending: false });
+
+        // Filter archived tasks unless viewing archive
+        if (!includeArchived) {
+          query = query.or('archived.is.null,archived.eq.false');
+        }
+
+        query = query.limit(50);
+
+        const { data: tasks, error: tasksError } = await query;
 
         if (tasksError) throw tasksError;
 
@@ -1073,6 +1081,16 @@
             <button class="btn-edit" onclick="openEditTaskModal('${task.id}')" style="background: #3B82F6; color: white; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 0.85rem;">
               ✏️ ערוך
             </button>
+            ${(task.status === 'completed' || task.status === 'verified') && !task.archived ? `
+              <button class="btn-archive" onclick="archiveTask('${task.id}')" style="background: #6B7280; color: white; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 0.85rem;">
+                📦 העבר לארכיון
+              </button>
+            ` : ''}
+            ${task.archived ? `
+              <button class="btn-restore" onclick="restoreTask('${task.id}')" style="background: #10B981; color: white; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 0.85rem;">
+                ↩️ שחזר
+              </button>
+            ` : ''}
           </div>
         </div>
       `;
@@ -1324,6 +1342,57 @@
       } catch (error) {
         console.error('Error creating task:', error);
         alert('❌ שגיאה ביצירת המשימה: ' + error.message);
+      }
+    };
+
+    // Archive and Restore Functions
+    window.archiveTask = async function(taskId) {
+      if (!confirm('האם אתה בטוח שברצונך להעביר משימה זו לארכיון?\n\nתוכל לשחזר אותה בכל עת.')) {
+        return;
+      }
+
+      try {
+        const { error } = await supabase
+          .from('tasks')
+          .update({
+            archived: true,
+            archived_at: new Date().toISOString(),
+            archived_by: currentUser.user_id
+          })
+          .eq('id', taskId);
+
+        if (error) throw error;
+
+        alert('✅ המשימה הועברה לארכיון בהצלחה');
+        await loadTasks();
+        await updateStats();
+
+      } catch (error) {
+        console.error('Error archiving task:', error);
+        alert('❌ שגיאה בהעברה לארכיון: ' + error.message);
+      }
+    };
+
+    window.restoreTask = async function(taskId) {
+      try {
+        const { error } = await supabase
+          .from('tasks')
+          .update({
+            archived: false,
+            archived_at: null,
+            archived_by: null
+          })
+          .eq('id', taskId);
+
+        if (error) throw error;
+
+        alert('✅ המשימה שוחזרה מהארכיון');
+        await loadTasks(true); // Reload with archived tasks to see the change
+        await updateStats();
+
+      } catch (error) {
+        console.error('Error restoring task:', error);
+        alert('❌ שגיאה בשחזור המשימה: ' + error.message);
       }
     };
 
