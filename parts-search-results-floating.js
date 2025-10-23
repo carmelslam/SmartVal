@@ -996,6 +996,8 @@
       if (window.supabase) {
         const updateData = {};
         updateData[fieldName] = parsedValue;
+        updateData.updated_by = (window.caseOwnershipService?.getCurrentUser() || {}).userId || null;
+        updateData.updated_at = new Date().toISOString();
         
         const { error } = await window.supabase
           .from('parts_required')

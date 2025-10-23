@@ -110,9 +110,14 @@ export const versionRecoveryService = {
       const newVersion = (maxVersion?.version || 0) + 1;
       
       // Mark all versions as not current
+      const userId = (window.caseOwnershipService?.getCurrentUser() || {}).userId || null;
       await supabase
         .from('case_helper')
-        .update({ is_current: false })
+        .update({ 
+          is_current: false,
+          updated_by: userId,
+          updated_at: new Date().toISOString()
+        })
         .eq('case_id', caseId);
       
       // Create new version based on restored data
@@ -130,7 +135,9 @@ export const versionRecoveryService = {
             restored_from_version: versionData.version,
             restore_reason: 'User requested version restore'
           },
-          source: 'version_restore'
+          source: 'version_restore',
+          created_by: userId,
+          updated_by: userId
         });
       
       if (insertError) throw insertError;

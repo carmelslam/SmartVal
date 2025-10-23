@@ -158,10 +158,15 @@ export const caseOwnershipService = {
       }
 
       const normalizedPlate = plateNumber.replace(/[^0-9]/g, '');
+      const { userId } = this.getCurrentUser();
 
       const { error } = await supabase
         .from('cases')
-        .update({ created_by: newOwnerId })
+        .update({ 
+          created_by: newOwnerId,
+          updated_by: userId,
+          updated_at: new Date().toISOString()
+        })
         .eq('plate', normalizedPlate);
 
       if (error) {

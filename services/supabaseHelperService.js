@@ -30,9 +30,14 @@ export const supabaseHelperService = {
       
       // Step 3: Mark all previous versions as not current
       if (caseRecord.id) {
+        const userId = (window.caseOwnershipService?.getCurrentUser() || {}).userId || null;
         await supabase
           .from('case_helper')
-          .update({ is_current: false })
+          .update({ 
+            is_current: false,
+            updated_by: userId,
+            updated_at: new Date().toISOString()
+          })
           .eq('case_id', caseRecord.id);
       }
       
@@ -59,6 +64,7 @@ export const supabaseHelperService = {
           helper_json: helperData,
           source: 'system',
           sync_status: 'synced',
+          created_by: updatedBy,
           updated_by: updatedBy,
           updated_at: timestamp || new Date().toISOString()
         })

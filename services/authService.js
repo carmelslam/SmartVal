@@ -175,7 +175,11 @@ class AuthService {
       // ALWAYS update must_change_password flag to false
       const { error: profileError } = await supabase
         .from('profiles')
-        .update({ must_change_password: false })
+        .update({ 
+          must_change_password: false,
+          updated_by: user.id,
+          updated_at: new Date().toISOString()
+        })
         .eq('user_id', user.id);
       
       if (profileError) {
@@ -377,7 +381,11 @@ class AuthService {
     try {
       await supabase
         .from('profiles')
-        .update({ last_login: new Date().toISOString() })
+        .update({ 
+          last_login: new Date().toISOString(),
+          updated_by: userId,
+          updated_at: new Date().toISOString()
+        })
         .eq('user_id', userId);
     } catch (error) {
       console.warn('Failed to update last_login:', error);
