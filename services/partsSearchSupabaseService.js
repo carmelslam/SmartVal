@@ -265,7 +265,10 @@
           search_query: searchParams, // Full search parameters as JSONB
           results: results, // Full results array as JSONB (50 parts with all details)
           response_time_ms: query.searchTime || null,
-          created_at: new Date().toISOString()
+          created_by: (window.caseOwnershipService?.getCurrentUser() || {}).userId || null,
+          updated_by: (window.caseOwnershipService?.getCurrentUser() || {}).userId || null,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
         };
         
         console.log('  - Insert data prepared:', Object.keys(insertData));
@@ -364,7 +367,11 @@
             status: 'selected',
             data_source: dataSource, // SESSION 12: Track WHERE part came from
             raw_data: partData, // Store complete original data
-            selected_at: new Date().toISOString()
+            created_by: (window.caseOwnershipService?.getCurrentUser() || {}).userId || null,
+            updated_by: (window.caseOwnershipService?.getCurrentUser() || {}).userId || null,
+            selected_at: new Date().toISOString(),
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
           });
 
         if (error) {
