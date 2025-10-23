@@ -1,0 +1,996 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ניהול משימות - ירון כיוף - שמאות וייעוץ</title>
+  <link rel="icon" type="image/webp" href="https://carmelcayouf.com/wp-content/uploads/2025/06/g.webp">
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Hebrew:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Noto Sans Hebrew', Arial, sans-serif;
+      background: #1a1a1a;
+      color: #e0e0e0;
+      direction: rtl;
+      line-height: 1.6;
+      min-height: 100vh;
+    }
+
+    .header {
+      background: linear-gradient(135deg, #003366 0%, #004c99 100%);
+      padding: 1rem 2rem;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .header h1 {
+      font-size: 1.5rem;
+      font-weight: 600;
+      color: white;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .logo {
+      width: 50px;
+      height: 50px;
+      object-fit: contain;
+      background: white;
+      border-radius: 8px;
+      padding: 5px;
+    }
+
+    .header-actions {
+      display: flex;
+      gap: 1rem;
+      align-items: center;
+    }
+
+    .badge {
+      background: #ff6b35;
+      color: white;
+      border-radius: 50%;
+      width: 24px;
+      height: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.75rem;
+      font-weight: bold;
+      position: absolute;
+      top: -5px;
+      left: -5px;
+    }
+
+    .icon-btn {
+      background: rgba(255, 255, 255, 0.1);
+      border: none;
+      color: white;
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.3s;
+      position: relative;
+    }
+
+    .icon-btn:hover {
+      background: rgba(255, 255, 255, 0.2);
+      transform: scale(1.1);
+    }
+
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 2rem;
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1.5rem;
+      margin-bottom: 2rem;
+    }
+
+    .stat-card {
+      background: #2a2a2a;
+      border-radius: 12px;
+      padding: 1.5rem;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+      border: 1px solid #3a3a3a;
+      transition: all 0.3s;
+      cursor: pointer;
+    }
+
+    .stat-card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 6px 12px rgba(0,0,0,0.4);
+      border-color: #003366;
+    }
+
+    .stat-label {
+      color: #999;
+      font-size: 0.9rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .stat-value {
+      font-size: 2.5rem;
+      font-weight: 700;
+      color: #fff;
+      margin-bottom: 0.5rem;
+    }
+
+    .stat-change {
+      font-size: 0.85rem;
+      color: #10B981;
+    }
+
+    .stat-change.negative {
+      color: #EF4444;
+    }
+
+    .toolbar {
+      background: #2a2a2a;
+      border-radius: 12px;
+      padding: 1.5rem;
+      margin-bottom: 2rem;
+      display: flex;
+      gap: 1rem;
+      flex-wrap: wrap;
+      align-items: center;
+      border: 1px solid #3a3a3a;
+    }
+
+    .btn {
+      padding: 0.75rem 1.5rem;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-family: 'Noto Sans Hebrew', Arial, sans-serif;
+      font-size: 1rem;
+      font-weight: 500;
+      transition: all 0.3s;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #ff6b35 0%, #ff8556 100%);
+      color: white;
+      box-shadow: 0 4px 6px rgba(255, 107, 53, 0.3);
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 12px rgba(255, 107, 53, 0.4);
+    }
+
+    .btn-secondary {
+      background: #3a3a3a;
+      color: #e0e0e0;
+      border: 1px solid #4a4a4a;
+    }
+
+    .btn-secondary:hover {
+      background: #4a4a4a;
+    }
+
+    .search-box {
+      flex: 1;
+      min-width: 250px;
+      position: relative;
+    }
+
+    .search-box input {
+      width: 100%;
+      padding: 0.75rem 1rem 0.75rem 2.5rem;
+      border: 1px solid #4a4a4a;
+      border-radius: 8px;
+      background: #1a1a1a;
+      color: #e0e0e0;
+      font-family: 'Noto Sans Hebrew', Arial, sans-serif;
+      font-size: 1rem;
+    }
+
+    .search-box::before {
+      content: "🔍";
+      position: absolute;
+      right: 1rem;
+      top: 50%;
+      transform: translateY(-50%);
+    }
+
+    .section-title {
+      font-size: 1.3rem;
+      font-weight: 600;
+      margin-bottom: 1rem;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .task-card {
+      background: #2a2a2a;
+      border-radius: 12px;
+      padding: 1.25rem;
+      margin-bottom: 1rem;
+      border-right: 4px solid #3a3a3a;
+      transition: all 0.3s;
+      cursor: pointer;
+    }
+
+    .task-card:hover {
+      transform: translateX(-5px);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+    }
+
+    .task-card.high {
+      border-right-color: #F59E0B;
+    }
+
+    .task-card.urgent {
+      border-right-color: #EF4444;
+    }
+
+    .task-card.medium {
+      border-right-color: #3B82F6;
+    }
+
+    .task-card.low {
+      border-right-color: #10B981;
+    }
+
+    .task-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 0.75rem;
+    }
+
+    .task-title {
+      font-weight: 600;
+      color: #fff;
+      font-size: 1rem;
+    }
+
+    .priority-badge {
+      padding: 0.25rem 0.75rem;
+      border-radius: 12px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+
+    .priority-badge.high {
+      background: rgba(245, 158, 11, 0.2);
+      color: #F59E0B;
+    }
+
+    .priority-badge.urgent {
+      background: rgba(239, 68, 68, 0.2);
+      color: #EF4444;
+    }
+
+    .priority-badge.medium {
+      background: rgba(59, 130, 246, 0.2);
+      color: #3B82F6;
+    }
+
+    .priority-badge.low {
+      background: rgba(16, 185, 129, 0.2);
+      color: #10B981;
+    }
+
+    .task-meta {
+      display: flex;
+      gap: 1rem;
+      font-size: 0.85rem;
+      color: #999;
+      margin-bottom: 0.75rem;
+      flex-wrap: wrap;
+    }
+
+    .task-stats {
+      display: flex;
+      gap: 1rem;
+      font-size: 0.85rem;
+      color: #999;
+    }
+
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.8);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .modal.open {
+      display: flex;
+    }
+
+    .modal-content {
+      background: #2a2a2a;
+      border-radius: 12px;
+      padding: 2rem;
+      max-width: 600px;
+      width: 90%;
+      max-height: 90vh;
+      overflow-y: auto;
+      border: 1px solid #3a3a3a;
+    }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1.5rem;
+    }
+
+    .modal-header h2 {
+      color: #fff;
+      font-size: 1.5rem;
+    }
+
+    .close-btn {
+      background: none;
+      border: none;
+      color: #999;
+      font-size: 1.5rem;
+      cursor: pointer;
+      padding: 0;
+      width: 30px;
+      height: 30px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .close-btn:hover {
+      color: #fff;
+    }
+
+    .form-group {
+      margin-bottom: 1.5rem;
+    }
+
+    .form-group label {
+      display: block;
+      margin-bottom: 0.5rem;
+      color: #e0e0e0;
+      font-weight: 500;
+    }
+
+    .form-group input,
+    .form-group select,
+    .form-group textarea {
+      width: 100%;
+      padding: 0.75rem;
+      border: 1px solid #4a4a4a;
+      border-radius: 8px;
+      background: #1a1a1a;
+      color: #e0e0e0;
+      font-family: 'Noto Sans Hebrew', Arial, sans-serif;
+      font-size: 1rem;
+    }
+
+    .form-group textarea {
+      min-height: 100px;
+      resize: vertical;
+    }
+
+    .loading {
+      text-align: center;
+      padding: 2rem;
+      color: #999;
+    }
+
+    .loading::after {
+      content: '...';
+      animation: dots 1.5s steps(4, end) infinite;
+    }
+
+    @keyframes dots {
+      0%, 20% { content: '.'; }
+      40% { content: '..'; }
+      60%, 100% { content: '...'; }
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 4rem 2rem;
+      color: #999;
+    }
+
+    .empty-state-icon {
+      font-size: 4rem;
+      margin-bottom: 1rem;
+    }
+
+    .footer {
+      text-align: center;
+      padding: 2rem;
+      color: #666;
+      border-top: 1px solid #3a3a3a;
+      margin-top: 3rem;
+    }
+
+    @media (max-width: 768px) {
+      .container {
+        padding: 1rem;
+      }
+
+      .header {
+        padding: 1rem;
+      }
+
+      .header h1 {
+        font-size: 1.2rem;
+      }
+
+      .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 1rem;
+      }
+
+      .stat-value {
+        font-size: 2rem;
+      }
+
+      .toolbar {
+        flex-direction: column;
+        align-items: stretch;
+      }
+
+      .search-box {
+        width: 100%;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header class="header">
+    <h1>
+      <img src="https://carmelcayouf.com/wp-content/uploads/2025/06/g.webp" alt="Logo" class="logo">
+      <span>ירון כיוף - שמאות וייעוץ - ניהול משימות</span>
+    </h1>
+    <div class="header-actions">
+      <div class="icon-btn" id="notificationsBtn">
+        🔔
+        <div class="badge" id="notificationCount" style="display: none;">0</div>
+      </div>
+      <div class="icon-btn" onclick="window.location.href='admin.html'">
+        🏠
+      </div>
+      <div class="icon-btn" onclick="window.location.href='selection.html'">
+        👤
+      </div>
+    </div>
+  </header>
+
+  <div class="container">
+    <!-- Statistics Section -->
+    <div class="section-title">📊 סטטיסטיקה כללית</div>
+    <div class="stats-grid">
+      <div class="stat-card" onclick="filterByStatus('active')">
+        <div class="stat-label">משימות פעילות</div>
+        <div class="stat-value" id="activeCount">0</div>
+        <div class="stat-change" id="activeChange">טוען...</div>
+      </div>
+      <div class="stat-card" onclick="filterByStatus('pending')">
+        <div class="stat-label">ממתינות לתגובה</div>
+        <div class="stat-value" id="pendingCount">0</div>
+        <div class="stat-change" id="pendingChange">טוען...</div>
+      </div>
+      <div class="stat-card" onclick="filterByStatus('completed')">
+        <div class="stat-label">הושלמו היום</div>
+        <div class="stat-value" id="completedCount">0</div>
+        <div class="stat-change" id="completedChange">טוען...</div>
+      </div>
+      <div class="stat-card" onclick="filterByStatus('overdue')">
+        <div class="stat-label">איחור ביצוע</div>
+        <div class="stat-value" id="overdueCount">0</div>
+        <div class="stat-change negative" id="overdueChange">טוען...</div>
+      </div>
+    </div>
+
+    <!-- Toolbar -->
+    <div class="toolbar">
+      <button class="btn btn-primary" onclick="openNewTaskModal()">➕ משימה חדשה</button>
+      <button class="btn btn-secondary" onclick="openNewThreadModal()">🧵 שרשור חדש</button>
+      <div class="search-box">
+        <input type="text" id="searchInput" placeholder="חיפוש משימות..." oninput="searchTasks()">
+      </div>
+      <select class="btn btn-secondary" id="priorityFilter" onchange="filterTasks()">
+        <option value="">כל העדיפויות</option>
+        <option value="urgent">דחוף</option>
+        <option value="high">גבוה</option>
+        <option value="medium">בינוני</option>
+        <option value="low">נמוך</option>
+      </select>
+      <select class="btn btn-secondary" id="statusFilter" onchange="filterTasks()">
+        <option value="">כל הסטטוסים</option>
+        <option value="pending">ממתינה</option>
+        <option value="in_progress">בביצוע</option>
+        <option value="awaiting_response">ממתינה לתשובה</option>
+        <option value="completed">הושלמה</option>
+        <option value="verified">אושרה</option>
+      </select>
+    </div>
+
+    <!-- Tasks Section -->
+    <div class="section-title">📋 משימות אחרונות</div>
+    <div id="tasksContainer">
+      <div class="loading">טוען משימות</div>
+    </div>
+  </div>
+
+  <!-- New Task Modal -->
+  <div id="newTaskModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>➕ משימה חדשה</h2>
+        <button class="close-btn" onclick="closeNewTaskModal()">✕</button>
+      </div>
+      <form id="newTaskForm" onsubmit="createTask(event)">
+        <div class="form-group">
+          <label for="taskTitle">כותרת המשימה *</label>
+          <input type="text" id="taskTitle" required>
+        </div>
+        <div class="form-group">
+          <label for="taskDescription">תיאור</label>
+          <textarea id="taskDescription"></textarea>
+        </div>
+        <div class="form-group">
+          <label for="taskType">סוג משימה</label>
+          <select id="taskType">
+            <option value="custom">כללית</option>
+            <option value="case_action">פעולה בתיק</option>
+            <option value="document_request">בקשת מסמך</option>
+            <option value="review_request">בקשת סקירה</option>
+            <option value="data_correction">תיקון נתונים</option>
+            <option value="follow_up">מעקב</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="assignedTo">הקצה ל- *</label>
+          <select id="assignedTo" required>
+            <option value="">בחר משתמש...</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="taskPriority">עדיפות</label>
+          <select id="taskPriority">
+            <option value="low">נמוכה</option>
+            <option value="medium" selected>בינונית</option>
+            <option value="high">גבוהה</option>
+            <option value="urgent">דחופה</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="dueDate">תאריך יעד</label>
+          <input type="datetime-local" id="dueDate">
+        </div>
+        <div class="form-group">
+          <label for="caseId">מספר תיק (אופציונלי)</label>
+          <input type="text" id="caseId" placeholder="UUID של התיק">
+        </div>
+        <div class="form-group">
+          <label for="plate">מספר רישוי (אופציונלי)</label>
+          <input type="text" id="plate" placeholder="12-345-67">
+        </div>
+        <div style="display: flex; gap: 1rem; margin-top: 2rem;">
+          <button type="submit" class="btn btn-primary" style="flex: 1;">✅ צור משימה</button>
+          <button type="button" class="btn btn-secondary" onclick="closeNewTaskModal()">ביטול</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="footer">
+    ©2025 Carmel Cayouf. All rights reserved. SmartVal Pro System by Evalix
+  </div>
+
+  <script type="module">
+    import { supabase } from './lib/supabaseClient.js';
+
+    // Global state
+    let allTasks = [];
+    let allUsers = [];
+    let currentUser = null;
+
+    // Initialize
+    async function init() {
+      try {
+        // Get current user
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) {
+          window.location.href = 'index.html';
+          return;
+        }
+
+        // Get user profile
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('user_id', user.id)
+          .single();
+
+        currentUser = profile;
+        console.log('Current user:', currentUser);
+
+        // Load users for assignment dropdown
+        await loadUsers();
+
+        // Load tasks
+        await loadTasks();
+
+        // Update stats
+        await updateStats();
+
+        // Set up real-time subscriptions
+        setupRealtime();
+
+      } catch (error) {
+        console.error('Initialization error:', error);
+        showError('שגיאה בטעינת הנתונים');
+      }
+    }
+
+    // Load all users for assignment dropdown
+    async function loadUsers() {
+      try {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('user_id, full_name, role')
+          .order('full_name');
+
+        if (error) throw error;
+
+        allUsers = data || [];
+        populateUserDropdown();
+
+      } catch (error) {
+        console.error('Error loading users:', error);
+      }
+    }
+
+    function populateUserDropdown() {
+      const select = document.getElementById('assignedTo');
+      select.innerHTML = '<option value="">בחר משתמש...</option>';
+
+      allUsers.forEach(user => {
+        const option = document.createElement('option');
+        option.value = user.user_id;
+        option.textContent = `${user.full_name} (${getRoleLabel(user.role)})`;
+        select.appendChild(option);
+      });
+    }
+
+    function getRoleLabel(role) {
+      const labels = {
+        admin: 'מנהל',
+        developer: 'מפתח',
+        assistant: 'עוזר',
+        assessor: 'שמאי',
+        viewer: 'צופה'
+      };
+      return labels[role] || role;
+    }
+
+    // Load tasks
+    async function loadTasks() {
+      try {
+        const { data, error } = await supabase
+          .from('tasks')
+          .select(`
+            *,
+            assigned_to_profile:profiles!tasks_assigned_to_fkey(full_name, role),
+            assigned_by_profile:profiles!tasks_assigned_by_fkey(full_name, role)
+          `)
+          .order('created_at', { ascending: false })
+          .limit(50);
+
+        if (error) throw error;
+
+        allTasks = data || [];
+        renderTasks(allTasks);
+
+      } catch (error) {
+        console.error('Error loading tasks:', error);
+        showError('שגיאה בטעינת המשימות');
+      }
+    }
+
+    function renderTasks(tasks) {
+      const container = document.getElementById('tasksContainer');
+
+      if (!tasks || tasks.length === 0) {
+        container.innerHTML = `
+          <div class="empty-state">
+            <div class="empty-state-icon">📝</div>
+            <h3>אין משימות להצגה</h3>
+            <p>לחץ על "משימה חדשה" כדי להתחיל</p>
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = tasks.map(task => `
+        <div class="task-card ${task.priority}" onclick="openTaskDetail('${task.id}')">
+          <div class="task-header">
+            <div class="task-title">${escapeHtml(task.title)}</div>
+            <span class="priority-badge ${task.priority}">
+              ${getPriorityIcon(task.priority)} ${getPriorityLabel(task.priority)}
+            </span>
+          </div>
+          <div class="task-meta">
+            <span>👤 ${task.assigned_to_profile?.full_name || 'לא ידוע'}</span>
+            <span>📅 ${formatDate(task.due_date) || 'ללא מועד'}</span>
+            <span>📊 ${getStatusLabel(task.status)}</span>
+            ${task.plate ? `<span>🚗 ${task.plate}</span>` : ''}
+          </div>
+          <div class="task-stats">
+            <span>📈 ${task.completion_percentage || 0}%</span>
+            <span>🕐 ${formatRelativeTime(task.created_at)}</span>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    // Update statistics
+    async function updateStats() {
+      try {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        // Active tasks (in_progress)
+        const activeCount = allTasks.filter(t => t.status === 'in_progress').length;
+        document.getElementById('activeCount').textContent = activeCount;
+
+        // Pending tasks (pending or awaiting_response)
+        const pendingCount = allTasks.filter(t =>
+          t.status === 'pending' || t.status === 'awaiting_response'
+        ).length;
+        document.getElementById('pendingCount').textContent = pendingCount;
+
+        // Completed today
+        const completedToday = allTasks.filter(t => {
+          if (!t.completed_at) return false;
+          const completedDate = new Date(t.completed_at);
+          return completedDate >= today;
+        }).length;
+        document.getElementById('completedCount').textContent = completedToday;
+
+        // Overdue tasks
+        const now = new Date();
+        const overdueCount = allTasks.filter(t => {
+          if (!t.due_date || t.status === 'completed' || t.status === 'verified') return false;
+          return new Date(t.due_date) < now;
+        }).length;
+        document.getElementById('overdueCount').textContent = overdueCount;
+
+        // Update change indicators (mock for now)
+        document.getElementById('activeChange').textContent = `↑ +${Math.floor(Math.random() * 5)} החודש`;
+        document.getElementById('pendingChange').textContent = `↓ -${Math.floor(Math.random() * 3)} השבוע`;
+        document.getElementById('completedChange').textContent = `↑ +${completedToday} היום`;
+        document.getElementById('overdueChange').textContent = overdueCount > 0 ? '⚠️ דורש טיפול' : '✅ הכל בסדר';
+
+      } catch (error) {
+        console.error('Error updating stats:', error);
+      }
+    }
+
+    // Real-time subscriptions
+    function setupRealtime() {
+      supabase
+        .channel('tasks-changes')
+        .on('postgres_changes',
+          { event: '*', schema: 'public', table: 'tasks' },
+          (payload) => {
+            console.log('Task changed:', payload);
+            loadTasks();
+            updateStats();
+          }
+        )
+        .subscribe();
+    }
+
+    // Modal functions
+    window.openNewTaskModal = function() {
+      document.getElementById('newTaskModal').classList.add('open');
+    };
+
+    window.closeNewTaskModal = function() {
+      document.getElementById('newTaskModal').classList.remove('open');
+      document.getElementById('newTaskForm').reset();
+    };
+
+    window.openNewThreadModal = function() {
+      alert('יצירת שרשור חדש - בפיתוח');
+    };
+
+    // Create new task
+    window.createTask = async function(event) {
+      event.preventDefault();
+
+      try {
+        const formData = {
+          title: document.getElementById('taskTitle').value,
+          description: document.getElementById('taskDescription').value,
+          task_type: document.getElementById('taskType').value,
+          assigned_to: document.getElementById('assignedTo').value,
+          assigned_by: currentUser.user_id,
+          priority: document.getElementById('taskPriority').value,
+          due_date: document.getElementById('dueDate').value || null,
+          case_id: document.getElementById('caseId').value || null,
+          plate: document.getElementById('plate').value || null,
+          status: 'pending',
+          completion_percentage: 0
+        };
+
+        const { data, error } = await supabase
+          .from('tasks')
+          .insert([formData])
+          .select()
+          .single();
+
+        if (error) throw error;
+
+        console.log('Task created:', data);
+        alert('✅ המשימה נוצרה בהצלחה!');
+        closeNewTaskModal();
+        await loadTasks();
+        await updateStats();
+
+      } catch (error) {
+        console.error('Error creating task:', error);
+        alert('❌ שגיאה ביצירת המשימה: ' + error.message);
+      }
+    };
+
+    // Filter and search functions
+    window.filterByStatus = function(status) {
+      const statusFilter = document.getElementById('statusFilter');
+      statusFilter.value = status === 'active' ? 'in_progress' :
+                          status === 'overdue' ? '' : status;
+      filterTasks();
+    };
+
+    window.filterTasks = function() {
+      const priority = document.getElementById('priorityFilter').value;
+      const status = document.getElementById('statusFilter').value;
+      const search = document.getElementById('searchInput').value.toLowerCase();
+
+      let filtered = allTasks;
+
+      if (priority) {
+        filtered = filtered.filter(t => t.priority === priority);
+      }
+
+      if (status) {
+        filtered = filtered.filter(t => t.status === status);
+      }
+
+      if (search) {
+        filtered = filtered.filter(t =>
+          t.title.toLowerCase().includes(search) ||
+          (t.description && t.description.toLowerCase().includes(search)) ||
+          (t.plate && t.plate.includes(search))
+        );
+      }
+
+      renderTasks(filtered);
+    };
+
+    window.searchTasks = function() {
+      filterTasks();
+    };
+
+    window.openTaskDetail = function(taskId) {
+      window.location.href = `task-detail.html?id=${taskId}`;
+    };
+
+    // Utility functions
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    function getPriorityIcon(priority) {
+      const icons = {
+        low: '🟢',
+        medium: '🔵',
+        high: '⚠️',
+        urgent: '🔴'
+      };
+      return icons[priority] || '⚪';
+    }
+
+    function getPriorityLabel(priority) {
+      const labels = {
+        low: 'נמוך',
+        medium: 'בינוני',
+        high: 'גבוה',
+        urgent: 'דחוף'
+      };
+      return labels[priority] || priority;
+    }
+
+    function getStatusLabel(status) {
+      const labels = {
+        pending: 'ממתינה',
+        in_progress: 'בביצוע',
+        awaiting_response: 'ממתינה לתשובה',
+        completed: 'הושלמה',
+        verified: 'אושרה',
+        cancelled: 'בוטלה'
+      };
+      return labels[status] || status;
+    }
+
+    function formatDate(dateString) {
+      if (!dateString) return null;
+      const date = new Date(dateString);
+      return date.toLocaleDateString('he-IL', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    }
+
+    function formatRelativeTime(dateString) {
+      const date = new Date(dateString);
+      const now = new Date();
+      const diffMs = now - date;
+      const diffMins = Math.floor(diffMs / 60000);
+      const diffHours = Math.floor(diffMs / 3600000);
+      const diffDays = Math.floor(diffMs / 86400000);
+
+      if (diffMins < 1) return 'עכשיו';
+      if (diffMins < 60) return `לפני ${diffMins} דקות`;
+      if (diffHours < 24) return `לפני ${diffHours} שעות`;
+      return `לפני ${diffDays} ימים`;
+    }
+
+    function showError(message) {
+      const container = document.getElementById('tasksContainer');
+      container.innerHTML = `
+        <div class="empty-state">
+          <div class="empty-state-icon">❌</div>
+          <h3>${message}</h3>
+        </div>
+      `;
+    }
+
+    // Initialize on load
+    init();
+  </script>
+</body>
+</html>
