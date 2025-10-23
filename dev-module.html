@@ -630,18 +630,34 @@
       }, 5000);
     }
 
-    // Authentication check
+    // Phase 6: Role-based authentication check
     document.addEventListener('DOMContentLoaded', () => {
-      // Check for dev access
-      const devAccess = sessionStorage.getItem('dev-access');
-      if (!devAccess) {
-        const password = prompt('הכנס סיסמת מפתח להגדרות מערכת:');
-        if (password !== 'dev_admin_2025') {
-          alert('גישה נדחתה - סיסמה שגויה');
-          window.location.href = 'selection.html';
+      console.log('🔐 Checking developer access for dev-module...');
+      
+      const authData = sessionStorage.getItem('auth');
+      if (!authData) {
+        alert('נדרשת התחברות למערכת');
+        window.location.href = 'index.html';
+        return;
+      }
+      
+      try {
+        const auth = JSON.parse(authData);
+        const userRole = auth?.profile?.role;
+        
+        if (userRole !== 'developer') {
+          console.log('❌ User role not authorized for dev module:', userRole);
+          alert('אין לך הרשאה לגשת למודול המפתחים.\n\nנדרשת הרשאת מפתח בלבד.');
+          window.location.href = 'admin.html';
           return;
         }
-        sessionStorage.setItem('dev-access', 'granted');
+        
+        console.log('✅ Developer access verified for:', auth.profile.name);
+      } catch (e) {
+        console.error('Failed to verify dev access:', e);
+        alert('שגיאה באימות הרשאות');
+        window.location.href = 'index.html';
+        return;
       }
 
       // Load current configuration

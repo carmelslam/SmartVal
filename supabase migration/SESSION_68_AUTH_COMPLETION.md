@@ -1,7 +1,7 @@
 # SESSION 68: Phase 6 Authentication - Completion
 
 **Date:** 2025-10-23  
-**Status:** 🔄 IN PROGRESS  
+**Status:** 🔄 IN PROGRESS (5/13 tasks completed)  
 **Priority:** HIGH
 
 ---
@@ -71,11 +71,113 @@ Complete Phase 6 authentication implementation by adding:
 
 **Notes:**
 - Session tracking file created
-- Todo list initialized with 12 tasks
+- Todo list initialized with 13 tasks
 
 ---
 
-### Task 2: Update selection.html (PENDING)
+### Task 2: Update selection.html
+**Status:** ✅ COMPLETED  
+**Location:** `selection.html`
+
+**Changes Made:**
+1. Added user info badge (top-left) displaying name and role
+2. Added IDs to assessor-only buttons for role-based visibility
+3. Created `applyRoleBasedVisibility(role)` function
+4. Created `navigateToAdmin()` function with role verification
+5. Replaced old `verifyAdminAccess()` with stub that calls new function
+6. Hide assessor tools for assistant role
+7. Hide admin button for non-admin/developer roles
+
+**Code Added:**
+```html
+<div id="userInfoBadge" style="position: fixed; top: 10px; left: 10px; background: #1e3a8a; color: white; padding: 8px 12px; border-radius: 8px; font-size: 14px; z-index: 1000;">
+  <span id="userName"></span> - <span id="userRole"></span>
+</div>
+```
+
+---
+
+### Task 3: Update admin.html Access Control
+**Status:** ✅ COMPLETED
+**Location:** `admin.html`
+
+**Changes Made:**
+1. Replaced old admin-access sessionStorage checks (2 instances)
+2. Added role verification requiring admin or developer
+3. Removed 24-hour session timeout (now using 15-min Supabase session)
+
+**Old Code (REMOVED):**
+```javascript
+const adminAccess = sessionStorage.getItem('admin-access');
+if (!adminAccess || !adminAccess.includes('granted')) {
+  alert('גישת מנהל נדרשת...');
+  window.location.href = 'selection.html';
+}
+```
+
+**New Code:**
+```javascript
+const auth = JSON.parse(sessionStorage.getItem('auth'));
+const userRole = auth?.profile?.role;
+if (!['admin', 'developer'].includes(userRole)) {
+  alert('אין לך הרשאה לגשת לניהול המערכת');
+  window.location.href = 'selection.html';
+}
+```
+
+---
+
+### Task 4: Update Developer Panel in admin.html
+**Status:** ✅ COMPLETED
+**Location:** `admin.html`
+
+**Changes Made:**
+1. Replaced password-based `verifyDevAccess()` with role check
+2. Only developer role can access (not admin)
+3. Hide Developer Panel button for non-developers
+
+**Old Function:** 113 lines with password prompt and webhook verification
+**New Function:** 19 lines with simple role check
+
+**Button Visibility:**
+```javascript
+if (userRole !== 'developer') {
+  const devButton = document.getElementById('devButton');
+  if (devButton) devButton.style.display = 'none';
+}
+```
+
+---
+
+### Task 5: Update dev-module.html
+**Status:** ✅ COMPLETED
+**Location:** `dev-module.html`
+
+**Changes Made:**
+1. Removed password prompt (`dev_admin_2025`)
+2. Added role-based auth check (developer only)
+3. Redirect to admin.html if not developer
+
+**Old Code (REMOVED):**
+```javascript
+const password = prompt('הכנס סיסמת מפתח להגדרות מערכת:');
+if (password !== 'dev_admin_2025') {
+  alert('גישה נדחתה - סיסמה שגויה');
+}
+```
+
+**New Code:**
+```javascript
+const auth = JSON.parse(sessionStorage.getItem('auth'));
+if (auth?.profile?.role !== 'developer') {
+  alert('אין לך הרשאה לגשת למודול המפתחים');
+  window.location.href = 'admin.html';
+}
+```
+
+---
+
+### Task 6: Module Access Control (PENDING)
 **Status:** 📋 PENDING  
 **Location:** `selection.html`
 
