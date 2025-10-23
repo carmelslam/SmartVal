@@ -622,7 +622,10 @@
   
   <!-- Admin/Developer only -->
   <button class="nav-button" id="btnAdmin" onclick="navigateToAdmin()">ניהול מערכת (Admin)</button>
-  
+
+  <!-- Task Management - All users -->
+  <button class="nav-button" id="btnTasks" onclick="navigateToTasks()">📋 ניהול משימות</button>
+
   <!-- All users -->
   <button class="nav-button" onclick="navigate('estimator-builder.html')">🧮 בניית אומדן נזקי רכב</button>
   <button class="nav-button" onclick="navigate('report-selection.html')">בחר דו"ח להפקה</button>
@@ -703,15 +706,46 @@
       window.location.href = 'index.html';
       return;
     }
-    
+
     try {
       const auth = JSON.parse(authData);
       if (!['admin', 'developer', 'assistant'].includes(auth.profile.role)) {
         alert('אין לך הרשאה לגשת לניהול המערכת. נדרשת הרשאת מנהל או מפתח.');
         return;
       }
-      
+
       window.location.href = 'admin.html';
+    } catch (e) {
+      console.error('Auth check failed:', e);
+      alert('שגיאה באימות הרשאות');
+    }
+  }
+
+  function navigateToTasks() {
+    const authData = sessionStorage.getItem('auth');
+    if (!authData) {
+      alert('נדרשת התחברות למערכת');
+      window.location.href = 'index.html';
+      return;
+    }
+
+    try {
+      const auth = JSON.parse(authData);
+      const role = auth.profile.role;
+
+      // Route based on role
+      if (role === 'admin' || role === 'developer') {
+        // Admins and developers go to admin-tasks page (full control)
+        window.location.href = 'admin-tasks.html';
+      } else if (role === 'assistant') {
+        // Assistants go to assistant-tasks page (can see assessor tasks + create for them)
+        window.location.href = 'assistant-tasks.html';
+      } else if (role === 'assessor') {
+        // Assessors go to user-tasks page (only their own tasks)
+        window.location.href = 'user-tasks.html';
+      } else {
+        alert('אין לך הרשאה לגשת למערכת ניהול המשימות.');
+      }
     } catch (e) {
       console.error('Auth check failed:', e);
       alert('שגיאה באימות הרשאות');
