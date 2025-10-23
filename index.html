@@ -373,7 +373,10 @@
         alert("הפגישה הסתיימה עקב חוסר פעילות.");
         window.location.href = "index.html";
       });
-      
+
+      // Trigger OneSignal initialization in background (non-blocking)
+      window.dispatchEvent(new Event('auth-success'));
+
       // Navigate after animation completes
       setTimeout(() => {
         console.log("✅ Navigating to selection page...");
@@ -488,6 +491,114 @@
     console.log("🌐 Current URL:", window.location.href);
     console.log("🌐 Current origin:", window.location.origin);
   });
+  </script>
+
+  <!-- OneSignal SDK for push notifications -->
+  <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
+  <script type="module">
+    // Initialize OneSignal after successful login
+    import { supabase } from './lib/supabaseClient.js';
+
+    const ONESIGNAL_APP_ID = '3b924b99-c302-4919-a97e-baf909394696';
+    let oneSignalInitialized = false;
+
+    async function initOneSignalOnLogin() {
+      try {
+        console.log('🔔 Login: Starting OneSignal initialization...');
+
+        // Wait for OneSignal SDK to load
+        let attempts = 0;
+        while (!window.OneSignal && attempts < 20) {
+          await new Promise(resolve => setTimeout(resolve, 500));
+          attempts++;
+        }
+
+        if (!window.OneSignal) {
+          console.log('🔔 Login: OneSignal SDK not available, skipping');
+          return;
+        }
+
+        // Initialize OneSignal
+        await OneSignal.init({
+          appId: ONESIGNAL_APP_ID,
+          allowLocalhostAsSecureOrigin: true,
+          notifyButton: {
+            enable: false
+          }
+        });
+
+        console.log('🔔 Login: OneSignal initialized');
+        oneSignalInitialized = true;
+
+        // Get auth data
+        const auth = sessionStorage.getItem('auth');
+        if (!auth) {
+          console.log('🔔 Login: No auth data, skipping ID save');
+          return;
+        }
+
+        const authData = JSON.parse(auth);
+        const userId = authData.profile?.user_id || authData.user?.id;
+
+        if (!userId) {
+          console.log('🔔 Login: No user ID, skipping ID save');
+          return;
+        }
+
+        // Wait a bit for OneSignal User API to be ready
+        attempts = 0;
+        while ((!window.OneSignal.User) && attempts < 10) {
+          await new Promise(resolve => setTimeout(resolve, 500));
+          attempts++;
+        }
+
+        // Try to get OneSignal ID (non-blocking)
+        setTimeout(async () => {
+          try {
+            const onesignalId = await OneSignal.User.getOnesignalId();
+
+            if (onesignalId) {
+              console.log('🔔 Login: OneSignal ID obtained:', onesignalId);
+
+              // Save to Supabase
+              const { error } = await supabase
+                .from('profiles')
+                .update({ onesignal_id: onesignalId })
+                .eq('user_id', userId);
+
+              if (error) {
+                console.error('🔔 Login: Error saving OneSignal ID:', error);
+              } else {
+                console.log('🔔 Login: OneSignal ID saved successfully');
+                sessionStorage.setItem('onesignalId', onesignalId);
+              }
+            } else {
+              console.log('🔔 Login: OneSignal ID not available yet');
+            }
+          } catch (error) {
+            console.log('🔔 Login: Could not get OneSignal ID (non-fatal):', error.message);
+          }
+        }, 2000);
+
+      } catch (error) {
+        console.log('🔔 Login: OneSignal init error (non-fatal):', error.message);
+      }
+    }
+
+    // Listen for successful login and initialize OneSignal
+    window.addEventListener('auth-success', () => {
+      console.log('🔔 Login: Auth success event received');
+      initOneSignalOnLogin();
+    });
+
+    // Also check if already logged in on page load
+    window.addEventListener('load', () => {
+      const auth = sessionStorage.getItem('auth');
+      if (auth) {
+        console.log('🔔 Login: User already authenticated, initializing OneSignal');
+        initOneSignalOnLogin();
+      }
+    });
   </script>
 </body>
 </html>
