@@ -57,6 +57,21 @@
    - Adds `invoice_documents`, `invoice_suppliers`, `invoice_validations` to realtime publication
    - **Depends on:** All previous migrations
 
+7. **07_create_invoice_damage_center_mapping.sql** ✅ **NEW - CRITICAL**
+   - Creates `invoice_damage_center_mappings` table
+   - Implements Invoice Module Instructions workflow
+   - Tracks which invoice items map to which damage center fields
+   - Supports auto-fill from OCR to damage centers
+   - **Depends on:** All previous migrations, cases table
+
+8. **08_add_item_category_to_invoice_lines.sql** ✅ **NEW - CRITICAL**
+   - Adds `item_category` column to invoice_lines (part/work/repair/material/other)
+   - Adds AI categorization support fields (confidence, method, suggestions)
+   - Creates auto-categorization functions (keyword-based)
+   - Creates trigger for automatic categorization on insert
+   - Enables parts dropdown filtering (3 sources: selected + bank + invoice)
+   - **Depends on:** invoice_lines table exists
+
 ---
 
 ## 🗃️ TABLES CREATED
@@ -66,11 +81,12 @@
 1. **invoice_documents** - Uploaded invoice files and OCR results
 2. **invoice_suppliers** - Supplier cache for auto-complete
 3. **invoice_validations** - Validation and approval workflow
+4. **invoice_damage_center_mappings** - Invoice items → damage center field mappings (CRITICAL)
 
 ### Modified Tables (Phase 5a):
 
-1. **invoices** - Added user tracking fields
-2. **invoice_lines** - Added user tracking fields
+1. **invoices** - Added user tracking fields (created_by, updated_by)
+2. **invoice_lines** - Added user tracking fields + item categorization (item_category, category_confidence, category_method)
 
 ### Existing Tables (from Phase 1):
 
@@ -121,6 +137,8 @@ psql -h your-project.supabase.co -U postgres -d postgres -f 03_create_invoice_su
 psql -h your-project.supabase.co -U postgres -d postgres -f 04_create_invoice_validations_table.sql
 psql -h your-project.supabase.co -U postgres -d postgres -f 05_create_indexes_and_rls.sql
 psql -h your-project.supabase.co -U postgres -d postgres -f 06_enable_realtime.sql
+psql -h your-project.supabase.co -U postgres -d postgres -f 07_create_invoice_damage_center_mapping.sql
+psql -h your-project.supabase.co -U postgres -d postgres -f 08_add_item_category_to_invoice_lines.sql
 ```
 
 ### Step 3: Verify Deployment
@@ -150,7 +168,7 @@ WHERE tablename LIKE 'invoice%'
 AND schemaname = 'public'
 ORDER BY tablename, indexname;
 
--- Expected: ~30 indexes
+-- Expected: ~35 indexes
 
 -- 4. Check RLS policies
 SELECT tablename, policyname, cmd
@@ -158,7 +176,7 @@ FROM pg_policies
 WHERE tablename LIKE 'invoice%'
 ORDER BY tablename, policyname;
 
--- Expected: ~20 policies
+-- Expected: ~24 policies
 
 -- 5. Check Realtime enabled
 SELECT schemaname, tablename 
@@ -167,7 +185,7 @@ WHERE pubname = 'supabase_realtime'
 AND tablename LIKE 'invoice%'
 ORDER BY tablename;
 
--- Expected: 5 tables (invoices, invoice_lines, invoice_documents, invoice_suppliers, invoice_validations)
+-- Expected: 6 tables (invoices, invoice_lines, invoice_documents, invoice_suppliers, invoice_validations, invoice_damage_center_mappings)
 
 -- 6. Check helper functions created
 SELECT routine_name 
@@ -233,13 +251,15 @@ DELETE FROM invoices WHERE invoice_number = 'INV-001';
 ### Table Relationships:
 
 ```
-cases (1) ─────────┬─── (many) invoices (1) ───┬─── (many) invoice_lines
-                   │                            │
-                   │                            ├─── (many) invoice_documents
-                   │                            │
-                   │                            └─── (1) invoice_validations
-                   │
-                   └─── (many) invoice_documents
+cases (1) ─────────┬─── (many) invoices (1) ───┬─── (many) invoice_lines (1) ──┬─── (many) invoice_damage_center_mappings
+                   │                            │                               │
+                   │                            ├─── (many) invoice_documents   │
+                   │                            │                               │
+                   │                            └─── (1) invoice_validations    │
+                   │                                                            │
+                   └─── (many) invoice_documents                                │
+                   │                                                            │
+                   └─── (many) invoice_damage_center_mappings ←────────────────┘
 
 profiles (1) ──────┬─── (many) invoices.created_by
                    │
@@ -247,11 +267,15 @@ profiles (1) ──────┬─── (many) invoices.created_by
                    │
                    ├─── (many) invoice_documents.uploaded_by
                    │
-                   └─── (many) invoice_validations.reviewed_by
+                   ├─── (many) invoice_validations.reviewed_by
+                   │
+                   └─── (many) invoice_damage_center_mappings.mapped_by
 
 invoice_suppliers ─────── (name match) ─────── invoices.supplier_name
 
 parts_required ────────── (optional link) ────── invoice_lines.part_id
+
+helper.centers (JSON) ←──── synced via ────── invoice_damage_center_mappings
 ```
 
 ### Key Features:
@@ -264,6 +288,8 @@ parts_required ────────── (optional link) ──────
 6. **Real-time Updates** - All tables support live subscriptions
 7. **Approval Workflow** - Track validation, review, and approval status
 8. **File Storage** - Link to Supabase Storage for invoice PDFs
+9. **🔥 Damage Center Mapping** - Map invoice items to damage center fields (auto-fill workflow)
+10. **OCR Data Capture** - Store complete OCR results in JSONB
 
 ---
 
