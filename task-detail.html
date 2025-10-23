@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>פרטי משימה - ירון כיוף - שמאות וייעוץ</title>
+  <link rel="icon" type="image/webp" href="https://carmelcayouf.com/wp-content/uploads/2025/06/g.webp">
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Hebrew:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Noto Sans Hebrew', Arial, sans-serif;
+      background: #f5f5f5;
+      color: #333;
+      direction: rtl;
+      line-height: 1.6;
+      min-height: 100vh;
+    }
+
+    .header {
+      background: linear-gradient(135deg, #003366 0%, #004c99 100%);
+      padding: 1rem 2rem;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .header h1 {
+      font-size: 1.3rem;
+      font-weight: 600;
+      color: white;
+    }
+
+    .back-btn {
+      background: rgba(255,255,255,0.2);
+      color: white;
+      border: none;
+      padding: 0.5rem 1rem;
+      border-radius: 8px;
+      cursor: pointer;
+      font-family: 'Noto Sans Hebrew', Arial, sans-serif;
+    }
+
+    .back-btn:hover {
+      background: rgba(255,255,255,0.3);
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 2rem auto;
+      padding: 0 2rem;
+    }
+
+    .task-info {
+      background: white;
+      padding: 2rem;
+      border-radius: 12px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      margin-bottom: 2rem;
+    }
+
+    .task-title {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: #003366;
+      margin-bottom: 1rem;
+    }
+
+    .task-meta {
+      display: flex;
+      gap: 2rem;
+      flex-wrap: wrap;
+      font-size: 0.9rem;
+      color: #666;
+    }
+
+    .loading {
+      text-align: center;
+      padding: 3rem;
+      color: #999;
+    }
+
+    .error {
+      background: #fee;
+      color: #c00;
+      padding: 1rem;
+      border-radius: 8px;
+      margin: 2rem 0;
+    }
+  </style>
+</head>
+<body>
+  <header class="header">
+    <h1>📋 פרטי משימה</h1>
+    <button class="back-btn" onclick="goBack()">← חזור</button>
+  </header>
+
+  <div class="container">
+    <div id="content">
+      <div class="loading">טוען פרטי משימה...</div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { supabase } from './lib/supabaseClient.js';
+
+    // Get task ID from URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const taskId = urlParams.get('id');
+
+    window.goBack = function() {
+      window.history.back();
+    };
+
+    async function loadTask() {
+      if (!taskId) {
+        document.getElementById('content').innerHTML = `
+          <div class="error">
+            ❌ לא צוין מזהה משימה
+          </div>
+        `;
+        return;
+      }
+
+      try {
+        // Get current user
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) {
+          window.location.href = 'index.html';
+          return;
+        }
+
+        // Load task
+        const { data: task, error } = await supabase
+          .from('tasks')
+          .select(`
+            *,
+            assigned_to_profile:profiles!tasks_assigned_to_fkey(name, role),
+            assigned_by_profile:profiles!tasks_assigned_by_fkey(name, role)
+          `)
+          .eq('id', taskId)
+          .single();
+
+        if (error) throw error;
+
+        if (!task) {
+          throw new Error('משימה לא נמצאה');
+        }
+
+        renderTask(task);
+
+      } catch (error) {
+        console.error('Error loading task:', error);
+        document.getElementById('content').innerHTML = `
+          <div class="error">
+            ❌ שגיאה בטעינת המשימה: ${error.message}
+          </div>
+        `;
+      }
+    }
+
+    function renderTask(task) {
+      document.getElementById('content').innerHTML = `
+        <div class="task-info">
+          <div class="task-title">${task.title || 'ללא כותרת'}</div>
+          <div class="task-meta">
+            <span>👤 הוקצה ל: ${task.assigned_to_profile?.name || 'לא ידוע'}</span>
+            <span>👤 הוקצה על ידי: ${task.assigned_by_profile?.name || 'לא ידוע'}</span>
+            <span>📊 סטטוס: ${getStatusLabel(task.status)}</span>
+            <span>🎯 עדיפות: ${getPriorityLabel(task.priority)}</span>
+            ${task.due_date ? `<span>📅 תאריך יעד: ${formatDate(task.due_date)}</span>` : ''}
+            ${task.plate ? `<span>🚗 רכב: ${task.plate}</span>` : ''}
+          </div>
+          ${task.description ? `
+            <div style="margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid #eee;">
+              <strong>תיאור:</strong><br>
+              ${task.description}
+            </div>
+          ` : ''}
+        </div>
+        <div style="background: white; padding: 2rem; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+          <p style="text-align: center; color: #999;">
+            💬 הצגת הודעות ושיחות תתווסף בקרוב
+          </p>
+        </div>
+      `;
+    }
+
+    function getStatusLabel(status) {
+      const labels = {
+        pending: 'ממתינה',
+        in_progress: 'בביצוע',
+        awaiting_response: 'ממתינה לתשובה',
+        completed: 'הושלמה',
+        verified: 'אושרה',
+        cancelled: 'בוטלה'
+      };
+      return labels[status] || status;
+    }
+
+    function getPriorityLabel(priority) {
+      const labels = {
+        low: 'נמוכה',
+        medium: 'בינונית',
+        high: 'גבוהה',
+        urgent: 'דחופה'
+      };
+      return labels[priority] || priority;
+    }
+
+    function formatDate(dateString) {
+      if (!dateString) return '';
+      const date = new Date(dateString);
+      return date.toLocaleDateString('he-IL', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    }
+
+    // Initialize
+    loadTask();
+  </script>
+</body>
+</html>
