@@ -137,21 +137,34 @@
         }
 
         // Load task
-        const { data: task, error } = await supabase
+        const { data: task, error: taskError } = await supabase
           .from('tasks')
-          .select(`
-            *,
-            assigned_to_profile:profiles!tasks_assigned_to_fkey(name, role),
-            assigned_by_profile:profiles!tasks_assigned_by_fkey(name, role)
-          `)
+          .select('*')
           .eq('id', taskId)
           .single();
 
-        if (error) throw error;
+        if (taskError) throw taskError;
 
         if (!task) {
           throw new Error('משימה לא נמצאה');
         }
+
+        // Get profiles for assigned_to and assigned_by
+        const { data: profiles, error: profilesError } = await supabase
+          .from('profiles')
+          .select('user_id, name, role');
+
+        if (profilesError) throw profilesError;
+
+        // Create a lookup map for profiles
+        const profileMap = {};
+        (profiles || []).forEach(profile => {
+          profileMap[profile.user_id] = profile;
+        });
+
+        // Add profile data to task
+        task.assigned_to_profile = profileMap[task.assigned_to] || null;
+        task.assigned_by_profile = profileMap[task.assigned_by] || null;
 
         renderTask(task);
 

@@ -525,19 +525,35 @@
     // Load tasks for current user
     async function loadTasks() {
       try {
-        const { data, error } = await supabase
+        // Get tasks for current user
+        const { data: tasks, error: tasksError } = await supabase
           .from('tasks')
-          .select(`
-            *,
-            assigned_to_profile:profiles!tasks_assigned_to_fkey(name, role),
-            assigned_by_profile:profiles!tasks_assigned_by_fkey(name, role)
-          `)
+          .select('*')
           .eq('assigned_to', currentUser.user_id)
           .order('created_at', { ascending: false });
 
-        if (error) throw error;
+        if (tasksError) throw tasksError;
 
-        allTasks = data || [];
+        // Get all profiles (for joining)
+        const { data: profiles, error: profilesError } = await supabase
+          .from('profiles')
+          .select('user_id, name, role');
+
+        if (profilesError) throw profilesError;
+
+        // Create a lookup map for profiles
+        const profileMap = {};
+        (profiles || []).forEach(profile => {
+          profileMap[profile.user_id] = profile;
+        });
+
+        // Join tasks with profile data
+        allTasks = (tasks || []).map(task => ({
+          ...task,
+          assigned_to_profile: profileMap[task.assigned_to] || null,
+          assigned_by_profile: profileMap[task.assigned_by] || null
+        }));
+
         filterTab(currentFilter);
 
       } catch (error) {
