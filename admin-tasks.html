@@ -242,6 +242,72 @@
       box-shadow: 0 4px 12px rgba(0,0,0,0.4);
     }
 
+    /* Task State Styling */
+    .task-card.state-pending {
+      border-right: 4px solid #9CA3AF;
+      background: linear-gradient(135deg, #2a2a2a 0%, #252525 100%);
+    }
+
+    .task-card.state-in_progress {
+      border-right: 4px solid #3B82F6;
+      background: linear-gradient(135deg, #1e2a3a 0%, #2a3544 100%);
+      box-shadow: 0 0 20px rgba(59, 130, 246, 0.2);
+      animation: pulse-blue 3s ease-in-out infinite;
+    }
+
+    .task-card.state-awaiting_response {
+      border-right: 4px solid #F59E0B;
+      background: linear-gradient(135deg, #3a2e1a 0%, #443520 100%);
+    }
+
+    .task-card.state-completed {
+      border-right: 4px solid #10B981;
+      background: linear-gradient(135deg, #1a2e2a 0%, #253a30 100%);
+      opacity: 0.95;
+    }
+
+    .task-card.state-verified {
+      border-right: 4px solid #22C55E;
+      background: linear-gradient(135deg, #1a2e2a 0%, #254a35 100%);
+      opacity: 0.95;
+    }
+
+    .task-card.state-completed .task-title::before,
+    .task-card.state-verified .task-title::before {
+      content: '✓ ';
+      color: #10B981;
+      font-weight: bold;
+      margin-left: 0.5rem;
+    }
+
+    .task-card.state-cancelled {
+      border-right: 4px solid #EF4444;
+      background: linear-gradient(135deg, #2a2a2a 0%, #252525 100%);
+      opacity: 0.7;
+    }
+
+    .task-card.overdue {
+      animation: pulse-red 3s ease-in-out infinite;
+    }
+
+    @keyframes pulse-blue {
+      0%, 100% {
+        box-shadow: 0 0 20px rgba(59, 130, 246, 0.2);
+      }
+      50% {
+        box-shadow: 0 0 35px rgba(59, 130, 246, 0.4);
+      }
+    }
+
+    @keyframes pulse-red {
+      0%, 100% {
+        box-shadow: 0 0 20px rgba(239, 68, 68, 0.3);
+      }
+      50% {
+        box-shadow: 0 0 35px rgba(239, 68, 68, 0.5);
+      }
+    }
+
     .task-card.high {
       border-right-color: #F59E0B;
     }
@@ -900,9 +966,11 @@
       container.innerHTML = tasks.map(task => {
         const isOverdue = task.due_date && new Date(task.due_date) < new Date() && task.status !== 'completed' && task.status !== 'verified';
         const progressPercent = task.completion_percentage || 0;
+        const stateClass = `state-${task.status}`;
+        const overdueClass = isOverdue ? 'overdue' : '';
 
         return `
-        <div class="task-card ${task.priority}" onclick="openTaskDetail('${task.id}')">
+        <div class="task-card ${task.priority} ${stateClass} ${overdueClass}" onclick="openTaskDetail('${task.id}')">
           <div class="task-header">
             <div class="task-title">
               ${escapeHtml(task.title)}
