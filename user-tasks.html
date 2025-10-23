@@ -200,6 +200,71 @@
       box-shadow: 0 4px 12px rgba(0,0,0,0.15);
     }
 
+    /* Task State Styling */
+    .task-card.state-pending {
+      border-right: 4px solid #9CA3AF;
+      background: linear-gradient(135deg, #ffffff 0%, #f9fafb 100%);
+    }
+
+    .task-card.state-in_progress {
+      border-right: 4px solid #3B82F6;
+      background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+      box-shadow: 0 0 20px rgba(59, 130, 246, 0.15);
+      animation: pulse-blue 3s ease-in-out infinite;
+    }
+
+    .task-card.state-awaiting_response {
+      border-right: 4px solid #F59E0B;
+      background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
+    }
+
+    .task-card.state-completed {
+      border-right: 4px solid #10B981;
+      background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+      opacity: 0.95;
+    }
+
+    .task-card.state-verified {
+      border-right: 4px solid #22C55E;
+      background: linear-gradient(135deg, #f0fdf4 0%, #bbf7d0 100%);
+      opacity: 0.95;
+    }
+
+    .task-card.state-completed .task-title::before,
+    .task-card.state-verified .task-title::before {
+      content: '✓ ';
+      color: #10B981;
+      font-weight: bold;
+      margin-left: 0.5rem;
+    }
+
+    .task-card.state-cancelled {
+      border-right: 4px solid #EF4444;
+      opacity: 0.7;
+    }
+
+    .task-card.overdue {
+      animation: pulse-red 3s ease-in-out infinite;
+    }
+
+    @keyframes pulse-blue {
+      0%, 100% {
+        box-shadow: 0 0 20px rgba(59, 130, 246, 0.15);
+      }
+      50% {
+        box-shadow: 0 0 35px rgba(59, 130, 246, 0.3);
+      }
+    }
+
+    @keyframes pulse-red {
+      0%, 100% {
+        box-shadow: 0 0 20px rgba(239, 68, 68, 0.2);
+      }
+      50% {
+        box-shadow: 0 0 35px rgba(239, 68, 68, 0.4);
+      }
+    }
+
     .task-card.urgent {
       border-right-color: #EF4444;
       background: linear-gradient(to left, rgba(239, 68, 68, 0.05), white);
@@ -653,9 +718,11 @@
       container.innerHTML = tasks.map(task => {
         const isNew = isTaskNew(task);
         const isOverdue = isTaskOverdue(task);
+        const stateClass = `state-${task.status}`;
+        const overdueClass = isOverdue ? 'overdue' : '';
 
         return `
-          <div class="task-card ${task.priority} ${isNew ? 'new' : ''}" onclick="openTaskDetail('${task.id}')">
+          <div class="task-card ${task.priority} ${stateClass} ${overdueClass} ${isNew ? 'new' : ''}" onclick="openTaskDetail('${task.id}')">
             ${isNew ? '<div class="new-badge">חדש!</div>' : ''}
             <div class="task-header">
               <div style="flex: 1;">
