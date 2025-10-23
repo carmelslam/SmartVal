@@ -2125,6 +2125,20 @@
         button.disabled = true;
       }
       
+      // Phase 6: Capture user ID for tracking
+      let userId = null;
+      let userName = null;
+      try {
+        const authData = sessionStorage.getItem('auth');
+        if (authData) {
+          const auth = JSON.parse(authData);
+          userId = auth?.user?.id;
+          userName = auth?.profile?.name;
+        }
+      } catch (e) {
+        console.warn('Could not extract user ID:', e);
+      }
+      
       try {
         const helper = window.helper || JSON.parse(sessionStorage.getItem('helper') || '{}');
         
@@ -2243,6 +2257,20 @@
         button.disabled = true;
       }
       
+      // Phase 6: Capture user ID for tracking
+      let userId = null;
+      let userName = null;
+      try {
+        const authData = sessionStorage.getItem('auth');
+        if (authData) {
+          const auth = JSON.parse(authData);
+          userId = auth?.user?.id;
+          userName = auth?.profile?.name;
+        }
+      } catch (e) {
+        console.warn('Could not extract user ID:', e);
+      }
+      
       try {
         // Get helper data from sessionStorage (single source of truth) to ensure consistency
         const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
@@ -2329,11 +2357,18 @@
         
         // ✅ REMOVED: No longer saving to manual_depreciation - everything is in helper.depreciation
         
+        // Phase 6: Add user tracking to meta
+        if (!helper.meta) helper.meta = {};
+        helper.meta.updated_by = userId;
+        helper.meta.updated_by_name = userName;
+        helper.meta.last_updated = new Date().toISOString();
+        
         // ✅ CRITICAL FIX: Update BOTH sessionStorage AND in-memory window.helper to prevent populateAllForms overwrite
         sessionStorage.setItem('helper', JSON.stringify(helper));
         if (window.helper) {
           window.helper.depreciation = helper.depreciation;
           window.helper.final_report = helper.final_report;
+          window.helper.meta = helper.meta;
         }
         
         console.log('✅ Depreciation data saved successfully:', helper.depreciation);
@@ -20478,6 +20513,7 @@
   <script type="module">
     // Import and make MathEngine globally available
     import { MathEngine } from './math.js';
+    import { caseOwnershipService } from './services/caseOwnershipService.js';
     
     // Make MathEngine available globally for other scripts
     window.MathEngine = MathEngine;
@@ -20489,6 +20525,23 @@
     window.dispatchEvent(new CustomEvent('mathEngineReady', { 
       detail: { MathEngine: MathEngine } 
     }));
+    
+    // Phase 6: Case ownership check
+    (async () => {
+      const plateNumber = window.helper?.plate || sessionStorage.getItem('currentPlate');
+      
+      if (plateNumber) {
+        const ownershipCheck = await caseOwnershipService.canEditCase(plateNumber);
+        
+        if (!ownershipCheck.canEdit) {
+          alert(ownershipCheck.reason || 'אין לך הרשאה לערוך תיק זה.\n\nרק הבעלים, מנהל או מפתח יכולים לערוך.');
+          window.location.href = 'selection.html';
+          return;
+        }
+        
+        console.log('✅ Case ownership verified - user can edit final report');
+      }
+    })();
   </script>
   
   <script>
