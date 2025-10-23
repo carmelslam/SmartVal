@@ -620,10 +620,90 @@
       </div>
     </div>
 
+    <!-- Enhanced Analytics Dashboard -->
+    <div class="section-title" style="margin-top: 2rem;">📈 לוח בקרה מתקדם</div>
+    <div style="background: #2a2a2a; border-radius: 12px; padding: 1.5rem; margin-bottom: 2rem;">
+
+      <!-- Overall Fulfillment -->
+      <div style="margin-bottom: 2rem;">
+        <h3 style="color: #fff; font-size: 1.1rem; margin-bottom: 1rem;">📊 אחוז השלמה כללי</h3>
+        <div style="display: flex; align-items: center; gap: 1rem;">
+          <div style="flex: 1;">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+              <span style="color: #9CA3AF;">סה"כ משימות: <span id="totalTasksCount">0</span></span>
+              <span style="color: #10B981; font-weight: bold; font-size: 1.2rem;"><span id="fulfillmentRate">0</span>%</span>
+            </div>
+            <div style="background: rgba(255,255,255,0.1); height: 24px; border-radius: 12px; overflow: hidden;">
+              <div id="fulfillmentBar" style="background: linear-gradient(90deg, #10B981, #22C55E); height: 100%; width: 0%; transition: width 0.5s; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 0.85rem;"></div>
+            </div>
+          </div>
+        </div>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1rem; margin-top: 1rem;">
+          <div style="background: rgba(59, 130, 246, 0.1); padding: 0.75rem; border-radius: 8px;">
+            <div style="color: #9CA3AF; font-size: 0.85rem;">בביצוע</div>
+            <div style="color: #3B82F6; font-size: 1.5rem; font-weight: bold;" id="inProgressCount">0</div>
+          </div>
+          <div style="background: rgba(16, 185, 129, 0.1); padding: 0.75rem; border-radius: 8px;">
+            <div style="color: #9CA3AF; font-size: 0.85rem;">הושלמו</div>
+            <div style="color: #10B981; font-size: 1.5rem; font-weight: bold;" id="completedTasksCount">0</div>
+          </div>
+          <div style="background: rgba(239, 68, 68, 0.1); padding: 0.75rem; border-radius: 8px;">
+            <div style="color: #9CA3AF; font-size: 0.85rem;">באיחור</div>
+            <div style="color: #EF4444; font-size: 1.5rem; font-weight: bold;" id="overdueTasksCount">0</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Per User Statistics -->
+      <div style="margin-bottom: 2rem;">
+        <h3 style="color: #fff; font-size: 1.1rem; margin-bottom: 1rem;">👥 ביצועים לפי משתמש</h3>
+        <div id="userStatsContainer" style="display: flex; flex-direction: column; gap: 1rem;">
+          <!-- Will be populated by JavaScript -->
+        </div>
+      </div>
+
+      <!-- Filters -->
+      <div style="border-top: 1px solid #3a3a3a; padding-top: 1.5rem;">
+        <h3 style="color: #fff; font-size: 1.1rem; margin-bottom: 1rem;">🔍 סינון סטטיסטיקות</h3>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
+          <div>
+            <label style="color: #9CA3AF; font-size: 0.85rem; display: block; margin-bottom: 0.5rem;">משתמש</label>
+            <select id="statsUserFilter" onchange="updateDashboardStats()" style="width: 100%; padding: 0.5rem; border-radius: 6px; background: #1a1a1a; color: #e0e0e0; border: 1px solid #4a4a4a;">
+              <option value="">כל המשתמשים</option>
+            </select>
+          </div>
+          <div>
+            <label style="color: #9CA3AF; font-size: 0.85rem; display: block; margin-bottom: 0.5rem;">סוג משימה</label>
+            <select id="statsTypeFilter" onchange="updateDashboardStats()" style="width: 100%; padding: 0.5rem; border-radius: 6px; background: #1a1a1a; color: #e0e0e0; border: 1px solid #4a4a4a;">
+              <option value="">כל הסוגים</option>
+              <option value="case_action">פעולה בתיק</option>
+              <option value="document_request">בקשת מסמך</option>
+              <option value="review_request">בקשת ביקורת</option>
+              <option value="data_correction">תיקון נתונים</option>
+              <option value="follow_up">מעקב</option>
+              <option value="custom">אחר</option>
+            </select>
+          </div>
+          <div>
+            <label style="color: #9CA3AF; font-size: 0.85rem; display: block; margin-bottom: 0.5rem;">עדיפות</label>
+            <select id="statsPriorityFilter" onchange="updateDashboardStats()" style="width: 100%; padding: 0.5rem; border-radius: 6px; background: #1a1a1a; color: #e0e0e0; border: 1px solid #4a4a4a;">
+              <option value="">כל העדיפויות</option>
+              <option value="urgent">דחוף</option>
+              <option value="high">גבוה</option>
+              <option value="medium">בינוני</option>
+              <option value="low">נמוך</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
     <!-- Toolbar -->
     <div class="toolbar">
       <button class="btn btn-primary" onclick="openNewTaskModal()">➕ משימה חדשה</button>
       <button class="btn btn-secondary" onclick="openNewThreadModal()">🧵 שרשור חדש</button>
+      <button class="btn btn-secondary" onclick="openArchiveModal()">📦 ארכיון (<span id="archiveCountToolbar">0</span>)</button>
       <div class="search-box">
         <input type="text" id="searchInput" placeholder="חיפוש משימות..." oninput="searchTasks()">
       </div>
@@ -786,6 +866,30 @@
     </div>
   </div>
 
+  <!-- Archive Modal -->
+  <div id="archiveModal" class="modal">
+    <div class="modal-content" style="max-width: 1200px;">
+      <div class="modal-header">
+        <h2>📦 ארכיון משימות (<span id="archiveCount">0</span>)</h2>
+        <button class="close-btn" onclick="closeArchiveModal()">✕</button>
+      </div>
+
+      <div style="margin-bottom: 1.5rem;">
+        <div class="search-box">
+          <input type="text" id="archiveSearchInput" placeholder="🔍 חיפוש בארכיון..." oninput="searchArchivedTasks()">
+        </div>
+      </div>
+
+      <div id="archivedTasksContainer" style="max-height: 600px; overflow-y: auto;">
+        <div class="loading">טוען משימות מאורכבות...</div>
+      </div>
+
+      <div style="text-align: center; margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid #3a3a3a;">
+        <button type="button" class="btn btn-secondary" onclick="closeArchiveModal()">סגור</button>
+      </div>
+    </div>
+  </div>
+
   <div class="footer">
     ©2025 Carmel Cayouf. All rights reserved. SmartVal Pro System by Evalix
   </div>
@@ -837,6 +941,9 @@
 
         // Update stats
         await updateStats();
+
+        // Update archive count
+        await updateArchiveCount();
 
         // Set up real-time subscriptions
         setupRealtime();
@@ -1138,6 +1245,113 @@
       } catch (error) {
         console.error('Error updating stats:', error);
       }
+
+      // Also update dashboard stats
+      updateDashboardStats();
+    }
+
+    // Enhanced Dashboard Statistics
+    function updateDashboardStats() {
+      try {
+        // Get filter values
+        const userFilter = document.getElementById('statsUserFilter').value;
+        const typeFilter = document.getElementById('statsTypeFilter').value;
+        const priorityFilter = document.getElementById('statsPriorityFilter').value;
+
+        // Filter tasks based on selections
+        let filteredTasks = allTasks.filter(t => !t.archived); // Exclude archived
+
+        if (userFilter) filteredTasks = filteredTasks.filter(t => t.assigned_to === userFilter);
+        if (typeFilter) filteredTasks = filteredTasks.filter(t => t.task_type === typeFilter);
+        if (priorityFilter) filteredTasks = filteredTasks.filter(t => t.priority === priorityFilter);
+
+        // Calculate overall metrics
+        const totalTasks = filteredTasks.length;
+        const completedTasks = filteredTasks.filter(t => t.status === 'completed' || t.status === 'verified').length;
+        const inProgressTasks = filteredTasks.filter(t => t.status === 'in_progress').length;
+        const overdueTasks = filteredTasks.filter(t => {
+          if (!t.due_date || t.status === 'completed' || t.status === 'verified') return false;
+          return new Date(t.due_date) < new Date();
+        }).length;
+
+        const fulfillmentRate = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
+
+        // Update overall metrics
+        document.getElementById('totalTasksCount').textContent = totalTasks;
+        document.getElementById('fulfillmentRate').textContent = fulfillmentRate;
+        document.getElementById('fulfillmentBar').style.width = `${fulfillmentRate}%`;
+        document.getElementById('fulfillmentBar').textContent = fulfillmentRate > 10 ? `${fulfillmentRate}%` : '';
+        document.getElementById('inProgressCount').textContent = inProgressTasks;
+        document.getElementById('completedTasksCount').textContent = completedTasks;
+        document.getElementById('overdueTasksCount').textContent = overdueTasks;
+
+        // Calculate per-user statistics
+        const userStats = {};
+        filteredTasks.forEach(task => {
+          const userId = task.assigned_to;
+          if (!userStats[userId]) {
+            userStats[userId] = {
+              name: task.assigned_to_profile?.name || 'לא ידוע',
+              total: 0,
+              completed: 0,
+              inProgress: 0,
+              overdue: 0
+            };
+          }
+          userStats[userId].total++;
+          if (task.status === 'completed' || task.status === 'verified') {
+            userStats[userId].completed++;
+          }
+          if (task.status === 'in_progress') {
+            userStats[userId].inProgress++;
+          }
+          if (task.due_date && new Date(task.due_date) < new Date() && task.status !== 'completed' && task.status !== 'verified') {
+            userStats[userId].overdue++;
+          }
+        });
+
+        // Render per-user statistics
+        const userStatsContainer = document.getElementById('userStatsContainer');
+        const userStatsList = Object.values(userStats).sort((a, b) => b.total - a.total);
+
+        if (userStatsList.length === 0) {
+          userStatsContainer.innerHTML = '<div style="color: #666; text-align: center; padding: 1rem;">אין נתונים להצגה</div>';
+        } else {
+          userStatsContainer.innerHTML = userStatsList.map(user => {
+            const completionRate = user.total > 0 ? Math.round((user.completed / user.total) * 100) : 0;
+            return `
+              <div style="background: rgba(255,255,255,0.05); padding: 1rem; border-radius: 8px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+                  <div>
+                    <div style="color: #fff; font-weight: 600;">${user.name}</div>
+                    <div style="color: #9CA3AF; font-size: 0.85rem;">סה"כ: ${user.total} | הושלמו: ${user.completed} | בביצוע: ${user.inProgress}${user.overdue > 0 ? ` | <span style="color: #EF4444;">באיחור: ${user.overdue}</span>` : ''}</div>
+                  </div>
+                  <div style="color: ${completionRate >= 80 ? '#10B981' : completionRate >= 50 ? '#F59E0B' : '#EF4444'}; font-size: 1.5rem; font-weight: bold;">
+                    ${completionRate}%
+                  </div>
+                </div>
+                <div style="background: rgba(255,255,255,0.1); height: 12px; border-radius: 6px; overflow: hidden;">
+                  <div style="background: linear-gradient(90deg, ${completionRate >= 80 ? '#10B981, #22C55E' : completionRate >= 50 ? '#F59E0B, #FBBF24' : '#EF4444, #F87171'}); height: 100%; width: ${completionRate}%; transition: width 0.5s;"></div>
+                </div>
+              </div>
+            `;
+          }).join('');
+        }
+
+        // Populate user filter dropdown if empty
+        const statsUserFilter = document.getElementById('statsUserFilter');
+        if (statsUserFilter.options.length === 1) {
+          allUsers.forEach(user => {
+            const option = document.createElement('option');
+            option.value = user.user_id;
+            option.textContent = user.name;
+            statsUserFilter.appendChild(option);
+          });
+        }
+
+      } catch (error) {
+        console.error('Error updating dashboard stats:', error);
+      }
     }
 
     // Real-time subscriptions
@@ -1387,7 +1601,8 @@
         if (error) throw error;
 
         alert('✅ המשימה שוחזרה מהארכיון');
-        await loadTasks(true); // Reload with archived tasks to see the change
+        await loadArchivedTasks(); // Refresh archive view
+        await loadTasks(); // Refresh main task list
         await updateStats();
 
       } catch (error) {
@@ -1395,6 +1610,173 @@
         alert('❌ שגיאה בשחזור המשימה: ' + error.message);
       }
     };
+
+    // Archive Modal Functions
+    let archivedTasks = [];
+
+    window.openArchiveModal = async function() {
+      document.getElementById('archiveModal').classList.add('open');
+      await loadArchivedTasks();
+    };
+
+    window.closeArchiveModal = function() {
+      document.getElementById('archiveModal').classList.remove('open');
+      document.getElementById('archiveSearchInput').value = '';
+    };
+
+    async function loadArchivedTasks() {
+      try {
+        const { data: tasks, error } = await supabase
+          .from('tasks')
+          .select('*')
+          .eq('archived', true)
+          .order('archived_at', { ascending: false });
+
+        if (error) throw error;
+
+        // Fetch profiles for name lookups
+        const { data: profiles } = await supabase
+          .from('profiles')
+          .select('user_id, name, role');
+
+        const profileMap = {};
+        (profiles || []).forEach(p => {
+          profileMap[p.user_id] = p;
+        });
+
+        // Add profile data to tasks
+        archivedTasks = (tasks || []).map(task => ({
+          ...task,
+          assigned_to_profile: profileMap[task.assigned_to],
+          assigned_by_profile: profileMap[task.assigned_by],
+          archived_by_profile: profileMap[task.archived_by]
+        }));
+
+        // Update counts
+        const count = archivedTasks.length;
+        document.getElementById('archiveCount').textContent = count;
+        document.getElementById('archiveCountToolbar').textContent = count;
+
+        renderArchivedTasks(archivedTasks);
+
+      } catch (error) {
+        console.error('Error loading archived tasks:', error);
+        document.getElementById('archivedTasksContainer').innerHTML =
+          '<div style="text-align: center; padding: 2rem; color: #EF4444;">שגיאה בטעינת משימות מאורכבות</div>';
+      }
+    }
+
+    function renderArchivedTasks(tasks) {
+      const container = document.getElementById('archivedTasksContainer');
+
+      if (!tasks || tasks.length === 0) {
+        container.innerHTML = '<div style="text-align: center; padding: 2rem; color: #9CA3AF;">אין משימות בארכיון</div>';
+        return;
+      }
+
+      container.innerHTML = tasks.map(task => {
+        const assignedToName = task.assigned_to_profile?.name || 'לא ידוע';
+        const assignedByName = task.assigned_by_profile?.name || 'לא ידוע';
+        const archivedByName = task.archived_by_profile?.name || 'לא ידוע';
+        const archivedAt = task.archived_at ? new Date(task.archived_at).toLocaleDateString('he-IL') : '';
+
+        const priorityColors = {
+          urgent: '#EF4444',
+          high: '#F59E0B',
+          medium: '#3B82F6',
+          low: '#9CA3AF'
+        };
+
+        const priorityLabels = {
+          urgent: 'דחוף',
+          high: 'גבוה',
+          medium: 'בינוני',
+          low: 'נמוך'
+        };
+
+        const statusLabels = {
+          pending: 'ממתינה',
+          in_progress: 'בביצוע',
+          awaiting_response: 'ממתינה לתשובה',
+          completed: 'הושלמה',
+          verified: 'אושרה',
+          cancelled: 'בוטלה'
+        };
+
+        return `
+          <div class="task-card" style="margin-bottom: 1rem; opacity: 0.8;">
+            <div class="task-header">
+              <div class="task-title">
+                ${task.title}
+                <span class="priority-badge" style="background: ${priorityColors[task.priority] || '#9CA3AF'};">
+                  ${priorityLabels[task.priority] || task.priority}
+                </span>
+              </div>
+              <div class="task-meta">
+                <span style="color: #10B981;">✓ ${statusLabels[task.status] || task.status}</span>
+              </div>
+            </div>
+
+            ${task.description ? `<div style="color: #9CA3AF; margin: 0.5rem 0; font-size: 0.9rem;">${task.description}</div>` : ''}
+
+            <div style="display: flex; gap: 1rem; margin-top: 0.75rem; flex-wrap: wrap; font-size: 0.85rem; color: #9CA3AF;">
+              <div>👤 הוקצה ל: <strong style="color: #fff;">${assignedToName}</strong></div>
+              <div>📤 הוקצה ע"י: <strong style="color: #fff;">${assignedByName}</strong></div>
+              ${task.plate ? `<div>🚗 ${task.plate}</div>` : ''}
+            </div>
+
+            <div style="display: flex; gap: 1rem; margin-top: 0.75rem; font-size: 0.85rem; color: #9CA3AF; border-top: 1px solid #3a3a3a; padding-top: 0.75rem;">
+              <div>📦 הועבר לארכיון ב-${archivedAt} ע"י ${archivedByName}</div>
+            </div>
+
+            <div style="display: flex; gap: 0.5rem; margin-top: 1rem;">
+              <button class="btn btn-sm" onclick="restoreTask('${task.id}')"
+                style="background: #10B981; padding: 0.4rem 1rem; font-size: 0.85rem;">
+                ↩️ שחזר מארכיון
+              </button>
+              <button class="btn btn-sm" onclick="openTaskDetail('${task.id}')"
+                style="background: #3B82F6; padding: 0.4rem 1rem; font-size: 0.85rem;">
+                👁️ צפה
+              </button>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    window.searchArchivedTasks = function() {
+      const search = document.getElementById('archiveSearchInput').value.toLowerCase();
+
+      if (!search) {
+        renderArchivedTasks(archivedTasks);
+        return;
+      }
+
+      const filtered = archivedTasks.filter(task =>
+        task.title.toLowerCase().includes(search) ||
+        (task.description && task.description.toLowerCase().includes(search)) ||
+        (task.assigned_to_profile?.name && task.assigned_to_profile.name.toLowerCase().includes(search)) ||
+        (task.plate && task.plate.includes(search))
+      );
+
+      renderArchivedTasks(filtered);
+    };
+
+    // Update archive count when loading tasks
+    async function updateArchiveCount() {
+      try {
+        const { count, error } = await supabase
+          .from('tasks')
+          .select('*', { count: 'exact', head: true })
+          .eq('archived', true);
+
+        if (!error && count !== null) {
+          document.getElementById('archiveCountToolbar').textContent = count;
+        }
+      } catch (error) {
+        console.error('Error updating archive count:', error);
+      }
+    }
 
     // Filter and search functions
     window.filterByStatus = function(status) {
