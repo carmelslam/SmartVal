@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>סנכרון התראות - SmartVal</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .container {
+      background: white;
+      border-radius: 20px;
+      padding: 3rem;
+      max-width: 500px;
+      width: 100%;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      text-align: center;
+    }
+
+    h1 {
+      color: #2d3748;
+      margin-bottom: 1.5rem;
+      font-size: 1.8rem;
+    }
+
+    .status {
+      padding: 1rem;
+      border-radius: 10px;
+      margin: 1rem 0;
+      font-size: 1rem;
+    }
+
+    .status.loading {
+      background: #bee3f8;
+      color: #2c5282;
+    }
+
+    .status.success {
+      background: #c6f6d5;
+      color: #22543d;
+    }
+
+    .status.error {
+      background: #fed7d7;
+      color: #742a2a;
+    }
+
+    .btn {
+      background: #667eea;
+      color: white;
+      border: none;
+      padding: 1rem 2rem;
+      border-radius: 10px;
+      font-size: 1rem;
+      cursor: pointer;
+      margin-top: 1rem;
+      transition: all 0.3s;
+    }
+
+    .btn:hover {
+      background: #5a67d8;
+      transform: translateY(-2px);
+    }
+
+    .btn:disabled {
+      background: #cbd5e0;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .info {
+      background: #fef5e7;
+      border-right: 4px solid #f59e0b;
+      padding: 1rem;
+      border-radius: 8px;
+      margin: 1.5rem 0;
+      text-align: right;
+      color: #92400e;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🔔 סנכרון מערכת התראות</h1>
+
+    <div class="info">
+      דף זה יסנכרן את מזהה ההתראות שלך עם המערכת.<br>
+      זה נדרש כדי לקבל התראות על משימות חדשות.
+    </div>
+
+    <div id="status" class="status loading" style="display: none;">
+      טוען...
+    </div>
+
+    <button id="syncBtn" class="btn" onclick="syncOneSignalId()">
+      התחל סנכרון
+    </button>
+
+    <button id="backBtn" class="btn" onclick="goBack()" style="display: none; background: #718096;">
+      חזור למערכת
+    </button>
+  </div>
+
+  <script type="module">
+    import { supabase } from './lib/supabaseClient.js';
+
+    let statusDiv = document.getElementById('status');
+    let syncBtn = document.getElementById('syncBtn');
+    let backBtn = document.getElementById('backBtn');
+
+    window.syncOneSignalId = async function() {
+      try {
+        syncBtn.disabled = true;
+        statusDiv.style.display = 'block';
+        statusDiv.className = 'status loading';
+        statusDiv.textContent = '⏳ בודק אימות משתמש...';
+
+        // Check authentication
+        const auth = sessionStorage.getItem('auth');
+        if (!auth) {
+          statusDiv.className = 'status error';
+          statusDiv.textContent = '❌ לא מחובר למערכת. אנא התחבר תחילה.';
+          setTimeout(() => {
+            window.location.href = 'index.html';
+          }, 2000);
+          return;
+        }
+
+        const authData = JSON.parse(auth);
+        const userId = authData.profile?.user_id || authData.user?.id;
+
+        if (!userId) {
+          statusDiv.className = 'status error';
+          statusDiv.textContent = '❌ לא נמצא מזהה משתמש.';
+          return;
+        }
+
+        statusDiv.textContent = '⏳ ממתין ל-OneSignal...';
+
+        // Wait for OneSignal to be ready
+        let attempts = 0;
+        while ((!window.OneSignal || !window.OneSignal.User) && attempts < 20) {
+          await new Promise(resolve => setTimeout(resolve, 500));
+          attempts++;
+        }
+
+        if (!window.OneSignal || !window.OneSignal.User) {
+          statusDiv.className = 'status error';
+          statusDiv.textContent = '❌ OneSignal לא נטען. אנא רענן את הדף.';
+          syncBtn.disabled = false;
+          return;
+        }
+
+        statusDiv.textContent = '⏳ מקבל מזהה התראות...';
+
+        // Get OneSignal ID
+        const onesignalId = await OneSignal.User.getOnesignalId();
+
+        if (!onesignalId) {
+          statusDiv.className = 'status error';
+          statusDiv.textContent = '❌ לא ניתן לקבל מזהה התראות. אנא רענן את הדף ונסה שוב.';
+          syncBtn.disabled = false;
+          return;
+        }
+
+        statusDiv.textContent = `⏳ שומר לבסיס נתונים...\nמזהה: ${onesignalId.substring(0, 20)}...`;
+
+        // Save to Supabase
+        const { error } = await supabase
+          .from('profiles')
+          .update({ onesignal_id: onesignalId })
+          .eq('user_id', userId);
+
+        if (error) {
+          statusDiv.className = 'status error';
+          statusDiv.textContent = `❌ שגיאה בשמירה: ${error.message}`;
+          syncBtn.disabled = false;
+          return;
+        }
+
+        // Success!
+        statusDiv.className = 'status success';
+        statusDiv.innerHTML = `
+          ✅ הסנכרון הושלם בהצלחה!<br><br>
+          תוכל כעת לקבל התראות על משימות חדשות.<br>
+          מזהה התראות נשמר במערכת.
+        `;
+
+        syncBtn.style.display = 'none';
+        backBtn.style.display = 'inline-block';
+
+        // Also save to sessionStorage
+        sessionStorage.setItem('onesignalId', onesignalId);
+
+      } catch (error) {
+        console.error('Sync error:', error);
+        statusDiv.className = 'status error';
+        statusDiv.textContent = `❌ שגיאה: ${error.message}`;
+        syncBtn.disabled = false;
+      }
+    };
+
+    window.goBack = function() {
+      window.location.href = 'selection.html';
+    };
+
+    // Auto-sync on page load
+    window.addEventListener('load', async () => {
+      // Wait a bit for OneSignal to initialize
+      await new Promise(resolve => setTimeout(resolve, 2000));
+
+      // Check if already synced
+      const auth = sessionStorage.getItem('auth');
+      if (auth) {
+        const authData = JSON.parse(auth);
+        const userId = authData.profile?.user_id || authData.user?.id;
+
+        if (userId) {
+          const { data } = await supabase
+            .from('profiles')
+            .select('onesignal_id')
+            .eq('user_id', userId)
+            .single();
+
+          if (data && data.onesignal_id) {
+            statusDiv.style.display = 'block';
+            statusDiv.className = 'status success';
+            statusDiv.textContent = '✅ מזהה ההתראות כבר מסונכרן!';
+            syncBtn.textContent = 'סנכרן מחדש';
+          }
+        }
+      }
+    });
+  </script>
+
+  <!-- OneSignal SDK -->
+  <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
+  <script src="onesignal-integration.js"></script>
+</body>
+</html>
