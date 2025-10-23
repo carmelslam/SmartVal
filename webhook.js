@@ -48,7 +48,7 @@ FINAL_REPORT_DRAFT: 'https://hook.eu2.make.com/j5qb0obvpa6maab9j4a7t71o70brqdfp'
   DELETE_CASE_IN_ONEDRIVE: 'https://hook.eu2.make.com/vf1wem86lba5nmjm6ipa3ugrcx3zljbs',
 
   // Push notifications webhook for task management system
-  ADMIN_PUSH_NOTIFICATION: 'https://hook.eu2.make.com/e41e2zm9f26ju5m815yfgn1ou41wwwhd',
+  ADMIN_PUSH_NOTIFICATION: 'https://hook.eu2.make.com/lzpl8fo7eef62cp642zbbtmph8ujuhlx',
 
   // DEPRECATED - Use ADMIN_PUSH_NOTIFICATION instead
   // PUSH_NOTIFICATION: 'https://hook.eu2.make.com/e41e2zm9f26ju5m815yfgn1ou41wwwhd',
