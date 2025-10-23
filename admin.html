@@ -2764,34 +2764,27 @@
       return;
     }
     
-    // Check for admin-specific access
-    const adminAccess = sessionStorage.getItem('admin-access');
-    const adminTimestamp = sessionStorage.getItem('admin-timestamp');
+    // Phase 6: Role-based admin access check
+    let authData;
+    try {
+      authData = JSON.parse(auth);
+    } catch (e) {
+      console.error('❌ Failed to parse auth data:', e);
+      alert('שגיאה באימות - אנא התחבר מחדש');
+      window.location.href = 'index.html';
+      return;
+    }
     
-    if (!adminAccess || !adminAccess.includes('granted')) {
-      console.log('❌ No admin access token found, redirecting to selection');
-      alert('גישת מנהל נדרשת - אנא אמת את הזהות שלך דרך עמוד הבחירה');
+    const userRole = authData?.profile?.role;
+    if (!userRole || !['admin', 'developer'].includes(userRole)) {
+      console.log('❌ User role not authorized for admin access:', userRole);
+      alert('אין לך הרשאה לגשת לניהול המערכת.\n\nנדרשת הרשאת מנהל או מפתח.');
       window.location.href = 'selection.html';
       return;
     }
     
-    // Check if admin session is still valid (24 hours)
-    if (adminTimestamp) {
-      const sessionAge = Date.now() - new Date(adminTimestamp).getTime();
-      const maxAge = 24 * 60 * 60 * 1000; // 24 hours
-      
-      if (sessionAge > maxAge) {
-        console.log('❌ Admin session expired, redirecting to selection');
-        sessionStorage.removeItem('admin-access');
-        sessionStorage.removeItem('admin-timestamp');
-        alert('תוקף גישת המנהל פג - אנא התחבר מחדש');
-        window.location.href = 'selection.html';
-        return;
-      }
-    }
-    
-    console.log('✅ Admin access verified, loading admin panel');
-    console.log('Admin access type:', adminAccess);
+    console.log('✅ Admin access verified for role:', userRole);
+    console.log('User:', authData.profile.name);
     
     // Load VAT from session
     const existingVat = sessionStorage.getItem('globalVAT');
@@ -5719,34 +5712,27 @@
       return;
     }
     
-    // Check for admin-specific access
-    const adminAccess = sessionStorage.getItem('admin-access');
-    const adminTimestamp = sessionStorage.getItem('admin-timestamp');
+    // Phase 6: Role-based admin access check
+    let authData;
+    try {
+      authData = JSON.parse(auth);
+    } catch (e) {
+      console.error('❌ Failed to parse auth data:', e);
+      alert('שגיאה באימות - אנא התחבר מחדש');
+      window.location.href = 'index.html';
+      return;
+    }
     
-    if (!adminAccess || !adminAccess.includes('granted')) {
-      console.log('❌ No admin access token found, redirecting to selection');
-      alert('גישת מנהל נדרשת - אנא אמת את הזהות שלך דרך עמוד הבחירה');
+    const userRole = authData?.profile?.role;
+    if (!userRole || !['admin', 'developer'].includes(userRole)) {
+      console.log('❌ User role not authorized for admin access:', userRole);
+      alert('אין לך הרשאה לגשת לניהול המערכת.\n\nנדרשת הרשאת מנהל או מפתח.');
       window.location.href = 'selection.html';
       return;
     }
     
-    // Check if admin session is still valid (24 hours)
-    if (adminTimestamp) {
-      const sessionAge = Date.now() - new Date(adminTimestamp).getTime();
-      const maxAge = 24 * 60 * 60 * 1000; // 24 hours
-      
-      if (sessionAge > maxAge) {
-        console.log('❌ Admin session expired, redirecting to selection');
-        sessionStorage.removeItem('admin-access');
-        sessionStorage.removeItem('admin-timestamp');
-        alert('תוקף גישת המנהל פג - אנא התחבר מחדש');
-        window.location.href = 'selection.html';
-        return;
-      }
-    }
-    
-    console.log('✅ Admin access verified, loading admin panel');
-    console.log('Admin access type:', adminAccess);
+    console.log('✅ Admin access verified for role:', userRole);
+    console.log('User:', authData.profile.name);
     
     // Load VAT from session
     const existingVat = sessionStorage.getItem('globalVAT');
