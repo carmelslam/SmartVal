@@ -503,7 +503,7 @@
 
         currentUser = profile;
         document.getElementById('userName').textContent =
-          `${profile.full_name} - ${getRoleLabel(profile.role)}`;
+          `${profile.name} - ${getRoleLabel(profile.role)}`;
 
         console.log('Current user:', currentUser);
 
@@ -529,8 +529,8 @@
           .from('tasks')
           .select(`
             *,
-            assigned_to_profile:profiles!tasks_assigned_to_fkey(full_name, role),
-            assigned_by_profile:profiles!tasks_assigned_by_fkey(full_name, role)
+            assigned_to_profile:profiles!tasks_assigned_to_fkey(name, role),
+            assigned_by_profile:profiles!tasks_assigned_by_fkey(name, role)
           `)
           .eq('assigned_to', currentUser.user_id)
           .order('created_at', { ascending: false });
@@ -608,7 +608,7 @@
               <div style="flex: 1;">
                 <div class="task-title">${isOverdue ? '⚠️ ' : ''}${escapeHtml(task.title)}</div>
                 <div class="task-from">
-                  👤 מ: ${task.assigned_by_profile?.full_name || 'לא ידוע'}
+                  👤 מ: ${task.assigned_by_profile?.name || 'לא ידוע'}
                 </div>
               </div>
               <span class="priority-badge ${task.priority}">
