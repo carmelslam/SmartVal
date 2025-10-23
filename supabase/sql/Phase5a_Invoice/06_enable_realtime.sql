@@ -10,14 +10,44 @@
 -- Note: Tables invoices and invoice_lines already added to realtime in initial schema
 -- This file adds the new tables created in Phase 5a
 
--- Enable realtime for invoice_documents table
-ALTER PUBLICATION supabase_realtime ADD TABLE invoice_documents;
+-- Enable realtime for invoice_documents table (conditionally)
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_publication_tables 
+    WHERE pubname = 'supabase_realtime' 
+    AND tablename = 'invoice_documents'
+  ) THEN
+    ALTER PUBLICATION supabase_realtime ADD TABLE invoice_documents;
+  END IF;
+END $$;
 
--- Enable realtime for invoice_suppliers table
-ALTER PUBLICATION supabase_realtime ADD TABLE invoice_suppliers;
+-- Enable realtime for invoice_suppliers table (conditionally)
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_publication_tables 
+    WHERE pubname = 'supabase_realtime' 
+    AND tablename = 'invoice_suppliers'
+  ) THEN
+    ALTER PUBLICATION supabase_realtime ADD TABLE invoice_suppliers;
+  END IF;
+END $$;
 
--- Enable realtime for invoice_validations table
-ALTER PUBLICATION supabase_realtime ADD TABLE invoice_validations;
+-- Enable realtime for invoice_validations table (conditionally)
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_publication_tables 
+    WHERE pubname = 'supabase_realtime' 
+    AND tablename = 'invoice_validations'
+  ) THEN
+    ALTER PUBLICATION supabase_realtime ADD TABLE invoice_validations;
+  END IF;
+END $$;
+
+-- NOTE: invoice_damage_center_mappings is added to realtime in file 07
+-- (after the table is created)
 
 -- ============================================================================
 -- VERIFICATION QUERY
@@ -34,6 +64,13 @@ ALTER PUBLICATION supabase_realtime ADD TABLE invoice_validations;
 -- NOTES
 -- ============================================================================
 
+-- This file enables realtime for 3 tables:
+-- 1. invoice_documents (already added by file 02, skip if exists)
+-- 2. invoice_suppliers (new in this file)
+-- 3. invoice_validations (new in this file)
+--
+-- invoice_damage_center_mappings is added by file 07 (after table creation)
+--
 -- Realtime enables:
 -- 1. Live updates when invoices change
 -- 2. Multi-user collaboration notifications

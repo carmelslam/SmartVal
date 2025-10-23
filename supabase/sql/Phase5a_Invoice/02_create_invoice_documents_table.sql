@@ -111,7 +111,7 @@ CREATE POLICY "Users can view invoice documents for accessible cases"
   ON invoice_documents
   FOR SELECT
   USING (
-    -- Case ownership check (from Phase 6)
+    -- Case ownership check
     EXISTS (
       SELECT 1 FROM cases c
       WHERE c.id = invoice_documents.case_id
@@ -119,11 +119,7 @@ CREATE POLICY "Users can view invoice documents for accessible cases"
         c.created_by = auth.uid() OR -- Owner
         auth.uid() IN (
           SELECT user_id FROM profiles WHERE role IN ('admin', 'developer')
-        ) OR -- Admin/Developer
-        auth.uid() IN (
-          SELECT collaborator_id FROM case_collaborators 
-          WHERE case_id = c.id AND status = 'active'
-        ) -- Collaborator
+        ) -- Admin/Developer
       )
     )
   );
@@ -140,10 +136,6 @@ CREATE POLICY "Users can upload documents to their cases"
         c.created_by = auth.uid() OR
         auth.uid() IN (
           SELECT user_id FROM profiles WHERE role IN ('admin', 'developer')
-        ) OR
-        auth.uid() IN (
-          SELECT collaborator_id FROM case_collaborators 
-          WHERE case_id = c.id AND status = 'active'
         )
       )
     )

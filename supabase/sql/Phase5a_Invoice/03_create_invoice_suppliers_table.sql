@@ -81,7 +81,7 @@ DROP TRIGGER IF EXISTS update_invoice_suppliers_updated_at ON invoice_suppliers;
 CREATE TRIGGER update_invoice_suppliers_updated_at
   BEFORE UPDATE ON invoice_suppliers
   FOR EACH ROW
-  EXECUTE FUNCTION update_updated_at_column();
+  EXECUTE FUNCTION update_updated_at();
 
 -- ============================================================================
 -- ROW LEVEL SECURITY (RLS)

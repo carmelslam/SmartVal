@@ -80,7 +80,7 @@ DROP TRIGGER IF EXISTS update_invoice_validations_updated_at ON invoice_validati
 CREATE TRIGGER update_invoice_validations_updated_at
   BEFORE UPDATE ON invoice_validations
   FOR EACH ROW
-  EXECUTE FUNCTION update_updated_at_column();
+  EXECUTE FUNCTION update_updated_at();
 
 -- ============================================================================
 -- ROW LEVEL SECURITY (RLS)
@@ -102,10 +102,6 @@ CREATE POLICY "Users can view validations for accessible invoices"
         c.created_by = auth.uid() OR
         auth.uid() IN (
           SELECT user_id FROM profiles WHERE role IN ('admin', 'developer')
-        ) OR
-        auth.uid() IN (
-          SELECT collaborator_id FROM case_collaborators 
-          WHERE case_id = c.id AND status = 'active'
         )
       )
     )
@@ -124,10 +120,6 @@ CREATE POLICY "Users can create validations for accessible invoices"
         c.created_by = auth.uid() OR
         auth.uid() IN (
           SELECT user_id FROM profiles WHERE role IN ('admin', 'developer')
-        ) OR
-        auth.uid() IN (
-          SELECT collaborator_id FROM case_collaborators 
-          WHERE case_id = c.id AND status = 'active'
         )
       )
     )

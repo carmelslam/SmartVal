@@ -57,11 +57,7 @@ CREATE POLICY "Users can view invoices for accessible cases"
         c.created_by = auth.uid() OR -- Owner
         auth.uid() IN (
           SELECT user_id FROM profiles WHERE role IN ('admin', 'developer')
-        ) OR -- Admin/Developer
-        auth.uid() IN (
-          SELECT collaborator_id FROM case_collaborators 
-          WHERE case_id = c.id AND status = 'active'
-        ) -- Collaborator
+        ) -- Admin/Developer
       )
     )
   );
@@ -78,10 +74,6 @@ CREATE POLICY "Users can create invoices for their cases"
         c.created_by = auth.uid() OR
         auth.uid() IN (
           SELECT user_id FROM profiles WHERE role IN ('admin', 'developer')
-        ) OR
-        auth.uid() IN (
-          SELECT collaborator_id FROM case_collaborators 
-          WHERE case_id = c.id AND status = 'active'
         )
       )
     )
@@ -99,10 +91,6 @@ CREATE POLICY "Users can update invoices for their cases"
         c.created_by = auth.uid() OR
         auth.uid() IN (
           SELECT user_id FROM profiles WHERE role IN ('admin', 'developer')
-        ) OR
-        auth.uid() IN (
-          SELECT collaborator_id FROM case_collaborators 
-          WHERE case_id = c.id AND status = 'active'
         )
       )
     )
@@ -140,10 +128,6 @@ CREATE POLICY "Users can view invoice lines for accessible invoices"
         c.created_by = auth.uid() OR
         auth.uid() IN (
           SELECT user_id FROM profiles WHERE role IN ('admin', 'developer')
-        ) OR
-        auth.uid() IN (
-          SELECT collaborator_id FROM case_collaborators 
-          WHERE case_id = c.id AND status = 'active'
         )
       )
     )
@@ -162,10 +146,6 @@ CREATE POLICY "Users can create invoice lines for accessible invoices"
         c.created_by = auth.uid() OR
         auth.uid() IN (
           SELECT user_id FROM profiles WHERE role IN ('admin', 'developer')
-        ) OR
-        auth.uid() IN (
-          SELECT collaborator_id FROM case_collaborators 
-          WHERE case_id = c.id AND status = 'active'
         )
       )
     )
@@ -184,10 +164,6 @@ CREATE POLICY "Users can update invoice lines for accessible invoices"
         c.created_by = auth.uid() OR
         auth.uid() IN (
           SELECT user_id FROM profiles WHERE role IN ('admin', 'developer')
-        ) OR
-        auth.uid() IN (
-          SELECT collaborator_id FROM case_collaborators 
-          WHERE case_id = c.id AND status = 'active'
         )
       )
     )
