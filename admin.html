@@ -1831,11 +1831,13 @@
         if (error) throw error;
         
         // Manually fetch owner details for each case
-        const caseIds = cases.map(c => c.created_by);
-        const { data: owners } = await supabase
+        const uniqueOwnerIds = [...new Set(cases.map(c => c.created_by))];
+        const { data: allOwners } = await supabase
           .from('profiles')
-          .select('user_id, name, role, org_id')
-          .filter('user_id', 'in', `(${caseIds.join(',')})`);
+          .select('user_id, name, role, org_id');
+        
+        // Filter owners to only those who own cases
+        const owners = allOwners?.filter(o => uniqueOwnerIds.includes(o.user_id));
         
         // Map owners to cases
         cases.forEach(caseItem => {
