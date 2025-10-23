@@ -626,14 +626,21 @@
     }
 
     // Load tasks for current user
-    async function loadTasks() {
+    async function loadTasks(includeArchived = false) {
       try {
         // Get tasks for current user
-        const { data: tasks, error: tasksError } = await supabase
+        let query = supabase
           .from('tasks')
           .select('*')
           .eq('assigned_to', currentUser.user_id)
           .order('created_at', { ascending: false });
+
+        // Filter archived tasks unless viewing archive
+        if (!includeArchived) {
+          query = query.or('archived.is.null,archived.eq.false');
+        }
+
+        const { data: tasks, error: tasksError } = await query;
 
         if (tasksError) throw tasksError;
 
@@ -758,25 +765,37 @@
 
     // Get task actions based on status
     function getTaskActions(task) {
-      if (task.status === 'pending') {
+      let actions = '';
+
+      if (task.archived) {
+        // Archived tasks can only be restored
         return `
+          <button class="btn btn-success" onclick="restoreTask('${task.id}')">↩️ שחזר מארכיון</button>
+        `;
+      }
+
+      if (task.status === 'pending') {
+        actions = `
           <button class="btn btn-primary" onclick="startTask('${task.id}')">▶️ התחל עבודה</button>
           <button class="btn btn-secondary" onclick="openTaskDetail('${task.id}')">💬 הוסף תשובה</button>
         `;
       } else if (task.status === 'in_progress') {
-        return `
+        actions = `
           <button class="btn btn-primary" onclick="openTaskDetail('${task.id}')">▶️ המשך עבודה</button>
           <button class="btn btn-success" onclick="completeTask('${task.id}')">✅ סיים משימה</button>
         `;
-      } else if (task.status === 'completed') {
-        return `
+      } else if (task.status === 'completed' || task.status === 'verified') {
+        actions = `
           <button class="btn btn-secondary" onclick="openTaskDetail('${task.id}')">👁️ צפה</button>
+          <button class="btn btn-warning" onclick="archiveTask('${task.id}')">📦 העבר לארכיון</button>
         `;
       } else {
-        return `
+        actions = `
           <button class="btn btn-primary" onclick="openTaskDetail('${task.id}')">▶️ פתח</button>
         `;
       }
+
+      return actions;
     }
 
     // Start task
@@ -935,6 +954,66 @@
         </div>
       `;
     }
+
+    // Archive and Restore Functions
+    window.archiveTask = async function(taskId) {
+      if (!confirm('האם אתה בטוח שברצונך להעביר משימה זו לארכיון?\n\nתוכל לשחזר אותה בכל עת.')) {
+        return;
+      }
+
+      try {
+        const auth = sessionStorage.getItem('auth');
+        if (!auth) {
+          alert('❌ נדרשת התחברות');
+          return;
+        }
+
+        const authData = JSON.parse(auth);
+        const userId = authData.profile?.user_id || authData.user?.id;
+
+        const { error } = await supabase
+          .from('tasks')
+          .update({
+            archived: true,
+            archived_at: new Date().toISOString(),
+            archived_by: userId
+          })
+          .eq('id', taskId);
+
+        if (error) throw error;
+
+        alert('✅ המשימה הועברה לארכיון');
+        await loadTasks(); // Refresh task list
+        await updateStats();
+
+      } catch (error) {
+        console.error('Error archiving task:', error);
+        alert('❌ שגיאה בהעברה לארכיון: ' + error.message);
+      }
+    };
+
+    window.restoreTask = async function(taskId) {
+      try {
+        const { error } = await supabase
+          .from('tasks')
+          .update({
+            archived: false,
+            archived_at: null,
+            archived_by: null
+          })
+          .eq('id', taskId);
+
+        if (error) throw error;
+
+        alert('✅ המשימה שוחזרה מהארכיון');
+        await loadTasks(); // Refresh task list
+        await updateStats();
+
+      } catch (error) {
+        console.error('Error restoring task:', error);
+        alert('❌ שגיאה בשחזור המשימה: ' + error.message);
+      }
+    };
 
     // Initialize on load
     init();

@@ -811,13 +811,20 @@
     };
 
     // Load tasks for assistant role
-    async function loadTasks() {
+    async function loadTasks(includeArchived = false) {
       try {
         // Get all tasks (we'll filter in JavaScript for complex logic)
-        const { data: tasks, error: tasksError } = await supabase
+        let query = supabase
           .from('tasks')
           .select('*')
           .order('created_at', { ascending: false });
+
+        // Filter archived tasks unless viewing archive
+        if (!includeArchived) {
+          query = query.or('archived.is.null,archived.eq.false');
+        }
+
+        const { data: tasks, error: tasksError } = await query;
 
         if (tasksError) throw tasksError;
 
@@ -878,22 +885,36 @@
       }
 
       container.innerHTML = tasks.map(task => `
-        <div class="task-card ${task.priority}" onclick="openTaskDetail('${task.id}')">
-          <div class="task-header">
-            <div class="task-title">${escapeHtml(task.title)}</div>
-            <span class="priority-badge ${task.priority}">
-              ${getPriorityIcon(task.priority)} ${getPriorityLabel(task.priority)}
-            </span>
+        <div class="task-card ${task.priority}">
+          <div style="cursor: pointer;" onclick="openTaskDetail('${task.id}')">
+            <div class="task-header">
+              <div class="task-title">${escapeHtml(task.title)}</div>
+              <span class="priority-badge ${task.priority}">
+                ${getPriorityIcon(task.priority)} ${getPriorityLabel(task.priority)}
+              </span>
+            </div>
+            <div class="task-meta">
+              <span>👤 ${task.assigned_to_profile?.name || 'לא ידוע'}</span>
+              <span>📅 ${formatDate(task.due_date) || 'ללא מועד'}</span>
+              <span>📊 ${getStatusLabel(task.status)}</span>
+              ${task.plate ? `<span>🚗 ${task.plate}</span>` : ''}
+            </div>
+            <div class="task-stats">
+              <span>📈 ${task.completion_percentage || 0}%</span>
+              <span>🕐 ${formatRelativeTime(task.created_at)}</span>
+            </div>
           </div>
-          <div class="task-meta">
-            <span>👤 ${task.assigned_to_profile?.name || 'לא ידוע'}</span>
-            <span>📅 ${formatDate(task.due_date) || 'ללא מועד'}</span>
-            <span>📊 ${getStatusLabel(task.status)}</span>
-            ${task.plate ? `<span>🚗 ${task.plate}</span>` : ''}
-          </div>
-          <div class="task-stats">
-            <span>📈 ${task.completion_percentage || 0}%</span>
-            <span>🕐 ${formatRelativeTime(task.created_at)}</span>
+          <div style="margin-top: 0.75rem; padding-top: 0.75rem; border-top: 1px solid #3a3a3a; display: flex; gap: 0.5rem; justify-content: flex-end;">
+            ${(task.status === 'completed' || task.status === 'verified') && !task.archived ? `
+              <button onclick="event.stopPropagation(); archiveTask('${task.id}')" style="background: #6B7280; color: white; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 0.85rem;">
+                📦 העבר לארכיון
+              </button>
+            ` : ''}
+            ${task.archived ? `
+              <button onclick="event.stopPropagation(); restoreTask('${task.id}')" style="background: #10B981; color: white; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 0.85rem;">
+                ↩️ שחזר
+              </button>
+            ` : ''}
           </div>
         </div>
       `).join('');
@@ -1140,6 +1161,66 @@
         </div>
       `;
     }
+
+    // Archive and Restore Functions
+    window.archiveTask = async function(taskId) {
+      if (!confirm('האם אתה בטוח שברצונך להעביר משימה זו לארכיון?\n\nתוכל לשחזר אותה בכל עת.')) {
+        return;
+      }
+
+      try {
+        const auth = sessionStorage.getItem('auth');
+        if (!auth) {
+          alert('❌ נדרשת התחברות');
+          return;
+        }
+
+        const authData = JSON.parse(auth);
+        const userId = authData.profile?.user_id || authData.user?.id;
+
+        const { error } = await supabase
+          .from('tasks')
+          .update({
+            archived: true,
+            archived_at: new Date().toISOString(),
+            archived_by: userId
+          })
+          .eq('id', taskId);
+
+        if (error) throw error;
+
+        alert('✅ המשימה הועברה לארכיון');
+        await loadTasks(); // Refresh task list
+        await updateStats();
+
+      } catch (error) {
+        console.error('Error archiving task:', error);
+        alert('❌ שגיאה בהעברה לארכיון: ' + error.message);
+      }
+    };
+
+    window.restoreTask = async function(taskId) {
+      try {
+        const { error } = await supabase
+          .from('tasks')
+          .update({
+            archived: false,
+            archived_at: null,
+            archived_by: null
+          })
+          .eq('id', taskId);
+
+        if (error) throw error;
+
+        alert('✅ המשימה שוחזרה מהארכיון');
+        await loadTasks(); // Refresh task list
+        await updateStats();
+
+      } catch (error) {
+        console.error('Error restoring task:', error);
+        alert('❌ שגיאה בשחזור המשימה: ' + error.message);
+      }
+    };
 
     // Initialize on load
     init();
