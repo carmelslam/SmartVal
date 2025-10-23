@@ -95,14 +95,18 @@ CREATE POLICY "tasks_admin_all_access"
     (SELECT role FROM public.profiles WHERE user_id = auth.uid()) IN ('admin', 'developer')
   );
 
--- Assistant: Can see tasks assigned to them OR created by them
+-- Assistant: Can see tasks assigned to them OR created by them OR assigned to assessors
 CREATE POLICY "tasks_assistant_select"
   ON public.tasks
   FOR SELECT
   TO authenticated
   USING (
     (SELECT role FROM public.profiles WHERE user_id = auth.uid()) = 'assistant'
-    AND (assigned_to = auth.uid() OR assigned_by = auth.uid())
+    AND (
+      assigned_to = auth.uid()
+      OR assigned_by = auth.uid()
+      OR (SELECT role FROM public.profiles WHERE user_id = assigned_to) = 'assessor'
+    )
   );
 
 -- Assistant: Can create tasks for self and assessors
@@ -118,18 +122,18 @@ CREATE POLICY "tasks_assistant_insert"
     )
   );
 
--- Assistant: Can update their own assigned tasks
+-- Assistant: Can update their own assigned tasks OR tasks they created
 CREATE POLICY "tasks_assistant_update"
   ON public.tasks
   FOR UPDATE
   TO authenticated
   USING (
     (SELECT role FROM public.profiles WHERE user_id = auth.uid()) = 'assistant'
-    AND assigned_to = auth.uid()
+    AND (assigned_to = auth.uid() OR assigned_by = auth.uid())
   )
   WITH CHECK (
     (SELECT role FROM public.profiles WHERE user_id = auth.uid()) = 'assistant'
-    AND assigned_to = auth.uid()
+    AND (assigned_to = auth.uid() OR assigned_by = auth.uid())
   );
 
 -- Assessor: Can only see tasks assigned to them
