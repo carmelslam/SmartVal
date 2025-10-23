@@ -1,5 +1,5 @@
 -- ============================================================================
--- Phase 7: Task Management System - Row Level Security (RLS) Policies
+-- Task Management System - Row Level Security (RLS) Policies
 -- ============================================================================
 -- Description: Creates RLS policies for role-based access control
 -- Date: 2025-10-23

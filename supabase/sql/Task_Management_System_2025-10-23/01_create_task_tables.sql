@@ -1,9 +1,9 @@
 -- ============================================================================
--- Phase 7: Task Management System - Table Creation
+-- Task Management System - Table Creation
 -- ============================================================================
 -- Description: Creates 5 core tables for the task management system
 -- Date: 2025-10-23
--- Dependencies: public.profiles table must exist (created in Phase 6)
+-- Dependencies: public.profiles table must exist
 -- Author: Claude Code
 -- ============================================================================
 

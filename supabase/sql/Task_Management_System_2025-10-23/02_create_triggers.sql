@@ -1,5 +1,5 @@
 -- ============================================================================
--- Phase 7: Task Management System - Triggers and Functions
+-- Task Management System - Triggers and Functions
 -- ============================================================================
 -- Description: Creates automatic triggers for timestamp updates, thread
 --              completion calculations, and audit trail logging

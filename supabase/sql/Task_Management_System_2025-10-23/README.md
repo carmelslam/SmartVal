@@ -1,15 +1,15 @@
-# Phase 7: Task Management System
+# Task Management System
 
 **Date:** October 23, 2025
 **Status:** ✅ Ready for deployment
 **Author:** Claude Code
-**Dependencies:** Phase 6 (Auth & Profiles) must be deployed first
+**Dependencies:** User profiles table must exist (public.profiles)
 
 ---
 
 ## Overview
 
-This phase implements a complete task management system for SmartVal, enabling admins to assign tasks to users, track progress with threaded conversations, and send targeted push notifications.
+This project implements a complete task management system for SmartVal, enabling admins to assign tasks to users, track progress with threaded conversations, and send targeted push notifications.
 
 ### Key Features
 - ✅ **Role-based task assignment** (Admin → Anyone, Assistant → Self/Assessors, Assessor → Self)
@@ -106,15 +106,15 @@ Run these files in order:
 cd /path/to/SmartVal
 
 # Run migrations in order
-supabase db execute -f "supabase/sql/Phase7_Task_Management_2025-10-23/01_create_task_tables.sql"
-supabase db execute -f "supabase/sql/Phase7_Task_Management_2025-10-23/02_create_triggers.sql"
-supabase db execute -f "supabase/sql/Phase7_Task_Management_2025-10-23/03_create_rls_policies.sql"
+supabase db execute -f "supabase/sql/Task_Management_System_2025-10-23/01_create_task_tables.sql"
+supabase db execute -f "supabase/sql/Task_Management_System_2025-10-23/02_create_triggers.sql"
+supabase db execute -f "supabase/sql/Task_Management_System_2025-10-23/03_create_rls_policies.sql"
 ```
 
 ### Option 3: Single Command (All files)
 
 ```bash
-cat supabase/sql/Phase7_Task_Management_2025-10-23/*.sql | \
+cat supabase/sql/Task_Management_System_2025-10-23/*.sql | \
   supabase db execute --stdin
 ```
 
