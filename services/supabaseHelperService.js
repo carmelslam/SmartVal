@@ -36,6 +36,18 @@ export const supabaseHelperService = {
           .eq('case_id', caseRecord.id);
       }
       
+      // Phase 6: Capture user ID for helper updates
+      let updatedBy = null;
+      try {
+        const authData = sessionStorage.getItem('auth');
+        if (authData) {
+          const auth = JSON.parse(authData);
+          updatedBy = auth?.user?.id;
+        }
+      } catch (e) {
+        console.warn('Could not extract user ID for helper update:', e);
+      }
+      
       // Step 4: Save new helper version
       const { data: helperRecord, error: helperError } = await supabase
         .from('case_helper')
@@ -47,6 +59,7 @@ export const supabaseHelperService = {
           helper_json: helperData,
           source: 'system',
           sync_status: 'synced',
+          updated_by: updatedBy,
           updated_at: timestamp || new Date().toISOString()
         })
         .select()
@@ -134,6 +147,18 @@ export const supabaseHelperService = {
       inspection_location: inspectionLocation
     });
     
+    // Phase 6: Capture user ID for case creation
+    let createdBy = null;
+    try {
+      const authData = sessionStorage.getItem('auth');
+      if (authData) {
+        const auth = JSON.parse(authData);
+        createdBy = auth?.user?.id;
+      }
+    } catch (e) {
+      console.warn('Could not extract user ID for case creation:', e);
+    }
+    
     const { data: newCase, error } = await supabase
       .from('cases')
       .insert({
@@ -141,6 +166,7 @@ export const supabaseHelperService = {
         owner_name: ownerName,
         inspection_location: inspectionLocation,
         status: 'OPEN',
+        created_by: createdBy,
         created_at: new Date().toISOString()
       })
       .select()

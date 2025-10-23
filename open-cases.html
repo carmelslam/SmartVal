@@ -361,11 +361,28 @@
       // Normalize plate number - remove dashes and keep only numbers
       const normalizedPlate = plate.replace(/[^0-9]/g, '');
       
+      // Phase 6: Capture user ID for case creation
+      const authData = sessionStorage.getItem('auth');
+      let userId = null;
+      let userName = null;
+      
+      if (authData) {
+        try {
+          const auth = JSON.parse(authData);
+          userId = auth?.user?.id;
+          userName = auth?.profile?.name;
+        } catch (e) {
+          console.warn('Failed to parse auth data for user tracking:', e);
+        }
+      }
+      
       const payload = {
         plate: normalizedPlate,
         owner,
         date,
-        location
+        location,
+        created_by: userId,
+        created_by_name: userName
       };
 
       try {
