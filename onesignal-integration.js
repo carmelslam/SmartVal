@@ -563,6 +563,12 @@
             this.playerId = onesignalId;
             sessionStorage.setItem('onesignalId', onesignalId);
             console.log('📱 OneSignal: Successfully got OneSignal ID:', onesignalId);
+
+            // Save to Supabase profiles table
+            this.saveOneSignalIdToSupabase(onesignalId).catch(err => {
+              console.error('📱 OneSignal: Failed to save to Supabase (non-fatal):', err);
+            });
+
             return onesignalId;
           } else {
             console.log(`📱 OneSignal: No ID available yet (attempt ${i + 1})`);
@@ -587,6 +593,48 @@
       
       console.warn('📱 OneSignal: Could not get OneSignal ID - likely due to subscription creation issues');
       return null;
+    }
+
+    /**
+     * Save OneSignal Player ID to Supabase profiles table
+     */
+    async saveOneSignalIdToSupabase(onesignalId) {
+      try {
+        // Get user ID from session
+        const auth = sessionStorage.getItem('auth');
+        if (!auth) {
+          console.log('📱 OneSignal: No auth data, skipping Supabase save');
+          return;
+        }
+
+        const authData = JSON.parse(auth);
+        const userId = authData.profile?.user_id || authData.user?.id;
+
+        if (!userId) {
+          console.log('📱 OneSignal: No user ID found, skipping Supabase save');
+          return;
+        }
+
+        console.log('📱 OneSignal: Saving OneSignal ID to Supabase for user:', userId);
+
+        // Dynamically import supabaseClient
+        const { supabase } = await import('./lib/supabaseClient.js');
+
+        // Update profiles table with OneSignal ID
+        const { error } = await supabase
+          .from('profiles')
+          .update({ onesignal_id: onesignalId })
+          .eq('user_id', userId);
+
+        if (error) {
+          console.error('📱 OneSignal: Error saving to Supabase:', error);
+        } else {
+          console.log('📱 OneSignal: Successfully saved OneSignal ID to Supabase');
+        }
+      } catch (error) {
+        console.error('📱 OneSignal: Error in saveOneSignalIdToSupabase:', error);
+        // Don't throw - this is not critical for OneSignal to work
+      }
     }
 
     async manualRegisterForPush() {
