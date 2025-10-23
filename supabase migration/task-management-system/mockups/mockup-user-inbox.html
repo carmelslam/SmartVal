@@ -1,0 +1,600 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>המשימות שלי - ירון כיוף - שמאות וייעוץ</title>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Hebrew:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Noto Sans Hebrew', Arial, sans-serif;
+            background: #f5f5f5;
+            color: #333;
+            direction: rtl;
+            line-height: 1.6;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #003366 0%, #004c99 100%);
+            padding: 1rem 2rem;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .header h1 {
+            font-size: 1.3rem;
+            font-weight: 600;
+            color: white;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .logo {
+            width: 40px;
+            height: 40px;
+            object-fit: contain;
+            background: white;
+            border-radius: 8px;
+            padding: 4px;
+        }
+
+        .user-name {
+            font-size: 0.9rem;
+            color: rgba(255,255,255,0.8);
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+        }
+
+        .badge {
+            background: #ff6b35;
+            color: white;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.75rem;
+            font-weight: bold;
+            position: absolute;
+            top: -5px;
+            left: -5px;
+        }
+
+        .icon-btn {
+            background: rgba(255, 255, 255, 0.1);
+            border: none;
+            color: white;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s;
+            position: relative;
+        }
+
+        .icon-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: scale(1.1);
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: white;
+            border-radius: 12px;
+            padding: 1.25rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            text-align: center;
+            transition: all 0.3s;
+            border: 2px solid transparent;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            border-color: #003366;
+        }
+
+        .stat-label {
+            color: #666;
+            font-size: 0.85rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #003366;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 2rem;
+            overflow-x: auto;
+            padding-bottom: 0.5rem;
+        }
+
+        .tab {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            background: white;
+            border-radius: 8px;
+            cursor: pointer;
+            font-family: 'Noto Sans Hebrew', Arial, sans-serif;
+            font-size: 0.95rem;
+            font-weight: 500;
+            transition: all 0.3s;
+            white-space: nowrap;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .tab.active {
+            background: linear-gradient(135deg, #ff6b35 0%, #ff8556 100%);
+            color: white;
+            box-shadow: 0 4px 8px rgba(255, 107, 53, 0.3);
+        }
+
+        .tab:hover:not(.active) {
+            background: #f0f0f0;
+        }
+
+        .section-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            color: #333;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .task-card {
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border-right: 4px solid #e0e0e0;
+            transition: all 0.3s;
+        }
+
+        .task-card:hover {
+            transform: translateX(-5px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+
+        .task-card.urgent {
+            border-right-color: #EF4444;
+            background: linear-gradient(to left, rgba(239, 68, 68, 0.05), white);
+        }
+
+        .task-card.high {
+            border-right-color: #F59E0B;
+        }
+
+        .task-card.medium {
+            border-right-color: #3B82F6;
+        }
+
+        .task-card.new {
+            position: relative;
+        }
+
+        .new-badge {
+            position: absolute;
+            top: 1rem;
+            left: 1rem;
+            background: #ff6b35;
+            color: white;
+            padding: 0.25rem 0.75rem;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        .task-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 1rem;
+        }
+
+        .task-title {
+            font-weight: 600;
+            color: #333;
+            font-size: 1.1rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .priority-badge {
+            padding: 0.25rem 0.75rem;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        .priority-badge.urgent {
+            background: rgba(239, 68, 68, 0.1);
+            color: #EF4444;
+        }
+
+        .priority-badge.high {
+            background: rgba(245, 158, 11, 0.1);
+            color: #F59E0B;
+        }
+
+        .task-from {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: #666;
+            font-size: 0.9rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .task-meta {
+            display: flex;
+            gap: 1rem;
+            font-size: 0.85rem;
+            color: #666;
+            margin-bottom: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .progress-mini {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.85rem;
+            color: #666;
+        }
+
+        .progress-mini-bar {
+            width: 60px;
+            height: 6px;
+            background: #e0e0e0;
+            border-radius: 3px;
+            overflow: hidden;
+        }
+
+        .progress-mini-fill {
+            height: 100%;
+            background: #10B981;
+            transition: width 0.3s;
+        }
+
+        .actions {
+            display: flex;
+            gap: 0.75rem;
+            margin-top: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 0.6rem 1.25rem;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-family: 'Noto Sans Hebrew', Arial, sans-serif;
+            font-size: 0.9rem;
+            font-weight: 500;
+            transition: all 0.3s;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #003366 0%, #004c99 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 51, 102, 0.3);
+        }
+
+        .btn-secondary {
+            background: white;
+            color: #666;
+            border: 1px solid #e0e0e0;
+        }
+
+        .btn-secondary:hover {
+            background: #f9f9f9;
+        }
+
+        .thread-info {
+            background: rgba(0, 51, 102, 0.05);
+            padding: 0.75rem 1rem;
+            border-radius: 8px;
+            margin-top: 1rem;
+            font-size: 0.85rem;
+            color: #003366;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 4rem 2rem;
+            color: #999;
+        }
+
+        .empty-state-icon {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 1rem;
+            }
+
+            .header {
+                padding: 1rem;
+            }
+
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .stat-value {
+                font-size: 1.5rem;
+            }
+
+            .tabs {
+                gap: 0.25rem;
+            }
+
+            .tab {
+                padding: 0.6rem 1rem;
+                font-size: 0.85rem;
+            }
+
+            .actions {
+                flex-direction: column;
+            }
+
+            .btn {
+                width: 100%;
+                justify-content: center;
+            }
+        }
+
+        .mockup-banner {
+            background: linear-gradient(135deg, #ff6b35 0%, #ff8556 100%);
+            color: white;
+            padding: 1rem;
+            text-align: center;
+            font-weight: 600;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+    </style>
+</head>
+<body>
+    <div class="mockup-banner">
+        🎨 מוקאפ תצוגה - ממשק משתמש (שמאי/עוזר)
+    </div>
+
+    <header class="header">
+        <div>
+            <h1>
+                <img src="https://carmelcayouf.com/wp-content/uploads/2025/06/g.webp" alt="Logo" class="logo">
+                <span>המשימות שלי - ירון כיוף - שמאות וייעוץ</span>
+            </h1>
+            <div class="user-name">אביב כהן - שמאי</div>
+        </div>
+        <div class="header-actions">
+            <div class="icon-btn">
+                🔔
+                <div class="badge">5</div>
+            </div>
+            <div class="icon-btn">👤</div>
+            <div class="icon-btn">⚙️</div>
+        </div>
+    </header>
+
+    <div class="container">
+        <!-- Personal Stats -->
+        <div class="section-title">📊 סיכום אישי</div>
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-label">משימות שלי</div>
+                <div class="stat-value">15</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">בביצוע כעת</div>
+                <div class="stat-value">3</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">הושלמו השבוע</div>
+                <div class="stat-value">8</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">ממתינות</div>
+                <div class="stat-value">12</div>
+            </div>
+        </div>
+
+        <!-- Tabs -->
+        <div class="tabs">
+            <button class="tab active">🔥 דחופות</button>
+            <button class="tab">📋 הכל</button>
+            <button class="tab">✅ הושלמו</button>
+            <button class="tab">📤 שיצרתי</button>
+            <button class="tab">📥 שהוקצו לי</button>
+        </div>
+
+        <!-- Urgent Tasks -->
+        <div class="section-title">🔥 משימות דחופות (2)</div>
+
+        <div class="task-card urgent new">
+            <div class="new-badge">חדש!</div>
+            <div class="task-header">
+                <div style="flex: 1;">
+                    <div class="task-title">⚠️ בדיקת חשבונית תיק 9876543</div>
+                    <div class="task-from">
+                        👤 מ: מנהל → אביב כהן
+                    </div>
+                </div>
+                <span class="priority-badge urgent">דחוף</span>
+            </div>
+            <div class="task-meta">
+                <span>📅 יעד: היום 18:00</span>
+                <span>⏰ נותרו 2 שעות</span>
+            </div>
+            <div class="progress-mini">
+                <span>📊 0%</span>
+                <div class="progress-mini-bar">
+                    <div class="progress-mini-fill" style="width: 0%"></div>
+                </div>
+                <span>💬 3</span>
+                <span>📎 2</span>
+            </div>
+            <div class="actions">
+                <button class="btn btn-primary">▶️ התחל עבודה</button>
+                <button class="btn btn-secondary">💬 הוסף תשובה</button>
+                <button class="btn btn-secondary">📎 צרף קבצים</button>
+            </div>
+        </div>
+
+        <div class="task-card urgent">
+            <div class="task-header">
+                <div style="flex: 1;">
+                    <div class="task-title">⚠️ העלאת תמונות נזק - רכב 1234567</div>
+                    <div class="task-from">
+                        👤 מ: מנהל → אביב כהן
+                    </div>
+                </div>
+                <span class="priority-badge urgent">איחור!</span>
+            </div>
+            <div class="task-meta">
+                <span>📅 יעד: אתמול</span>
+                <span>⚠️ באיחור של יום אחד</span>
+            </div>
+            <div class="progress-mini">
+                <span>📊 50%</span>
+                <div class="progress-mini-bar">
+                    <div class="progress-mini-fill" style="width: 50%; background: #F59E0B;"></div>
+                </div>
+                <span>💬 5</span>
+                <span>📎 8</span>
+            </div>
+            <div class="actions">
+                <button class="btn btn-primary">▶️ המשך עבודה</button>
+                <button class="btn btn-primary" style="background: #10B981;">✅ סיים משימה</button>
+                <button class="btn btn-secondary">💬 דווח בעיה</button>
+            </div>
+        </div>
+
+        <!-- Active Tasks -->
+        <div class="section-title" style="margin-top: 2rem;">📋 משימות פעילות (8)</div>
+
+        <div class="task-card medium">
+            <div class="task-header">
+                <div style="flex: 1;">
+                    <div class="task-title">עדכון פרטי לקוח - רכב 5555555</div>
+                    <div class="task-from">
+                        👤 מ: מנהל → אביב כהן
+                    </div>
+                </div>
+                <span class="priority-badge" style="background: rgba(59, 130, 246, 0.1); color: #3B82F6;">בינוני</span>
+            </div>
+            <div class="task-meta">
+                <span>📅 יעד: 26/10/2025</span>
+                <span>🕐 נותר יום אחד</span>
+            </div>
+            <div class="progress-mini">
+                <span>📊 0%</span>
+                <div class="progress-mini-bar">
+                    <div class="progress-mini-fill" style="width: 0%"></div>
+                </div>
+                <span>💬 1</span>
+                <span>📎 0</span>
+            </div>
+            <div class="actions">
+                <button class="btn btn-primary">▶️ פתח</button>
+            </div>
+        </div>
+
+        <div class="task-card high">
+            <div class="task-header">
+                <div style="flex: 1;">
+                    <div class="task-title">אישור דוח סופי - תיק 7777777</div>
+                    <div class="task-from">
+                        👤 מ: מנהל → אביב כהן
+                    </div>
+                </div>
+                <span class="priority-badge high">גבוה</span>
+            </div>
+            <div class="task-meta">
+                <span>📅 יעד: 28/10/2025</span>
+                <span>🕐 נותרו 5 ימים</span>
+            </div>
+            <div class="progress-mini">
+                <span>📊 25%</span>
+                <div class="progress-mini-bar">
+                    <div class="progress-mini-fill" style="width: 25%; background: #3B82F6;"></div>
+                </div>
+                <span>💬 2</span>
+                <span>📎 1</span>
+            </div>
+            <div class="thread-info">
+                🧵 שרשור: תיק רכב 7777777 (2/4 משימות הושלמו)
+            </div>
+            <div class="actions">
+                <button class="btn btn-primary">▶️ פתח</button>
+            </div>
+        </div>
+
+        <!-- Completed Section -->
+        <div class="section-title" style="margin-top: 2rem;">
+            ✅ הושלמו השבוע (8)
+            <button class="btn btn-secondary" style="margin-right: auto; font-size: 0.85rem;">🔽 הרחב</button>
+        </div>
+
+        <!-- Footer Info -->
+        <div style="text-align: center; margin-top: 3rem; padding: 2rem; color: #999; border-top: 2px solid #e0e0e0;">
+            <p>🎨 זהו מוקאפ עיצובי בלבד - לתצוגה ראשונית</p>
+            <p style="margin-top: 0.5rem;">כל הנתונים המוצגים הם דוגמאות להמחשה</p>
+            <p style="margin-top: 1.5rem; font-size: 0.9rem; color: #888;">©2025 Carmel Cayouf. All rights reserved. SmartVal Pro System by Evalix</p>
+        </div>
+    </div>
+</body>
+</html>
