@@ -46,8 +46,12 @@ FINAL_REPORT_DRAFT: 'https://hook.eu2.make.com/j5qb0obvpa6maab9j4a7t71o70brqdfp'
   AUTH_VERIFY_USER: 'https://hook.eu2.make.com/mzpa0otk0oxxfznrp4mn2nhg5mj4h5xn',
   ADMIN_FETCH_FIELDS: 'https://hook.eu2.make.com/urzpd316748hb4m6c5qx4uf8trqlbyf9',
   DELETE_CASE_IN_ONEDRIVE: 'https://hook.eu2.make.com/vf1wem86lba5nmjm6ipa3ugrcx3zljbs',
-  // Used by Make automations to push notifications to user system
-  PUSH_NOTIFICATION: 'https://hook.eu2.make.com/e41e2zm9f26ju5m815yfgn1ou41wwwhd',
+
+  // Push notifications webhook for task management system
+  ADMIN_PUSH_NOTIFICATION: 'https://hook.eu2.make.com/e41e2zm9f26ju5m815yfgn1ou41wwwhd',
+
+  // DEPRECATED - Use ADMIN_PUSH_NOTIFICATION instead
+  // PUSH_NOTIFICATION: 'https://hook.eu2.make.com/e41e2zm9f26ju5m815yfgn1ou41wwwhd',
   
   
   // Call expertise report webhook

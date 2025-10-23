@@ -109,7 +109,7 @@ class TaskNotificationManager {
         };
 
         try {
-          await sendToWebhook('PUSH_NOTIFICATION', payload);
+          await sendToWebhook('ADMIN_PUSH_NOTIFICATION', payload);
           successCount++;
           console.log(`📬 Task Notifications: Sent notification to user ${userId}`);
         } catch (error) {
@@ -191,7 +191,7 @@ class TaskNotificationManager {
 
     try {
       console.log('📬 Task Notifications: Sending notification:', data);
-      await sendToWebhook('PUSH_NOTIFICATION', data);
+      await sendToWebhook('ADMIN_PUSH_NOTIFICATION', data);
       console.log('📬 Task Notifications: Notification sent successfully');
       return true;
     } catch (error) {
