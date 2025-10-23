@@ -1139,12 +1139,17 @@
 
     indicator.addEventListener('click', async () => {
       const permission = Notification.permission;
-      
+
       if (permission !== 'granted') {
-        // Check if OneSignal manager is available
+        indicator.innerHTML = '⏳ מבקש הרשאות...';
+
+        // Request permission via OneSignal
         let granted = false;
         try {
-          if (window.oneSignalManager && typeof window.oneSignalManager.requestPermission === 'function') {
+          if (window.OneSignal && window.OneSignal.Notifications) {
+            await window.OneSignal.Notifications.requestPermission();
+            granted = (Notification.permission === 'granted');
+          } else if (window.oneSignalManager && typeof window.oneSignalManager.requestPermission === 'function') {
             granted = await window.oneSignalManager.requestPermission();
           } else {
             // Fallback to native permission request
@@ -1161,14 +1166,88 @@
             granted = false;
           }
         }
-        
+
         if (granted) {
+          indicator.innerHTML = '⏳ מאתחל התראות...';
+
+          // Try to get OneSignal ID and save it
+          let onesignalId = null;
+          let attempts = 0;
+
+          while (!onesignalId && attempts < 10) {
+            try {
+              await new Promise(resolve => setTimeout(resolve, 1000));
+
+              if (window.OneSignal && window.OneSignal.User) {
+                // Try multiple ways to get ID
+                if (window.OneSignal.User.PushSubscription && window.OneSignal.User.PushSubscription.id) {
+                  onesignalId = window.OneSignal.User.PushSubscription.id;
+                } else if (window.OneSignal.User.onesignalId) {
+                  onesignalId = window.OneSignal.User.onesignalId;
+                }
+              }
+
+              if (onesignalId) break;
+              attempts++;
+            } catch (e) {
+              console.log('📱 OneSignal: Attempt', attempts + 1, 'to get ID failed');
+              attempts++;
+            }
+          }
+
+          if (onesignalId) {
+            // Save to Supabase
+            try {
+              const auth = sessionStorage.getItem('auth');
+              if (auth) {
+                const authData = JSON.parse(auth);
+                const userId = authData.profile?.user_id || authData.user?.id;
+
+                if (userId) {
+                  const { supabase } = await import('./lib/supabaseClient.js');
+                  const { error } = await supabase
+                    .from('profiles')
+                    .update({ onesignal_id: onesignalId })
+                    .eq('user_id', userId);
+
+                  if (!error) {
+                    console.log('📱 OneSignal: Saved ID to database:', onesignalId);
+                    sessionStorage.setItem('onesignalId', onesignalId);
+                  }
+                }
+              }
+            } catch (err) {
+              console.error('📱 OneSignal: Failed to save to database:', err);
+            }
+          }
+
           // Force update the session storage and indicator
           sessionStorage.setItem('oneSignalSubscribed', 'true');
           updateIndicator();
           alert('✅ התראות הופעלו בהצלחה!');
         } else {
+          updateIndicator();
           alert('❌ לא ניתן להפעיל התראות. אנא אפשר התראות בדפדפן.');
+        }
+      } else {
+        // Already granted - try to get ID if missing
+        indicator.innerHTML = '⏳ בודק...';
+
+        let onesignalId = sessionStorage.getItem('onesignalId');
+
+        if (!onesignalId && window.OneSignal && window.OneSignal.User) {
+          if (window.OneSignal.User.PushSubscription && window.OneSignal.User.PushSubscription.id) {
+            onesignalId = window.OneSignal.User.PushSubscription.id;
+            sessionStorage.setItem('onesignalId', onesignalId);
+          }
+        }
+
+        updateIndicator();
+
+        if (onesignalId) {
+          alert('✅ התראות כבר פעילות!\nמזהה: ' + onesignalId.substring(0, 20) + '...');
+        } else {
+          alert('ℹ️ הרשאות ניתנו אך OneSignal לא מאותחל. נסה לרענן את הדף.');
         }
       }
     });
