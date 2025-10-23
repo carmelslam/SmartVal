@@ -1933,17 +1933,20 @@
       try {
         const { supabase } = await import('./lib/supabaseClient.js');
         
-        const { data: users, error } = await supabase
+        const { data: allUsers, error } = await supabase
           .from('profiles')
-          .select('user_id, name, role')
-          .in('role', ['assessor', 'admin', 'developer'])
-          .eq('status', 'active')
-          .neq('user_id', currentOwnerId);
+          .select('user_id, name, role, status')
+          .eq('status', 'active');
         
         if (error) {
           alert('שגיאה בטעינת משתמשים');
           return;
         }
+        
+        const users = allUsers.filter(user => 
+          ['assessor', 'admin', 'developer'].includes(user.role) && 
+          user.user_id !== currentOwnerId
+        );
         
         const roleNames = {
           developer: 'מפתח',
