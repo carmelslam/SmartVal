@@ -1,9 +1,10 @@
 // Phase 6: Case Ownership Service
 // Enforces case ownership rules across all modules
 // Rules:
-// - Assessor can only edit cases they created
+// - Assessor can only edit cases they created OR cases they collaborate on
 // - Admin and Developer can edit any case
 // - Assistant can view but not edit any case
+// - Multiple users can collaborate on the same case
 
 import { supabase } from '../lib/supabaseClient.js';
 
@@ -41,7 +42,7 @@ export const caseOwnershipService = {
         return { canEdit: false, reason: 'עוזר לא יכול לערוך תיקים' };
       }
 
-      // For assessors, check case ownership
+      // For assessors, check case ownership OR collaboration
       if (userRole === 'assessor') {
         // Normalize plate number
         const normalizedPlate = plateNumber.replace(/[^0-9]/g, '');
@@ -71,14 +72,29 @@ export const caseOwnershipService = {
         if (caseRecord.created_by === userId) {
           console.log('✅ Assessor is case owner - can edit');
           return { canEdit: true, caseOwnerId: caseRecord.created_by };
-        } else {
-          console.log('❌ Assessor is not case owner - cannot edit');
-          return { 
-            canEdit: false, 
-            reason: 'תיק זה שייך למשתמש אחר. רק מנהל יכול להעביר תיק.',
-            caseOwnerId: caseRecord.created_by 
-          };
         }
+        
+        // Check if assessor is a collaborator
+        const { data: collaborators, error: collabError } = await supabase
+          .from('case_collaborators')
+          .select('id')
+          .eq('case_id', caseRecord.id)
+          .eq('user_id', userId)
+          .limit(1);
+        
+        if (collabError) {
+          console.error('Error checking collaborators:', collabError);
+        } else if (collaborators && collaborators.length > 0) {
+          console.log('✅ Assessor is case collaborator - can edit');
+          return { canEdit: true, caseOwnerId: caseRecord.created_by, isCollaborator: true };
+        }
+        
+        console.log('❌ Assessor is not case owner or collaborator - cannot edit');
+        return { 
+          canEdit: false, 
+          reason: 'תיק זה שייך למשתמש אחר. פנה למנהל להוספתך כשותף.',
+          caseOwnerId: caseRecord.created_by 
+        };
       }
 
       // Unknown role
@@ -158,6 +174,162 @@ export const caseOwnershipService = {
 
     } catch (error) {
       console.error('Transfer case exception:', error);
+      return { success: false, error: error.message };
+    }
+  },
+
+  /**
+   * Add collaborator to case
+   * @param {string} plateNumber - Case plate number
+   * @param {string} collaboratorUserId - User ID to add as collaborator
+   * @returns {Promise<{success: boolean, error?: string}>}
+   */
+  async addCollaborator(plateNumber, collaboratorUserId) {
+    try {
+      const { userId, userRole } = this.getCurrentUser();
+      
+      if (!userId) {
+        return { success: false, error: 'משתמש לא מחובר' };
+      }
+
+      const normalizedPlate = plateNumber.replace(/[^0-9]/g, '');
+
+      const { data: cases, error: caseError } = await supabase
+        .from('cases')
+        .select('id, created_by')
+        .eq('plate', normalizedPlate)
+        .limit(1);
+
+      if (caseError || !cases || cases.length === 0) {
+        return { success: false, error: 'תיק לא נמצא' };
+      }
+
+      const caseRecord = cases[0];
+
+      if (!['admin', 'developer'].includes(userRole) && caseRecord.created_by !== userId) {
+        return { success: false, error: 'רק בעל התיק או מנהל יכול להוסיף שותפים' };
+      }
+
+      const { error } = await supabase
+        .from('case_collaborators')
+        .insert({
+          case_id: caseRecord.id,
+          user_id: collaboratorUserId,
+          added_by: userId
+        });
+
+      if (error) {
+        if (error.message.includes('duplicate')) {
+          return { success: false, error: 'משתמש כבר שותף בתיק זה' };
+        }
+        console.error('Add collaborator error:', error);
+        return { success: false, error: error.message };
+      }
+
+      console.log(`✅ Collaborator ${collaboratorUserId} added to case ${plateNumber}`);
+      return { success: true };
+
+    } catch (error) {
+      console.error('Add collaborator exception:', error);
+      return { success: false, error: error.message };
+    }
+  },
+
+  /**
+   * Remove collaborator from case
+   * @param {string} plateNumber - Case plate number
+   * @param {string} collaboratorUserId - User ID to remove
+   * @returns {Promise<{success: boolean, error?: string}>}
+   */
+  async removeCollaborator(plateNumber, collaboratorUserId) {
+    try {
+      const { userId, userRole } = this.getCurrentUser();
+      
+      if (!userId) {
+        return { success: false, error: 'משתמש לא מחובר' };
+      }
+
+      const normalizedPlate = plateNumber.replace(/[^0-9]/g, '');
+
+      const { data: cases, error: caseError } = await supabase
+        .from('cases')
+        .select('id, created_by')
+        .eq('plate', normalizedPlate)
+        .limit(1);
+
+      if (caseError || !cases || cases.length === 0) {
+        return { success: false, error: 'תיק לא נמצא' };
+      }
+
+      const caseRecord = cases[0];
+
+      if (!['admin', 'developer'].includes(userRole) && caseRecord.created_by !== userId) {
+        return { success: false, error: 'רק בעל התיק או מנהל יכול להסיר שותפים' };
+      }
+
+      const { error } = await supabase
+        .from('case_collaborators')
+        .delete()
+        .eq('case_id', caseRecord.id)
+        .eq('user_id', collaboratorUserId);
+
+      if (error) {
+        console.error('Remove collaborator error:', error);
+        return { success: false, error: error.message };
+      }
+
+      console.log(`✅ Collaborator ${collaboratorUserId} removed from case ${plateNumber}`);
+      return { success: true };
+
+    } catch (error) {
+      console.error('Remove collaborator exception:', error);
+      return { success: false, error: error.message };
+    }
+  },
+
+  /**
+   * Get all collaborators for a case
+   * @param {string} plateNumber - Case plate number
+   * @returns {Promise<{success: boolean, collaborators?: Array, error?: string}>}
+   */
+  async getCollaborators(plateNumber) {
+    try {
+      const normalizedPlate = plateNumber.replace(/[^0-9]/g, '');
+
+      const { data: cases, error: caseError } = await supabase
+        .from('cases')
+        .select('id')
+        .eq('plate', normalizedPlate)
+        .limit(1);
+
+      if (caseError || !cases || cases.length === 0) {
+        return { success: false, error: 'תיק לא נמצא' };
+      }
+
+      const caseId = cases[0].id;
+
+      const { data: collaborators, error } = await supabase
+        .from('case_collaborators')
+        .select(`
+          user_id,
+          added_at,
+          profiles:user_id (
+            name,
+            email,
+            role
+          )
+        `)
+        .eq('case_id', caseId);
+
+      if (error) {
+        console.error('Get collaborators error:', error);
+        return { success: false, error: error.message };
+      }
+
+      return { success: true, collaborators: collaborators || [] };
+
+    } catch (error) {
+      console.error('Get collaborators exception:', error);
       return { success: false, error: error.message };
     }
   }

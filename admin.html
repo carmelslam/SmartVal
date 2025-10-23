@@ -378,7 +378,7 @@
         <button onclick="loadSection('logView')">יומן פעולות</button>
         <button onclick="loadSection('versionManagement')">📚 ניהול גרסאות תיקים</button>
         <button onclick="loadSection('userManagement')">👥 ניהול משתמשים</button>
-        <button onclick="loadSection('caseTransfer')">🔄 העברת תיקים</button>
+        <button onclick="loadSection('caseTransfer')">👥 שיתוף תיקים</button>
         <button onclick="loadSection('clearSystem')">🗑️ מחק נתוני מערכת</button>
         <button onclick="window.open('https://ycshamautcoil-my.sharepoint.com/personal/yaron_yc-shamaut_co_il/_layouts/15/onedrive.aspx?id=%2Fpersonal%2Fyaron%5Fyc%2Dshamaut%5Fco%5Fil%2FDocuments%2FYC%20שמאות%2Fתיקים%20פתוחים&ga=1', '_blank')">כניסה לתיקים פתוחים</button>
         <button class="devButton" onclick="window.location.href='validation-dashboard.html'">לוח בקרת אימות</button>
@@ -1012,7 +1012,7 @@
           
         case 'caseTransfer':
           content.innerHTML = `
-            <h2 style="color: #ff6b35; font-size: 20px; margin-bottom: 20px; text-align: center;">🔄 העברת תיקים</h2>
+            <h2 style="color: #ff6b35; font-size: 20px; margin-bottom: 20px; text-align: center;">👥 ניהול שיתוף תיקים</h2>
             <div id="caseTransferContent" style="padding: 10px;"></div>
           `;
           loadCaseTransferUI();
@@ -1848,7 +1848,7 @@
               <thead>
                 <tr style="background: #333; border-bottom: 2px solid #ff6b35;">
                   <th style="padding: 12px; text-align: right; color: #ff6b35;">מספר רכב</th>
-                  <th style="padding: 12px; text-align: right; color: #ff6b35;">בעלים נוכחי</th>
+                  <th style="padding: 12px; text-align: right; color: #ff6b35;">בעל התיק</th>
                   <th style="padding: 12px; text-align: right; color: #ff6b35;">תפקיד</th>
                   <th style="padding: 12px; text-align: right; color: #ff6b35;">תאריך יצירה</th>
                   <th style="padding: 12px; text-align: center; color: #ff6b35;">פעולות</th>
@@ -1859,16 +1859,22 @@
         cases.forEach(caseItem => {
           html += `
                 <tr style="border-bottom: 1px solid #444;">
-                  <td style="padding: 10px; color: #e0e0e0;">${caseItem.plate || 'לא ידוע'}</td>
+                  <td style="padding: 10px; color: #e0e0e0; font-weight: bold;">${caseItem.plate || 'לא ידוע'}</td>
                   <td style="padding: 10px; color: #e0e0e0;">${caseItem.profiles?.name || 'לא ידוע'}</td>
                   <td style="padding: 10px; color: #e0e0e0;">${roleNames[caseItem.profiles?.role] || 'לא ידוע'}</td>
                   <td style="padding: 10px; color: #e0e0e0;">${new Date(caseItem.created_at).toLocaleDateString('he-IL')}</td>
                   <td style="padding: 10px; text-align: center;">
-                    <button onclick="showTransferModal('${caseItem.plate}', '${caseItem.created_by}')"
-                            style="padding: 6px 12px; background: #3b82f6; color: white; border: none; border-radius: 4px; cursor: pointer;"
+                    <button onclick="showCollaboratorModal('${caseItem.plate}', '${caseItem.id}', '${caseItem.created_by}')"
+                            style="padding: 6px 12px; background: #3b82f6; color: white; border: none; border-radius: 4px; cursor: pointer; margin-left: 5px;"
                             onmouseover="this.style.background='#2563eb'"
                             onmouseout="this.style.background='#3b82f6'">
-                      🔄 העבר תיק
+                      👥 ניהול שותפים
+                    </button>
+                    <button onclick="showTransferModal('${caseItem.plate}', '${caseItem.created_by}')"
+                            style="padding: 6px 12px; background: #ef4444; color: white; border: none; border-radius: 4px; cursor: pointer;"
+                            onmouseover="this.style.background='#dc2626'"
+                            onmouseout="this.style.background='#ef4444'">
+                      🔄 העבר בעלות
                     </button>
                   </td>
                 </tr>`;
@@ -1879,18 +1885,57 @@
             </table>
           </div>
           
+          <!-- Collaborator Modal -->
+          <div id="collaboratorModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 1001; justify-content: center; align-items: center; overflow-y: auto;">
+            <div style="background: #2a2a2a; padding: 30px; border-radius: 12px; max-width: 600px; width: 90%; border: 2px solid #3b82f6; margin: 20px;">
+              <h3 style="color: #3b82f6; margin-top: 0;">👥 ניהול שותפים לתיק</h3>
+              <p>תיק: <strong id="collaboratorPlate" style="color: #ff6b35;"></strong></p>
+              
+              <div id="currentCollaborators" style="margin: 20px 0;">
+                <h4 style="color: #e0e0e0; font-size: 14px;">שותפים נוכחיים:</h4>
+                <div id="collaboratorsList" style="background: #1a1a1a; padding: 15px; border-radius: 8px; margin-top: 10px;">
+                  <p style="color: #999; text-align: center;">טוען...</p>
+                </div>
+              </div>
+              
+              <div style="background: #1a365d; padding: 15px; border-radius: 8px; border: 1px solid #3b82f6; margin: 20px 0;">
+                <h4 style="color: #3b82f6; margin-top: 0; font-size: 14px;">הוסף שותף חדש:</h4>
+                <select id="newCollaboratorSelect" style="width: 100%; padding: 10px; background: #3a3a3a; color: #e0e0e0; border: 1px solid #555; border-radius: 4px; margin: 10px 0;">
+                  <option value="">בחר משתמש...</option>
+                </select>
+                <button onclick="addCollaboratorToCase()"
+                        style="width: 100%; padding: 10px; background: #22c55e; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold;"
+                        onmouseover="this.style.background='#16a34a'"
+                        onmouseout="this.style.background='#22c55e'">
+                  ✅ הוסף שותף
+                </button>
+              </div>
+              
+              <div style="display: flex; gap: 10px; justify-content: center; margin-top: 20px;">
+                <button onclick="closeCollaboratorModal()"
+                        style="padding: 10px 20px; background: #6c757d; color: white; border: none; border-radius: 6px; cursor: pointer;"
+                        onmouseover="this.style.background='#5a6268'"
+                        onmouseout="this.style.background='#6c757d'">
+                  ✓ סגור
+                </button>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Transfer Modal -->
           <div id="transferModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 1000; justify-content: center; align-items: center;">
-            <div style="background: #2a2a2a; padding: 30px; border-radius: 12px; max-width: 500px; width: 90%; border: 2px solid #ff6b35;">
-              <h3 style="color: #ff6b35; margin-top: 0;">העברת תיק</h3>
+            <div style="background: #2a2a2a; padding: 30px; border-radius: 12px; max-width: 500px; width: 90%; border: 2px solid #ef4444;">
+              <h3 style="color: #ef4444; margin-top: 0;">⚠️ העברת בעלות על תיק</h3>
+              <p style="background: #7f1d1d; padding: 10px; border-radius: 6px; font-size: 13px;">העברת בעלות היא פעולה קבועה שמעבירה את הבעלות המלאה על התיק למשתמש אחר.</p>
               <p>העבר תיק <strong id="transferPlate" style="color: #3b82f6;"></strong> למשתמש:</p>
               <select id="newOwnerSelect" style="width: 100%; padding: 10px; background: #3a3a3a; color: #e0e0e0; border: 1px solid #555; border-radius: 4px; margin: 15px 0;">
                 <option value="">בחר משתמש...</option>
               </select>
               <div style="display: flex; gap: 10px; justify-content: center; margin-top: 20px;">
                 <button onclick="confirmTransfer()"
-                        style="padding: 10px 20px; background: #22c55e; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold;"
-                        onmouseover="this.style.background='#16a34a'"
-                        onmouseout="this.style.background='#22c55e'">
+                        style="padding: 10px 20px; background: #ef4444; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold;"
+                        onmouseover="this.style.background='#dc2626'"
+                        onmouseout="this.style.background='#ef4444'">
                   ✅ אשר העברה
                 </button>
                 <button onclick="closeTransferModal()"
@@ -1924,6 +1969,173 @@
           container.innerHTML = `<p style="color: #dc3545;">שגיאה בטעינת תיקים: ${error.message}</p>`;
         }
       }
+    };
+    
+    // Collaborator Management Functions
+    window.showCollaboratorModal = async function(plate, caseId, ownerId) {
+      window.currentCollaboratorPlate = plate;
+      window.currentCollaboratorCaseId = caseId;
+      window.currentCollaboratorOwnerId = ownerId;
+      
+      document.getElementById('collaboratorPlate').textContent = plate;
+      document.getElementById('collaboratorModal').style.display = 'flex';
+      
+      await loadCurrentCollaborators(plate);
+      await loadAvailableUsers(ownerId);
+    };
+    
+    async function loadCurrentCollaborators(plate) {
+      const list = document.getElementById('collaboratorsList');
+      list.innerHTML = '<p style="color: #999; text-align: center;">טוען...</p>';
+      
+      try {
+        const { caseOwnershipService } = await import('./services/caseOwnershipService.js');
+        const result = await caseOwnershipService.getCollaborators(plate);
+        
+        if (!result.success) {
+          list.innerHTML = `<p style="color: #dc3545;">שגיאה: ${result.error}</p>`;
+          return;
+        }
+        
+        const collaborators = result.collaborators || [];
+        
+        if (collaborators.length === 0) {
+          list.innerHTML = '<p style="color: #999; text-align: center;">אין שותפים נוכחיים</p>';
+          return;
+        }
+        
+        const roleNames = {
+          developer: 'מפתח',
+          admin: 'אדמין',
+          assessor: 'שמאי',
+          assistant: 'עוזר'
+        };
+        
+        let html = '';
+        collaborators.forEach(collab => {
+          html += `
+            <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px; background: #2a2a2a; border-radius: 6px; margin-bottom: 8px;">
+              <div>
+                <div style="color: #e0e0e0; font-weight: bold;">${collab.profiles?.name || 'לא ידוע'}</div>
+                <div style="color: #999; font-size: 12px;">${roleNames[collab.profiles?.role] || ''} • ${new Date(collab.added_at).toLocaleDateString('he-IL')}</div>
+              </div>
+              <button onclick="removeCollaboratorFromCase('${collab.user_id}')"
+                      style="padding: 6px 12px; background: #ef4444; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;"
+                      onmouseover="this.style.background='#dc2626'"
+                      onmouseout="this.style.background='#ef4444'">
+                🗑️ הסר
+              </button>
+            </div>`;
+        });
+        
+        list.innerHTML = html;
+        
+      } catch (error) {
+        console.error('Error loading collaborators:', error);
+        list.innerHTML = `<p style="color: #dc3545;">שגיאה בטעינת שותפים</p>`;
+      }
+    }
+    
+    async function loadAvailableUsers(ownerId) {
+      const select = document.getElementById('newCollaboratorSelect');
+      select.innerHTML = '<option value="">בחר משתמש...</option>';
+      
+      try {
+        const { supabase } = await import('./lib/supabaseClient.js');
+        
+        const { data: allUsers, error } = await supabase
+          .from('profiles')
+          .select('user_id, name, role, status')
+          .eq('status', 'active');
+        
+        if (error) {
+          console.error('Error loading users:', error);
+          return;
+        }
+        
+        const users = allUsers.filter(user => 
+          ['assessor', 'admin', 'developer'].includes(user.role) && 
+          user.user_id !== ownerId
+        );
+        
+        const roleNames = {
+          developer: 'מפתח',
+          admin: 'אדמין',
+          assessor: 'שמאי',
+          assistant: 'עוזר'
+        };
+        
+        users.forEach(user => {
+          select.innerHTML += `
+            <option value="${user.user_id}">
+              ${user.name} (${roleNames[user.role]})
+            </option>`;
+        });
+        
+      } catch (error) {
+        console.error('Error loading available users:', error);
+      }
+    }
+    
+    window.addCollaboratorToCase = async function() {
+      const userId = document.getElementById('newCollaboratorSelect').value;
+      
+      if (!userId) {
+        alert('נא לבחור משתמש');
+        return;
+      }
+      
+      try {
+        const { caseOwnershipService } = await import('./services/caseOwnershipService.js');
+        
+        const result = await caseOwnershipService.addCollaborator(
+          window.currentCollaboratorPlate,
+          userId
+        );
+        
+        if (result.success) {
+          alert('✅ שותף נוסף בהצלחה');
+          await loadCurrentCollaborators(window.currentCollaboratorPlate);
+          document.getElementById('newCollaboratorSelect').value = '';
+        } else {
+          alert('❌ שגיאה: ' + result.error);
+        }
+      } catch (error) {
+        console.error('Error adding collaborator:', error);
+        alert('❌ שגיאה בהוספת שותף');
+      }
+    };
+    
+    window.removeCollaboratorFromCase = async function(userId) {
+      if (!confirm('האם להסיר שותף זה מהתיק?')) {
+        return;
+      }
+      
+      try {
+        const { caseOwnershipService } = await import('./services/caseOwnershipService.js');
+        
+        const result = await caseOwnershipService.removeCollaborator(
+          window.currentCollaboratorPlate,
+          userId
+        );
+        
+        if (result.success) {
+          alert('✅ שותף הוסר בהצלחה');
+          await loadCurrentCollaborators(window.currentCollaboratorPlate);
+        } else {
+          alert('❌ שגיאה: ' + result.error);
+        }
+      } catch (error) {
+        console.error('Error removing collaborator:', error);
+        alert('❌ שגיאה בהסרת שותף');
+      }
+    };
+    
+    window.closeCollaboratorModal = function() {
+      document.getElementById('collaboratorModal').style.display = 'none';
+      window.currentCollaboratorPlate = null;
+      window.currentCollaboratorCaseId = null;
+      window.currentCollaboratorOwnerId = null;
     };
     
     window.showTransferModal = async function(plate, currentOwnerId) {
@@ -2508,7 +2720,7 @@
           
         case 'caseTransfer':
           content.innerHTML = `
-            <h2 style="color: #ff6b35; font-size: 20px; margin-bottom: 20px; text-align: center;">🔄 העברת תיקים</h2>
+            <h2 style="color: #ff6b35; font-size: 20px; margin-bottom: 20px; text-align: center;">👥 ניהול שיתוף תיקים</h2>
             <div id="caseTransferContent" style="padding: 10px;"></div>
           `;
           loadCaseTransferUI();
