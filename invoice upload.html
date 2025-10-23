@@ -384,7 +384,26 @@
 
 <script type="module">
   import { WEBHOOKS } from './webhook.js';
+  import { caseOwnershipService } from './services/caseOwnershipService.js';
+  
   window.WEBHOOKS = WEBHOOKS;
+  
+  // Phase 6: Case ownership check
+  (async () => {
+    const plateNumber = window.helper?.plate || sessionStorage.getItem('currentPlate');
+    
+    if (plateNumber) {
+      const ownershipCheck = await caseOwnershipService.canEditCase(plateNumber);
+      
+      if (!ownershipCheck.canEdit) {
+        alert(ownershipCheck.reason || 'אין לך הרשאה לערוך תיק זה.\n\nרק הבעלים, מנהל או מפתח יכולים לערוך.');
+        window.location.href = 'selection.html';
+        return;
+      }
+      
+      console.log('✅ Case ownership verified - user can upload invoices');
+    }
+  })();
 </script>
 
 <div class="container">

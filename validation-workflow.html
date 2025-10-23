@@ -1298,6 +1298,7 @@
     // SESSION 56: helper.js is NOT an ES6 module - use window.helper
     // import { helper } from './helper.js';
     import { sendToWebhook } from './webhook.js';
+    import { caseOwnershipService } from './services/caseOwnershipService.js';
     
     // Authentication check
     const auth = sessionStorage.getItem("auth");
@@ -1305,6 +1306,23 @@
       alert("הגישה חסומה - אנא התחבר דרך דף הבית");
       window.location.href = "index.html";
     }
+    
+    // Phase 6: Case ownership check
+    (async () => {
+      const plateNumber = window.helper?.plate || sessionStorage.getItem('currentPlate');
+      
+      if (plateNumber) {
+        const ownershipCheck = await caseOwnershipService.canEditCase(plateNumber);
+        
+        if (!ownershipCheck.canEdit) {
+          alert(ownershipCheck.reason || 'אין לך הרשאה לערוך תיק זה.\n\nרק הבעלים, מנהל או מפתח יכולים לערוך.');
+          window.location.href = 'selection.html';
+          return;
+        }
+        
+        console.log('✅ Case ownership verified - user can validate');
+      }
+    })();
 
     // Global validation state
     let validatedSections = [];
