@@ -160,7 +160,39 @@
 - Status change dropdown
 - Basic file attachment UI
 
-### Step 4: Polish & Test (FINAL)
+### Step 4: Integrate OneSignal Push Notifications (HIGH PRIORITY)
+- **Notification Events:**
+  - 📬 Task assigned to user
+  - 💬 New message/reply in task
+  - ✅ Task status changed
+  - ⚠️ Task overdue reminder
+
+- **OneSignal Configuration:**
+  - App ID: `3b924b99-c302-4919-a97e-baf909394696`
+  - REST API Key: (in environment variables)
+  - Use player_id from user profiles table
+
+- **Implementation:**
+  - Send notification when task created (to assigned_to user)
+  - Send notification when message added (to assigned_to if from assigned_by, vice versa)
+  - Send notification when status changes (to creator/assigned user)
+  - Use targeted notifications (NOT broadcast)
+
+- **Notification Payload:**
+  ```javascript
+  {
+    headings: { en: "משימה חדשה" },
+    contents: { en: task.title },
+    data: {
+      task_id: task.id,
+      type: "task_assigned",
+      url: "task-detail.html?id=" + task.id
+    },
+    include_player_ids: [user.onesignal_player_id]
+  }
+  ```
+
+### Step 5: Polish & Test (FINAL)
 - Add visual improvements
 - Test all workflows
 - Fix any bugs found
