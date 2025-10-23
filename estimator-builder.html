@@ -1272,6 +1272,7 @@
   <script type="module">
     // Import and make MathEngine globally available
     import { MathEngine } from './math.js';
+    import { caseOwnershipService } from './services/caseOwnershipService.js';
     
     // Make MathEngine available globally for other scripts
     window.MathEngine = MathEngine;
@@ -1291,6 +1292,23 @@
     window.dispatchEvent(new CustomEvent('mathEngineReady', { 
       detail: { MathEngine: MathEngine } 
     }));
+    
+    // Phase 6: Case ownership check
+    (async () => {
+      const plateNumber = window.helper?.plate || sessionStorage.getItem('currentPlate');
+      
+      if (plateNumber) {
+        const ownershipCheck = await caseOwnershipService.canEditCase(plateNumber);
+        
+        if (!ownershipCheck.canEdit) {
+          alert(ownershipCheck.reason || 'אין לך הרשאה לערוך תיק זה.\n\nרק הבעלים, מנהל או מפתח יכולים לערוך.');
+          window.location.href = 'selection.html';
+          return;
+        }
+        
+        console.log('✅ Case ownership verified - user can edit estimator');
+      }
+    })();
   </script>
   
   <script type="module" src="auth.js"></script>
@@ -11264,6 +11282,20 @@
         
         // 5. DUAL STORAGE: Save gross sections array to helper.estimate
         saveGrossSectionsToEstimateHelper(helper);
+        
+        // Phase 6: Add user tracking
+        const authData = sessionStorage.getItem('auth');
+        if (authData) {
+          try {
+            const auth = JSON.parse(authData);
+            if (!helper.meta) helper.meta = {};
+            helper.meta.updated_by = auth?.user?.id;
+            helper.meta.updated_by_name = auth?.profile?.name;
+            helper.meta.last_updated = new Date().toISOString();
+          } catch (e) {
+            console.warn('Could not add user tracking:', e);
+          }
+        }
         
         // 4. SAVE TO ALL STORAGE LOCATIONS
         sessionStorage.setItem('helper', JSON.stringify(helper));
