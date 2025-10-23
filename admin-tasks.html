@@ -722,6 +722,70 @@
     </div>
   </div>
 
+  <!-- Edit Task Modal -->
+  <div id="editTaskModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>✏️ ערוך משימה</h2>
+        <button class="close-btn" onclick="closeEditTaskModal()">✕</button>
+      </div>
+      <form onsubmit="saveTaskEdits(event)">
+        <div class="form-group">
+          <label for="editTaskTitle">כותרת המשימה *</label>
+          <input type="text" id="editTaskTitle" required placeholder="הזן כותרת למשימה...">
+        </div>
+        <div class="form-group">
+          <label for="editTaskDescription">תיאור המשימה</label>
+          <textarea id="editTaskDescription" rows="4" placeholder="הזן תיאור מפורט..."></textarea>
+        </div>
+        <div class="form-group">
+          <label for="editTaskType">סוג המשימה</label>
+          <select id="editTaskType">
+            <option value="case_action">פעולה בתיק</option>
+            <option value="document_request">בקשת מסמך</option>
+            <option value="review_request">בקשת ביקורת</option>
+            <option value="data_correction">תיקון נתונים</option>
+            <option value="follow_up">מעקב</option>
+            <option value="custom">אחר</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="editAssignedTo">הקצה ל *</label>
+          <select id="editAssignedTo" required>
+            <option value="">בחר משתמש...</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="editTaskPriority">עדיפות</label>
+          <select id="editTaskPriority">
+            <option value="low">נמוכה</option>
+            <option value="medium">בינונית</option>
+            <option value="high">גבוהה</option>
+            <option value="urgent">דחוף</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="editDueDate">תאריך יעד</label>
+          <input type="date" id="editDueDate">
+        </div>
+        <div class="form-group">
+          <label for="editFilingCaseId">מספר תיק (אופציונלי)</label>
+          <select id="editFilingCaseId">
+            <option value="">בחר תיק...</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="editPlate">מספר רישוי (אופציונלי)</label>
+          <input type="text" id="editPlate" placeholder="12-345-67">
+        </div>
+        <div style="display: flex; gap: 1rem; margin-top: 2rem;">
+          <button type="submit" class="btn btn-primary" style="flex: 1;">💾 שמור שינויים</button>
+          <button type="button" class="btn btn-secondary" onclick="closeEditTaskModal()">ביטול</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <div class="footer">
     ©2025 Carmel Cayouf. All rights reserved. SmartVal Pro System by Evalix
   </div>
@@ -1004,6 +1068,12 @@
             </div>
             <span style="margin-right: 16px;">🕐 ${formatRelativeTime(task.created_at)}</span>
           </div>
+
+          <div class="task-actions" style="margin-top: 12px; display: flex; gap: 8px; justify-content: flex-start;" onclick="event.stopPropagation()">
+            <button class="btn-edit" onclick="openEditTaskModal('${task.id}')" style="background: #3B82F6; color: white; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 0.85rem;">
+              ✏️ ערוך
+            </button>
+          </div>
         </div>
       `;
       }).join('');
@@ -1076,6 +1146,129 @@
       document.getElementById('newTaskModal').classList.remove('open');
       document.getElementById('newTaskForm').reset();
     };
+
+    // Edit Task Functions
+    let currentEditingTaskId = null;
+
+    window.openEditTaskModal = async function(taskId) {
+      try {
+        // Find task in allTasks array
+        const task = allTasks.find(t => t.id === taskId);
+        if (!task) {
+          alert('משימה לא נמצאה');
+          return;
+        }
+
+        currentEditingTaskId = taskId;
+
+        // Pre-fill form
+        document.getElementById('editTaskTitle').value = task.title || '';
+        document.getElementById('editTaskDescription').value = task.description || '';
+        document.getElementById('editTaskType').value = task.task_type || 'custom';
+        document.getElementById('editTaskPriority').value = task.priority || 'medium';
+        document.getElementById('editDueDate').value = task.due_date ? task.due_date.split('T')[0] : '';
+        document.getElementById('editPlate').value = task.plate || '';
+
+        // Populate user dropdown if not already done
+        if (document.getElementById('editAssignedTo').options.length <= 1) {
+          const select = document.getElementById('editAssignedTo');
+          allUsers.forEach(user => {
+            const option = document.createElement('option');
+            option.value = user.user_id;
+            option.textContent = `${user.name} (${getRoleLabel(user.role)})`;
+            select.appendChild(option);
+          });
+        }
+
+        // Set assigned user
+        document.getElementById('editAssignedTo').value = task.assigned_to || '';
+
+        // Populate case dropdown if needed
+        await populateEditCaseDropdown();
+        if (task.case_id) {
+          // Try to find and select the case
+          const caseSelect = document.getElementById('editFilingCaseId');
+          for (let i = 0; i < caseSelect.options.length; i++) {
+            if (caseSelect.options[i].getAttribute('data-uuid') === task.case_id) {
+              caseSelect.selectedIndex = i;
+              break;
+            }
+          }
+        }
+
+        // Show modal
+        document.getElementById('editTaskModal').classList.add('open');
+
+      } catch (error) {
+        console.error('Error opening edit modal:', error);
+        alert('שגיאה בטעינת פרטי המשימה');
+      }
+    };
+
+    window.closeEditTaskModal = function() {
+      document.getElementById('editTaskModal').classList.remove('open');
+      currentEditingTaskId = null;
+    };
+
+    window.saveTaskEdits = async function(event) {
+      event.preventDefault();
+
+      if (!currentEditingTaskId) {
+        alert('שגיאה: לא נבחרה משימה לעריכה');
+        return;
+      }
+
+      try {
+        const updates = {
+          title: document.getElementById('editTaskTitle').value,
+          description: document.getElementById('editTaskDescription').value,
+          task_type: document.getElementById('editTaskType').value,
+          assigned_to: document.getElementById('editAssignedTo').value,
+          priority: document.getElementById('editTaskPriority').value,
+          due_date: document.getElementById('editDueDate').value || null,
+          plate: document.getElementById('editPlate').value || null,
+          updated_at: new Date().toISOString()
+        };
+
+        // Get case_id from selected option
+        const caseSelect = document.getElementById('editFilingCaseId');
+        const selectedCaseOption = caseSelect.options[caseSelect.selectedIndex];
+        if (selectedCaseOption && selectedCaseOption.value) {
+          updates.case_id = selectedCaseOption.getAttribute('data-uuid') || null;
+        } else {
+          updates.case_id = null;
+        }
+
+        const { error } = await supabase
+          .from('tasks')
+          .update(updates)
+          .eq('id', currentEditingTaskId);
+
+        if (error) throw error;
+
+        alert('✅ המשימה עודכנה בהצלחה!');
+        closeEditTaskModal();
+        await loadTasks();
+        await updateStats();
+
+      } catch (error) {
+        console.error('Error updating task:', error);
+        alert('❌ שגיאה בעדכון המשימה: ' + error.message);
+      }
+    };
+
+    async function populateEditCaseDropdown() {
+      const cases = await loadCases();
+      const select = document.getElementById('editFilingCaseId');
+      select.innerHTML = '<option value="">בחר תיק...</option>';
+      cases.forEach(c => {
+        const option = document.createElement('option');
+        option.value = c.filing_case_id;
+        option.setAttribute('data-uuid', c.id);
+        option.textContent = `${c.filing_case_id}${c.plate ? ' - ' + c.plate : ''}`;
+        select.appendChild(option);
+      });
+    }
 
     window.openNewThreadModal = function() {
       alert('יצירת שרשור חדש - בפיתוח');
