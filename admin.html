@@ -407,41 +407,23 @@
       import { sendToWebhook } from './webhook.js';
       import { WEBHOOKS } from './webhook.js';
       
-      // Security and Audit Functions
+      // Legacy verifyAdminAccess removed in Phase 6
+      // Admin access now controlled by Supabase role-based auth (see lines 3164 & 6121)
       window.verifyAdminAccess = function() {
-        const adminAccess = sessionStorage.getItem('admin-access');
-        const adminTimestamp = sessionStorage.getItem('admin-timestamp');
-        
-        if (!adminAccess || adminAccess !== 'granted') {
-          alert('⚠️ נדרשת הרשאת מנהל\n\nאין לך הרשאות מנהל או שפגה תוקף ההתחברות.');
-          window.location.href = 'selection.html';
-          return false;
-        }
-        
-        // Check if session is expired (30 minutes)
-        if (adminTimestamp) {
-          const sessionTime = new Date(adminTimestamp);
-          const now = new Date();
-          const timeDiff = (now - sessionTime) / (1000 * 60); // minutes
-          
-          if (timeDiff > 30) {
-            alert('⚠️ פג תוקף ההתחברות\n\nפג תוקף ההתחברות כמנהל. נדרש להתחבר מחדש.');
-            sessionStorage.removeItem('admin-access');
-            sessionStorage.removeItem('admin-timestamp');
-            window.location.href = 'selection.html';
-            return false;
-          }
-        }
-        
+        // Stub function for backwards compatibility - actual auth handled at page load
         return true;
       };
       
       window.logAdminAction = async function(action, details = {}) {
+        // Get current user from Supabase auth
+        const authData = sessionStorage.getItem('auth');
+        const auth = authData ? JSON.parse(authData) : null;
+        
         const logEntry = {
           action: action,
           timestamp: new Date().toISOString(),
-          admin_session: sessionStorage.getItem('admin-access'),
-          session_timestamp: sessionStorage.getItem('admin-timestamp'),
+          user_email: auth?.user?.email || 'unknown',
+          user_role: auth?.profile?.role || 'unknown',
           details: details,
           user_agent: navigator.userAgent,
           page_url: window.location.href
@@ -4628,7 +4610,7 @@
             plate: plate,
             action: 'load_finalized_case_for_edit',
             require_finalized: true,
-            admin_session: sessionStorage.getItem('admin-access'),
+            user_email: JSON.parse(sessionStorage.getItem('auth') || '{}').user?.email || 'unknown',
             timestamp: new Date().toISOString()
           })
         });
@@ -5113,8 +5095,7 @@
             action: 'vat_override',
             plate: plate,
             vat_rate: parseFloat(vatValue),
-            admin_session: sessionStorage.getItem('admin-access'),
-            admin_timestamp: sessionStorage.getItem('admin-timestamp'),
+            user_email: JSON.parse(sessionStorage.getItem('auth') || '{}').user?.email || 'unknown',
             timestamp: new Date().toISOString()
           })
         });
@@ -5182,8 +5163,7 @@
             action: 'upload_helper_json',
             plate: plate,
             helper_data: jsonData,
-            admin_session: sessionStorage.getItem('admin-access'),
-            admin_timestamp: sessionStorage.getItem('admin-timestamp'),
+            user_email: JSON.parse(sessionStorage.getItem('auth') || '{}').user?.email || 'unknown',
             timestamp: new Date().toISOString()
           })
         });
@@ -5251,8 +5231,7 @@
             action: 'save_all_changes',
             original_plate: plate,
             changes: changes,
-            admin_session: sessionStorage.getItem('admin-access'),
-            admin_timestamp: sessionStorage.getItem('admin-timestamp'),
+            user_email: JSON.parse(sessionStorage.getItem('auth') || '{}').user?.email || 'unknown',
             timestamp: new Date().toISOString()
           })
         });

@@ -1318,22 +1318,8 @@ class LeviProcessor {
         }, 500);
       }
       
-      // Additional fallback: Try to get password from auth and store for prefill
-      const authData = sessionStorage.getItem('auth');
-      if (authData && !sessionStorage.getItem('prefillPassword')) {
-        // Try to decrypt auth data to get password
-        import('./auth.js').then(({ decryptPassword }) => {
-          decryptPassword(authData).then(decryptedPassword => {
-            sessionStorage.setItem('prefillPassword', decryptedPassword);
-            document.getElementById('pass').value = decryptedPassword;
-            console.log('🔑 LEVI UPLOAD: Password decrypted and filled from auth');
-          }).catch(error => {
-            console.log('❌ LEVI UPLOAD: Failed to decrypt auth password:', error);
-          });
-        }).catch(error => {
-          console.log('❌ LEVI UPLOAD: Failed to import auth module:', error);
-        });
-      }
+      // Password prefill no longer needed with Supabase Auth
+      // Legacy password system removed in Phase 6
       
       console.log('Case data loaded from helper:', {
         plate: helper.car_details?.plate,
@@ -3119,20 +3105,7 @@ window.testPasswordPrefill = function() {
     console.log('✅ Manual prefill successful:', prefillPassword);
   } else {
     console.log('❌ No prefillPassword found');
-    
-    // Try to decrypt auth
-    const authData = sessionStorage.getItem('auth');
-    if (authData) {
-      import('./auth.js').then(({ decryptPassword }) => {
-        decryptPassword(authData).then(decryptedPassword => {
-          document.getElementById('pass').value = decryptedPassword;
-          sessionStorage.setItem('prefillPassword', decryptedPassword);
-          console.log('✅ Password decrypted and filled manually');
-        }).catch(error => {
-          console.log('❌ Failed to decrypt auth:', error);
-        });
-      });
-    }
+    // Legacy password decryption removed in Phase 6
   }
 };
 

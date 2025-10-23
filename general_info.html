@@ -142,7 +142,7 @@
   <script type="module">
     import { sendToWebhook } from './webhook.js';
     import { updateHelperWithEvents } from './helper-events.js';
-    import { decryptPassword } from './auth.js';
+    // Legacy auth.js imports removed in Phase 6 - using Supabase Auth
     import { caseOwnershipService } from './services/caseOwnershipService.js';
     // SESSION 56: helper.js is NOT an ES6 module - use window.updateHelper, window.helper
     // import { helper, updateHelper, broadcastHelperUpdate } from './helper.js';
@@ -188,11 +188,11 @@
         const auth = JSON.parse(authData);
         if (auth.user && auth.session) {
           console.log('✅ Valid Supabase session for:', auth.user.email);
-          // No password needed for Supabase auth
+          // No password needed for Supabase auth - Phase 6
         } else {
-          // Try old password decryption as fallback
-          password = await decryptPassword(authData);
-          console.log('✅ Using legacy password system');
+          console.error('❌ Invalid auth data structure');
+          alert("שגיאה באימות הזדהות - נדרשת התחברות מחדש");
+          window.location.href = "index.html";
         }
       } catch (error) {
         console.error('❌ Auth validation failed:', error);
