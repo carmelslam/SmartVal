@@ -310,15 +310,7 @@ export const caseOwnershipService = {
 
       const { data: collaborators, error } = await supabase
         .from('case_collaborators')
-        .select(`
-          user_id,
-          added_at,
-          profiles:user_id (
-            name,
-            email,
-            role
-          )
-        `)
+        .select('user_id, added_at')
         .eq('case_id', caseId);
 
       if (error) {
@@ -326,7 +318,23 @@ export const caseOwnershipService = {
         return { success: false, error: error.message };
       }
 
-      return { success: true, collaborators: collaborators || [] };
+      if (!collaborators || collaborators.length === 0) {
+        return { success: true, collaborators: [] };
+      }
+
+      const userIds = collaborators.map(c => c.user_id);
+      const { data: allProfiles } = await supabase
+        .from('profiles')
+        .select('user_id, name, email, role');
+
+      const profiles = allProfiles?.filter(p => userIds.includes(p.user_id));
+
+      const enrichedCollaborators = collaborators.map(collab => ({
+        ...collab,
+        profiles: profiles?.find(p => p.user_id === collab.user_id)
+      }));
+
+      return { success: true, collaborators: enrichedCollaborators };
 
     } catch (error) {
       console.error('Get collaborators exception:', error);
