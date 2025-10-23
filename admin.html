@@ -1803,7 +1803,15 @@
       
       try {
         const { supabase } = await import('./lib/supabaseClient.js');
+        const { authService } = await import('./services/authService.js');
         const { caseOwnershipService } = await import('./services/caseOwnershipService.js');
+        
+        const authData = sessionStorage.getItem('auth');
+        if (!authData) {
+          container.innerHTML = '<p style="color: #dc3545;">שגיאה: נדרש להתחבר מחדש</p>';
+          setTimeout(() => window.location.href = 'index.html', 2000);
+          return;
+        }
         
         const { data: cases, error } = await supabase
           .from('cases')
@@ -1899,7 +1907,22 @@
         
       } catch (error) {
         console.error('Error loading case transfer UI:', error);
-        container.innerHTML = `<p style="color: #dc3545;">שגיאה בטעינת תיקים: ${error.message}</p>`;
+        
+        if (error.message && error.message.includes('JWT expired')) {
+          container.innerHTML = `
+            <div style="text-align: center; padding: 30px;">
+              <p style="color: #dc3545; font-size: 18px; margin-bottom: 15px;">⚠️ פג תוקף ההתחברות</p>
+              <p style="color: #e0e0e0; margin-bottom: 20px;">נדרש להתחבר מחדש למערכת</p>
+              <button onclick="window.location.href='index.html'" 
+                      style="padding: 10px 20px; background: #ff6b35; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold;"
+                      onmouseover="this.style.background='#e55a2b'"
+                      onmouseout="this.style.background='#ff6b35'">
+                🔐 חזור להתחברות
+              </button>
+            </div>`;
+        } else {
+          container.innerHTML = `<p style="color: #dc3545;">שגיאה בטעינת תיקים: ${error.message}</p>`;
+        }
       }
     };
     
