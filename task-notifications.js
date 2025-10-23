@@ -96,16 +96,13 @@ class TaskNotificationManager {
         const payload = {
           type: 'tasks_batch_assigned',
           user_id: userId,
-          task_count: taskCount,
-          task_ids: tasks.map(t => t.id),
           title: `${emoji} ${taskCount === 1 ? 'משימה חדשה' : `${taskCount} משימות חדשות`}`,
           message: message,
-          url: `${window.location.origin}/user-tasks.html`,
-          data: {
-            task_ids: tasks.map(t => t.id),
-            task_count: taskCount,
-            highest_priority: highestPriority
-          }
+          url: this.getRoleBasedUrl(profile), // Role-based routing
+          task_count: taskCount,
+          // Internal data for backend (not visible to user)
+          task_ids: tasks.map(t => t.id),
+          highest_priority: highestPriority
         };
 
         try {
@@ -181,6 +178,30 @@ class TaskNotificationManager {
   }
 
   /**
+   * Get role-based URL for notification based on user profile
+   */
+  getRoleBasedUrl(userProfile, taskId = null) {
+    const origin = window.location.origin;
+
+    // If taskId provided, always go to task detail page
+    if (taskId) {
+      return `${origin}/task-detail.html?id=${taskId}`;
+    }
+
+    // Otherwise route to appropriate tasks page based on role
+    if (userProfile && userProfile.role) {
+      if (userProfile.role === 'admin' || userProfile.role === 'developer') {
+        return `${origin}/admin-tasks.html`;
+      } else if (userProfile.role === 'assistant') {
+        return `${origin}/assistant-tasks.html`;
+      }
+    }
+
+    // Default to user tasks page
+    return `${origin}/user-tasks.html`;
+  }
+
+  /**
    * Send notification via webhook using webhook.js
    */
   async sendNotification(data) {
@@ -231,16 +252,12 @@ class TaskNotificationManager {
       await this.sendNotification({
         type: 'task_assigned',
         user_id: task.assigned_to,
-        task_id: task.id,
         title: `${emoji} משימה חדשה - ${priorityLabel}`,
-        message: `${task.title}`,
-        url: `${window.location.origin}/task-detail.html?id=${task.id}`,
-        data: {
-          task_id: task.id,
-          priority: task.priority,
-          task_type: task.task_type,
-          due_date: task.due_date
-        }
+        message: task.title,
+        url: this.getRoleBasedUrl(assignedToProfile, task.id),
+        // Internal data for backend
+        task_id: task.id,
+        priority: priorityLabel
       });
     } catch (error) {
       console.error('📬 Task Notifications: Error in notifyTaskAssigned:', error);
@@ -276,16 +293,12 @@ class TaskNotificationManager {
         await this.sendNotification({
           type: 'task_status_changed',
           user_id: task.assigned_to,
-          task_id: task.id,
           title: `${statusEmojis[newStatus]} משימה עודכנה`,
           message: `"${task.title}" - ${statusLabels[newStatus]}`,
-          url: `${window.location.origin}/task-detail.html?id=${task.id}`,
-          data: {
-            task_id: task.id,
-            old_status: oldStatus,
-            new_status: newStatus,
-            changed_by: changedByProfile?.name || 'לא ידוע'
-          }
+          url: this.getRoleBasedUrl(task.assigned_to_profile, task.id),
+          // Internal data for backend
+          task_id: task.id,
+          changed_by: changedByProfile?.name || 'מערכת'
         });
       }
 
@@ -294,16 +307,12 @@ class TaskNotificationManager {
         await this.sendNotification({
           type: 'task_status_changed',
           user_id: task.assigned_by,
-          task_id: task.id,
           title: `${statusEmojis[newStatus]} משימה עודכנה`,
           message: `"${task.title}" - ${statusLabels[newStatus]}`,
-          url: `${window.location.origin}/task-detail.html?id=${task.id}`,
-          data: {
-            task_id: task.id,
-            old_status: oldStatus,
-            new_status: newStatus,
-            changed_by: changedByProfile?.name || 'לא ידוע'
-          }
+          url: this.getRoleBasedUrl(task.assigned_by_profile, task.id),
+          // Internal data for backend
+          task_id: task.id,
+          changed_by: changedByProfile?.name || 'מערכת'
         });
       }
     } catch (error) {
@@ -323,15 +332,12 @@ class TaskNotificationManager {
         await this.sendNotification({
           type: 'task_message',
           user_id: task.assigned_to,
-          task_id: task.id,
-          title: `💬 הודעה חדשה במשימה`,
+          title: `💬 הודעה חדשה: ${task.title}`,
           message: `${senderProfile?.name || 'משתמש'}: ${message.substring(0, 100)}${message.length > 100 ? '...' : ''}`,
-          url: `${window.location.origin}/task-detail.html?id=${task.id}`,
-          data: {
-            task_id: task.id,
-            sender_name: senderProfile?.name || 'לא ידוע',
-            task_title: task.title
-          }
+          url: this.getRoleBasedUrl(task.assigned_to_profile, task.id),
+          // Internal data for backend
+          task_id: task.id,
+          sender: senderProfile?.name || 'משתמש'
         });
       }
 
@@ -340,15 +346,12 @@ class TaskNotificationManager {
         await this.sendNotification({
           type: 'task_message',
           user_id: task.assigned_by,
-          task_id: task.id,
-          title: `💬 הודעה חדשה במשימה`,
+          title: `💬 הודעה חדשה: ${task.title}`,
           message: `${senderProfile?.name || 'משתמש'}: ${message.substring(0, 100)}${message.length > 100 ? '...' : ''}`,
-          url: `${window.location.origin}/task-detail.html?id=${task.id}`,
-          data: {
-            task_id: task.id,
-            sender_name: senderProfile?.name || 'לא ידוע',
-            task_title: task.title
-          }
+          url: this.getRoleBasedUrl(task.assigned_by_profile, task.id),
+          // Internal data for backend
+          task_id: task.id,
+          sender: senderProfile?.name || 'משתמש'
         });
       }
     } catch (error) {
@@ -435,14 +438,12 @@ class TaskNotificationManager {
         await this.sendNotification({
           type: 'task_updated',
           user_id: task.assigned_to,
-          task_id: task.id,
           title: '✏️ משימה עודכנה',
-          message: `"${task.title}" עודכנה על ידי ${updatedByProfile?.name || 'משתמש'}`,
-          url: `${window.location.origin}/task-detail.html?id=${task.id}`,
-          data: {
-            task_id: task.id,
-            updated_by: updatedByProfile?.name || 'לא ידוע'
-          }
+          message: `"${task.title}" עודכנה על ידי ${updatedByProfile?.name || 'מערכת'}`,
+          url: this.getRoleBasedUrl(task.assigned_to_profile, task.id),
+          // Internal data for backend
+          task_id: task.id,
+          updated_by: updatedByProfile?.name || 'מערכת'
         });
       }
     } catch (error) {
