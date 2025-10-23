@@ -1033,6 +1033,20 @@
           
           window.helper.parts_search.selected_parts = mappedParts;
           
+          // Phase 6: Add user tracking
+          const authData = sessionStorage.getItem('auth');
+          if (authData) {
+            try {
+              const auth = JSON.parse(authData);
+              if (!window.helper.meta) window.helper.meta = {};
+              window.helper.meta.updated_by = auth?.user?.id;
+              window.helper.meta.updated_by_name = auth?.profile?.name;
+              window.helper.meta.last_updated = new Date().toISOString();
+            } catch (e) {
+              console.warn('Could not add user tracking:', e);
+            }
+          }
+          
           sessionStorage.setItem('helper', JSON.stringify(window.helper));
           console.log(`💾 SESSION 20: Synced ${mappedParts.length} parts from Supabase to helper (with field mapping)`);
         } else {
@@ -2949,6 +2963,24 @@ window.addEventListener('DOMContentLoaded', function() {
 </script>
 <script type="module">
   import { sendPartSearch, sendSearchResultFile } from './webhook.js';
+  import { caseOwnershipService } from './services/caseOwnershipService.js';
+  
+  // Phase 6: Case ownership check
+  (async () => {
+    const plateNumber = window.helper?.plate || sessionStorage.getItem('currentPlate');
+    
+    if (plateNumber) {
+      const ownershipCheck = await caseOwnershipService.canEditCase(plateNumber);
+      
+      if (!ownershipCheck.canEdit) {
+        alert(ownershipCheck.reason || 'אין לך הרשאה לערוך תיק זה.\n\nרק הבעלים, מנהל או מפתח יכולים לערוך.');
+        window.location.href = 'selection.html';
+        return;
+      }
+      
+      console.log('✅ Case ownership verified - user can search parts');
+    }
+  })();
   
   // ✅ NEW: Listen for messages from damage centers wizard
   window.addEventListener('message', function(event) {

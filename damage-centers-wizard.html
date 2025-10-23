@@ -1498,8 +1498,27 @@
   <script type="module">
     // SESSION 34: Import and initialize Supabase client for RPC calls
     import { supabase } from './lib/supabaseClient.js';
+    import { caseOwnershipService } from './services/caseOwnershipService.js';
+    
     window.supabase = supabase;
     console.log('✅ SESSION 34: Supabase client initialized');
+    
+    // Phase 6: Case ownership check
+    (async () => {
+      const plateNumber = window.helper?.plate || sessionStorage.getItem('currentPlate');
+      
+      if (plateNumber) {
+        const ownershipCheck = await caseOwnershipService.canEditCase(plateNumber);
+        
+        if (!ownershipCheck.canEdit) {
+          alert(ownershipCheck.reason || 'אין לך הרשאה לערוך תיק זה.\n\nרק הבעלים, מנהל או מפתח יכולים לערוך.');
+          window.location.href = 'selection.html';
+          return;
+        }
+        
+        console.log('✅ Case ownership verified - user can edit damage centers');
+      }
+    })();
   </script>
   <script>
     // Global wizard state and module data storage
@@ -4281,6 +4300,20 @@
         if (!helper.estimate) helper.estimate = {};
         helper.estimate.damage_centers = helper.damage_centers;
         console.log('✅ SESSION 44: Synced to helper.estimate.damage_centers for estimator (all steps)');
+      }
+      
+      // Phase 6: Add user tracking
+      const authData = sessionStorage.getItem('auth');
+      if (authData) {
+        try {
+          const auth = JSON.parse(authData);
+          if (!helper.meta) helper.meta = {};
+          helper.meta.updated_by = auth?.user?.id;
+          helper.meta.updated_by_name = auth?.profile?.name;
+          helper.meta.last_updated = new Date().toISOString();
+        } catch (e) {
+          console.warn('Could not add user tracking:', e);
+        }
       }
       
       sessionStorage.setItem('helper', JSON.stringify(helper));
