@@ -155,10 +155,26 @@
           }
         });
 
-        console.log('🔔 Sync: OneSignal initialized successfully');
-        oneSignalInitialized = true;
+        console.log('🔔 Sync: OneSignal init called, waiting for ready state...');
 
-        return true;
+        // Wait for OneSignal to be fully ready
+        let readyAttempts = 0;
+        while (readyAttempts < 30) {
+          await new Promise(resolve => setTimeout(resolve, 500));
+
+          // Check if User API is available
+          if (OneSignal.User && OneSignal.User.PushSubscription) {
+            console.log('🔔 Sync: OneSignal User API is ready!');
+            oneSignalInitialized = true;
+            return true;
+          }
+
+          readyAttempts++;
+          console.log('🔔 Sync: Waiting for User API... attempt', readyAttempts);
+        }
+
+        console.error('🔔 Sync: Timeout waiting for OneSignal User API');
+        return false;
       } catch (error) {
         console.error('🔔 Sync: OneSignal init error:', error);
         return false;
@@ -242,32 +258,57 @@
 
         statusDiv.textContent = '⏳ מקבל מזהה התראות...';
 
-        // Get OneSignal ID with retry - try multiple API methods
+        // Get OneSignal ID - try different properties
         let onesignalId = null;
         attempts = 0;
+
+        console.log('🔔 Sync: Attempting to get OneSignal ID...');
+        console.log('🔔 Sync: Available properties:', Object.keys(OneSignal.User || {}));
+        console.log('🔔 Sync: PushSubscription:', OneSignal.User?.PushSubscription);
+
         while (!onesignalId && attempts < 10) {
           try {
-            // Try multiple methods for compatibility
-            if (OneSignal.User && typeof OneSignal.User.getOnesignalId === 'function') {
-              onesignalId = await OneSignal.User.getOnesignalId();
-            } else if (OneSignal.User && OneSignal.User.PushSubscription) {
+            // Try the User.PushSubscription.id property first (most common)
+            if (OneSignal.User?.PushSubscription?.id) {
               onesignalId = OneSignal.User.PushSubscription.id;
-              if (!onesignalId && typeof OneSignal.User.PushSubscription.getIdAsync === 'function') {
-                onesignalId = await OneSignal.User.PushSubscription.getIdAsync();
-              }
-            } else if (typeof OneSignal.getUserId === 'function') {
+              console.log('🔔 Sync: Got ID from User.PushSubscription.id');
+            }
+            // Try onesignalId property
+            else if (OneSignal.User?.onesignalId) {
+              onesignalId = OneSignal.User.onesignalId;
+              console.log('🔔 Sync: Got ID from User.onesignalId');
+            }
+            // Try legacy getUserId
+            else if (typeof OneSignal.getUserId === 'function') {
               onesignalId = await OneSignal.getUserId();
+              console.log('🔔 Sync: Got ID from getUserId()');
+            }
+            // Last resort - check all User properties
+            else if (OneSignal.User) {
+              const userProps = Object.keys(OneSignal.User);
+              console.log('🔔 Sync: Searching User properties:', userProps);
+
+              for (const prop of userProps) {
+                const val = OneSignal.User[prop];
+                if (typeof val === 'string' && val.length > 20) {
+                  console.log('🔔 Sync: Found potential ID in User.' + prop + ':', val);
+                  onesignalId = val;
+                  break;
+                }
+              }
             }
 
             if (onesignalId) {
-              console.log('🔔 Sync: Got ID via method at attempt', attempts + 1);
+              console.log('🔔 Sync: Successfully got OneSignal ID:', onesignalId);
               break;
             }
           } catch (e) {
-            console.log('🔔 Sync: Retry getting OneSignal ID, attempt', attempts + 1, ':', e.message);
+            console.log('🔔 Sync: Attempt', attempts + 1, 'failed:', e.message);
           }
-          await new Promise(resolve => setTimeout(resolve, 1000));
+
+          await new Promise(resolve => setTimeout(resolve, 1500));
           attempts++;
+          console.log('🔔 Sync: Retry attempt', attempts);
         }
 
         if (!onesignalId) {
