@@ -426,8 +426,57 @@
   console.log("✅ Login function assigned to window.login");
   
   // Initialize when DOM is ready
-  document.addEventListener('DOMContentLoaded', function() {
+  document.addEventListener('DOMContentLoaded', async function() {
     console.log("DOM ready, setting up login handlers");
+    
+    // Check for email link tokens (signup, invite, magic link, email change)
+    const hashParams = new URLSearchParams(window.location.hash.substring(1));
+    const accessToken = hashParams.get('access_token');
+    const refreshToken = hashParams.get('refresh_token');
+    const type = hashParams.get('type');
+    
+    if (accessToken && type) {
+      console.log(`📧 Email link detected: type=${type}`);
+      
+      try {
+        // Set the session using the token
+        const { data, error } = await supabase.auth.setSession({
+          access_token: accessToken,
+          refresh_token: refreshToken
+        });
+        
+        if (error) throw error;
+        
+        console.log('✅ Session established from email link');
+        
+        // Handle different types
+        if (type === 'signup') {
+          alert('אימייל אומת בהצלחה! נא להתחבר.');
+          window.location.href = 'index.html'; // Clear hash and show login
+        } else if (type === 'invite') {
+          alert('הזמנה התקבלה! נא להגדיר סיסמה.');
+          window.location.href = 'change-password.html';
+        } else if (type === 'magiclink') {
+          // Auto-login from magic link
+          const authData = {
+            user: data.user,
+            session: data.session,
+            profile: await authService.getProfile(data.user.id)
+          };
+          sessionStorage.setItem('auth', JSON.stringify(authData));
+          window.location.href = 'selection.html';
+        } else if (type === 'email_change') {
+          alert('כתובת האימייל שונתה בהצלחה!');
+          window.location.href = 'index.html';
+        }
+        
+        return; // Don't continue with normal login flow
+        
+      } catch (error) {
+        console.error('❌ Email link error:', error);
+        alert('שגיאה באימות קישור האימייל');
+      }
+    }
     
     const emailField = document.getElementById("email");
     if (emailField) {
