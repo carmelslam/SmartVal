@@ -704,6 +704,9 @@
       <button class="btn btn-primary" onclick="openNewTaskModal()">➕ משימה חדשה</button>
       <button class="btn btn-secondary" onclick="openNewThreadModal()">🧵 שרשור חדש</button>
       <button class="btn btn-secondary" onclick="openArchiveModal()">📦 ארכיון (<span id="archiveCountToolbar">0</span>)</button>
+      <button id="sendNotificationsBtn" class="btn btn-success" onclick="sendBatchNotifications()" style="display: none; background: #10B981;">
+        📬 שלח התראות (<span id="notificationBadge">0</span>)
+      </button>
       <div class="search-box">
         <input type="text" id="searchInput" placeholder="חיפוש משימות..." oninput="searchTasks()">
       </div>
@@ -896,6 +899,7 @@
 
   <script type="module">
     import { supabase } from './lib/supabaseClient.js';
+    import { taskNotifications } from './task-notifications.js';
 
     // Global state
     let allTasks = [];
@@ -1478,6 +1482,15 @@
 
         if (error) throw error;
 
+        // Send notification to assigned user about task update
+        if (window.taskNotifications) {
+          const updatedTask = allTasks.find(t => t.id === currentEditingTaskId);
+          if (updatedTask) {
+            const updatedTaskData = { ...updatedTask, ...updates };
+            await window.taskNotifications.notifyTaskUpdated(updatedTaskData, currentUser);
+          }
+        }
+
         alert('✅ המשימה עודכנה בהצלחה!');
         closeEditTaskModal();
         await loadTasks();
@@ -1548,6 +1561,14 @@
         if (error) throw error;
 
         console.log('Task created:', data);
+
+        // Add to pending notifications queue (won't send immediately)
+        if (window.taskNotifications && data.assigned_to) {
+          const assignedUser = allUsers.find(u => u.user_id === data.assigned_to);
+          window.taskNotifications.addToPendingNotifications(data, assignedUser);
+          updateNotificationBadge();
+        }
+
         alert('✅ המשימה נוצרה בהצלחה!');
         closeNewTaskModal();
         await loadTasks();
@@ -1894,6 +1915,57 @@
         </div>
       `;
     }
+
+    // Batch Notification Functions
+    function updateNotificationBadge() {
+      if (!window.taskNotifications) return;
+
+      const count = window.taskNotifications.getPendingCount();
+      const badge = document.getElementById('notificationBadge');
+      const button = document.getElementById('sendNotificationsBtn');
+
+      if (count > 0) {
+        badge.textContent = count;
+        button.style.display = 'block';
+      } else {
+        button.style.display = 'none';
+      }
+    }
+
+    window.sendBatchNotifications = async function() {
+      if (!window.taskNotifications) {
+        alert('מערכת ההתראות לא זמינה');
+        return;
+      }
+
+      const count = window.taskNotifications.getPendingCount();
+      if (count === 0) {
+        alert('אין התראות ממתינות לשליחה');
+        return;
+      }
+
+      if (!confirm(`האם לשלוח התראות עבור ${count} משימות?`)) {
+        return;
+      }
+
+      try {
+        const result = await window.taskNotifications.sendBatchNotifications();
+
+        if (result.success) {
+          if (result.count > 0) {
+            alert(`✅ נשלחו ${result.count} התראות בהצלחה!\n\nמשתמשים שקיבלו התראות: ${result.usersNotified}`);
+          } else {
+            alert('✅ כל ההתראות נשלחו בהצלחה!');
+          }
+          updateNotificationBadge();
+        } else {
+          alert('❌ שגיאה בשליחת התראות: ' + (result.error || 'לא ידוע'));
+        }
+      } catch (error) {
+        console.error('Error sending batch notifications:', error);
+        alert('❌ שגיאה בשליחת התראות');
+      }
+    };
 
     // Initialize on load
     init();
