@@ -595,12 +595,21 @@
           <input type="datetime-local" id="dueDate">
         </div>
         <div class="form-group">
-          <label for="caseId">מספר תיק (אופציונלי)</label>
-          <input type="text" id="caseId" placeholder="UUID של התיק">
+          <label for="filingCaseId">מספר תיק (אופציונלי)</label>
+          <select id="filingCaseId" onchange="onCaseSelected()">
+            <option value="">בחר תיק...</option>
+          </select>
         </div>
         <div class="form-group">
-          <label for="plate">מספר רישוי (אופציונלי)</label>
-          <input type="text" id="plate" placeholder="12-345-67">
+          <label for="plateDropdown">מספר רישוי (אופציונלי)</label>
+          <select id="plateDropdown" onchange="onPlateDropdownChange()">
+            <option value="">בחר מספר רישוי...</option>
+            <option value="__manual__">הזנה ידנית</option>
+          </select>
+        </div>
+        <div class="form-group" id="plateManualGroup" style="display: none;">
+          <label for="plateManual">הזן מספר רישוי ידנית</label>
+          <input type="text" id="plateManual" placeholder="12-345-67">
         </div>
         <div style="display: flex; gap: 1rem; margin-top: 2rem;">
           <button type="submit" class="btn btn-primary" style="flex: 1;">✅ צור משימה</button>
@@ -642,8 +651,19 @@
         currentUser = profile;
         console.log('Current user:', currentUser);
 
+        // Check access - only admin and developer can access this page
+        if (profile.role !== 'admin' && profile.role !== 'developer') {
+          alert('⛔ אין לך הרשאה לגשת לדף זה\n\nרק מנהלים ומפתחים יכולים לנהל משימות.');
+          window.location.href = 'user-tasks.html';
+          return;
+        }
+
         // Load users for assignment dropdown
         await loadUsers();
+
+        // Load cases and plates for dropdowns
+        await populateCaseDropdown();
+        await populatePlateDropdown();
 
         // Load tasks
         await loadTasks();
@@ -665,8 +685,8 @@
       try {
         const { data, error } = await supabase
           .from('profiles')
-          .select('user_id, full_name, role')
-          .order('full_name');
+          .select('user_id, name, role')
+          .order('name');
 
         if (error) throw error;
 
@@ -685,7 +705,7 @@
       allUsers.forEach(user => {
         const option = document.createElement('option');
         option.value = user.user_id;
-        option.textContent = `${user.full_name} (${getRoleLabel(user.role)})`;
+        option.textContent = `${user.name} (${getRoleLabel(user.role)})`;
         select.appendChild(option);
       });
     }
@@ -701,6 +721,91 @@
       return labels[role] || role;
     }
 
+    // Load cases for dropdown
+    async function loadCases() {
+      try {
+        const { data, error } = await supabase
+          .from('cases')
+          .select('id, filing_case_id, plate')
+          .order('filing_case_id', { ascending: false })
+          .limit(100);
+
+        if (error) throw error;
+
+        return data || [];
+      } catch (error) {
+        console.error('Error loading cases:', error);
+        return [];
+      }
+    }
+
+    // Populate case dropdown
+    async function populateCaseDropdown() {
+      const cases = await loadCases();
+      const select = document.getElementById('filingCaseId');
+      select.innerHTML = '<option value="">בחר תיק...</option>';
+
+      cases.forEach(c => {
+        const option = document.createElement('option');
+        option.value = c.filing_case_id;
+        option.setAttribute('data-uuid', c.id);
+        option.setAttribute('data-plate', c.plate || '');
+        option.textContent = `${c.filing_case_id}${c.plate ? ' - ' + c.plate : ''}`;
+        select.appendChild(option);
+      });
+    }
+
+    // Populate plate dropdown
+    async function populatePlateDropdown() {
+      const cases = await loadCases();
+      const select = document.getElementById('plateDropdown');
+      select.innerHTML = '<option value="">בחר מספר רישוי...</option><option value="__manual__">הזנה ידנית</option>';
+
+      // Get unique plates
+      const uniquePlates = [...new Set(cases.map(c => c.plate).filter(p => p))];
+
+      uniquePlates.forEach(plate => {
+        const option = document.createElement('option');
+        option.value = plate;
+        option.textContent = plate;
+        select.appendChild(option);
+      });
+    }
+
+    // When case is selected, auto-fill plate
+    window.onCaseSelected = function() {
+      const select = document.getElementById('filingCaseId');
+      const selectedOption = select.options[select.selectedIndex];
+      const plate = selectedOption.getAttribute('data-plate');
+
+      if (plate) {
+        const plateDropdown = document.getElementById('plateDropdown');
+        // Try to select the plate in dropdown
+        for (let i = 0; i < plateDropdown.options.length; i++) {
+          if (plateDropdown.options[i].value === plate) {
+            plateDropdown.selectedIndex = i;
+            break;
+          }
+        }
+      }
+    };
+
+    // When plate dropdown changes
+    window.onPlateDropdownChange = function() {
+      const dropdown = document.getElementById('plateDropdown');
+      const manualGroup = document.getElementById('plateManualGroup');
+      const manualInput = document.getElementById('plateManual');
+
+      if (dropdown.value === '__manual__') {
+        manualGroup.style.display = 'block';
+        manualInput.required = true;
+      } else {
+        manualGroup.style.display = 'none';
+        manualInput.required = false;
+        manualInput.value = '';
+      }
+    };
+
     // Load tasks
     async function loadTasks() {
       try {
@@ -708,8 +813,8 @@
           .from('tasks')
           .select(`
             *,
-            assigned_to_profile:profiles!tasks_assigned_to_fkey(full_name, role),
-            assigned_by_profile:profiles!tasks_assigned_by_fkey(full_name, role)
+            assigned_to_profile:profiles!tasks_assigned_to_fkey(name, role),
+            assigned_by_profile:profiles!tasks_assigned_by_fkey(name, role)
           `)
           .order('created_at', { ascending: false })
           .limit(50);
@@ -748,7 +853,7 @@
             </span>
           </div>
           <div class="task-meta">
-            <span>👤 ${task.assigned_to_profile?.full_name || 'לא ידוע'}</span>
+            <span>👤 ${task.assigned_to_profile?.name || 'לא ידוע'}</span>
             <span>📅 ${formatDate(task.due_date) || 'ללא מועד'}</span>
             <span>📊 ${getStatusLabel(task.status)}</span>
             ${task.plate ? `<span>🚗 ${task.plate}</span>` : ''}
@@ -838,6 +943,20 @@
       event.preventDefault();
 
       try {
+        // Get case_id (UUID) from the selected option
+        const caseSelect = document.getElementById('filingCaseId');
+        const selectedCaseOption = caseSelect.options[caseSelect.selectedIndex];
+        const caseId = selectedCaseOption.getAttribute('data-uuid') || null;
+
+        // Get plate - either from dropdown or manual input
+        const plateDropdown = document.getElementById('plateDropdown');
+        let plate = null;
+        if (plateDropdown.value === '__manual__') {
+          plate = document.getElementById('plateManual').value || null;
+        } else if (plateDropdown.value) {
+          plate = plateDropdown.value;
+        }
+
         const formData = {
           title: document.getElementById('taskTitle').value,
           description: document.getElementById('taskDescription').value,
@@ -846,8 +965,8 @@
           assigned_by: currentUser.user_id,
           priority: document.getElementById('taskPriority').value,
           due_date: document.getElementById('dueDate').value || null,
-          case_id: document.getElementById('caseId').value || null,
-          plate: document.getElementById('plate').value || null,
+          case_id: caseId,
+          plate: plate,
           status: 'pending',
           completion_percentage: 0
         };
