@@ -1,0 +1,821 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>המשימות שלי - ירון כיוף - שמאות וייעוץ</title>
+  <link rel="icon" type="image/webp" href="https://carmelcayouf.com/wp-content/uploads/2025/06/g.webp">
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Hebrew:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Noto Sans Hebrew', Arial, sans-serif;
+      background: #f5f5f5;
+      color: #333;
+      direction: rtl;
+      line-height: 1.6;
+      min-height: 100vh;
+    }
+
+    .header {
+      background: linear-gradient(135deg, #003366 0%, #004c99 100%);
+      padding: 1rem 2rem;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .header h1 {
+      font-size: 1.3rem;
+      font-weight: 600;
+      color: white;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .logo {
+      width: 40px;
+      height: 40px;
+      object-fit: contain;
+      background: white;
+      border-radius: 8px;
+      padding: 4px;
+    }
+
+    .user-name {
+      font-size: 0.9rem;
+      color: rgba(255,255,255,0.8);
+    }
+
+    .header-actions {
+      display: flex;
+      gap: 1rem;
+      align-items: center;
+    }
+
+    .badge {
+      background: #ff6b35;
+      color: white;
+      border-radius: 50%;
+      width: 24px;
+      height: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.75rem;
+      font-weight: bold;
+      position: absolute;
+      top: -5px;
+      left: -5px;
+    }
+
+    .icon-btn {
+      background: rgba(255, 255, 255, 0.1);
+      border: none;
+      color: white;
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.3s;
+      position: relative;
+    }
+
+    .icon-btn:hover {
+      background: rgba(255, 255, 255, 0.2);
+      transform: scale(1.1);
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 2rem;
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 1rem;
+      margin-bottom: 2rem;
+    }
+
+    .stat-card {
+      background: white;
+      border-radius: 12px;
+      padding: 1.25rem;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      text-align: center;
+      transition: all 0.3s;
+      border: 2px solid transparent;
+      cursor: pointer;
+    }
+
+    .stat-card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      border-color: #003366;
+    }
+
+    .stat-label {
+      color: #666;
+      font-size: 0.85rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .stat-value {
+      font-size: 2rem;
+      font-weight: 700;
+      color: #003366;
+    }
+
+    .tabs {
+      display: flex;
+      gap: 0.5rem;
+      margin-bottom: 2rem;
+      overflow-x: auto;
+      padding-bottom: 0.5rem;
+    }
+
+    .tab {
+      padding: 0.75rem 1.5rem;
+      border: none;
+      background: white;
+      border-radius: 8px;
+      cursor: pointer;
+      font-family: 'Noto Sans Hebrew', Arial, sans-serif;
+      font-size: 0.95rem;
+      font-weight: 500;
+      transition: all 0.3s;
+      white-space: nowrap;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .tab.active {
+      background: linear-gradient(135deg, #ff6b35 0%, #ff8556 100%);
+      color: white;
+      box-shadow: 0 4px 8px rgba(255, 107, 53, 0.3);
+    }
+
+    .tab:hover:not(.active) {
+      background: #f0f0f0;
+    }
+
+    .section-title {
+      font-size: 1.2rem;
+      font-weight: 600;
+      margin-bottom: 1rem;
+      color: #333;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .task-card {
+      background: white;
+      border-radius: 12px;
+      padding: 1.5rem;
+      margin-bottom: 1rem;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      border-right: 4px solid #e0e0e0;
+      transition: all 0.3s;
+      position: relative;
+      cursor: pointer;
+    }
+
+    .task-card:hover {
+      transform: translateX(-5px);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+
+    .task-card.urgent {
+      border-right-color: #EF4444;
+      background: linear-gradient(to left, rgba(239, 68, 68, 0.05), white);
+    }
+
+    .task-card.high {
+      border-right-color: #F59E0B;
+    }
+
+    .task-card.medium {
+      border-right-color: #3B82F6;
+    }
+
+    .task-card.new {
+      position: relative;
+    }
+
+    .new-badge {
+      position: absolute;
+      top: 1rem;
+      left: 1rem;
+      background: #ff6b35;
+      color: white;
+      padding: 0.25rem 0.75rem;
+      border-radius: 12px;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+
+    .task-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 1rem;
+    }
+
+    .task-title {
+      font-weight: 600;
+      color: #333;
+      font-size: 1.1rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .priority-badge {
+      padding: 0.25rem 0.75rem;
+      border-radius: 12px;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+
+    .priority-badge.urgent {
+      background: rgba(239, 68, 68, 0.1);
+      color: #EF4444;
+    }
+
+    .priority-badge.high {
+      background: rgba(245, 158, 11, 0.1);
+      color: #F59E0B;
+    }
+
+    .task-from {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      color: #666;
+      font-size: 0.9rem;
+      margin-bottom: 0.75rem;
+    }
+
+    .task-meta {
+      display: flex;
+      gap: 1rem;
+      font-size: 0.85rem;
+      color: #666;
+      margin-bottom: 1rem;
+      flex-wrap: wrap;
+    }
+
+    .progress-mini {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.85rem;
+      color: #666;
+    }
+
+    .progress-mini-bar {
+      width: 60px;
+      height: 6px;
+      background: #e0e0e0;
+      border-radius: 3px;
+      overflow: hidden;
+    }
+
+    .progress-mini-fill {
+      height: 100%;
+      background: #10B981;
+      transition: width 0.3s;
+    }
+
+    .actions {
+      display: flex;
+      gap: 0.75rem;
+      margin-top: 1rem;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      padding: 0.6rem 1.25rem;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-family: 'Noto Sans Hebrew', Arial, sans-serif;
+      font-size: 0.9rem;
+      font-weight: 500;
+      transition: all 0.3s;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #003366 0%, #004c99 100%);
+      color: white;
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 8px rgba(0, 51, 102, 0.3);
+    }
+
+    .btn-secondary {
+      background: white;
+      color: #666;
+      border: 1px solid #e0e0e0;
+    }
+
+    .btn-secondary:hover {
+      background: #f9f9f9;
+    }
+
+    .btn-success {
+      background: #10B981;
+      color: white;
+    }
+
+    .btn-success:hover {
+      background: #059669;
+    }
+
+    .loading {
+      text-align: center;
+      padding: 2rem;
+      color: #999;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 4rem 2rem;
+      color: #999;
+    }
+
+    .empty-state-icon {
+      font-size: 4rem;
+      margin-bottom: 1rem;
+    }
+
+    .footer {
+      text-align: center;
+      padding: 2rem;
+      color: #999;
+      border-top: 2px solid #e0e0e0;
+      margin-top: 3rem;
+    }
+
+    @media (max-width: 768px) {
+      .container {
+        padding: 1rem;
+      }
+
+      .header {
+        padding: 1rem;
+      }
+
+      .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+
+      .stat-value {
+        font-size: 1.5rem;
+      }
+
+      .tabs {
+        gap: 0.25rem;
+      }
+
+      .tab {
+        padding: 0.6rem 1rem;
+        font-size: 0.85rem;
+      }
+
+      .actions {
+        flex-direction: column;
+      }
+
+      .btn {
+        width: 100%;
+        justify-content: center;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header class="header">
+    <div>
+      <h1>
+        <img src="https://carmelcayouf.com/wp-content/uploads/2025/06/g.webp" alt="Logo" class="logo">
+        <span>המשימות שלי - ירון כיוף - שמאות וייעוץ</span>
+      </h1>
+      <div class="user-name" id="userName">טוען...</div>
+    </div>
+    <div class="header-actions">
+      <div class="icon-btn" id="notificationsBtn">
+        🔔
+        <div class="badge" id="notificationCount" style="display: none;">0</div>
+      </div>
+      <div class="icon-btn" onclick="window.location.href='selection.html'">
+        🏠
+      </div>
+      <div class="icon-btn" onclick="window.location.href='selection.html'">
+        👤
+      </div>
+    </div>
+  </header>
+
+  <div class="container">
+    <!-- Personal Stats -->
+    <div class="section-title">📊 סיכום אישי</div>
+    <div class="stats-grid">
+      <div class="stat-card" onclick="filterTab('all')">
+        <div class="stat-label">משימות שלי</div>
+        <div class="stat-value" id="myTasksCount">0</div>
+      </div>
+      <div class="stat-card" onclick="filterTab('in_progress')">
+        <div class="stat-label">בביצוע כעת</div>
+        <div class="stat-value" id="inProgressCount">0</div>
+      </div>
+      <div class="stat-card" onclick="filterTab('completed')">
+        <div class="stat-label">הושלמו השבוע</div>
+        <div class="stat-value" id="completedWeekCount">0</div>
+      </div>
+      <div class="stat-card" onclick="filterTab('pending')">
+        <div class="stat-label">ממתינות</div>
+        <div class="stat-value" id="pendingCount">0</div>
+      </div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="tabs">
+      <button class="tab active" onclick="filterTab('urgent')">🔥 דחופות</button>
+      <button class="tab" onclick="filterTab('all')">📋 הכל</button>
+      <button class="tab" onclick="filterTab('completed')">✅ הושלמו</button>
+      <button class="tab" onclick="filterTab('assigned_to')">📥 שהוקצו לי</button>
+    </div>
+
+    <!-- Tasks Section -->
+    <div class="section-title" id="sectionTitle">🔥 משימות דחופות</div>
+    <div id="tasksContainer">
+      <div class="loading">טוען משימות</div>
+    </div>
+  </div>
+
+  <div class="footer">
+    ©2025 Carmel Cayouf. All rights reserved. SmartVal Pro System by Evalix
+  </div>
+
+  <script type="module">
+    import { supabase } from './lib/supabaseClient.js';
+
+    // Global state
+    let allTasks = [];
+    let currentUser = null;
+    let currentFilter = 'urgent';
+
+    // Initialize
+    async function init() {
+      try {
+        // Get current user
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) {
+          window.location.href = 'index.html';
+          return;
+        }
+
+        // Get user profile
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('user_id', user.id)
+          .single();
+
+        currentUser = profile;
+        document.getElementById('userName').textContent =
+          `${profile.full_name} - ${getRoleLabel(profile.role)}`;
+
+        console.log('Current user:', currentUser);
+
+        // Load tasks
+        await loadTasks();
+
+        // Update stats
+        updateStats();
+
+        // Set up real-time subscriptions
+        setupRealtime();
+
+      } catch (error) {
+        console.error('Initialization error:', error);
+        showError('שגיאה בטעינת הנתונים');
+      }
+    }
+
+    // Load tasks for current user
+    async function loadTasks() {
+      try {
+        const { data, error } = await supabase
+          .from('tasks')
+          .select(`
+            *,
+            assigned_to_profile:profiles!tasks_assigned_to_fkey(full_name, role),
+            assigned_by_profile:profiles!tasks_assigned_by_fkey(full_name, role)
+          `)
+          .eq('assigned_to', currentUser.user_id)
+          .order('created_at', { ascending: false });
+
+        if (error) throw error;
+
+        allTasks = data || [];
+        filterTab(currentFilter);
+
+      } catch (error) {
+        console.error('Error loading tasks:', error);
+        showError('שגיאה בטעינת המשימות');
+      }
+    }
+
+    // Filter tasks by tab
+    window.filterTab = function(filter) {
+      currentFilter = filter;
+
+      // Update active tab
+      document.querySelectorAll('.tab').forEach(tab => {
+        tab.classList.remove('active');
+      });
+      event?.target?.classList.add('active');
+
+      let filtered = allTasks;
+
+      // Apply filter
+      if (filter === 'urgent') {
+        filtered = allTasks.filter(t => t.priority === 'urgent' || t.priority === 'high');
+        document.getElementById('sectionTitle').innerHTML = '🔥 משימות דחופות (' + filtered.length + ')';
+      } else if (filter === 'all') {
+        filtered = allTasks;
+        document.getElementById('sectionTitle').innerHTML = '📋 כל המשימות (' + filtered.length + ')';
+      } else if (filter === 'completed') {
+        filtered = allTasks.filter(t => t.status === 'completed' || t.status === 'verified');
+        document.getElementById('sectionTitle').innerHTML = '✅ משימות שהושלמו (' + filtered.length + ')';
+      } else if (filter === 'assigned_to') {
+        filtered = allTasks.filter(t => t.assigned_to === currentUser.user_id);
+        document.getElementById('sectionTitle').innerHTML = '📥 משימות שהוקצו לי (' + filtered.length + ')';
+      } else if (filter === 'in_progress') {
+        filtered = allTasks.filter(t => t.status === 'in_progress');
+        document.getElementById('sectionTitle').innerHTML = '▶️ משימות בביצוע (' + filtered.length + ')';
+      } else if (filter === 'pending') {
+        filtered = allTasks.filter(t => t.status === 'pending');
+        document.getElementById('sectionTitle').innerHTML = '⏳ משימות ממתינות (' + filtered.length + ')';
+      }
+
+      renderTasks(filtered);
+    };
+
+    // Render tasks
+    function renderTasks(tasks) {
+      const container = document.getElementById('tasksContainer');
+
+      if (!tasks || tasks.length === 0) {
+        container.innerHTML = `
+          <div class="empty-state">
+            <div class="empty-state-icon">📭</div>
+            <h3>אין משימות להצגה</h3>
+            <p>כל המשימות הושלמו - עבודה מצוינת!</p>
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = tasks.map(task => {
+        const isNew = isTaskNew(task);
+        const isOverdue = isTaskOverdue(task);
+
+        return `
+          <div class="task-card ${task.priority} ${isNew ? 'new' : ''}" onclick="openTaskDetail('${task.id}')">
+            ${isNew ? '<div class="new-badge">חדש!</div>' : ''}
+            <div class="task-header">
+              <div style="flex: 1;">
+                <div class="task-title">${isOverdue ? '⚠️ ' : ''}${escapeHtml(task.title)}</div>
+                <div class="task-from">
+                  👤 מ: ${task.assigned_by_profile?.full_name || 'לא ידוע'}
+                </div>
+              </div>
+              <span class="priority-badge ${task.priority}">
+                ${getPriorityLabel(task.priority)}
+              </span>
+            </div>
+            <div class="task-meta">
+              <span>📅 יעד: ${formatDate(task.due_date) || 'ללא מועד'}</span>
+              ${isOverdue ? '<span style="color: #EF4444;">⚠️ באיחור</span>' : ''}
+              ${task.plate ? `<span>🚗 ${task.plate}</span>` : ''}
+            </div>
+            <div class="progress-mini">
+              <span>📊 ${task.completion_percentage || 0}%</span>
+              <div class="progress-mini-bar">
+                <div class="progress-mini-fill" style="width: ${task.completion_percentage || 0}%"></div>
+              </div>
+            </div>
+            <div class="actions" onclick="event.stopPropagation()">
+              ${getTaskActions(task)}
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    // Get task actions based on status
+    function getTaskActions(task) {
+      if (task.status === 'pending') {
+        return `
+          <button class="btn btn-primary" onclick="startTask('${task.id}')">▶️ התחל עבודה</button>
+          <button class="btn btn-secondary" onclick="openTaskDetail('${task.id}')">💬 הוסף תשובה</button>
+        `;
+      } else if (task.status === 'in_progress') {
+        return `
+          <button class="btn btn-primary" onclick="openTaskDetail('${task.id}')">▶️ המשך עבודה</button>
+          <button class="btn btn-success" onclick="completeTask('${task.id}')">✅ סיים משימה</button>
+        `;
+      } else if (task.status === 'completed') {
+        return `
+          <button class="btn btn-secondary" onclick="openTaskDetail('${task.id}')">👁️ צפה</button>
+        `;
+      } else {
+        return `
+          <button class="btn btn-primary" onclick="openTaskDetail('${task.id}')">▶️ פתח</button>
+        `;
+      }
+    }
+
+    // Start task
+    window.startTask = async function(taskId) {
+      try {
+        const { error } = await supabase
+          .from('tasks')
+          .update({
+            status: 'in_progress',
+            started_at: new Date().toISOString()
+          })
+          .eq('id', taskId);
+
+        if (error) throw error;
+
+        await loadTasks();
+        alert('✅ המשימה החלה!');
+
+      } catch (error) {
+        console.error('Error starting task:', error);
+        alert('❌ שגיאה בהתחלת המשימה');
+      }
+    };
+
+    // Complete task
+    window.completeTask = async function(taskId) {
+      if (!confirm('האם לסמן משימה זו כהושלמה?')) return;
+
+      try {
+        const { error } = await supabase
+          .from('tasks')
+          .update({
+            status: 'completed',
+            completion_percentage: 100,
+            completed_at: new Date().toISOString()
+          })
+          .eq('id', taskId);
+
+        if (error) throw error;
+
+        await loadTasks();
+        alert('✅ המשימה הושלמה!');
+
+      } catch (error) {
+        console.error('Error completing task:', error);
+        alert('❌ שגיאה בסיום המשימה');
+      }
+    };
+
+    // Open task detail
+    window.openTaskDetail = function(taskId) {
+      window.location.href = `task-detail.html?id=${taskId}`;
+    };
+
+    // Update statistics
+    function updateStats() {
+      const now = new Date();
+      const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+
+      // My tasks count
+      document.getElementById('myTasksCount').textContent = allTasks.length;
+
+      // In progress
+      const inProgress = allTasks.filter(t => t.status === 'in_progress').length;
+      document.getElementById('inProgressCount').textContent = inProgress;
+
+      // Completed this week
+      const completedWeek = allTasks.filter(t => {
+        if (!t.completed_at) return false;
+        return new Date(t.completed_at) >= weekAgo;
+      }).length;
+      document.getElementById('completedWeekCount').textContent = completedWeek;
+
+      // Pending
+      const pending = allTasks.filter(t => t.status === 'pending').length;
+      document.getElementById('pendingCount').textContent = pending;
+    }
+
+    // Real-time subscriptions
+    function setupRealtime() {
+      supabase
+        .channel('my-tasks')
+        .on('postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'tasks',
+            filter: `assigned_to=eq.${currentUser.user_id}`
+          },
+          (payload) => {
+            console.log('Task changed:', payload);
+            loadTasks();
+          }
+        )
+        .subscribe();
+    }
+
+    // Utility functions
+    function isTaskNew(task) {
+      const created = new Date(task.created_at);
+      const now = new Date();
+      const diffHours = (now - created) / (1000 * 60 * 60);
+      return diffHours < 24 && task.status === 'pending';
+    }
+
+    function isTaskOverdue(task) {
+      if (!task.due_date || task.status === 'completed' || task.status === 'verified') {
+        return false;
+      }
+      return new Date(task.due_date) < new Date();
+    }
+
+    function getRoleLabel(role) {
+      const labels = {
+        admin: 'מנהל',
+        developer: 'מפתח',
+        assistant: 'עוזר',
+        assessor: 'שמאי',
+        viewer: 'צופה'
+      };
+      return labels[role] || role;
+    }
+
+    function getPriorityLabel(priority) {
+      const labels = {
+        low: 'נמוך',
+        medium: 'בינוני',
+        high: 'גבוה',
+        urgent: 'דחוף'
+      };
+      return labels[priority] || priority;
+    }
+
+    function formatDate(dateString) {
+      if (!dateString) return null;
+      const date = new Date(dateString);
+      return date.toLocaleDateString('he-IL', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric'
+      });
+    }
+
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    function showError(message) {
+      const container = document.getElementById('tasksContainer');
+      container.innerHTML = `
+        <div class="empty-state">
+          <div class="empty-state-icon">❌</div>
+          <h3>${message}</h3>
+        </div>
+      `;
+    }
+
+    // Initialize on load
+    init();
+  </script>
+</body>
+</html>
