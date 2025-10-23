@@ -95,14 +95,16 @@ class TaskNotificationManager {
 
         const payload = {
           type: 'tasks_batch_assigned',
+          // For Make.com backend to find onesignal_id
           user_id: userId,
+          // Human-readable information
+          user_name: profile?.name || 'משתמש',
           title: `${emoji} ${taskCount === 1 ? 'משימה חדשה' : `${taskCount} משימות חדשות`}`,
           message: message,
-          url: this.getRoleBasedUrl(profile), // Role-based routing
+          url: this.getRoleBasedUrl(profile),
           task_count: taskCount,
-          // Internal data for backend (not visible to user)
-          task_ids: tasks.map(t => t.id),
-          highest_priority: highestPriority
+          task_titles: tasks.map(t => t.title), // Human readable task names
+          highest_priority_hebrew: this.getPriorityLabel(highestPriority)
         };
 
         try {
@@ -202,6 +204,34 @@ class TaskNotificationManager {
   }
 
   /**
+   * Get Hebrew priority label
+   */
+  getPriorityLabel(priority) {
+    const labels = {
+      urgent: 'דחוף',
+      high: 'גבוה',
+      medium: 'בינוני',
+      low: 'נמוך'
+    };
+    return labels[priority] || priority;
+  }
+
+  /**
+   * Get Hebrew status label
+   */
+  getStatusLabel(status) {
+    const labels = {
+      pending: 'ממתינה',
+      in_progress: 'בביצוע',
+      awaiting_response: 'ממתינה לתשובה',
+      completed: 'הושלמה',
+      verified: 'אושרה',
+      cancelled: 'בוטלה'
+    };
+    return labels[status] || status;
+  }
+
+  /**
    * Send notification via webhook using webhook.js
    */
   async sendNotification(data) {
@@ -251,13 +281,14 @@ class TaskNotificationManager {
 
       await this.sendNotification({
         type: 'task_assigned',
-        user_id: task.assigned_to,
+        user_id: task.assigned_to, // For Make.com to find onesignal_id
+        user_name: assignedToProfile?.name || 'משתמש',
+        task_title: task.title,
+        task_priority_hebrew: priorityLabel,
+        assigned_by_name: task.assigned_by_profile?.name || 'מערכת',
         title: `${emoji} משימה חדשה - ${priorityLabel}`,
         message: task.title,
-        url: this.getRoleBasedUrl(assignedToProfile, task.id),
-        // Internal data for backend
-        task_id: task.id,
-        priority: priorityLabel
+        url: this.getRoleBasedUrl(assignedToProfile, task.id)
       });
     } catch (error) {
       console.error('📬 Task Notifications: Error in notifyTaskAssigned:', error);
@@ -292,13 +323,15 @@ class TaskNotificationManager {
       if (task.assigned_to && task.assigned_to !== currentUserId) {
         await this.sendNotification({
           type: 'task_status_changed',
-          user_id: task.assigned_to,
+          user_id: task.assigned_to, // For Make.com to find onesignal_id
+          user_name: task.assigned_to_profile?.name || 'משתמש',
+          task_title: task.title,
+          old_status_hebrew: statusLabels[oldStatus] || oldStatus,
+          new_status_hebrew: statusLabels[newStatus] || newStatus,
+          changed_by_name: changedByProfile?.name || 'מערכת',
           title: `${statusEmojis[newStatus]} משימה עודכנה`,
           message: `"${task.title}" - ${statusLabels[newStatus]}`,
-          url: this.getRoleBasedUrl(task.assigned_to_profile, task.id),
-          // Internal data for backend
-          task_id: task.id,
-          changed_by: changedByProfile?.name || 'מערכת'
+          url: this.getRoleBasedUrl(task.assigned_to_profile, task.id)
         });
       }
 
@@ -306,13 +339,15 @@ class TaskNotificationManager {
       if (task.assigned_by && task.assigned_by !== task.assigned_to && task.assigned_by !== currentUserId) {
         await this.sendNotification({
           type: 'task_status_changed',
-          user_id: task.assigned_by,
+          user_id: task.assigned_by, // For Make.com to find onesignal_id
+          user_name: task.assigned_by_profile?.name || 'משתמש',
+          task_title: task.title,
+          old_status_hebrew: statusLabels[oldStatus] || oldStatus,
+          new_status_hebrew: statusLabels[newStatus] || newStatus,
+          changed_by_name: changedByProfile?.name || 'מערכת',
           title: `${statusEmojis[newStatus]} משימה עודכנה`,
           message: `"${task.title}" - ${statusLabels[newStatus]}`,
-          url: this.getRoleBasedUrl(task.assigned_by_profile, task.id),
-          // Internal data for backend
-          task_id: task.id,
-          changed_by: changedByProfile?.name || 'מערכת'
+          url: this.getRoleBasedUrl(task.assigned_by_profile, task.id)
         });
       }
     } catch (error) {
@@ -331,13 +366,14 @@ class TaskNotificationManager {
       if (task.assigned_to && task.assigned_to !== currentUserId) {
         await this.sendNotification({
           type: 'task_message',
-          user_id: task.assigned_to,
+          user_id: task.assigned_to, // For Make.com to find onesignal_id
+          user_name: task.assigned_to_profile?.name || 'משתמש',
+          task_title: task.title,
+          sender_name: senderProfile?.name || 'משתמש',
+          message_preview: message.substring(0, 100),
           title: `💬 הודעה חדשה: ${task.title}`,
           message: `${senderProfile?.name || 'משתמש'}: ${message.substring(0, 100)}${message.length > 100 ? '...' : ''}`,
-          url: this.getRoleBasedUrl(task.assigned_to_profile, task.id),
-          // Internal data for backend
-          task_id: task.id,
-          sender: senderProfile?.name || 'משתמש'
+          url: this.getRoleBasedUrl(task.assigned_to_profile, task.id)
         });
       }
 
@@ -345,13 +381,14 @@ class TaskNotificationManager {
       if (task.assigned_by && task.assigned_by !== task.assigned_to && task.assigned_by !== currentUserId) {
         await this.sendNotification({
           type: 'task_message',
-          user_id: task.assigned_by,
+          user_id: task.assigned_by, // For Make.com to find onesignal_id
+          user_name: task.assigned_by_profile?.name || 'משתמש',
+          task_title: task.title,
+          sender_name: senderProfile?.name || 'משתמש',
+          message_preview: message.substring(0, 100),
           title: `💬 הודעה חדשה: ${task.title}`,
           message: `${senderProfile?.name || 'משתמש'}: ${message.substring(0, 100)}${message.length > 100 ? '...' : ''}`,
-          url: this.getRoleBasedUrl(task.assigned_by_profile, task.id),
-          // Internal data for backend
-          task_id: task.id,
-          sender: senderProfile?.name || 'משתמש'
+          url: this.getRoleBasedUrl(task.assigned_by_profile, task.id)
         });
       }
     } catch (error) {
@@ -437,13 +474,14 @@ class TaskNotificationManager {
       if (task.assigned_to && task.assigned_to !== currentUserId) {
         await this.sendNotification({
           type: 'task_updated',
-          user_id: task.assigned_to,
+          user_id: task.assigned_to, // For Make.com to find onesignal_id
+          user_name: task.assigned_to_profile?.name || 'משתמש',
+          task_title: task.title,
+          updated_by_name: updatedByProfile?.name || 'מערכת',
+          task_priority_hebrew: this.getPriorityLabel(task.priority),
           title: '✏️ משימה עודכנה',
           message: `"${task.title}" עודכנה על ידי ${updatedByProfile?.name || 'מערכת'}`,
-          url: this.getRoleBasedUrl(task.assigned_to_profile, task.id),
-          // Internal data for backend
-          task_id: task.id,
-          updated_by: updatedByProfile?.name || 'מערכת'
+          url: this.getRoleBasedUrl(task.assigned_to_profile, task.id)
         });
       }
     } catch (error) {
