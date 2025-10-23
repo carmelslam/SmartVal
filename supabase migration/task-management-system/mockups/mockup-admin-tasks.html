@@ -1,0 +1,669 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ניהול משימות - ירון כיוף - שמאות וייעוץ</title>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Hebrew:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Noto Sans Hebrew', Arial, sans-serif;
+            background: #1a1a1a;
+            color: #e0e0e0;
+            direction: rtl;
+            line-height: 1.6;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #003366 0%, #004c99 100%);
+            padding: 1rem 2rem;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .header h1 {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: white;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .logo {
+            width: 50px;
+            height: 50px;
+            object-fit: contain;
+            background: white;
+            border-radius: 8px;
+            padding: 5px;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+        }
+
+        .badge {
+            background: #ff6b35;
+            color: white;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.75rem;
+            font-weight: bold;
+        }
+
+        .icon-btn {
+            background: rgba(255, 255, 255, 0.1);
+            border: none;
+            color: white;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s;
+            position: relative;
+        }
+
+        .icon-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: scale(1.1);
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: #2a2a2a;
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+            border: 1px solid #3a3a3a;
+            transition: all 0.3s;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 6px 12px rgba(0,0,0,0.4);
+            border-color: #003366;
+        }
+
+        .stat-label {
+            color: #999;
+            font-size: 0.9rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-value {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: #fff;
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-change {
+            font-size: 0.85rem;
+            color: #10B981;
+        }
+
+        .stat-change.negative {
+            color: #EF4444;
+        }
+
+        .toolbar {
+            background: #2a2a2a;
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+            align-items: center;
+            border: 1px solid #3a3a3a;
+        }
+
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-family: 'Noto Sans Hebrew', Arial, sans-serif;
+            font-size: 1rem;
+            font-weight: 500;
+            transition: all 0.3s;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #ff6b35 0%, #ff8556 100%);
+            color: white;
+            box-shadow: 0 4px 6px rgba(255, 107, 53, 0.3);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(255, 107, 53, 0.4);
+        }
+
+        .btn-secondary {
+            background: #3a3a3a;
+            color: #e0e0e0;
+            border: 1px solid #4a4a4a;
+        }
+
+        .btn-secondary:hover {
+            background: #4a4a4a;
+        }
+
+        .search-box {
+            flex: 1;
+            min-width: 250px;
+            position: relative;
+        }
+
+        .search-box input {
+            width: 100%;
+            padding: 0.75rem 1rem 0.75rem 2.5rem;
+            border: 1px solid #4a4a4a;
+            border-radius: 8px;
+            background: #1a1a1a;
+            color: #e0e0e0;
+            font-family: 'Noto Sans Hebrew', Arial, sans-serif;
+            font-size: 1rem;
+        }
+
+        .search-box::before {
+            content: "🔍";
+            position: absolute;
+            right: 1rem;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+
+        .section-title {
+            font-size: 1.3rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .thread-card {
+            background: #2a2a2a;
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+            border: 1px solid #3a3a3a;
+            transition: all 0.3s;
+        }
+
+        .thread-card:hover {
+            border-color: #003366;
+            box-shadow: 0 4px 12px rgba(0,51,102,0.2);
+        }
+
+        .thread-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 1rem;
+        }
+
+        .thread-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .thread-meta {
+            display: flex;
+            gap: 1rem;
+            font-size: 0.9rem;
+            color: #999;
+            margin-bottom: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .thread-meta span {
+            display: flex;
+            align-items: center;
+            gap: 0.3rem;
+        }
+
+        .progress-bar-container {
+            background: #1a1a1a;
+            border-radius: 8px;
+            height: 24px;
+            overflow: hidden;
+            margin-bottom: 0.5rem;
+            position: relative;
+        }
+
+        .progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #10B981 0%, #059669 100%);
+            transition: width 0.5s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 600;
+            font-size: 0.85rem;
+        }
+
+        .progress-bar.medium {
+            background: linear-gradient(90deg, #3B82F6 0%, #2563EB 100%);
+        }
+
+        .progress-bar.low {
+            background: linear-gradient(90deg, #F59E0B 0%, #D97706 100%);
+        }
+
+        .progress-label {
+            font-size: 0.85rem;
+            color: #999;
+        }
+
+        .task-card {
+            background: #2a2a2a;
+            border-radius: 12px;
+            padding: 1.25rem;
+            margin-bottom: 1rem;
+            border-right: 4px solid #3a3a3a;
+            transition: all 0.3s;
+        }
+
+        .task-card:hover {
+            transform: translateX(-5px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+        }
+
+        .task-card.high {
+            border-right-color: #F59E0B;
+        }
+
+        .task-card.urgent {
+            border-right-color: #EF4444;
+        }
+
+        .task-card.medium {
+            border-right-color: #3B82F6;
+        }
+
+        .task-card.low {
+            border-right-color: #10B981;
+        }
+
+        .task-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 0.75rem;
+        }
+
+        .task-title {
+            font-weight: 600;
+            color: #fff;
+            font-size: 1rem;
+        }
+
+        .priority-badge {
+            padding: 0.25rem 0.75rem;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .priority-badge.high {
+            background: rgba(245, 158, 11, 0.2);
+            color: #F59E0B;
+        }
+
+        .priority-badge.urgent {
+            background: rgba(239, 68, 68, 0.2);
+            color: #EF4444;
+        }
+
+        .priority-badge.medium {
+            background: rgba(59, 130, 246, 0.2);
+            color: #3B82F6;
+        }
+
+        .task-meta {
+            display: flex;
+            gap: 1rem;
+            font-size: 0.85rem;
+            color: #999;
+            margin-bottom: 0.75rem;
+        }
+
+        .task-stats {
+            display: flex;
+            gap: 1rem;
+            font-size: 0.85rem;
+            color: #999;
+        }
+
+        .expand-btn {
+            background: transparent;
+            border: 1px solid #4a4a4a;
+            color: #e0e0e0;
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            cursor: pointer;
+            font-family: 'Noto Sans Hebrew', Arial, sans-serif;
+            transition: all 0.3s;
+        }
+
+        .expand-btn:hover {
+            background: #3a3a3a;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-left: 0.5rem;
+        }
+
+        .status-dot.completed {
+            background: #10B981;
+        }
+
+        .status-dot.active {
+            background: #3B82F6;
+        }
+
+        .status-dot.overdue {
+            background: #EF4444;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 1rem;
+            }
+
+            .header {
+                padding: 1rem;
+            }
+
+            .header h1 {
+                font-size: 1.2rem;
+            }
+
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 1rem;
+            }
+
+            .stat-value {
+                font-size: 2rem;
+            }
+
+            .toolbar {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .search-box {
+                width: 100%;
+            }
+        }
+
+        .mockup-banner {
+            background: linear-gradient(135deg, #ff6b35 0%, #ff8556 100%);
+            color: white;
+            padding: 1rem;
+            text-align: center;
+            font-weight: 600;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+    </style>
+</head>
+<body>
+    <div class="mockup-banner">
+        🎨 מוקאפ תצוגה - עיצוב ממשק ניהול משימות
+    </div>
+
+    <header class="header">
+        <h1>
+            <img src="https://carmelcayouf.com/wp-content/uploads/2025/06/g.webp" alt="Logo" class="logo">
+            <span>ירון כיוף - שמאות וייעוץ - ניהול משימות</span>
+        </h1>
+        <div class="header-actions">
+            <div class="icon-btn">
+                🔔
+                <div class="badge" style="position: absolute; top: -5px; left: -5px;">5</div>
+            </div>
+            <div class="icon-btn">👤</div>
+            <div class="icon-btn">⚙️</div>
+        </div>
+    </header>
+
+    <div class="container">
+        <!-- Statistics Section -->
+        <div class="section-title">📊 סטטיסטיקה כללית</div>
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-label">משימות פעילות</div>
+                <div class="stat-value">24</div>
+                <div class="stat-change">↑ +12 החודש</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">ממתינות לתגובה</div>
+                <div class="stat-value">8</div>
+                <div class="stat-change">↓ -3 השבוע</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">הושלמו היום</div>
+                <div class="stat-value">12</div>
+                <div class="stat-change">↑ +8 מאתמול</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">איחור ביצוע</div>
+                <div class="stat-value">3</div>
+                <div class="stat-change negative">⚠️ דורש טיפול</div>
+            </div>
+        </div>
+
+        <!-- Toolbar -->
+        <div class="toolbar">
+            <button class="btn btn-primary">➕ משימה חדשה</button>
+            <button class="btn btn-secondary">🧵 שרשור חדש</button>
+            <div class="search-box">
+                <input type="text" placeholder="חיפוש משימות...">
+            </div>
+        </div>
+
+        <!-- Thread Section -->
+        <div class="section-title">🧵 שרשורי משימות פעילים</div>
+
+        <div class="thread-card">
+            <div class="thread-header">
+                <div class="thread-title">
+                    🧵 תיק רכב 5785269 - תיקון נזקים
+                    <span class="status-dot active"></span>
+                </div>
+                <button class="expand-btn">🔽 הצג פרטים</button>
+            </div>
+            <div class="thread-meta">
+                <span>👤 אביב כהן, שרה לוי</span>
+                <span>📅 יעד: 25/10/2025</span>
+                <span>🕐 נותרו 2 ימים</span>
+            </div>
+            <div class="progress-bar-container">
+                <div class="progress-bar medium" style="width: 80%;">
+                    80% (4/5 משימות)
+                </div>
+            </div>
+            <div class="progress-label">התקדמות כללית של השרשור</div>
+        </div>
+
+        <div class="thread-card">
+            <div class="thread-header">
+                <div class="thread-title">
+                    🧵 דוחות חודש ספטמבר
+                    <span class="status-dot completed"></span>
+                </div>
+                <button class="expand-btn">👁️ צפה</button>
+            </div>
+            <div class="thread-meta">
+                <span>👤 מיכל דהן, רונית אבידן</span>
+                <span>✅ הושלם: 20/10/2025</span>
+            </div>
+            <div class="progress-bar-container">
+                <div class="progress-bar" style="width: 100%;">
+                    100% (8/8 משימות) ✅
+                </div>
+            </div>
+            <div class="progress-label">שרשור הושלם בהצלחה</div>
+        </div>
+
+        <div class="thread-card">
+            <div class="thread-header">
+                <div class="thread-title">
+                    🧵 תיק רכב 1234567 - העלאת מסמכים
+                    <span class="status-dot overdue"></span>
+                </div>
+                <button class="expand-btn">🔽 הצג פרטים</button>
+            </div>
+            <div class="thread-meta">
+                <span>👤 דני שמואל</span>
+                <span>⚠️ איחור: חרג ב-2 ימים</span>
+            </div>
+            <div class="progress-bar-container">
+                <div class="progress-bar low" style="width: 40%;">
+                    40% (2/5 משימות)
+                </div>
+            </div>
+            <div class="progress-label">דורש התערבות - משימות באיחור</div>
+        </div>
+
+        <!-- Individual Tasks Section -->
+        <div class="section-title" style="margin-top: 2rem;">📝 משימות בודדות</div>
+
+        <div class="task-card high">
+            <div class="task-header">
+                <div>
+                    <div class="task-title">בדיקת חשבונית תיק 9876543</div>
+                </div>
+                <span class="priority-badge high">⚠️ HIGH</span>
+            </div>
+            <div class="task-meta">
+                <span>👤 אביב כהן</span>
+                <span>📅 יעד: 24/10/2025</span>
+                <span>🕐 נותרו 2 שעות</span>
+            </div>
+            <div class="task-stats">
+                <span>💬 3 הודעות</span>
+                <span>📎 2 קבצים</span>
+                <span>📊 0%</span>
+            </div>
+        </div>
+
+        <div class="task-card medium">
+            <div class="task-header">
+                <div>
+                    <div class="task-title">עדכון פרטי לקוח - רכב 5555555</div>
+                </div>
+                <span class="priority-badge medium">🔵 MEDIUM</span>
+            </div>
+            <div class="task-meta">
+                <span>👤 שרה לוי</span>
+                <span>📅 יעד: 26/10/2025</span>
+                <span>🕐 נותר יום אחד</span>
+            </div>
+            <div class="task-stats">
+                <span>💬 1 הודעה</span>
+                <span>📎 0 קבצים</span>
+                <span>📊 25%</span>
+            </div>
+        </div>
+
+        <div class="task-card urgent">
+            <div class="task-header">
+                <div>
+                    <div class="task-title">אישור דוח סופי דחוף - תיק 7777777</div>
+                </div>
+                <span class="priority-badge urgent">🔴 URGENT</span>
+            </div>
+            <div class="task-meta">
+                <span>👤 מיכל דהן</span>
+                <span>📅 יעד: היום 17:00</span>
+                <span>⚠️ דחוף!</span>
+            </div>
+            <div class="task-stats">
+                <span>💬 7 הודעות</span>
+                <span>📎 5 קבצים</span>
+                <span>📊 75%</span>
+            </div>
+        </div>
+
+        <div class="task-card low">
+            <div class="task-header">
+                <div>
+                    <div class="task-title">ארכיון תיקי ספטמבר</div>
+                </div>
+                <span class="priority-badge" style="background: rgba(16, 185, 129, 0.2); color: #10B981;">🟢 LOW</span>
+            </div>
+            <div class="task-meta">
+                <span>👤 רונית אבידן</span>
+                <span>📅 יעד: 30/10/2025</span>
+                <span>🕐 נותרו 7 ימים</span>
+            </div>
+            <div class="task-stats">
+                <span>💬 0 הודעות</span>
+                <span>📎 0 קבצים</span>
+                <span>📊 0%</span>
+            </div>
+        </div>
+
+        <!-- Footer Info -->
+        <div style="text-align: center; margin-top: 3rem; padding: 2rem; color: #666; border-top: 1px solid #3a3a3a;">
+            <p>🎨 זהו מוקאפ עיצובי בלבד - לתצוגה ראשונית</p>
+            <p style="margin-top: 0.5rem;">כל הנתונים המוצגים הם דוגמאות להמחשה</p>
+            <p style="margin-top: 1.5rem; font-size: 0.9rem; color: #888;">©2025 Carmel Cayouf. All rights reserved. SmartVal Pro System by Evalix</p>
+        </div>
+    </div>
+</body>
+</html>
