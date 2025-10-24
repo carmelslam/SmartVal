@@ -5,7 +5,16 @@
 class InvoiceService {
   constructor() {
     this.currentUser = null;
-    this.supabase = window.supabase;
+    // SESSION 74: Lazy load supabase to ensure it's initialized
+    this._supabase = null;
+  }
+
+  // Lazy getter for supabase client
+  get supabase() {
+    if (!this._supabase) {
+      this._supabase = window.supabase;
+    }
+    return this._supabase;
   }
 
   // ============================================================================

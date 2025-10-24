@@ -931,6 +931,84 @@
           <label for="dueDate">תאריך יעד</label>
           <input type="date" id="dueDate">
         </div>
+
+        <!-- Recurring Task Options -->
+        <div class="form-group">
+          <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+            <input type="checkbox" id="isRecurring" onchange="toggleRecurringOptions()" style="width: auto; margin: 0;">
+            <span>הפוך למשימה חוזרת</span>
+          </label>
+        </div>
+
+        <div id="recurringOptions" style="display: none; border: 1px solid #4a4a4a; border-radius: 8px; padding: 1rem; margin-bottom: 1rem;">
+          <div class="form-group">
+            <label for="recurrenceType">תדירות</label>
+            <select id="recurrenceType" onchange="updateRecurrenceFields()">
+              <option value="daily">יומי</option>
+              <option value="weekly">שבועי</option>
+              <option value="monthly">חודשי</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="recurrenceInterval">חזור כל</label>
+            <div style="display: flex; gap: 0.5rem; align-items: center;">
+              <input type="number" id="recurrenceInterval" value="1" min="1" max="365" style="width: 80px;">
+              <span id="intervalLabel">ימים</span>
+            </div>
+          </div>
+
+          <!-- Weekly options -->
+          <div class="form-group" id="weeklyOptions" style="display: none;">
+            <label>ימים בשבוע</label>
+            <div style="display: flex; flex-wrap: wrap; gap: 0.5rem;">
+              <label style="display: flex; align-items: center; gap: 0.25rem; cursor: pointer;">
+                <input type="checkbox" value="0" class="day-checkbox" style="width: auto; margin: 0;"> ראשון
+              </label>
+              <label style="display: flex; align-items: center; gap: 0.25rem; cursor: pointer;">
+                <input type="checkbox" value="1" class="day-checkbox" style="width: auto; margin: 0;"> שני
+              </label>
+              <label style="display: flex; align-items: center; gap: 0.25rem; cursor: pointer;">
+                <input type="checkbox" value="2" class="day-checkbox" style="width: auto; margin: 0;"> שלישי
+              </label>
+              <label style="display: flex; align-items: center; gap: 0.25rem; cursor: pointer;">
+                <input type="checkbox" value="3" class="day-checkbox" style="width: auto; margin: 0;"> רביעי
+              </label>
+              <label style="display: flex; align-items: center; gap: 0.25rem; cursor: pointer;">
+                <input type="checkbox" value="4" class="day-checkbox" style="width: auto; margin: 0;"> חמישי
+              </label>
+              <label style="display: flex; align-items: center; gap: 0.25rem; cursor: pointer;">
+                <input type="checkbox" value="5" class="day-checkbox" style="width: auto; margin: 0;"> שישי
+              </label>
+              <label style="display: flex; align-items: center; gap: 0.25rem; cursor: pointer;">
+                <input type="checkbox" value="6" class="day-checkbox" style="width: auto; margin: 0;"> שבת
+              </label>
+            </div>
+          </div>
+
+          <!-- Monthly options -->
+          <div class="form-group" id="monthlyOptions" style="display: none;">
+            <label for="dayOfMonth">יום בחודש</label>
+            <input type="number" id="dayOfMonth" value="1" min="1" max="31">
+          </div>
+
+          <div class="form-group">
+            <label for="recurrenceStartDate">תאריך התחלה</label>
+            <input type="date" id="recurrenceStartDate">
+          </div>
+
+          <div class="form-group">
+            <label for="recurrenceEndDate">תאריך סיום (אופציונלי)</label>
+            <input type="date" id="recurrenceEndDate">
+            <small style="color: #999; font-size: 0.85rem;">השאר ריק למשימה ללא סוף</small>
+          </div>
+
+          <div class="form-group">
+            <label for="templateName">שם תבנית</label>
+            <input type="text" id="templateName" placeholder="לדוגמה: בדיקת מלאי יומית">
+          </div>
+        </div>
+
         <div class="form-group">
           <label for="filingCaseId">מספר תיק (אופציונלי)</label>
           <select id="filingCaseId" onchange="onCaseSelected()">
@@ -1113,6 +1191,108 @@
     let allUsers = [];
     let currentUser = null;
 
+    // ============================================================================
+    // RECURRING TASKS SCHEDULER
+    // ============================================================================
+    async function processRecurringTasks() {
+      try {
+        const today = new Date().toISOString().split('T')[0];
+
+        // Find all active recurring tasks that are due
+        const { data: dueTasks, error } = await supabase
+          .from('recurring_tasks')
+          .select('*')
+          .lte('next_run_date', today)
+          .eq('is_active', true)
+          .eq('paused', false);
+
+        if (error) throw error;
+
+        if (!dueTasks || dueTasks.length === 0) {
+          console.log('📅 No recurring tasks due today');
+          return;
+        }
+
+        console.log(`📅 Found ${dueTasks.length} recurring tasks to process`);
+
+        for (const recurringTask of dueTasks) {
+          try {
+            // Create task from template
+            const assignedUsers = recurringTask.assigned_to_users || [];
+            const primaryAssignee = assignedUsers[0];
+
+            if (!primaryAssignee) {
+              console.error('No assigned users for recurring task:', recurringTask.id);
+              continue;
+            }
+
+            const newTask = {
+              title: recurringTask.title,
+              description: recurringTask.description,
+              task_type: recurringTask.task_type,
+              assigned_to: primaryAssignee,
+              assigned_by: recurringTask.assigned_by,
+              priority: recurringTask.priority,
+              due_date: null, // Can be customized
+              status: 'pending',
+              completion_percentage: 0
+            };
+
+            // Insert new task
+            const { data: createdTask, error: taskError } = await supabase
+              .from('tasks')
+              .insert([newTask])
+              .select()
+              .single();
+
+            if (taskError) throw taskError;
+
+            // Create task assignments for all users
+            if (assignedUsers.length > 0) {
+              const assignments = assignedUsers.map((userId, index) => ({
+                task_id: createdTask.id,
+                user_id: userId,
+                is_primary: index === 0,
+                assigned_by: recurringTask.assigned_by
+              }));
+
+              await supabase
+                .from('task_assignments')
+                .insert(assignments);
+            }
+
+            // Calculate next run date using SQL function
+            const { data: nextDate } = await supabase
+              .rpc('calculate_next_run_date', {
+                p_recurrence_type: recurringTask.recurrence_type,
+                p_interval: recurringTask.recurrence_interval,
+                p_current_date: recurringTask.next_run_date,
+                p_days_of_week: recurringTask.days_of_week || [],
+                p_day_of_month: recurringTask.day_of_month
+              });
+
+            // Update recurring task with new next_run_date
+            await supabase
+              .from('recurring_tasks')
+              .update({
+                next_run_date: nextDate,
+                last_run_date: new Date().toISOString(),
+                total_tasks_created: (recurringTask.total_tasks_created || 0) + 1
+              })
+              .eq('id', recurringTask.id);
+
+            console.log(`✅ Created task from recurring template: ${recurringTask.template_name}`);
+
+          } catch (taskError) {
+            console.error(`Error processing recurring task ${recurringTask.id}:`, taskError);
+          }
+        }
+
+      } catch (error) {
+        console.error('Error in recurring tasks scheduler:', error);
+      }
+    }
+
     // Initialize
     async function init() {
       try {
@@ -1159,11 +1339,14 @@
         // Set up real-time subscriptions
         setupRealtime();
 
-        // Initialize activity feed
+// Initialize activity feed
         await taskActivityFeed.init('activity-feed');
 
         // Load task templates
         await loadTaskTemplates();
+
+        // Process recurring tasks (check for due tasks and create them)
+        await processRecurringTasks();
 
       } catch (error) {
         console.error('Initialization error:', error);
@@ -1312,6 +1495,103 @@
         viewer: 'צופה'
       };
       return labels[role] || role;
+    }
+
+    // ============================================================================
+    // RECURRING TASKS FUNCTIONS
+    // ============================================================================
+
+    window.toggleRecurringOptions = function() {
+      const isChecked = document.getElementById('isRecurring').checked;
+      const options = document.getElementById('recurringOptions');
+
+      if (isChecked) {
+        options.style.display = 'block';
+        // Set default start date to today
+        document.getElementById('recurrenceStartDate').value = new Date().toISOString().split('T')[0];
+        updateRecurrenceFields();
+      } else {
+        options.style.display = 'none';
+      }
+    };
+
+    window.updateRecurrenceFields = function() {
+      const type = document.getElementById('recurrenceType').value;
+      const weeklyOptions = document.getElementById('weeklyOptions');
+      const monthlyOptions = document.getElementById('monthlyOptions');
+      const intervalLabel = document.getElementById('intervalLabel');
+
+      // Update interval label
+      const labels = {
+        daily: 'ימים',
+        weekly: 'שבועות',
+        monthly: 'חודשים'
+      };
+      intervalLabel.textContent = labels[type] || 'ימים';
+
+      // Show/hide conditional fields
+      weeklyOptions.style.display = type === 'weekly' ? 'block' : 'none';
+      monthlyOptions.style.display = type === 'monthly' ? 'block' : 'none';
+
+      // Set defaults for weekly (Mon, Wed, Fri)
+      if (type === 'weekly') {
+        const checkboxes = document.querySelectorAll('.day-checkbox');
+        checkboxes.forEach((cb, i) => {
+          cb.checked = [1, 3, 5].includes(parseInt(cb.value)); // Mon, Wed, Fri
+        });
+      }
+    };
+
+    async function createRecurringTask(taskData, recurringData) {
+      try {
+        // Get selected days of week for weekly recurrence
+        let daysOfWeek = [];
+        if (recurringData.recurrence_type === 'weekly') {
+          const checkboxes = document.querySelectorAll('.day-checkbox:checked');
+          daysOfWeek = Array.from(checkboxes).map(cb => parseInt(cb.value));
+
+          if (daysOfWeek.length === 0) {
+            alert('אנא בחר לפחות יום אחד בשבוע');
+            return false;
+          }
+        }
+
+        // Prepare recurring task data
+        const recurringTask = {
+          template_name: recurringData.template_name,
+          title: taskData.title,
+          description: taskData.description,
+          task_type: taskData.task_type,
+          priority: taskData.priority,
+          assigned_to_users: selectedUsers.length > 0 ? selectedUsers : [taskData.assigned_to],
+          assigned_by: currentUser.user_id,
+          recurrence_type: recurringData.recurrence_type,
+          recurrence_interval: parseInt(recurringData.recurrence_interval),
+          days_of_week: daysOfWeek,
+          day_of_month: recurringData.day_of_month ? parseInt(recurringData.day_of_month) : null,
+          start_date: recurringData.start_date,
+          end_date: recurringData.end_date || null,
+          next_run_date: recurringData.start_date,
+          is_active: true,
+          created_by: currentUser.user_id
+        };
+
+        // Insert into recurring_tasks table
+        const { data, error } = await supabase
+          .from('recurring_tasks')
+          .insert([recurringTask])
+          .select()
+          .single();
+
+        if (error) throw error;
+
+        console.log('Recurring task created:', data);
+        return data;
+
+      } catch (error) {
+        console.error('Error creating recurring task:', error);
+        throw error;
+      }
     }
 
     // Load cases for dropdown
@@ -2188,6 +2468,9 @@
       event.preventDefault();
 
       try {
+        // Check if this is a recurring task
+        const isRecurring = document.getElementById('isRecurring').checked;
+
         // Get case_id (UUID) from the selected option
         const caseSelect = document.getElementById('filingCaseId');
         const selectedCaseOption = caseSelect.options[caseSelect.selectedIndex];
@@ -2215,6 +2498,36 @@
           status: 'pending',
           completion_percentage: 0
         };
+
+        // Handle recurring task creation
+        if (isRecurring) {
+          const templateName = document.getElementById('templateName').value.trim();
+          if (!templateName) {
+            alert('אנא הזן שם תבנית למשימה חוזרת');
+            return;
+          }
+
+          const recurringData = {
+            template_name: templateName,
+            recurrence_type: document.getElementById('recurrenceType').value,
+            recurrence_interval: document.getElementById('recurrenceInterval').value,
+            day_of_month: document.getElementById('dayOfMonth').value,
+            start_date: document.getElementById('recurrenceStartDate').value,
+            end_date: document.getElementById('recurrenceEndDate').value
+          };
+
+          if (!recurringData.start_date) {
+            alert('אנא בחר תאריך התחלה');
+            return;
+          }
+
+          await createRecurringTask(parentFormData, recurringData);
+
+          alert('✅ משימה חוזרת נוצרה בהצלחה! המערכת תיצור אוטומטית משימות חדשות לפי התדירות שנבחרה.');
+          closeNewTaskModal();
+          await loadTasks();
+          return;
+        }
 
         // Check if task has child tasks
         const hasChildTasks = document.getElementById('hasChildTasks').checked;
