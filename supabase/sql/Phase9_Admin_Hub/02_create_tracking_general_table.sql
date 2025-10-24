@@ -386,7 +386,7 @@ COMMENT ON COLUMN tracking_general.garage_phone IS 'טלפון מוסך - Garage
 COMMENT ON COLUMN tracking_general.email IS 'E-mail';
 COMMENT ON COLUMN tracking_general.directive IS 'דירקטיבה - Directive/instructions';
 COMMENT ON COLUMN tracking_general.photos_available IS 'תמונות - Photos available';
-COMMENT ON COLUMN tracking_general.photo_count IS 'מס\' תמונות - Number of photos';
+COMMENT ON COLUMN tracking_general.photo_count IS 'מס'' תמונות - Number of photos';
 COMMENT ON COLUMN tracking_general.invoice_received IS 'התקבלה חשבונית - Invoice received';
 COMMENT ON COLUMN tracking_general.payment_received IS 'התקבל תשלום - Payment received';
 COMMENT ON COLUMN tracking_general.case_in_claim IS 'תיק בתביעה - Case in claim/litigation';
