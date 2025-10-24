@@ -599,16 +599,7 @@
   <div id="alerts-container"></div>
 
   <form id="upload-form" method="POST" onsubmit="return false;">
-    <!-- Password Authentication Section -->
-    <div class="form-section">
-      <h3>אימות זהות</h3>
-      <div class="form-row">
-        <div class="form-group">
-          <label for="password">סיסמא:</label>
-          <input id="password" name="password" placeholder="סיסמא" required type="password"/>
-        </div>
-      </div>
-    </div>
+    <!-- SESSION 74: Password authentication removed - using Supabase auth only -->
 
     <!-- Case Information Section -->
     <div class="form-section">
@@ -813,16 +804,13 @@ class ImageUploadManager {
     // Load case data from session storage
     const plate = sessionStorage.getItem('plate');
     const owner = sessionStorage.getItem('owner');
-    const password = sessionStorage.getItem('ycPass');
+    // SESSION 74: Password loading removed - using Supabase auth only
     
     if (plate) {
       document.getElementById('plate').value = plate;
     }
     if (owner) {
       document.getElementById('owner').value = owner;
-    }
-    if (password) {
-      document.getElementById('password').value = password;
     }
 
     // Load from helper if available
@@ -1050,11 +1038,7 @@ class ImageUploadManager {
   async uploadImages() {
     if (this.uploadInProgress || this.files.length === 0) return;
 
-    // Validate password before upload
-    if (!this.validatePassword()) {
-      this.showAlert('❌ סיסמא שגויה או חסרה', 'error');
-      return;
-    }
+    // SESSION 74: Password validation removed - using Supabase auth only
 
     this.uploadInProgress = true;
     this.showUploadProgress(true);
@@ -1065,7 +1049,7 @@ class ImageUploadManager {
       // Add case information
       formData.append('plate', document.getElementById('plate').value);
       formData.append('owner', document.getElementById('owner').value);
-      formData.append('password', document.getElementById('password').value);
+      // SESSION 74: Password removed from formData - using Supabase auth only
       
       // Handle damage center selection
       const damageCenterValue = document.getElementById('damage-center').value;
@@ -1114,20 +1098,9 @@ class ImageUploadManager {
     }
   }
 
+  // SESSION 74: validatePassword() removed - using Supabase auth only
   validatePassword() {
-    const enteredPassword = document.getElementById('password').value;
-    const sessionPassword = sessionStorage.getItem('ycPass');
-    
-    if (!enteredPassword) {
-      return false;
-    }
-    
-    // If session password exists, validate against it
-    if (sessionPassword) {
-      return enteredPassword === sessionPassword;
-    }
-    
-    // If no session password, any non-empty password is accepted
+    // No password validation needed - Supabase handles authentication
     return true;
   }
 
@@ -1169,16 +1142,13 @@ class ImageUploadManager {
     }
 
     // Validate password before processing
-    if (!this.validatePassword()) {
-      this.showAlert('❌ סיסמא שגויה או חסרה', 'error');
-      return;
-    }
+    // SESSION 74: Password validation removed - using Supabase auth only
 
     try {
       const formData = new FormData();
       formData.append('plate', plate);
       formData.append('owner', owner);
-      formData.append('password', document.getElementById('password').value);
+      // SESSION 74: Password removed from formData - using Supabase auth only
       formData.append('process_type', type);
       formData.append('advanced_mode', 'true'); // Flag to indicate this pulls from case folder
       
