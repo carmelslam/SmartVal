@@ -1804,9 +1804,11 @@
           .select(`
             id,
             plate,
+            plate_number,
             owner_name,
             created_at,
-            created_by
+            created_by,
+            assigned_to
           `)
           .order('created_at', { ascending: false });
         
@@ -1814,17 +1816,19 @@
         
         // Manually fetch owner details for each case
         const uniqueOwnerIds = [...new Set(cases.map(c => c.created_by))];
-        const { data: allOwners } = await supabase
+        const uniqueAssignedIds = [...new Set(cases.map(c => c.assigned_to).filter(Boolean))];
+        const allUserIds = [...new Set([...uniqueOwnerIds, ...uniqueAssignedIds])];
+
+        const { data: allUsers } = await supabase
           .from('profiles')
           .select('user_id, name, role, org_id');
-        
-        // Filter owners to only those who own cases
-        const owners = allOwners?.filter(o => uniqueOwnerIds.includes(o.user_id));
-        
-        // Map owners to cases
+
+        // Map owners and assigned users to cases
         cases.forEach(caseItem => {
-          const owner = owners?.find(o => o.user_id === caseItem.created_by);
+          const owner = allUsers?.find(o => o.user_id === caseItem.created_by);
+          const assignedUser = caseItem.assigned_to ? allUsers?.find(u => u.user_id === caseItem.assigned_to) : null;
           caseItem.owner = owner;
+          caseItem.assignedUser = assignedUser;
         });
         
         if (error) throw error;
@@ -1849,6 +1853,7 @@
                   <th style="padding: 12px; text-align: right; color: #ff6b35;">מספר רכב</th>
                   <th style="padding: 12px; text-align: right; color: #ff6b35;">בעל התיק</th>
                   <th style="padding: 12px; text-align: right; color: #ff6b35;">תפקיד</th>
+                  <th style="padding: 12px; text-align: right; color: #ff6b35;">משוייך ל</th>
                   <th style="padding: 12px; text-align: right; color: #ff6b35;">תאריך יצירה</th>
                   <th style="padding: 12px; text-align: center; color: #ff6b35;">פעולות</th>
                 </tr>
@@ -1858,9 +1863,10 @@
         cases.forEach(caseItem => {
           html += `
                 <tr style="border-bottom: 1px solid #444;">
-                  <td style="padding: 10px; color: #e0e0e0; font-weight: bold;">${caseItem.plate || 'לא ידוע'}</td>
+                  <td style="padding: 10px; color: #e0e0e0; font-weight: bold;">${caseItem.plate || caseItem.plate_number || 'לא ידוע'}</td>
                   <td style="padding: 10px; color: #e0e0e0;">${caseItem.owner?.name || 'לא ידוע'}</td>
                   <td style="padding: 10px; color: #e0e0e0;">${roleNames[caseItem.owner?.role] || 'לא ידוע'}</td>
+                  <td style="padding: 10px; color: ${caseItem.assignedUser ? '#22c55e' : '#6b7280'};">${caseItem.assignedUser?.name || 'לא משוייך'}</td>
                   <td style="padding: 10px; color: #e0e0e0;">${new Date(caseItem.created_at).toLocaleDateString('he-IL')}</td>
                   <td style="padding: 10px; text-align: center;">
                     <button onclick="showCollaboratorModal('${caseItem.plate}', '${caseItem.id}', '${caseItem.created_by}', '${caseItem.owner?.org_id || currentUserOrgId}')"

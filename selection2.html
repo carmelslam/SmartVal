@@ -1387,22 +1387,12 @@ window.verifyAdminAccess = verifyAdminAccess;
 
     try {
       const { supabase } = await import('./lib/supabaseClient.js');
-      const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
 
-      // Try to get case_id from multiple sources
-      const caseId = helper.meta?.case_id || helper.case_info?.case_id || helper.case_info?.id;
-
-      if (!caseId) {
-        console.warn('No case ID found, cannot update status');
-        alert('לא ניתן לעדכן סטטוס - תיק לא נטען כראוי');
-        return;
-      }
-
-      // Update status in cases table
+      // Update status in cases table using plate_number (not id)
       const { data, error } = await supabase
         .from('cases')
         .update({ status: statusValue })
-        .eq('id', caseId);
+        .eq('plate_number', plateNumber);
 
       if (error) {
         console.error('Error updating case status:', error);
@@ -1413,6 +1403,7 @@ window.verifyAdminAccess = verifyAdminAccess;
       console.log('✅ Case status updated successfully to:', statusValue);
 
       // Update helper in session storage
+      const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
       if (helper.meta) {
         helper.meta.status = statusValue;
         sessionStorage.setItem('helper', JSON.stringify(helper));
@@ -1442,19 +1433,12 @@ window.verifyAdminAccess = verifyAdminAccess;
 
     try {
       const { supabase } = await import('./lib/supabaseClient.js');
-      const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
-      const caseId = helper.meta?.case_id || helper.case_info?.case_id || helper.case_info?.id;
 
-      if (!caseId) {
-        alert('לא ניתן לעדכן שיוך - תיק לא נטען כראוי');
-        return;
-      }
-
-      // Update assigned_to in cases table
+      // Update assigned_to in cases table using plate_number (not id)
       const { data, error } = await supabase
         .from('cases')
         .update({ assigned_to: assessorId || null })
-        .eq('id', caseId);
+        .eq('plate_number', plateNumber);
 
       if (error) {
         console.error('Error updating assigned_to:', error);
