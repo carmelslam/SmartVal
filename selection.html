@@ -1614,11 +1614,25 @@ window.verifyAdminAccess = verifyAdminAccess;
     try {
       const { supabase } = await import('./lib/supabaseClient.js');
 
-      // Use user_id instead of id (profiles table uses user_id as primary key)
+      // Get current user's org_id from session
+      const authData = sessionStorage.getItem('auth');
+      const auth = authData ? JSON.parse(authData) : null;
+      const userOrgId = auth?.profile?.org_id;
+
+      if (!userOrgId) {
+        console.warn('⚠️ No org_id found for current user');
+        document.getElementById('assignedToDropdown').innerHTML = '<option value="">לא משוייך</option>';
+        return;
+      }
+
+      console.log('📊 Loading assessors for org_id:', userOrgId);
+
+      // Query profiles: only assessors and admins from same org (no developers)
       const { data, error } = await supabase
         .from('profiles')
-        .select('user_id, name, role')
-        .or('role.eq.assessor,role.eq.admin,role.eq.developer')
+        .select('user_id, name, role, org_id')
+        .eq('org_id', userOrgId)
+        .or('role.eq.assessor,role.eq.admin')
         .order('name');
 
       if (error) {
@@ -1634,12 +1648,12 @@ window.verifyAdminAccess = verifyAdminAccess;
         data.forEach(assessor => {
           const option = document.createElement('option');
           option.value = assessor.user_id;
-          option.textContent = `${assessor.name} (${assessor.role === 'assessor' ? 'שמאי' : assessor.role === 'admin' ? 'מנהל' : 'מפתח'})`;
+          option.textContent = `${assessor.name} (${assessor.role === 'assessor' ? 'שמאי' : 'מנהל'})`;
           dropdown.appendChild(option);
         });
-        console.log('✅ Loaded', data.length, 'assessors');
+        console.log('✅ Loaded', data.length, 'assessors from org:', userOrgId);
       } else {
-        console.log('⚠️ No assessors found');
+        console.log('⚠️ No assessors found for org:', userOrgId);
       }
     } catch (err) {
       console.error('Error in loadAssessors:', err);
