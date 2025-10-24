@@ -406,6 +406,7 @@
       import { MathEngine } from './math.js';
       import { sendToWebhook } from './webhook.js';
       import { WEBHOOKS } from './webhook.js';
+      import { adminSupabaseService } from './services/admin-supabase-service.js';
       
       // Legacy verifyAdminAccess removed in Phase 6
       // Admin access now controlled by Supabase role-based auth (see lines 3164 & 6121)
@@ -2893,83 +2894,76 @@
     // Define performSearch function globally to be accessible by onclick
     window.performSearch = async function() {
       const resultsDiv = document.getElementById('trackingResults');
-      
-      // Check if at least one filter is set - ANY field is acceptable
-      const hasAnyFilter = document.getElementById('dateFrom')?.value ||
-                          document.getElementById('dateTo')?.value ||
-                          document.getElementById('statusFilter')?.value ||
-                          document.getElementById('manufacturerFilter')?.value?.trim() ||
-                          document.getElementById('ownerFilter')?.value?.trim() ||
-                          document.getElementById('garageFilter')?.value?.trim() ||
-                          document.getElementById('claimFilter')?.value ||
-                          document.getElementById('invoiceFilter')?.value ||
-                          document.getElementById('paymentFilter')?.value;
-                          
-      if (!hasAnyFilter) {
-        alert('אנא בחר לפחות פילטר אחד כדי לבצע חיפוש (תאריך, יצרן, דירקטיבה וכו...)');
-        resultsDiv.innerHTML = `
-          <div style="background: #333; padding: 15px; border-radius: 8px; border: 1px solid #555; color: #ccc; text-align: center;">
-            <p>לא נבחרו פילטרים</p>
-            <p style="font-size: 12px; color: #999;">בחר לפחות פילטר אחד (כל שדה) ונסה שוב</p>
-          </div>`;
-        return;
-      }
-      
+
       resultsDiv.innerHTML = `
         <div style="background: #333; padding: 12px; border-radius: 8px; border: 1px solid #555; color: #e0e0e0; text-align: center;">
-          <h4 style="color: #ff6b35; margin-bottom: 8px;">🔍 מחפש לפי הפרמטרים שנבחרו</h4>
+          <h4 style="color: #ff6b35; margin-bottom: 8px;">🔍 מחפש ב-Supabase...</h4>
           <p>אנא המתן...</p>
         </div>`;
-      
+
       try {
-        // Wait for webhook to be ready
-        if (!window.webhookReady || typeof window.sendToWebhook !== 'function') {
-          throw new Error('Webhook function not available - page still loading');
-        }
-        
-        // Ultra simple structure that Make.com can easily parse
-        const searchParams = {
-          type: 'field_search',
-          date_from: document.getElementById('dateFrom')?.value || 'all',
-          date_to: document.getElementById('dateTo')?.value || 'all',
-          directive: document.getElementById('statusFilter')?.value || 'all',
-          manufacturer: document.getElementById('manufacturerFilter')?.value?.trim() || 'all',
-          owner: document.getElementById('ownerFilter')?.value?.trim() || 'all',
-          garage: document.getElementById('garageFilter')?.value?.trim() || 'all',
-          claim_status: document.getElementById('claimFilter')?.value || 'all',
-          invoice_received: document.getElementById('invoiceFilter')?.value || 'all',
-          payment_received: document.getElementById('paymentFilter')?.value || 'all'
-        };
-        
-        // Send all parameters including empty ones - let the webhook handle filtering
-        console.log('🔍 Sending search parameters:', searchParams);
-        console.log('🌐 Webhook URL:', window.WEBHOOKS?.ADMIN_FETCH_FIELDS);
-        console.log('🔧 sendToWebhook function available:', typeof window.sendToWebhook);
-        
-        const response = await window.sendToWebhook('ADMIN_FETCH_FIELDS', searchParams);
-        console.log('📥 Webhook response:', response);
-        
-        // Store results and filters for export
-        window.lastSearchResults = response && Array.isArray(response) ? response : (response ? [response] : []);
-        window.lastSearchFilters = searchParams;
-        
-        // Create description of active filters (only non-empty ones)
+        // Build filters object for Supabase
+        const filters = {};
+
+        const dateFrom = document.getElementById('dateFrom')?.value;
+        const dateTo = document.getElementById('dateTo')?.value;
+        const manufacturer = document.getElementById('manufacturerFilter')?.value?.trim();
+        const owner = document.getElementById('ownerFilter')?.value?.trim();
+        const garage = document.getElementById('garageFilter')?.value?.trim();
+        const directive = document.getElementById('statusFilter')?.value;
+        const claimStatus = document.getElementById('claimFilter')?.value;
+        const invoiceReceived = document.getElementById('invoiceFilter')?.value;
+        const paymentReceived = document.getElementById('paymentFilter')?.value;
+
+        if (dateFrom) filters.dateFrom = dateFrom;
+        if (dateTo) filters.dateTo = dateTo;
+        if (manufacturer) filters.manufacturer = manufacturer;
+        if (owner) filters.owner = owner;
+        if (garage) filters.garage = garage;
+        if (directive) filters.directive = directive;
+        if (claimStatus) filters.caseInClaim = claimStatus;
+        if (invoiceReceived) filters.invoiceReceived = invoiceReceived === 'yes';
+        if (paymentReceived) filters.paymentReceived = paymentReceived === 'yes';
+
+        console.log('📋 Querying tracking table with filters:', filters);
+
+        // Query Supabase
+        const results = await adminSupabaseService.queryTrackingTable(filters);
+
+        console.log('✅ Tracking results from Supabase:', results);
+
+        // Store results for export
+        window.lastSearchResults = results;
+        window.lastSearchFilters = filters;
+
+        // Create description of active filters
         const activeFilters = [];
-        if (searchParams.date_from && searchParams.date_to) activeFilters.push(`תאריכים: ${searchParams.date_from} - ${searchParams.date_to}`);
-        if (searchParams.directive) activeFilters.push(`דירקטיבה: ${searchParams.directive}`);
-        if (searchParams.manufacturer) activeFilters.push(`יצרן: ${searchParams.manufacturer}`);
-        if (searchParams.owner) activeFilters.push(`בעלים: ${searchParams.owner}`);
-        if (searchParams.garage) activeFilters.push(`מוסך: ${searchParams.garage}`);
-        if (searchParams.claim_status) activeFilters.push(`תיק בתביעה: ${searchParams.claim_status}`);
-        if (searchParams.invoice_received) activeFilters.push(`חשבונית: ${searchParams.invoice_received === 'yes' ? 'כן' : 'לא'}`);
-        if (searchParams.payment_received) activeFilters.push(`תשלום: ${searchParams.payment_received === 'yes' ? 'כן' : 'לא'}`);
-        
-        const filterDescription = activeFilters.length > 0 ? activeFilters.join(', ') : 'חיפוש כללי';
-        window.displayFieldResults('חיפוש מורכב', filterDescription, response);
-        
+        if (dateFrom && dateTo) activeFilters.push(`תאריכים: ${dateFrom} - ${dateTo}`);
+        else if (dateFrom) activeFilters.push(`מתאריך: ${dateFrom}`);
+        else if (dateTo) activeFilters.push(`עד תאריך: ${dateTo}`);
+        if (directive) activeFilters.push(`דירקטיבה: ${directive}`);
+        if (manufacturer) activeFilters.push(`יצרן: ${manufacturer}`);
+        if (owner) activeFilters.push(`בעלים: ${owner}`);
+        if (garage) activeFilters.push(`מוסך: ${garage}`);
+        if (claimStatus) activeFilters.push(`תיק בתביעה: ${claimStatus}`);
+        if (invoiceReceived) activeFilters.push(`חשבונית: ${invoiceReceived === 'yes' ? 'כן' : 'לא'}`);
+        if (paymentReceived) activeFilters.push(`תשלום: ${paymentReceived === 'yes' ? 'כן' : 'לא'}`);
+
+        const filterDescription = activeFilters.length > 0 ? activeFilters.join(', ') : 'כל התיקים';
+
+        // Display results
+        window.displayTrackingResults(filterDescription, results);
+
       } catch (error) {
-        console.error('Search error:', error);
-        window.displayFieldError('חיפוש מורכב', error.message);
+        console.error('❌ Error querying tracking table:', error);
+        resultsDiv.innerHTML = `
+          <div style="background: #f8d7da; padding: 15px; border-radius: 8px; border: 1px solid #f5c6cb; color: #721c24;">
+            <h4>❌ שגיאה בחיפוש</h4>
+            <p>שגיאה: ${error.message}</p>
+            <p style="font-size: 12px; margin-top: 10px;">
+              🔍 בדוק את הקונסול לפרטים נוספים
+            </p>
+          </div>`;
       }
     };
 
@@ -3261,31 +3255,21 @@
         alert('אנא הכנס מספר רכב');
         return;
       }
-      
+
       const resultsDiv = document.getElementById('caseResults');
       resultsDiv.innerHTML = `
         <div style="background: #fff3cd; padding: 15px; border-radius: 8px; border: 1px solid #ffeaa7;">
           <h4>🔍 מחפש נתונים עבור רכב: ${plate}</h4>
-          <p>אנא המתן...</p>
+          <p>אנא המתן... שולח שאילתה ל-Supabase</p>
         </div>`;
-      
+
       try {
-        // Wait for webhook to be ready with a small delay
-        await new Promise(resolve => setTimeout(resolve, 100));
-        
-        if (!window.sendToWebhook || typeof window.sendToWebhook !== 'function') {
-          throw new Error('Webhook function not available - please refresh the page');
-        }
-        
-        const response = await window.sendToWebhook('ADMIN_FETCH_TRACKING_TABLE', {
-          plate: plate,
-          action: 'get_case_status'
-        });
-        
-        console.log('Case status response:', response);
-        
-        if (response && Array.isArray(response) && response.length > 0) {
-          const caseData = response[0];
+        // Query Supabase instead of webhook
+        const caseData = await adminSupabaseService.getCaseStatus(plate);
+
+        console.log('✅ Case status from Supabase:', caseData);
+
+        if (caseData) {
           // Store results for export
           window.lastCaseStatusResults = caseData;
           window.lastCaseStatusPlate = plate;
@@ -3296,15 +3280,20 @@
               <h4>❌ לא נמצאו נתונים</h4>
               <p>לא נמצאו נתונים עבור רכב מספר: ${plate}</p>
               <p>אנא בדוק את מספר הרכב ונסה שוב</p>
+              <p style="font-size: 12px; margin-top: 10px; color: #856404;">
+                💡 ייתכן שהתיק טרם נשמר ב-Supabase או שמספר הרכב שגוי
+              </p>
             </div>`;
         }
       } catch (error) {
-        console.error('Error fetching case status:', error);
+        console.error('❌ Error fetching case status from Supabase:', error);
         resultsDiv.innerHTML = `
           <div style="background: #f8d7da; padding: 15px; border-radius: 8px; border: 1px solid #f5c6cb; color: #721c24;">
             <h4>❌ שגיאה בטעינת נתונים</h4>
             <p>שגיאה: ${error.message}</p>
-            <p>אנא נסה שוב מאוחר יותר</p>
+            <p style="font-size: 12px; margin-top: 10px;">
+              🔍 בדוק את הקונסול לפרטים נוספים
+            </p>
           </div>`;
       }
     };
@@ -3509,9 +3498,71 @@
       }
     };
 
+    // Display tracking results from Supabase
+    window.displayTrackingResults = function(filterDesc, results) {
+      const resultsDiv = document.getElementById('trackingResults');
+
+      if (!results || results.length === 0) {
+        resultsDiv.innerHTML = `
+          <div style="background: #f8d7da; padding: 15px; border-radius: 8px; border: 1px solid #f5c6cb; color: #721c24;">
+            <h4>❌ לא נמצאו תיקים</h4>
+            <p>לא נמצאו תיקים התואמים לקריטריונים: ${filterDesc}</p>
+            <p style="font-size: 12px; margin-top: 10px; color: #856404;">
+              💡 נסה לשנות את הפילטרים או בדוק שהתיקים נשמרו ב-Supabase
+            </p>
+          </div>`;
+        return;
+      }
+
+      let resultsHtml = `
+        <div style="background: #333; padding: 12px; border-radius: 8px; border: 1px solid #555; color: #e0e0e0; font-size: 13px;">
+          <h4 style="margin: 0 0 8px 0; font-size: 16px; color: #ff6b35;">📊 תוצאות מ-Supabase</h4>
+          <div style="margin-bottom: 12px; font-size: 12px; color: #ccc;">
+            <span><strong>נמצאו:</strong> ${results.length} תיקים</span> |
+            <span><strong>סונן לפי:</strong> ${filterDesc}</span> |
+            <span><strong>עדכון:</strong> ${new Date().toLocaleString('he-IL')}</span>
+          </div>`;
+
+      results.forEach((row, index) => {
+        resultsHtml += `
+          <div style="background: #2a2a2a; padding: 10px; border-radius: 6px; margin-bottom: 8px; border: 1px solid #444;">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; font-size: 12px;">
+              <div>
+                <div style="margin-bottom: 4px;"><strong style="color: #4ade80;">מספר תיק:</strong> ${row.case_number || 'לא זמין'}</div>
+                <div style="margin-bottom: 4px;"><strong style="color: #4ade80;">מס. רכב:</strong> ${row.plate || 'לא זמין'}</div>
+                <div style="margin-bottom: 4px;"><strong style="color: #4ade80;">יצרן:</strong> ${row.manufacturer || 'לא זמין'}</div>
+                <div style="margin-bottom: 4px;"><strong style="color: #4ade80;">שנה:</strong> ${row.year_of_manufacture || 'לא זמין'}</div>
+              </div>
+              <div>
+                <div style="margin-bottom: 4px;"><strong style="color: #fbbf24;">בעל הרכב:</strong> ${row.owner_name || 'לא זמין'}</div>
+                <div style="margin-bottom: 4px;"><strong style="color: #f87171;">מוסך:</strong> ${row.garage_name || 'לא זמין'}</div>
+                <div style="margin-bottom: 4px;"><strong style="color: #f87171;">דירקטיבה:</strong> ${row.directive || 'לא זמין'}</div>
+                <div style="margin-bottom: 4px;"><strong style="color: #f87171;">סטטוס:</strong> ${row.general_status || 'לא זמין'}</div>
+              </div>
+            </div>
+            <div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid #444; font-size: 11px; color: #999;">
+              <strong>תאריך בדיקה:</strong> ${row.inspection_date ? new Date(row.inspection_date).toLocaleDateString('he-IL') : 'לא זמין'} |
+              <strong>חשבונית:</strong> ${row.invoice_received ? 'התקבלה' : 'טרם התקבלה'} |
+              <strong>תשלום:</strong> ${row.payment_received ? 'התקבל' : 'טרם התקבל'}
+            </div>
+            <div style="display: flex; gap: 8px; justify-content: center; margin-top: 8px;">
+              <button onclick="loadCaseDetailsFromResult('${row.plate}')"
+                      onmouseover="this.style.background='#e55a2b'"
+                      onmouseout="this.style.background='#ff6b35'"
+                      style="padding: 6px 12px; background: #ff6b35; color: white; border: none; border-radius: 4px; font-size: 11px; cursor: pointer; transition: all 0.3s;">
+                📋 פרטים מלאים
+              </button>
+            </div>
+          </div>`;
+      });
+
+      resultsHtml += `</div>`;
+      resultsDiv.innerHTML = resultsHtml;
+    };
+
     window.displayFieldResults = function(filterType, filterDesc, data) {
       const resultsDiv = document.getElementById('trackingResults');
-      
+
       if (!data || (Array.isArray(data) && data.length === 0)) {
         resultsDiv.innerHTML = `
           <div style="background: #f8d7da; padding: 15px; border-radius: 8px; border: 1px solid #f5c6cb; color: #721c24;">
@@ -3766,60 +3817,79 @@
           date_to: document.getElementById('serverDateTo').value,
           limit: document.getElementById('serverLimitFilter').value
         };
-        
+
         // Close modal
         closeLoadRemindersModal();
-        
+
         // Update data status to loading
-        updateDataStatus('loading', 'טוען תזכורות מ-Make.com עם הפרמטרים שנבחרו...');
-        
-        // Wait for webhook to be ready
-        if (!window.webhookReady || typeof window.sendToWebhook !== 'function') {
-          throw new Error('Webhook function not available');
+        updateDataStatus('loading', 'טוען תזכורות מ-Supabase עם הפרמטרים שנבחרו...');
+
+        console.log('🔄 Loading reminders from Supabase with filters:', serverFilters);
+
+        // Build filters object for Supabase
+        const filters = {};
+        if (serverFilters.status !== 'all') {
+          // Map to Hebrew status values from reminders table
+          const statusMap = {
+            'active': 'פעיל',
+            'pending': 'ממתין',
+            'completed': 'הושלם',
+            'overdue': 'פג תוקף'
+          };
+          filters.status = statusMap[serverFilters.status] || serverFilters.status;
         }
-        
-        console.log('🔄 Loading reminders with server filters:', serverFilters);
-        
-        const response = await window.sendToWebhook('ADMIN_FETCH_REMINDERS', {
-          action: 'fetch_reminders',
-          server_filters: serverFilters,
-          pagination: {
-            limit: serverFilters.limit === 'all' ? null : parseInt(serverFilters.limit),
-            offset: 0
-          },
-          timestamp: new Date().toISOString()
-        });
-        
-        console.log('📥 Fetched reminders with server filters:', response);
-        
-        // Update local data with fetched reminders
-        if (response && Array.isArray(response)) {
-          window.remindersData = response;
-        } else if (response && response.reminders && Array.isArray(response.reminders)) {
-          window.remindersData = response.reminders;
+        if (serverFilters.category !== 'all') {
+          // Map to Hebrew category values from reminders table
+          const categoryMap = {
+            'case_deadline': 'תזכורת כללית',
+            'payment_reminder': 'תזכורת תשלום',
+            'follow_up': 'תזכורת מעקב',
+            'inspection': 'תזכורת בדיקה',
+            'general': 'תזכורת כללית'
+          };
+          filters.category = categoryMap[serverFilters.category] || serverFilters.category;
+        }
+        if (serverFilters.plate_number) {
+          filters.plate = serverFilters.plate_number;
+        }
+        if (serverFilters.date_from) {
+          filters.dateFrom = serverFilters.date_from;
+        }
+        if (serverFilters.date_to) {
+          filters.dateTo = serverFilters.date_to;
+        }
+
+        // Query Supabase
+        const response = await adminSupabaseService.getReminders(filters);
+
+        console.log('✅ Fetched reminders from Supabase:', response);
+
+        // Apply limit if specified
+        if (serverFilters.limit !== 'all') {
+          const limit = parseInt(serverFilters.limit);
+          window.remindersData = response.slice(0, limit);
         } else {
-          console.warn('No reminders found in response');
-          window.remindersData = [];
+          window.remindersData = response;
         }
-        
+
         // Store current filters and timestamp
         window.currentServerFilters = serverFilters;
         window.dataLoadedTimestamp = new Date();
-        
+
         // Enable local filtering controls
         enableLocalControls();
-        
+
         // Update data status
         const filterDesc = createFilterDescription(serverFilters);
-        updateDataStatus('loaded', `נטענו ${window.remindersData.length} תזכורות (${filterDesc}) - עודכן: ${new Date().toLocaleTimeString('he-IL')}`);
-        
+        updateDataStatus('loaded', `נטענו ${window.remindersData.length} תזכורות מ-Supabase (${filterDesc}) - עודכן: ${new Date().toLocaleTimeString('he-IL')}`);
+
         // Refresh display
         renderReminders();
-        
+
         return window.remindersData;
-        
+
       } catch (error) {
-        console.error('Error loading reminders:', error);
+        console.error('❌ Error loading reminders from Supabase:', error);
         updateDataStatus('error', `שגיאה בטעינת תזכורות: ${error.message}`);
         throw error;
       }
