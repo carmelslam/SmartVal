@@ -1342,10 +1342,10 @@ window.verifyAdminAccess = verifyAdminAccess;
     try {
       const { supabase } = await import('./lib/supabaseClient.js');
 
-      // Use .or() instead of .in() for compatibility
+      // Use user_id instead of id (profiles table uses user_id as primary key)
       const { data, error } = await supabase
         .from('profiles')
-        .select('id, name, role')
+        .select('user_id, name, role')
         .or('role.eq.assessor,role.eq.admin,role.eq.developer')
         .order('name');
 
@@ -1361,7 +1361,7 @@ window.verifyAdminAccess = verifyAdminAccess;
       if (data && data.length > 0) {
         data.forEach(assessor => {
           const option = document.createElement('option');
-          option.value = assessor.id;
+          option.value = assessor.user_id;
           option.textContent = `${assessor.name} (${assessor.role === 'assessor' ? 'שמאי' : assessor.role === 'admin' ? 'מנהל' : 'מפתח'})`;
           dropdown.appendChild(option);
         });
