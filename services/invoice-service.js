@@ -5,24 +5,45 @@
 class InvoiceService {
   constructor() {
     this.currentUser = null;
-    this.supabase = window.supabase;
+    this._supabase = null;
   }
 
   // ============================================================================
   // INITIALIZATION
   // ============================================================================
-  
+
+  /**
+   * Getter for Supabase client - lazy loads if not initialized
+   */
+  get supabase() {
+    if (!this._supabase) {
+      this._supabase = window.supabase || window.supabaseClient;
+    }
+
+    if (!this._supabase) {
+      throw new Error('Supabase client not available - ensure supabaseClient.js is loaded');
+    }
+
+    return this._supabase;
+  }
+
+  /**
+   * Ensure Supabase client is initialized
+   * Call this before any database operations
+   */
+  ensureSupabase() {
+    return this.supabase; // Uses getter above
+  }
+
   async initialize() {
     try {
-      if (!this.supabase) {
-        throw new Error('Supabase client not initialized');
-      }
-      
-      const user = await this.supabase.from('profiles')
+      const supabase = this.ensureSupabase();
+
+      const user = await supabase.from('profiles')
         .select('user_id, email, full_name, role')
-        .eq('user_id', this.supabase.auth.user()?.id)
+        .eq('user_id', supabase.auth?.user()?.id)
         .single();
-      
+
       this.currentUser = user.data;
       console.log('📄 InvoiceService initialized for user:', this.currentUser?.email);
       return true;
@@ -238,13 +259,16 @@ class InvoiceService {
   async uploadInvoiceDocument(file, caseId, plate, invoiceId = null) {
     try {
       console.log('📤 Uploading invoice document:', file.name);
-      
+
+      // Ensure Supabase is initialized
+      const supabase = this.ensureSupabase();
+
       const userId = this.currentUser?.user_id;
       const timestamp = Date.now();
       const filePath = `${caseId}/invoices/${timestamp}_${file.name}`;
 
       // 1. Upload to Supabase Storage 'docs' bucket
-      const { data: uploadData, error: uploadError } = await this.supabase.storage
+      const { data: uploadData, error: uploadError} = await supabase.storage
         .from('docs')
         .upload(filePath, file);
 
@@ -267,7 +291,7 @@ class InvoiceService {
         uploaded_by: userId
       };
 
-      const { data: document, error: docError } = await this.supabase
+      const { data: document, error: docError } = await supabase
         .from('invoice_documents')
         .insert(documentInsert)
         .select()
