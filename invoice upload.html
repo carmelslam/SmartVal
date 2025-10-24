@@ -629,13 +629,13 @@ class InvoiceProcessor {
     // Load case data from session storage
     const plate = sessionStorage.getItem('plate');
     const owner = sessionStorage.getItem('owner');
-    const pass = sessionStorage.getItem('ycPass');
+    // SESSION 74: Removed pass loading - using Supabase auth only
     const garageName = sessionStorage.getItem('garage_name');
     const today = new Date().toISOString().split('T')[0];
 
     if (plate) document.getElementById('plate').value = plate;
     if (owner) document.getElementById('owner').value = owner;
-    if (pass) document.getElementById('pass').value = pass;
+    // SESSION 74: Removed pass field setting - using Supabase auth only
     if (garageName) document.getElementById('garage_name').value = garageName;
     document.getElementById('date').value = today;
 
@@ -706,12 +706,31 @@ class InvoiceProcessor {
     
     // SESSION 74: Upload to Supabase Storage immediately
     try {
-      const caseId = sessionStorage.getItem('currentCaseId');
+      let caseId = sessionStorage.getItem('currentCaseId');
       const plate = document.getElementById('plate').value;
       
+      // Try to get case ID from helper if not in sessionStorage
       if (!caseId) {
-        console.warn('⚠️ No case ID found, skipping Supabase upload');
-        this.showAlert('קובץ נטען בהצלחה', 'success');
+        try {
+          const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+          // Check helper.case_info.supabase_case_id first, then fallback to helper.case_id
+          if (helper.case_info && helper.case_info.supabase_case_id) {
+            caseId = helper.case_info.supabase_case_id;
+            sessionStorage.setItem('currentCaseId', caseId);
+            console.log('✅ Found case ID in helper.case_info.supabase_case_id:', caseId);
+          } else if (helper.case_id) {
+            caseId = helper.case_id;
+            sessionStorage.setItem('currentCaseId', caseId);
+            console.log('✅ Found case ID in helper.case_id:', caseId);
+          }
+        } catch (e) {
+          console.warn('Could not get case ID from helper:', e);
+        }
+      }
+      
+      if (!caseId) {
+        console.warn('⚠️ No case ID found, skipping Supabase upload (will save via webhook)');
+        this.showAlert('קובץ נטען בהצלחה (ללא שמירה בענן - פתח מתוך תיק לשמירה מלאה)', 'info');
         return;
       }
 
@@ -791,13 +810,20 @@ class InvoiceProcessor {
     try {
       const formData = new FormData();
       formData.append('file', this.uploadedFile);
+      // SESSION 74: Removed 'pass' field - using Supabase auth only
+      // Add defensive checks for all fields
+      const plateEl = document.getElementById('plate');
+      const ownerEl = document.getElementById('owner');
+      const garageEl = document.getElementById('garage_name');
+      const dateEl = document.getElementById('date');
+      const typeEl = document.getElementById('invoice-type');
+      
       formData.append('meta', JSON.stringify({
-        plate: document.getElementById('plate').value,
-        owner: document.getElementById('owner').value,
-        pass: document.getElementById('pass').value,
-        garage_name: document.getElementById('garage_name').value,
-        date: document.getElementById('date').value,
-        invoice_type: document.getElementById('invoice-type').value
+        plate: plateEl ? plateEl.value : '',
+        owner: ownerEl ? ownerEl.value : '',
+        garage_name: garageEl ? garageEl.value : '',
+        date: dateEl ? dateEl.value : '',
+        invoice_type: typeEl ? typeEl.value : ''
       }));
 
       // FIXED: Use sendToWebhook to get proper Make.com array parsing

@@ -5,6 +5,7 @@
 class InvoiceService {
   constructor() {
     this.currentUser = null;
+    // SESSION 74: Lazy load supabase to ensure it's initialized
     this._supabase = null;
   }
 
@@ -14,6 +15,7 @@ class InvoiceService {
 
   /**
    * Getter for Supabase client - lazy loads if not initialized
+   * Throws error if not available (fail-fast approach)
    */
   get supabase() {
     if (!this._supabase) {
@@ -21,6 +23,8 @@ class InvoiceService {
     }
 
     if (!this._supabase) {
+      console.error('❌ window.supabase is not available!');
+      console.log('Available globals:', Object.keys(window).filter(k => k.includes('supabase')));
       throw new Error('Supabase client not available - ensure supabaseClient.js is loaded');
     }
 
@@ -260,12 +264,28 @@ class InvoiceService {
     try {
       console.log('📤 Uploading invoice document:', file.name);
 
-      // Ensure Supabase is initialized
-      const supabase = this.ensureSupabase();
+      // SESSION 74: Check Supabase and authentication
+      const supabase = this.supabase; // Uses getter - will throw if not available
 
-      const userId = this.currentUser?.user_id;
+      if (!supabase.auth) {
+        console.warn('⚠️ Supabase auth not available');
+        throw new Error('Supabase auth not initialized - invoice will be processed via webhook only');
+      }
+
+      // Check authentication status before upload
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        console.warn('⚠️ User not authenticated');
+        throw new Error('User not authenticated - invoice will be processed via webhook only');
+      }
+      console.log('✅ User authenticated:', session.user.email);
+
+      const userId = this.currentUser?.user_id || session.user.id;
       const timestamp = Date.now();
       const filePath = `${caseId}/invoices/${timestamp}_${file.name}`;
+
+      console.log('📁 Upload path:', filePath);
+      console.log('👤 User ID:', userId);
 
       // 1. Upload to Supabase Storage 'docs' bucket
       const { data: uploadData, error: uploadError} = await supabase.storage

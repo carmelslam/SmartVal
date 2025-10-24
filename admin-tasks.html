@@ -505,6 +505,116 @@
       resize: vertical;
     }
 
+    /* Multi-select dropdown styles */
+    .multi-select-container {
+      position: relative;
+      width: 100%;
+    }
+
+    .multi-select-header {
+      width: 100%;
+      padding: 0.75rem;
+      border: 1px solid #4a4a4a;
+      border-radius: 8px;
+      background: #1a1a1a;
+      color: #e0e0e0;
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      user-select: none;
+    }
+
+    .multi-select-header:hover {
+      border-color: #003366;
+    }
+
+    .dropdown-arrow {
+      font-size: 0.8rem;
+      transition: transform 0.2s;
+    }
+
+    .multi-select-header.open .dropdown-arrow {
+      transform: rotate(180deg);
+    }
+
+    .multi-select-dropdown {
+      position: absolute;
+      top: 100%;
+      left: 0;
+      right: 0;
+      margin-top: 0.25rem;
+      background: #2a2a2a;
+      border: 1px solid #4a4a4a;
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+      z-index: 100;
+      max-height: 300px;
+      overflow-y: auto;
+    }
+
+    .multi-select-search {
+      padding: 0.75rem;
+      border-bottom: 1px solid #4a4a4a;
+    }
+
+    .multi-select-search input {
+      width: 100%;
+      padding: 0.5rem;
+      border: 1px solid #4a4a4a;
+      border-radius: 6px;
+      background: #1a1a1a;
+      color: #e0e0e0;
+      font-size: 0.9rem;
+    }
+
+    .multi-select-options {
+      max-height: 200px;
+      overflow-y: auto;
+    }
+
+    .multi-select-option {
+      padding: 0.75rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      transition: background 0.2s;
+    }
+
+    .multi-select-option:hover {
+      background: #3a3a3a;
+    }
+
+    .multi-select-option input[type="checkbox"] {
+      width: auto;
+      margin: 0;
+      cursor: pointer;
+    }
+
+    .multi-select-option.primary {
+      background: #003366;
+    }
+
+    .multi-select-option.primary:hover {
+      background: #004c99;
+    }
+
+    .user-badge {
+      display: inline-block;
+      padding: 0.25rem 0.5rem;
+      margin: 0.125rem;
+      background: #003366;
+      color: white;
+      border-radius: 4px;
+      font-size: 0.85rem;
+    }
+
+    .user-badge.primary {
+      background: #0066cc;
+      font-weight: 600;
+    }
+
     .loading {
       text-align: center;
       padding: 2rem;
@@ -581,14 +691,10 @@
       <span>ירון כיוף - שמאות וייעוץ - ניהול משימות</span>
     </h1>
     <div class="header-actions">
-      <div class="icon-btn" id="notificationsBtn">
-        🔔
-        <div class="badge" id="notificationCount" style="display: none;">0</div>
-      </div>
-      <div class="icon-btn" onclick="window.location.href='admin.html'">
+      <div class="icon-btn" onclick="window.location.href='selection.html'">
         🏠
       </div>
-      <div class="icon-btn" onclick="window.location.href='selection.html'">
+      <div class="icon-btn" onclick="window.location.href='admin.html'">
         👤
       </div>
     </div>
@@ -699,6 +805,21 @@
 
     </div>
 
+    <!-- Activity Feed Section -->
+    <div style="margin-bottom: 2rem;">
+      <div class="section-title" style="cursor: pointer; user-select: none; display: flex; align-items: center; justify-content: space-between;" onclick="toggleActivityFeed()">
+        <span>📋 פעילות אחרונה</span>
+        <span id="activity-toggle-arrow" style="transition: transform 0.2s;">▼</span>
+      </div>
+      <div id="activity-feed-container" style="display: none; margin-top: 1rem;">
+        <div style="background: #1e1e1e; border-radius: 8px; overflow: hidden; max-height: 500px;">
+          <div id="activity-feed" style="overflow-y: auto; max-height: 500px;">
+            <div style="text-align: center; padding: 40px 20px; color: #999;">טוען...</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- Toolbar -->
     <div class="toolbar">
       <button class="btn btn-primary" onclick="openNewTaskModal()">➕ משימה חדשה</button>
@@ -742,6 +863,24 @@
         <button class="close-btn" onclick="closeNewTaskModal()">✕</button>
       </div>
       <form id="newTaskForm" onsubmit="createTask(event)">
+        <!-- Template Section -->
+        <div style="background: #2a2a2a; padding: 1rem; border-radius: 8px; margin-bottom: 1.5rem; border: 1px solid #3a3a3a;">
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem;">
+            <label style="margin: 0; font-weight: 600; color: #ffd700;">📋 תבניות משימה</label>
+            <button type="button" onclick="openTemplateManager()" class="btn btn-secondary" style="padding: 0.4rem 0.8rem; font-size: 0.85rem;">
+              ⚙️ ניהול תבניות
+            </button>
+          </div>
+          <div style="display: flex; gap: 0.5rem;">
+            <select id="templateSelect" onchange="loadTemplate()" style="flex: 1; padding: 0.5rem; background: #1a1a1a; border: 1px solid #3a3a3a; border-radius: 6px; color: white;">
+              <option value="">טען מתבנית קיימת...</option>
+            </select>
+            <button type="button" onclick="clearTemplate()" class="btn btn-secondary" style="padding: 0.5rem 1rem;">
+              🗑️ נקה
+            </button>
+          </div>
+        </div>
+
         <div class="form-group">
           <label for="taskTitle">כותרת המשימה *</label>
           <input type="text" id="taskTitle" required>
@@ -762,10 +901,22 @@
           </select>
         </div>
         <div class="form-group">
-          <label for="assignedTo">הקצה ל- *</label>
-          <select id="assignedTo" required>
-            <option value="">בחר משתמש...</option>
-          </select>
+          <label for="assignedTo">הקצה ל- * (ניתן לבחור מספר משתמשים)</label>
+          <div class="multi-select-container">
+            <div class="multi-select-header" id="multiSelectHeader" onclick="toggleUserDropdown()">
+              <span id="selectedUsersDisplay">בחר משתמשים...</span>
+              <span class="dropdown-arrow">▼</span>
+            </div>
+            <div class="multi-select-dropdown" id="userDropdown" style="display: none;">
+              <div class="multi-select-search">
+                <input type="text" id="userSearch" placeholder="חפש משתמש..." onkeyup="filterUsers()">
+              </div>
+              <div class="multi-select-options" id="userOptions">
+                <!-- Will be populated dynamically -->
+              </div>
+            </div>
+          </div>
+          <input type="hidden" id="assignedTo" required>
         </div>
         <div class="form-group">
           <label for="taskPriority">עדיפות</label>
@@ -778,8 +929,97 @@
         </div>
         <div class="form-group">
           <label for="dueDate">תאריך יעד</label>
-          <input type="date" id="dueDate">
+          <div style="display: flex; gap: 0.5rem; align-items: center;">
+            <input type="date" id="dueDate" style="flex: 1; cursor: pointer;">
+            <button type="button" onclick="setDueDate('today')" class="btn btn-secondary" style="padding: 0.5rem 0.75rem; white-space: nowrap;">
+              היום
+            </button>
+            <button type="button" onclick="setDueDate('tomorrow')" class="btn btn-secondary" style="padding: 0.5rem 0.75rem; white-space: nowrap;">
+              מחר
+            </button>
+            <button type="button" onclick="setDueDate('week')" class="btn btn-secondary" style="padding: 0.5rem 0.75rem; white-space: nowrap;">
+              שבוע
+            </button>
+          </div>
         </div>
+
+        <!-- Recurring Task Options -->
+        <div class="form-group">
+          <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+            <input type="checkbox" id="isRecurring" onchange="toggleRecurringOptions()" style="width: auto; margin: 0;">
+            <span>הפוך למשימה חוזרת</span>
+          </label>
+        </div>
+
+        <div id="recurringOptions" style="display: none; border: 1px solid #4a4a4a; border-radius: 8px; padding: 1rem; margin-bottom: 1rem;">
+          <div class="form-group">
+            <label for="recurrenceType">תדירות</label>
+            <select id="recurrenceType" onchange="updateRecurrenceFields()">
+              <option value="daily">יומי</option>
+              <option value="weekly">שבועי</option>
+              <option value="monthly">חודשי</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="recurrenceInterval">חזור כל</label>
+            <div style="display: flex; gap: 0.5rem; align-items: center;">
+              <input type="number" id="recurrenceInterval" value="1" min="1" max="365" style="width: 80px;">
+              <span id="intervalLabel">ימים</span>
+            </div>
+          </div>
+
+          <!-- Weekly options -->
+          <div class="form-group" id="weeklyOptions" style="display: none;">
+            <label>ימים בשבוע</label>
+            <div style="display: flex; flex-wrap: wrap; gap: 0.5rem;">
+              <label style="display: flex; align-items: center; gap: 0.25rem; cursor: pointer;">
+                <input type="checkbox" value="0" class="day-checkbox" style="width: auto; margin: 0;"> ראשון
+              </label>
+              <label style="display: flex; align-items: center; gap: 0.25rem; cursor: pointer;">
+                <input type="checkbox" value="1" class="day-checkbox" style="width: auto; margin: 0;"> שני
+              </label>
+              <label style="display: flex; align-items: center; gap: 0.25rem; cursor: pointer;">
+                <input type="checkbox" value="2" class="day-checkbox" style="width: auto; margin: 0;"> שלישי
+              </label>
+              <label style="display: flex; align-items: center; gap: 0.25rem; cursor: pointer;">
+                <input type="checkbox" value="3" class="day-checkbox" style="width: auto; margin: 0;"> רביעי
+              </label>
+              <label style="display: flex; align-items: center; gap: 0.25rem; cursor: pointer;">
+                <input type="checkbox" value="4" class="day-checkbox" style="width: auto; margin: 0;"> חמישי
+              </label>
+              <label style="display: flex; align-items: center; gap: 0.25rem; cursor: pointer;">
+                <input type="checkbox" value="5" class="day-checkbox" style="width: auto; margin: 0;"> שישי
+              </label>
+              <label style="display: flex; align-items: center; gap: 0.25rem; cursor: pointer;">
+                <input type="checkbox" value="6" class="day-checkbox" style="width: auto; margin: 0;"> שבת
+              </label>
+            </div>
+          </div>
+
+          <!-- Monthly options -->
+          <div class="form-group" id="monthlyOptions" style="display: none;">
+            <label for="dayOfMonth">יום בחודש</label>
+            <input type="number" id="dayOfMonth" value="1" min="1" max="31">
+          </div>
+
+          <div class="form-group">
+            <label for="recurrenceStartDate">תאריך התחלה</label>
+            <input type="date" id="recurrenceStartDate">
+          </div>
+
+          <div class="form-group">
+            <label for="recurrenceEndDate">תאריך סיום (אופציונלי)</label>
+            <input type="date" id="recurrenceEndDate">
+            <small style="color: #999; font-size: 0.85rem;">השאר ריק למשימה ללא סוף</small>
+          </div>
+
+          <div class="form-group">
+            <label for="templateName">שם תבנית</label>
+            <input type="text" id="templateName" placeholder="לדוגמה: בדיקת מלאי יומית">
+          </div>
+        </div>
+
         <div class="form-group">
           <label for="filingCaseId">מספר תיק (אופציונלי)</label>
           <select id="filingCaseId" onchange="onCaseSelected()">
@@ -816,6 +1056,13 @@
 
           <button type="button" class="btn btn-secondary" onclick="addChildTask()" style="width: 100%; margin-top: 0.5rem;">
             ➕ הוסף משימת ילד נוספת
+          </button>
+        </div>
+
+        <!-- Save as Template Button -->
+        <div style="margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid #3a3a3a;">
+          <button type="button" onclick="saveAsTemplate()" class="btn" style="width: 100%; background: #2a5a2a; border: 1px solid #3a7a3a;">
+            💾 שמור כתבנית
           </button>
         </div>
 
@@ -891,6 +1138,31 @@
     </div>
   </div>
 
+  <!-- Template Manager Modal -->
+  <div id="templateManagerModal" class="modal">
+    <div class="modal-content" style="max-width: 900px;">
+      <div class="modal-header">
+        <h2>⚙️ ניהול תבניות משימה</h2>
+        <button class="close-btn" onclick="closeTemplateManager()">✕</button>
+      </div>
+      <div style="padding: 1.5rem;">
+        <!-- Templates List -->
+        <div id="templatesListContainer" style="margin-bottom: 2rem;">
+          <div style="margin-bottom: 1rem; display: flex; justify-content: space-between; align-items: center;">
+            <h3 style="margin: 0; color: #ffd700;">📋 התבניות שלי</h3>
+            <span id="templateCount" style="color: #999; font-size: 0.9rem;">0 תבניות</span>
+          </div>
+          <div id="templatesList" style="max-height: 400px; overflow-y: auto;">
+            <div style="text-align: center; padding: 2rem; color: #999;">
+              <p>אין תבניות שמורות</p>
+              <p style="font-size: 0.9rem;">צור משימה ולחץ על "💾 שמור כתבנית" כדי להתחיל</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Archive Modal -->
   <div id="archiveModal" class="modal">
     <div class="modal-content" style="max-width: 1200px;">
@@ -922,11 +1194,115 @@
   <script type="module">
     import { supabase } from './lib/supabaseClient.js';
     import { taskNotifications } from './task-notifications.js';
+    import { notificationCenter } from './components/notification-center.js';
+    import { taskActivityFeed } from './components/task-activity-feed.js';
 
     // Global state
     let allTasks = [];
     let allUsers = [];
     let currentUser = null;
+
+    // ============================================================================
+    // RECURRING TASKS SCHEDULER
+    // ============================================================================
+    async function processRecurringTasks() {
+      try {
+        const today = new Date().toISOString().split('T')[0];
+
+        // Find all active recurring tasks that are due
+        const { data: dueTasks, error } = await supabase
+          .from('recurring_tasks')
+          .select('*')
+          .lte('next_run_date', today)
+          .eq('is_active', true)
+          .eq('paused', false);
+
+        if (error) throw error;
+
+        if (!dueTasks || dueTasks.length === 0) {
+          console.log('📅 No recurring tasks due today');
+          return;
+        }
+
+        console.log(`📅 Found ${dueTasks.length} recurring tasks to process`);
+
+        for (const recurringTask of dueTasks) {
+          try {
+            // Create task from template
+            const assignedUsers = recurringTask.assigned_to_users || [];
+            const primaryAssignee = assignedUsers[0];
+
+            if (!primaryAssignee) {
+              console.error('No assigned users for recurring task:', recurringTask.id);
+              continue;
+            }
+
+            const newTask = {
+              title: recurringTask.title,
+              description: recurringTask.description,
+              task_type: recurringTask.task_type,
+              assigned_to: primaryAssignee,
+              assigned_by: recurringTask.assigned_by,
+              priority: recurringTask.priority,
+              due_date: null, // Can be customized
+              status: 'pending',
+              completion_percentage: 0
+            };
+
+            // Insert new task
+            const { data: createdTask, error: taskError } = await supabase
+              .from('tasks')
+              .insert([newTask])
+              .select()
+              .single();
+
+            if (taskError) throw taskError;
+
+            // Create task assignments for all users
+            if (assignedUsers.length > 0) {
+              const assignments = assignedUsers.map((userId, index) => ({
+                task_id: createdTask.id,
+                user_id: userId,
+                is_primary: index === 0,
+                assigned_by: recurringTask.assigned_by
+              }));
+
+              await supabase
+                .from('task_assignments')
+                .insert(assignments);
+            }
+
+            // Calculate next run date using SQL function
+            const { data: nextDate } = await supabase
+              .rpc('calculate_next_run_date', {
+                p_recurrence_type: recurringTask.recurrence_type,
+                p_interval: recurringTask.recurrence_interval,
+                p_current_date: recurringTask.next_run_date,
+                p_days_of_week: recurringTask.days_of_week || [],
+                p_day_of_month: recurringTask.day_of_month
+              });
+
+            // Update recurring task with new next_run_date
+            await supabase
+              .from('recurring_tasks')
+              .update({
+                next_run_date: nextDate,
+                last_run_date: new Date().toISOString(),
+                total_tasks_created: (recurringTask.total_tasks_created || 0) + 1
+              })
+              .eq('id', recurringTask.id);
+
+            console.log(`✅ Created task from recurring template: ${recurringTask.template_name}`);
+
+          } catch (taskError) {
+            console.error(`Error processing recurring task ${recurringTask.id}:`, taskError);
+          }
+        }
+
+      } catch (error) {
+        console.error('Error in recurring tasks scheduler:', error);
+      }
+    }
 
     // Initialize
     async function init() {
@@ -974,6 +1350,15 @@
         // Set up real-time subscriptions
         setupRealtime();
 
+        // Initialize activity feed
+        await taskActivityFeed.init('activity-feed');
+
+        // Load task templates
+        await loadTaskTemplates();
+
+        // Process recurring tasks (check for due tasks and create them)
+        await processRecurringTasks();
+
       } catch (error) {
         console.error('Initialization error:', error);
         showError('שגיאה בטעינת הנתונים');
@@ -983,14 +1368,21 @@
     // Load all users for assignment dropdown
     async function loadUsers() {
       try {
+        // Load users with their organization, exclude Evalix org
         const { data, error } = await supabase
           .from('profiles')
-          .select('user_id, name, role')
+          .select('user_id, name, role, org_id, orgs(name)')
           .order('name');
 
         if (error) throw error;
 
-        allUsers = data || [];
+        // Filter out Evalix organization users (developer org)
+        allUsers = (data || []).filter(user => {
+          const orgName = user.orgs?.name;
+          return orgName !== 'Evalix';
+        });
+
+        console.log(`Loaded ${allUsers.length} users (excluding Evalix org)`);
         populateUserDropdown();
 
       } catch (error) {
@@ -998,17 +1390,141 @@
       }
     }
 
+    // Track selected users for multi-select
+    let selectedUsers = [];
+
     function populateUserDropdown() {
-      const select = document.getElementById('assignedTo');
-      select.innerHTML = '<option value="">בחר משתמש...</option>';
+      const container = document.getElementById('userOptions');
+      if (!container) return;
+
+      container.innerHTML = '';
 
       allUsers.forEach(user => {
-        const option = document.createElement('option');
-        option.value = user.user_id;
-        option.textContent = `${user.name} (${getRoleLabel(user.role)})`;
-        select.appendChild(option);
+        const option = document.createElement('div');
+        option.className = 'multi-select-option';
+        option.innerHTML = `
+          <input type="checkbox"
+                 id="user_${user.user_id}"
+                 value="${user.user_id}"
+                 onchange="updateUserSelection('${user.user_id}')"
+                 ${selectedUsers.includes(user.user_id) ? 'checked' : ''}>
+          <label for="user_${user.user_id}" style="cursor: pointer; flex: 1;">
+            ${user.name} (${getRoleLabel(user.role)})
+          </label>
+        `;
+        container.appendChild(option);
       });
     }
+
+    // Quick date setter for due date
+    window.setDueDate = function(option) {
+      const dateInput = document.getElementById('dueDate');
+      const today = new Date();
+      let targetDate;
+
+      switch(option) {
+        case 'today':
+          targetDate = today;
+          break;
+        case 'tomorrow':
+          targetDate = new Date(today);
+          targetDate.setDate(today.getDate() + 1);
+          break;
+        case 'week':
+          targetDate = new Date(today);
+          targetDate.setDate(today.getDate() + 7);
+          break;
+        default:
+          targetDate = today;
+      }
+
+      // Format date as YYYY-MM-DD for input[type="date"]
+      const year = targetDate.getFullYear();
+      const month = String(targetDate.getMonth() + 1).padStart(2, '0');
+      const day = String(targetDate.getDate()).padStart(2, '0');
+      dateInput.value = `${year}-${month}-${day}`;
+    };
+
+    window.toggleUserDropdown = function() {
+      const dropdown = document.getElementById('userDropdown');
+      const header = document.getElementById('multiSelectHeader');
+
+      if (dropdown.style.display === 'none') {
+        dropdown.style.display = 'block';
+        header.classList.add('open');
+      } else {
+        dropdown.style.display = 'none';
+        header.classList.remove('open');
+      }
+    };
+
+    window.updateUserSelection = function(userId) {
+      const checkbox = document.getElementById(`user_${userId}`);
+
+      if (checkbox.checked) {
+        if (!selectedUsers.includes(userId)) {
+          selectedUsers.push(userId);
+        }
+      } else {
+        selectedUsers = selectedUsers.filter(id => id !== userId);
+      }
+
+      updateSelectedUsersDisplay();
+      updateHiddenInput();
+    };
+
+    function updateSelectedUsersDisplay() {
+      const display = document.getElementById('selectedUsersDisplay');
+
+      if (selectedUsers.length === 0) {
+        display.textContent = 'בחר משתמשים...';
+        return;
+      }
+
+      const selectedNames = selectedUsers.map(userId => {
+        const user = allUsers.find(u => u.user_id === userId);
+        return user ? user.name : '';
+      }).filter(name => name);
+
+      if (selectedNames.length === 1) {
+        display.textContent = selectedNames[0];
+      } else if (selectedNames.length === 2) {
+        display.textContent = selectedNames.join(' ו-');
+      } else {
+        display.textContent = `${selectedNames.length} משתמשים נבחרו`;
+      }
+    }
+
+    function updateHiddenInput() {
+      const hiddenInput = document.getElementById('assignedTo');
+      // Store first selected user as primary for backwards compatibility
+      hiddenInput.value = selectedUsers[0] || '';
+    }
+
+    window.filterUsers = function() {
+      const searchTerm = document.getElementById('userSearch').value.toLowerCase();
+      const options = document.querySelectorAll('.multi-select-option');
+
+      options.forEach(option => {
+        const text = option.textContent.toLowerCase();
+        if (text.includes(searchTerm)) {
+          option.style.display = 'flex';
+        } else {
+          option.style.display = 'none';
+        }
+      });
+    };
+
+    // Close dropdown when clicking outside
+    document.addEventListener('click', function(event) {
+      const container = document.querySelector('.multi-select-container');
+      const dropdown = document.getElementById('userDropdown');
+
+      if (container && !container.contains(event.target)) {
+        dropdown.style.display = 'none';
+        document.getElementById('multiSelectHeader')?.classList.remove('open');
+      }
+    });
 
     function getRoleLabel(role) {
       const labels = {
@@ -1019,6 +1535,103 @@
         viewer: 'צופה'
       };
       return labels[role] || role;
+    }
+
+    // ============================================================================
+    // RECURRING TASKS FUNCTIONS
+    // ============================================================================
+
+    window.toggleRecurringOptions = function() {
+      const isChecked = document.getElementById('isRecurring').checked;
+      const options = document.getElementById('recurringOptions');
+
+      if (isChecked) {
+        options.style.display = 'block';
+        // Set default start date to today
+        document.getElementById('recurrenceStartDate').value = new Date().toISOString().split('T')[0];
+        updateRecurrenceFields();
+      } else {
+        options.style.display = 'none';
+      }
+    };
+
+    window.updateRecurrenceFields = function() {
+      const type = document.getElementById('recurrenceType').value;
+      const weeklyOptions = document.getElementById('weeklyOptions');
+      const monthlyOptions = document.getElementById('monthlyOptions');
+      const intervalLabel = document.getElementById('intervalLabel');
+
+      // Update interval label
+      const labels = {
+        daily: 'ימים',
+        weekly: 'שבועות',
+        monthly: 'חודשים'
+      };
+      intervalLabel.textContent = labels[type] || 'ימים';
+
+      // Show/hide conditional fields
+      weeklyOptions.style.display = type === 'weekly' ? 'block' : 'none';
+      monthlyOptions.style.display = type === 'monthly' ? 'block' : 'none';
+
+      // Set defaults for weekly (Mon, Wed, Fri)
+      if (type === 'weekly') {
+        const checkboxes = document.querySelectorAll('.day-checkbox');
+        checkboxes.forEach((cb, i) => {
+          cb.checked = [1, 3, 5].includes(parseInt(cb.value)); // Mon, Wed, Fri
+        });
+      }
+    };
+
+    async function createRecurringTask(taskData, recurringData) {
+      try {
+        // Get selected days of week for weekly recurrence
+        let daysOfWeek = [];
+        if (recurringData.recurrence_type === 'weekly') {
+          const checkboxes = document.querySelectorAll('.day-checkbox:checked');
+          daysOfWeek = Array.from(checkboxes).map(cb => parseInt(cb.value));
+
+          if (daysOfWeek.length === 0) {
+            alert('אנא בחר לפחות יום אחד בשבוע');
+            return false;
+          }
+        }
+
+        // Prepare recurring task data
+        const recurringTask = {
+          template_name: recurringData.template_name,
+          title: taskData.title,
+          description: taskData.description,
+          task_type: taskData.task_type,
+          priority: taskData.priority,
+          assigned_to_users: selectedUsers.length > 0 ? selectedUsers : [taskData.assigned_to],
+          assigned_by: currentUser.user_id,
+          recurrence_type: recurringData.recurrence_type,
+          recurrence_interval: parseInt(recurringData.recurrence_interval),
+          days_of_week: daysOfWeek,
+          day_of_month: recurringData.day_of_month ? parseInt(recurringData.day_of_month) : null,
+          start_date: recurringData.start_date,
+          end_date: recurringData.end_date || null,
+          next_run_date: recurringData.start_date,
+          is_active: true,
+          created_by: currentUser.user_id
+        };
+
+        // Insert into recurring_tasks table
+        const { data, error } = await supabase
+          .from('recurring_tasks')
+          .insert([recurringTask])
+          .select()
+          .single();
+
+        if (error) throw error;
+
+        console.log('Recurring task created:', data);
+        return data;
+
+      } catch (error) {
+        console.error('Error creating recurring task:', error);
+        throw error;
+      }
     }
 
     // Load cases for dropdown
@@ -1105,6 +1718,234 @@
         manualInput.value = '';
       }
     };
+
+    // Toggle activity feed visibility
+    window.toggleActivityFeed = function() {
+      const container = document.getElementById('activity-feed-container');
+      const arrow = document.getElementById('activity-toggle-arrow');
+
+      if (container.style.display === 'none') {
+        container.style.display = 'block';
+        arrow.style.transform = 'rotate(180deg)';
+      } else {
+        container.style.display = 'none';
+        arrow.style.transform = 'rotate(0deg)';
+      }
+    };
+
+    // ============================================================================
+    // TASK TEMPLATES FUNCTIONS
+    // ============================================================================
+
+    let allTemplates = [];
+
+    // Load all templates for current user
+    async function loadTaskTemplates() {
+      try {
+        const { data, error } = await supabase
+          .from('task_templates')
+          .select('*')
+          .or(`created_by.eq.${currentUser.user_id},is_public.eq.true`)
+          .order('usage_count', { ascending: false });
+
+        if (error) throw error;
+
+        allTemplates = data || [];
+        console.log(`Loaded ${allTemplates.length} task templates`);
+
+        // Populate template select dropdown
+        const templateSelect = document.getElementById('templateSelect');
+        templateSelect.innerHTML = '<option value="">טען מתבנית קיימת...</option>';
+
+        allTemplates.forEach(template => {
+          const option = document.createElement('option');
+          option.value = template.id;
+          option.textContent = `${template.template_name} ${template.is_public ? '(ציבורי)' : ''}`;
+          templateSelect.appendChild(option);
+        });
+
+        return allTemplates;
+      } catch (error) {
+        console.error('Error loading templates:', error);
+        return [];
+      }
+    }
+
+    // Load selected template into form
+    window.loadTemplate = async function() {
+      const templateId = document.getElementById('templateSelect').value;
+      if (!templateId) return;
+
+      const template = allTemplates.find(t => t.id === templateId);
+      if (!template) return;
+
+      // Fill form with template values
+      document.getElementById('taskTitle').value = template.title || '';
+      document.getElementById('taskDescription').value = template.description || '';
+      document.getElementById('taskType').value = template.task_type || 'custom';
+      document.getElementById('taskPriority').value = template.priority || 'medium';
+
+      // Increment usage count
+      try {
+        await supabase.rpc('increment_template_usage', { p_template_id: templateId });
+        console.log('✅ Template usage count incremented');
+      } catch (error) {
+        console.error('Error incrementing template usage:', error);
+      }
+
+      alert(`✅ תבנית "${template.template_name}" נטענה בהצלחה!`);
+    };
+
+    // Clear template selection and form
+    window.clearTemplate = function() {
+      document.getElementById('templateSelect').value = '';
+      document.getElementById('taskTitle').value = '';
+      document.getElementById('taskDescription').value = '';
+      document.getElementById('taskType').value = 'custom';
+      document.getElementById('taskPriority').value = 'medium';
+    };
+
+    // Save current form as template
+    window.saveAsTemplate = async function() {
+      const templateName = prompt('הזן שם לתבנית:');
+      if (!templateName) return;
+
+      const title = document.getElementById('taskTitle').value;
+      if (!title) {
+        alert('אנא הזן כותרת למשימה לפני שמירה כתבנית');
+        return;
+      }
+
+      const category = prompt('קטגוריה (אופציונלי):');
+
+      const templateData = {
+        template_name: templateName,
+        category: category || null,
+        title: document.getElementById('taskTitle').value,
+        description: document.getElementById('taskDescription').value,
+        task_type: document.getElementById('taskType').value,
+        priority: document.getElementById('taskPriority').value,
+        created_by: currentUser.user_id,
+        is_public: false
+      };
+
+      try {
+        const { data, error } = await supabase
+          .from('task_templates')
+          .insert([templateData])
+          .select()
+          .single();
+
+        if (error) {
+          if (error.code === '23505') {
+            alert('❌ תבנית בשם זה כבר קיימת. אנא בחר שם אחר.');
+          } else {
+            throw error;
+          }
+          return;
+        }
+
+        alert(`✅ תבנית "${templateName}" נשמרה בהצלחה!`);
+        await loadTaskTemplates(); // Refresh templates list
+      } catch (error) {
+        console.error('Error saving template:', error);
+        alert('❌ שגיאה בשמירת התבנית');
+      }
+    };
+
+    // Open template manager modal
+    window.openTemplateManager = async function() {
+      document.getElementById('templateManagerModal').style.display = 'flex';
+      await renderTemplatesList();
+    };
+
+    // Close template manager modal
+    window.closeTemplateManager = function() {
+      document.getElementById('templateManagerModal').style.display = 'none';
+    };
+
+    // Render templates list in manager
+    async function renderTemplatesList() {
+      await loadTaskTemplates(); // Refresh data
+
+      const container = document.getElementById('templatesList');
+      const countSpan = document.getElementById('templateCount');
+
+      countSpan.textContent = `${allTemplates.length} תבניות`;
+
+      if (allTemplates.length === 0) {
+        container.innerHTML = `
+          <div style="text-align: center; padding: 2rem; color: #999;">
+            <p>אין תבניות שמורות</p>
+            <p style="font-size: 0.9rem;">צור משימה ולחץ על "💾 שמור כתבנית" כדי להתחיל</p>
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = allTemplates.map(template => `
+        <div style="background: #2a2a2a; border: 1px solid #3a3a3a; border-radius: 8px; padding: 1rem; margin-bottom: 0.75rem;">
+          <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 0.5rem;">
+            <div style="flex: 1;">
+              <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.25rem;">
+                <h4 style="margin: 0; color: #ffd700;">${template.template_name}</h4>
+                ${template.is_public ? '<span style="font-size: 0.75rem; background: #3a5a7a; padding: 0.15rem 0.4rem; border-radius: 4px;">ציבורי</span>' : ''}
+                ${template.category ? `<span style="font-size: 0.75rem; background: #4a4a4a; padding: 0.15rem 0.4rem; border-radius: 4px;">${template.category}</span>` : ''}
+              </div>
+              <p style="margin: 0.5rem 0; color: #ccc; font-size: 0.9rem;"><strong>כותרת:</strong> ${template.title}</p>
+              ${template.description ? `<p style="margin: 0.5rem 0; color: #999; font-size: 0.85rem;">${template.description}</p>` : ''}
+              <div style="display: flex; gap: 1rem; margin-top: 0.5rem; font-size: 0.85rem; color: #999;">
+                <span>📊 <strong>סוג:</strong> ${getTaskTypeLabel(template.task_type)}</span>
+                <span>⚡ <strong>עדיפות:</strong> ${getPriorityLabel(template.priority)}</span>
+                <span>📈 <strong>שימושים:</strong> ${template.usage_count || 0}</span>
+              </div>
+            </div>
+            <div style="display: flex; gap: 0.5rem;">
+              <button onclick="deleteTemplate('${template.id}')" class="btn btn-danger" style="padding: 0.4rem 0.8rem; font-size: 0.85rem;">
+                🗑️ מחק
+              </button>
+            </div>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    // Delete template
+    window.deleteTemplate = async function(templateId) {
+      const template = allTemplates.find(t => t.id === templateId);
+      if (!template) return;
+
+      if (!confirm(`האם למחוק את התבנית "${template.template_name}"?`)) return;
+
+      try {
+        const { error } = await supabase
+          .from('task_templates')
+          .delete()
+          .eq('id', templateId);
+
+        if (error) throw error;
+
+        alert('✅ התבנית נמחקה בהצלחה');
+        await renderTemplatesList();
+        await loadTaskTemplates(); // Refresh dropdown
+      } catch (error) {
+        console.error('Error deleting template:', error);
+        alert('❌ שגיאה במחיקת התבנית');
+      }
+    };
+
+    // Helper: Get task type label for templates
+    function getTaskTypeLabel(type) {
+      const labels = {
+        'custom': 'כללית',
+        'case_action': 'פעולה בתיק',
+        'document_request': 'בקשת מסמך',
+        'review_request': 'בקשת סקירה',
+        'data_correction': 'תיקון נתונים',
+        'follow_up': 'מעקב'
+      };
+      return labels[type] || type;
+    }
 
     // Load tasks
     async function loadTasks(includeArchived = false) {
@@ -1412,6 +2253,11 @@
       document.getElementById('childTasksSection').style.display = 'none';
       document.getElementById('childTasksList').innerHTML = '';
       childTaskCounter = 0;
+
+      // Reset multi-select users
+      selectedUsers = [];
+      updateSelectedUsersDisplay();
+      populateUserDropdown(); // Refresh checkboxes
     };
 
     // Edit Task Functions
@@ -1651,6 +2497,9 @@
       event.preventDefault();
 
       try {
+        // Check if this is a recurring task
+        const isRecurring = document.getElementById('isRecurring').checked;
+
         // Get case_id (UUID) from the selected option
         const caseSelect = document.getElementById('filingCaseId');
         const selectedCaseOption = caseSelect.options[caseSelect.selectedIndex];
@@ -1678,6 +2527,36 @@
           status: 'pending',
           completion_percentage: 0
         };
+
+        // Handle recurring task creation
+        if (isRecurring) {
+          const templateName = document.getElementById('templateName').value.trim();
+          if (!templateName) {
+            alert('אנא הזן שם תבנית למשימה חוזרת');
+            return;
+          }
+
+          const recurringData = {
+            template_name: templateName,
+            recurrence_type: document.getElementById('recurrenceType').value,
+            recurrence_interval: document.getElementById('recurrenceInterval').value,
+            day_of_month: document.getElementById('dayOfMonth').value,
+            start_date: document.getElementById('recurrenceStartDate').value,
+            end_date: document.getElementById('recurrenceEndDate').value
+          };
+
+          if (!recurringData.start_date) {
+            alert('אנא בחר תאריך התחלה');
+            return;
+          }
+
+          await createRecurringTask(parentFormData, recurringData);
+
+          alert('✅ משימה חוזרת נוצרה בהצלחה! המערכת תיצור אוטומטית משימות חדשות לפי התדירות שנבחרה.');
+          closeNewTaskModal();
+          await loadTasks();
+          return;
+        }
 
         // Check if task has child tasks
         const hasChildTasks = document.getElementById('hasChildTasks').checked;
@@ -1799,14 +2678,46 @@
 
           console.log('Task created:', data);
 
-          // Add to pending notifications queue (won't send immediately)
-          if (window.taskNotifications && data.assigned_to) {
-            const assignedUser = allUsers.find(u => u.user_id === data.assigned_to);
-            window.taskNotifications.addToPendingNotifications(data, assignedUser);
-            updateNotificationBadge();
+          // Create task assignments for all selected users
+          if (selectedUsers.length > 0) {
+            const assignments = selectedUsers.map((userId, index) => ({
+              task_id: data.id,
+              user_id: userId,
+              is_primary: index === 0, // First user is primary
+              assigned_by: currentUser.user_id,
+              assigned_at: new Date().toISOString()
+            }));
+
+            const { error: assignmentError } = await supabase
+              .from('task_assignments')
+              .insert(assignments);
+
+            if (assignmentError) {
+              console.error('Error creating task assignments:', assignmentError);
+              // Don't fail the whole operation, just log the error
+            }
+
+            // Add to pending notifications for all assigned users
+            if (window.taskNotifications) {
+              selectedUsers.forEach(userId => {
+                const assignedUser = allUsers.find(u => u.user_id === userId);
+                if (assignedUser) {
+                  window.taskNotifications.addToPendingNotifications(data, assignedUser);
+                }
+              });
+              updateNotificationBadge();
+            }
+          } else {
+            // Fallback: if no users selected via multi-select, use single assignment
+            if (window.taskNotifications && data.assigned_to) {
+              const assignedUser = allUsers.find(u => u.user_id === data.assigned_to);
+              window.taskNotifications.addToPendingNotifications(data, assignedUser);
+              updateNotificationBadge();
+            }
           }
 
-          alert('✅ המשימה נוצרה בהצלחה!');
+          const userCount = selectedUsers.length || 1;
+          alert(`✅ המשימה נוצרה בהצלחה והוקצתה ל-${userCount} ${userCount === 1 ? 'משתמש' : 'משתמשים'}!`);
         }
 
         closeNewTaskModal();
