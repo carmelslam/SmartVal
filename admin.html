@@ -1850,6 +1850,7 @@
               <thead>
                 <tr style="background: #333; border-bottom: 2px solid #ff6b35;">
                   <th style="padding: 12px; text-align: right; color: #ff6b35;">מספר רכב</th>
+                  <th style="padding: 12px; text-align: right; color: #ff6b35;">בעל הרכב</th>
                   <th style="padding: 12px; text-align: right; color: #ff6b35;">בעל התיק</th>
                   <th style="padding: 12px; text-align: right; color: #ff6b35;">תפקיד</th>
                   <th style="padding: 12px; text-align: right; color: #ff6b35;">משוייך ל</th>
@@ -1858,14 +1859,26 @@
                 </tr>
               </thead>
               <tbody>`;
-        
+
         cases.forEach(caseItem => {
+          // Create dropdown options for assigned_to
+          const assignedOptions = allUsers.filter(u => ['assessor', 'admin', 'developer'].includes(u.role))
+            .map(u => `<option value="${u.user_id}" ${caseItem.assigned_to === u.user_id ? 'selected' : ''}>${u.name} (${roleNames[u.role]})</option>`)
+            .join('');
+
           html += `
                 <tr style="border-bottom: 1px solid #444;">
                   <td style="padding: 10px; color: #e0e0e0; font-weight: bold;">${caseItem.plate || 'לא ידוע'}</td>
+                  <td style="padding: 10px; color: #94a3b8;">${caseItem.owner_name || 'לא זמין'}</td>
                   <td style="padding: 10px; color: #e0e0e0;">${caseItem.owner?.name || 'לא ידוע'}</td>
                   <td style="padding: 10px; color: #e0e0e0;">${roleNames[caseItem.owner?.role] || 'לא ידוע'}</td>
-                  <td style="padding: 10px; color: ${caseItem.assignedUser ? '#22c55e' : '#6b7280'};">${caseItem.assignedUser?.name || 'לא משוייך'}</td>
+                  <td style="padding: 10px;">
+                    <select onchange="updateAssignedToFromAdmin('${caseItem.plate}', this.value)"
+                            style="padding: 6px 10px; background: #3a3a3a; color: #e0e0e0; border: 1px solid #555; border-radius: 4px; cursor: pointer; width: 100%;">
+                      <option value="">לא משוייך</option>
+                      ${assignedOptions}
+                    </select>
+                  </td>
                   <td style="padding: 10px; color: #e0e0e0;">${new Date(caseItem.created_at).toLocaleDateString('he-IL')}</td>
                   <td style="padding: 10px; text-align: center;">
                     <button onclick="showCollaboratorModal('${caseItem.plate}', '${caseItem.id}', '${caseItem.created_by}', '${caseItem.owner?.org_id || currentUserOrgId}')"
@@ -1878,7 +1891,7 @@
                             style="padding: 6px 12px; background: #ef4444; color: white; border: none; border-radius: 4px; cursor: pointer;"
                             onmouseover="this.style.background='#dc2626'"
                             onmouseout="this.style.background='#ef4444'">
-                      🔄 העבר בעלות
+                      🔄 שיוך מהיר
                     </button>
                   </td>
                 </tr>`;
@@ -2224,7 +2237,44 @@
       document.getElementById('transferModal').style.display = 'none';
       window.currentTransferPlate = null;
     };
-    
+
+    // Update assigned_to directly from admin table dropdown
+    window.updateAssignedToFromAdmin = async function(plate, assignedToUserId) {
+      try {
+        const { supabase } = await import('./lib/supabaseClient.js');
+
+        console.log(`🔄 Admin: Updating assigned_to for ${plate} to:`, assignedToUserId || 'null');
+
+        const { error } = await supabase
+          .from('cases')
+          .update({
+            assigned_to: assignedToUserId || null,
+            updated_at: new Date().toISOString()
+          })
+          .eq('plate', plate);
+
+        if (error) {
+          console.error('Error updating assigned_to from admin:', error);
+          alert('❌ שגיאה בעדכון שיוך: ' + error.message);
+          return;
+        }
+
+        console.log(`✅ Admin: assigned_to updated successfully for ${plate}`);
+
+        // Show success feedback
+        const dropdown = event.target;
+        const originalBg = dropdown.style.background;
+        dropdown.style.background = '#22c55e';
+        setTimeout(() => {
+          dropdown.style.background = originalBg;
+        }, 1000);
+
+      } catch (err) {
+        console.error('Error in updateAssignedToFromAdmin:', err);
+        alert('❌ שגיאה בעדכון שיוך');
+      }
+    };
+
     // ============================================================================
     // END OF CASE TRANSFER FUNCTION
     // ============================================================================

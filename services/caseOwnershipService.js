@@ -147,11 +147,12 @@ export const caseOwnershipService = {
 
   /**
    * Transfer case ownership (admin/developer only)
+   * This assigns the case to a new assessor (updates assigned_to)
    * @param {string} plateNumber - Case plate number
-   * @param {string} newOwnerId - New owner user ID
+   * @param {string} newAssigneeId - New assignee user ID
    * @returns {Promise<{success: boolean, error?: string}>}
    */
-  async transferCase(plateNumber, newOwnerId) {
+  async transferCase(plateNumber, newAssigneeId) {
     try {
       if (!this.isAdminOrDev()) {
         return { success: false, error: 'רק מנהל או מפתח יכול להעביר תיק' };
@@ -160,10 +161,11 @@ export const caseOwnershipService = {
       const normalizedPlate = plateNumber.replace(/[^0-9]/g, '');
       const { userId } = this.getCurrentUser();
 
+      // Update assigned_to (assignment), NOT created_by (owner)
       const { error } = await supabase
         .from('cases')
-        .update({ 
-          created_by: newOwnerId,
+        .update({
+          assigned_to: newAssigneeId,
           updated_by: userId,
           updated_at: new Date().toISOString()
         })
@@ -174,7 +176,7 @@ export const caseOwnershipService = {
         return { success: false, error: error.message };
       }
 
-      console.log(`✅ Case ${plateNumber} transferred to user ${newOwnerId}`);
+      console.log(`✅ Case ${plateNumber} assigned to user ${newAssigneeId}`);
       return { success: true };
 
     } catch (error) {
