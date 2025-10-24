@@ -555,7 +555,7 @@
 
   <script type="module">
     import { supabase } from './lib/supabaseClient.js';
-    import { NotificationManager } from './task-notifications.js';
+    import { taskNotifications } from './task-notifications.js';
 
     // Get task ID from URL
     const urlParams = new URLSearchParams(window.location.search);
@@ -591,7 +591,7 @@
         currentUser = user;
 
         // Initialize notification manager
-        notificationManager = new NotificationManager();
+        notificationManager = taskNotifications;
 
         // Load profiles
         const { data: profiles, error: profilesError } = await supabase
@@ -984,12 +984,8 @@
 
         // Send notification
         if (notificationManager && currentTask) {
-          await notificationManager.sendNotification({
-            type: 'message',
-            task: currentTask,
-            assignedToProfile: currentTask.assigned_to_profile,
-            messagePreview: message.substring(0, 100)
-          });
+          const senderProfile = profileMap[currentUser.user_id];
+          await notificationManager.notifyNewTaskMessage(currentTask, message, senderProfile);
         }
 
         // Messages will auto-refresh via subscription
@@ -1049,12 +1045,13 @@
 
         // Send notification
         if (notificationManager && currentTask) {
-          await notificationManager.sendNotification({
-            type: 'status_changed',
-            task: { ...currentTask, status: newStatus },
-            assignedToProfile: currentTask.assigned_to_profile,
-            oldStatus: oldStatus
-          });
+          const changedByProfile = profileMap[currentUser.user_id];
+          await notificationManager.notifyTaskStatusChanged(
+            { ...currentTask, status: newStatus },
+            oldStatus,
+            newStatus,
+            changedByProfile
+          );
         }
 
       } catch (error) {
@@ -1341,13 +1338,12 @@
 
         if (taskError) throw taskError;
 
+        // Add profile data for notification
+        newTask.assigned_by_profile = profileMap[currentUser.user_id];
+
         // Send notification
         if (notificationManager) {
-          await notificationManager.sendNotification({
-            type: 'assigned',
-            task: newTask,
-            assignedToProfile: profileMap[assignedTo]
-          });
+          await notificationManager.notifyTaskAssigned(newTask, profileMap[assignedTo]);
         }
 
         // Log to progress history
