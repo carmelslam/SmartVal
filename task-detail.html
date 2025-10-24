@@ -616,10 +616,16 @@
             schema: 'public',
             table: 'task_messages',
             filter: `task_id=eq.${taskId}`
-          }, () => {
+          }, (payload) => {
+            console.log('📨 Message change detected:', payload);
             loadMessages();
           })
-          .subscribe();
+          .subscribe((status) => {
+            console.log('📨 Message subscription status:', status);
+            if (status === 'SUBSCRIBED') {
+              console.log('✅ Successfully subscribed to task messages');
+            }
+          });
 
         // Set up real-time subscription for task updates
         const taskSubscription = supabase
@@ -629,10 +635,13 @@
             schema: 'public',
             table: 'tasks',
             filter: `id=eq.${taskId}`
-          }, () => {
+          }, (payload) => {
+            console.log('📋 Task change detected:', payload);
             refreshTask();
           })
-          .subscribe();
+          .subscribe((status) => {
+            console.log('📋 Task subscription status:', status);
+          });
 
         // Set up real-time subscription for attachments
         const attachmentSubscription = supabase
@@ -642,10 +651,13 @@
             schema: 'public',
             table: 'task_attachments',
             filter: `task_id=eq.${taskId}`
-          }, () => {
+          }, (payload) => {
+            console.log('📎 Attachment change detected:', payload);
             loadAttachments();
           })
-          .subscribe();
+          .subscribe((status) => {
+            console.log('📎 Attachment subscription status:', status);
+          });
 
       } catch (error) {
         console.error('Error loading task:', error);
@@ -989,7 +1001,8 @@
           await notificationManager.notifyNewTaskMessage(currentTask, message, senderProfile);
         }
 
-        // Messages will auto-refresh via subscription
+        // Manually refresh messages (fallback if real-time not enabled)
+        await loadMessages();
 
       } catch (error) {
         console.error('Error sending message:', error);
