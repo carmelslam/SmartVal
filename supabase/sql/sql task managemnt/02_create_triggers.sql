@@ -50,7 +50,7 @@ BEGIN
     FROM public.tasks
     WHERE thread_id = v_thread_id
       AND status != 'cancelled'
-      AND is_deleted IS NOT TRUE;  -- Assuming soft delete if column exists
+      AND (archived IS NULL OR archived = false);  -- Exclude archived tasks
 
     -- Calculate percentage
     IF v_total > 0 THEN
