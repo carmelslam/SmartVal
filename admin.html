@@ -4982,14 +4982,25 @@
       return true;
     };
     
-    window.validatePlateNumber = function(input) {
+    window.validatePlateNumber = function(input, source) {
+      // Handle both DOM input elements and string values
+      if (typeof input === 'string') {
+        // Called from helper.js with string value - delegate to helper's validation
+        if (window.helperValidatePlateNumber) {
+          return window.helperValidatePlateNumber(input, source);
+        }
+        // Fallback: simple validation
+        return { valid: true, action: 'accept' };
+      }
+
+      // DOM input element validation (original behavior)
       const value = input.value.trim();
       const warningDiv = getOrCreateWarningDiv(input, 'plate-warning');
-      
+
       // Clear previous styling
       input.style.borderColor = '';
       warningDiv.innerHTML = '';
-      
+
       if (!value) {
         input.style.borderColor = '#dc3545';
         warningDiv.innerHTML = '<small style="color: #dc3545;">❌ מספר רכב הוא שדה חובה</small>';
