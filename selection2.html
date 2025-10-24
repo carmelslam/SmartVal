@@ -1389,15 +1389,33 @@ window.verifyAdminAccess = verifyAdminAccess;
     loadAssessors();
   });
 
-  // Load assessors list for assigned_to dropdown
+  // Load assessors list for assigned_to dropdown (filtered by current user's org)
   async function loadAssessors() {
     try {
       const { supabase } = await import('./lib/supabaseClient.js');
 
-      // Use user_id instead of id (profiles table uses user_id as primary key)
+      // Get current user's org from auth
+      const authData = sessionStorage.getItem('auth');
+      if (!authData) {
+        console.error('No auth data found');
+        return;
+      }
+
+      const auth = JSON.parse(authData);
+      const userOrgId = auth?.profile?.org_id;
+
+      if (!userOrgId) {
+        console.error('No org_id found for current user');
+        return;
+      }
+
+      console.log('📋 Loading assessors for org:', userOrgId);
+
+      // Use user_id instead of id, filter by org_id
       const { data, error } = await supabase
         .from('profiles')
-        .select('user_id, name, role')
+        .select('user_id, name, role, org_id')
+        .eq('org_id', userOrgId)
         .or('role.eq.assessor,role.eq.admin,role.eq.developer')
         .order('name');
 
@@ -1417,9 +1435,9 @@ window.verifyAdminAccess = verifyAdminAccess;
           option.textContent = `${assessor.name} (${assessor.role === 'assessor' ? 'שמאי' : assessor.role === 'admin' ? 'מנהל' : 'מפתח'})`;
           dropdown.appendChild(option);
         });
-        console.log('✅ Loaded', data.length, 'assessors');
+        console.log('✅ Loaded', data.length, 'assessors from org', userOrgId);
       } else {
-        console.log('⚠️ No assessors found');
+        console.log('⚠️ No assessors found in org', userOrgId);
       }
     } catch (err) {
       console.error('Error in loadAssessors:', err);
@@ -1603,9 +1621,28 @@ window.verifyAdminAccess = verifyAdminAccess;
       const assignedTo = dbCase?.assigned_to || caseData.assigned_to || caseData.meta?.assigned_to;
       const assignedDropdown = document.getElementById('assignedToDropdown');
       console.log('👨‍💼 Assigned to from DB:', dbCase?.assigned_to, 'helper.meta.assigned_to:', caseData.meta?.assigned_to, 'final:', assignedTo);
+
       if (assignedDropdown && assignedTo) {
-        assignedDropdown.value = assignedTo;
-        console.log('👨‍💼 Set assigned to dropdown:', assignedTo);
+        // Check if option exists in dropdown
+        const optionExists = Array.from(assignedDropdown.options).some(o => o.value === assignedTo);
+
+        if (optionExists) {
+          assignedDropdown.value = assignedTo;
+          console.log('👨‍💼 Set assigned to dropdown:', assignedTo);
+        } else {
+          console.warn('⚠️ Assigned user not in dropdown options yet, retrying in 500ms...');
+          // Retry after a delay to allow loadAssessors to complete
+          setTimeout(() => {
+            const retryOptionExists = Array.from(assignedDropdown.options).some(o => o.value === assignedTo);
+            if (retryOptionExists) {
+              assignedDropdown.value = assignedTo;
+              console.log('✅ Set assigned to dropdown on retry:', assignedTo);
+            } else {
+              console.error('❌ Assigned user still not in dropdown options:', assignedTo);
+              console.log('Available options:', Array.from(assignedDropdown.options).map(o => o.value));
+            }
+          }, 500);
+        }
       } else {
         console.log('👨‍💼 No assigned_to value or dropdown not found');
       }

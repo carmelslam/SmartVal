@@ -1844,6 +1844,9 @@
           assistant: 'עוזר'
         };
         
+        // Get current admin org for filtering
+        const adminOrgId = authData?.profile?.org_id;
+
         let html = `
           <div style="overflow-x: auto;">
             <table style="width: 100%; border-collapse: collapse; background: #2a2a2a;">
@@ -1851,9 +1854,8 @@
                 <tr style="background: #333; border-bottom: 2px solid #ff6b35;">
                   <th style="padding: 12px; text-align: right; color: #ff6b35;">מספר רכב</th>
                   <th style="padding: 12px; text-align: right; color: #ff6b35;">בעל הרכב</th>
-                  <th style="padding: 12px; text-align: right; color: #ff6b35;">בעל התיק</th>
-                  <th style="padding: 12px; text-align: right; color: #ff6b35;">תפקיד</th>
                   <th style="padding: 12px; text-align: right; color: #ff6b35;">משוייך ל</th>
+                  <th style="padding: 12px; text-align: right; color: #ff6b35;">תפקיד</th>
                   <th style="padding: 12px; text-align: right; color: #ff6b35;">תאריך יצירה</th>
                   <th style="padding: 12px; text-align: center; color: #ff6b35;">פעולות</th>
                 </tr>
@@ -1861,24 +1863,29 @@
               <tbody>`;
 
         cases.forEach(caseItem => {
-          // Create dropdown options for assigned_to
-          const assignedOptions = allUsers.filter(u => ['assessor', 'admin', 'developer'].includes(u.role))
+          // Filter users by admin org
+          const orgUsers = allUsers.filter(u => u.org_id === adminOrgId && ['assessor', 'admin', 'developer'].includes(u.role));
+
+          // Create dropdown options for assigned_to from org users only
+          const assignedOptions = orgUsers
             .map(u => `<option value="${u.user_id}" ${caseItem.assigned_to === u.user_id ? 'selected' : ''}>${u.name} (${roleNames[u.role]})</option>`)
             .join('');
+
+          // Find assigned user for display
+          const assignedUser = caseItem.assigned_to ? allUsers.find(u => u.user_id === caseItem.assigned_to) : null;
 
           html += `
                 <tr style="border-bottom: 1px solid #444;">
                   <td style="padding: 10px; color: #e0e0e0; font-weight: bold;">${caseItem.plate || 'לא ידוע'}</td>
                   <td style="padding: 10px; color: #94a3b8;">${caseItem.owner_name || 'לא זמין'}</td>
-                  <td style="padding: 10px; color: #e0e0e0;">${caseItem.owner?.name || 'לא ידוע'}</td>
-                  <td style="padding: 10px; color: #e0e0e0;">${roleNames[caseItem.owner?.role] || 'לא ידוע'}</td>
                   <td style="padding: 10px;">
-                    <select onchange="updateAssignedToFromAdmin('${caseItem.plate}', this.value)"
+                    <select onchange="updateAssignedToFromAdmin('${caseItem.plate}', this.value, this)"
                             style="padding: 6px 10px; background: #3a3a3a; color: #e0e0e0; border: 1px solid #555; border-radius: 4px; cursor: pointer; width: 100%;">
                       <option value="">לא משוייך</option>
                       ${assignedOptions}
                     </select>
                   </td>
+                  <td style="padding: 10px; color: #e0e0e0;">${assignedUser ? roleNames[assignedUser.role] || 'לא ידוע' : '—'}</td>
                   <td style="padding: 10px; color: #e0e0e0;">${new Date(caseItem.created_at).toLocaleDateString('he-IL')}</td>
                   <td style="padding: 10px; text-align: center;">
                     <button onclick="showCollaboratorModal('${caseItem.plate}', '${caseItem.id}', '${caseItem.created_by}', '${caseItem.owner?.org_id || currentUserOrgId}')"
@@ -2072,8 +2079,8 @@
           return;
         }
         
-        const users = allUsers.filter(user => 
-          ['assessor', 'admin'].includes(user.role) && 
+        const users = allUsers.filter(user =>
+          ['assessor', 'admin', 'developer'].includes(user.role) &&
           user.user_id !== ownerId
         );
         
@@ -2175,8 +2182,8 @@
           return;
         }
         
-        const users = allUsers.filter(user => 
-          ['assessor', 'admin'].includes(user.role) && 
+        const users = allUsers.filter(user =>
+          ['assessor', 'admin', 'developer'].includes(user.role) &&
           user.user_id !== currentOwnerId
         );
         
@@ -2239,7 +2246,7 @@
     };
 
     // Update assigned_to directly from admin table dropdown
-    window.updateAssignedToFromAdmin = async function(plate, assignedToUserId) {
+    window.updateAssignedToFromAdmin = async function(plate, assignedToUserId, dropdownElement) {
       try {
         const { supabase } = await import('./lib/supabaseClient.js');
 
@@ -2262,12 +2269,13 @@
         console.log(`✅ Admin: assigned_to updated successfully for ${plate}`);
 
         // Show success feedback
-        const dropdown = event.target;
-        const originalBg = dropdown.style.background;
-        dropdown.style.background = '#22c55e';
-        setTimeout(() => {
-          dropdown.style.background = originalBg;
-        }, 1000);
+        if (dropdownElement) {
+          const originalBg = dropdownElement.style.background;
+          dropdownElement.style.background = '#22c55e';
+          setTimeout(() => {
+            dropdownElement.style.background = originalBg;
+          }, 1000);
+        }
 
       } catch (err) {
         console.error('Error in updateAssignedToFromAdmin:', err);
