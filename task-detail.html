@@ -93,6 +93,123 @@
       border-radius: 8px;
       margin: 2rem 0;
     }
+
+    /* Comments Section Styles */
+    .comments-section {
+      background: white;
+      padding: 2rem;
+      border-radius: 12px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+
+    .comments-header {
+      font-size: 1.2rem;
+      font-weight: 600;
+      color: #003366;
+      margin-bottom: 1.5rem;
+      padding-bottom: 0.75rem;
+      border-bottom: 2px solid #e5e5e5;
+    }
+
+    .comment-input-box {
+      margin-bottom: 2rem;
+    }
+
+    .comment-textarea {
+      width: 100%;
+      min-height: 100px;
+      padding: 1rem;
+      border: 2px solid #e5e5e5;
+      border-radius: 8px;
+      font-family: 'Noto Sans Hebrew', Arial, sans-serif;
+      font-size: 0.95rem;
+      resize: vertical;
+      transition: border-color 0.3s;
+    }
+
+    .comment-textarea:focus {
+      outline: none;
+      border-color: #003366;
+    }
+
+    .comment-submit-btn {
+      background: #003366;
+      color: white;
+      border: none;
+      padding: 0.75rem 2rem;
+      border-radius: 8px;
+      cursor: pointer;
+      font-family: 'Noto Sans Hebrew', Arial, sans-serif;
+      font-size: 1rem;
+      margin-top: 0.5rem;
+      transition: background 0.3s;
+    }
+
+    .comment-submit-btn:hover {
+      background: #004c99;
+    }
+
+    .comment-submit-btn:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+    }
+
+    .comments-list {
+      margin-top: 2rem;
+    }
+
+    .comment-item {
+      padding: 1rem;
+      border-radius: 8px;
+      background: #f9f9f9;
+      margin-bottom: 1rem;
+      border-right: 4px solid #003366;
+    }
+
+    .comment-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 0.75rem;
+    }
+
+    .comment-author {
+      font-weight: 600;
+      color: #003366;
+      font-size: 0.95rem;
+    }
+
+    .comment-date {
+      font-size: 0.85rem;
+      color: #999;
+    }
+
+    .comment-text {
+      color: #333;
+      line-height: 1.6;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+    }
+
+    .comment-edited {
+      font-size: 0.8rem;
+      color: #999;
+      font-style: italic;
+      margin-top: 0.5rem;
+    }
+
+    .no-comments {
+      text-align: center;
+      padding: 2rem;
+      color: #999;
+      font-style: italic;
+    }
+
+    .comment-loading {
+      text-align: center;
+      padding: 1rem;
+      color: #999;
+    }
   </style>
 </head>
 <body>
@@ -109,6 +226,7 @@
 
   <script type="module">
     import { supabase } from './lib/supabaseClient.js';
+    import { taskNotifications } from './task-notifications.js';
 
     // Get task ID from URL
     const urlParams = new URLSearchParams(window.location.search);
@@ -197,12 +315,36 @@
             </div>
           ` : ''}
         </div>
-        <div style="background: white; padding: 2rem; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
-          <p style="text-align: center; color: #999;">
-            💬 הצגת הודעות ושיחות תתווסף בקרוב
-          </p>
+
+        <!-- Comments Section -->
+        <div class="comments-section">
+          <div class="comments-header">💬 הודעות ושיחות</div>
+
+          <!-- Comment Input Box -->
+          <div class="comment-input-box">
+            <textarea
+              id="commentTextarea"
+              class="comment-textarea"
+              placeholder="הוסף הודעה או תשובה למשימה..."
+            ></textarea>
+            <button
+              id="submitCommentBtn"
+              class="comment-submit-btn"
+              onclick="submitComment()"
+            >
+              📤 שלח הודעה
+            </button>
+          </div>
+
+          <!-- Comments List -->
+          <div id="commentsList" class="comments-list">
+            <div class="comment-loading">טוען הודעות...</div>
+          </div>
         </div>
       `;
+
+      // Load comments after rendering task
+      loadComments();
     }
 
     function getStatusLabel(status) {
@@ -237,6 +379,240 @@
         hour: '2-digit',
         minute: '2-digit'
       });
+    }
+
+    function formatRelativeTime(dateString) {
+      if (!dateString) return '';
+      const date = new Date(dateString);
+      const now = new Date();
+      const diffMs = now - date;
+      const diffMins = Math.floor(diffMs / 60000);
+      const diffHours = Math.floor(diffMs / 3600000);
+      const diffDays = Math.floor(diffMs / 86400000);
+
+      if (diffMins < 1) return 'עכשיו';
+      if (diffMins < 60) return `לפני ${diffMins} דקות`;
+      if (diffHours < 24) return `לפני ${diffHours} שעות`;
+      if (diffDays < 7) return `לפני ${diffDays} ימים`;
+
+      return formatDate(dateString);
+    }
+
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    // ============================================================================
+    // COMMENTS FUNCTIONALITY
+    // ============================================================================
+
+    let currentUser = null;
+    let commentsSubscription = null;
+
+    // Load comments for the current task
+    async function loadComments() {
+      if (!taskId) return;
+
+      try {
+        // Get current user
+        const auth = sessionStorage.getItem('auth');
+        if (auth) {
+          const authData = JSON.parse(auth);
+          currentUser = authData.profile || authData.user;
+        }
+
+        // Fetch comments with user profiles
+        const { data: comments, error } = await supabase
+          .from('task_comments')
+          .select(`
+            *,
+            profiles:user_id (
+              user_id,
+              name,
+              email,
+              role
+            )
+          `)
+          .eq('task_id', taskId)
+          .eq('is_deleted', false)
+          .order('created_at', { ascending: true });
+
+        if (error) throw error;
+
+        renderComments(comments || []);
+
+        // Set up real-time subscription if not already set up
+        if (!commentsSubscription) {
+          setupCommentsSubscription();
+        }
+
+      } catch (error) {
+        console.error('Error loading comments:', error);
+        document.getElementById('commentsList').innerHTML = `
+          <div class="error">❌ שגיאה בטעינת ההודעות: ${error.message}</div>
+        `;
+      }
+    }
+
+    // Render comments in the UI
+    function renderComments(comments) {
+      const commentsList = document.getElementById('commentsList');
+
+      if (!comments || comments.length === 0) {
+        commentsList.innerHTML = `
+          <div class="no-comments">
+            📭 אין עדיין הודעות למשימה זו.<br>
+            היה הראשון להוסיף הודעה!
+          </div>
+        `;
+        return;
+      }
+
+      commentsList.innerHTML = comments.map(comment => {
+        const authorName = comment.profiles?.name || 'משתמש לא ידוע';
+        const commentDate = formatRelativeTime(comment.created_at);
+        const isEdited = comment.is_edited ? '<div class="comment-edited">(נערך)</div>' : '';
+
+        return `
+          <div class="comment-item">
+            <div class="comment-header">
+              <div class="comment-author">👤 ${escapeHtml(authorName)}</div>
+              <div class="comment-date">🕐 ${commentDate}</div>
+            </div>
+            <div class="comment-text">${escapeHtml(comment.comment_text)}</div>
+            ${isEdited}
+          </div>
+        `;
+      }).join('');
+    }
+
+    // Submit a new comment
+    window.submitComment = async function() {
+      const textarea = document.getElementById('commentTextarea');
+      const submitBtn = document.getElementById('submitCommentBtn');
+      const commentText = textarea.value.trim();
+
+      if (!commentText) {
+        alert('⚠️ אנא הזן טקסט להודעה');
+        return;
+      }
+
+      if (!currentUser) {
+        alert('❌ נדרשת התחברות');
+        return;
+      }
+
+      try {
+        submitBtn.disabled = true;
+        submitBtn.textContent = '⏳ שולח...';
+
+        // Insert the comment
+        const { data, error } = await supabase
+          .from('task_comments')
+          .insert([{
+            task_id: taskId,
+            user_id: currentUser.user_id,
+            comment_text: commentText
+          }])
+          .select();
+
+        if (error) throw error;
+
+        // Clear textarea
+        textarea.value = '';
+
+        // Reload comments to show the new one
+        await loadComments();
+
+        // Send OneSignal notification (will implement this next)
+        await sendCommentNotification(data[0]);
+
+        console.log('✅ Comment added successfully');
+
+      } catch (error) {
+        console.error('Error submitting comment:', error);
+        alert('❌ שגיאה בשליחת ההודעה: ' + error.message);
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = '📤 שלח הודעה';
+      }
+    };
+
+    // Set up real-time subscription for new comments
+    function setupCommentsSubscription() {
+      if (!taskId) return;
+
+      console.log('🔔 Setting up real-time comments subscription for task:', taskId);
+
+      commentsSubscription = supabase
+        .channel(`task_comments:${taskId}`)
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'task_comments',
+            filter: `task_id=eq.${taskId}`
+          },
+          (payload) => {
+            console.log('🔔 Real-time comment update:', payload);
+
+            // Reload comments when there's a change
+            loadComments();
+          }
+        )
+        .subscribe((status) => {
+          console.log('🔔 Comments subscription status:', status);
+        });
+    }
+
+    // Send OneSignal notification for new comment
+    async function sendCommentNotification(comment) {
+      try {
+        // Get the task with all related profiles
+        const { data: task, error: taskError } = await supabase
+          .from('tasks')
+          .select('*')
+          .eq('id', taskId)
+          .single();
+
+        if (taskError) throw taskError;
+
+        // Get profiles for assigned_to and assigned_by
+        const { data: profiles, error: profilesError } = await supabase
+          .from('profiles')
+          .select('user_id, name, role');
+
+        if (profilesError) throw profilesError;
+
+        // Create a lookup map for profiles
+        const profileMap = {};
+        (profiles || []).forEach(profile => {
+          profileMap[profile.user_id] = profile;
+        });
+
+        // Add profile data to task
+        task.assigned_to_profile = profileMap[task.assigned_to] || null;
+        task.assigned_by_profile = profileMap[task.assigned_by] || null;
+
+        // Get the sender profile (current user)
+        const senderProfile = currentUser ? profileMap[currentUser.user_id] : null;
+
+        // Use the existing notification infrastructure
+        await taskNotifications.notifyNewTaskMessage(
+          task,
+          comment.comment_text,
+          senderProfile
+        );
+
+        console.log('✅ Comment notification sent successfully');
+
+      } catch (error) {
+        console.error('Error sending comment notification:', error);
+        // Don't show error to user - notification failure shouldn't block commenting
+      }
     }
 
     // Initialize
