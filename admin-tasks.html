@@ -797,6 +797,28 @@
           <label for="plateManual">הזן מספר רישוי ידנית</label>
           <input type="text" id="plateManual" placeholder="12-345-67">
         </div>
+
+        <!-- Child Tasks Section -->
+        <div class="form-group" style="border-top: 1px solid #3a3a3a; padding-top: 1.5rem; margin-top: 1.5rem;">
+          <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+            <input type="checkbox" id="hasChildTasks" onchange="toggleChildTasksSection()" style="width: auto;">
+            <span>למשימה זו יש משימות ילד (תתי-משימות)</span>
+          </label>
+        </div>
+
+        <div id="childTasksSection" style="display: none; border: 1px solid #3a3a3a; border-radius: 8px; padding: 1rem; margin-top: 1rem; background: #252525;">
+          <h3 style="margin: 0 0 1rem 0; font-size: 1rem; color: #10B981;">🔗 משימות ילד</h3>
+          <p style="font-size: 0.85rem; color: #999; margin-bottom: 1rem;">כל משימת ילד עצמאית בביצוע ומדידה, אך שייכת לאותו הקשר של המשימה הראשית</p>
+
+          <div id="childTasksList">
+            <!-- Child tasks will be added here dynamically -->
+          </div>
+
+          <button type="button" class="btn btn-secondary" onclick="addChildTask()" style="width: 100%; margin-top: 0.5rem;">
+            ➕ הוסף משימת ילד נוספת
+          </button>
+        </div>
+
         <div style="display: flex; gap: 1rem; margin-top: 2rem;">
           <button type="submit" class="btn btn-primary" style="flex: 1;">✅ צור משימה</button>
           <button type="button" class="btn btn-secondary" onclick="closeNewTaskModal()">ביטול</button>
@@ -1384,6 +1406,12 @@
     window.closeNewTaskModal = function() {
       document.getElementById('newTaskModal').classList.remove('open');
       document.getElementById('newTaskForm').reset();
+
+      // Reset child tasks section
+      document.getElementById('hasChildTasks').checked = false;
+      document.getElementById('childTasksSection').style.display = 'none';
+      document.getElementById('childTasksList').innerHTML = '';
+      childTaskCounter = 0;
     };
 
     // Edit Task Functions
@@ -1522,6 +1550,102 @@
       alert('יצירת שרשור חדש - בפיתוח');
     };
 
+    // Child Tasks Management
+    let childTaskCounter = 0;
+
+    window.toggleChildTasksSection = function() {
+      const checkbox = document.getElementById('hasChildTasks');
+      const section = document.getElementById('childTasksSection');
+
+      if (checkbox.checked) {
+        section.style.display = 'block';
+        // Add first child task automatically
+        if (document.getElementById('childTasksList').children.length === 0) {
+          addChildTask();
+        }
+      } else {
+        section.style.display = 'none';
+        // Clear all child tasks
+        document.getElementById('childTasksList').innerHTML = '';
+        childTaskCounter = 0;
+      }
+    };
+
+    window.addChildTask = function() {
+      const parentAssignedTo = document.getElementById('assignedTo').value;
+      const childTaskId = `childTask_${childTaskCounter++}`;
+
+      const childTaskHtml = `
+        <div class="child-task-item" id="${childTaskId}" style="background: #1a1a1a; padding: 1rem; border-radius: 8px; margin-bottom: 1rem; border: 1px solid #3a3a3a;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+            <h4 style="margin: 0; font-size: 0.9rem; color: #10B981;">משימת ילד ${childTaskCounter}</h4>
+            <button type="button" onclick="removeChildTask('${childTaskId}')" style="background: #EF4444; color: white; border: none; padding: 0.25rem 0.75rem; border-radius: 6px; cursor: pointer; font-size: 0.75rem;">
+              🗑️ הסר
+            </button>
+          </div>
+
+          <div class="form-group">
+            <label>כותרת *</label>
+            <input type="text" class="child-title" required style="width: 100%; padding: 0.5rem; background: #2a2a2a; border: 1px solid #3a3a3a; border-radius: 6px; color: white;">
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+            <div class="form-group">
+              <label>הקצה ל-</label>
+              <select class="child-assigned-to" style="width: 100%; padding: 0.5rem; background: #2a2a2a; border: 1px solid #3a3a3a; border-radius: 6px; color: white;">
+                <option value="">בחר משתמש...</option>
+                ${Array.from(document.getElementById('assignedTo').options).map(opt =>
+                  opt.value ? `<option value="${opt.value}" ${opt.value === parentAssignedTo ? 'selected' : ''}>${opt.text}</option>` : ''
+                ).join('')}
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label>עדיפות</label>
+              <select class="child-priority" style="width: 100%; padding: 0.5rem; background: #2a2a2a; border: 1px solid #3a3a3a; border-radius: 6px; color: white;">
+                <option value="low">נמוכה</option>
+                <option value="medium" selected>בינונית</option>
+                <option value="high">גבוהה</option>
+                <option value="urgent">דחופה</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>תאריך יעד</label>
+            <input type="date" class="child-due-date" style="width: 100%; padding: 0.5rem; background: #2a2a2a; border: 1px solid #3a3a3a; border-radius: 6px; color: white;">
+          </div>
+        </div>
+      `;
+
+      document.getElementById('childTasksList').insertAdjacentHTML('beforeend', childTaskHtml);
+
+      // Update all child task dropdowns when parent assigned_to changes
+      updateChildTaskAssignees();
+    };
+
+    window.removeChildTask = function(childTaskId) {
+      document.getElementById(childTaskId).remove();
+    };
+
+    // Update child task assignee dropdowns when parent assignee changes
+    function updateChildTaskAssignees() {
+      const parentAssignedTo = document.getElementById('assignedTo');
+
+      parentAssignedTo.addEventListener('change', function() {
+        const selectedUserId = this.value;
+        const childAssigneeSelects = document.querySelectorAll('.child-assigned-to');
+
+        childAssigneeSelects.forEach(select => {
+          // Only update if the current value is empty or was the previous parent assignee
+          if (!select.value || select.value === select.dataset.previousParent) {
+            select.value = selectedUserId;
+          }
+          select.dataset.previousParent = selectedUserId;
+        });
+      });
+    }
+
     // Create new task
     window.createTask = async function(event) {
       event.preventDefault();
@@ -1541,7 +1665,7 @@
           plate = plateDropdown.value;
         }
 
-        const formData = {
+        const parentFormData = {
           title: document.getElementById('taskTitle').value,
           description: document.getElementById('taskDescription').value,
           task_type: document.getElementById('taskType').value,
@@ -1555,24 +1679,136 @@
           completion_percentage: 0
         };
 
-        const { data, error } = await supabase
-          .from('tasks')
-          .insert([formData])
-          .select()
-          .single();
+        // Check if task has child tasks
+        const hasChildTasks = document.getElementById('hasChildTasks').checked;
 
-        if (error) throw error;
+        if (hasChildTasks) {
+          // Collect child tasks data
+          const childTaskElements = document.querySelectorAll('.child-task-item');
 
-        console.log('Task created:', data);
+          if (childTaskElements.length === 0) {
+            alert('אנא הוסף לפחות משימת ילד אחת או בטל את הסימון');
+            return;
+          }
 
-        // Add to pending notifications queue (won't send immediately)
-        if (window.taskNotifications && data.assigned_to) {
-          const assignedUser = allUsers.find(u => u.user_id === data.assigned_to);
-          window.taskNotifications.addToPendingNotifications(data, assignedUser);
-          updateNotificationBadge();
+          const childTasksData = [];
+          for (const childElement of childTaskElements) {
+            const title = childElement.querySelector('.child-title').value.trim();
+            const assignedTo = childElement.querySelector('.child-assigned-to').value;
+            const priority = childElement.querySelector('.child-priority').value;
+            const dueDate = childElement.querySelector('.child-due-date').value || null;
+
+            if (!title) {
+              alert('נא למלא כותרת לכל משימות הילד');
+              return;
+            }
+
+            if (!assignedTo) {
+              alert('נא לבחור משתמש לכל משימות הילד');
+              return;
+            }
+
+            childTasksData.push({
+              title,
+              assigned_to: assignedTo,
+              priority,
+              due_date: dueDate
+            });
+          }
+
+          // Create thread
+          const { data: thread, error: threadError } = await supabase
+            .from('task_threads')
+            .insert({
+              thread_name: parentFormData.title,
+              thread_description: parentFormData.description,
+              case_id: caseId,
+              plate: plate,
+              created_by: currentUser.user_id
+            })
+            .select()
+            .single();
+
+          if (threadError) throw threadError;
+
+          // Create parent task with thread_id
+          parentFormData.thread_id = thread.id;
+
+          const { data: parentTask, error: parentError } = await supabase
+            .from('tasks')
+            .insert([parentFormData])
+            .select()
+            .single();
+
+          if (parentError) throw parentError;
+
+          // Create child tasks
+          const childTasksToInsert = childTasksData.map(child => ({
+            title: child.title,
+            description: `משימת ילד של: ${parentFormData.title}`,
+            task_type: parentFormData.task_type,
+            assigned_to: child.assigned_to,
+            assigned_by: currentUser.user_id,
+            priority: child.priority,
+            due_date: child.due_date,
+            case_id: caseId,
+            plate: plate,
+            status: 'pending',
+            completion_percentage: 0,
+            thread_id: thread.id,
+            parent_task_id: parentTask.id
+          }));
+
+          const { data: childTasks, error: childError } = await supabase
+            .from('tasks')
+            .insert(childTasksToInsert)
+            .select();
+
+          if (childError) throw childError;
+
+          // Add all tasks to notification queue
+          if (window.taskNotifications) {
+            // Parent task notification
+            if (parentTask.assigned_to) {
+              const assignedUser = allUsers.find(u => u.user_id === parentTask.assigned_to);
+              window.taskNotifications.addToPendingNotifications(parentTask, assignedUser);
+            }
+
+            // Child tasks notifications
+            childTasks.forEach(childTask => {
+              if (childTask.assigned_to) {
+                const assignedUser = allUsers.find(u => u.user_id === childTask.assigned_to);
+                window.taskNotifications.addToPendingNotifications(childTask, assignedUser);
+              }
+            });
+
+            updateNotificationBadge();
+          }
+
+          alert(`✅ המשימה הראשית ו-${childTasks.length} משימות ילד נוצרו בהצלחה!`);
+
+        } else {
+          // Create single task (no children)
+          const { data, error } = await supabase
+            .from('tasks')
+            .insert([parentFormData])
+            .select()
+            .single();
+
+          if (error) throw error;
+
+          console.log('Task created:', data);
+
+          // Add to pending notifications queue (won't send immediately)
+          if (window.taskNotifications && data.assigned_to) {
+            const assignedUser = allUsers.find(u => u.user_id === data.assigned_to);
+            window.taskNotifications.addToPendingNotifications(data, assignedUser);
+            updateNotificationBadge();
+          }
+
+          alert('✅ המשימה נוצרה בהצלחה!');
         }
 
-        alert('✅ המשימה נוצרה בהצלחה!');
         closeNewTaskModal();
         await loadTasks();
         await updateStats();
