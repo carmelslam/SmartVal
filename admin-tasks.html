@@ -1102,14 +1102,21 @@
     // Load all users for assignment dropdown
     async function loadUsers() {
       try {
+        // Load users with their organization, exclude Evalix org
         const { data, error } = await supabase
           .from('profiles')
-          .select('user_id, name, role')
+          .select('user_id, name, role, org_id, orgs(name)')
           .order('name');
 
         if (error) throw error;
 
-        allUsers = data || [];
+        // Filter out Evalix organization users (developer org)
+        allUsers = (data || []).filter(user => {
+          const orgName = user.orgs?.name;
+          return orgName !== 'Evalix';
+        });
+
+        console.log(`Loaded ${allUsers.length} users (excluding Evalix org)`);
         populateUserDropdown();
 
       } catch (error) {
