@@ -175,13 +175,32 @@
             `${helper.vehicle?.make || ''} ${helper.vehicle?.model || ''}`.trim() || 'לא זמין';
           
           // Show the case info div and toggle button
-          document.getElementById('caseInfo').style.display = 'block';
-          document.getElementById('caseInfo').classList.add('show');
-          
-          // Show the toggle details button
-          document.getElementById('toggleDetailsBtn').style.display = 'inline-block';
-          document.getElementById('toggleDetailsIcon').textContent = '🙈';
-          document.getElementById('toggleDetailsText').textContent = 'הסתר פרטי תיק';
+          const caseInfoEl = document.getElementById('caseInfo');
+          const toggleBtnEl = document.getElementById('toggleDetailsBtn');
+          const toggleIconEl = document.getElementById('toggleDetailsIcon');
+          const toggleTextEl = document.getElementById('toggleDetailsText');
+
+          if (caseInfoEl) {
+            caseInfoEl.style.display = 'block';
+            caseInfoEl.classList.add('show');
+            console.log('✅ Showed case info section');
+          } else {
+            console.error('❌ caseInfo element not found!');
+          }
+
+          if (toggleBtnEl) {
+            toggleBtnEl.style.display = 'inline-block';
+            console.log('✅ Showed toggle details button');
+          } else {
+            console.error('❌ toggleDetailsBtn element not found!');
+          }
+
+          if (toggleIconEl) {
+            toggleIconEl.textContent = '🙈';
+          }
+          if (toggleTextEl) {
+            toggleTextEl.textContent = 'הסתר פרטי תיק';
+          }
           
           // Reset input field styling on success
           const plateInput = document.getElementById('plateNumber');
@@ -206,7 +225,11 @@
           });
           document.dispatchEvent(dataLoadedEvent);
           console.log('📡 Dispatched helperDataLoaded event for UI modules');
-          
+
+          // CRITICAL: Update status ribbon with loaded case data
+          console.log('🔄 Calling updateStatusRibbon after Supabase load');
+          await updateStatusRibbon(helper);
+
           // Show appropriate success message with warning if needed
           let successMessage = `התיק נטען בהצלחה מ-Supabase (גרסה ${metadata.version})`;
           if (metadata.unwrapped) {
@@ -217,7 +240,7 @@
             successMessage += `\n\n⚠️ אזהרה: ${metadata.warning}`;
             console.warn('⚠️ Data integrity warning shown to user');
           }
-          
+
           alert(successMessage);
           return;
         }
@@ -277,19 +300,42 @@
               `${caseData.car_details?.manufacturer || ''} ${caseData.car_details?.model || ''}`.trim() || 'לא זמין';
             
             // Show the case info div and toggle button
-            document.getElementById('caseInfo').style.display = 'block';
-            document.getElementById('caseInfo').classList.add('show');
-            
-            // Show the toggle details button
-            document.getElementById('toggleDetailsBtn').style.display = 'inline-block';
-            document.getElementById('toggleDetailsIcon').textContent = '🙈';
-            document.getElementById('toggleDetailsText').textContent = 'הסתר פרטי תיק';
+            const caseInfoEl2 = document.getElementById('caseInfo');
+            const toggleBtnEl2 = document.getElementById('toggleDetailsBtn');
+            const toggleIconEl2 = document.getElementById('toggleDetailsIcon');
+            const toggleTextEl2 = document.getElementById('toggleDetailsText');
+
+            if (caseInfoEl2) {
+              caseInfoEl2.style.display = 'block';
+              caseInfoEl2.classList.add('show');
+              console.log('✅ Showed case info section (webhook path)');
+            } else {
+              console.error('❌ caseInfo element not found (webhook path)!');
+            }
+
+            if (toggleBtnEl2) {
+              toggleBtnEl2.style.display = 'inline-block';
+              console.log('✅ Showed toggle details button (webhook path)');
+            } else {
+              console.error('❌ toggleDetailsBtn element not found (webhook path)!');
+            }
+
+            if (toggleIconEl2) {
+              toggleIconEl2.textContent = '🙈';
+            }
+            if (toggleTextEl2) {
+              toggleTextEl2.textContent = 'הסתר פרטי תיק';
+            }
             
             // Reset input field styling on success
             const plateInput = document.getElementById('plateNumber');
             plateInput.style.color = '';
             plateInput.style.borderColor = '';
-            
+
+            // CRITICAL: Update status ribbon with loaded case data
+            console.log('🔄 Calling updateStatusRibbon after webhook load');
+            await updateStatusRibbon(caseData);
+
             alert('התיק נטען בהצלחה מ-Make.com (גיבוי)');
             return;
           }
@@ -1546,6 +1592,13 @@ window.verifyAdminAccess = verifyAdminAccess;
 
       // Get plate number
       const plateNumber = caseData.plate || caseData.meta?.plate || document.getElementById('plateNumber').value;
+
+      // CRITICAL: Ensure plate number stays in the input field
+      const plateInput = document.getElementById('plateNumber');
+      if (plateInput && plateNumber) {
+        plateInput.value = plateNumber;
+        console.log('🚗 Set plate number in input:', plateNumber);
+      }
 
       // Get the actual case record from Supabase using plate column
       const { data: cases, error } = await supabase
