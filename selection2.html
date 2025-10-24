@@ -1,0 +1,1183 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="he">
+<head>
+  <meta charset="utf-8"/>
+  <title>ירון כיוף - משרד שמאות וייעוץ - בחירת פעולה</title>
+  <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+  <link rel="icon" href="https://carmelcayouf.com/wp-content/uploads/2025/06/g.webp" type="image/webp"/>
+  <link rel="shortcut icon" href="https://carmelcayouf.com/wp-content/uploads/2025/06/g.webp"/>
+  <link rel="apple-touch-icon" href="https://carmelcayouf.com/wp-content/uploads/2025/06/g.webp"/>
+  <script type="module">
+    import { WEBHOOKS } from './webhook.js';
+    import { sendToWebhook } from './webhook.js';
+
+    // Load actual backup count from Supabase
+    window.loadBackupCount = async function(caseId, plateNumber) {
+      console.log('Loading backup count for case:', caseId);
+      if (!caseId) {
+        console.log('No case ID provided for backup count');
+        return;
+      }
+      
+      try {
+        // Import Supabase client
+        const { supabase } = await import('./lib/supabaseClient.js');
+        
+        // Count all versions for this case
+        const { count, error } = await supabase
+          .from('case_helper')
+          .select('*', { count: 'exact', head: true })
+          .eq('case_id', caseId);
+        
+        console.log('Backup count result:', { count, error });
+        
+        if (!error && count !== null && count !== undefined) {
+          document.getElementById('caseBackups').textContent = 
+            count > 1 ? `${count} גיבויים` : `${count} גיבוי`;
+        } else if (error) {
+          console.error('Error loading backup count:', error);
+          // Fallback - just show we have at least one backup
+          document.getElementById('caseBackups').textContent = '1 גיבוי לפחות';
+        }
+      } catch (err) {
+        console.error('Could not load backup count:', err);
+        // Keep the version text as fallback
+        document.getElementById('caseBackups').textContent = '1 גיבוי לפחות';
+      }
+    }
+    
+    // Toggle case details visibility
+    window.toggleCaseDetails = function() {
+      const caseInfo = document.getElementById('caseInfo');
+      const toggleBtn = document.getElementById('toggleDetailsBtn');
+      const toggleIcon = document.getElementById('toggleDetailsIcon');
+      const toggleText = document.getElementById('toggleDetailsText');
+      
+      if (caseInfo.style.display === 'none' || caseInfo.style.display === '') {
+        caseInfo.style.display = 'block';
+        toggleIcon.textContent = '🙈';
+        toggleText.textContent = 'הסתר פרטי תיק';
+      } else {
+        caseInfo.style.display = 'none';
+        toggleIcon.textContent = '👁️';
+        toggleText.textContent = 'הצג פרטי תיק';
+      }
+    };
+
+    // Legacy admin access function - DEPRECATED - now using role-based auth
+    window.verifyAdminAccess = async function (event) {
+      console.log('⚠️ verifyAdminAccess called but deprecated - redirecting to role-based auth');
+      navigateToAdmin();
+    }
+
+    window.loadExistingCase = async function () {
+      const plateNumber = document.getElementById('plateNumber').value.trim();
+      if (!plateNumber) {
+        alert('אנא הכנס מספר רכב');
+        return;
+      }
+
+      // Clear old case data when loading a different case
+      const existingHelper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+      const existingPlate = existingHelper.meta?.plate;
+      
+      if (plateNumber && plateNumber !== existingPlate) {
+        console.log('🔄 Loading existing case for plate:', plateNumber);
+        
+        // Clear old case data using security manager if available
+        if (window.securityManager && typeof window.securityManager.startNewCase === 'function') {
+          window.securityManager.startNewCase();
+        } else {
+          // Fallback - clear old data manually
+          localStorage.removeItem('lastCaseData');
+          localStorage.removeItem('lastCaseTimestamp');
+          sessionStorage.removeItem('helper');
+          
+          // Clear sensitive data from memory (don't create new helper)
+          if (window.helper) {
+            // Clear helper data without creating new object
+            Object.keys(window.helper).forEach(key => {
+              delete window.helper[key];
+            });
+          }
+          
+          console.log('✅ Cleared old case data before loading new case');
+        }
+      }
+
+      // Get the button to show loading state
+      const loadButton = document.querySelector('button[onclick="loadExistingCase()"]');
+      const originalText = loadButton?.textContent || 'טען תיק קיים';
+      
+      if (loadButton) {
+        loadButton.disabled = true;
+        loadButton.textContent = 'טוען מ-Supabase...';
+      }
+
+      try {
+        // PRIMARY: Try loading from Supabase first
+        console.log('🔄 Attempting to load case from Supabase:', plateNumber);
+        
+        // Import the case retrieval service
+        const caseRetrievalService = await import('./services/caseRetrievalService.js').then(m => m.default);
+        const result = await caseRetrievalService.loadCaseIntoSession(plateNumber);
+        
+        if (result.success) {
+          console.log('✅ Case loaded successfully from Supabase');
+          
+          // Update UI with Supabase data
+          const helper = result.helper;
+          const metadata = result.metadata;
+          
+          // PHASE 4: Update new case details format
+          document.getElementById('casePlate').textContent = plateNumber;
+          document.getElementById('caseStatus').textContent = 
+            caseRetrievalService.getStatusDisplay(metadata.caseStatus);
+          document.getElementById('caseStatus').style.color = 
+            metadata.caseStatus === 'OPEN' ? '#28a745' : '#6c757d';
+          
+          // Owner name from case record or helper
+          const ownerName = result.case?.owner_name || 
+                           helper.case_info?.owner_name || 
+                           helper.vehicle?.owner_name || 
+                           helper.stakeholders?.owner?.name || 
+                           'לא רשום';
+          document.getElementById('caseOwner').textContent = ownerName;
+          
+          // Created date from case record
+          const createdDate = result.case?.created_at || helper.case_info?.created_at;
+          document.getElementById('caseCreated').textContent = 
+            createdDate ? new Date(createdDate).toLocaleDateString('he-IL') : 'לא זמין';
+          
+          // Updated date from metadata or case record
+          const updatedDate = metadata.lastUpdated || result.case?.updated_at || helper.case_info?.updated_at;
+          document.getElementById('caseUpdated').textContent = 
+            updatedDate ? new Date(updatedDate).toLocaleDateString('he-IL') : 'לא זמין';
+          
+          // Initial backup count - show at least 1 (current version)
+          document.getElementById('caseBackups').textContent = '1 גיבוי לפחות';
+          
+          // Async load actual backup count - make it available globally
+          const caseId = result.case?.id || metadata?.caseId;
+          if (caseId) {
+            window.loadBackupCount(caseId, plateNumber);
+          } else {
+            console.log('No case ID available for backup count');
+          }
+          
+          // Legacy fields for compatibility - use same created date
+          const inspectionDate = result.case?.created_at || helper.case_info?.created_at || helper.case_info?.inspection_date;
+          document.getElementById('caseDate').textContent = 
+            inspectionDate ? 
+            new Date(inspectionDate).toLocaleDateString('he-IL') : 'לא זמין';
+            
+          document.getElementById('caseVehicle').textContent = 
+            `${helper.vehicle?.make || ''} ${helper.vehicle?.model || ''}`.trim() || 'לא זמין';
+          
+          // Show the case info div and toggle button
+          document.getElementById('caseInfo').style.display = 'block';
+          document.getElementById('caseInfo').classList.add('show');
+          
+          // Show the toggle details button
+          document.getElementById('toggleDetailsBtn').style.display = 'inline-block';
+          document.getElementById('toggleDetailsIcon').textContent = '🙈';
+          document.getElementById('toggleDetailsText').textContent = 'הסתר פרטי תיק';
+          
+          // Reset input field styling on success
+          const plateInput = document.getElementById('plateNumber');
+          plateInput.style.color = '';
+          plateInput.style.borderColor = '';
+          
+          // PHASE 4: Auto-populate UI with retrieved data
+          console.log('🔧 PHASE 4: Auto-populating UI with retrieved helper data');
+          
+          // Set global helper for UI components
+          window.helper = helper;
+          
+          // Trigger UI population events if available
+          if (typeof window.populateUIFromHelper === 'function') {
+            console.log('📋 Calling populateUIFromHelper function');
+            window.populateUIFromHelper(helper);
+          }
+          
+          // Dispatch custom event for modules that listen for data updates
+          const dataLoadedEvent = new CustomEvent('helperDataLoaded', {
+            detail: { helper, metadata, source: 'supabase' }
+          });
+          document.dispatchEvent(dataLoadedEvent);
+          console.log('📡 Dispatched helperDataLoaded event for UI modules');
+          
+          // Show appropriate success message with warning if needed
+          let successMessage = `התיק נטען בהצלחה מ-Supabase (גרסה ${metadata.version})`;
+          if (metadata.unwrapped) {
+            successMessage += `\n✅ מבנה הנתונים תוקן אוטומטית לתאימות UI`;
+            console.log('🔧 Data structure was unwrapped for UI compatibility');
+          }
+          if (metadata.dataIntegrityWarning) {
+            successMessage += `\n\n⚠️ אזהרה: ${metadata.warning}`;
+            console.warn('⚠️ Data integrity warning shown to user');
+          }
+          
+          alert(successMessage);
+          return;
+        }
+        
+        // If Supabase fails, try webhook as fallback
+        console.log('⚠️ Supabase load failed, trying webhook fallback:', result.message);
+        
+        if (loadButton) {
+          loadButton.textContent = 'טוען מ-Make.com...';
+        }
+        
+        const response = await sendToWebhook('ADMIN_FETCH_CASE', { plate: plateNumber });
+        console.log('🔍 ADMIN_FETCH_CASE response:', response);
+        
+        // Check if webhook response is successful and has data
+        if (response && response.success !== false && response && typeof response === 'object' && !response.error) {
+          // Check if response has actual case data (not just success message)
+          if (response.meta || response.car_details || response.general_info) {
+            const caseData = response;
+            
+            // Store webhook data with compatibility format
+            sessionStorage.setItem('carData', JSON.stringify(caseData));
+            sessionStorage.setItem('helper', JSON.stringify(caseData));
+            sessionStorage.setItem('plate', plateNumber);
+            sessionStorage.setItem('caseLoaded', 'true');
+            
+            // PHASE 4: Update new case details format for webhook fallback
+            document.getElementById('casePlate').textContent = plateNumber;
+            document.getElementById('caseStatus').textContent = caseData.meta?.status || 'לא זמין';
+            document.getElementById('caseStatus').style.color = 
+              caseData.meta?.status === 'פעיל' || caseData.meta?.status === 'OPEN' ? '#28a745' : '#6c757d';
+            
+            // Owner name from webhook data
+            const ownerName = caseData.general_info?.insured_name || 
+                             caseData.meta?.owner_name || 
+                             caseData.stakeholders?.owner?.name || 
+                             'לא רשום';
+            document.getElementById('caseOwner').textContent = ownerName;
+            
+            // Created date - webhook data
+            document.getElementById('caseCreated').textContent = 
+              caseData.meta?.created_date || caseData.meta?.inspection_date || 'לא זמין';
+            
+            // Updated date - webhook data
+            document.getElementById('caseUpdated').textContent = 
+              caseData.meta?.last_updated || caseData.meta?.inspection_date || 'לא זמין';
+            
+            // Version count - webhook doesn't provide this
+            const backupElement = document.getElementById('caseBackups');
+            if (backupElement) {
+              backupElement.textContent = '1 גיבוי (מידע מ-Make.com)';
+            }
+            
+            // Legacy fields for compatibility
+            document.getElementById('caseDate').textContent = caseData.meta?.inspection_date || 'לא זמין';
+            document.getElementById('caseVehicle').textContent = 
+              `${caseData.car_details?.manufacturer || ''} ${caseData.car_details?.model || ''}`.trim() || 'לא זמין';
+            
+            // Show the case info div and toggle button
+            document.getElementById('caseInfo').style.display = 'block';
+            document.getElementById('caseInfo').classList.add('show');
+            
+            // Show the toggle details button
+            document.getElementById('toggleDetailsBtn').style.display = 'inline-block';
+            document.getElementById('toggleDetailsIcon').textContent = '🙈';
+            document.getElementById('toggleDetailsText').textContent = 'הסתר פרטי תיק';
+            
+            // Reset input field styling on success
+            const plateInput = document.getElementById('plateNumber');
+            plateInput.style.color = '';
+            plateInput.style.borderColor = '';
+            
+            alert('התיק נטען בהצלחה מ-Make.com (גיבוי)');
+            return;
+          }
+        }
+        
+        // Both systems failed - case not found
+        throw new Error('CASE_NOT_FOUND');
+        
+      } catch (error) {
+        console.log('🚫 Case not found in both systems:', error.message);
+        
+        // Show appropriate error message
+        let errorMessage = 'תיק לא נמצא במערכת';
+        if (error.message === 'SYSTEM_ERROR') {
+          errorMessage = 'שגיאה בטעינת התיק - נסה שוב';
+        }
+        
+        alert(errorMessage);
+        
+        // Make input field red and clear it after 3 seconds
+        const plateInput = document.getElementById('plateNumber');
+        plateInput.style.color = '#dc2626';
+        plateInput.style.borderColor = '#dc2626';
+        
+        setTimeout(() => {
+          plateInput.value = '';
+          plateInput.style.color = '';
+          plateInput.style.borderColor = '';
+        }, 3000);
+        
+        // Clear any existing helper data
+        sessionStorage.removeItem('helper');
+        sessionStorage.removeItem('plate');
+        sessionStorage.removeItem('caseLoaded');
+        
+        // Hide case info if it was showing
+        document.getElementById('caseInfo').classList.remove('show');
+        
+      } finally {
+        // Restore button state
+        if (loadButton) {
+          loadButton.disabled = false;
+          loadButton.textContent = originalText;
+        }
+      }
+    }
+
+    window.generateEstimate = function () {
+      const caseLoaded = sessionStorage.getItem('caseLoaded');
+      if (!caseLoaded) {
+        alert('אנא טען תיק קיים תחילה');
+        return;
+      }
+      // Set estimate as selected report type
+      sessionStorage.setItem('selectedReportType', 'estimate');
+      window.location.href = 'estimator-builder.html?mode=post-session';
+    }
+
+    window.generateFinalReport = function () {
+      const caseLoaded = sessionStorage.getItem('caseLoaded');
+      if (!caseLoaded) {
+        alert('אנא טען תיק קיים תחילה');
+        return;
+      }
+      window.location.href = 'report-selection.html';
+    }
+
+    window.viewExpertise = function () {
+      const caseLoaded = sessionStorage.getItem('caseLoaded');
+      if (!caseLoaded) {
+        alert('אנא טען תיק קיים תחילה');
+        return;
+      }
+      window.location.href = 'expertise-builder.html?mode=view';
+    }
+  </script>
+  <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Heebo', sans-serif;
+      background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%);
+      color: #e2e8f0;
+      min-height: 100vh;
+      padding: 20px;
+      direction: rtl;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+
+    /* Header */
+    .header {
+      background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+      border-radius: 16px;
+      padding: 30px;
+      margin-bottom: 30px;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+      text-align: center;
+      border: 1px solid rgba(59, 130, 246, 0.2);
+    }
+
+    .logo {
+      width: 120px;
+      height: auto;
+      margin-bottom: 15px;
+      filter: drop-shadow(0 4px 12px rgba(59, 130, 246, 0.3));
+    }
+
+    h1 {
+      font-size: 32px;
+      font-weight: 900;
+      color: #22c55e;
+      margin-bottom: 8px;
+      text-shadow: 0 2px 8px rgba(34, 197, 94, 0.3);
+    }
+
+    h2 {
+      font-size: 18px;
+      font-weight: 500;
+      color: #94a3b8;
+      margin-bottom: 0;
+    }
+
+    /* Case Loader Section */
+    .case-loader {
+      background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+      border-radius: 16px;
+      padding: 25px;
+      margin-bottom: 25px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+      border: 1px solid rgba(34, 197, 94, 0.2);
+    }
+
+    .case-loader h3 {
+      color: #22c55e;
+      font-size: 20px;
+      font-weight: 700;
+      margin-bottom: 15px;
+      text-align: right;
+    }
+
+    .case-input {
+      width: 100%;
+      padding: 12px 16px;
+      border: 2px solid #475569;
+      border-radius: 10px;
+      font-size: 16px;
+      font-family: 'Heebo', sans-serif;
+      background: #0f172a;
+      color: #e2e8f0;
+      margin-bottom: 12px;
+      transition: all 0.3s ease;
+    }
+
+    .case-input:focus {
+      outline: none;
+      border-color: #22c55e;
+      box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.1);
+    }
+
+    .case-button {
+      background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+      color: white;
+      padding: 12px 24px;
+      border: none;
+      border-radius: 10px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      font-family: 'Heebo', sans-serif;
+      box-shadow: 0 4px 12px rgba(34, 197, 94, 0.3);
+    }
+
+    .case-button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(34, 197, 94, 0.4);
+    }
+
+    .case-info {
+      background: #0f172a;
+      border: 1px solid #3b82f6;
+      border-radius: 12px;
+      padding: 20px;
+      margin-top: 15px;
+      text-align: right;
+      display: none;
+    }
+
+    .case-info.show {
+      display: block;
+    }
+
+    /* Workflow Sections */
+    .section {
+      background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+      border-radius: 16px;
+      padding: 20px;
+      margin-bottom: 20px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+      border: 1px solid rgba(59, 130, 246, 0.2);
+    }
+
+    .section-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      cursor: pointer;
+      padding: 10px;
+      border-radius: 10px;
+      transition: all 0.3s ease;
+    }
+
+    .section-header:hover {
+      background: rgba(59, 130, 246, 0.1);
+    }
+
+    .section-title {
+      font-size: 22px;
+      font-weight: 800;
+      color: #3b82f6;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .section-icon {
+      font-size: 24px;
+    }
+
+    .toggle-icon {
+      font-size: 20px;
+      transition: transform 0.3s ease;
+    }
+
+    .section.collapsed .toggle-icon {
+      transform: rotate(-90deg);
+    }
+
+    .section-content {
+      margin-top: 15px;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 12px;
+      transition: all 0.3s ease;
+    }
+
+    .section.collapsed .section-content {
+      display: none;
+    }
+
+    /* Buttons */
+    .nav-button {
+      background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+      color: white;
+      padding: 14px 20px;
+      border: none;
+      border-radius: 12px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      font-family: 'Heebo', sans-serif;
+      box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+      text-align: center;
+      width: 100%;
+    }
+
+    .nav-button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(59, 130, 246, 0.5);
+    }
+
+    .nav-button.primary {
+      background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+      box-shadow: 0 4px 12px rgba(34, 197, 94, 0.3);
+    }
+
+    .nav-button.primary:hover {
+      box-shadow: 0 6px 20px rgba(34, 197, 94, 0.5);
+    }
+
+    .nav-button.warning {
+      background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+      box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3);
+    }
+
+    .nav-button.warning:hover {
+      box-shadow: 0 6px 20px rgba(245, 158, 11, 0.5);
+    }
+
+    .nav-button.danger {
+      background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+      box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+    }
+
+    .nav-button.danger:hover {
+      box-shadow: 0 6px 20px rgba(239, 68, 68, 0.5);
+    }
+
+    .nicole-button {
+      background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+      color: white;
+      padding: 16px 24px;
+      border: none;
+      border-radius: 14px;
+      font-size: 18px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      font-family: 'Heebo', sans-serif;
+      box-shadow: 0 6px 24px rgba(139, 92, 246, 0.4);
+      text-align: center;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      width: 100%;
+      margin-bottom: 20px;
+    }
+
+    .nicole-button:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 8px 32px rgba(139, 92, 246, 0.6);
+    }
+
+    .nicole-icon {
+      font-size: 24px;
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.1); }
+    }
+
+    /* User Badge */
+    #userInfoBadge {
+      position: fixed;
+      top: 20px;
+      left: 20px;
+      background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+      color: #22c55e;
+      padding: 12px 20px;
+      border-radius: 12px;
+      font-size: 15px;
+      font-weight: 600;
+      z-index: 1000;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+      border: 1px solid rgba(34, 197, 94, 0.3);
+    }
+
+    /* Footer */
+    .footer {
+      text-align: center;
+      color: #64748b;
+      font-size: 14px;
+      margin-top: 40px;
+      padding-top: 20px;
+      border-top: 1px solid #334155;
+    }
+
+    /* Mobile Responsive */
+    @media (max-width: 768px) {
+      body {
+        padding: 10px;
+      }
+
+      .header {
+        padding: 20px;
+      }
+
+      h1 {
+        font-size: 24px;
+      }
+
+      h2 {
+        font-size: 16px;
+      }
+
+      .section-content {
+        grid-template-columns: 1fr;
+      }
+
+      #userInfoBadge {
+        top: 10px;
+        left: 10px;
+        font-size: 13px;
+        padding: 8px 12px;
+      }
+    }
+  </style>
+</head>
+<body>
+<div class="container">
+  <!-- Header -->
+  <div class="header">
+    <img class="logo" src="https://carmelcayouf.com/wp-content/uploads/2025/06/g.webp" alt="Logo"/>
+    <h1>ירון כיוף - משרד שמאות וייעוץ</h1>
+    <h2>שמאות והערכת נזקי רכב ורכוש</h2>
+  </div>
+
+  <!-- User info badge -->
+  <div id="userInfoBadge">
+    <span id="userName"></span> - <span id="userRole"></span>
+  </div>
+
+  <!-- Case Loader Section -->
+  <div class="case-loader">
+    <h3>📂 טעינת תיק קיים</h3>
+    <input type="text" class="case-input" id="plateNumber" placeholder="הכנס מספר רכב (לטעינת תיק קיים)">
+    <div style="display: flex; gap: 10px; justify-content: center; margin-top: 10px; flex-wrap: wrap;">
+      <button class="case-button" onclick="loadExistingCase()">טען תיק קיים</button>
+      <button class="case-button" id="toggleDetailsBtn" onclick="toggleCaseDetails()" style="display: none; background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); margin: 0;">
+        <span id="toggleDetailsIcon">👁️</span> <span id="toggleDetailsText">הצג פרטי תיק</span>
+      </button>
+    </div>
+    <div class="case-info" id="caseInfo" style="display: none;">
+      <!-- PHASE 4: Updated case details format to match admin -->
+      <div style="background: #1a365d; padding: 15px; border-radius: 6px; border: 1px solid #17a2b8; margin-top: 15px;">
+        <h3 style="color: #17a2b8; margin-top: 0;">📋 פרטי התיק</h3>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; font-size: 14px; color: #e0e0e0;">
+          <div><strong>מספר רכב:</strong> <span id="casePlate"></span></div>
+          <div><strong>מצב התיק:</strong> <span id="caseStatus"></span></div>
+          <div><strong>בעל הרכב:</strong> <span id="caseOwner">לא רשום</span></div>
+          <div><strong>התיק נפתח:</strong> <span id="caseCreated"></span></div>
+          <div><strong>עדכון אחרון:</strong> <span id="caseUpdated"></span></div>
+          <div><strong>סה"כ גיבויים:</strong> <span id="caseBackups">בודק...</span></div>
+        </div>
+      </div>
+      <!-- Legacy display for compatibility -->
+      <div style="margin-top: 10px; color: #94a3b8;">
+        <p><strong>תאריך בדיקה:</strong> <span id="caseDate"></span></p>
+        <p><strong>יצרן ודגם:</strong> <span id="caseVehicle"></span></p>
+      </div>
+      <div style="margin-top: 15px; display: flex; gap: 10px; flex-wrap: wrap; justify-content: center;">
+        <button class="case-button" onclick="generateEstimate()">הפק אומדן</button>
+        <button class="case-button" onclick="generateFinalReport()">הפק דו"ח סופי</button>
+        <button class="case-button" onclick="viewExpertise()">צפה באקספרטיזה</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== WORKFLOW LEVEL ===== -->
+
+  <!-- Expertise Workflow -->
+  <div class="section" id="expertiseSection">
+    <div class="section-header" onclick="toggleSection('expertiseSection')">
+      <div class="section-title">
+        <span class="section-icon">🔍</span>
+        <span>תהליך אקספרטיזה</span>
+      </div>
+      <span class="toggle-icon">▼</span>
+    </div>
+    <div class="section-content">
+      <button class="nav-button primary" id="btnOpenCases" onclick="navigate('open-cases.html')">התחלת דו"ח חדש</button>
+      <button class="nav-button" onclick="navigate('general_info.html')">פרטי רכב כלליים</button>
+      <button class="nav-button" id="btnUploadLevi" onclick="navigate('upload-levi.html')">העלאת דו"ח לוי יצחק</button>
+      <button class="nav-button" id="btnDamageCenters" onclick="navigate('damage-centers-wizard.html')">פתיחת מוקד נזק (אשף מלא)</button>
+      <button class="nav-button" id="btnExpertiseSummary" onclick="navigate('expertise-summary.html')">סיכום אקספרטיזה</button>
+    </div>
+  </div>
+
+  <!-- Estimate Workflow -->
+  <div class="section" id="estimateSection">
+    <div class="section-header" onclick="toggleSection('estimateSection')">
+      <div class="section-title">
+        <span class="section-icon">🧮</span>
+        <span>תהליך אומדן</span>
+      </div>
+      <span class="toggle-icon">▼</span>
+    </div>
+    <div class="section-content">
+      <button class="nav-button" onclick="navigate('estimator-builder.html')">בניית אומדן נזקי רכב</button>
+    </div>
+  </div>
+
+  <!-- Final Report Workflow -->
+  <div class="section" id="finalReportSection">
+    <div class="section-header" onclick="toggleSection('finalReportSection')">
+      <div class="section-title">
+        <span class="section-icon">📑</span>
+        <span>תהליך דו"ח סופי</span>
+      </div>
+      <span class="toggle-icon">▼</span>
+    </div>
+    <div class="section-content">
+      <button class="nav-button" onclick="navigate('fee-module.html')">מודול שכר טרחה</button>
+      <button class="nav-button" id="btnFinalReport" onclick="navigate('final-report-builder.html')">בונה דוח סופי</button>
+    </div>
+  </div>
+
+  <!-- ===== ADMINISTRATIVE/UNIVERSAL LEVEL ===== -->
+
+  <div class="section" id="adminSection">
+    <div class="section-header" onclick="toggleSection('adminSection')">
+      <div class="section-title">
+        <span class="section-icon">🛠️</span>
+        <span>כלים ניהוליים ואוניברסליים</span>
+      </div>
+      <span class="toggle-icon">▼</span>
+    </div>
+    <div class="section-content">
+      <button class="nav-button warning" id="btnAdmin" onclick="navigateToAdmin()">ניהול מערכת (Admin)</button>
+      <button class="nav-button" id="btnTasks" onclick="navigateToTasks()">📋 ניהול משימות</button>
+      <button class="nav-button" id="btnPartsSearch" onclick="navigate('parts search.html')">מודול חלקים</button>
+      <button class="nav-button" id="btnUploadImages" onclick="navigate('upload-images.html')">העלאת תמונות</button>
+      <button class="nav-button" id="btnInvoiceUpload" onclick="navigate('invoice upload.html')">העלאת חשבונית</button>
+      <button class="nicole-button" onclick="navigate('assistant.html')">
+        <span class="nicole-icon">👩</span>
+        <span>שאל את ניקול - מנהלת הידע</span>
+      </button>
+      <button class="nav-button warning" onclick="showBrowserMenu()">🌐 דפדפן - אתרים חיצוניים</button>
+    </div>
+  </div>
+
+  <!-- Logout Button -->
+  <button class="nav-button danger" onclick="logout()" style="margin-top: 30px;">יציאה מהמערכת</button>
+
+  <div class="footer">All rights reserved © Carmel Cayouf</div>
+</div>
+<script>
+  console.log("🔍 Selection page loaded, checking authentication...");
+  
+  function checkAuth() {
+    const userAuthToken = sessionStorage.getItem('auth');
+    const loginSuccess = sessionStorage.getItem('loginSuccess');
+    const sessionStart = sessionStorage.getItem('sessionStart');
+    const loginTime = sessionStorage.getItem('loginTime');
+    
+    console.log("🔐 Auth check results:");
+    console.log("- Auth token exists:", !!userAuthToken);
+    console.log("- Login success flag:", loginSuccess);
+    console.log("- Session start:", sessionStart);
+    console.log("- Login time:", loginTime);
+    console.log("- Auth token preview:", userAuthToken ? userAuthToken.substring(0, 50) + "..." : "null");
+    
+    if (!userAuthToken || !loginTime) {
+      console.log("❌ No auth token found, redirecting to login");
+      alert("הגישה חסומה - אנא התחבר דרך דף הבית");
+      window.location.href = `${window.location.origin}/index.html`;
+      return false;
+    }
+    
+    try {
+      const auth = JSON.parse(userAuthToken);
+      const profile = auth.profile;
+      
+      if (profile && profile.name && profile.role) {
+        document.getElementById('userName').textContent = profile.name;
+        const roleText = profile.role === 'developer' ? 'מפתח' :
+                        profile.role === 'admin' ? 'מנהל' :
+                        profile.role === 'assessor' ? 'שמאי' :
+                        profile.role === 'assistant' ? 'עוזר' : profile.role;
+        document.getElementById('userRole').textContent = roleText;
+        
+        applyRoleBasedVisibility(profile.role);
+      }
+    } catch (e) {
+      console.error("Failed to parse auth data:", e);
+    }
+    
+    console.log("✅ Authentication verified, user can access selection page");
+    return true;
+  }
+  
+  function applyRoleBasedVisibility(role) {
+    console.log('🔐 Applying role-based visibility for role:', role);
+    
+    const assessorButtons = ['btnOpenCases', 'btnUploadLevi', 'btnDamageCenters', 
+                             'btnExpertiseSummary', 'btnPartsSearch', 'btnUploadImages', 
+                             'btnInvoiceUpload', 'btnFinalReport'];
+    
+    if (role === 'assistant') {
+      assessorButtons.forEach(btnId => {
+        const btn = document.getElementById(btnId);
+        if (btn) btn.style.display = 'none';
+      });
+    }
+    
+    if (!['admin', 'developer', 'assistant'].includes(role)) {
+      const adminBtn = document.getElementById('btnAdmin');
+      if (adminBtn) adminBtn.style.display = 'none';
+    }
+  }
+  
+  function navigateToAdmin() {
+    const authData = sessionStorage.getItem('auth');
+    if (!authData) {
+      alert('נדרשת התחברות למערכת');
+      window.location.href = 'index.html';
+      return;
+    }
+
+    try {
+      const auth = JSON.parse(authData);
+      if (!['admin', 'developer', 'assistant'].includes(auth.profile.role)) {
+        alert('אין לך הרשאה לגשת לניהול המערכת. נדרשת הרשאת מנהל או מפתח.');
+        return;
+      }
+
+      window.location.href = 'admin.html';
+    } catch (e) {
+      console.error('Auth check failed:', e);
+      alert('שגיאה באימות הרשאות');
+    }
+  }
+
+  function navigateToTasks() {
+    const authData = sessionStorage.getItem('auth');
+    if (!authData) {
+      alert('נדרשת התחברות למערכת');
+      window.location.href = 'index.html';
+      return;
+    }
+
+    try {
+      const auth = JSON.parse(authData);
+      const role = auth.profile.role;
+
+      // Route based on role
+      if (role === 'admin' || role === 'developer') {
+        // Admins and developers go to admin-tasks page (full control)
+        window.location.href = 'admin-tasks.html';
+      } else if (role === 'assistant') {
+        // Assistants go to assistant-tasks page (can see assessor tasks + create for them)
+        window.location.href = 'assistant-tasks.html';
+      } else if (role === 'assessor') {
+        // Assessors go to user-tasks page (only their own tasks)
+        window.location.href = 'user-tasks.html';
+      } else {
+        alert('אין לך הרשאה לגשת למערכת ניהול המשימות.');
+      }
+    } catch (e) {
+      console.error('Auth check failed:', e);
+      alert('שגיאה באימות הרשאות');
+    }
+  }
+  
+  // Check auth immediately with multiple retry attempts
+  let authRetries = 0;
+  const maxRetries = 3;
+  
+  function attemptAuth() {
+    if (checkAuth()) {
+      console.log("✅ Authentication successful");
+      return;
+    }
+    
+    authRetries++;
+    if (authRetries < maxRetries) {
+      console.log(`🔄 Auth retry ${authRetries}/${maxRetries} in 200ms...`);
+      setTimeout(attemptAuth, 200);
+    } else {
+      console.log("❌ Max auth retries reached, redirecting to login");
+      window.location.href = 'index.html';
+    }
+  }
+  
+  document.addEventListener('DOMContentLoaded', attemptAuth);
+
+  function navigate(pageName) {
+    window.location.href = pageName;
+  }
+
+  function logout() {
+    // Use the enhanced logout with sound if available
+    if (typeof window.logoutWithSound === 'function') {
+      window.logoutWithSound();
+    } else {
+      // Fallback to regular logout
+      sessionStorage.clear();
+      window.location.href = 'index.html';
+    }
+  }
+
+  document.addEventListener("DOMContentLoaded", function() {
+    // ✅ CRITICAL FIX: Check for incoming URL parameters for data capture
+    try {
+      import('./helper.js').then(helperModule => {
+        if (typeof helperModule.checkForIncomingData === 'function') {
+          helperModule.checkForIncomingData().catch(console.error);
+          console.log('✅ URL parameter check initiated on selection page');
+        }
+      }).catch(error => {
+        console.warn('Could not import helper.js for URL parameter checking:', error);
+      });
+    } catch (error) {
+      console.warn('Error setting up URL parameter checking:', error);
+    }
+    
+    // Session timeout management
+    let idleTimeout;
+    function resetIdleTimer() {
+      clearTimeout(idleTimeout);
+      idleTimeout = setTimeout(() => {
+        alert("הפגישה הסתיימה עקב חוסר פעילות.");
+        sessionStorage.clear();
+        window.location.href = 'index.html';
+      }, 30 * 60 * 1000);
+    }
+    ["click", "keydown", "scroll", "mousemove"].forEach(eventType => {
+      document.addEventListener(eventType, resetIdleTimer, true);
+    });
+    resetIdleTimer();
+  });
+</script>
+
+<script>
+// Global admin access function - non-module script for immediate availability
+async function verifyAdminAccess(event) {
+  const password = prompt("Enter admin password:");
+  if (!password) return;
+
+  // Get button reference
+  const submitBtn = event?.target || document.querySelector('button[onclick*="verifyAdminAccess"]');
+  const originalText = submitBtn?.textContent || 'ניהול מערכת (Admin)';
+  
+  try {
+    // Show loading state
+    if (submitBtn) {
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'מתחבר למערכת...';
+    }
+
+    // Import webhooks dynamically with fallback
+    let WEBHOOKS;
+    try {
+      const webhookModule = await import('./webhook.js');
+      WEBHOOKS = webhookModule.WEBHOOKS;
+    } catch (importError) {
+      console.error('Failed to import webhooks:', importError);
+      // Fallback webhook URL
+      WEBHOOKS = {
+        ADMIN_HUB: 'https://hook.eu2.make.com/xwr4rxw9sp1v16ihuw4ldgyxa312hg2p'
+      };
+    }
+    
+    console.log('Using ADMIN_HUB:', WEBHOOKS.ADMIN_HUB);
+
+    const response = await fetch(WEBHOOKS.ADMIN_HUB, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ 
+        password,
+        action: 'admin_login',
+        timestamp: new Date().toISOString(),
+        user_auth: sessionStorage.getItem('auth')
+      })
+    });
+
+    const text = await response.text();
+    console.log('🔍 Admin webhook response status:', response.status);
+    console.log('🔍 Admin webhook raw response:', text);
+    
+    // Handle different response formats
+    let data;
+    try {
+      data = JSON.parse(text);
+      console.log('🔍 Parsed JSON admin response:', data);
+    } catch (_) {
+      console.log('🔍 Response is not JSON, treating as text');
+      data = { responseText: text.trim() };
+    }
+
+    // Enhanced admin access validation
+    const isAdmin = 
+      // JSON response patterns
+      data?.role === 'admin' || 
+      data?.access === 'admin' ||
+      data?.status === 'admin' ||
+      data?.result === 'admin' ||
+      data?.access_granted === true ||
+      data?.admin === true ||
+      data?.authenticated === true ||
+      data?.valid === true ||
+      
+      // Text response patterns (case insensitive)
+      /^(admin|success|granted|approved|valid|authenticated|true)$/i.test(text?.trim()) ||
+      
+      // Partial match patterns
+      /admin.*granted|access.*granted|admin.*success|authenticated.*admin/i.test(text) ||
+      
+      // Response status validation
+      (response.status === 200 && text && !text.toLowerCase().includes('error') && !text.toLowerCase().includes('denied'));
+    
+    console.log('🔍 Admin validation result:', isAdmin);
+    
+    if (isAdmin) {
+      console.log('✅ Admin access granted');
+      
+      // Legacy admin-access sessionStorage removed in Phase 6
+      // Admin access now controlled by Supabase role-based auth
+      
+      if (submitBtn) {
+        submitBtn.textContent = '✅ גישה אושרה';
+      }
+      
+      setTimeout(() => {
+        window.location.href = 'admin.html';
+      }, 500);
+      
+    } else {
+      console.error('❌ Admin access denied');
+      console.error('Response details:', { data, text, status: response.status });
+      
+      if (submitBtn) {
+        submitBtn.textContent = '❌ גישה נדחתה';
+        setTimeout(() => {
+          submitBtn.disabled = false;
+          submitBtn.textContent = originalText;
+        }, 2000);
+      }
+      
+      alert('גישה נדחתה: סיסמה שגויה או שגיאה בשרת');
+    }
+    
+  } catch (err) {
+    console.error('Admin verification error:', err);
+    
+    if (submitBtn) {
+      submitBtn.textContent = '❌ שגיאת חיבור';
+      setTimeout(() => {
+        submitBtn.disabled = false;
+        submitBtn.textContent = originalText;
+      }, 2000);
+    }
+    
+    // More specific error messages
+    let errorMessage = 'שגיאה בחיבור לשרת האימות';
+    
+    if (err.message.includes('Failed to fetch')) {
+      errorMessage = 'שגיאת רשת - בדוק חיבור לאינטרנט';
+    } else if (err.message.includes('NetworkError')) {
+      errorMessage = 'שגיאת רשת - יתכן שהשרת לא זמין';
+    } else if (err.message.includes('CORS')) {
+      errorMessage = 'שגיאת אבטחה - בעיית CORS';
+    } else if (err.name === 'TypeError') {
+      errorMessage = 'שגיאה טכנית - בעיה בטעינת המודולים';
+    }
+    
+    alert(errorMessage + '\n\nפרטי השגיאה: ' + err.message);
+    
+    // Legacy emergency fallback removed in Phase 6
+    // All admin access now through Supabase role-based auth
+  }
+}
+
+// Ensure function is globally available
+window.verifyAdminAccess = verifyAdminAccess;
+</script>
+
+<script>
+  // Toggle collapsible sections
+  function toggleSection(sectionId) {
+    const section = document.getElementById(sectionId);
+    section.classList.toggle('collapsed');
+
+    // Save state to localStorage
+    const isCollapsed = section.classList.contains('collapsed');
+    localStorage.setItem(`section_${sectionId}_collapsed`, isCollapsed);
+  }
+
+  // Restore section states from localStorage on page load
+  document.addEventListener('DOMContentLoaded', function() {
+    const sections = ['expertiseSection', 'estimateSection', 'finalReportSection', 'adminSection'];
+    sections.forEach(sectionId => {
+      const isCollapsed = localStorage.getItem(`section_${sectionId}_collapsed`) === 'true';
+      if (isCollapsed) {
+        document.getElementById(sectionId).classList.add('collapsed');
+      }
+    });
+  });
+</script>
+
+<script src="logout-sound.js"></script>
+<script src="assistant-floating.js"></script>
+<script src="onesignal-integration.js"></script>
+<script src="internal-browser.js"></script>
+<script src="services/autoSaveService.js" type="module"></script>
+</body>
+</html>

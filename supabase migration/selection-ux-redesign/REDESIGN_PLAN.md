@@ -439,7 +439,7 @@ This project aims to create a modern, efficient, and mobile-friendly UX/UI for t
 - **Inspiration**: `/selection1.html`
 - **Documentation**: `/DOCUMENTATION/` folder
 - **Branding**: Logo at `https://carmelcayouf.com/wp-content/uploads/2025/06/g.webp`
-- **Business Name**: "ירון כיוף שמאות - פורטל"
+- **Business Name**: "ירון כיוף - משרד שמאות וייעוץ"
 - **Tagline**: "שמאות והערכת נזקי רכב ורכוש"
 
 ---
