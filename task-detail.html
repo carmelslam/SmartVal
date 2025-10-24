@@ -491,6 +491,68 @@
     </div>
   </div>
 
+  <!-- Follow-up Task Modal -->
+  <div id="followUpModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 1000; align-items: center; justify-content: center;">
+    <div style="background: white; border-radius: 12px; padding: 2rem; max-width: 600px; width: 90%; max-height: 80vh; overflow-y: auto;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+        <h2 style="color: #003366; font-size: 1.3rem;">🔗 יצירת משימת המשך</h2>
+        <button onclick="closeFollowUpModal()" style="background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #666;">✕</button>
+      </div>
+
+      <form id="followUpForm" style="display: flex; flex-direction: column; gap: 1rem;">
+        <div>
+          <label style="display: block; font-weight: 600; margin-bottom: 0.5rem; color: #003366;">כותרת המשימה *</label>
+          <input type="text" id="followUpTitle" required style="width: 100%; padding: 0.75rem; border: 1px solid #ddd; border-radius: 8px; font-family: 'Noto Sans Hebrew', Arial, sans-serif;">
+        </div>
+
+        <div>
+          <label style="display: block; font-weight: 600; margin-bottom: 0.5rem; color: #003366;">תיאור</label>
+          <textarea id="followUpDescription" rows="4" style="width: 100%; padding: 0.75rem; border: 1px solid #ddd; border-radius: 8px; font-family: 'Noto Sans Hebrew', Arial, sans-serif; resize: vertical;"></textarea>
+        </div>
+
+        <div>
+          <label style="display: block; font-weight: 600; margin-bottom: 0.5rem; color: #003366;">הקצה ל-</label>
+          <select id="followUpAssignedTo" required style="width: 100%; padding: 0.75rem; border: 1px solid #ddd; border-radius: 8px; font-family: 'Noto Sans Hebrew', Arial, sans-serif;">
+            <option value="">בחר משתמש...</option>
+          </select>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+          <div>
+            <label style="display: block; font-weight: 600; margin-bottom: 0.5rem; color: #003366;">עדיפות</label>
+            <select id="followUpPriority" style="width: 100%; padding: 0.75rem; border: 1px solid #ddd; border-radius: 8px; font-family: 'Noto Sans Hebrew', Arial, sans-serif;">
+              <option value="low">נמוכה</option>
+              <option value="medium" selected>בינונית</option>
+              <option value="high">גבוהה</option>
+              <option value="urgent">דחופה</option>
+            </select>
+          </div>
+
+          <div>
+            <label style="display: block; font-weight: 600; margin-bottom: 0.5rem; color: #003366;">תאריך יעד</label>
+            <input type="datetime-local" id="followUpDueDate" style="width: 100%; padding: 0.75rem; border: 1px solid #ddd; border-radius: 8px; font-family: 'Noto Sans Hebrew', Arial, sans-serif;">
+          </div>
+        </div>
+
+        <div style="background: #f8f9fa; padding: 1rem; border-radius: 8px; margin-top: 0.5rem;">
+          <p style="margin: 0; font-size: 0.9rem; color: #666;">
+            <strong>משימת המקור:</strong> <span id="parentTaskName"></span><br>
+            משימה זו תיווצר כהמשך למשימה המקורית ותהיה חלק מאותו שרשור.
+          </p>
+        </div>
+
+        <div style="display: flex; gap: 1rem; margin-top: 1rem;">
+          <button type="submit" style="flex: 1; padding: 0.75rem; background: #003366; color: white; border: none; border-radius: 8px; font-family: 'Noto Sans Hebrew', Arial, sans-serif; font-size: 1rem; cursor: pointer;">
+            ✅ צור משימת המשך
+          </button>
+          <button type="button" onclick="closeFollowUpModal()" style="flex: 1; padding: 0.75rem; background: #f0f0f0; color: #333; border: none; border-radius: 8px; font-family: 'Noto Sans Hebrew', Arial, sans-serif; font-size: 1rem; cursor: pointer;">
+            ביטול
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <script type="module">
     import { supabase } from './lib/supabaseClient.js';
     import { NotificationManager } from './task-notifications.js';
@@ -630,6 +692,7 @@
           <div class="task-header">
             <div class="task-title">${escapeHtml(task.title || 'ללא כותרת')}</div>
             <div class="action-buttons">
+              ${canEdit ? `<button class="btn btn-primary" onclick="openFollowUpModal()">🔗 משימת המשך</button>` : ''}
               ${canEdit ? `<button class="btn btn-secondary" onclick="editTask()">✏️ ערוך</button>` : ''}
               ${canEdit ? `<button class="btn btn-secondary" onclick="archiveTask()">📦 העבר לארכיון</button>` : ''}
               ${canDelete ? `<button class="btn btn-danger" onclick="deleteTask()">🗑️ מחק</button>` : ''}
@@ -725,6 +788,14 @@
       const sidebar = document.createElement('div');
       sidebar.className = 'sidebar';
       sidebar.innerHTML = `
+        ${task.thread_id ? `
+          <div class="attachments-section" id="thread-section">
+            <h3 class="section-title">🧵 משימות קשורות</h3>
+            <div id="thread-tasks-list">
+              <div class="loading">טוען משימות קשורות...</div>
+            </div>
+          </div>
+        ` : ''}
         <div class="attachments-section">
           <h3 class="section-title">📎 קבצים מצורפים</h3>
           <div class="upload-area" onclick="document.getElementById('file-input').click()">
@@ -738,6 +809,11 @@
       `;
 
       document.querySelector('.container').appendChild(sidebar);
+
+      // Load thread tasks if task has a thread
+      if (task.thread_id) {
+        loadThreadTasks();
+      }
 
       // Update progress display dynamically
       const slider = document.getElementById('progress-slider');
@@ -825,6 +901,62 @@
           <div class="error">שגיאה בטעינת קבצים: ${error.message}</div>
         `;
       }
+    }
+
+    async function loadThreadTasks() {
+      try {
+        const { data: threadTasks, error } = await supabase
+          .from('tasks')
+          .select('*')
+          .eq('thread_id', currentTask.thread_id)
+          .order('created_at', { ascending: true });
+
+        if (error) throw error;
+
+        const container = document.getElementById('thread-tasks-list');
+
+        if (!threadTasks || threadTasks.length <= 1) {
+          container.innerHTML = '<div class="empty-state">אין משימות קשורות נוספות</div>';
+          return;
+        }
+
+        // Add profile data to tasks
+        const tasksWithProfiles = threadTasks.map(t => ({
+          ...t,
+          assigned_to_profile: profileMap[t.assigned_to]
+        }));
+
+        container.innerHTML = tasksWithProfiles.map(t => `
+          <div onclick="window.location.href='task-detail.html?id=${t.id}'" style="padding: 0.75rem; margin-bottom: 0.5rem; background: ${t.id === taskId ? '#e3f2fd' : '#f8f9fa'}; border-radius: 8px; cursor: pointer; border-left: 3px solid ${t.id === taskId ? '#003366' : getPriorityColor(t.priority)}; transition: background 0.2s;">
+            <div style="font-weight: ${t.id === taskId ? '700' : '500'}; font-size: 0.9rem; margin-bottom: 0.25rem; color: #003366;">
+              ${escapeHtml(t.title)}
+              ${t.id === taskId ? ' (נוכחי)' : ''}
+            </div>
+            <div style="font-size: 0.75rem; color: #666; display: flex; justify-content: space-between;">
+              <span>👤 ${escapeHtml(t.assigned_to_profile?.name || 'לא ידוע')}</span>
+              <span>📊 ${getStatusLabel(t.status)}</span>
+            </div>
+            ${t.parent_task_id === taskId ? '<div style="font-size: 0.7rem; color: #10B981; margin-top: 0.25rem;">↳ המשך של משימה זו</div>' : ''}
+            ${t.id === currentTask.parent_task_id ? '<div style="font-size: 0.7rem; color: #3B82F6; margin-top: 0.25rem;">↑ משימת המקור</div>' : ''}
+          </div>
+        `).join('');
+
+      } catch (error) {
+        console.error('Error loading thread tasks:', error);
+        document.getElementById('thread-tasks-list').innerHTML = `
+          <div class="error">שגיאה בטעינת משימות קשורות: ${error.message}</div>
+        `;
+      }
+    }
+
+    function getPriorityColor(priority) {
+      const colors = {
+        low: '#10B981',
+        medium: '#3B82F6',
+        high: '#F59E0B',
+        urgent: '#EF4444'
+      };
+      return colors[priority] || '#999';
     }
 
     window.sendMessage = async function() {
@@ -1122,6 +1254,124 @@
       div.textContent = text;
       return div.innerHTML;
     }
+
+    // Follow-up Task Functions
+    window.openFollowUpModal = function() {
+      // Populate user dropdown
+      const select = document.getElementById('followUpAssignedTo');
+      select.innerHTML = '<option value="">בחר משתמש...</option>' +
+        Object.values(profileMap).map(profile =>
+          `<option value="${profile.user_id}">${escapeHtml(profile.name)} (${profile.role})</option>`
+        ).join('');
+
+      // Set parent task name
+      document.getElementById('parentTaskName').textContent = currentTask.title;
+
+      // Show modal
+      document.getElementById('followUpModal').style.display = 'flex';
+    };
+
+    window.closeFollowUpModal = function() {
+      document.getElementById('followUpModal').style.display = 'none';
+      document.getElementById('followUpForm').reset();
+    };
+
+    // Handle follow-up form submission
+    document.getElementById('followUpForm').addEventListener('submit', async function(e) {
+      e.preventDefault();
+
+      const title = document.getElementById('followUpTitle').value.trim();
+      const description = document.getElementById('followUpDescription').value.trim();
+      const assignedTo = document.getElementById('followUpAssignedTo').value;
+      const priority = document.getElementById('followUpPriority').value;
+      const dueDate = document.getElementById('followUpDueDate').value;
+
+      if (!title || !assignedTo) {
+        alert('נא למלא את כל השדות החובה');
+        return;
+      }
+
+      try {
+        let threadId = currentTask.thread_id;
+
+        // If parent task doesn't have a thread, create one
+        if (!threadId) {
+          const { data: newThread, error: threadError } = await supabase
+            .from('task_threads')
+            .insert({
+              thread_name: `שרשור: ${currentTask.title}`,
+              thread_description: `שרשור משימות הקשור ל: ${currentTask.title}`,
+              case_id: currentTask.case_id,
+              plate: currentTask.plate,
+              created_by: currentUser.user_id
+            })
+            .select()
+            .single();
+
+          if (threadError) throw threadError;
+          threadId = newThread.id;
+
+          // Update parent task with thread_id
+          const { error: updateError } = await supabase
+            .from('tasks')
+            .update({ thread_id: threadId })
+            .eq('id', taskId);
+
+          if (updateError) throw updateError;
+        }
+
+        // Create follow-up task
+        const { data: newTask, error: taskError } = await supabase
+          .from('tasks')
+          .insert({
+            title: title,
+            description: description,
+            assigned_to: assignedTo,
+            assigned_by: currentUser.user_id,
+            priority: priority,
+            due_date: dueDate || null,
+            status: 'pending',
+            case_id: currentTask.case_id,
+            plate: currentTask.plate,
+            thread_id: threadId,
+            parent_task_id: taskId
+          })
+          .select()
+          .single();
+
+        if (taskError) throw taskError;
+
+        // Send notification
+        if (notificationManager) {
+          await notificationManager.sendNotification({
+            type: 'assigned',
+            task: newTask,
+            assignedToProfile: profileMap[assignedTo]
+          });
+        }
+
+        // Log to progress history
+        await supabase
+          .from('task_progress_history')
+          .insert({
+            task_id: taskId,
+            changed_by: currentUser.user_id,
+            change_type: 'created',
+            new_value: JSON.stringify({ follow_up_task_id: newTask.id }),
+            change_description: `נוצרה משימת המשך: ${title}`
+          });
+
+        alert('✅ משימת המשך נוצרה בהצלחה!');
+        closeFollowUpModal();
+
+        // Refresh current task to update thread info
+        await refreshTask();
+
+      } catch (error) {
+        console.error('Error creating follow-up task:', error);
+        alert('❌ שגיאה ביצירת משימת המשך: ' + error.message);
+      }
+    });
 
     // Initialize
     loadTask();
