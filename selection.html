@@ -1821,25 +1821,100 @@ window.verifyAdminAccess = verifyAdminAccess;
     }
   }
 
-  // Open report (placeholder - to be implemented)
-  function openReport(reportType) {
-    console.log('Opening report:', reportType);
+  // Open existing report PDF from storage
+  async function openReport(reportType) {
+    console.log('📄 Opening report:', reportType);
 
-    // Check if case is loaded
-    const caseLoaded = sessionStorage.getItem('caseLoaded');
-    if (!caseLoaded) {
+    // Check if case is loaded by checking plate number field
+    const plateNumber = document.getElementById('plateNumber')?.value?.trim();
+    if (!plateNumber) {
       alert('אנא טען תיק קיים תחילה');
       return;
     }
 
-    // Navigate to appropriate report page
-    if (reportType === 'expertise') {
-      window.location.href = 'expertise-builder.html?mode=view';
-    } else if (reportType === 'estimate') {
-      sessionStorage.setItem('selectedReportType', 'estimate');
-      window.location.href = 'estimator-builder.html?mode=post-session';
-    } else if (reportType === 'final') {
-      window.location.href = 'report-selection.html';
+    console.log('✅ Case loaded with plate:', plateNumber);
+
+    try {
+      // Map report type to category name
+      const categoryMap = {
+        'expertise': 'אקספרטיזה',
+        'estimate': 'אומדן',
+        'final': 'דו"ח סופי'
+      };
+
+      // Get case_id from helper or database
+      const { supabase } = await import('./lib/supabaseClient.js');
+      const { data: cases, error: caseError } = await supabase
+        .from('cases')
+        .select('id')
+        .eq('plate', plateNumber)
+        .limit(1);
+
+      if (caseError || !cases || cases.length === 0) {
+        console.error('❌ Error finding case:', caseError);
+        alert('לא נמצא תיק עבור לוחית רישוי זו');
+        return;
+      }
+
+      const caseId = cases[0].id;
+      console.log('📋 Case ID:', caseId);
+
+      // Query documents table for this report type
+      const { data: documents, error: docError } = await supabase
+        .from('documents')
+        .select('id, filename, storage_key, created_at')
+        .eq('case_id', caseId)
+        .eq('category', 'report')
+        .ilike('filename', `%${categoryMap[reportType]}%`)
+        .order('created_at', { ascending: false })
+        .limit(1);
+
+      if (docError) {
+        console.error('❌ Error fetching document:', docError);
+        alert('שגיאה בטעינת המסמך');
+        return;
+      }
+
+      if (!documents || documents.length === 0) {
+        console.log('⚠️ No document found for type:', reportType);
+        alert(`לא נמצא ${categoryMap[reportType]} עבור תיק זה.\n\nיש ליצור אותו תחילה.`);
+
+        // Offer to navigate to builder page
+        const createNew = confirm(`האם ברצונך ליצור ${categoryMap[reportType]} חדש?`);
+        if (createNew) {
+          if (reportType === 'expertise') {
+            window.location.href = 'expertise-builder.html?mode=view';
+          } else if (reportType === 'estimate') {
+            sessionStorage.setItem('selectedReportType', 'estimate');
+            window.location.href = 'estimator-builder.html?mode=post-session';
+          } else if (reportType === 'final') {
+            window.location.href = 'report-selection.html';
+          }
+        }
+        return;
+      }
+
+      const document = documents[0];
+      console.log('📄 Found document:', document.filename);
+
+      // Get signed URL for private bucket (reports bucket is private)
+      const { data: urlData, error: urlError } = await supabase.storage
+        .from('reports')
+        .createSignedUrl(document.storage_key, 3600); // 1 hour expiry
+
+      if (urlError || !urlData) {
+        console.error('❌ Error creating signed URL:', urlError);
+        alert('שגיאה בטעינת ה-PDF');
+        return;
+      }
+
+      console.log('✅ Opening PDF in new tab');
+      // Open PDF in new tab
+      window.open(urlData.signedUrl, '_blank');
+
+    } catch (error) {
+      console.error('❌ Error opening report:', error);
+      alert('שגיאה בפתיחת הדוח');
     }
   }
 
