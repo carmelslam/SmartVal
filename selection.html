@@ -399,35 +399,6 @@
         }
       }
     }
-
-    window.generateEstimate = function () {
-      const caseLoaded = sessionStorage.getItem('caseLoaded');
-      if (!caseLoaded) {
-        alert('אנא טען תיק קיים תחילה');
-        return;
-      }
-      // Set estimate as selected report type
-      sessionStorage.setItem('selectedReportType', 'estimate');
-      window.location.href = 'estimator-builder.html?mode=post-session';
-    }
-
-    window.generateFinalReport = function () {
-      const caseLoaded = sessionStorage.getItem('caseLoaded');
-      if (!caseLoaded) {
-        alert('אנא טען תיק קיים תחילה');
-        return;
-      }
-      window.location.href = 'report-selection.html';
-    }
-
-    window.viewExpertise = function () {
-      const caseLoaded = sessionStorage.getItem('caseLoaded');
-      if (!caseLoaded) {
-        alert('אנא טען תיק קיים תחילה');
-        return;
-      }
-      window.location.href = 'expertise-builder.html?mode=view';
-    }
   </script>
   <link href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
   <style>
@@ -995,11 +966,6 @@
       <div style="margin-top: 10px; color: #94a3b8;">
         <p><strong>תאריך בדיקה:</strong> <span id="caseDate"></span></p>
         <p><strong>יצרן ודגם:</strong> <span id="caseVehicle"></span></p>
-      </div>
-      <div style="margin-top: 15px; display: flex; gap: 10px; flex-wrap: wrap; justify-content: center;">
-        <button class="case-button" onclick="generateEstimate()">הפק אומדן</button>
-        <button class="case-button" onclick="generateFinalReport()">הפק דו"ח סופי</button>
-        <button class="case-button" onclick="viewExpertise()">צפה באקספרטיזה</button>
       </div>
     </div>
 
@@ -1858,7 +1824,23 @@ window.verifyAdminAccess = verifyAdminAccess;
   // Open report (placeholder - to be implemented)
   function openReport(reportType) {
     console.log('Opening report:', reportType);
-    alert(`פתיחת ${reportType === 'expertise' ? 'אקספרטיזה' : reportType === 'estimate' ? 'אומדן' : 'דו"ח סופי'}\n\nפונקציונליות זו תושלם בהמשך`);
+
+    // Check if case is loaded
+    const caseLoaded = sessionStorage.getItem('caseLoaded');
+    if (!caseLoaded) {
+      alert('אנא טען תיק קיים תחילה');
+      return;
+    }
+
+    // Navigate to appropriate report page
+    if (reportType === 'expertise') {
+      window.location.href = 'expertise-builder.html?mode=view';
+    } else if (reportType === 'estimate') {
+      sessionStorage.setItem('selectedReportType', 'estimate');
+      window.location.href = 'estimator-builder.html?mode=post-session';
+    } else if (reportType === 'final') {
+      window.location.href = 'report-selection.html';
+    }
   }
 
   // Override the original loadExistingCase to update status ribbon
