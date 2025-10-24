@@ -3817,60 +3817,79 @@
           date_to: document.getElementById('serverDateTo').value,
           limit: document.getElementById('serverLimitFilter').value
         };
-        
+
         // Close modal
         closeLoadRemindersModal();
-        
+
         // Update data status to loading
-        updateDataStatus('loading', 'טוען תזכורות מ-Make.com עם הפרמטרים שנבחרו...');
-        
-        // Wait for webhook to be ready
-        if (!window.webhookReady || typeof window.sendToWebhook !== 'function') {
-          throw new Error('Webhook function not available');
+        updateDataStatus('loading', 'טוען תזכורות מ-Supabase עם הפרמטרים שנבחרו...');
+
+        console.log('🔄 Loading reminders from Supabase with filters:', serverFilters);
+
+        // Build filters object for Supabase
+        const filters = {};
+        if (serverFilters.status !== 'all') {
+          // Map to Hebrew status values from reminders table
+          const statusMap = {
+            'active': 'פעיל',
+            'pending': 'ממתין',
+            'completed': 'הושלם',
+            'overdue': 'פג תוקף'
+          };
+          filters.status = statusMap[serverFilters.status] || serverFilters.status;
         }
-        
-        console.log('🔄 Loading reminders with server filters:', serverFilters);
-        
-        const response = await window.sendToWebhook('ADMIN_FETCH_REMINDERS', {
-          action: 'fetch_reminders',
-          server_filters: serverFilters,
-          pagination: {
-            limit: serverFilters.limit === 'all' ? null : parseInt(serverFilters.limit),
-            offset: 0
-          },
-          timestamp: new Date().toISOString()
-        });
-        
-        console.log('📥 Fetched reminders with server filters:', response);
-        
-        // Update local data with fetched reminders
-        if (response && Array.isArray(response)) {
-          window.remindersData = response;
-        } else if (response && response.reminders && Array.isArray(response.reminders)) {
-          window.remindersData = response.reminders;
+        if (serverFilters.category !== 'all') {
+          // Map to Hebrew category values from reminders table
+          const categoryMap = {
+            'case_deadline': 'תזכורת כללית',
+            'payment_reminder': 'תזכורת תשלום',
+            'follow_up': 'תזכורת מעקב',
+            'inspection': 'תזכורת בדיקה',
+            'general': 'תזכורת כללית'
+          };
+          filters.category = categoryMap[serverFilters.category] || serverFilters.category;
+        }
+        if (serverFilters.plate_number) {
+          filters.plate = serverFilters.plate_number;
+        }
+        if (serverFilters.date_from) {
+          filters.dateFrom = serverFilters.date_from;
+        }
+        if (serverFilters.date_to) {
+          filters.dateTo = serverFilters.date_to;
+        }
+
+        // Query Supabase
+        const response = await adminSupabaseService.getReminders(filters);
+
+        console.log('✅ Fetched reminders from Supabase:', response);
+
+        // Apply limit if specified
+        if (serverFilters.limit !== 'all') {
+          const limit = parseInt(serverFilters.limit);
+          window.remindersData = response.slice(0, limit);
         } else {
-          console.warn('No reminders found in response');
-          window.remindersData = [];
+          window.remindersData = response;
         }
-        
+
         // Store current filters and timestamp
         window.currentServerFilters = serverFilters;
         window.dataLoadedTimestamp = new Date();
-        
+
         // Enable local filtering controls
         enableLocalControls();
-        
+
         // Update data status
         const filterDesc = createFilterDescription(serverFilters);
-        updateDataStatus('loaded', `נטענו ${window.remindersData.length} תזכורות (${filterDesc}) - עודכן: ${new Date().toLocaleTimeString('he-IL')}`);
-        
+        updateDataStatus('loaded', `נטענו ${window.remindersData.length} תזכורות מ-Supabase (${filterDesc}) - עודכן: ${new Date().toLocaleTimeString('he-IL')}`);
+
         // Refresh display
         renderReminders();
-        
+
         return window.remindersData;
-        
+
       } catch (error) {
-        console.error('Error loading reminders:', error);
+        console.error('❌ Error loading reminders from Supabase:', error);
         updateDataStatus('error', `שגיאה בטעינת תזכורות: ${error.message}`);
         throw error;
       }
