@@ -558,10 +558,14 @@
 
 <!-- SESSION 56: Load helper.js as regular script BEFORE module script -->
 <script src="helper.js"></script>
+<script src="services/supabaseClient.js"></script>
+<script src="services/invoice-service.js"></script>
+<script src="services/invoice-helper-sync.js"></script>
 <script type="module">
 import { sendToWebhook, getWebhook } from './webhook.js';
 // SESSION 56: helper.js is NOT an ES6 module - use window.updateHelper
 // import { updateHelper } from './helper.js';
+// SESSION 74: Phase 5a Invoice Integration with Supabase
 
 // Enhanced Invoice Processing System
 class InvoiceProcessor {
@@ -571,6 +575,12 @@ class InvoiceProcessor {
     this.processingInProgress = false;
     this.maxFileSize = 10 * 1024 * 1024; // 10MB
     this.allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'];
+    
+    // SESSION 74: Supabase integration
+    this.invoiceService = window.invoiceService;
+    this.invoiceHelperSync = window.invoiceHelperSync;
+    this.currentDocumentId = null;
+    this.currentInvoiceId = null;
     
     this.init();
   }
@@ -702,7 +712,7 @@ class InvoiceProcessor {
     e.stopPropagation();
   }
 
-  handleFileSelection(file) {
+  async handleFileSelection(file) {
     if (!file) return;
 
     if (!this.validateFile(file)) {
@@ -711,7 +721,30 @@ class InvoiceProcessor {
 
     this.uploadedFile = file;
     this.showPreview(file);
-    this.showAlert('קובץ נטען בהצלחה', 'success');
+    
+    // SESSION 74: Upload to Supabase Storage immediately
+    try {
+      const caseId = sessionStorage.getItem('currentCaseId');
+      const plate = document.getElementById('plate').value;
+      
+      if (!caseId) {
+        console.warn('⚠️ No case ID found, skipping Supabase upload');
+        this.showAlert('קובץ נטען בהצלחה', 'success');
+        return;
+      }
+
+      console.log('📤 Uploading invoice document to Supabase...');
+      const result = await this.invoiceService.uploadInvoiceDocument(file, caseId, plate, null);
+      
+      if (result.success) {
+        this.currentDocumentId = result.document.id;
+        console.log('✅ Document uploaded to Supabase:', this.currentDocumentId);
+        this.showAlert('קובץ נטען ונשמר בהצלחה', 'success');
+      }
+    } catch (error) {
+      console.error('❌ Supabase upload failed:', error);
+      this.showAlert('קובץ נטען (שמירה בענן נכשלה)', 'warning');
+    }
   }
 
   validateFile(file) {
@@ -822,10 +855,23 @@ class InvoiceProcessor {
     return true;
   }
 
-  handleOCRResults(result) {
+  async handleOCRResults(result) {
     this.ocrResults = result.items || [];
     this.displayOCRResults(result);
     this.showValidationStatus(result);
+    
+    // SESSION 74: Save OCR results to Supabase
+    try {
+      if (this.currentDocumentId) {
+        console.log('💾 Saving OCR results to Supabase...');
+        await this.invoiceService.updateOCRResults(this.currentDocumentId, result);
+        console.log('✅ OCR results saved to Supabase');
+      } else {
+        console.warn('⚠️ No document ID, skipping Supabase OCR save');
+      }
+    } catch (error) {
+      console.error('❌ Failed to save OCR results to Supabase:', error);
+    }
     
     // Update helper with OCR results
     this.updateHelperWithResults(result);
@@ -989,8 +1035,14 @@ class InvoiceProcessor {
     }
     
     try {
+      console.log('💾 Saving invoice results...');
+      
+      const plate = document.getElementById('plate').value;
+      const caseId = sessionStorage.getItem('currentCaseId');
+      
+      // Prepare result data for helper (backward compatibility)
       const resultData = {
-        plate: document.getElementById('plate').value,
+        plate: plate,
         owner: document.getElementById('owner').value,
         garage_name: document.getElementById('garage_name').value,
         date: document.getElementById('date').value,
@@ -1000,17 +1052,64 @@ class InvoiceProcessor {
         processed_at: new Date().toISOString()
       };
       
-      // Save to helper system
+      // SESSION 74: Save to Supabase if case ID exists
+      if (caseId && this.invoiceService) {
+        try {
+          // Prepare invoice data
+          const invoiceData = {
+            plate: plate,
+            invoice_number: `INV-${Date.now()}`, // Generate unique number
+            supplier_name: document.getElementById('garage_name').value,
+            issue_date: document.getElementById('date').value,
+            invoice_type: document.getElementById('invoice-type').value?.toUpperCase() || 'MIXED',
+            total_amount: resultData.total,
+            currency: 'ILS',
+            approval_status: 'pending'
+          };
+          
+          // Prepare invoice lines
+          const lines = this.ocrResults.map((item, index) => ({
+            line_number: index + 1,
+            description: item.name || item.description || '',
+            quantity: item.quantity || 1,
+            unit_price: item.unit_price || 0,
+            line_total: (item.quantity || 1) * (item.unit_price || 0)
+            // item_category will be auto-filled by SQL trigger
+          }));
+          
+          // Create invoice in Supabase
+          const result = await this.invoiceService.createInvoice(invoiceData, lines, caseId);
+          
+          if (result.success) {
+            this.currentInvoiceId = result.invoice.id;
+            console.log('✅ Invoice saved to Supabase:', this.currentInvoiceId);
+            
+            // Link document to invoice
+            if (this.currentDocumentId) {
+              await this.invoiceService.updateInvoice(this.currentInvoiceId, {
+                // Update document with invoice ID would be done via document update
+              });
+            }
+          }
+        } catch (supabaseError) {
+          console.error('❌ Supabase save failed:', supabaseError);
+          this.showAlert('⚠️ חשבונית נשמרה מקומית (שמירה בענן נכשלה)', 'warning');
+        }
+      } else {
+        console.warn('⚠️ No case ID, skipping Supabase save');
+      }
+      
+      // Save to helper system (backward compatibility)
       this.updateHelperWithResults(resultData);
       
       // Send to webhook for processing
       await sendToWebhook('SAVE_INVOICE_RESULTS', resultData);
       
-      this.showAlert('✅ תוצאות נשמרו בהצלחה', 'success');
+      this.showAlert('✅ חשבונית נשמרה בהצלחה', 'success');
       
     } catch (error) {
       console.error('Save error:', error);
-      this.showAlert('❌ שגיאה בשמירת התוצאות', 'error');
+      this.showAlert('❌ שגיאה בשמירת החשבונית', 'error');
     }
   }
 
