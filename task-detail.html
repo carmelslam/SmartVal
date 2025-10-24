@@ -681,7 +681,7 @@
     }
 
     function renderTask(task) {
-      const userProfile = profileMap[currentUser.user_id];
+      const userProfile = profileMap[currentUser.id];
       const isAdmin = userProfile && (userProfile.role === 'admin' || userProfile.role === 'developer');
       const isAssistant = userProfile && userProfile.role === 'assistant';
       const canEdit = isAdmin || isAssistant;
@@ -888,7 +888,7 @@
             </span>
             <div class="attachment-actions">
               <button class="icon-btn" onclick="downloadAttachment('${att.file_url}', '${escapeHtml(att.file_name)}')" title="הורד">⬇️</button>
-              ${profileMap[currentUser.user_id]?.role === 'admin' ? `
+              ${profileMap[currentUser.id]?.role === 'admin' ? `
                 <button class="icon-btn" onclick="deleteAttachment('${att.id}')" title="מחק">🗑️</button>
               ` : ''}
             </div>
@@ -973,9 +973,9 @@
           .from('task_messages')
           .insert({
             task_id: taskId,
-            sender_id: currentUser.user_id,
+            sender_id: currentUser.id,
             message_text: message,
-            sender_role: profileMap[currentUser.user_id]?.role || 'user'
+            sender_role: profileMap[currentUser.id]?.role || 'user'
           });
 
         if (error) throw error;
@@ -985,7 +985,7 @@
 
         // Send notification
         if (notificationManager && currentTask) {
-          const senderProfile = profileMap[currentUser.user_id];
+          const senderProfile = profileMap[currentUser.id];
           await notificationManager.notifyNewTaskMessage(currentTask, message, senderProfile);
         }
 
@@ -1011,7 +1011,7 @@
           .from('task_progress_history')
           .insert({
             task_id: taskId,
-            changed_by: currentUser.user_id,
+            changed_by: currentUser.id,
             change_type: 'progress_update',
             new_value: value.toString()
           });
@@ -1038,7 +1038,7 @@
           .from('task_progress_history')
           .insert({
             task_id: taskId,
-            changed_by: currentUser.user_id,
+            changed_by: currentUser.id,
             change_type: 'status_change',
             old_value: oldStatus,
             new_value: newStatus
@@ -1046,7 +1046,7 @@
 
         // Send notification
         if (notificationManager && currentTask) {
-          const changedByProfile = profileMap[currentUser.user_id];
+          const changedByProfile = profileMap[currentUser.id];
           await notificationManager.notifyTaskStatusChanged(
             { ...currentTask, status: newStatus },
             oldStatus,
@@ -1090,7 +1090,7 @@
             file_name: file.name,
             file_url: publicUrl,
             file_type: file.type,
-            uploaded_by: currentUser.user_id
+            uploaded_by: currentUser.id
           });
 
         if (dbError) throw dbError;
@@ -1152,7 +1152,7 @@
           .update({
             archived: true,
             archived_at: new Date().toISOString(),
-            archived_by: currentUser.user_id
+            archived_by: currentUser.id
           })
           .eq('id', taskId);
 
@@ -1301,7 +1301,7 @@
               thread_description: `שרשור משימות הקשור ל: ${currentTask.title}`,
               case_id: currentTask.case_id,
               plate: currentTask.plate,
-              created_by: currentUser.user_id
+              created_by: currentUser.id
             })
             .select()
             .single();
@@ -1325,7 +1325,7 @@
             title: title,
             description: description,
             assigned_to: assignedTo,
-            assigned_by: currentUser.user_id,
+            assigned_by: currentUser.id,
             priority: priority,
             due_date: dueDate || null,
             status: 'pending',
@@ -1340,7 +1340,7 @@
         if (taskError) throw taskError;
 
         // Add profile data for notification
-        newTask.assigned_by_profile = profileMap[currentUser.user_id];
+        newTask.assigned_by_profile = profileMap[currentUser.id];
 
         // Send notification
         if (notificationManager) {
@@ -1352,7 +1352,7 @@
           .from('task_progress_history')
           .insert({
             task_id: taskId,
-            changed_by: currentUser.user_id,
+            changed_by: currentUser.id,
             change_type: 'created',
             new_value: JSON.stringify({ follow_up_task_id: newTask.id }),
             change_description: `נוצרה משימת המשך: ${title}`
