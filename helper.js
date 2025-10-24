@@ -2451,17 +2451,17 @@ window.protectPlateNumber = function(plateNumber, source = 'manual') {
 /**
  * Validates incoming plate number against protected original
  */
-window.validatePlateNumber = function(incomingPlate, source = 'unknown') {
+window.helperValidatePlateNumber = function(incomingPlate, source = 'unknown') {
   if (!window.helper.meta?.plate_locked || !window.helper.meta?.original_plate) {
     return { valid: true, action: 'accept' };
   }
-  
+
   // Normalize both plates by removing dashes before comparison
   const originalPlate = window.helper.meta.original_plate.replace(/[-\s]/g, '').toUpperCase().trim();
   const newPlate = String(incomingPlate).replace(/[-\s]/g, '').toUpperCase().trim();
-  
+
   console.log(`🔍 VALIDATION: Checking plate "${newPlate}" from ${source} against protected "${originalPlate}"`);
-  
+
   if (originalPlate === newPlate) {
     console.log(`✅ VALIDATION: Plate numbers match - allowing update`);
     return { valid: true, action: 'accept', message: 'Plate numbers match' };
@@ -2469,9 +2469,9 @@ window.validatePlateNumber = function(incomingPlate, source = 'unknown') {
     console.warn(`⚠️ VALIDATION: Plate mismatch detected!`);
     console.warn(`   Original (protected): "${originalPlate}" from ${window.helper.meta.plate_protection_source}`);
     console.warn(`   Incoming (rejected):  "${newPlate}" from ${source}`);
-    
-    return { 
-      valid: false, 
+
+    return {
+      valid: false,
       action: 'reject',
       message: `Plate number mismatch detected!\n\nProtected plate: "${originalPlate}" (from ${window.helper.meta.plate_protection_source})\nIncoming plate: "${newPlate}" (from ${source})\n\nThe original plate number is protected and cannot be changed.`,
       originalPlate: originalPlate,
@@ -2480,6 +2480,9 @@ window.validatePlateNumber = function(incomingPlate, source = 'unknown') {
     };
   }
 };
+
+// Create alias for backward compatibility (admin.html may override this)
+window.validatePlateNumber = window.helperValidatePlateNumber;
 
 /**
  * Gets current plate protection status
@@ -4035,7 +4038,7 @@ function processHebrewText(bodyText, result) {
       
       // 🔒 CRITICAL: Validate plate numbers before processing
       if (field === 'plate') {
-        const validation = validatePlateNumber(value, 'hebrew_text_ocr');
+        const validation = helperValidatePlateNumber(value, 'hebrew_text_ocr');
         if (!validation.valid) {
           showPlateProtectionAlert(validation);
           console.warn(`🚫 BLOCKING Hebrew OCR plate extraction - validation failed`);
@@ -4145,7 +4148,7 @@ function processDirectData(data, result) {
   const plateFields = ['plate', 'license_plate', 'מספר_רכב', 'מס_רכב', 'מס רכב', 'plate_number'];
   for (const field of plateFields) {
     if (data[field]) {
-      const validation = validatePlateNumber(data[field], 'webhook_direct_data');
+      const validation = helperValidatePlateNumber(data[field], 'webhook_direct_data');
       if (!validation.valid) {
         showPlateProtectionAlert(validation);
         console.warn(`🚫 BLOCKING webhook data - plate validation failed for field: ${field}`);
@@ -4938,7 +4941,7 @@ window.updateHelper = function(field, value) {
   if (field === 'plate' || (typeof value === 'object' && value && value.plate)) {
     const incomingPlate = typeof value === 'string' ? value : value.plate;
     if (incomingPlate) {
-      const validation = validatePlateNumber(incomingPlate, 'updateHelper');
+      const validation = helperValidatePlateNumber(incomingPlate, 'updateHelper');
       if (!validation.valid) {
         showPlateProtectionAlert(validation);
         console.error(`🚫 BLOCKING plate update from updateHelper - validation failed`);
