@@ -21136,7 +21136,23 @@
     </div>
   </div>
 
-
+  <!-- SESSION 74: Invoice Mapping Modal -->
+  <div id="invoice-mapping-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.5); z-index: 10000; justify-content: center; align-items: center;">
+    <div style="background: white; border-radius: 12px; padding: 24px; max-width: 600px; width: 90%; max-height: 80vh; overflow-y: auto; direction: rtl;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <h3 style="margin: 0; color: #1e3a8a; font-size: 20px;">מיפוי פריטים מהחשבונית</h3>
+        <button onclick="closeInvoiceMappingModal()" style="background: none; border: none; font-size: 24px; cursor: pointer; color: #666;">×</button>
+      </div>
+      <div id="invoice-mapping-field-info" style="background: #f3f4f6; padding: 12px; border-radius: 8px; margin-bottom: 16px; font-size: 14px;">
+        <div style="font-weight: 600; margin-bottom: 4px;">שדה נבחר:</div>
+        <div id="field-info-text" style="color: #666;">...</div>
+      </div>
+      <div id="invoice-items-dropdown-container"></div>
+      <div style="margin-top: 16px; display: flex; gap: 8px; justify-content: flex-end;">
+        <button onclick="closeInvoiceMappingModal()" style="padding: 8px 16px; background: #e5e7eb; border: none; border-radius: 6px; cursor: pointer;">ביטול</button>
+      </div>
+    </div>
+  </div>
 
   <script src="internal-browser.js"></script>
   <script src="levi-floating.js"></script>
@@ -21144,6 +21160,178 @@
   <script src="invoice-details-floating.js"></script>
   <script src="parts-search-results-floating.js"></script>
   <script src="password-prefill.js"></script>
+  <script src="services/damage-center-mapper.js"></script>
+  <script src="components/invoice-parts-dropdown.js"></script>
   <script src="final_report.js" type="module"></script>
+
+  <!-- SESSION 74: Invoice Mapping Integration -->
+  <script>
+    // Invoice mapping state
+    let invoiceMappingState = {
+      damageCenterId: null,
+      fieldType: null,
+      fieldIndex: null,
+      caseId: null,
+      invoiceId: null,
+      dropdown: null
+    };
+
+    // Initialize invoice mapping on page load
+    document.addEventListener('DOMContentLoaded', async () => {
+      // Get case ID from sessionStorage
+      const caseId = sessionStorage.getItem('currentCaseId');
+      if (caseId) {
+        invoiceMappingState.caseId = caseId;
+        console.log('🗺️ Invoice mapping initialized for case:', caseId);
+        
+        // Initialize mapper
+        if (window.damageCenterMapper) {
+          await window.damageCenterMapper.initialize(caseId);
+        }
+      }
+
+      // Listen for messages from damage center iframes or floating screens
+      window.addEventListener('message', handleDamageCenterMessage);
+    });
+
+    // Handle messages from damage center iframes
+    function handleDamageCenterMessage(event) {
+      // Check if message is about field click
+      if (event.data && event.data.type === 'DAMAGE_CENTER_FIELD_CLICKED') {
+        const { centerId, fieldType, fieldIndex, currentValue } = event.data;
+        console.log('📍 Field clicked:', { centerId, fieldType, fieldIndex });
+        
+        // Show invoice mapping modal
+        showInvoiceMappingModal(centerId, fieldType, fieldIndex, currentValue);
+      }
+    }
+
+    // Show invoice mapping modal
+    async function showInvoiceMappingModal(centerId, fieldType, fieldIndex, currentValue = null) {
+      try {
+        // Get invoice ID from helper (most recent invoice)
+        let invoiceId = null;
+        if (window.helper && window.helper.financials && window.helper.financials.invoices && window.helper.financials.invoices.length > 0) {
+          invoiceId = window.helper.financials.invoices[0].id;
+        }
+
+        if (!invoiceId) {
+          alert('לא נמצאה חשבונית לתיק זה. אנא העלה חשבונית תחילה.');
+          return;
+        }
+
+        // Store state
+        invoiceMappingState.damageCenterId = centerId;
+        invoiceMappingState.fieldType = fieldType;
+        invoiceMappingState.fieldIndex = fieldIndex;
+        invoiceMappingState.invoiceId = invoiceId;
+
+        // Update field info display
+        const fieldTypeLabels = {
+          'work': 'עבודה',
+          'part': 'חלק',
+          'repair': 'תיקון'
+        };
+        const fieldLabel = fieldTypeLabels[fieldType] || fieldType;
+        document.getElementById('field-info-text').textContent = 
+          `${fieldLabel} #${fieldIndex + 1} במרכז נזקים ${centerId}${currentValue ? ' - ערך נוכחי: ' + currentValue : ''}`;
+
+        // Show modal
+        const modal = document.getElementById('invoice-mapping-modal');
+        modal.style.display = 'flex';
+
+        // Initialize dropdown
+        if (!invoiceMappingState.dropdown) {
+          invoiceMappingState.dropdown = new InvoicePartsDropdown();
+        }
+
+        // Load dropdown items
+        const success = await invoiceMappingState.dropdown.init({
+          fieldType: fieldType,
+          caseId: invoiceMappingState.caseId,
+          invoiceId: invoiceId,
+          containerId: 'invoice-items-dropdown-container',
+          onSelect: handleInvoiceItemSelected
+        });
+
+        if (!success) {
+          alert('שגיאה בטעינת פריטים מהחשבונית');
+          closeInvoiceMappingModal();
+        }
+      } catch (error) {
+        console.error('❌ Error showing mapping modal:', error);
+        alert('שגיאה בטעינת מיפוי חשבונית: ' + error.message);
+      }
+    }
+
+    // Handle invoice item selection
+    async function handleInvoiceItemSelected(item) {
+      try {
+        console.log('✅ Item selected for mapping:', item);
+
+        const mappingData = {
+          invoiceId: invoiceMappingState.invoiceId,
+          invoiceLineId: item.invoice_line_id || null,
+          caseId: invoiceMappingState.caseId,
+          damageCenterId: invoiceMappingState.damageCenterId,
+          fieldType: invoiceMappingState.fieldType,
+          fieldIndex: invoiceMappingState.fieldIndex,
+          itemData: item
+        };
+
+        // Create mapping using damage-center-mapper
+        if (window.damageCenterMapper) {
+          const mappingId = await window.damageCenterMapper.mapItemToField(mappingData);
+          console.log('✅ Mapping created:', mappingId);
+
+          // Notify user
+          alert('הפריט מופה בהצלחה לשדה!');
+
+          // Notify iframe if present
+          window.damageCenterMapper.notifyIframeOfMappingChange(
+            invoiceMappingState.damageCenterId,
+            invoiceMappingState.fieldType,
+            invoiceMappingState.fieldIndex,
+            {
+              name: item.name,
+              costWithoutVat: item.price || item.total || 0
+            }
+          );
+
+          // Close modal
+          closeInvoiceMappingModal();
+        } else {
+          throw new Error('Damage center mapper not initialized');
+        }
+      } catch (error) {
+        console.error('❌ Error creating mapping:', error);
+        alert('שגיאה ביצירת מיפוי: ' + error.message);
+      }
+    }
+
+    // Close invoice mapping modal
+    function closeInvoiceMappingModal() {
+      const modal = document.getElementById('invoice-mapping-modal');
+      modal.style.display = 'none';
+
+      // Cleanup dropdown
+      if (invoiceMappingState.dropdown) {
+        invoiceMappingState.dropdown.destroy();
+        invoiceMappingState.dropdown = null;
+      }
+
+      // Clear state
+      invoiceMappingState.damageCenterId = null;
+      invoiceMappingState.fieldType = null;
+      invoiceMappingState.fieldIndex = null;
+    }
+
+    // Global function for testing
+    window.testInvoiceMapping = function() {
+      showInvoiceMappingModal('center_1', 'work', 0, 'Test Work');
+    };
+
+    console.log('✅ Invoice mapping integration loaded');
+  </script>
 </body>
 </html>
