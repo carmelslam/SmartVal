@@ -33,13 +33,14 @@
 
         console.log('📊 Querying case_helper table for case_id:', caseId);
 
-        // Count all versions for this case
-        const { count, error } = await supabase
+        // Query all versions for this case (same approach as admin.html)
+        const { data: versions, error } = await supabase
           .from('case_helper')
-          .select('*', { count: 'exact', head: true })
-          .eq('case_id', caseId);
+          .select('id, version, created_at, is_current')
+          .eq('case_id', caseId)
+          .order('created_at', { ascending: false });
 
-        console.log('📊 Backup count query result:', { count, error, caseId });
+        console.log('📊 Backup count query result:', { versionsCount: versions?.length, error, caseId });
 
         if (error) {
           console.error('❌ Error loading backup count:', error);
@@ -47,12 +48,13 @@
           return;
         }
 
-        if (count !== null && count !== undefined) {
+        if (versions && Array.isArray(versions)) {
+          const count = versions.length;
           const displayText = count > 1 ? `${count} גיבויים` : count === 1 ? `${count} גיבוי` : 'אין גיבויים';
           backupElement.textContent = displayText;
           console.log('✅ Set backup count to:', displayText, '(count:', count, ')');
         } else {
-          console.warn('⚠️ Count is null or undefined');
+          console.warn('⚠️ Versions array is null or not an array');
           backupElement.textContent = 'לא זמין';
         }
       } catch (err) {
