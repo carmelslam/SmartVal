@@ -1461,10 +1461,12 @@ window.verifyAdminAccess = verifyAdminAccess;
 
       // Update helper in session storage
       const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
-      if (helper.meta) {
-        helper.meta.status = statusValue;
-        sessionStorage.setItem('helper', JSON.stringify(helper));
+      if (!helper.meta) {
+        helper.meta = {};
       }
+      helper.meta.status = statusValue;
+      sessionStorage.setItem('helper', JSON.stringify(helper));
+      console.log('✅ Updated helper.meta.status in sessionStorage:', statusValue);
 
       // Show success feedback
       const dropdown = document.getElementById('caseStatusDropdown');
@@ -1504,6 +1506,15 @@ window.verifyAdminAccess = verifyAdminAccess;
       }
 
       console.log('✅ Case assigned successfully to:', assessorId);
+
+      // Update helper in session storage
+      const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+      if (!helper.meta) {
+        helper.meta = {};
+      }
+      helper.meta.assigned_to = assessorId || null;
+      sessionStorage.setItem('helper', JSON.stringify(helper));
+      console.log('✅ Updated helper.meta.assigned_to in sessionStorage:', assessorId);
 
       // Show success feedback
       const dropdown = document.getElementById('assignedToDropdown');
@@ -1569,10 +1580,10 @@ window.verifyAdminAccess = verifyAdminAccess;
         document.getElementById('caseDateDisplay').textContent = '—';
       }
 
-      // Status dropdown - use database value
+      // Status dropdown - use database value with fallbacks to helper.meta
       const status = dbCase?.status || caseData.status || caseData.meta?.status || '';
       const dropdown = document.getElementById('caseStatusDropdown');
-      console.log('📊 Status from DB:', status, 'dbCase:', dbCase);
+      console.log('📊 Status from DB:', status, 'dbCase:', dbCase, 'helper.meta.status:', caseData.meta?.status);
       if (dropdown && status) {
         // Make sure status is uppercase
         const statusUpper = status.toUpperCase();
@@ -1588,12 +1599,15 @@ window.verifyAdminAccess = verifyAdminAccess;
         console.log('📊 No status to set or dropdown not found');
       }
 
-      // Assigned to dropdown - use database value
-      const assignedTo = dbCase?.assigned_to || caseData.assigned_to;
+      // Assigned to dropdown - use database value with fallbacks to helper.meta
+      const assignedTo = dbCase?.assigned_to || caseData.assigned_to || caseData.meta?.assigned_to;
       const assignedDropdown = document.getElementById('assignedToDropdown');
+      console.log('👨‍💼 Assigned to from DB:', dbCase?.assigned_to, 'helper.meta.assigned_to:', caseData.meta?.assigned_to, 'final:', assignedTo);
       if (assignedDropdown && assignedTo) {
         assignedDropdown.value = assignedTo;
-        console.log('👨‍💼 Assigned to:', assignedTo);
+        console.log('👨‍💼 Set assigned to dropdown:', assignedTo);
+      } else {
+        console.log('👨‍💼 No assigned_to value or dropdown not found');
       }
 
       // Show reports section when case is loaded
