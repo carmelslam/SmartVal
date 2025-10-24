@@ -820,7 +820,7 @@
     <h3>📂 טעינת תיק קיים</h3>
 
     <!-- Status Ribbon with Quick Info -->
-    <div class="status-ribbon">
+    <div class="status-ribbon" style="grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));">
       <div class="status-field">
         <label>🚗 לוחית רישוי</label>
         <input type="text" class="case-input" id="plateNumber" placeholder="הכנס מספר רכב" style="margin: 0;">
@@ -830,11 +830,11 @@
         <label>📊 סטטוס תיק</label>
         <select id="caseStatusDropdown" onchange="updateCaseStatus(this.value)">
           <option value="">בחר סטטוס...</option>
-          <option value="new">🚀 התחלה</option>
-          <option value="in_progress">⚙️ בתהליך</option>
-          <option value="needs_levi">📄 דורש דו"ח לוי</option>
-          <option value="ready_to_close">✅ מוכן לסגירה</option>
-          <option value="closed">🔒 סגור</option>
+          <option value="OPEN">🚀 התחלה</option>
+          <option value="IN_PROGRESS">⚙️ בתהליך</option>
+          <option value="PENDING">📄 דורש דו"ח לוי</option>
+          <option value="READY">✅ מוכן לסגירה</option>
+          <option value="CLOSED">🔒 סגור</option>
         </select>
       </div>
 
@@ -846,6 +846,13 @@
       <div class="status-field">
         <label>📅 תאריך בדיקה</label>
         <div class="value" id="caseDateDisplay">—</div>
+      </div>
+
+      <div class="status-field">
+        <label>👨‍💼 משוייך ל</label>
+        <select id="assignedToDropdown" onchange="updateAssignedTo(this.value)">
+          <option value="">טוען...</option>
+        </select>
       </div>
     </div>
 
@@ -881,10 +888,10 @@
     </div>
 
     <!-- Quick Access Tools -->
-    <div style="margin-top: 20px; display: grid; gap: 12px;">
+    <div style="margin-top: 20px; display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
       <button class="nicole-button" onclick="navigate('assistant.html')">
         <span class="nicole-icon">👩</span>
-        <span>שאל את ניקול - מנהלת הידע</span>
+        <span>ניקול</span>
       </button>
       <button class="nav-button" id="btnTasks" onclick="navigateToTasks()">📋 ניהול משימות</button>
     </div>
@@ -1325,21 +1332,42 @@ window.verifyAdminAccess = verifyAdminAccess;
         document.getElementById(sectionId).classList.add('collapsed');
       }
     });
+
+    // Load assessors list for dropdown
+    loadAssessors();
   });
 
-  // Status mapping (English to Hebrew)
-  const STATUS_MAP = {
-    'OPEN': 'new',
-    'IN_PROGRESS': 'in_progress',
-    'PENDING': 'needs_levi',
-    'READY': 'ready_to_close',
-    'CLOSED': 'closed',
-    'new': '🚀 התחלה',
-    'in_progress': '⚙️ בתהליך',
-    'needs_levi': '📄 דורש דו"ח לוי',
-    'ready_to_close': '✅ מוכן לסגירה',
-    'closed': '🔒 סגור'
-  };
+  // Load assessors list for assigned_to dropdown
+  async function loadAssessors() {
+    try {
+      const { supabase } = await import('./lib/supabaseClient.js');
+
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id, name, role')
+        .in('role', ['assessor', 'admin', 'developer'])
+        .order('name');
+
+      if (error) {
+        console.error('Error loading assessors:', error);
+        return;
+      }
+
+      const dropdown = document.getElementById('assignedToDropdown');
+      dropdown.innerHTML = '<option value="">לא משוייך</option>';
+
+      data.forEach(assessor => {
+        const option = document.createElement('option');
+        option.value = assessor.id;
+        option.textContent = `${assessor.name} (${assessor.role === 'assessor' ? 'שמאי' : assessor.role === 'admin' ? 'מנהל' : 'מפתח'})`;
+        dropdown.appendChild(option);
+      });
+
+      console.log('✅ Loaded', data.length, 'assessors');
+    } catch (err) {
+      console.error('Error in loadAssessors:', err);
+    }
+  }
 
   // Update case status in Supabase
   async function updateCaseStatus(statusValue) {
@@ -1352,12 +1380,11 @@ window.verifyAdminAccess = verifyAdminAccess;
     }
 
     try {
-      // Import Supabase client
       const { supabase } = await import('./lib/supabaseClient.js');
-
-      // Get current case ID from helper or session
       const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
-      const caseId = helper.meta?.case_id || helper.case_info?.id;
+
+      // Try to get case_id from multiple sources
+      const caseId = helper.meta?.case_id || helper.case_info?.case_id || helper.case_info?.id;
 
       if (!caseId) {
         console.warn('No case ID found, cannot update status');
@@ -1368,7 +1395,7 @@ window.verifyAdminAccess = verifyAdminAccess;
       // Update status in cases table
       const { data, error } = await supabase
         .from('cases')
-        .update({ status: statusValue.toUpperCase() })
+        .update({ status: statusValue })
         .eq('id', caseId);
 
       if (error) {
@@ -1377,7 +1404,7 @@ window.verifyAdminAccess = verifyAdminAccess;
         return;
       }
 
-      console.log('✅ Case status updated successfully:', statusValue);
+      console.log('✅ Case status updated successfully to:', statusValue);
 
       // Update helper in session storage
       if (helper.meta) {
@@ -1399,36 +1426,124 @@ window.verifyAdminAccess = verifyAdminAccess;
     }
   }
 
-  // Update status ribbon fields from helper data
-  function updateStatusRibbon(helper) {
-    // Owner name
-    const ownerName = helper.case_info?.owner_name ||
-                     helper.vehicle?.owner_name ||
-                     helper.stakeholders?.owner?.name ||
-                     helper.general_info?.insured_name || '—';
-    document.getElementById('caseOwnerDisplay').textContent = ownerName;
-
-    // Inspection date
-    const inspectionDate = helper.case_info?.inspection_date ||
-                          helper.case_info?.created_at ||
-                          helper.meta?.inspection_date;
-    if (inspectionDate) {
-      document.getElementById('caseDateDisplay').textContent =
-        new Date(inspectionDate).toLocaleDateString('he-IL');
-    } else {
-      document.getElementById('caseDateDisplay').textContent = '—';
+  // Update assigned_to in Supabase
+  async function updateAssignedTo(assessorId) {
+    const plateNumber = document.getElementById('plateNumber').value.trim();
+    if (!plateNumber) {
+      alert('אנא טען תיק תחילה');
+      return;
     }
 
-    // Status dropdown
-    const status = helper.meta?.status || helper.case_info?.status || '';
-    const statusKey = STATUS_MAP[status.toUpperCase()] || status.toLowerCase();
-    const dropdown = document.getElementById('caseStatusDropdown');
-    if (dropdown) {
-      dropdown.value = statusKey;
-    }
+    try {
+      const { supabase } = await import('./lib/supabaseClient.js');
+      const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+      const caseId = helper.meta?.case_id || helper.case_info?.case_id || helper.case_info?.id;
 
-    // Show reports section when case is loaded
-    document.getElementById('reportsSection').style.display = 'block';
+      if (!caseId) {
+        alert('לא ניתן לעדכן שיוך - תיק לא נטען כראוי');
+        return;
+      }
+
+      // Update assigned_to in cases table
+      const { data, error } = await supabase
+        .from('cases')
+        .update({ assigned_to: assessorId || null })
+        .eq('id', caseId);
+
+      if (error) {
+        console.error('Error updating assigned_to:', error);
+        alert('שגיאה בעדכון שיוך');
+        return;
+      }
+
+      console.log('✅ Case assigned successfully to:', assessorId);
+
+      // Show success feedback
+      const dropdown = document.getElementById('assignedToDropdown');
+      const originalBg = dropdown.style.background;
+      dropdown.style.background = 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)';
+      setTimeout(() => {
+        dropdown.style.background = originalBg;
+      }, 1000);
+
+    } catch (err) {
+      console.error('Error in updateAssignedTo:', err);
+      alert('שגיאה בעדכון שיוך');
+    }
+  }
+
+  // Update status ribbon fields from case data
+  async function updateStatusRibbon(caseData) {
+    console.log('📊 Updating status ribbon with case data:', caseData);
+
+    try {
+      const { supabase } = await import('./lib/supabaseClient.js');
+
+      // Get plate number
+      const plateNumber = caseData.plate_number || caseData.meta?.plate || document.getElementById('plateNumber').value;
+
+      // Get the actual case record from Supabase using plate number
+      const { data: cases, error } = await supabase
+        .from('cases')
+        .select('id, plate_number, status, owner_name, inspection_date, assigned_to, created_at')
+        .eq('plate_number', plateNumber)
+        .order('created_at', { ascending: false })
+        .limit(1);
+
+      if (error) {
+        console.error('Error fetching case from Supabase:', error);
+      }
+
+      const dbCase = cases && cases.length > 0 ? cases[0] : null;
+      console.log('📋 Case from database:', dbCase);
+
+      // Owner name - try multiple sources
+      const ownerName = dbCase?.owner_name ||
+                       caseData.owner_name ||
+                       caseData.case_info?.owner_name ||
+                       caseData.vehicle?.owner_name ||
+                       caseData.stakeholders?.owner?.name ||
+                       caseData.general_info?.insured_name || '—';
+      document.getElementById('caseOwnerDisplay').textContent = ownerName;
+      console.log('👤 Owner:', ownerName);
+
+      // Inspection date - try multiple sources
+      const inspectionDate = dbCase?.inspection_date ||
+                            dbCase?.created_at ||
+                            caseData.inspection_date ||
+                            caseData.case_info?.inspection_date ||
+                            caseData.case_info?.created_at ||
+                            caseData.meta?.inspection_date;
+      if (inspectionDate) {
+        document.getElementById('caseDateDisplay').textContent =
+          new Date(inspectionDate).toLocaleDateString('he-IL');
+        console.log('📅 Date:', new Date(inspectionDate).toLocaleDateString('he-IL'));
+      } else {
+        document.getElementById('caseDateDisplay').textContent = '—';
+      }
+
+      // Status dropdown - use database value
+      const status = dbCase?.status || caseData.status || caseData.meta?.status || '';
+      const dropdown = document.getElementById('caseStatusDropdown');
+      if (dropdown && status) {
+        dropdown.value = status.toUpperCase();
+        console.log('📊 Status:', status);
+      }
+
+      // Assigned to dropdown - use database value
+      const assignedTo = dbCase?.assigned_to || caseData.assigned_to;
+      const assignedDropdown = document.getElementById('assignedToDropdown');
+      if (assignedDropdown && assignedTo) {
+        assignedDropdown.value = assignedTo;
+        console.log('👨‍💼 Assigned to:', assignedTo);
+      }
+
+      // Show reports section when case is loaded
+      document.getElementById('reportsSection').style.display = 'block';
+
+    } catch (err) {
+      console.error('Error in updateStatusRibbon:', err);
+    }
   }
 
   // Open report (placeholder - to be implemented)
