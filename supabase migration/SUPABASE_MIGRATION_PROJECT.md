@@ -489,6 +489,9 @@ Both paths run at the same time
 5. Create deployment procedures
 
 **###Phase 9: admin functions migration**
+Explore the system - read all documentation and folders - understand functionality and features and gain an extensive knowledge and understanding of the system as a whole . 
+your task is teh admin hub enhancement and integration with supabse .
+this task is phase 9 in the supabase migration/SUPABASE_MIGRATION_PROJECT.md and ypu will need read and have knowledge of all the activity done within thi sproject and all teh sessions logged in teh supabase migration folder 
 1. check all menue functions and connect to supabase: 
 סטטוס תיקים
 סקירה לפי שדות
@@ -514,7 +517,9 @@ Experties
 final report / estimata
 מספר רכב	מס מוקדי נזק	מוקד נזק	תיקונים בפועל	סה"כ חלקים בפועל	סה"כ עבודות בפועל	סכום לתביעה	ירידת ערך	פיצוי סופי	הערות			
 
-6. think of any modern and usful enhancemnt based on an intimate understanding of teh system 
+6. think of any modern and usful enhancemnt based on an intimate understanding of the system 
+
+7, make an extenstive plan create a session file - you are session number 75 . all sql need to be in supabase/sql under phase 9 and all teh log , sunnaries and documentation in the supabase migration folder 
 
 **### Phase 10 : connect the load report on modules to supabase**
 1. expertise report, final report builder and estimate builder ned to be saved as pdf in teh documents, in supabase
