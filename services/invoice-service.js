@@ -275,9 +275,15 @@ class InvoiceService {
       // Check authentication status before upload
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
-        console.warn('⚠️ User not authenticated');
+        console.warn('⚠️ User not authenticated - no session');
         throw new Error('User not authenticated - invoice will be processed via webhook only');
       }
+
+      if (!session.user) {
+        console.warn('⚠️ Session exists but no user object:', session);
+        throw new Error('Invalid session - missing user data');
+      }
+
       console.log('✅ User authenticated:', session.user.email);
 
       const userId = this.currentUser?.user_id || session.user.id;
