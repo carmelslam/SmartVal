@@ -13,36 +13,51 @@
 
     // Load actual backup count from Supabase
     window.loadBackupCount = async function(caseId, plateNumber) {
-      console.log('Loading backup count for case:', caseId);
-      if (!caseId) {
-        console.log('No case ID provided for backup count');
+      console.log('🔍 loadBackupCount called with case_id:', caseId, 'plate:', plateNumber);
+
+      const backupElement = document.getElementById('caseBackups');
+      if (!backupElement) {
+        console.error('❌ caseBackups element not found in DOM!');
         return;
       }
-      
+
+      if (!caseId) {
+        console.log('⚠️ No case ID provided for backup count');
+        backupElement.textContent = 'לא זמין';
+        return;
+      }
+
       try {
         // Import Supabase client
         const { supabase } = await import('./lib/supabaseClient.js');
-        
+
+        console.log('📊 Querying case_helper table for case_id:', caseId);
+
         // Count all versions for this case
         const { count, error } = await supabase
           .from('case_helper')
           .select('*', { count: 'exact', head: true })
           .eq('case_id', caseId);
-        
-        console.log('Backup count result:', { count, error });
-        
-        if (!error && count !== null && count !== undefined) {
-          document.getElementById('caseBackups').textContent = 
-            count > 1 ? `${count} גיבויים` : `${count} גיבוי`;
-        } else if (error) {
-          console.error('Error loading backup count:', error);
-          // Fallback - just show we have at least one backup
-          document.getElementById('caseBackups').textContent = '1 גיבוי לפחות';
+
+        console.log('📊 Backup count query result:', { count, error, caseId });
+
+        if (error) {
+          console.error('❌ Error loading backup count:', error);
+          backupElement.textContent = '1 גיבוי לפחות';
+          return;
+        }
+
+        if (count !== null && count !== undefined) {
+          const displayText = count > 1 ? `${count} גיבויים` : count === 1 ? `${count} גיבוי` : 'אין גיבויים';
+          backupElement.textContent = displayText;
+          console.log('✅ Set backup count to:', displayText, '(count:', count, ')');
+        } else {
+          console.warn('⚠️ Count is null or undefined');
+          backupElement.textContent = 'לא זמין';
         }
       } catch (err) {
-        console.error('Could not load backup count:', err);
-        // Keep the version text as fallback
-        document.getElementById('caseBackups').textContent = '1 גיבוי לפחות';
+        console.error('❌ Exception in loadBackupCount:', err);
+        backupElement.textContent = '1 גיבוי לפחות';
       }
     }
     
@@ -1368,8 +1383,16 @@
 
               // Load actual backup count from case_helper table
               console.log('🔍 About to load backup count for case_id:', dbCase.id);
+
+              // Verify element exists before calling
+              const backupCheckEl = document.getElementById('caseBackups');
+              console.log('🔍 caseBackups element exists:', !!backupCheckEl, 'visible:', backupCheckEl?.offsetParent !== null);
+
               if (dbCase.id && typeof window.loadBackupCount === 'function') {
-                await window.loadBackupCount(dbCase.id, plate);
+                // Small delay to ensure DOM is fully rendered
+                setTimeout(() => {
+                  window.loadBackupCount(dbCase.id, plate);
+                }, 100);
               } else {
                 console.warn('⚠️ Cannot load backup count - dbCase.id:', dbCase.id, 'loadBackupCount exists:', typeof window.loadBackupCount);
               }
