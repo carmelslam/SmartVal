@@ -1322,6 +1322,51 @@
           const vehicleText = `${helper.vehicle?.make || ''} ${helper.vehicle?.model || ''}`.trim() || 'לא זמין';
           if (caseVehicle) caseVehicle.textContent = vehicleText;
 
+          // Query Supabase for fresh case metadata (status, updated_at, case_id)
+          try {
+            const { supabase } = await import('./lib/supabaseClient.js');
+            const { data: cases, error } = await supabase
+              .from('cases')
+              .select('id, status, updated_at, created_at')
+              .eq('plate', plate)
+              .order('created_at', { ascending: false })
+              .limit(1);
+
+            if (!error && cases && cases.length > 0) {
+              const dbCase = cases[0];
+
+              // Update status field
+              const caseStatus = document.getElementById('caseStatus');
+              if (caseStatus && dbCase.status) {
+                const statusMap = {
+                  'OPEN': '🚀 פתוח',
+                  'IN_PROGRESS': '⚙️ בתהליך',
+                  'CLOSED': '✅ סגור',
+                  'ARCHIVED': '📦 בארכיון'
+                };
+                caseStatus.textContent = statusMap[dbCase.status] || dbCase.status;
+                caseStatus.style.color = dbCase.status === 'OPEN' ? '#28a745' : '#6c757d';
+              }
+
+              // Update updated_at field
+              const caseUpdated = document.getElementById('caseUpdated');
+              if (caseUpdated && dbCase.updated_at) {
+                caseUpdated.textContent = new Date(dbCase.updated_at).toLocaleDateString('he-IL');
+              } else if (caseUpdated && dbCase.created_at) {
+                caseUpdated.textContent = new Date(dbCase.created_at).toLocaleDateString('he-IL');
+              }
+
+              // Load actual backup count from case_helper table
+              if (dbCase.id && typeof window.loadBackupCount === 'function') {
+                await window.loadBackupCount(dbCase.id, plate);
+              }
+            } else {
+              console.warn('Could not fetch case metadata from Supabase:', error);
+            }
+          } catch (err) {
+            console.warn('Error fetching case metadata:', err);
+          }
+
           console.log('✅ Case UI state fully restored');
         }, 500); // Small delay to ensure DOM is ready
       } else {
