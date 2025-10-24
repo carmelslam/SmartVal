@@ -1192,7 +1192,7 @@
             <button class="btn-edit" onclick="openEditTaskModal('${task.id}')" style="background: #3B82F6; color: white; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 0.85rem;">
               ✏️ ערוך
             </button>
-            ${(task.status === 'completed' || task.status === 'verified') && !task.archived ? `
+            ${!task.archived ? `
               <button class="btn-archive" onclick="archiveTask('${task.id}')" style="background: #6B7280; color: white; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 0.85rem;">
                 📦 העבר לארכיון
               </button>
@@ -1202,6 +1202,9 @@
                 ↩️ שחזר
               </button>
             ` : ''}
+            <button class="btn-delete" onclick="deleteTask('${task.id}')" style="background: #EF4444; color: white; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 0.85rem;">
+              🗑️ מחק
+            </button>
           </div>
         </div>
       `;
@@ -1629,6 +1632,35 @@
       } catch (error) {
         console.error('Error restoring task:', error);
         alert('❌ שגיאה בשחזור המשימה: ' + error.message);
+      }
+    };
+
+    window.deleteTask = async function(taskId) {
+      if (!confirm('⚠️ האם אתה בטוח שברצונך למחוק את המשימה?\n\nפעולה זו תמחק לצמיתות את המשימה וכל ההודעות והקבצים המצורפים אליה.\n\nפעולה זו אינה ניתנת לביטול!')) {
+        return;
+      }
+
+      // Second confirmation for safety
+      if (!confirm('אישור סופי: האם אתה בטוח לחלוטין? המשימה תימחק לצמיתות.')) {
+        return;
+      }
+
+      try {
+        const { error } = await supabase
+          .from('tasks')
+          .delete()
+          .eq('id', taskId);
+
+        if (error) throw error;
+
+        alert('✅ המשימה נמחקה בהצלחה');
+        await loadTasks();
+        await updateStats();
+        await updateArchiveCount();
+
+      } catch (error) {
+        console.error('Error deleting task:', error);
+        alert('❌ שגיאה במחיקת המשימה: ' + error.message);
       }
     };
 
