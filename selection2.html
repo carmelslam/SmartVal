@@ -459,6 +459,115 @@
       box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.1);
     }
 
+    /* Status Ribbon */
+    .status-ribbon {
+      background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+      border: 1px solid #334155;
+      border-radius: 10px;
+      padding: 15px;
+      margin-top: 15px;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 12px;
+      align-items: center;
+    }
+
+    .status-field {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .status-field label {
+      font-size: 12px;
+      color: #94a3b8;
+      font-weight: 600;
+    }
+
+    .status-field input,
+    .status-field select {
+      background: #0f172a;
+      border: 1px solid #475569;
+      border-radius: 8px;
+      padding: 8px 12px;
+      color: #e2e8f0;
+      font-size: 14px;
+      font-family: 'Heebo', sans-serif;
+      transition: all 0.3s ease;
+    }
+
+    .status-field input:focus,
+    .status-field select:focus {
+      outline: none;
+      border-color: #3b82f6;
+      box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
+    }
+
+    .status-field select {
+      cursor: pointer;
+    }
+
+    .status-field .value {
+      font-size: 14px;
+      color: #e2e8f0;
+      font-weight: 600;
+    }
+
+    /* Reports Display */
+    .reports-section {
+      background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+      border: 1px solid rgba(139, 92, 246, 0.3);
+      border-radius: 12px;
+      padding: 20px;
+      margin-top: 20px;
+    }
+
+    .reports-section h3 {
+      color: #8b5cf6;
+      font-size: 18px;
+      font-weight: 700;
+      margin-bottom: 8px;
+      text-align: right;
+    }
+
+    .reports-section .sub {
+      color: #94a3b8;
+      font-size: 14px;
+      margin-bottom: 15px;
+      text-align: right;
+    }
+
+    .report-pills {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 10px;
+    }
+
+    .report-pill {
+      background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+      color: white;
+      border: none;
+      border-radius: 10px;
+      padding: 12px 16px;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      font-family: 'Heebo', sans-serif;
+      box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
+    }
+
+    .report-pill:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(139, 92, 246, 0.5);
+    }
+
+    .report-pill:disabled {
+      background: #475569;
+      cursor: not-allowed;
+      opacity: 0.5;
+    }
+
     .case-button {
       background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
       color: white;
@@ -709,8 +818,38 @@
   <!-- Case Loader Section -->
   <div class="case-loader">
     <h3>📂 טעינת תיק קיים</h3>
-    <input type="text" class="case-input" id="plateNumber" placeholder="הכנס מספר רכב (לטעינת תיק קיים)">
-    <div style="display: flex; gap: 10px; justify-content: center; margin-top: 10px; flex-wrap: wrap;">
+
+    <!-- Status Ribbon with Quick Info -->
+    <div class="status-ribbon">
+      <div class="status-field">
+        <label>🚗 לוחית רישוי</label>
+        <input type="text" class="case-input" id="plateNumber" placeholder="הכנס מספר רכב" style="margin: 0;">
+      </div>
+
+      <div class="status-field">
+        <label>📊 סטטוס תיק</label>
+        <select id="caseStatusDropdown" onchange="updateCaseStatus(this.value)">
+          <option value="">בחר סטטוס...</option>
+          <option value="new">🚀 התחלה</option>
+          <option value="in_progress">⚙️ בתהליך</option>
+          <option value="needs_levi">📄 דורש דו"ח לוי</option>
+          <option value="ready_to_close">✅ מוכן לסגירה</option>
+          <option value="closed">🔒 סגור</option>
+        </select>
+      </div>
+
+      <div class="status-field">
+        <label>👤 בעלים</label>
+        <div class="value" id="caseOwnerDisplay">—</div>
+      </div>
+
+      <div class="status-field">
+        <label>📅 תאריך בדיקה</label>
+        <div class="value" id="caseDateDisplay">—</div>
+      </div>
+    </div>
+
+    <div style="display: flex; gap: 10px; justify-content: center; margin-top: 15px; flex-wrap: wrap;">
       <button class="case-button" onclick="loadExistingCase()">טען תיק קיים</button>
       <button class="case-button" id="toggleDetailsBtn" onclick="toggleCaseDetails()" style="display: none; background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); margin: 0;">
         <span id="toggleDetailsIcon">👁️</span> <span id="toggleDetailsText">הצג פרטי תיק</span>
@@ -748,6 +887,17 @@
         <span>שאל את ניקול - מנהלת הידע</span>
       </button>
       <button class="nav-button" id="btnTasks" onclick="navigateToTasks()">📋 ניהול משימות</button>
+    </div>
+
+    <!-- Reports Display Section -->
+    <div class="reports-section" style="display: none;" id="reportsSection">
+      <h3>📊 תצוגת דו"חות קיימים</h3>
+      <p class="sub">לחץ על כל כפתור לפתיחת PDF במצב צף (פונקציונליות בפיתוח)</p>
+      <div class="report-pills">
+        <button class="report-pill" onclick="openReport('expertise')" id="btnReportExpertise">🔍 אקספרטיזה</button>
+        <button class="report-pill" onclick="openReport('estimate')" id="btnReportEstimate">📋 אומדן</button>
+        <button class="report-pill" onclick="openReport('final')" id="btnReportFinal">📑 דו"ח סופי</button>
+      </div>
     </div>
   </div>
 
@@ -1176,6 +1326,128 @@ window.verifyAdminAccess = verifyAdminAccess;
       }
     });
   });
+
+  // Status mapping (English to Hebrew)
+  const STATUS_MAP = {
+    'OPEN': 'new',
+    'IN_PROGRESS': 'in_progress',
+    'PENDING': 'needs_levi',
+    'READY': 'ready_to_close',
+    'CLOSED': 'closed',
+    'new': '🚀 התחלה',
+    'in_progress': '⚙️ בתהליך',
+    'needs_levi': '📄 דורש דו"ח לוי',
+    'ready_to_close': '✅ מוכן לסגירה',
+    'closed': '🔒 סגור'
+  };
+
+  // Update case status in Supabase
+  async function updateCaseStatus(statusValue) {
+    if (!statusValue) return;
+
+    const plateNumber = document.getElementById('plateNumber').value.trim();
+    if (!plateNumber) {
+      alert('אנא טען תיק תחילה');
+      return;
+    }
+
+    try {
+      // Import Supabase client
+      const { supabase } = await import('./lib/supabaseClient.js');
+
+      // Get current case ID from helper or session
+      const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+      const caseId = helper.meta?.case_id || helper.case_info?.id;
+
+      if (!caseId) {
+        console.warn('No case ID found, cannot update status');
+        alert('לא ניתן לעדכן סטטוס - תיק לא נטען כראוי');
+        return;
+      }
+
+      // Update status in cases table
+      const { data, error } = await supabase
+        .from('cases')
+        .update({ status: statusValue.toUpperCase() })
+        .eq('id', caseId);
+
+      if (error) {
+        console.error('Error updating case status:', error);
+        alert('שגיאה בעדכון סטטוס התיק');
+        return;
+      }
+
+      console.log('✅ Case status updated successfully:', statusValue);
+
+      // Update helper in session storage
+      if (helper.meta) {
+        helper.meta.status = statusValue;
+        sessionStorage.setItem('helper', JSON.stringify(helper));
+      }
+
+      // Show success feedback
+      const dropdown = document.getElementById('caseStatusDropdown');
+      const originalBg = dropdown.style.background;
+      dropdown.style.background = 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)';
+      setTimeout(() => {
+        dropdown.style.background = originalBg;
+      }, 1000);
+
+    } catch (err) {
+      console.error('Error in updateCaseStatus:', err);
+      alert('שגיאה בעדכון סטטוס');
+    }
+  }
+
+  // Update status ribbon fields from helper data
+  function updateStatusRibbon(helper) {
+    // Owner name
+    const ownerName = helper.case_info?.owner_name ||
+                     helper.vehicle?.owner_name ||
+                     helper.stakeholders?.owner?.name ||
+                     helper.general_info?.insured_name || '—';
+    document.getElementById('caseOwnerDisplay').textContent = ownerName;
+
+    // Inspection date
+    const inspectionDate = helper.case_info?.inspection_date ||
+                          helper.case_info?.created_at ||
+                          helper.meta?.inspection_date;
+    if (inspectionDate) {
+      document.getElementById('caseDateDisplay').textContent =
+        new Date(inspectionDate).toLocaleDateString('he-IL');
+    } else {
+      document.getElementById('caseDateDisplay').textContent = '—';
+    }
+
+    // Status dropdown
+    const status = helper.meta?.status || helper.case_info?.status || '';
+    const statusKey = STATUS_MAP[status.toUpperCase()] || status.toLowerCase();
+    const dropdown = document.getElementById('caseStatusDropdown');
+    if (dropdown) {
+      dropdown.value = statusKey;
+    }
+
+    // Show reports section when case is loaded
+    document.getElementById('reportsSection').style.display = 'block';
+  }
+
+  // Open report (placeholder - to be implemented)
+  function openReport(reportType) {
+    console.log('Opening report:', reportType);
+    alert(`פתיחת ${reportType === 'expertise' ? 'אקספרטיזה' : reportType === 'estimate' ? 'אומדן' : 'דו"ח סופי'}\n\nפונקציונליות זו תושלם בהמשך`);
+  }
+
+  // Override the original loadExistingCase to update status ribbon
+  const originalLoadExistingCase = window.loadExistingCase;
+  window.loadExistingCase = async function() {
+    await originalLoadExistingCase();
+
+    // After case loads, update the status ribbon
+    const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+    if (helper && Object.keys(helper).length > 0) {
+      updateStatusRibbon(helper);
+    }
+  };
 </script>
 
 <script src="logout-sound.js"></script>
