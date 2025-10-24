@@ -248,6 +248,15 @@ class InvoiceService {
     try {
       console.log('📤 Uploading invoice document:', file.name);
       
+      // SESSION 74: Check if Supabase is available
+      if (!this.supabase) {
+        throw new Error('Supabase client not initialized');
+      }
+      
+      if (!this.supabase.auth) {
+        throw new Error('Supabase auth not available');
+      }
+      
       // SESSION 74: Check authentication status before upload
       const { data: { session } } = await this.supabase.auth.getSession();
       if (!session) {
