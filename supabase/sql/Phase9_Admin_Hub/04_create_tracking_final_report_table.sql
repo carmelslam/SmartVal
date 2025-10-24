@@ -303,7 +303,7 @@ RETURNS TABLE (
   case_id UUID,
   report_type TEXT,
   final_compensation NUMERIC,
-  timestamp TIMESTAMPTZ
+  record_timestamp TIMESTAMPTZ
 ) AS $$
 BEGIN
   RETURN QUERY
@@ -311,7 +311,7 @@ BEGIN
     tfr.case_id,
     tfr.report_type,
     tfr.final_compensation,
-    tfr.timestamp
+    tfr.timestamp as record_timestamp
   FROM tracking_final_report tfr
   WHERE tfr.plate = p_plate
   ORDER BY tfr.timestamp DESC
