@@ -505,6 +505,116 @@
       resize: vertical;
     }
 
+    /* Multi-select dropdown styles */
+    .multi-select-container {
+      position: relative;
+      width: 100%;
+    }
+
+    .multi-select-header {
+      width: 100%;
+      padding: 0.75rem;
+      border: 1px solid #4a4a4a;
+      border-radius: 8px;
+      background: #1a1a1a;
+      color: #e0e0e0;
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      user-select: none;
+    }
+
+    .multi-select-header:hover {
+      border-color: #003366;
+    }
+
+    .dropdown-arrow {
+      font-size: 0.8rem;
+      transition: transform 0.2s;
+    }
+
+    .multi-select-header.open .dropdown-arrow {
+      transform: rotate(180deg);
+    }
+
+    .multi-select-dropdown {
+      position: absolute;
+      top: 100%;
+      left: 0;
+      right: 0;
+      margin-top: 0.25rem;
+      background: #2a2a2a;
+      border: 1px solid #4a4a4a;
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+      z-index: 100;
+      max-height: 300px;
+      overflow-y: auto;
+    }
+
+    .multi-select-search {
+      padding: 0.75rem;
+      border-bottom: 1px solid #4a4a4a;
+    }
+
+    .multi-select-search input {
+      width: 100%;
+      padding: 0.5rem;
+      border: 1px solid #4a4a4a;
+      border-radius: 6px;
+      background: #1a1a1a;
+      color: #e0e0e0;
+      font-size: 0.9rem;
+    }
+
+    .multi-select-options {
+      max-height: 200px;
+      overflow-y: auto;
+    }
+
+    .multi-select-option {
+      padding: 0.75rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      transition: background 0.2s;
+    }
+
+    .multi-select-option:hover {
+      background: #3a3a3a;
+    }
+
+    .multi-select-option input[type="checkbox"] {
+      width: auto;
+      margin: 0;
+      cursor: pointer;
+    }
+
+    .multi-select-option.primary {
+      background: #003366;
+    }
+
+    .multi-select-option.primary:hover {
+      background: #004c99;
+    }
+
+    .user-badge {
+      display: inline-block;
+      padding: 0.25rem 0.5rem;
+      margin: 0.125rem;
+      background: #003366;
+      color: white;
+      border-radius: 4px;
+      font-size: 0.85rem;
+    }
+
+    .user-badge.primary {
+      background: #0066cc;
+      font-weight: 600;
+    }
+
     .loading {
       text-align: center;
       padding: 2rem;
@@ -758,10 +868,22 @@
           </select>
         </div>
         <div class="form-group">
-          <label for="assignedTo">הקצה ל- *</label>
-          <select id="assignedTo" required>
-            <option value="">בחר משתמש...</option>
-          </select>
+          <label for="assignedTo">הקצה ל- * (ניתן לבחור מספר משתמשים)</label>
+          <div class="multi-select-container">
+            <div class="multi-select-header" id="multiSelectHeader" onclick="toggleUserDropdown()">
+              <span id="selectedUsersDisplay">בחר משתמשים...</span>
+              <span class="dropdown-arrow">▼</span>
+            </div>
+            <div class="multi-select-dropdown" id="userDropdown" style="display: none;">
+              <div class="multi-select-search">
+                <input type="text" id="userSearch" placeholder="חפש משתמש..." onkeyup="filterUsers()">
+              </div>
+              <div class="multi-select-options" id="userOptions">
+                <!-- Will be populated dynamically -->
+              </div>
+            </div>
+          </div>
+          <input type="hidden" id="assignedTo" required>
         </div>
         <div class="form-group">
           <label for="taskPriority">עדיפות</label>
@@ -995,17 +1117,112 @@
       }
     }
 
+    // Track selected users for multi-select
+    let selectedUsers = [];
+
     function populateUserDropdown() {
-      const select = document.getElementById('assignedTo');
-      select.innerHTML = '<option value="">בחר משתמש...</option>';
+      const container = document.getElementById('userOptions');
+      if (!container) return;
+
+      container.innerHTML = '';
 
       allUsers.forEach(user => {
-        const option = document.createElement('option');
-        option.value = user.user_id;
-        option.textContent = `${user.name} (${getRoleLabel(user.role)})`;
-        select.appendChild(option);
+        const option = document.createElement('div');
+        option.className = 'multi-select-option';
+        option.innerHTML = `
+          <input type="checkbox"
+                 id="user_${user.user_id}"
+                 value="${user.user_id}"
+                 onchange="updateUserSelection('${user.user_id}')"
+                 ${selectedUsers.includes(user.user_id) ? 'checked' : ''}>
+          <label for="user_${user.user_id}" style="cursor: pointer; flex: 1;">
+            ${user.name} (${getRoleLabel(user.role)})
+          </label>
+        `;
+        container.appendChild(option);
       });
     }
+
+    function toggleUserDropdown() {
+      const dropdown = document.getElementById('userDropdown');
+      const header = document.getElementById('multiSelectHeader');
+
+      if (dropdown.style.display === 'none') {
+        dropdown.style.display = 'block';
+        header.classList.add('open');
+      } else {
+        dropdown.style.display = 'none';
+        header.classList.remove('open');
+      }
+    }
+
+    function updateUserSelection(userId) {
+      const checkbox = document.getElementById(`user_${userId}`);
+
+      if (checkbox.checked) {
+        if (!selectedUsers.includes(userId)) {
+          selectedUsers.push(userId);
+        }
+      } else {
+        selectedUsers = selectedUsers.filter(id => id !== userId);
+      }
+
+      updateSelectedUsersDisplay();
+      updateHiddenInput();
+    }
+
+    function updateSelectedUsersDisplay() {
+      const display = document.getElementById('selectedUsersDisplay');
+
+      if (selectedUsers.length === 0) {
+        display.textContent = 'בחר משתמשים...';
+        return;
+      }
+
+      const selectedNames = selectedUsers.map(userId => {
+        const user = allUsers.find(u => u.user_id === userId);
+        return user ? user.name : '';
+      }).filter(name => name);
+
+      if (selectedNames.length === 1) {
+        display.textContent = selectedNames[0];
+      } else if (selectedNames.length === 2) {
+        display.textContent = selectedNames.join(' ו-');
+      } else {
+        display.textContent = `${selectedNames.length} משתמשים נבחרו`;
+      }
+    }
+
+    function updateHiddenInput() {
+      const hiddenInput = document.getElementById('assignedTo');
+      // Store first selected user as primary for backwards compatibility
+      hiddenInput.value = selectedUsers[0] || '';
+    }
+
+    function filterUsers() {
+      const searchTerm = document.getElementById('userSearch').value.toLowerCase();
+      const options = document.querySelectorAll('.multi-select-option');
+
+      options.forEach(option => {
+        const text = option.textContent.toLowerCase();
+        if (text.includes(searchTerm)) {
+          option.style.display = 'flex';
+        } else {
+          option.style.display = 'none';
+        }
+      });
+    }
+
+    // Close dropdown when clicking outside
+    document.addEventListener('click', function(event) {
+      const container = document.querySelector('.multi-select-container');
+      const dropdown = document.getElementById('userDropdown');
+
+      if (container && !container.contains(event.target)) {
+        dropdown.style.display = 'none';
+        document.getElementById('multiSelectHeader')?.classList.remove('open');
+      }
+    });
 
     function getRoleLabel(role) {
       const labels = {
@@ -1409,6 +1626,11 @@
       document.getElementById('childTasksSection').style.display = 'none';
       document.getElementById('childTasksList').innerHTML = '';
       childTaskCounter = 0;
+
+      // Reset multi-select users
+      selectedUsers = [];
+      updateSelectedUsersDisplay();
+      populateUserDropdown(); // Refresh checkboxes
     };
 
     // Edit Task Functions
@@ -1796,14 +2018,46 @@
 
           console.log('Task created:', data);
 
-          // Add to pending notifications queue (won't send immediately)
-          if (window.taskNotifications && data.assigned_to) {
-            const assignedUser = allUsers.find(u => u.user_id === data.assigned_to);
-            window.taskNotifications.addToPendingNotifications(data, assignedUser);
-            updateNotificationBadge();
+          // Create task assignments for all selected users
+          if (selectedUsers.length > 0) {
+            const assignments = selectedUsers.map((userId, index) => ({
+              task_id: data.id,
+              user_id: userId,
+              is_primary: index === 0, // First user is primary
+              assigned_by: currentUser.user_id,
+              assigned_at: new Date().toISOString()
+            }));
+
+            const { error: assignmentError } = await supabase
+              .from('task_assignments')
+              .insert(assignments);
+
+            if (assignmentError) {
+              console.error('Error creating task assignments:', assignmentError);
+              // Don't fail the whole operation, just log the error
+            }
+
+            // Add to pending notifications for all assigned users
+            if (window.taskNotifications) {
+              selectedUsers.forEach(userId => {
+                const assignedUser = allUsers.find(u => u.user_id === userId);
+                if (assignedUser) {
+                  window.taskNotifications.addToPendingNotifications(data, assignedUser);
+                }
+              });
+              updateNotificationBadge();
+            }
+          } else {
+            // Fallback: if no users selected via multi-select, use single assignment
+            if (window.taskNotifications && data.assigned_to) {
+              const assignedUser = allUsers.find(u => u.user_id === data.assigned_to);
+              window.taskNotifications.addToPendingNotifications(data, assignedUser);
+              updateNotificationBadge();
+            }
           }
 
-          alert('✅ המשימה נוצרה בהצלחה!');
+          const userCount = selectedUsers.length || 1;
+          alert(`✅ המשימה נוצרה בהצלחה והוקצתה ל-${userCount} ${userCount === 1 ? 'משתמש' : 'משתמשים'}!`);
         }
 
         closeNewTaskModal();
