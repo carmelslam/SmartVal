@@ -23,6 +23,7 @@ export const caseRetrievalService = {
           plate,
           owner_name,
           status,
+          assigned_to,
           created_at,
           updated_at
         `)
@@ -101,7 +102,15 @@ export const caseRetrievalService = {
         if (unwrappedHelper && !unwrappedHelper.meta && orphanedHelper.helper_json.meta) {
           unwrappedHelper.meta = orphanedHelper.helper_json.meta;
         }
-        
+
+        // Inject case data into helper.meta for UI access (orphaned case)
+        if (!unwrappedHelper.meta) {
+          unwrappedHelper.meta = {};
+        }
+        unwrappedHelper.meta.status = mockCaseRecord.status;
+        unwrappedHelper.meta.assigned_to = null; // Orphaned helpers don't have assigned_to
+        unwrappedHelper.meta.plate = mockCaseRecord.plate;
+
         return {
           success: true,
           case: mockCaseRecord,
@@ -113,6 +122,7 @@ export const caseRetrievalService = {
             lastUpdated: orphanedHelper.updated_at,
             source: orphanedHelper.source,
             caseStatus: mockCaseRecord.status,
+            assignedTo: null,
             dataIntegrityWarning: true,
             warning: 'נמצא helper יתום - יש בעיית שלמות נתונים',
             unwrapped: !!orphanedHelper.helper_json.helper_data
@@ -171,7 +181,16 @@ export const caseRetrievalService = {
       if (unwrappedHelper && !unwrappedHelper.meta && helper.helper_json.meta) {
         unwrappedHelper.meta = helper.helper_json.meta;
       }
-      
+
+      // Inject case data into helper.meta for UI access
+      if (!unwrappedHelper.meta) {
+        unwrappedHelper.meta = {};
+      }
+      unwrappedHelper.meta.status = caseRecord.status;
+      unwrappedHelper.meta.assigned_to = caseRecord.assigned_to;
+      unwrappedHelper.meta.plate = caseRecord.plate;
+      console.log(`📋 Injected case data into helper.meta: status=${caseRecord.status}, assigned_to=${caseRecord.assigned_to}`);
+
       return {
         success: true,
         case: caseRecord,
@@ -183,6 +202,7 @@ export const caseRetrievalService = {
           lastUpdated: helper.updated_at,
           source: helper.source,
           caseStatus: caseRecord.status,
+          assignedTo: caseRecord.assigned_to,
           unwrapped: !!helper.helper_json.helper_data
         }
       };
@@ -211,6 +231,7 @@ export const caseRetrievalService = {
           plate,
           owner_name,
           status,
+          assigned_to,
           created_at,
           updated_at,
           case_helper!inner(
@@ -281,6 +302,7 @@ export const caseRetrievalService = {
           plate,
           owner_name,
           status,
+          assigned_to,
           updated_at,
           case_helper!inner(
             version,
