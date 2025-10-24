@@ -805,6 +805,21 @@
 
     </div>
 
+    <!-- Activity Feed Section -->
+    <div style="margin-bottom: 2rem;">
+      <div class="section-title" style="cursor: pointer; user-select: none; display: flex; align-items: center; justify-content: space-between;" onclick="toggleActivityFeed()">
+        <span>📋 פעילות אחרונה</span>
+        <span id="activity-toggle-arrow" style="transition: transform 0.2s;">▼</span>
+      </div>
+      <div id="activity-feed-container" style="display: none; margin-top: 1rem;">
+        <div style="background: #1e1e1e; border-radius: 8px; overflow: hidden; max-height: 500px;">
+          <div id="activity-feed" style="overflow-y: auto; max-height: 500px;">
+            <div style="text-align: center; padding: 40px 20px; color: #999;">טוען...</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- Toolbar -->
     <div class="toolbar">
       <button class="btn btn-primary" onclick="openNewTaskModal()">➕ משימה חדשה</button>
@@ -1041,6 +1056,7 @@
     import { supabase } from './lib/supabaseClient.js';
     import { taskNotifications } from './task-notifications.js';
     import { notificationCenter } from './components/notification-center.js';
+    import { taskActivityFeed } from './components/task-activity-feed.js';
 
     // Global state
     let allTasks = [];
@@ -1092,6 +1108,9 @@
 
         // Set up real-time subscriptions
         setupRealtime();
+
+        // Initialize activity feed
+        await taskActivityFeed.init('activity-feed');
 
       } catch (error) {
         console.error('Initialization error:', error);
@@ -1324,6 +1343,20 @@
         manualGroup.style.display = 'none';
         manualInput.required = false;
         manualInput.value = '';
+      }
+    };
+
+    // Toggle activity feed visibility
+    window.toggleActivityFeed = function() {
+      const container = document.getElementById('activity-feed-container');
+      const arrow = document.getElementById('activity-toggle-arrow');
+
+      if (container.style.display === 'none') {
+        container.style.display = 'block';
+        arrow.style.transform = 'rotate(180deg)';
+      } else {
+        container.style.display = 'none';
+        arrow.style.transform = 'rotate(0deg)';
       }
     };
 
