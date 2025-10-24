@@ -848,7 +848,7 @@
                 <span class="message-author">${escapeHtml(author?.name || 'משתמש לא ידוע')}</span>
                 <span class="message-time">${formatDateTime(msg.created_at)}</span>
               </div>
-              <div class="message-content">${escapeHtml(msg.message)}</div>
+              <div class="message-content">${escapeHtml(msg.message_text)}</div>
             </div>
           `;
         }).join('');
@@ -870,7 +870,7 @@
           .from('task_attachments')
           .select('*')
           .eq('task_id', taskId)
-          .order('created_at', { ascending: false });
+          .order('uploaded_at', { ascending: false });
 
         if (error) throw error;
 
@@ -974,7 +974,8 @@
           .insert({
             task_id: taskId,
             sender_id: currentUser.user_id,
-            message: message
+            message_text: message,
+            sender_role: profileMap[currentUser.user_id]?.role || 'user'
           });
 
         if (error) throw error;
