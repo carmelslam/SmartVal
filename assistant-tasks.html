@@ -478,10 +478,7 @@
       <span>ירון כיוף - שמאות וייעוץ - המשימות שלי</span>
     </h1>
     <div class="header-actions">
-      <div class="icon-btn" id="notificationsBtn">
-        🔔
-        <div class="badge" id="notificationCount" style="display: none;">0</div>
-      </div>
+      <div class="icon-btn" id="notificationsBtn"></div>
       <div class="icon-btn" onclick="window.location.href='selection.html'">
         🏠
       </div>
@@ -490,6 +487,9 @@
       </div>
     </div>
   </header>
+
+  <!-- Notification Center Dropdown -->
+  <div id="notificationDropdownContainer"></div>
 
   <div class="container">
     <!-- Statistics Section -->
@@ -626,6 +626,7 @@
   <script type="module">
     import { supabase } from './lib/supabaseClient.js';
     import { taskNotifications } from './task-notifications.js';
+    import { notificationCenter } from './notification-center.js';
 
     // Global state
     let allTasks = [];
@@ -675,9 +676,43 @@
         // Set up real-time subscriptions
         setupRealtime();
 
+        // Initialize notification center
+        initNotificationCenter();
+
       } catch (error) {
         console.error('Initialization error:', error);
         showError('שגיאה בטעינת הנתונים');
+      }
+    }
+
+    // Initialize notification center
+    async function initNotificationCenter() {
+      try {
+        if (!currentUser) return;
+
+        // Inject notification center styles
+        const styleElement = document.createElement('div');
+        styleElement.innerHTML = notificationCenter.getStyles();
+        document.head.appendChild(styleElement.firstElementChild);
+
+        // Inject notification bell icon
+        const notifBtn = document.getElementById('notificationsBtn');
+        if (notifBtn) {
+          notifBtn.innerHTML = notificationCenter.getBellIconHTML();
+        }
+
+        // Inject notification dropdown
+        const dropdownContainer = document.getElementById('notificationDropdownContainer');
+        if (dropdownContainer) {
+          dropdownContainer.innerHTML = notificationCenter.getDropdownHTML();
+        }
+
+        // Initialize notification center
+        await notificationCenter.init(currentUser.user_id);
+
+        console.log('🔔 Notification center initialized');
+      } catch (error) {
+        console.error('Error initializing notification center:', error);
       }
     }
 

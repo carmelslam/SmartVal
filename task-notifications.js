@@ -1,7 +1,9 @@
 // Task Management Push Notifications
 // Integrates with OneSignal to send notifications for task events
+// Also saves notifications to database for notification center
 
 import { sendToWebhook } from './webhook.js';
+import { supabase } from './lib/supabaseClient.js';
 
 class TaskNotificationManager {
   constructor() {
@@ -233,6 +235,7 @@ class TaskNotificationManager {
 
   /**
    * Send notification via webhook using webhook.js
+   * Also saves notification to database for notification center
    */
   async sendNotification(data) {
     if (!this.enabled) {
@@ -242,8 +245,41 @@ class TaskNotificationManager {
 
     try {
       console.log('📬 Task Notifications: Sending notification:', data);
+
+      // Send via webhook to OneSignal
       await sendToWebhook('ADMIN_PUSH_NOTIFICATION', data);
-      console.log('📬 Task Notifications: Notification sent successfully');
+      console.log('📬 Task Notifications: Notification sent successfully via webhook');
+
+      // Also save to database for notification center
+      if (data.user_id && data.title && data.message) {
+        try {
+          const { error: dbError } = await supabase
+            .from('notifications')
+            .insert([{
+              user_id: data.user_id,
+              type: data.type || 'general',
+              title: data.title,
+              message: data.message,
+              url: data.url || null,
+              data: {
+                task_id: data.task_id || null,
+                task_title: data.task_title || null,
+                ...data
+              }
+            }]);
+
+          if (dbError) {
+            console.error('📬 Task Notifications: Error saving to database:', dbError);
+            // Don't throw - notification was already sent via webhook
+          } else {
+            console.log('📬 Task Notifications: Notification saved to database');
+          }
+        } catch (saveError) {
+          console.error('📬 Task Notifications: Exception saving to database:', saveError);
+          // Don't throw - notification was already sent via webhook
+        }
+      }
+
       return true;
     } catch (error) {
       console.error('📬 Task Notifications: Error sending notification:', error);
