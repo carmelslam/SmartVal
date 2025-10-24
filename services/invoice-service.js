@@ -11,8 +11,12 @@ class InvoiceService {
 
   // Lazy getter for supabase client
   get supabase() {
-    if (!this._supabase) {
+    if (!this._supabase && window.supabase) {
       this._supabase = window.supabase;
+    }
+    if (!this._supabase) {
+      console.error('❌ window.supabase is not available!');
+      console.log('Available globals:', Object.keys(window).filter(k => k.includes('supabase')));
     }
     return this._supabase;
   }
@@ -248,19 +252,17 @@ class InvoiceService {
     try {
       console.log('📤 Uploading invoice document:', file.name);
       
-      // SESSION 74: Check if Supabase is available
-      if (!this.supabase) {
-        throw new Error('Supabase client not initialized');
-      }
-      
-      if (!this.supabase.auth) {
-        throw new Error('Supabase auth not available');
+      // SESSION 74: Skip Supabase if not available
+      if (!this.supabase || !this.supabase.auth) {
+        console.warn('⚠️ Supabase not available, skipping cloud upload');
+        throw new Error('Supabase not initialized - invoice will be processed via webhook only');
       }
       
       // SESSION 74: Check authentication status before upload
       const { data: { session } } = await this.supabase.auth.getSession();
       if (!session) {
-        throw new Error('User not authenticated - please log in');
+        console.warn('⚠️ User not authenticated');
+        throw new Error('User not authenticated - invoice will be processed via webhook only');
       }
       console.log('✅ User authenticated:', session.user.email);
       
