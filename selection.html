@@ -1262,6 +1262,74 @@
     } catch (error) {
       console.warn('Error setting up URL parameter checking:', error);
     }
+
+    // CRITICAL: Restore case UI state from sessionStorage if case was loaded
+    try {
+      const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+      const plate = helper.plate || helper.meta?.plate;
+
+      if (plate && Object.keys(helper).length > 0) {
+        console.log('🔄 Restoring case UI state for plate:', plate);
+
+        // Restore the case info and populate status ribbon
+        setTimeout(async () => {
+          // First load assessors dropdown
+          if (typeof window.loadAssessors === 'function') {
+            await window.loadAssessors();
+          }
+
+          // Then update status ribbon with existing data
+          if (typeof window.updateStatusRibbon === 'function') {
+            await window.updateStatusRibbon(helper);
+          }
+
+          // Show case details section
+          const caseInfoEl = document.getElementById('caseInfo');
+          if (caseInfoEl) {
+            caseInfoEl.style.display = 'block';
+            caseInfoEl.classList.add('show');
+            console.log('✅ Restored case info section');
+          }
+
+          // Show toggle button
+          const toggleBtn = document.getElementById('toggleDetailsBtn');
+          if (toggleBtn) {
+            toggleBtn.style.display = 'inline-block';
+            console.log('✅ Restored toggle details button');
+          }
+
+          // Update case details from helper
+          const casePlate = document.getElementById('casePlate');
+          if (casePlate) casePlate.textContent = plate;
+
+          const caseOwner = document.getElementById('caseOwner');
+          const ownerName = helper.case_info?.owner_name || helper.vehicle?.owner_name || helper.stakeholders?.owner?.name || 'לא רשום';
+          if (caseOwner) caseOwner.textContent = ownerName;
+
+          const caseCreated = document.getElementById('caseCreated');
+          const createdDate = helper.case_info?.created_at || helper.meta?.created_at;
+          if (caseCreated && createdDate) {
+            caseCreated.textContent = new Date(createdDate).toLocaleDateString('he-IL');
+          }
+
+          const caseDate = document.getElementById('caseDate');
+          const inspectionDate = helper.case_info?.inspection_date || helper.case_info?.created_at;
+          if (caseDate && inspectionDate) {
+            caseDate.textContent = new Date(inspectionDate).toLocaleDateString('he-IL');
+          }
+
+          const caseVehicle = document.getElementById('caseVehicle');
+          const vehicleText = `${helper.vehicle?.make || ''} ${helper.vehicle?.model || ''}`.trim() || 'לא זמין';
+          if (caseVehicle) caseVehicle.textContent = vehicleText;
+
+          console.log('✅ Case UI state fully restored');
+        }, 500); // Small delay to ensure DOM is ready
+      } else {
+        console.log('ℹ️ No case loaded in sessionStorage');
+      }
+    } catch (error) {
+      console.warn('Error restoring case UI state:', error);
+    }
     
     // Session timeout management
     let idleTimeout;
