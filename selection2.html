@@ -830,11 +830,10 @@
         <label>📊 סטטוס תיק</label>
         <select id="caseStatusDropdown" onchange="updateCaseStatus(this.value)">
           <option value="">בחר סטטוס...</option>
-          <option value="OPEN">🚀 התחלה</option>
+          <option value="OPEN">🚀 פתוח</option>
           <option value="IN_PROGRESS">⚙️ בתהליך</option>
-          <option value="PENDING">📄 דורש דו"ח לוי</option>
-          <option value="READY">✅ מוכן לסגירה</option>
-          <option value="CLOSED">🔒 סגור</option>
+          <option value="CLOSED">✅ סגור</option>
+          <option value="ARCHIVED">📦 בארכיון</option>
         </select>
       </div>
 
@@ -1377,13 +1376,18 @@ window.verifyAdminAccess = verifyAdminAccess;
 
   // Update case status in Supabase
   async function updateCaseStatus(statusValue) {
-    if (!statusValue) return;
+    if (!statusValue) {
+      console.log('⚠️ No status value provided');
+      return;
+    }
 
     const plateNumber = document.getElementById('plateNumber').value.trim();
     if (!plateNumber) {
       alert('אנא טען תיק תחילה');
       return;
     }
+
+    console.log('🔄 Updating status to:', statusValue, 'for plate:', plateNumber);
 
     try {
       const { supabase } = await import('./lib/supabaseClient.js');
@@ -1395,12 +1399,12 @@ window.verifyAdminAccess = verifyAdminAccess;
         .eq('plate', plateNumber);
 
       if (error) {
-        console.error('Error updating case status:', error);
-        alert('שגיאה בעדכון סטטוס התיק');
+        console.error('❌ Error updating case status:', error);
+        alert('שגיאה בעדכון סטטוס התיק: ' + error.message);
         return;
       }
 
-      console.log('✅ Case status updated successfully to:', statusValue);
+      console.log('✅ Case status updated successfully to:', statusValue, 'Response:', data);
 
       // Update helper in session storage
       const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
@@ -1515,9 +1519,20 @@ window.verifyAdminAccess = verifyAdminAccess;
       // Status dropdown - use database value
       const status = dbCase?.status || caseData.status || caseData.meta?.status || '';
       const dropdown = document.getElementById('caseStatusDropdown');
+      console.log('📊 Status from DB:', status, 'dbCase:', dbCase);
       if (dropdown && status) {
-        dropdown.value = status.toUpperCase();
-        console.log('📊 Status:', status);
+        // Make sure status is uppercase
+        const statusUpper = status.toUpperCase();
+        dropdown.value = statusUpper;
+        console.log('📊 Set dropdown to:', statusUpper, 'Available options:', Array.from(dropdown.options).map(o => o.value));
+
+        // Verify the option exists
+        const optionExists = Array.from(dropdown.options).some(o => o.value === statusUpper);
+        if (!optionExists) {
+          console.warn('⚠️ Status value not in dropdown options:', statusUpper);
+        }
+      } else {
+        console.log('📊 No status to set or dropdown not found');
       }
 
       // Assigned to dropdown - use database value
