@@ -1388,11 +1388,11 @@ window.verifyAdminAccess = verifyAdminAccess;
     try {
       const { supabase } = await import('./lib/supabaseClient.js');
 
-      // Update status in cases table using plate_number (not id)
+      // Update status in cases table using plate column
       const { data, error } = await supabase
         .from('cases')
         .update({ status: statusValue })
-        .eq('plate_number', plateNumber);
+        .eq('plate', plateNumber);
 
       if (error) {
         console.error('Error updating case status:', error);
@@ -1434,11 +1434,11 @@ window.verifyAdminAccess = verifyAdminAccess;
     try {
       const { supabase } = await import('./lib/supabaseClient.js');
 
-      // Update assigned_to in cases table using plate_number (not id)
+      // Update assigned_to in cases table using plate column
       const { data, error } = await supabase
         .from('cases')
         .update({ assigned_to: assessorId || null })
-        .eq('plate_number', plateNumber);
+        .eq('plate', plateNumber);
 
       if (error) {
         console.error('Error updating assigned_to:', error);
@@ -1470,13 +1470,13 @@ window.verifyAdminAccess = verifyAdminAccess;
       const { supabase } = await import('./lib/supabaseClient.js');
 
       // Get plate number
-      const plateNumber = caseData.plate_number || caseData.meta?.plate || document.getElementById('plateNumber').value;
+      const plateNumber = caseData.plate || caseData.meta?.plate || document.getElementById('plateNumber').value;
 
-      // Get the actual case record from Supabase using plate number
+      // Get the actual case record from Supabase using plate column
       const { data: cases, error } = await supabase
         .from('cases')
-        .select('id, plate_number, status, owner_name, inspection_date, assigned_to, created_at')
-        .eq('plate_number', plateNumber)
+        .select('id, plate, status, owner_name, inspection_location, assigned_to, created_at')
+        .eq('plate', plateNumber)
         .order('created_at', { ascending: false })
         .limit(1);
 
