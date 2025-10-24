@@ -1113,6 +1113,13 @@
         return;
       }
 
+      // CRITICAL: Save current helper state before navigation
+      if (window.helper && Object.keys(window.helper).length > 0) {
+        sessionStorage.setItem('helper', JSON.stringify(window.helper));
+        sessionStorage.setItem('currentHelper', JSON.stringify(window.helper));
+        console.log('💾 Saved helper before navigation to admin');
+      }
+
       window.location.href = 'admin.html';
     } catch (e) {
       console.error('Auth check failed:', e);
@@ -1131,6 +1138,13 @@
     try {
       const auth = JSON.parse(authData);
       const role = auth.profile.role;
+
+      // CRITICAL: Save current helper state before navigation
+      if (window.helper && Object.keys(window.helper).length > 0) {
+        sessionStorage.setItem('helper', JSON.stringify(window.helper));
+        sessionStorage.setItem('currentHelper', JSON.stringify(window.helper));
+        console.log('💾 Saved helper before navigation to tasks');
+      }
 
       // Route based on role
       if (role === 'admin' || role === 'developer') {
@@ -1217,6 +1231,15 @@
       document.addEventListener(eventType, resetIdleTimer, true);
     });
     resetIdleTimer();
+
+    // CRITICAL: Save helper before page unload (navigation to other pages)
+    window.addEventListener('beforeunload', function() {
+      if (window.helper && Object.keys(window.helper).length > 0) {
+        sessionStorage.setItem('helper', JSON.stringify(window.helper));
+        sessionStorage.setItem('currentHelper', JSON.stringify(window.helper));
+        console.log('💾 Auto-saved helper on page unload');
+      }
+    });
   });
 </script>
 
@@ -1440,15 +1463,10 @@ window.verifyAdminAccess = verifyAdminAccess;
       return;
     }
 
-    console.log('🔄 Starting updateCaseStatus - will NOT reload case');
     console.log('🔄 Updating status to:', statusValue, 'for plate:', plateNumber);
 
     try {
       const { supabase } = await import('./lib/supabaseClient.js');
-
-      // CRITICAL: Get helper BEFORE Supabase update to preserve it
-      const helperBeforeUpdate = JSON.parse(sessionStorage.getItem('helper') || '{}');
-      console.log('📋 Helper before update:', Object.keys(helperBeforeUpdate).length, 'keys');
 
       // Update status in cases table using plate column
       const { data, error } = await supabase
@@ -1462,28 +1480,7 @@ window.verifyAdminAccess = verifyAdminAccess;
         return;
       }
 
-      console.log('✅ Supabase updated - Case status changed to:', statusValue);
-
-      // CRITICAL: Update ONLY status field, preserve everything else
-      const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
-
-      // Ensure we still have the helper data
-      if (!helper || Object.keys(helper).length === 0) {
-        console.warn('⚠️ Helper was cleared! Restoring from backup...');
-        sessionStorage.setItem('helper', JSON.stringify(helperBeforeUpdate));
-      }
-
-      // Update status in helper.meta
-      const currentHelper = JSON.parse(sessionStorage.getItem('helper') || '{}');
-      if (!currentHelper.meta) {
-        currentHelper.meta = {};
-      }
-      currentHelper.meta.status = statusValue;
-
-      // Save back to sessionStorage
-      sessionStorage.setItem('helper', JSON.stringify(currentHelper));
-      console.log('✅ Updated helper.meta.status in sessionStorage:', statusValue);
-      console.log('📋 Helper after update still has:', Object.keys(currentHelper).length, 'keys');
+      console.log('✅ Case status updated to:', statusValue);
 
       // Show success feedback
       const dropdown = document.getElementById('caseStatusDropdown');
@@ -1507,14 +1504,10 @@ window.verifyAdminAccess = verifyAdminAccess;
       return;
     }
 
-    console.log('🔄 Starting updateAssignedTo - will NOT reload case');
+    console.log('🔄 Updating assigned_to to:', assessorId, 'for plate:', plateNumber);
 
     try {
       const { supabase } = await import('./lib/supabaseClient.js');
-
-      // CRITICAL: Get helper BEFORE Supabase update to preserve it
-      const helperBeforeUpdate = JSON.parse(sessionStorage.getItem('helper') || '{}');
-      console.log('📋 Helper before update:', Object.keys(helperBeforeUpdate).length, 'keys');
 
       // Update assigned_to in cases table using plate column
       const { data, error } = await supabase
@@ -1528,28 +1521,7 @@ window.verifyAdminAccess = verifyAdminAccess;
         return;
       }
 
-      console.log('✅ Supabase updated - Case assigned to:', assessorId);
-
-      // CRITICAL: Update ONLY assigned_to field, preserve everything else
-      const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
-
-      // Ensure we still have the helper data
-      if (!helper || Object.keys(helper).length === 0) {
-        console.warn('⚠️ Helper was cleared! Restoring from backup...');
-        sessionStorage.setItem('helper', JSON.stringify(helperBeforeUpdate));
-      }
-
-      // Update assigned_to in helper.meta
-      const currentHelper = JSON.parse(sessionStorage.getItem('helper') || '{}');
-      if (!currentHelper.meta) {
-        currentHelper.meta = {};
-      }
-      currentHelper.meta.assigned_to = assessorId || null;
-
-      // Save back to sessionStorage
-      sessionStorage.setItem('helper', JSON.stringify(currentHelper));
-      console.log('✅ Updated helper.meta.assigned_to in sessionStorage:', assessorId);
-      console.log('📋 Helper after update still has:', Object.keys(currentHelper).length, 'keys');
+      console.log('✅ Case assigned to:', assessorId);
 
       // Show success feedback
       const dropdown = document.getElementById('assignedToDropdown');
