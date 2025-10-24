@@ -863,6 +863,24 @@
         <button class="close-btn" onclick="closeNewTaskModal()">✕</button>
       </div>
       <form id="newTaskForm" onsubmit="createTask(event)">
+        <!-- Template Section -->
+        <div style="background: #2a2a2a; padding: 1rem; border-radius: 8px; margin-bottom: 1.5rem; border: 1px solid #3a3a3a;">
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem;">
+            <label style="margin: 0; font-weight: 600; color: #ffd700;">📋 תבניות משימה</label>
+            <button type="button" onclick="openTemplateManager()" class="btn btn-secondary" style="padding: 0.4rem 0.8rem; font-size: 0.85rem;">
+              ⚙️ ניהול תבניות
+            </button>
+          </div>
+          <div style="display: flex; gap: 0.5rem;">
+            <select id="templateSelect" onchange="loadTemplate()" style="flex: 1; padding: 0.5rem; background: #1a1a1a; border: 1px solid #3a3a3a; border-radius: 6px; color: white;">
+              <option value="">טען מתבנית קיימת...</option>
+            </select>
+            <button type="button" onclick="clearTemplate()" class="btn btn-secondary" style="padding: 0.5rem 1rem;">
+              🗑️ נקה
+            </button>
+          </div>
+        </div>
+
         <div class="form-group">
           <label for="taskTitle">כותרת המשימה *</label>
           <input type="text" id="taskTitle" required>
@@ -952,6 +970,13 @@
           </button>
         </div>
 
+        <!-- Save as Template Button -->
+        <div style="margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid #3a3a3a;">
+          <button type="button" onclick="saveAsTemplate()" class="btn" style="width: 100%; background: #2a5a2a; border: 1px solid #3a7a3a;">
+            💾 שמור כתבנית
+          </button>
+        </div>
+
         <div style="display: flex; gap: 1rem; margin-top: 2rem;">
           <button type="submit" class="btn btn-primary" style="flex: 1;">✅ צור משימה</button>
           <button type="button" class="btn btn-secondary" onclick="closeNewTaskModal()">ביטול</button>
@@ -1021,6 +1046,31 @@
           <button type="button" class="btn btn-secondary" onclick="closeEditTaskModal()">ביטול</button>
         </div>
       </form>
+    </div>
+  </div>
+
+  <!-- Template Manager Modal -->
+  <div id="templateManagerModal" class="modal">
+    <div class="modal-content" style="max-width: 900px;">
+      <div class="modal-header">
+        <h2>⚙️ ניהול תבניות משימה</h2>
+        <button class="close-btn" onclick="closeTemplateManager()">✕</button>
+      </div>
+      <div style="padding: 1.5rem;">
+        <!-- Templates List -->
+        <div id="templatesListContainer" style="margin-bottom: 2rem;">
+          <div style="margin-bottom: 1rem; display: flex; justify-content: space-between; align-items: center;">
+            <h3 style="margin: 0; color: #ffd700;">📋 התבניות שלי</h3>
+            <span id="templateCount" style="color: #999; font-size: 0.9rem;">0 תבניות</span>
+          </div>
+          <div id="templatesList" style="max-height: 400px; overflow-y: auto;">
+            <div style="text-align: center; padding: 2rem; color: #999;">
+              <p>אין תבניות שמורות</p>
+              <p style="font-size: 0.9rem;">צור משימה ולחץ על "💾 שמור כתבנית" כדי להתחיל</p>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -1111,6 +1161,9 @@
 
         // Initialize activity feed
         await taskActivityFeed.init('activity-feed');
+
+        // Load task templates
+        await loadTaskTemplates();
 
       } catch (error) {
         console.error('Initialization error:', error);
@@ -1359,6 +1412,231 @@
         arrow.style.transform = 'rotate(0deg)';
       }
     };
+
+    // ============================================================================
+    // TASK TEMPLATES FUNCTIONS
+    // ============================================================================
+
+    let allTemplates = [];
+
+    // Load all templates for current user
+    async function loadTaskTemplates() {
+      try {
+        const { data, error } = await supabase
+          .from('task_templates')
+          .select('*')
+          .or(`created_by.eq.${currentUser.user_id},is_public.eq.true`)
+          .order('usage_count', { ascending: false });
+
+        if (error) throw error;
+
+        allTemplates = data || [];
+        console.log(`Loaded ${allTemplates.length} task templates`);
+
+        // Populate template select dropdown
+        const templateSelect = document.getElementById('templateSelect');
+        templateSelect.innerHTML = '<option value="">טען מתבנית קיימת...</option>';
+
+        allTemplates.forEach(template => {
+          const option = document.createElement('option');
+          option.value = template.id;
+          option.textContent = `${template.template_name} ${template.is_public ? '(ציבורי)' : ''}`;
+          templateSelect.appendChild(option);
+        });
+
+        return allTemplates;
+      } catch (error) {
+        console.error('Error loading templates:', error);
+        return [];
+      }
+    }
+
+    // Load selected template into form
+    window.loadTemplate = async function() {
+      const templateId = document.getElementById('templateSelect').value;
+      if (!templateId) return;
+
+      const template = allTemplates.find(t => t.id === templateId);
+      if (!template) return;
+
+      // Fill form with template values
+      document.getElementById('taskTitle').value = template.title || '';
+      document.getElementById('taskDescription').value = template.description || '';
+      document.getElementById('taskType').value = template.task_type || 'custom';
+      document.getElementById('taskPriority').value = template.priority || 'medium';
+
+      // Increment usage count
+      try {
+        await supabase.rpc('increment_template_usage', { p_template_id: templateId });
+        console.log('✅ Template usage count incremented');
+      } catch (error) {
+        console.error('Error incrementing template usage:', error);
+      }
+
+      alert(`✅ תבנית "${template.template_name}" נטענה בהצלחה!`);
+    };
+
+    // Clear template selection and form
+    window.clearTemplate = function() {
+      document.getElementById('templateSelect').value = '';
+      document.getElementById('taskTitle').value = '';
+      document.getElementById('taskDescription').value = '';
+      document.getElementById('taskType').value = 'custom';
+      document.getElementById('taskPriority').value = 'medium';
+    };
+
+    // Save current form as template
+    window.saveAsTemplate = async function() {
+      const templateName = prompt('הזן שם לתבנית:');
+      if (!templateName) return;
+
+      const title = document.getElementById('taskTitle').value;
+      if (!title) {
+        alert('אנא הזן כותרת למשימה לפני שמירה כתבנית');
+        return;
+      }
+
+      const category = prompt('קטגוריה (אופציונלי):');
+
+      const templateData = {
+        template_name: templateName,
+        category: category || null,
+        title: document.getElementById('taskTitle').value,
+        description: document.getElementById('taskDescription').value,
+        task_type: document.getElementById('taskType').value,
+        priority: document.getElementById('taskPriority').value,
+        created_by: currentUser.user_id,
+        is_public: false
+      };
+
+      try {
+        const { data, error } = await supabase
+          .from('task_templates')
+          .insert([templateData])
+          .select()
+          .single();
+
+        if (error) {
+          if (error.code === '23505') {
+            alert('❌ תבנית בשם זה כבר קיימת. אנא בחר שם אחר.');
+          } else {
+            throw error;
+          }
+          return;
+        }
+
+        alert(`✅ תבנית "${templateName}" נשמרה בהצלחה!`);
+        await loadTaskTemplates(); // Refresh templates list
+      } catch (error) {
+        console.error('Error saving template:', error);
+        alert('❌ שגיאה בשמירת התבנית');
+      }
+    };
+
+    // Open template manager modal
+    window.openTemplateManager = async function() {
+      document.getElementById('templateManagerModal').style.display = 'flex';
+      await renderTemplatesList();
+    };
+
+    // Close template manager modal
+    window.closeTemplateManager = function() {
+      document.getElementById('templateManagerModal').style.display = 'none';
+    };
+
+    // Render templates list in manager
+    async function renderTemplatesList() {
+      await loadTaskTemplates(); // Refresh data
+
+      const container = document.getElementById('templatesList');
+      const countSpan = document.getElementById('templateCount');
+
+      countSpan.textContent = `${allTemplates.length} תבניות`;
+
+      if (allTemplates.length === 0) {
+        container.innerHTML = `
+          <div style="text-align: center; padding: 2rem; color: #999;">
+            <p>אין תבניות שמורות</p>
+            <p style="font-size: 0.9rem;">צור משימה ולחץ על "💾 שמור כתבנית" כדי להתחיל</p>
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = allTemplates.map(template => `
+        <div style="background: #2a2a2a; border: 1px solid #3a3a3a; border-radius: 8px; padding: 1rem; margin-bottom: 0.75rem;">
+          <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 0.5rem;">
+            <div style="flex: 1;">
+              <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.25rem;">
+                <h4 style="margin: 0; color: #ffd700;">${template.template_name}</h4>
+                ${template.is_public ? '<span style="font-size: 0.75rem; background: #3a5a7a; padding: 0.15rem 0.4rem; border-radius: 4px;">ציבורי</span>' : ''}
+                ${template.category ? `<span style="font-size: 0.75rem; background: #4a4a4a; padding: 0.15rem 0.4rem; border-radius: 4px;">${template.category}</span>` : ''}
+              </div>
+              <p style="margin: 0.5rem 0; color: #ccc; font-size: 0.9rem;"><strong>כותרת:</strong> ${template.title}</p>
+              ${template.description ? `<p style="margin: 0.5rem 0; color: #999; font-size: 0.85rem;">${template.description}</p>` : ''}
+              <div style="display: flex; gap: 1rem; margin-top: 0.5rem; font-size: 0.85rem; color: #999;">
+                <span>📊 <strong>סוג:</strong> ${getTaskTypeLabel(template.task_type)}</span>
+                <span>⚡ <strong>עדיפות:</strong> ${getPriorityLabel(template.priority)}</span>
+                <span>📈 <strong>שימושים:</strong> ${template.usage_count || 0}</span>
+              </div>
+            </div>
+            <div style="display: flex; gap: 0.5rem;">
+              <button onclick="deleteTemplate('${template.id}')" class="btn btn-danger" style="padding: 0.4rem 0.8rem; font-size: 0.85rem;">
+                🗑️ מחק
+              </button>
+            </div>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    // Delete template
+    window.deleteTemplate = async function(templateId) {
+      const template = allTemplates.find(t => t.id === templateId);
+      if (!template) return;
+
+      if (!confirm(`האם למחוק את התבנית "${template.template_name}"?`)) return;
+
+      try {
+        const { error } = await supabase
+          .from('task_templates')
+          .delete()
+          .eq('id', templateId);
+
+        if (error) throw error;
+
+        alert('✅ התבנית נמחקה בהצלחה');
+        await renderTemplatesList();
+        await loadTaskTemplates(); // Refresh dropdown
+      } catch (error) {
+        console.error('Error deleting template:', error);
+        alert('❌ שגיאה במחיקת התבנית');
+      }
+    };
+
+    // Helper: Get task type label
+    function getTaskTypeLabel(type) {
+      const labels = {
+        'custom': 'כללית',
+        'case_action': 'פעולה בתיק',
+        'document_request': 'בקשת מסמך',
+        'review_request': 'בקשת סקירה',
+        'data_correction': 'תיקון נתונים',
+        'follow_up': 'מעקב'
+      };
+      return labels[type] || type;
+    }
+
+    // Helper: Get priority label
+    function getPriorityLabel(priority) {
+      const labels = {
+        'low': 'נמוכה',
+        'medium': 'בינונית',
+        'high': 'גבוהה',
+        'urgent': 'דחופה'
+      };
+      return labels[priority] || priority;
+    }
 
     // Load tasks
     async function loadTasks(includeArchived = false) {
