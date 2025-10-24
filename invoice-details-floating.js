@@ -574,7 +574,7 @@
 
   async function loadInvoiceData() {
     try {
-      console.log('🔄 PHASE 2.1: Loading Invoice data from helper ONLY (single source)...');
+      console.log('🔄 SESSION 74: Loading Invoice data from Supabase + helper...');
       
       // 🔧 PHASE 2.1: SINGLE SOURCE LOADING - window.helper is authoritative
       let helper = {};
@@ -597,12 +597,29 @@
         }
       }
 
+      // SESSION 74: Load invoices from Supabase if available
+      let supabaseInvoices = [];
+      if (window.invoiceService) {
+        try {
+          const caseId = sessionStorage.getItem('currentCaseId');
+          if (caseId) {
+            const result = await window.invoiceService.getInvoicesByCase(caseId);
+            if (result.success && result.invoices) {
+              supabaseInvoices = result.invoices;
+              console.log(`✅ SESSION 74: Loaded ${supabaseInvoices.length} invoices from Supabase`);
+            }
+          }
+        } catch (supabaseError) {
+          console.warn('⚠️ SESSION 74: Could not load from Supabase:', supabaseError);
+        }
+      }
+
       // Get invoice data from helper
       const invoiceData = helper.invoice || {};
       const documentsInvoices = helper.documents?.invoices || [];
       
       // Display invoice data
-      displayInvoiceData(invoiceData, documentsInvoices);
+      displayInvoiceData(invoiceData, documentsInvoices, supabaseInvoices);
 
     } catch (error) {
       console.error("Error loading invoice data:", error);
@@ -610,7 +627,7 @@
     }
   }
 
-  function displayInvoiceData(invoiceData, documentsInvoices) {
+  function displayInvoiceData(invoiceData, documentsInvoices, supabaseInvoices = []) {
     const contentDiv = document.getElementById('invoiceContent');
     
     // Check if we have any invoice data
@@ -618,13 +635,19 @@
       value && value.toString().trim() !== ''
     );
     const hasDocumentInvoices = documentsInvoices && documentsInvoices.length > 0;
+    const hasSupabaseInvoices = supabaseInvoices && supabaseInvoices.length > 0;
 
-    if (!hasMainInvoice && !hasDocumentInvoices) {
+    if (!hasMainInvoice && !hasDocumentInvoices && !hasSupabaseInvoices) {
       displayNoDataMessage("לא נמצאו נתוני חשבוניות במערכת");
       return;
     }
 
     let content = '';
+
+    // SESSION 74: Display Supabase invoices first (most detailed)
+    if (hasSupabaseInvoices) {
+      content += generateSupabaseInvoicesSection(supabaseInvoices);
+    }
 
     // Display main invoice data if exists
     if (hasMainInvoice) {
@@ -904,6 +927,103 @@
         </div>
       </div>
     `;
+  }
+
+  // SESSION 74: Generate Supabase invoices section
+  function generateSupabaseInvoicesSection(invoices) {
+    const formatPrice = (value) => {
+      const num = parseFloat(value) || 0;
+      return num > 0 ? `₪${num.toLocaleString('he-IL', {minimumFractionDigits: 2, maximumFractionDigits: 2})}` : "₪0";
+    };
+
+    const formatDate = (dateStr) => {
+      if (!dateStr) return '-';
+      try {
+        const date = new Date(dateStr);
+        return date.toLocaleDateString('he-IL');
+      } catch {
+        return dateStr;
+      }
+    };
+
+    const getCategoryLabel = (category) => {
+      const labels = {
+        'part': '🔧 חלק',
+        'work': '⚙️ עבודה',
+        'repair': '🔨 תיקון',
+        'material': '📦 חומר',
+        'other': '📋 אחר',
+        'uncategorized': '❓ לא מסווג'
+      };
+      return labels[category] || category;
+    };
+
+    const getValidationBadge = (status) => {
+      const badges = {
+        'approved': '<span style="background: #d4edda; color: #155724; padding: 3px 8px; border-radius: 4px; font-size: 12px;">✅ אושר</span>',
+        'rejected': '<span style="background: #f8d7da; color: #721c24; padding: 3px 8px; border-radius: 4px; font-size: 12px;">❌ נדחה</span>',
+        'pending': '<span style="background: #fff3cd; color: #856404; padding: 3px 8px; border-radius: 4px; font-size: 12px;">⏳ ממתין</span>',
+        'auto_approved': '<span style="background: #cfe2ff; color: #084298; padding: 3px 8px; border-radius: 4px; font-size: 12px;">🤖 אושר אוטומטית</span>'
+      };
+      return badges[status] || '';
+    };
+
+    let html = `<div class="invoice-section" style="border: 2px solid #3498db;">
+      <h4 style="color: #2563eb;">💾 חשבוניות מ-Supabase (${invoices.length})</h4>`;
+
+    invoices.forEach((invoice, index) => {
+      const linesCount = invoice.lines ? invoice.lines.length : 0;
+      const mappingsCount = invoice.mappings_count || 0;
+
+      html += `
+        <div style="background: #f0f9ff; border: 1px solid #bfdbfe; border-radius: 6px; padding: 12px; margin-bottom: 12px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+            <div style="font-weight: 600; font-size: 15px; color: #1e40af;">
+              📄 חשבונית #${index + 1} - ${invoice.supplier_name || 'ספק לא ידוע'}
+            </div>
+            ${invoice.validation_status ? getValidationBadge(invoice.validation_status) : ''}
+          </div>
+          
+          <div class="invoice-field">
+            <div class="label">מספר חשבונית:</div>
+            <div class="value">${invoice.invoice_number || '-'}</div>
+          </div>
+          <div class="invoice-field">
+            <div class="label">תאריך:</div>
+            <div class="value">${formatDate(invoice.invoice_date)}</div>
+          </div>
+          <div class="invoice-field">
+            <div class="label">סכום כולל:</div>
+            <div class="value" style="font-weight: 700; color: #1e40af;">${formatPrice(invoice.total_amount)}</div>
+          </div>
+          <div class="invoice-field">
+            <div class="label">פריטים בחשבונית:</div>
+            <div class="value">${linesCount} פריטים</div>
+          </div>
+          ${invoice.ocr_confidence ? `
+            <div class="invoice-field">
+              <div class="label">דיוק OCR:</div>
+              <div class="value">${Math.round(invoice.ocr_confidence)}%</div>
+            </div>
+          ` : ''}
+          ${mappingsCount > 0 ? `
+            <div class="invoice-field">
+              <div class="label">מיפויים:</div>
+              <div class="value">${mappingsCount} מיפויים למרכזי נזקים</div>
+            </div>
+          ` : ''}
+          ${invoice.notes ? `
+            <div class="invoice-field">
+              <div class="label">הערות:</div>
+              <div class="value" style="font-size: 13px; color: #64748b;">${invoice.notes}</div>
+            </div>
+          ` : ''}
+        </div>
+      `;
+    });
+
+    html += `</div>`;
+    return html;
   }
 
   function generateDocumentInvoicesSection(invoices) {
