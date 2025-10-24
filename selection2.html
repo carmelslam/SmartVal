@@ -1342,30 +1342,36 @@ window.verifyAdminAccess = verifyAdminAccess;
     try {
       const { supabase } = await import('./lib/supabaseClient.js');
 
+      // Use .or() instead of .in() for compatibility
       const { data, error } = await supabase
         .from('profiles')
         .select('id, name, role')
-        .in('role', ['assessor', 'admin', 'developer'])
+        .or('role.eq.assessor,role.eq.admin,role.eq.developer')
         .order('name');
 
       if (error) {
         console.error('Error loading assessors:', error);
+        document.getElementById('assignedToDropdown').innerHTML = '<option value="">לא משוייך</option>';
         return;
       }
 
       const dropdown = document.getElementById('assignedToDropdown');
       dropdown.innerHTML = '<option value="">לא משוייך</option>';
 
-      data.forEach(assessor => {
-        const option = document.createElement('option');
-        option.value = assessor.id;
-        option.textContent = `${assessor.name} (${assessor.role === 'assessor' ? 'שמאי' : assessor.role === 'admin' ? 'מנהל' : 'מפתח'})`;
-        dropdown.appendChild(option);
-      });
-
-      console.log('✅ Loaded', data.length, 'assessors');
+      if (data && data.length > 0) {
+        data.forEach(assessor => {
+          const option = document.createElement('option');
+          option.value = assessor.id;
+          option.textContent = `${assessor.name} (${assessor.role === 'assessor' ? 'שמאי' : assessor.role === 'admin' ? 'מנהל' : 'מפתח'})`;
+          dropdown.appendChild(option);
+        });
+        console.log('✅ Loaded', data.length, 'assessors');
+      } else {
+        console.log('⚠️ No assessors found');
+      }
     } catch (err) {
       console.error('Error in loadAssessors:', err);
+      document.getElementById('assignedToDropdown').innerHTML = '<option value="">שגיאה בטעינה</option>';
     }
   }
 
