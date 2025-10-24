@@ -2,11 +2,45 @@
 // Integrates with OneSignal to send notifications for task events
 
 import { sendToWebhook } from './webhook.js';
+import { supabase } from './lib/supabaseClient.js';
 
 class TaskNotificationManager {
   constructor() {
     this.enabled = true;
     this.pendingNotifications = []; // Track tasks waiting for notification
+  }
+
+  /**
+   * Save notification to database for in-app notification center
+   */
+  async saveNotificationToDatabase(userId, type, title, message, url = null, taskId = null) {
+    try {
+      const { data, error} = await supabase
+        .from('notifications')
+        .insert({
+          user_id: userId,
+          type: type,
+          title: title,
+          message: message,
+          url: url,
+          task_id: taskId,
+          read: false,
+          created_at: new Date().toISOString()
+        })
+        .select()
+        .single();
+
+      if (error) {
+        console.error('📬 Task Notifications: Error saving to database:', error);
+        return null;
+      }
+
+      console.log('📬 Task Notifications: Saved to database:', data?.id);
+      return data;
+    } catch (error) {
+      console.error('📬 Task Notifications: Database save error:', error);
+      return null;
+    }
   }
 
   /**
@@ -108,7 +142,19 @@ class TaskNotificationManager {
         };
 
         try {
+          // Send push notification via webhook
           await sendToWebhook('ADMIN_PUSH_NOTIFICATION', payload);
+
+          // Also save to database for in-app notification center
+          await this.saveNotificationToDatabase(
+            userId,
+            'tasks_batch_assigned',
+            payload.title,
+            payload.message,
+            payload.url,
+            taskCount === 1 ? tasks[0].id : null  // Link to task if single task
+          );
+
           successCount++;
           console.log(`📬 Task Notifications: Sent notification to user ${userId}`);
         } catch (error) {
@@ -279,7 +325,7 @@ class TaskNotificationManager {
       const emoji = priorityEmojis[task.priority] || '📋';
       const priorityLabel = priorityLabels[task.priority] || task.priority;
 
-      await this.sendNotification({
+      const notificationData = {
         type: 'task_assigned',
         user_id: task.assigned_to, // For Make.com to find onesignal_id
         user_name: assignedToProfile?.name || 'משתמש',
@@ -289,7 +335,20 @@ class TaskNotificationManager {
         title: `${emoji} משימה חדשה - ${priorityLabel}`,
         message: task.title,
         url: this.getRoleBasedUrl(assignedToProfile, task.id)
-      });
+      };
+
+      // Send push notification
+      await this.sendNotification(notificationData);
+
+      // Save to database
+      await this.saveNotificationToDatabase(
+        task.assigned_to,
+        'task_assigned',
+        notificationData.title,
+        notificationData.message,
+        notificationData.url,
+        task.id
+      );
     } catch (error) {
       console.error('📬 Task Notifications: Error in notifyTaskAssigned:', error);
     }
