@@ -1113,6 +1113,13 @@
         return;
       }
 
+      // CRITICAL: Save current helper state before navigation
+      if (window.helper && Object.keys(window.helper).length > 0) {
+        sessionStorage.setItem('helper', JSON.stringify(window.helper));
+        sessionStorage.setItem('currentHelper', JSON.stringify(window.helper));
+        console.log('💾 Saved helper before navigation to admin');
+      }
+
       window.location.href = 'admin.html';
     } catch (e) {
       console.error('Auth check failed:', e);
@@ -1131,6 +1138,13 @@
     try {
       const auth = JSON.parse(authData);
       const role = auth.profile.role;
+
+      // CRITICAL: Save current helper state before navigation
+      if (window.helper && Object.keys(window.helper).length > 0) {
+        sessionStorage.setItem('helper', JSON.stringify(window.helper));
+        sessionStorage.setItem('currentHelper', JSON.stringify(window.helper));
+        console.log('💾 Saved helper before navigation to tasks');
+      }
 
       // Route based on role
       if (role === 'admin' || role === 'developer') {
@@ -1217,6 +1231,15 @@
       document.addEventListener(eventType, resetIdleTimer, true);
     });
     resetIdleTimer();
+
+    // CRITICAL: Save helper before page unload (navigation to other pages)
+    window.addEventListener('beforeunload', function() {
+      if (window.helper && Object.keys(window.helper).length > 0) {
+        sessionStorage.setItem('helper', JSON.stringify(window.helper));
+        sessionStorage.setItem('currentHelper', JSON.stringify(window.helper));
+        console.log('💾 Auto-saved helper on page unload');
+      }
+    });
   });
 </script>
 
