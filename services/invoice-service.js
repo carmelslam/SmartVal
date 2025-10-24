@@ -239,9 +239,19 @@ class InvoiceService {
     try {
       console.log('📤 Uploading invoice document:', file.name);
       
-      const userId = this.currentUser?.user_id;
+      // SESSION 74: Check authentication status before upload
+      const { data: { session } } = await this.supabase.auth.getSession();
+      if (!session) {
+        throw new Error('User not authenticated - please log in');
+      }
+      console.log('✅ User authenticated:', session.user.email);
+      
+      const userId = this.currentUser?.user_id || session.user.id;
       const timestamp = Date.now();
       const filePath = `${caseId}/invoices/${timestamp}_${file.name}`;
+
+      console.log('📁 Upload path:', filePath);
+      console.log('👤 User ID:', userId);
 
       // 1. Upload to Supabase Storage 'docs' bucket
       const { data: uploadData, error: uploadError } = await this.supabase.storage
