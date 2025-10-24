@@ -4,12 +4,27 @@
  * Phase 9: Admin Hub Enhancement - Supabase Integration
  */
 
-import { supabase } from './supabase-client.js';
+// Import supabase client - using lib/supabaseClient.js which is already loaded in HTML
+// The supabase object is available globally from the HTML script tag
+// No import needed - we'll access window.supabase
 
 class AdminSupabaseService {
   constructor() {
     this.cache = new Map();
     this.cacheTimeout = 2 * 60 * 1000; // 2 minutes cache
+    // Get supabase from window (loaded via script tag in HTML)
+    this.supabase = null;
+  }
+
+  _getSupabase() {
+    // Lazy load supabase reference from window.supabaseClient
+    if (!this.supabase && typeof window !== 'undefined') {
+      this.supabase = window.supabaseClient || window.supabase;
+    }
+    if (!this.supabase) {
+      throw new Error('Supabase client not initialized. Make sure lib/supabaseClient.js is loaded.');
+    }
+    return this.supabase;
   }
 
   /**
@@ -18,6 +33,7 @@ class AdminSupabaseService {
    */
   async getCaseStatus(plate) {
     try {
+      const supabase = this._getSupabase();
       console.log(`📊 Fetching case status for plate: ${plate}`);
 
       // Query tracking_general for complete case overview
@@ -146,6 +162,7 @@ class AdminSupabaseService {
    */
   async queryTrackingTable(filters = {}) {
     try {
+      const supabase = this._getSupabase();
       console.log('📋 Querying tracking table with filters:', filters);
 
       let query = supabase.from('tracking_general').select('*');
@@ -198,6 +215,7 @@ class AdminSupabaseService {
    */
   async getReminders(filters = {}) {
     try {
+      const supabase = this._getSupabase();
       console.log('🔔 Fetching reminders with filters:', filters);
 
       let query = supabase.from('reminders').select('*');
@@ -241,6 +259,7 @@ class AdminSupabaseService {
    */
   async createReminder(reminderData) {
     try {
+      const supabase = this._getSupabase();
       console.log('➕ Creating new reminder:', reminderData);
 
       const { data, error } = await supabase
@@ -263,6 +282,7 @@ class AdminSupabaseService {
    */
   async updateReminder(id, updates) {
     try {
+      const supabase = this._getSupabase();
       console.log(`📝 Updating reminder ${id}:`, updates);
 
       const { data, error } = await supabase
@@ -286,6 +306,7 @@ class AdminSupabaseService {
    */
   async deleteReminder(id) {
     try {
+      const supabase = this._getSupabase();
       console.log(`🗑️ Deleting reminder ${id}`);
 
       const { error } = await supabase
@@ -307,6 +328,7 @@ class AdminSupabaseService {
    */
   async getPaymentTracking(filters = {}) {
     try {
+      const supabase = this._getSupabase();
       console.log('💰 Fetching payment tracking with filters:', filters);
 
       let query = supabase.from('payment_tracking').select('*');
@@ -341,6 +363,7 @@ class AdminSupabaseService {
    */
   async createPaymentRecord(paymentData) {
     try {
+      const supabase = this._getSupabase();
       console.log('➕ Creating payment record:', paymentData);
 
       const { data, error } = await supabase
@@ -363,6 +386,7 @@ class AdminSupabaseService {
    */
   async updatePaymentRecord(id, updates) {
     try {
+      const supabase = this._getSupabase();
       console.log(`📝 Updating payment record ${id}:`, updates);
 
       const { data, error } = await supabase
@@ -386,6 +410,7 @@ class AdminSupabaseService {
    */
   async getProductivityStats() {
     try {
+      const supabase = this._getSupabase();
       console.log('📊 Fetching productivity statistics');
 
       const { data, error } = await supabase.rpc('nicole_get_dashboard_statistics');
@@ -404,6 +429,7 @@ class AdminSupabaseService {
    */
   async getCaseStatistics() {
     try {
+      const supabase = this._getSupabase();
       console.log('📈 Fetching case statistics');
 
       const { data, error } = await supabase.rpc('nicole_get_case_status_statistics');
@@ -422,6 +448,7 @@ class AdminSupabaseService {
    */
   async getPaymentStatistics() {
     try {
+      const supabase = this._getSupabase();
       console.log('💵 Fetching payment statistics');
 
       const { data, error } = await supabase.rpc('nicole_get_payment_statistics');
@@ -440,6 +467,7 @@ class AdminSupabaseService {
    */
   async getReminderStatistics() {
     try {
+      const supabase = this._getSupabase();
       console.log('🔔 Fetching reminder statistics');
 
       const { data, error } = await supabase.rpc('nicole_get_reminder_statistics');
@@ -458,6 +486,7 @@ class AdminSupabaseService {
    */
   async deleteCase(caseId) {
     try {
+      const supabase = this._getSupabase();
       console.log(`🗑️ Deleting case ${caseId} from Supabase`);
 
       // Get case details first
