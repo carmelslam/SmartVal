@@ -554,7 +554,7 @@
 
 <!-- SESSION 56: Load helper.js as regular script BEFORE module script -->
 <script src="helper.js"></script>
-<script src="services/supabaseClient.js"></script>
+<script src="lib/supabaseClient.js"></script>
 <script src="services/invoice-service.js"></script>
 <script src="services/invoice-helper-sync.js"></script>
 <script type="module">
@@ -1236,6 +1236,23 @@ document.addEventListener('DOMContentLoaded', () => {
     alert("הגישה חסומה - אנא התחבר דרך דף הבית");
     window.location.href = "index.html";
     return;
+  }
+
+  // Initialize invoiceService with current user from auth
+  try {
+    const authData = JSON.parse(auth);
+    if (window.invoiceService && authData.profile) {
+      // Set currentUser from auth profile
+      window.invoiceService.currentUser = {
+        user_id: authData.profile.user_id || authData.user.id,
+        email: authData.profile.email || authData.user.email,
+        name: authData.profile.name,
+        role: authData.profile.role
+      };
+      console.log('✅ InvoiceService initialized with user:', window.invoiceService.currentUser.email);
+    }
+  } catch (error) {
+    console.error('❌ Failed to initialize invoiceService with user:', error);
   }
 
   // Initialize invoice processor
