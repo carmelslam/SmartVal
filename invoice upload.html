@@ -817,17 +817,16 @@ class InvoiceProcessor {
   }
 
   validateForm() {
-    const required = ['plate', 'owner', 'pass'];
+    // SESSION 74: Removed 'pass' from required fields - using Supabase auth only
+    const required = ['plate', 'owner'];
     for (const fieldId of required) {
       const field = document.getElementById(fieldId);
-      if (!field.value.trim()) {
-        this.showAlert(`שדה חובה: ${field.previousElementSibling.textContent}`, 'error');
-        field.focus();
+      if (!field || !field.value.trim()) {
+        this.showAlert(`שדה חובה: ${field ? field.previousElementSibling.textContent : fieldId}`, 'error');
+        if (field) field.focus();
         return false;
       }
     }
-    
-    // SESSION 74: Password validation removed - using Supabase auth only
     
     return true;
   }
