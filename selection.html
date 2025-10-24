@@ -1335,6 +1335,13 @@
             if (!error && cases && cases.length > 0) {
               const dbCase = cases[0];
 
+              // Update created_at field (התיק נפתח) - CRITICAL FIX
+              const caseCreated = document.getElementById('caseCreated');
+              if (caseCreated && dbCase.created_at) {
+                caseCreated.textContent = new Date(dbCase.created_at).toLocaleDateString('he-IL');
+                console.log('✅ Set caseCreated to:', dbCase.created_at);
+              }
+
               // Update status field
               const caseStatus = document.getElementById('caseStatus');
               if (caseStatus && dbCase.status) {
@@ -1346,19 +1353,25 @@
                 };
                 caseStatus.textContent = statusMap[dbCase.status] || dbCase.status;
                 caseStatus.style.color = dbCase.status === 'OPEN' ? '#28a745' : '#6c757d';
+                console.log('✅ Set caseStatus to:', dbCase.status);
               }
 
               // Update updated_at field
               const caseUpdated = document.getElementById('caseUpdated');
               if (caseUpdated && dbCase.updated_at) {
                 caseUpdated.textContent = new Date(dbCase.updated_at).toLocaleDateString('he-IL');
+                console.log('✅ Set caseUpdated to:', dbCase.updated_at);
               } else if (caseUpdated && dbCase.created_at) {
                 caseUpdated.textContent = new Date(dbCase.created_at).toLocaleDateString('he-IL');
+                console.log('✅ Set caseUpdated to created_at:', dbCase.created_at);
               }
 
               // Load actual backup count from case_helper table
+              console.log('🔍 About to load backup count for case_id:', dbCase.id);
               if (dbCase.id && typeof window.loadBackupCount === 'function') {
                 await window.loadBackupCount(dbCase.id, plate);
+              } else {
+                console.warn('⚠️ Cannot load backup count - dbCase.id:', dbCase.id, 'loadBackupCount exists:', typeof window.loadBackupCount);
               }
             } else {
               console.warn('Could not fetch case metadata from Supabase:', error);
