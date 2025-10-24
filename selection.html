@@ -1440,10 +1440,15 @@ window.verifyAdminAccess = verifyAdminAccess;
       return;
     }
 
+    console.log('🔄 Starting updateCaseStatus - will NOT reload case');
     console.log('🔄 Updating status to:', statusValue, 'for plate:', plateNumber);
 
     try {
       const { supabase } = await import('./lib/supabaseClient.js');
+
+      // CRITICAL: Get helper BEFORE Supabase update to preserve it
+      const helperBeforeUpdate = JSON.parse(sessionStorage.getItem('helper') || '{}');
+      console.log('📋 Helper before update:', Object.keys(helperBeforeUpdate).length, 'keys');
 
       // Update status in cases table using plate column
       const { data, error } = await supabase
@@ -1457,16 +1462,28 @@ window.verifyAdminAccess = verifyAdminAccess;
         return;
       }
 
-      console.log('✅ Case status updated successfully to:', statusValue, 'Response:', data);
+      console.log('✅ Supabase updated - Case status changed to:', statusValue);
 
-      // Update helper in session storage
+      // CRITICAL: Update ONLY status field, preserve everything else
       const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
-      if (!helper.meta) {
-        helper.meta = {};
+
+      // Ensure we still have the helper data
+      if (!helper || Object.keys(helper).length === 0) {
+        console.warn('⚠️ Helper was cleared! Restoring from backup...');
+        sessionStorage.setItem('helper', JSON.stringify(helperBeforeUpdate));
       }
-      helper.meta.status = statusValue;
-      sessionStorage.setItem('helper', JSON.stringify(helper));
+
+      // Update status in helper.meta
+      const currentHelper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+      if (!currentHelper.meta) {
+        currentHelper.meta = {};
+      }
+      currentHelper.meta.status = statusValue;
+
+      // Save back to sessionStorage
+      sessionStorage.setItem('helper', JSON.stringify(currentHelper));
       console.log('✅ Updated helper.meta.status in sessionStorage:', statusValue);
+      console.log('📋 Helper after update still has:', Object.keys(currentHelper).length, 'keys');
 
       // Show success feedback
       const dropdown = document.getElementById('caseStatusDropdown');
@@ -1490,8 +1507,14 @@ window.verifyAdminAccess = verifyAdminAccess;
       return;
     }
 
+    console.log('🔄 Starting updateAssignedTo - will NOT reload case');
+
     try {
       const { supabase } = await import('./lib/supabaseClient.js');
+
+      // CRITICAL: Get helper BEFORE Supabase update to preserve it
+      const helperBeforeUpdate = JSON.parse(sessionStorage.getItem('helper') || '{}');
+      console.log('📋 Helper before update:', Object.keys(helperBeforeUpdate).length, 'keys');
 
       // Update assigned_to in cases table using plate column
       const { data, error } = await supabase
@@ -1505,16 +1528,28 @@ window.verifyAdminAccess = verifyAdminAccess;
         return;
       }
 
-      console.log('✅ Case assigned successfully to:', assessorId);
+      console.log('✅ Supabase updated - Case assigned to:', assessorId);
 
-      // Update helper in session storage
+      // CRITICAL: Update ONLY assigned_to field, preserve everything else
       const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
-      if (!helper.meta) {
-        helper.meta = {};
+
+      // Ensure we still have the helper data
+      if (!helper || Object.keys(helper).length === 0) {
+        console.warn('⚠️ Helper was cleared! Restoring from backup...');
+        sessionStorage.setItem('helper', JSON.stringify(helperBeforeUpdate));
       }
-      helper.meta.assigned_to = assessorId || null;
-      sessionStorage.setItem('helper', JSON.stringify(helper));
+
+      // Update assigned_to in helper.meta
+      const currentHelper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+      if (!currentHelper.meta) {
+        currentHelper.meta = {};
+      }
+      currentHelper.meta.assigned_to = assessorId || null;
+
+      // Save back to sessionStorage
+      sessionStorage.setItem('helper', JSON.stringify(currentHelper));
       console.log('✅ Updated helper.meta.assigned_to in sessionStorage:', assessorId);
+      console.log('📋 Helper after update still has:', Object.keys(currentHelper).length, 'keys');
 
       // Show success feedback
       const dropdown = document.getElementById('assignedToDropdown');
