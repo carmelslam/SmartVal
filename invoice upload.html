@@ -706,12 +706,31 @@ class InvoiceProcessor {
     
     // SESSION 74: Upload to Supabase Storage immediately
     try {
-      const caseId = sessionStorage.getItem('currentCaseId');
+      let caseId = sessionStorage.getItem('currentCaseId');
       const plate = document.getElementById('plate').value;
       
+      // Try to get case ID from helper if not in sessionStorage
       if (!caseId) {
-        console.warn('⚠️ No case ID found, skipping Supabase upload');
-        this.showAlert('קובץ נטען בהצלחה', 'success');
+        try {
+          const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+          // Check helper.case_info.supabase_case_id first, then fallback to helper.case_id
+          if (helper.case_info && helper.case_info.supabase_case_id) {
+            caseId = helper.case_info.supabase_case_id;
+            sessionStorage.setItem('currentCaseId', caseId);
+            console.log('✅ Found case ID in helper.case_info.supabase_case_id:', caseId);
+          } else if (helper.case_id) {
+            caseId = helper.case_id;
+            sessionStorage.setItem('currentCaseId', caseId);
+            console.log('✅ Found case ID in helper.case_id:', caseId);
+          }
+        } catch (e) {
+          console.warn('Could not get case ID from helper:', e);
+        }
+      }
+      
+      if (!caseId) {
+        console.warn('⚠️ No case ID found, skipping Supabase upload (will save via webhook)');
+        this.showAlert('קובץ נטען בהצלחה (ללא שמירה בענן - פתח מתוך תיק לשמירה מלאה)', 'info');
         return;
       }
 
