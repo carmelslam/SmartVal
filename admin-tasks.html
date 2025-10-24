@@ -929,7 +929,18 @@
         </div>
         <div class="form-group">
           <label for="dueDate">תאריך יעד</label>
-          <input type="date" id="dueDate">
+          <div style="display: flex; gap: 0.5rem; align-items: center;">
+            <input type="date" id="dueDate" style="flex: 1; cursor: pointer;">
+            <button type="button" onclick="setDueDate('today')" class="btn btn-secondary" style="padding: 0.5rem 0.75rem; white-space: nowrap;">
+              היום
+            </button>
+            <button type="button" onclick="setDueDate('tomorrow')" class="btn btn-secondary" style="padding: 0.5rem 0.75rem; white-space: nowrap;">
+              מחר
+            </button>
+            <button type="button" onclick="setDueDate('week')" class="btn btn-secondary" style="padding: 0.5rem 0.75rem; white-space: nowrap;">
+              שבוע
+            </button>
+          </div>
         </div>
 
         <!-- Recurring Task Options -->
@@ -1404,6 +1415,35 @@
         container.appendChild(option);
       });
     }
+
+    // Quick date setter for due date
+    window.setDueDate = function(option) {
+      const dateInput = document.getElementById('dueDate');
+      const today = new Date();
+      let targetDate;
+
+      switch(option) {
+        case 'today':
+          targetDate = today;
+          break;
+        case 'tomorrow':
+          targetDate = new Date(today);
+          targetDate.setDate(today.getDate() + 1);
+          break;
+        case 'week':
+          targetDate = new Date(today);
+          targetDate.setDate(today.getDate() + 7);
+          break;
+        default:
+          targetDate = today;
+      }
+
+      // Format date as YYYY-MM-DD for input[type="date"]
+      const year = targetDate.getFullYear();
+      const month = String(targetDate.getMonth() + 1).padStart(2, '0');
+      const day = String(targetDate.getDate()).padStart(2, '0');
+      dateInput.value = `${year}-${month}-${day}`;
+    };
 
     window.toggleUserDropdown = function() {
       const dropdown = document.getElementById('userDropdown');
