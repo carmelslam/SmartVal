@@ -1257,6 +1257,11 @@
                 if (caseIdOrNumber && plate && window.supabase) {
                   console.log('💾 Saving expertise to Supabase...', { caseIdOrNumber, plate });
 
+                  // 🔍 DEBUG: Log helper structure to understand data format
+                  console.log('🔍 DEBUG: helper.damage_assessment =', helper.damage_assessment);
+                  console.log('🔍 DEBUG: helper.damage_assessment?.centers =', helper.damage_assessment?.centers);
+                  console.log('🔍 DEBUG: Full helper keys =', Object.keys(helper));
+
                   // Check if case_id is a valid UUID (format: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx)
                   const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
                   let actualCaseId = caseIdOrNumber;
@@ -1282,17 +1287,33 @@
                     console.log('✅ Found case UUID:', actualCaseId);
                   }
 
+                  // 🔍 DEBUG: Log RPC call parameters
+                  console.log('🔍 DEBUG: Calling RPC with parameters:', {
+                    p_case_id: actualCaseId,
+                    p_plate: plate?.replace(/-/g, ''),
+                    helper_json_preview: {
+                      has_damage_assessment: !!helper.damage_assessment,
+                      has_centers: !!helper.damage_assessment?.centers,
+                      centers_length: helper.damage_assessment?.centers?.length
+                    }
+                  });
+
                   const { data, error } = await window.supabase.rpc('upsert_tracking_expertise_from_helper', {
                     helper_json: helper,
                     p_case_id: actualCaseId,
                     p_plate: plate?.replace(/-/g, '')
                   });
 
+                  // 🔍 DEBUG: Log RPC response
+                  console.log('🔍 DEBUG: RPC response data =', data);
+                  console.log('🔍 DEBUG: RPC response error =', error);
+
                   if (error) {
                     console.error('❌ Supabase save failed:', error);
                     console.warn('⚠️ Expertise will still be sent to Make.com webhooks');
                   } else {
                     console.log('✅ Expertise saved to Supabase successfully');
+                    console.log('✅ Number of records inserted:', data);
                   }
                 } else {
                   console.warn('⚠️ Missing case_id or plate - skipping Supabase save');
