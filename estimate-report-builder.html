@@ -2314,11 +2314,23 @@
 
             // Only save if we have a valid UUID
             if (uuidPattern.test(actualCaseId)) {
+              // 🔧 FIX: Transform helper structure for SQL function
+              // SQL expects helper.estimate.centers but data might be at helper.centers
+              const centersData = helper.estimate?.centers || helper.centers || helper.damage_centers || [];
+              const helperForSupabase = {
+                ...helper,
+                estimate: {
+                  ...helper.estimate,
+                  centers: centersData
+                }
+              };
+
               const { data, error } = await window.supabase.rpc('upsert_tracking_final_report_from_helper', {
-                helper_json: helper,
+                helper_json: helperForSupabase,
                 p_case_id: actualCaseId,
                 p_plate: plate?.replace(/-/g, ''),
-                p_report_type: 'estimate'
+                p_report_type: 'estimate',
+                p_status: 'final'  // ✅ Export button creates final version
               });
 
               if (error) {

@@ -1638,11 +1638,23 @@
               console.log('✅ Found case UUID:', actualCaseId);
             }
 
+            // 🔧 FIX: Transform helper structure for SQL function
+            // SQL expects helper.final_report.centers but data might be at helper.centers
+            const centersData = helper.final_report?.centers || helper.centers || helper.damage_centers || [];
+            const helperForSupabase = {
+              ...helper,
+              final_report: {
+                ...helper.final_report,
+                centers: centersData
+              }
+            };
+
             const { data, error} = await window.supabase.rpc('upsert_tracking_final_report_from_helper', {
-              helper_json: helper,
+              helper_json: helperForSupabase,
               p_case_id: actualCaseId,
               p_plate: plate?.replace(/-/g, ''),
-              p_report_type: 'final_report'
+              p_report_type: 'final_report',
+              p_status: 'final'  // ✅ Export button creates final version
             });
 
             if (error) {
