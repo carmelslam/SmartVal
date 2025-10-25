@@ -347,32 +347,77 @@ const supabase = {
     };
   },
 
-  // SESSION 76: Auth API support (for invoice module)
+  // SESSION 76: Auth API support (full authentication)
   auth: {
-    getSession: async () => {
+    signInWithPassword: async ({ email, password }) => {
       try {
-        const url = `${supabaseUrl}/auth/v1/user`;
-        const token = localStorage.getItem('supabase.auth.token');
-        
-        if (!token) {
-          return { data: { session: null }, error: null };
-        }
-
+        const url = `${supabaseUrl}/auth/v1/token?grant_type=password`;
         const response = await fetch(url, {
+          method: 'POST',
           headers: {
             'apikey': supabaseAnonKey,
-            'Authorization': `Bearer ${token}`
-          }
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ email, password })
         });
 
         if (!response.ok) {
-          return { data: { session: null }, error: null };
+          const errorData = await response.json();
+          return {
+            data: { user: null, session: null },
+            error: { message: errorData.error_description || errorData.msg || 'Login failed' }
+          };
         }
 
-        const user = await response.json();
+        const data = await response.json();
+        
+        sessionStorage.setItem('auth', JSON.stringify({
+          session: {
+            access_token: data.access_token,
+            refresh_token: data.refresh_token,
+            user: data.user
+          }
+        }));
+
+        return {
+          data: {
+            user: data.user,
+            session: {
+              access_token: data.access_token,
+              refresh_token: data.refresh_token,
+              user: data.user
+            }
+          },
+          error: null
+        };
+      } catch (error) {
+        return {
+          data: { user: null, session: null },
+          error: { message: error.message }
+        };
+      }
+    },
+
+    signOut: async () => {
+      try {
+        sessionStorage.removeItem('auth');
+        return { error: null };
+      } catch (error) {
+        return { error: { message: error.message } };
+      }
+    },
+
+    getSession: async () => {
+      try {
+        const authData = sessionStorage.getItem('auth');
+        if (!authData) {
+          return { data: { session: null }, error: null };
+        }
+        
+        const auth = JSON.parse(authData);
         return { 
           data: { 
-            session: { user } 
+            session: auth.session || null 
           }, 
           error: null 
         };
@@ -391,6 +436,12 @@ const supabase = {
       } catch (error) {
         return { data: { user: null }, error: null };
       }
+    },
+
+    onAuthStateChange: (callback) => {
+      return {
+        data: { subscription: { unsubscribe: () => {} } }
+      };
     }
   },
 
