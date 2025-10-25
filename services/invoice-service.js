@@ -389,17 +389,32 @@ class InvoiceService {
     try {
       console.log('🔗 Generating URL for document:', documentId);
 
-      // 1. Get document record with storage path
+      // SESSION 79: Get document record with storage path
       const { data: doc, error: docError } = await this.supabase
         .from('invoice_documents')
-        .select('storage_path, storage_bucket, filename')
+        .select('storage_path, storage_bucket, filename, id, case_id, invoice_id')
         .eq('id', documentId)
         .single();
 
-      if (docError) throw docError;
+      if (docError) {
+        console.error('❌ Database error fetching document:', docError);
+        throw docError;
+      }
       
-      if (!doc || !doc.storage_path) {
-        throw new Error('Document not found or missing storage path');
+      console.log('📄 Document data:', doc);
+      
+      if (!doc) {
+        throw new Error(`Document with ID ${documentId} not found in database`);
+      }
+      
+      if (!doc.storage_path) {
+        console.error('❌ Document exists but storage_path is NULL:', {
+          id: doc.id,
+          filename: doc.filename,
+          case_id: doc.case_id,
+          invoice_id: doc.invoice_id
+        });
+        throw new Error('Document found but storage_path is NULL - file upload may have failed');
       }
 
       console.log('📁 Storage path:', doc.storage_path);
