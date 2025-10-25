@@ -562,28 +562,32 @@
         </tbody>
       </table>
       
-      <!-- Manual Override Section -->
+      <!-- SESSION 76: Manual Override Section - Collapsible -->
       <div class="section">
-        <h3>הוספה ידנית</h3>
-        <div class="form-row">
-          <div class="form-group">
-            <label for="manual-item">פריט:</label>
-            <input id="manual-item" type="text" placeholder="שם הפריט" />
+        <h3 onclick="toggleManualSection()" style="cursor: pointer; user-select: none;">
+          <span id="manual-toggle-icon">▼</span> הוספה ידנית (לחץ להצגה/הסתרה)
+        </h3>
+        <div id="manual-section-content" style="display: none;">
+          <div class="form-row">
+            <div class="form-group">
+              <label for="manual-item">פריט:</label>
+              <input id="manual-item" type="text" placeholder="שם הפריט" />
+            </div>
+            <div class="form-group">
+              <label for="manual-desc">תיאור:</label>
+              <input id="manual-desc" type="text" placeholder="תיאור" />
+            </div>
+            <div class="form-group">
+              <label for="manual-qty">כמות:</label>
+              <input id="manual-qty" type="number" min="1" value="1" />
+            </div>
+            <div class="form-group">
+              <label for="manual-price">מחיר:</label>
+              <input id="manual-price" type="number" step="0.01" placeholder="0.00" />
+            </div>
           </div>
-          <div class="form-group">
-            <label for="manual-desc">תיאור:</label>
-            <input id="manual-desc" type="text" placeholder="תיאור" />
-          </div>
-          <div class="form-group">
-            <label for="manual-qty">כמות:</label>
-            <input id="manual-qty" type="number" min="1" value="1" />
-          </div>
-          <div class="form-group">
-            <label for="manual-price">מחיר:</label>
-            <input id="manual-price" type="number" step="0.01" placeholder="0.00" />
-          </div>
+          <button type="button" id="add-manual-item" class="btn btn-secondary">הוסף פריט</button>
         </div>
-        <button type="button" id="add-manual-item" class="btn btn-secondary">הוסף פריט</button>
       </div>
     </div>
 
@@ -953,13 +957,18 @@ class InvoiceProcessor {
     // Show OCR results section
     ocrContainer.classList.add('show');
     
+    // SESSION 76: Calculate total correctly
+    const calculatedTotal = this.ocrResults.reduce((sum, item) => {
+      return sum + ((item.quantity || 1) * (item.unit_price || 0));
+    }, 0);
+    
     // Display summary
     summaryContainer.innerHTML = `
       <div style="background: #e8f5e8; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
         <h4 style="margin: 0 0 10px 0; color: #2c3e50;">סיכום החשבונית</h4>
         <div style="display: flex; gap: 20px; flex-wrap: wrap;">
           <div><strong>מספר פריטים:</strong> ${this.ocrResults.length}</div>
-          <div><strong>סה"כ:</strong> ₪${result.total || 0}</div>
+          <div id="summary-total"><strong>סה"כ:</strong> ₪${calculatedTotal.toFixed(2)}</div>
           <div><strong>דיוק OCR:</strong> ${result.confidence || 'לא זמין'}%</div>
         </div>
       </div>
@@ -1014,12 +1023,10 @@ class InvoiceProcessor {
       return sum + ((item.quantity || 1) * (item.unit_price || 0));
     }, 0);
     
-    const summaryContainer = document.getElementById('ocr-summary');
-    if (summaryContainer) {
-      const totalElement = summaryContainer.querySelector('div:last-child');
-      if (totalElement) {
-        totalElement.innerHTML = `<strong>סה"כ:</strong> ₪${total.toFixed(2)}`;
-      }
+    // SESSION 76: Update summary total correctly
+    const totalElement = document.getElementById('summary-total');
+    if (totalElement) {
+      totalElement.innerHTML = `<strong>סה"כ:</strong> ₪${total.toFixed(2)}`;
     }
   }
 
@@ -1358,6 +1365,20 @@ document.addEventListener('DOMContentLoaded', () => {
   // Auto-populate on page load
   populateVehicleDataFromHelper();
 });
+
+// SESSION 76: Toggle manual section visibility
+function toggleManualSection() {
+  const content = document.getElementById('manual-section-content');
+  const icon = document.getElementById('manual-toggle-icon');
+  
+  if (content.style.display === 'none') {
+    content.style.display = 'block';
+    icon.textContent = '▲';
+  } else {
+    content.style.display = 'none';
+    icon.textContent = '▼';
+  }
+}
 
 </script>
 <script src="password-prefill.js"></script>
