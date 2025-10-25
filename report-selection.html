@@ -467,8 +467,12 @@
     </div>
   </div>
 
+  <!-- Load services -->
+  <script src="services/reportStorageService.js"></script>
+
   <script type="module">
     import { sendToWebhook } from './webhook.js';
+    import { supabase } from './lib/supabaseClient.js';
     
     // Authentication check
     const auth = sessionStorage.getItem("auth");
@@ -1295,40 +1299,80 @@
     window.fetchExpertisePDF = async function() {
       const plateNumber = document.getElementById('plateInput').value.trim();
       const helper = sessionStorage.getItem('helper');
-      
+
       if (!plateNumber) {
         alert('אנא הכנס מספר רכב');
         return;
       }
-      
+
       const fetchBtn = document.getElementById('fetchExpertiseBtn');
       const originalText = fetchBtn.textContent;
-      
+
       try {
         fetchBtn.disabled = true;
         fetchBtn.textContent = 'טוען PDF...';
-        
+
         const caseData = helper ? JSON.parse(helper) : null;
+
+        // First check if PDF exists in Supabase
+        if (caseData?.meta?.case_id && window.reportStorageService) {
+          console.log('🔍 Checking Supabase storage first...');
+          const storageResult = await window.reportStorageService.getReportURL(
+            caseData.meta.case_id,
+            'expertise'
+          );
+
+          if (storageResult.success) {
+            console.log('✅ Found in Supabase storage');
+            showFloatingPDF(storageResult.url, 'אקספירטיזה PDF');
+            return;
+          }
+        }
+
+        // If not in Supabase, fetch from Make.com
+        console.log('📥 Fetching from Make.com...');
         const payload = {
           plate: plateNumber,
           case_id: caseData?.meta?.case_id,
           document_type: 'expertise'
         };
-        
+
         const response = await sendToWebhook('FETCH_EXPERTISE_PDF', payload);
-        
+
         if (response?.success && response?.pdf_url) {
-          showFloatingPDF(response.pdf_url, 'אקספירטיזה PDF');
+          // Upload to Supabase for future use
+          if (caseData?.meta?.case_id && window.reportStorageService) {
+            console.log('📤 Uploading to Supabase storage...');
+            fetchBtn.textContent = 'שומר ל-Supabase...';
+
+            const uploadResult = await window.reportStorageService.uploadReportFromURL(
+              response.pdf_url,
+              caseData.meta.case_id,
+              plateNumber,
+              'expertise'
+            );
+
+            if (uploadResult.success) {
+              console.log('✅ Saved to Supabase, showing from storage');
+              showFloatingPDF(uploadResult.url, 'אקספירטיזה PDF');
+            } else {
+              console.warn('⚠️ Supabase upload failed, showing Make.com URL');
+              showFloatingPDF(response.pdf_url, 'אקספירטיזה PDF');
+            }
+          } else {
+            showFloatingPDF(response.pdf_url, 'אקספירטיזה PDF');
+          }
+
           console.log('✅ Expertise PDF fetched successfully');
         } else {
           alert('אקספירטיזה לא נמצאה במערכת או לא הופקה עדיין');
           console.error('❌ Failed to fetch expertise PDF:', response);
         }
-        
+
       } catch (error) {
         console.error('Error fetching expertise PDF:', error);
         alert('שגיאה בטעינת אקספירטיזה PDF');
-        
+
       } finally {
         fetchBtn.disabled = false;
         fetchBtn.textContent = originalText;
@@ -1339,40 +1383,80 @@
     window.fetchEstimatePDF = async function() {
       const plateNumber = document.getElementById('plateInput').value.trim();
       const helper = sessionStorage.getItem('helper');
-      
+
       if (!plateNumber) {
         alert('אנא הכנס מספר רכב');
         return;
       }
-      
+
       const fetchBtn = document.getElementById('fetchEstimateBtn');
       const originalText = fetchBtn.textContent;
-      
+
       try {
         fetchBtn.disabled = true;
         fetchBtn.textContent = 'טוען PDF...';
-        
+
         const caseData = helper ? JSON.parse(helper) : null;
+
+        // First check if PDF exists in Supabase
+        if (caseData?.meta?.case_id && window.reportStorageService) {
+          console.log('🔍 Checking Supabase storage first...');
+          const storageResult = await window.reportStorageService.getReportURL(
+            caseData.meta.case_id,
+            'estimate'
+          );
+
+          if (storageResult.success) {
+            console.log('✅ Found in Supabase storage');
+            showFloatingPDF(storageResult.url, 'אומדן PDF');
+            return;
+          }
+        }
+
+        // If not in Supabase, fetch from Make.com
+        console.log('📥 Fetching from Make.com...');
         const payload = {
           plate: plateNumber,
           case_id: caseData?.meta?.case_id,
           document_type: 'estimate'
         };
-        
+
         const response = await sendToWebhook('FETCH_ESTIMATE_PDF', payload);
-        
+
         if (response?.success && response?.pdf_url) {
-          showFloatingPDF(response.pdf_url, 'אומדן PDF');
+          // Upload to Supabase for future use
+          if (caseData?.meta?.case_id && window.reportStorageService) {
+            console.log('📤 Uploading to Supabase storage...');
+            fetchBtn.textContent = 'שומר ל-Supabase...';
+
+            const uploadResult = await window.reportStorageService.uploadReportFromURL(
+              response.pdf_url,
+              caseData.meta.case_id,
+              plateNumber,
+              'estimate'
+            );
+
+            if (uploadResult.success) {
+              console.log('✅ Saved to Supabase, showing from storage');
+              showFloatingPDF(uploadResult.url, 'אומדן PDF');
+            } else {
+              console.warn('⚠️ Supabase upload failed, showing Make.com URL');
+              showFloatingPDF(response.pdf_url, 'אומדן PDF');
+            }
+          } else {
+            showFloatingPDF(response.pdf_url, 'אומדן PDF');
+          }
+
           console.log('✅ Estimate PDF fetched successfully');
         } else {
           alert('אומדן לא נמצא במערכת או לא הופק עדיין');
           console.error('❌ Failed to fetch estimate PDF:', response);
         }
-        
+
       } catch (error) {
         console.error('Error fetching estimate PDF:', error);
         alert('שגיאה בטעינת אומדן PDF');
-        
+
       } finally {
         fetchBtn.disabled = false;
         fetchBtn.textContent = originalText;
