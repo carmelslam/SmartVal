@@ -2570,7 +2570,7 @@
 
         case 'paymentTracking':
           content.innerHTML = `
-            <h2 style="color: #ff6b35; font-size: 24px; margin-bottom: 20px;">💰 מעקב תשלומים</h2>
+            <h2 style="color: #ff6b35; font-size: 24px; margin-bottom: 20px;">💰 ניהול תשלומים - מעקב ובקרה</h2>
 
             <!-- Payment Statistics Cards -->
             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 20px;">
@@ -2599,16 +2599,35 @@
               </div>
             </div>
 
-            <!-- Actions -->
+            <!-- Filters and Actions -->
             <div style="background: #333; padding: 15px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #555;">
-              <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap; justify-content: center;">
+              <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 15px;">
+                <label style="color: #e0e0e0; font-size: 14px;">סינון לפי סטטוס:</label>
+                <select id="paymentStatusFilter" onchange="filterPaymentsByStatus()" style="padding: 8px; border-radius: 4px; border: 1px solid #555; background: #444; color: #e0e0e0;">
+                  <option value="all">הכל</option>
+                  <option value="ממתין לתשלום">ממתין לתשלום</option>
+                  <option value="שולם חלקית">שולם חלקית</option>
+                  <option value="שולם במלואו">שולם במלואו</option>
+                  <option value="באיחור">באיחור</option>
+                </select>
+
+                <label style="color: #e0e0e0; font-size: 14px; margin-right: 20px;">התראות:</label>
+                <select id="paymentAlertFilter" onchange="filterPaymentsByStatus()" style="padding: 8px; border-radius: 4px; border: 1px solid #555; background: #444; color: #e0e0e0;">
+                  <option value="all">הכל</option>
+                  <option value="overdue">באיחור</option>
+                  <option value="due_soon">תשלום קרוב (7 ימים)</option>
+                  <option value="due_month">תשלום החודש</option>
+                </select>
+              </div>
+
+              <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap; justify-content: center; border-top: 1px solid #555; padding-top: 15px;">
                 <button onclick="loadPaymentTracking()"
                         onmouseover="this.style.background='#e55a2b'"
                         onmouseout="this.style.background='#ff6b35'"
                         style="padding: 12px 24px; background: #ff6b35; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; transition: all 0.3s;">
-                  📥 טען נתוני תשלומים
+                  🔄 רענן נתונים
                 </button>
-                <button onclick="addNewPaymentRecord()"
+                <button onclick="showAddPaymentModal()"
                         onmouseover="this.style.background='#059669'"
                         onmouseout="this.style.background='#16a34a'"
                         style="padding: 12px 24px; background: #16a34a; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; transition: all 0.3s;">
@@ -2623,17 +2642,18 @@
               </div>
             </div>
 
-            <!-- Payments Table -->
+            <!-- Payments Management Table -->
             <div id="paymentTrackingResults" style="margin-top: 20px;">
               <div style="background: #2a2a2a; padding: 20px; border-radius: 8px; border: 1px solid #444; text-align: center;">
-                <h3 style="color: #ff6b35;">💡 לחץ על "טען נתוני תשלומים" להתחלה</h3>
-                <p style="color: #ccc;">המערכת תציג את כל רשומות התשלום מ-Supabase</p>
+                <h3 style="color: #ff6b35;">⏳ טוען נתוני תשלומים...</h3>
+                <p style="color: #ccc;">נא המתן...</p>
               </div>
             </div>`;
 
-          // Load payment statistics
+          // Auto-load payment data on section load
           setTimeout(() => {
             loadPaymentStatistics();
+            loadPaymentTracking();
           }, 500);
           break;
 
@@ -9047,12 +9067,16 @@ window.loadPaymentStatistics = async function() {
   }
 };
 
+// Store all payments globally for filtering
+window.allPayments = [];
+
 window.loadPaymentTracking = async function() {
   try {
     const resultsDiv = document.getElementById('paymentTrackingResults');
     resultsDiv.innerHTML = '<div style="padding: 20px; text-align: center; color: #ccc;">🔄 טוען נתוני תשלומים...</div>';
 
     const payments = await adminSupabaseService.getPaymentTracking();
+    window.allPayments = payments || [];
 
     if (!payments || payments.length === 0) {
       resultsDiv.innerHTML = `
@@ -9063,46 +9087,7 @@ window.loadPaymentTracking = async function() {
       return;
     }
 
-    let html = `<div style="overflow-x: auto;">
-      <table style="width: 100%; border-collapse: collapse; background: #2a2a2a; border-radius: 8px; overflow: hidden;">
-        <thead style="background: #333;">
-          <tr style="color: #ff6b35;">
-            <th style="padding: 12px; text-align: right; border-bottom: 2px solid #444;">מס' רכב</th>
-            <th style="padding: 12px; text-align: right; border-bottom: 2px solid #444;">בעלים</th>
-            <th style="padding: 12px; text-align: right; border-bottom: 2px solid #444;">סכום</th>
-            <th style="padding: 12px; text-align: right; border-bottom: 2px solid #444;">תאריך צפוי</th>
-            <th style="padding: 12px; text-align: right; border-bottom: 2px solid #444;">סטטוס</th>
-            <th style="padding: 12px; text-align: center; border-bottom: 2px solid #444;">פעולות</th>
-          </tr>
-        </thead>
-        <tbody>`;
-
-    payments.forEach(payment => {
-      const statusColors = {
-        'ממתין לתשלום': '#f59e0b',
-        'שולם חלקית': '#3b82f6',
-        'שולם במלואו': '#16a34a',
-        'באיחור': '#dc2626'
-      };
-      const statusColor = statusColors[payment.payment_status] || '#666';
-
-      html += `
-        <tr style="border-bottom: 1px solid #333; color: #e0e0e0;">
-          <td style="padding: 12px;">${payment.plate || 'לא זמין'}</td>
-          <td style="padding: 12px;">${payment.owner_name || 'לא זמין'}</td>
-          <td style="padding: 12px; font-weight: bold;">₪${Number(payment.total_fee || 0).toLocaleString('he-IL')}</td>
-          <td style="padding: 12px;">${payment.expected_payment_date ? new Date(payment.expected_payment_date).toLocaleDateString('he-IL') : 'לא זמין'}</td>
-          <td style="padding: 12px;"><span style="background: ${statusColor}; padding: 4px 8px; border-radius: 4px; color: white; font-size: 12px;">${payment.payment_status}</span></td>
-          <td style="padding: 12px; text-align: center;">
-            <button onclick="editPaymentRecord('${payment.id}')" style="padding: 6px 12px; background: #3b82f6; color: white; border: none; border-radius: 4px; cursor: pointer; margin-right: 5px;">✏️ ערוך</button>
-          </td>
-        </tr>`;
-    });
-
-    html += '</tbody></table></div>';
-    resultsDiv.innerHTML = html;
-
-    // Refresh statistics
+    renderPaymentsTable(payments);
     loadPaymentStatistics();
 
   } catch (error) {
@@ -9115,12 +9100,221 @@ window.loadPaymentTracking = async function() {
   }
 };
 
-window.addNewPaymentRecord = function() {
-  alert('פונקציית הוספת תשלום תיושם בקרוב - השתמש ב-Supabase UI לעת עתה');
+window.renderPaymentsTable = function(payments) {
+  const resultsDiv = document.getElementById('paymentTrackingResults');
+
+  let html = `<div style="overflow-x: auto; -webkit-overflow-scrolling: touch;">
+    <table style="width: 100%; border-collapse: collapse; background: #2a2a2a; border-radius: 8px; overflow: hidden; font-size: 13px;">
+      <thead style="background: #333; position: sticky; top: 0;">
+        <tr style="color: #ff6b35;">
+          <th style="padding: 10px; text-align: right; border-bottom: 2px solid #444; white-space: nowrap;">מס' רכב</th>
+          <th style="padding: 10px; text-align: right; border-bottom: 2px solid #444; white-space: nowrap;">בעלים</th>
+          <th style="padding: 10px; text-align: right; border-bottom: 2px solid #444; white-space: nowrap;">יצרן / שנה</th>
+          <th style="padding: 10px; text-align: right; border-bottom: 2px solid #444; white-space: nowrap;">סכום שכ"ט</th>
+          <th style="padding: 10px; text-align: right; border-bottom: 2px solid #444; white-space: nowrap;">מוסך</th>
+          <th style="padding: 10px; text-align: right; border-bottom: 2px solid #444; white-space: nowrap;">סוכן</th>
+          <th style="padding: 10px; text-align: right; border-bottom: 2px solid #444; white-space: nowrap;">תאריך צפוי</th>
+          <th style="padding: 10px; text-align: right; border-bottom: 2px solid #444; white-space: nowrap;">ימים</th>
+          <th style="padding: 10px; text-align: right; border-bottom: 2px solid #444; white-space: nowrap;">סטטוס תשלום</th>
+          <th style="padding: 10px; text-align: center; border-bottom: 2px solid #444; white-space: nowrap;">פעולות</th>
+        </tr>
+      </thead>
+      <tbody>`;
+
+  payments.forEach(payment => {
+    const statusColors = {
+      'ממתין לתשלום': '#f59e0b',
+      'שולם חלקית': '#3b82f6',
+      'שולם במלואו': '#16a34a',
+      'באיחור': '#dc2626'
+    };
+    const statusColor = statusColors[payment.payment_status] || '#666';
+
+    // Calculate days until payment
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const expectedDate = payment.expected_payment_date ? new Date(payment.expected_payment_date) : null;
+    let daysUntil = 'N/A';
+    let daysClass = '';
+
+    if (expectedDate) {
+      expectedDate.setHours(0, 0, 0, 0);
+      const diffTime = expectedDate - today;
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      daysUntil = diffDays;
+
+      if (diffDays < 0) {
+        daysClass = 'color: #dc2626; font-weight: bold;'; // Overdue - red
+      } else if (diffDays <= 7) {
+        daysClass = 'color: #f59e0b; font-weight: bold;'; // Due soon - orange
+      } else if (diffDays <= 30) {
+        daysClass = 'color: #3b82f6;'; // This month - blue
+      } else {
+        daysClass = 'color: #10b981;'; // Future - green
+      }
+    }
+
+    const vehicleInfo = `${payment.manufacturer || 'לא זמין'} / ${payment.year_of_manufacture || ''}`;
+    const formattedDate = expectedDate ? expectedDate.toLocaleDateString('he-IL') : 'לא זמין';
+
+    html += `
+      <tr style="border-bottom: 1px solid #333; color: #e0e0e0;" data-payment-id="${payment.id}">
+        <td style="padding: 10px; white-space: nowrap;">${payment.plate || 'לא זמין'}</td>
+        <td style="padding: 10px;">${payment.owner_name || 'לא זמין'}</td>
+        <td style="padding: 10px; font-size: 12px; color: #ccc;">${vehicleInfo}</td>
+        <td style="padding: 10px; font-weight: bold;">₪${Number(payment.total_fee || 0).toLocaleString('he-IL')}</td>
+        <td style="padding: 10px; font-size: 12px;">${payment.garage || 'לא זמין'}</td>
+        <td style="padding: 10px; font-size: 12px;">${payment.agent || 'לא זמין'}</td>
+        <td style="padding: 10px;">${formattedDate}</td>
+        <td style="padding: 10px; ${daysClass}">${daysUntil !== 'N/A' ? (daysUntil >= 0 ? `+${daysUntil}` : daysUntil) : 'N/A'}</td>
+        <td style="padding: 10px;">
+          <select onchange="updatePaymentStatus('${payment.id}', this.value)" style="background: ${statusColor}; padding: 6px 10px; border-radius: 4px; color: white; font-size: 12px; border: none; cursor: pointer; font-weight: bold;">
+            <option value="ממתין לתשלום" ${payment.payment_status === 'ממתין לתשלום' ? 'selected' : ''}>ממתין לתשלום</option>
+            <option value="שולם חלקית" ${payment.payment_status === 'שולם חלקית' ? 'selected' : ''}>שולם חלקית</option>
+            <option value="שולם במלואו" ${payment.payment_status === 'שולם במלואו' ? 'selected' : ''}>שולם במלואו</option>
+            <option value="באיחור" ${payment.payment_status === 'באיחור' ? 'selected' : ''}>באיחור</option>
+          </select>
+        </td>
+        <td style="padding: 10px; text-align: center; white-space: nowrap;">
+          <button onclick="viewPaymentDetails('${payment.id}')" style="padding: 5px 10px; background: #3b82f6; color: white; border: none; border-radius: 4px; cursor: pointer; margin-right: 3px; font-size: 11px;">👁️ פרטים</button>
+          <button onclick="editPaymentRecord('${payment.id}')" style="padding: 5px 10px; background: #f59e0b; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 11px;">✏️ ערוך</button>
+        </td>
+      </tr>`;
+  });
+
+  html += '</tbody></table></div>';
+
+  // Add summary
+  const totalAmount = payments.reduce((sum, p) => sum + (Number(p.total_fee) || 0), 0);
+  html += `
+    <div style="background: #333; padding: 15px; border-radius: 8px; margin-top: 15px; text-align: center;">
+      <span style="color: #e0e0e0;">סה"כ מוצג: <strong style="color: #ff6b35;">${payments.length}</strong> תשלומים | </span>
+      <span style="color: #e0e0e0;">סכום כולל: <strong style="color: #16a34a;">₪${totalAmount.toLocaleString('he-IL')}</strong></span>
+    </div>`;
+
+  resultsDiv.innerHTML = html;
+};
+
+window.filterPaymentsByStatus = function() {
+  const statusFilter = document.getElementById('paymentStatusFilter').value;
+  const alertFilter = document.getElementById('paymentAlertFilter').value;
+
+  let filtered = [...window.allPayments];
+
+  // Apply status filter
+  if (statusFilter !== 'all') {
+    filtered = filtered.filter(p => p.payment_status === statusFilter);
+  }
+
+  // Apply alert/timeline filter
+  if (alertFilter !== 'all') {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    filtered = filtered.filter(p => {
+      if (!p.expected_payment_date) return false;
+
+      const expectedDate = new Date(p.expected_payment_date);
+      expectedDate.setHours(0, 0, 0, 0);
+      const diffDays = Math.ceil((expectedDate - today) / (1000 * 60 * 60 * 24));
+
+      switch(alertFilter) {
+        case 'overdue':
+          return diffDays < 0;
+        case 'due_soon':
+          return diffDays >= 0 && diffDays <= 7;
+        case 'due_month':
+          return diffDays >= 0 && diffDays <= 30;
+        default:
+          return true;
+      }
+    });
+  }
+
+  renderPaymentsTable(filtered);
+};
+
+window.updatePaymentStatus = async function(paymentId, newStatus) {
+  try {
+    console.log(`💰 Updating payment ${paymentId} status to: ${newStatus}`);
+
+    // Update in Supabase
+    const supabase = window.supabaseClient;
+    const { error } = await supabase
+      .from('payment_tracking')
+      .update({
+        payment_status: newStatus,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', paymentId);
+
+    if (error) throw error;
+
+    // Update local data
+    const payment = window.allPayments.find(p => p.id === paymentId);
+    if (payment) {
+      payment.payment_status = newStatus;
+    }
+
+    // Refresh display
+    filterPaymentsByStatus();
+    loadPaymentStatistics();
+
+    console.log('✅ Payment status updated successfully');
+
+  } catch (error) {
+    console.error('❌ Error updating payment status:', error);
+    alert(`שגיאה בעדכון סטטוס: ${error.message}`);
+    loadPaymentTracking(); // Reload to reset
+  }
+};
+
+window.viewPaymentDetails = function(paymentId) {
+  const payment = window.allPayments.find(p => p.id === paymentId);
+  if (!payment) return;
+
+  const modal = `
+    <div style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 10000; display: flex; align-items: center; justify-content: center;" onclick="this.remove()">
+      <div style="background: #2a2a2a; padding: 25px; border-radius: 12px; max-width: 600px; width: 90%; max-height: 80vh; overflow-y: auto; border: 2px solid #ff6b35;" onclick="event.stopPropagation()">
+        <h3 style="color: #ff6b35; margin-top: 0;">פרטי תשלום מלאים</h3>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
+          <div><strong style="color: #f59e0b;">מס' רכב:</strong> <span style="color: #e0e0e0;">${payment.plate || 'N/A'}</span></div>
+          <div><strong style="color: #f59e0b;">בעלים:</strong> <span style="color: #e0e0e0;">${payment.owner_name || 'N/A'}</span></div>
+          <div><strong style="color: #f59e0b;">יצרן:</strong> <span style="color: #e0e0e0;">${payment.manufacturer || 'N/A'}</span></div>
+          <div><strong style="color: #f59e0b;">שנה:</strong> <span style="color: #e0e0e0;">${payment.year_of_manufacture || 'N/A'}</span></div>
+          <div><strong style="color: #f59e0b;">טלפון:</strong> <span style="color: #e0e0e0;">${payment.phone || 'N/A'}</span></div>
+          <div><strong style="color: #f59e0b;">סוכן:</strong> <span style="color: #e0e0e0;">${payment.agent || 'N/A'}</span></div>
+          <div><strong style="color: #f59e0b;">מוסך:</strong> <span style="color: #e0e0e0;">${payment.garage || 'N/A'}</span></div>
+          <div><strong style="color: #f59e0b;">מטפל בתביעה:</strong> <span style="color: #e0e0e0;">${payment.claim_handler || 'N/A'}</span></div>
+          <div><strong style="color: #f59e0b;">סה"כ שכ"ט:</strong> <span style="color: #16a34a; font-weight: bold;">₪${Number(payment.total_fee || 0).toLocaleString('he-IL')}</span></div>
+          <div><strong style="color: #f59e0b;">תאריך נזק:</strong> <span style="color: #e0e0e0;">${payment.damage_date ? new Date(payment.damage_date).toLocaleDateString('he-IL') : 'N/A'}</span></div>
+          <div><strong style="color: #f59e0b;">תאריך שידור:</strong> <span style="color: #e0e0e0;">${payment.broadcast_date ? new Date(payment.broadcast_date).toLocaleDateString('he-IL') : 'N/A'}</span></div>
+          <div><strong style="color: #f59e0b;">תאריך צפוי לתשלום:</strong> <span style="color: #e0e0e0;">${payment.expected_payment_date ? new Date(payment.expected_payment_date).toLocaleDateString('he-IL') : 'N/A'}</span></div>
+        </div>
+
+        <div style="margin-bottom: 15px;">
+          <strong style="color: #f59e0b;">סטטוס תשלום:</strong>
+          <span style="background: ${payment.payment_status === 'שולם במלואו' ? '#16a34a' : payment.payment_status === 'באיחור' ? '#dc2626' : '#f59e0b'}; padding: 6px 12px; border-radius: 4px; color: white; margin-right: 10px;">${payment.payment_status}</span>
+        </div>
+
+        ${payment.notes ? `<div style="margin-bottom: 15px;"><strong style="color: #f59e0b;">הערות:</strong><p style="color: #ccc; background: #333; padding: 10px; border-radius: 4px; margin-top: 5px;">${payment.notes}</p></div>` : ''}
+
+        <div style="text-align: center; margin-top: 20px;">
+          <button onclick="this.closest('div[style*=\\'position: fixed\\']').remove()" style="padding: 10px 20px; background: #666; color: white; border: none; border-radius: 6px; cursor: pointer;">סגור</button>
+        </div>
+      </div>
+    </div>`;
+
+  document.body.insertAdjacentHTML('beforeend', modal);
+};
+
+window.showAddPaymentModal = function() {
+  alert('הוספת תשלום חדש תיושם בקרוב - כרגע השתמש ב-Supabase Dashboard להוספה ידנית');
 };
 
 window.editPaymentRecord = function(id) {
-  alert(`עריכת תשלום ${id} - תיושם בקרוב`);
+  alert(`עריכת תשלום מלא תיושם בקרוב - כרגע ניתן לשנות סטטוס ישירות בטבלה`);
 };
 
 window.exportPaymentTracking = function() {
