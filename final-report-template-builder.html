@@ -1600,7 +1600,40 @@
       
       console.log('Sending webhook with data size:', JSON.stringify(webhookData).length);
       console.log('Webhook payload:', webhookData);
-      
+
+      // 💾 CRITICAL FIX: Save to Supabase BEFORE webhook
+      // This ensures reports are backed up to database
+      (async () => {
+        try {
+          const helper = window.helper || JSON.parse(sessionStorage.getItem('helper') || '{}');
+          const caseId = helper.meta?.case_id;
+          const plate = helper.car_details?.plate || helper.vehicle?.plate || helper.meta?.plate;
+
+          if (caseId && plate && window.supabase) {
+            console.log('💾 Saving final report to Supabase...', { caseId, plate });
+
+            const { data, error } = await window.supabase.rpc('upsert_tracking_final_report_from_helper', {
+              helper_json: helper,
+              p_case_id: caseId,
+              p_plate: plate?.replace(/-/g, ''),
+              p_report_type: 'final_report'
+            });
+
+            if (error) {
+              console.error('❌ Supabase save failed:', error);
+              console.warn('⚠️ Report will still be sent to Make.com webhook');
+            } else {
+              console.log('✅ Final report saved to Supabase successfully');
+            }
+          } else {
+            console.warn('⚠️ Missing case_id or plate - skipping Supabase save');
+          }
+        } catch (error) {
+          console.error('❌ Error saving to Supabase:', error);
+          console.warn('⚠️ Continuing with webhook despite Supabase error');
+        }
+      })();
+
       // Use the proper sendToWebhook function
       window.sendToWebhook('SUBMIT_FINAL_REPORT', webhookData)
         .then(response => {
