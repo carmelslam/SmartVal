@@ -779,7 +779,23 @@ class InvoiceProcessor {
     this.uploadedFile = file;
     this.showPreview(file);
     
-    // SESSION 74: Upload to Supabase Storage immediately
+    // SESSION 76: Reset state for new file to prevent reusing old IDs
+    const isNewFile = !this.currentDocumentId || this.uploadedFile.name !== file.name;
+    if (isNewFile) {
+      this.currentDocumentId = null;
+      this.currentInvoiceId = null;
+      this.ocrResults = [];
+      console.log('📁 New file selected - reset state');
+    }
+    
+    // SESSION 76: Only upload to Supabase if NOT already uploaded
+    if (this.currentDocumentId) {
+      console.log('✅ File already uploaded, reusing document ID:', this.currentDocumentId);
+      this.showAlert('קובץ כבר נטען, לחץ "עבד חשבונית" להמשך', 'info');
+      return;
+    }
+    
+    // SESSION 74: Upload to Supabase Storage
     try {
       let caseId = sessionStorage.getItem('currentCaseId');
       const plate = document.getElementById('plate').value;
@@ -809,7 +825,7 @@ class InvoiceProcessor {
         return;
       }
 
-      console.log('📤 Uploading invoice document to Supabase...');
+      console.log('📤 Uploading invoice document to Supabase (FIRST TIME)...');
       const result = await this.invoiceService.uploadInvoiceDocument(file, caseId, plate, null);
       
       if (result.success) {
@@ -1297,11 +1313,22 @@ class InvoiceProcessor {
             this.currentInvoiceId = result.invoice.id;
             console.log('✅ Invoice saved to Supabase:', this.currentInvoiceId);
             
-            // Link document to invoice
+            // SESSION 76: Link document to invoice - UPDATE invoice_documents.invoice_id
             if (this.currentDocumentId) {
-              await this.invoiceService.updateInvoice(this.currentInvoiceId, {
-                // Update document with invoice ID would be done via document update
-              });
+              console.log('🔗 Linking document to invoice:', this.currentDocumentId, '→', this.currentInvoiceId);
+              
+              const { data: updatedDoc, error: linkError } = await window.supabase
+                .from('invoice_documents')
+                .update({ invoice_id: this.currentInvoiceId })
+                .eq('id', this.currentDocumentId)
+                .select()
+                .single();
+              
+              if (linkError) {
+                console.error('❌ Failed to link document to invoice:', linkError);
+              } else {
+                console.log('✅ Document linked to invoice successfully');
+              }
             }
           }
         } catch (supabaseError) {
