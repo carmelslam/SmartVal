@@ -1533,21 +1533,33 @@ document.addEventListener('DOMContentLoaded', () => {
     return;
   }
 
-  // Initialize invoiceService with current user from auth
+  // SESSION 79: Initialize invoiceService with current user from auth
   try {
     const authData = JSON.parse(auth);
-    if (window.invoiceService && authData.profile) {
-      // Set currentUser from auth profile
-      window.invoiceService.currentUser = {
-        user_id: authData.profile.user_id || authData.user.id,
-        email: authData.profile.email || authData.user.email,
-        name: authData.profile.name,
-        role: authData.profile.role
-      };
-      console.log('✅ InvoiceService initialized with user:', window.invoiceService.currentUser.email);
+    if (window.invoiceService) {
+      // SESSION 79 FIX: Auth structure is { session: { user: {...} } } OR { user: {...}, profile: {...} }
+      // Need to handle both cases for backward compatibility
+      const user = authData.session?.user || authData.user;
+      const profile = authData.profile;
+      
+      if (user) {
+        window.invoiceService.currentUser = {
+          user_id: profile?.user_id || user.id,
+          email: profile?.email || user.email,
+          full_name: profile?.full_name || user.user_metadata?.full_name || user.email,
+          role: profile?.role || user.user_metadata?.role || 'user'
+        };
+        console.log('✅ InvoiceService initialized with user:', window.invoiceService.currentUser.email);
+        console.log('   User ID:', window.invoiceService.currentUser.user_id);
+      } else {
+        console.error('❌ No user found in auth data:', authData);
+      }
+    } else {
+      console.error('❌ window.invoiceService not available');
     }
   } catch (error) {
     console.error('❌ Failed to initialize invoiceService with user:', error);
+    console.error('   Auth data:', auth);
   }
 
   // Initialize invoice processor
