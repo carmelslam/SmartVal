@@ -1225,15 +1225,26 @@ class InvoiceProcessor {
         return;
       }
       
+      console.log('🔍 Attempting to view PDF for document ID:', this.currentDocumentId);
       this.showAlert('מייצר קישור לצפייה...', 'info');
       
       const url = await this.invoiceService.getInvoiceDocumentURL(this.currentDocumentId);
+      console.log('✅ Got signed URL, opening in new tab');
       window.open(url, '_blank');
       
       this.showAlert('החשבונית נפתחה בחלון חדש', 'success');
     } catch (error) {
-      console.error('Error viewing PDF:', error);
-      this.showAlert('שגיאה בפתיחת החשבונית', 'error');
+      console.error('❌ Error viewing PDF:', error);
+      console.error('   Document ID was:', this.currentDocumentId);
+      
+      // SESSION 79: Show more helpful error message
+      if (error.message && error.message.includes('storage_path is NULL')) {
+        this.showAlert('החשבונית לא הועלתה כראוי - אנא העלה שוב', 'error');
+      } else if (error.message && error.message.includes('not found')) {
+        this.showAlert('לא נמצא מסמך במאגר', 'error');
+      } else {
+        this.showAlert(`שגיאה: ${error.message || 'לא ניתן לפתוח חשבונית'}`, 'error');
+      }
     }
   }
 
