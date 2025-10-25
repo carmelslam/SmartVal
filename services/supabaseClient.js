@@ -347,6 +347,53 @@ const supabase = {
     };
   },
 
+  // SESSION 76: Auth API support (for invoice module)
+  auth: {
+    getSession: async () => {
+      try {
+        const url = `${supabaseUrl}/auth/v1/user`;
+        const token = localStorage.getItem('supabase.auth.token');
+        
+        if (!token) {
+          return { data: { session: null }, error: null };
+        }
+
+        const response = await fetch(url, {
+          headers: {
+            'apikey': supabaseAnonKey,
+            'Authorization': `Bearer ${token}`
+          }
+        });
+
+        if (!response.ok) {
+          return { data: { session: null }, error: null };
+        }
+
+        const user = await response.json();
+        return { 
+          data: { 
+            session: { user } 
+          }, 
+          error: null 
+        };
+      } catch (error) {
+        return { data: { session: null }, error: null };
+      }
+    },
+    
+    getUser: async () => {
+      try {
+        const { data } = await supabase.auth.getSession();
+        return { 
+          data: { user: data.session?.user || null }, 
+          error: null 
+        };
+      } catch (error) {
+        return { data: { user: null }, error: null };
+      }
+    }
+  },
+
   // SESSION 29: Storage API support
   storage: {
     from: (bucketName) => {
