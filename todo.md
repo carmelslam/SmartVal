@@ -934,3 +934,137 @@ Phase 9 is complete when:
 **Status:** ⏳ Awaiting User Approval
 
 **Next Action:** Review plan with user, answer questions, get approval to proceed
+
+---
+
+# 📄 CRITICAL BUG FIX: Reports Not Saving to Supabase
+
+**Date:** 2025-10-25
+**Session:** Current
+**Priority:** 🔴 CRITICAL - Data Loss Issue
+**Status:** Investigation Complete - Ready for Implementation
+
+---
+
+## 📋 EXECUTIVE SUMMARY
+
+**Problem:** Three critical report types (Final Report, Expertise Report, Estimate Report) are **only triggering Make.com webhooks** and **NOT saving to Supabase database**. This means no database backup exists for generated reports.
+
+**Root Cause:** Report submission functions only call `sendToWebhook()` without any Supabase save operations.
+
+**Solution:** Implement dual-save system: Save to Supabase tracking tables FIRST, then trigger Make.com webhooks.
+
+---
+
+## 🔍 INVESTIGATION FINDINGS
+
+### Current System Architecture
+
+#### Report Generation Flow (AS-IS)
+```
+User clicks "Generate Report"
+    ↓
+Report HTML is generated in UI
+    ↓
+sendToWebhook() called ONLY ❌
+    ↓
+Make.com receives data & generates PDF
+    ↓
+NO DATABASE RECORD EXISTS ❌
+```
+
+#### Files Analyzed
+
+**1. Final Report:**
+- **Builder:** `/home/user/SmartVal/final-report-template-builder.html`
+- **Save Location:** Line 1605
+- **Current Behavior:** Calls `window.sendToWebhook('SUBMIT_FINAL_REPORT', webhookData)` only
+- **Webhook:** `SUBMIT_FINAL_REPORT: 'https://hook.eu2.make.com/humgj4nyifchtnivuatdrh6u9slj8xrh'`
+
+**2. Expertise Report:**
+- **Builder:** `/home/user/SmartVal/expertise builder.html`
+- **Save Location:** Lines 1253-1257
+- **Current Behavior:** Sequential webhooks only
+- **Webhooks:** EXPERTISE_HTML, LAUNCH_EXPERTISE, HELPER_EXPORT, SAVE_EXPERTISE_SUMMARY
+
+**3. Estimate Report:**
+- **Builder:** `/home/user/SmartVal/estimate-report-builder.html`
+- **Save Location:** Line 2279
+- **Current Behavior:** Calls `sendToWebhook('SUBMIT_ESTIMATE', payload)` only
+
+### Existing Supabase Infrastructure ✅
+
+**Good News:** Database tables already exist (created in Phase 9)!
+
+**Tables:**
+1. `tracking_expertise` - For expertise/damage assessment data
+2. `tracking_final_report` - For final reports and estimates (has report_type column)
+3. Helper functions: `upsert_tracking_expertise_from_helper()`, `upsert_tracking_final_report_from_helper()`
+
+**Gap:** These tables exist but are NOT being populated by report save functions!
+
+---
+
+## 🛠️ IMPLEMENTATION PLAN
+
+### Simple 3-Step Fix
+
+For each report type, add Supabase save BEFORE webhook call:
+
+```javascript
+// BEFORE (current - broken):
+sendToWebhook('SUBMIT_FINAL_REPORT', data);
+
+// AFTER (fixed):
+await supabase.rpc('upsert_tracking_final_report_from_helper', {
+  helper_json: helper,
+  p_case_id: caseId,
+  p_plate: plate,
+  p_report_type: 'final_report'
+});
+sendToWebhook('SUBMIT_FINAL_REPORT', data);  // Keep existing flow
+```
+
+### Implementation Tasks
+
+- [ ] **Fix Final Report:** Add Supabase save in `final-report-template-builder.html` (line 1605)
+- [ ] **Fix Expertise Report:** Add Supabase save in `expertise builder.html` (line 1253)  
+- [ ] **Fix Estimate Report:** Add Supabase save in `estimate-report-builder.html` (line 2279)
+- [ ] **Test all three report types** with database verification
+- [ ] **Commit and push** changes
+
+---
+
+## ⚠️ CRITICAL NOTES
+
+**What stays the same:**
+- ✅ Make.com webhooks (keep working as before)
+- ✅ Report generation logic (no changes)
+- ✅ UI/UX (no visual changes)
+
+**What we're adding:**
+- ✅ Database backup for all reports
+- ✅ Query capability for reports
+- ✅ Data persistence and recovery
+
+**Error handling strategy:**
+- If Supabase save fails → Log error, continue with webhook
+- If webhook fails → Current handling (already exists)
+
+---
+
+## 🧪 TESTING CHECKLIST
+
+- [ ] Generate Final Report → Verify record in `tracking_final_report` (report_type='final_report')
+- [ ] Generate Expertise → Verify records in `tracking_expertise`
+- [ ] Generate Estimate → Verify record in `tracking_final_report` (report_type='estimate')
+- [ ] Verify Make.com webhooks still working
+- [ ] Test error handling (missing case_id, invalid data)
+
+---
+
+**Status:** ⏳ Awaiting User Approval
+**Next Action:** Get approval and implement fix
+
+---
+
