@@ -324,14 +324,20 @@ class AdminSupabaseService {
   }
 
   /**
-   * Get all payment tracking records
+   * Get all payment tracking records with last contact info and invoice counts
    */
   async getPaymentTracking(filters = {}) {
     try {
       const supabase = this._getSupabase();
       console.log('💰 Fetching payment tracking with filters:', filters);
 
-      let query = supabase.from('payment_tracking').select('*');
+      // First, get payment tracking records with last contact user name
+      let query = supabase
+        .from('payment_tracking')
+        .select(`
+          *,
+          last_contacted_by_name:profiles!payment_tracking_last_contacted_by_fkey(name)
+        `);
 
       // Apply filters
       if (filters.status) {
@@ -347,11 +353,39 @@ class AdminSupabaseService {
       // Order by expected payment date
       query = query.order('expected_payment_date', { ascending: true });
 
-      const { data, error } = await query;
+      const { data: payments, error } = await query;
 
       if (error) throw error;
 
-      return data || [];
+      if (!payments || payments.length === 0) {
+        return [];
+      }
+
+      // Get invoice counts for all payments
+      const { data: invoiceCounts, error: countError } = await supabase
+        .from('fee_invoices')
+        .select('payment_tracking_id, id.count()');
+
+      if (countError) {
+        console.warn('⚠️ Error fetching invoice counts:', countError);
+      }
+
+      // Create a map of payment_id -> invoice_count
+      const countMap = {};
+      if (invoiceCounts) {
+        invoiceCounts.forEach(row => {
+          countMap[row.payment_tracking_id] = row.count || 0;
+        });
+      }
+
+      // Enhance payments with invoice count and format last_contacted_by_name
+      const enhancedPayments = payments.map(payment => ({
+        ...payment,
+        last_contacted_by_name: payment.last_contacted_by_name?.name || null,
+        invoice_count: countMap[payment.id] || 0
+      }));
+
+      return enhancedPayments;
     } catch (error) {
       console.error('Error fetching payment tracking:', error);
       throw error;

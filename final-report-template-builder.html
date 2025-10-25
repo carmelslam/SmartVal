@@ -1606,15 +1606,40 @@
       (async () => {
         try {
           const helper = window.helper || JSON.parse(sessionStorage.getItem('helper') || '{}');
-          const caseId = helper.meta?.case_id;
+          let caseIdOrNumber = helper.meta?.case_id;
           const plate = helper.car_details?.plate || helper.vehicle?.plate || helper.meta?.plate;
 
-          if (caseId && plate && window.supabase) {
-            console.log('💾 Saving final report to Supabase...', { caseId, plate });
+          if (caseIdOrNumber && plate && window.supabase) {
+            console.log('💾 Saving final report to Supabase...', { caseIdOrNumber, plate });
 
-            const { data, error } = await window.supabase.rpc('upsert_tracking_final_report_from_helper', {
+            // Check if case_id is a valid UUID (format: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx)
+            const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+            let actualCaseId = caseIdOrNumber;
+
+            if (!uuidPattern.test(caseIdOrNumber)) {
+              console.log('⚠️ case_id is not a UUID, looking up by case_number or plate...');
+
+              // Try to find the case UUID by case_number or plate
+              const { data: caseData, error: lookupError } = await window.supabase
+                .from('cases')
+                .select('id')
+                .or(`case_number.eq.${caseIdOrNumber},plate.eq.${plate?.replace(/-/g, '')}`)
+                .limit(1)
+                .single();
+
+              if (lookupError || !caseData) {
+                console.warn('⚠️ Could not find case UUID - skipping Supabase save');
+                console.warn('Lookup error:', lookupError);
+                return; // Skip Supabase save, continue with webhook
+              }
+
+              actualCaseId = caseData.id;
+              console.log('✅ Found case UUID:', actualCaseId);
+            }
+
+            const { data, error} = await window.supabase.rpc('upsert_tracking_final_report_from_helper', {
               helper_json: helper,
-              p_case_id: caseId,
+              p_case_id: actualCaseId,
               p_plate: plate?.replace(/-/g, ''),
               p_report_type: 'final_report'
             });

@@ -9112,7 +9112,9 @@ window.renderPaymentsTable = function(payments) {
           <th style="padding: 10px; text-align: right; border-bottom: 2px solid #444; white-space: nowrap;">יצרן / שנה</th>
           <th style="padding: 10px; text-align: right; border-bottom: 2px solid #444; white-space: nowrap;">סכום שכ"ט</th>
           <th style="padding: 10px; text-align: right; border-bottom: 2px solid #444; white-space: nowrap;">מוסך</th>
-          <th style="padding: 10px; text-align: right; border-bottom: 2px solid #444; white-space: nowrap;">סוכן</th>
+          <th style="padding: 10px; text-align: right; border-bottom: 2px solid #444; white-space: nowrap;">יצירת קשר</th>
+          <th style="padding: 10px; text-align: right; border-bottom: 2px solid #444; white-space: nowrap;">תאריך חשבונית</th>
+          <th style="padding: 10px; text-align: center; border-bottom: 2px solid #444; white-space: nowrap;">חשבוניות</th>
           <th style="padding: 10px; text-align: right; border-bottom: 2px solid #444; white-space: nowrap;">תאריך צפוי</th>
           <th style="padding: 10px; text-align: right; border-bottom: 2px solid #444; white-space: nowrap;">ימים</th>
           <th style="padding: 10px; text-align: right; border-bottom: 2px solid #444; white-space: nowrap;">סטטוס תשלום</th>
@@ -9157,6 +9159,38 @@ window.renderPaymentsTable = function(payments) {
     const vehicleInfo = `${payment.manufacturer || 'לא זמין'} / ${payment.year_of_manufacture || ''}`;
     const formattedDate = expectedDate ? expectedDate.toLocaleDateString('he-IL') : 'לא זמין';
 
+    // Format last contact info
+    let lastContactHtml = '';
+    if (payment.last_contacted_at) {
+      const contactDate = new Date(payment.last_contacted_at);
+      const contactDateStr = contactDate.toLocaleDateString('he-IL', { day: '2-digit', month: '2-digit' });
+      const contacterName = payment.last_contacted_by_name || 'לא ידוע';
+      lastContactHtml = `
+        <div style="font-size: 11px; line-height: 1.4;">
+          <div style="color: #3b82f6; font-weight: bold;">${contacterName}</div>
+          <div style="color: #999;">${contactDateStr}</div>
+        </div>`;
+    } else {
+      lastContactHtml = `<div style="font-size: 11px; color: #666;">אין מידע</div>`;
+    }
+
+    // Format invoice date
+    const invoiceDateStr = payment.fee_invoice_date
+      ? new Date(payment.fee_invoice_date).toLocaleDateString('he-IL', { day: '2-digit', month: '2-digit', year: 'numeric' })
+      : '<span style="color: #666;">לא צורף</span>';
+
+    // Format invoice count badge
+    const invoiceCount = payment.invoice_count || 0;
+    let invoiceBadgeColor = '#666';
+    if (invoiceCount === 0) invoiceBadgeColor = '#dc2626';
+    else if (invoiceCount >= 1 && invoiceCount <= 2) invoiceBadgeColor = '#f59e0b';
+    else invoiceBadgeColor = '#16a34a';
+
+    const invoiceCountHtml = `
+      <span style="background: ${invoiceBadgeColor}; color: white; padding: 4px 8px; border-radius: 12px; font-size: 11px; font-weight: bold; display: inline-block;">
+        ${invoiceCount}/3
+      </span>`;
+
     html += `
       <tr style="border-bottom: 1px solid #333; color: #e0e0e0;" data-payment-id="${payment.id}">
         <td style="padding: 10px; white-space: nowrap;">${payment.plate || 'לא זמין'}</td>
@@ -9164,7 +9198,21 @@ window.renderPaymentsTable = function(payments) {
         <td style="padding: 10px; font-size: 12px; color: #ccc;">${vehicleInfo}</td>
         <td style="padding: 10px; font-weight: bold;">₪${Number(payment.total_fee || 0).toLocaleString('he-IL')}</td>
         <td style="padding: 10px; font-size: 12px;">${payment.garage || 'לא זמין'}</td>
-        <td style="padding: 10px; font-size: 12px;">${payment.agent || 'לא זמין'}</td>
+        <td style="padding: 8px;">
+          ${lastContactHtml}
+          <button onclick="openLastContactModal('${payment.id}', '${payment.plate}')"
+                  style="padding: 4px 8px; background: #3b82f6; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 10px; margin-top: 4px; width: 100%;">
+            📞 עדכן
+          </button>
+        </td>
+        <td style="padding: 10px; font-size: 12px; text-align: center;">${invoiceDateStr}</td>
+        <td style="padding: 8px; text-align: center;">
+          ${invoiceCountHtml}
+          <button onclick="openFeeInvoiceModal('${payment.id}', '${payment.plate}')"
+                  style="padding: 4px 8px; background: #059669; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 10px; margin-top: 4px; width: 100%;">
+            📄 נהל
+          </button>
+        </td>
         <td style="padding: 10px;">${formattedDate}</td>
         <td style="padding: 10px; ${daysClass}">${daysUntil !== 'N/A' ? (daysUntil >= 0 ? `+${daysUntil}` : daysUntil) : 'N/A'}</td>
         <td style="padding: 10px;">
@@ -9580,6 +9628,575 @@ window.exportHealthReport = function() {
   alert('📄 ייצוא דוח בריאות - תיושם בקרוב');
 };
 
+/**
+ * ========================================
+ * FEE INVOICE MANAGEMENT FUNCTIONS
+ * ========================================
+ */
+
+// Store current payment context for modals
+window.currentPaymentContext = {
+  paymentId: null,
+  plate: null,
+  caseId: null
+};
+
+/**
+ * Open Fee Invoice Management Modal
+ */
+window.openFeeInvoiceModal = async function(paymentId, plate) {
+  console.log(`📄 Opening fee invoice modal for payment: ${paymentId}, plate: ${plate}`);
+
+  // Store context
+  window.currentPaymentContext.paymentId = paymentId;
+  window.currentPaymentContext.plate = plate;
+
+  // Update modal header
+  document.getElementById('feeInvoiceModalPlate').textContent = `מספר רכב: ${plate}`;
+
+  // Show modal
+  const modal = document.getElementById('feeInvoiceModal');
+  modal.style.display = 'flex';
+
+  // Load invoices list
+  await loadInvoicesList(plate);
+
+  // Reset upload form
+  document.getElementById('invoiceType').value = '';
+  document.getElementById('invoiceFile').value = '';
+  document.getElementById('invoiceDate').value = '';
+  document.getElementById('invoiceAmount').value = '';
+  document.getElementById('invoiceNotes').value = '';
+};
+
+/**
+ * Close Fee Invoice Modal
+ */
+window.closeFeeInvoiceModal = function() {
+  document.getElementById('feeInvoiceModal').style.display = 'none';
+  window.currentPaymentContext = { paymentId: null, plate: null, caseId: null };
+};
+
+/**
+ * Load invoices list for a plate
+ */
+window.loadInvoicesList = async function(plate) {
+  const listDiv = document.getElementById('invoicesList');
+
+  try {
+    listDiv.innerHTML = '<div style="text-align: center; padding: 20px; color: #999;">🔄 טוען חשבוניות...</div>';
+
+    const invoices = await adminSupabaseService.getFeeInvoices(plate);
+
+    if (!invoices || invoices.length === 0) {
+      listDiv.innerHTML = `
+        <div style="text-align: center; padding: 30px; background: #333; border-radius: 8px; border: 2px dashed #555;">
+          <div style="font-size: 48px; margin-bottom: 10px; opacity: 0.5;">📭</div>
+          <div style="color: #999; font-size: 14px;">עדיין לא הועלו חשבוניות</div>
+          <div style="color: #666; font-size: 12px; margin-top: 6px;">השתמש בטופס למטה כדי להעלות חשבונית</div>
+        </div>`;
+      return;
+    }
+
+    // Render invoices list
+    let html = '';
+    const typeNames = {
+      'initial': 'ראשונית',
+      'supplementary': 'משלימה',
+      'final': 'סופית'
+    };
+
+    invoices.forEach(invoice => {
+      const typeName = typeNames[invoice.invoice_type] || invoice.invoice_type;
+      const dateStr = invoice.invoice_date
+        ? new Date(invoice.invoice_date).toLocaleDateString('he-IL')
+        : 'לא צוין';
+      const amountStr = invoice.invoice_amount
+        ? `₪${Number(invoice.invoice_amount).toLocaleString('he-IL')}`
+        : '-';
+
+      html += `
+        <div style="background: #333; padding: 15px; border-radius: 8px; margin-bottom: 12px; border-right: 4px solid #ff6b35;">
+          <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 10px;">
+            <div style="flex: 1;">
+              <div style="color: #ff6b35; font-weight: bold; font-size: 15px; margin-bottom: 6px;">
+                📄 חשבונית ${typeName}
+              </div>
+              <div style="color: #e0e0e0; font-size: 13px; line-height: 1.6;">
+                <div><strong>תאריך:</strong> ${dateStr} | <strong>סכום:</strong> ${amountStr}</div>
+                <div style="color: #999; font-size: 12px; margin-top: 4px;">
+                  <strong>העלה:</strong> ${invoice.uploader_name || 'לא ידוע'} | ${invoice.file_name}
+                </div>
+                ${invoice.notes ? `<div style="color: #999; font-size: 12px; margin-top: 4px;"><strong>הערות:</strong> ${invoice.notes}</div>` : ''}
+              </div>
+            </div>
+            <div style="display: flex; gap: 6px; margin-right: 10px;">
+              <button onclick="viewFeeInvoice('${invoice.file_path}')"
+                      style="padding: 6px 12px; background: #3b82f6; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 11px; white-space: nowrap;">
+                👁️ צפה
+              </button>
+              <button onclick="deleteFeeInvoiceUI('${invoice.id}', '${plate}')"
+                      style="padding: 6px 12px; background: #dc2626; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 11px; white-space: nowrap;">
+                🗑️ מחק
+              </button>
+            </div>
+          </div>
+        </div>`;
+    });
+
+    listDiv.innerHTML = html;
+
+  } catch (error) {
+    console.error('❌ Error loading invoices:', error);
+    listDiv.innerHTML = `
+      <div style="text-align: center; padding: 20px; background: #2a2a2a; border: 1px solid #dc2626; border-radius: 8px;">
+        <div style="color: #dc2626; font-weight: bold; margin-bottom: 8px;">❌ שגיאה בטעינת חשבוניות</div>
+        <div style="color: #999; font-size: 13px;">${error.message}</div>
+      </div>`;
+  }
+};
+
+/**
+ * Upload fee invoice
+ */
+window.uploadFeeInvoice = async function() {
+  const uploadBtn = document.getElementById('uploadInvoiceBtn');
+  const originalText = uploadBtn.innerHTML;
+
+  try {
+    // Validate inputs
+    const invoiceType = document.getElementById('invoiceType').value;
+    const fileInput = document.getElementById('invoiceFile');
+    const file = fileInput.files[0];
+
+    if (!invoiceType) {
+      alert('⚠️ נא לבחור סוג חשבונית');
+      return;
+    }
+
+    if (!file) {
+      alert('⚠️ נא לבחור קובץ');
+      return;
+    }
+
+    // Validate file size (10MB)
+    if (file.size > 10 * 1024 * 1024) {
+      alert('⚠️ גודל הקובץ חורג מ-10MB');
+      return;
+    }
+
+    // Show loading state
+    uploadBtn.disabled = true;
+    uploadBtn.innerHTML = '⏳ מעלה...';
+
+    // Get current user ID from session
+    const supabase = window.supabaseClient;
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user) {
+      throw new Error('לא נמצא משתמש מחובר');
+    }
+
+    // Get payment record to get case_id
+    const payment = window.allPayments.find(p => p.id === window.currentPaymentContext.paymentId);
+    if (!payment) {
+      throw new Error('לא נמצא רשומת תשלום');
+    }
+
+    // Prepare metadata
+    const metadata = {
+      case_id: payment.case_id,
+      payment_tracking_id: window.currentPaymentContext.paymentId,
+      invoice_type: invoiceType,
+      invoice_number: null,
+      invoice_date: document.getElementById('invoiceDate').value || null,
+      invoice_amount: document.getElementById('invoiceAmount').value || null,
+      notes: document.getElementById('invoiceNotes').value || null,
+      uploaded_by: user.id,
+      date_extracted_from_ocr: false,
+      ocr_confidence: null,
+      extraction_metadata: null
+    };
+
+    // Upload invoice
+    console.log('📤 Uploading invoice...', metadata);
+    await adminSupabaseService.uploadFeeInvoice(window.currentPaymentContext.plate, file, metadata);
+
+    // Success - reload invoices list and payment table
+    alert('✅ החשבונית הועלתה בהצלחה!');
+
+    // Reset form
+    document.getElementById('invoiceType').value = '';
+    document.getElementById('invoiceFile').value = '';
+    document.getElementById('invoiceDate').value = '';
+    document.getElementById('invoiceAmount').value = '';
+    document.getElementById('invoiceNotes').value = '';
+
+    // Reload invoices list
+    await loadInvoicesList(window.currentPaymentContext.plate);
+
+    // Reload payment tracking to update counts
+    await loadPaymentTracking();
+
+  } catch (error) {
+    console.error('❌ Error uploading invoice:', error);
+    alert(`❌ שגיאה בהעלאת חשבונית:\n${error.message}`);
+  } finally {
+    uploadBtn.disabled = false;
+    uploadBtn.innerHTML = originalText;
+  }
+};
+
+/**
+ * View/download fee invoice
+ */
+window.viewFeeInvoice = async function(filePath) {
+  try {
+    console.log('👁️ Getting invoice URL:', filePath);
+
+    const url = await adminSupabaseService.getFeeInvoiceUrl(filePath);
+
+    // Open in new tab
+    window.open(url, '_blank');
+
+  } catch (error) {
+    console.error('❌ Error viewing invoice:', error);
+    alert(`❌ שגיאה בצפייה בחשבונית:\n${error.message}`);
+  }
+};
+
+/**
+ * Delete fee invoice with confirmation
+ */
+window.deleteFeeInvoiceUI = async function(invoiceId, plate) {
+  if (!confirm('⚠️ האם אתה בטוח שברצונך למחוק את החשבונית?\nפעולה זו אינה הפיכה.')) {
+    return;
+  }
+
+  try {
+    console.log('🗑️ Deleting invoice:', invoiceId);
+
+    await adminSupabaseService.deleteFeeInvoice(invoiceId);
+
+    alert('✅ החשבונית נמחקה בהצלחה');
+
+    // Reload invoices list
+    await loadInvoicesList(plate);
+
+    // Reload payment tracking to update counts
+    await loadPaymentTracking();
+
+  } catch (error) {
+    console.error('❌ Error deleting invoice:', error);
+    alert(`❌ שגיאה במחיקת חשבונית:\n${error.message}`);
+  }
+};
+
+/**
+ * ========================================
+ * LAST CONTACT FUNCTIONS
+ * ========================================
+ */
+
+/**
+ * Open Last Contact Modal
+ */
+window.openLastContactModal = async function(paymentId, plate) {
+  console.log(`📞 Opening last contact modal for payment: ${paymentId}, plate: ${plate}`);
+
+  // Store context
+  window.currentPaymentContext.paymentId = paymentId;
+  window.currentPaymentContext.plate = plate;
+
+  // Update modal header
+  document.getElementById('lastContactModalPlate').textContent = `מספר רכב: ${plate}`;
+
+  // Get current user info
+  const supabase = window.supabaseClient;
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (user) {
+    // Get user profile for name
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('name')
+      .eq('user_id', user.id)
+      .single();
+
+    const userName = profile?.name || user.email || 'לא ידוע';
+    document.getElementById('currentUserName').textContent = userName;
+
+    // Store user ID for later
+    window.currentPaymentContext.userId = user.id;
+  }
+
+  // Set current timestamp
+  const now = new Date();
+  const timestampStr = now.toLocaleString('he-IL', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+  document.getElementById('currentTimestamp').textContent = timestampStr;
+
+  // Load previous contact info
+  const payment = window.allPayments.find(p => p.id === paymentId);
+  const previousDiv = document.getElementById('previousContactDetails');
+
+  if (payment && payment.last_contacted_at) {
+    const contactDate = new Date(payment.last_contacted_at);
+    const contactDateStr = contactDate.toLocaleString('he-IL', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+
+    previousDiv.innerHTML = `
+      <div style="margin-bottom: 8px;"><strong>משתמש:</strong> ${payment.last_contacted_by_name || 'לא ידוע'}</div>
+      <div style="margin-bottom: 8px;"><strong>תאריך ושעה:</strong> ${contactDateStr}</div>
+      ${payment.last_contact_notes ? `<div style="margin-top: 10px; padding-top: 10px; border-top: 1px solid #555;"><strong>הערות:</strong><br/>${payment.last_contact_notes}</div>` : ''}
+    `;
+  } else {
+    previousDiv.innerHTML = '<div style="text-align: center; padding: 10px; color: #666;">אין מידע על יצירת קשר קודמת</div>';
+  }
+
+  // Reset notes field
+  document.getElementById('contactNotes').value = '';
+
+  // Show modal
+  const modal = document.getElementById('lastContactModal');
+  modal.style.display = 'flex';
+};
+
+/**
+ * Close Last Contact Modal
+ */
+window.closeLastContactModal = function() {
+  document.getElementById('lastContactModal').style.display = 'none';
+  window.currentPaymentContext = { paymentId: null, plate: null, caseId: null, userId: null };
+};
+
+/**
+ * Update last contact
+ */
+window.updateLastContactUI = async function() {
+  const updateBtn = document.getElementById('updateContactBtn');
+  const originalText = updateBtn.innerHTML;
+
+  try {
+    const notes = document.getElementById('contactNotes').value.trim();
+
+    if (!notes) {
+      alert('⚠️ נא להזין הערות לגבי יצירת הקשר');
+      return;
+    }
+
+    if (!window.currentPaymentContext.userId) {
+      throw new Error('לא נמצא משתמש מחובר');
+    }
+
+    // Show loading state
+    updateBtn.disabled = true;
+    updateBtn.innerHTML = '⏳ שומר...';
+
+    // Update last contact
+    console.log('📞 Updating last contact...');
+    await adminSupabaseService.updateLastContact(
+      window.currentPaymentContext.paymentId,
+      window.currentPaymentContext.userId,
+      notes
+    );
+
+    // Success
+    alert('✅ יצירת הקשר עודכנה בהצלחה!');
+
+    // Close modal
+    closeLastContactModal();
+
+    // Reload payment tracking to show updated info
+    await loadPaymentTracking();
+
+  } catch (error) {
+    console.error('❌ Error updating last contact:', error);
+    alert(`❌ שגיאה בעדכון יצירת קשר:\n${error.message}`);
+  } finally {
+    updateBtn.disabled = false;
+    updateBtn.innerHTML = originalText;
+  }
+};
+
+</script>
+
+<!-- Fee Invoice Management Modal -->
+<div id="feeInvoiceModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 2000; justify-content: center; align-items: center; overflow-y: auto;">
+  <div style="background: #2a2a2a; border-radius: 12px; width: 90%; max-width: 800px; max-height: 90vh; overflow-y: auto; border: 2px solid #ff6b35; box-shadow: 0 8px 32px rgba(0,0,0,0.4);">
+    <!-- Modal Header -->
+    <div style="background: linear-gradient(135deg, #ff6b35 0%, #e55a2b 100%); padding: 20px; border-radius: 12px 12px 0 0; position: sticky; top: 0; z-index: 1;">
+      <h2 style="margin: 0; color: white; font-size: 22px; display: flex; align-items: center; gap: 10px;">
+        <span>📄</span>
+        <span>ניהול חשבוניות שכ"ט</span>
+      </h2>
+      <div id="feeInvoiceModalPlate" style="color: rgba(255,255,255,0.9); font-size: 14px; margin-top: 8px;"></div>
+    </div>
+
+    <!-- Modal Body -->
+    <div style="padding: 25px;">
+      <!-- Uploaded Invoices Section -->
+      <div style="margin-bottom: 25px;">
+        <h3 style="color: #ff6b35; font-size: 18px; margin-bottom: 15px; border-bottom: 2px solid #444; padding-bottom: 10px;">
+          📋 חשבוניות שהועלו
+        </h3>
+        <div id="invoicesList" style="min-height: 100px;">
+          <div style="text-align: center; padding: 20px; color: #999;">
+            🔄 טוען חשבוניות...
+          </div>
+        </div>
+      </div>
+
+      <!-- Upload New Invoice Section -->
+      <div style="background: #333; padding: 20px; border-radius: 8px; border: 1px solid #555;">
+        <h3 style="color: #16a34a; font-size: 18px; margin-bottom: 15px; display: flex; align-items: center; gap: 8px;">
+          <span>➕</span>
+          <span>העלאת חשבונית חדשה</span>
+        </h3>
+
+        <div style="display: grid; gap: 15px;">
+          <!-- Invoice Type -->
+          <div>
+            <label style="display: block; color: #e0e0e0; margin-bottom: 8px; font-size: 14px;">סוג חשבונית:</label>
+            <select id="invoiceType" style="width: 100%; padding: 10px; background: #444; color: #e0e0e0; border: 1px solid #666; border-radius: 6px; font-size: 14px;">
+              <option value="">בחר סוג...</option>
+              <option value="initial">חשבונית ראשונית</option>
+              <option value="supplementary">חשבונית משלימה</option>
+              <option value="final">חשבונית סופית</option>
+            </select>
+          </div>
+
+          <!-- File Upload -->
+          <div>
+            <label style="display: block; color: #e0e0e0; margin-bottom: 8px; font-size: 14px;">קובץ חשבונית:</label>
+            <div style="display: flex; gap: 10px;">
+              <input type="file" id="invoiceFile" accept=".pdf,.jpg,.jpeg,.png,.heic,.webp"
+                     style="flex: 1; padding: 10px; background: #444; color: #e0e0e0; border: 1px solid #666; border-radius: 6px; font-size: 14px;">
+              <button onclick="document.getElementById('invoiceFile').click()"
+                      style="padding: 10px 20px; background: #3b82f6; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold;">
+                📷 סרוק
+              </button>
+            </div>
+            <div style="color: #999; font-size: 12px; margin-top: 6px;">
+              קבצים נתמכים: PDF, JPG, PNG, HEIC, WEBP (עד 10MB)
+            </div>
+          </div>
+
+          <!-- Invoice Date (Optional) -->
+          <div>
+            <label style="display: block; color: #e0e0e0; margin-bottom: 8px; font-size: 14px;">תאריך חשבונית (אופציונלי):</label>
+            <input type="date" id="invoiceDate"
+                   style="width: 100%; padding: 10px; background: #444; color: #e0e0e0; border: 1px solid #666; border-radius: 6px; font-size: 14px;">
+            <div style="color: #999; font-size: 12px; margin-top: 6px;">
+              אם ריק, המערכת תנסה לזהות אוטומטית
+            </div>
+          </div>
+
+          <!-- Invoice Amount (Optional) -->
+          <div>
+            <label style="display: block; color: #e0e0e0; margin-bottom: 8px; font-size: 14px;">סכום (אופציונלי):</label>
+            <input type="number" id="invoiceAmount" placeholder="0.00" step="0.01"
+                   style="width: 100%; padding: 10px; background: #444; color: #e0e0e0; border: 1px solid #666; border-radius: 6px; font-size: 14px;">
+          </div>
+
+          <!-- Notes (Optional) -->
+          <div>
+            <label style="display: block; color: #e0e0e0; margin-bottom: 8px; font-size: 14px;">הערות (אופציונלי):</label>
+            <textarea id="invoiceNotes" rows="3" placeholder="הערות נוספות..."
+                      style="width: 100%; padding: 10px; background: #444; color: #e0e0e0; border: 1px solid #666; border-radius: 6px; font-size: 14px; resize: vertical;"></textarea>
+          </div>
+
+          <!-- Upload Button -->
+          <button id="uploadInvoiceBtn" onclick="uploadFeeInvoice()"
+                  style="padding: 14px 28px; background: #16a34a; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 16px; transition: all 0.3s;"
+                  onmouseover="this.style.background='#059669'"
+                  onmouseout="this.style.background='#16a34a'">
+            ⬆️ העלה חשבונית
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal Footer -->
+    <div style="background: #333; padding: 15px 25px; border-radius: 0 0 12px 12px; display: flex; justify-content: flex-end; gap: 10px; border-top: 1px solid #444;">
+      <button onclick="closeFeeInvoiceModal()"
+              style="padding: 10px 24px; background: #666; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold;"
+              onmouseover="this.style.background='#555'"
+              onmouseout="this.style.background='#666'">
+        סגור
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Last Contact Modal -->
+<div id="lastContactModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 2000; justify-content: center; align-items: center;">
+  <div style="background: #2a2a2a; border-radius: 12px; width: 90%; max-width: 600px; border: 2px solid #3b82f6; box-shadow: 0 8px 32px rgba(0,0,0,0.4);">
+    <!-- Modal Header -->
+    <div style="background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); padding: 20px; border-radius: 12px 12px 0 0;">
+      <h2 style="margin: 0; color: white; font-size: 22px; display: flex; align-items: center; gap: 10px;">
+        <span>📞</span>
+        <span>עדכון יצירת קשר</span>
+      </h2>
+      <div id="lastContactModalPlate" style="color: rgba(255,255,255,0.9); font-size: 14px; margin-top: 8px;"></div>
+    </div>
+
+    <!-- Modal Body -->
+    <div style="padding: 25px;">
+      <!-- Previous Contact Info -->
+      <div id="previousContactInfo" style="background: #333; padding: 15px; border-radius: 8px; margin-bottom: 20px; border-right: 4px solid #3b82f6;">
+        <h3 style="color: #3b82f6; font-size: 16px; margin-bottom: 10px;">יצירת קשר קודמת:</h3>
+        <div id="previousContactDetails" style="color: #999; font-size: 14px; line-height: 1.6;">
+          <div style="text-align: center; padding: 10px;">אין מידע על יצירת קשר קודמת</div>
+        </div>
+      </div>
+
+      <!-- New Contact Form -->
+      <div style="background: #333; padding: 20px; border-radius: 8px; border: 1px solid #555;">
+        <h3 style="color: #16a34a; font-size: 16px; margin-bottom: 15px;">יצירת קשר חדשה:</h3>
+
+        <div style="margin-bottom: 15px;">
+          <label style="display: block; color: #e0e0e0; margin-bottom: 8px; font-size: 14px;">הערות:</label>
+          <textarea id="contactNotes" rows="4" placeholder="תאר את יצירת הקשר: עם מי דיברת, מה הוסכם, מה הצעדים הבאים..."
+                    style="width: 100%; padding: 12px; background: #444; color: #e0e0e0; border: 1px solid #666; border-radius: 6px; font-size: 14px; resize: vertical;"></textarea>
+        </div>
+
+        <div style="background: #444; padding: 12px; border-radius: 6px; margin-top: 15px;">
+          <div style="color: #e0e0e0; font-size: 13px; line-height: 1.6;">
+            <div><strong>משתמש נוכחי:</strong> <span id="currentUserName">-</span></div>
+            <div style="margin-top: 6px;"><strong>תאריך ושעה:</strong> <span id="currentTimestamp">-</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal Footer -->
+    <div style="background: #333; padding: 15px 25px; border-radius: 0 0 12px 12px; display: flex; justify-content: space-between; gap: 10px; border-top: 1px solid #444;">
+      <button onclick="closeLastContactModal()"
+              style="padding: 10px 24px; background: #666; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold;"
+              onmouseover="this.style.background='#555'"
+              onmouseout="this.style.background='#666'">
+        ביטול
+      </button>
+      <button id="updateContactBtn" onclick="updateLastContactUI()"
+              style="padding: 10px 28px; background: #16a34a; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; transition: all 0.3s;"
+              onmouseover="this.style.background='#059669'"
+              onmouseout="this.style.background='#16a34a'">
+        💾 שמור
+      </button>
+    </div>
+  </div>
+</div>
 
 </script>
 
