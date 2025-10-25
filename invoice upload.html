@@ -955,7 +955,51 @@ class InvoiceProcessor {
   }
 
   async handleOCRResults(result) {
-    this.ocrResults = result.items || [];
+    // SESSION 79: Parse Hebrew structured data from webhook
+    // Webhook returns: { חלקים: [], עבודות: [], תיקונים: [] }
+    // Need to combine into flat items array for UI
+    
+    const parts = result.חלקים || result.parts || [];
+    const works = result.עבודות || result.works || [];
+    const repairs = result.תיקונים || result.repairs || [];
+    
+    // Convert parts to items format
+    const partItems = parts.map(part => ({
+      name: part['שם חלק'] || part.name || part['תיאור'] || part.description,
+      description: part['תיאור'] || part.description || part['מק"ט חלק'] || '',
+      quantity: parseFloat(part['כמות'] || part.quantity || 1),
+      unit_price: parseFloat(part['עלות'] || part.price || part.unit_price || 0),
+      category: 'PART'
+    }));
+    
+    // Convert works to items format
+    const workItems = works.map(work => ({
+      name: work['סוג העבודה'] || work['תיאור עבודות'] || work.name || work.description,
+      description: work['תיאור עבודות'] || work.description || '',
+      quantity: 1,
+      unit_price: parseFloat(work['עלות עבודות'] || work.price || work.unit_price || 0),
+      category: 'WORK'
+    }));
+    
+    // Convert repairs to items format
+    const repairItems = repairs.map(repair => ({
+      name: repair['סוג תיקון'] || repair['תיאור התיקון'] || repair.name || repair.description,
+      description: repair['תיאור התיקון'] || repair.description || '',
+      quantity: 1,
+      unit_price: parseFloat(repair['עלות תיקונים'] || repair.price || repair.unit_price || 0),
+      category: 'REPAIR'
+    })).filter(item => item.unit_price > 0); // Filter out "אין מידע" entries
+    
+    // Combine all items
+    this.ocrResults = [...partItems, ...workItems, ...repairItems];
+    
+    // Fallback to old format if Hebrew fields not found
+    if (this.ocrResults.length === 0) {
+      this.ocrResults = result.items || [];
+    }
+    
+    console.log(`📊 Parsed ${partItems.length} parts, ${workItems.length} works, ${repairItems.length} repairs`);
+    
     this.displayOCRResults(result);
     this.showValidationStatus(result);
     
@@ -1002,11 +1046,11 @@ class InvoiceProcessor {
     
     const calculatedTotal = totalParts + totalWorks + totalRepairs + totalOther;
     
-    // Get invoice details
+    // SESSION 79: Get invoice details - PRIORITIZE OCR DATA over form fields
     const invoiceNumber = result['מס. חשבונית'] || result.invoice_number || `INV-${Date.now()}`;
-    const garageName = document.getElementById('garage_name').value || result['שם מוסך'] || 'לא צוין';
-    const plate = document.getElementById('plate').value || 'לא צוין';
-    const invoiceDate = document.getElementById('date').value || new Date().toISOString().split('T')[0];
+    const garageName = result['שם מוסך'] || document.getElementById('garage_name').value || 'לא צוין';
+    const plate = result['מספר רכב'] || document.getElementById('plate').value || 'לא צוין';
+    const invoiceDate = result['תאריך'] || document.getElementById('date').value || new Date().toISOString().split('T')[0];
     
     // Display enhanced summary
     summaryContainer.innerHTML = `
