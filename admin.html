@@ -9377,8 +9377,178 @@ window.viewPaymentDetails = function(paymentId) {
   document.body.insertAdjacentHTML('beforeend', modal);
 };
 
+/**
+ * ========================================
+ * ADD PAYMENT RECORD FUNCTIONS
+ * ========================================
+ */
+
 window.showAddPaymentModal = function() {
-  alert('הוספת תשלום חדש תיושם בקרוב - כרגע השתמש ב-Supabase Dashboard להוספה ידנית');
+  // Reset form
+  document.getElementById('addPaymentForm').reset();
+  document.getElementById('lookupMessage').style.display = 'none';
+
+  // Set default expected date (30 days from now)
+  const defaultDate = new Date();
+  defaultDate.setDate(defaultDate.getDate() + 30);
+  document.getElementById('newPaymentExpectedDate').valueAsDate = defaultDate;
+
+  // Show modal
+  document.getElementById('addPaymentModal').style.display = 'flex';
+};
+
+window.closeAddPaymentModal = function() {
+  document.getElementById('addPaymentModal').style.display = 'none';
+};
+
+/**
+ * Lookup case data from cases table and auto-fill form
+ */
+window.lookupCaseData = async function() {
+  const plate = document.getElementById('newPaymentPlate').value.trim();
+  const msgDiv = document.getElementById('lookupMessage');
+
+  if (!plate) {
+    msgDiv.style.display = 'block';
+    msgDiv.style.background = '#dc2626';
+    msgDiv.style.color = 'white';
+    msgDiv.textContent = '⚠️ נא להזין מספר רכב';
+    return;
+  }
+
+  try {
+    msgDiv.style.display = 'block';
+    msgDiv.style.background = '#3b82f6';
+    msgDiv.style.color = 'white';
+    msgDiv.textContent = '🔍 מחפש תיק במערכת...';
+
+    const supabase = window.supabaseClient;
+
+    // Try to find in cases table
+    const { data: caseData, error } = await supabase
+      .from('cases')
+      .select('*')
+      .eq('plate', plate)
+      .single();
+
+    if (error && error.code !== 'PGRST116') {
+      throw error;
+    }
+
+    if (!caseData) {
+      // Not found - show message but allow manual entry
+      msgDiv.style.background = '#f59e0b';
+      msgDiv.textContent = '⚠️ לא נמצא תיק במערכת. ניתן למלא ידנית.';
+      return;
+    }
+
+    // Found - auto-fill form
+    document.getElementById('newPaymentOwner').value = caseData.owner_name || '';
+    document.getElementById('newPaymentManufacturer').value = caseData.manufacturer || '';
+    document.getElementById('newPaymentYear').value = caseData.year_of_manufacture || '';
+    document.getElementById('newPaymentGarage').value = caseData.garage_name || '';
+
+    // Try to get fee from tracking data
+    if (caseData.id) {
+      const { data: trackingData } = await supabase
+        .from('tracking_general')
+        .select('*')
+        .eq('case_id', caseData.id)
+        .single();
+
+      if (trackingData && trackingData.total_fee) {
+        document.getElementById('newPaymentFee').value = trackingData.total_fee;
+      }
+    }
+
+    msgDiv.style.background = '#16a34a';
+    msgDiv.textContent = '✅ נמצא תיק! השדות מולאו אוטומטית. אנא בדוק ועדכן לפי הצורך.';
+
+  } catch (error) {
+    console.error('❌ Error looking up case:', error);
+    msgDiv.style.background = '#dc2626';
+    msgDiv.textContent = `❌ שגיאה בחיפוש: ${error.message}`;
+  }
+};
+
+/**
+ * Save payment record to database
+ */
+window.savePaymentRecord = async function() {
+  const saveBtn = document.getElementById('savePaymentBtn');
+  const originalText = saveBtn.innerHTML;
+
+  try {
+    // Get form values
+    const plate = document.getElementById('newPaymentPlate').value.trim();
+    const ownerName = document.getElementById('newPaymentOwner').value.trim();
+    const manufacturer = document.getElementById('newPaymentManufacturer').value.trim();
+    const year = document.getElementById('newPaymentYear').value;
+    const totalFee = document.getElementById('newPaymentFee').value;
+    const garage = document.getElementById('newPaymentGarage').value.trim();
+    const expectedDate = document.getElementById('newPaymentExpectedDate').value;
+    const paymentStatus = document.getElementById('newPaymentStatus').value;
+    const notes = document.getElementById('newPaymentNotes').value.trim();
+
+    // Validate required fields
+    if (!plate || !ownerName || !totalFee || !expectedDate) {
+      alert('⚠️ נא למלא את כל השדות הנדרשים (מסומנים ב-*)');
+      return;
+    }
+
+    // Show loading state
+    saveBtn.disabled = true;
+    saveBtn.innerHTML = '⏳ שומר...';
+
+    const supabase = window.supabaseClient;
+
+    // Get case_id if exists
+    const { data: caseData } = await supabase
+      .from('cases')
+      .select('id')
+      .eq('plate', plate)
+      .single();
+
+    // Prepare payment record
+    const paymentRecord = {
+      plate: plate,
+      owner_name: ownerName,
+      manufacturer: manufacturer || null,
+      year_of_manufacture: year ? parseInt(year) : null,
+      total_fee: parseFloat(totalFee),
+      garage: garage || null,
+      expected_payment_date: expectedDate,
+      payment_status: paymentStatus,
+      notes: notes || null,
+      case_id: caseData?.id || null
+    };
+
+    // Insert into payment_tracking
+    const { data, error } = await supabase
+      .from('payment_tracking')
+      .insert([paymentRecord])
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    // Success!
+    alert('✅ רשומת התשלום נוספה בהצלחה!');
+
+    // Close modal
+    closeAddPaymentModal();
+
+    // Reload payment tracking table
+    await loadPaymentTracking();
+    await loadPaymentStatistics();
+
+  } catch (error) {
+    console.error('❌ Error saving payment record:', error);
+    alert(`❌ שגיאה בשמירת רשומה:\n${error.message}`);
+  } finally {
+    saveBtn.disabled = false;
+    saveBtn.innerHTML = originalText;
+  }
 };
 
 window.editPaymentRecord = function(id) {
@@ -10303,6 +10473,141 @@ window.updateLastContactUI = async function() {
               onmouseover="this.style.background='#059669'"
               onmouseout="this.style.background='#16a34a'">
         💾 שמור
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Add Payment Record Modal -->
+<div id="addPaymentModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 2000; justify-content: center; align-items: center; overflow-y: auto;">
+  <div style="background: #2a2a2a; border-radius: 12px; width: 90%; max-width: 700px; max-height: 90vh; overflow-y: auto; border: 2px solid #16a34a; box-shadow: 0 8px 32px rgba(0,0,0,0.4); margin: 20px;">
+    <!-- Modal Header -->
+    <div style="background: linear-gradient(135deg, #16a34a 0%, #059669 100%); padding: 20px; border-radius: 12px 12px 0 0; position: sticky; top: 0; z-index: 1;">
+      <h2 style="margin: 0; color: white; font-size: 22px; display: flex; align-items: center; gap: 10px;">
+        <span>➕</span>
+        <span>הוספת רשומת תשלום</span>
+      </h2>
+      <div style="color: rgba(255,255,255,0.9); font-size: 13px; margin-top: 6px;">
+        הזן את פרטי התיק למעקב תשלום
+      </div>
+    </div>
+
+    <!-- Modal Body -->
+    <div style="padding: 25px;">
+      <form id="addPaymentForm">
+        <div style="display: grid; gap: 15px;">
+          <!-- Plate Number -->
+          <div>
+            <label style="display: block; color: #e0e0e0; margin-bottom: 8px; font-size: 14px; font-weight: bold;">
+              מספר רכב: <span style="color: #dc2626;">*</span>
+            </label>
+            <div style="display: flex; gap: 10px;">
+              <input type="text" id="newPaymentPlate" required
+                     placeholder="12345678"
+                     style="flex: 1; padding: 10px; background: #444; color: #e0e0e0; border: 1px solid #666; border-radius: 6px; font-size: 14px;">
+              <button type="button" onclick="lookupCaseData()"
+                      style="padding: 10px 20px; background: #3b82f6; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; white-space: nowrap;">
+                🔍 חפש תיק
+              </button>
+            </div>
+            <div style="color: #999; font-size: 12px; margin-top: 6px;">
+              הקלד מספר רכב ולחץ "חפש תיק" למילוי אוטומטי מהמערכת
+            </div>
+          </div>
+
+          <!-- Owner Name -->
+          <div>
+            <label style="display: block; color: #e0e0e0; margin-bottom: 8px; font-size: 14px;">
+              שם בעלים: <span style="color: #dc2626;">*</span>
+            </label>
+            <input type="text" id="newPaymentOwner" required
+                   placeholder="שם מלא"
+                   style="width: 100%; padding: 10px; background: #444; color: #e0e0e0; border: 1px solid #666; border-radius: 6px; font-size: 14px;">
+          </div>
+
+          <!-- Vehicle Info Row -->
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+            <div>
+              <label style="display: block; color: #e0e0e0; margin-bottom: 8px; font-size: 14px;">יצרן:</label>
+              <input type="text" id="newPaymentManufacturer"
+                     placeholder="טויוטה"
+                     style="width: 100%; padding: 10px; background: #444; color: #e0e0e0; border: 1px solid #666; border-radius: 6px; font-size: 14px;">
+            </div>
+            <div>
+              <label style="display: block; color: #e0e0e0; margin-bottom: 8px; font-size: 14px;">שנת ייצור:</label>
+              <input type="number" id="newPaymentYear"
+                     placeholder="2020"
+                     min="1900" max="2030"
+                     style="width: 100%; padding: 10px; background: #444; color: #e0e0e0; border: 1px solid #666; border-radius: 6px; font-size: 14px;">
+            </div>
+          </div>
+
+          <!-- Fee and Garage Row -->
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+            <div>
+              <label style="display: block; color: #e0e0e0; margin-bottom: 8px; font-size: 14px;">
+                סכום שכ"ט: <span style="color: #dc2626;">*</span>
+              </label>
+              <input type="number" id="newPaymentFee" required
+                     placeholder="0.00" step="0.01" min="0"
+                     style="width: 100%; padding: 10px; background: #444; color: #e0e0e0; border: 1px solid #666; border-radius: 6px; font-size: 14px;">
+            </div>
+            <div>
+              <label style="display: block; color: #e0e0e0; margin-bottom: 8px; font-size: 14px;">מוסך:</label>
+              <input type="text" id="newPaymentGarage"
+                     placeholder="שם המוסך"
+                     style="width: 100%; padding: 10px; background: #444; color: #e0e0e0; border: 1px solid #666; border-radius: 6px; font-size: 14px;">
+            </div>
+          </div>
+
+          <!-- Expected Payment Date -->
+          <div>
+            <label style="display: block; color: #e0e0e0; margin-bottom: 8px; font-size: 14px;">
+              תאריך תשלום צפוי: <span style="color: #dc2626;">*</span>
+            </label>
+            <input type="date" id="newPaymentExpectedDate" required
+                   style="width: 100%; padding: 10px; background: #444; color: #e0e0e0; border: 1px solid #666; border-radius: 6px; font-size: 14px;">
+          </div>
+
+          <!-- Payment Status -->
+          <div>
+            <label style="display: block; color: #e0e0e0; margin-bottom: 8px; font-size: 14px;">סטטוס תשלום:</label>
+            <select id="newPaymentStatus"
+                    style="width: 100%; padding: 10px; background: #444; color: #e0e0e0; border: 1px solid #666; border-radius: 6px; font-size: 14px;">
+              <option value="ממתין לתשלום" selected>ממתין לתשלום</option>
+              <option value="שולם חלקית">שולם חלקית</option>
+              <option value="שולם במלואו">שולם במלואו</option>
+              <option value="באיחור">באיחור</option>
+            </select>
+          </div>
+
+          <!-- Notes -->
+          <div>
+            <label style="display: block; color: #e0e0e0; margin-bottom: 8px; font-size: 14px;">הערות (אופציונלי):</label>
+            <textarea id="newPaymentNotes" rows="3"
+                      placeholder="הערות נוספות על התשלום..."
+                      style="width: 100%; padding: 10px; background: #444; color: #e0e0e0; border: 1px solid #666; border-radius: 6px; font-size: 14px; resize: vertical;"></textarea>
+          </div>
+
+          <div id="lookupMessage" style="display: none; padding: 12px; border-radius: 6px; font-size: 13px;"></div>
+
+        </div>
+      </form>
+    </div>
+
+    <!-- Modal Footer -->
+    <div style="background: #333; padding: 15px 25px; border-radius: 0 0 12px 12px; display: flex; justify-content: space-between; gap: 10px; border-top: 1px solid #444;">
+      <button onclick="closeAddPaymentModal()"
+              style="padding: 10px 24px; background: #666; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold;"
+              onmouseover="this.style.background='#555'"
+              onmouseout="this.style.background='#666'">
+        ביטול
+      </button>
+      <button id="savePaymentBtn" onclick="savePaymentRecord()"
+              style="padding: 10px 28px; background: #16a34a; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; transition: all 0.3s;"
+              onmouseover="this.style.background='#059669'"
+              onmouseout="this.style.background='#16a34a'">
+        💾 שמור רשומה
       </button>
     </div>
   </div>
