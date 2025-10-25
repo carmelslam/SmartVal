@@ -380,6 +380,46 @@ class InvoiceService {
   }
 
   /**
+   * Get viewable URL for invoice document
+   * SESSION 76: Added to provide user access to uploaded invoice PDFs
+   * @param {string} documentId - Document UUID
+   * @returns {string} Signed URL valid for 1 hour
+   */
+  async getInvoiceDocumentURL(documentId) {
+    try {
+      console.log('🔗 Generating URL for document:', documentId);
+
+      // 1. Get document record with storage path
+      const { data: doc, error: docError } = await this.supabase
+        .from('invoice_documents')
+        .select('storage_path, storage_bucket, filename')
+        .eq('id', documentId)
+        .single();
+
+      if (docError) throw docError;
+      
+      if (!doc || !doc.storage_path) {
+        throw new Error('Document not found or missing storage path');
+      }
+
+      console.log('📁 Storage path:', doc.storage_path);
+
+      // 2. Generate signed URL for viewing (valid for 1 hour)
+      const { data: urlData, error: urlError } = await this.supabase.storage
+        .from(doc.storage_bucket || 'docs')
+        .createSignedUrl(doc.storage_path, 3600);
+
+      if (urlError) throw urlError;
+
+      console.log('✅ Signed URL generated');
+      return urlData.signedUrl;
+    } catch (error) {
+      console.error('❌ Error generating document URL:', error);
+      throw error;
+    }
+  }
+
+  /**
    * Get OCR data by invoice
    * @param {string} invoiceId - Invoice UUID
    * @returns {Object} OCR structured data

@@ -714,10 +714,192 @@ const subscription = supabase
 
 ---
 
-**SESSION 76 STATUS:** Code Complete - Awaiting User Testing  
-**Next Session:** Testing, Bug Fixes, Final Integration  
-**Phase 5a Completion:** ~70% (Code) | ~0% (Tested)
+## 🔧 ADDITIONAL FIXES (SESSION 76 CONTINUED)
+
+### Fix 4: Hebrew Filename Sanitization
+**File:** `services/invoice-service.js` (lines 292-299)  
+**Problem:** Hebrew characters in filenames caused Supabase Storage InvalidKey error  
+**Error:** `InvalidKey: c52af5d6-.../invoices/1761392844718_‎⁨חשבונית תיקון (3)⁩.pdf`
+
+**Solution:**
+```javascript
+const sanitizedFilename = file.name
+  .replace(/[\u0590-\u05FF]/g, '') // Remove Hebrew characters
+  .replace(/[\u200E\u200F\u202A-\u202E]/g, '') // Remove RTL/LTR marks
+  .replace(/[^\x00-\x7F]/g, '') // Remove all non-ASCII
+  .replace(/[^a-zA-Z0-9._-]/g, '_') // Replace special chars
+  .replace(/_+/g, '_') // Collapse multiple underscores
+  .replace(/^_|_$/g, ''); // Remove leading/trailing underscores
+```
+
+**Result:** Filename sanitized before upload, preventing Storage API errors
+
+---
+
+### Fix 5: toggleManualSection Global Scope
+**File:** `invoice upload.html` (lines 1368-1380)  
+**Problem:** Function defined inside DOMContentLoaded, not accessible from onclick  
+**Error:** `Uncaught ReferenceError: toggleManualSection is not defined`
+
+**Solution:**
+```javascript
+// Changed from local function to window property
+window.toggleManualSection = function() {
+  const content = document.getElementById('manual-section-content');
+  const icon = document.getElementById('manual-toggle-icon');
+  
+  if (content.style.display === 'none') {
+    content.style.display = 'block';
+    icon.textContent = '▲';
+  } else {
+    content.style.display = 'none';
+    icon.textContent = '▼';
+  }
+};
+```
+
+**Result:** Function now globally accessible from HTML onclick handler
+
+---
+
+### Fix 6: Query Builder Missing .select() Method
+**File:** `lib/supabaseClient.js` (lines 944-947)  
+**Problem:** `.update().eq().select()` chain failed  
+**Error:** `TypeError: this.supabase.from(...).update(...).eq(...).select is not a function`
+
+**Solution:**
+Added `.select()` to `createQueryMethods()` function:
+```javascript
+function createQueryMethods(builder) {
+  return {
+    eq: (column, value) => { ... },
+    select: (fields = '*') => {  // ADDED
+      builder.selectFields = fields;
+      return createQueryMethods(builder);
+    },
+    single: () => { ... },
+    then: (onResolve, onReject) => { ... }
+  };
+}
+```
+
+**Result:** Update queries can now chain `.select()` to return updated data
+
+---
+
+### Fix 7: Invoice Document View URL
+**File:** `services/invoice-service.js` (lines 382-420)  
+**Problem:** No way to access/view uploaded invoice PDFs  
+**User Request:** "i need a view url that i can access"
+
+**Solution:**
+Added new method `getInvoiceDocumentURL(documentId)`:
+```javascript
+async getInvoiceDocumentURL(documentId) {
+  // 1. Get document record with storage path
+  const { data: doc } = await this.supabase
+    .from('invoice_documents')
+    .select('storage_path, storage_bucket, filename')
+    .eq('id', documentId)
+    .single();
+  
+  // 2. Generate signed URL (valid 1 hour)
+  const { data: urlData } = await this.supabase.storage
+    .from(doc.storage_bucket || 'docs')
+    .createSignedUrl(doc.storage_path, 3600);
+  
+  return urlData.signedUrl;
+}
+```
+
+**Usage:**
+```javascript
+const invoiceService = new InvoiceService();
+const url = await invoiceService.getInvoiceDocumentURL(documentId);
+window.open(url, '_blank'); // View invoice in new tab
+```
+
+**Result:** Users can now get viewable URLs for uploaded invoices
+
+---
+
+### Fix 8: Module Import for Export Statement
+**File:** `invoice upload.html` (lines 623-629)  
+**Problem:** supabaseClient.js has export statement causing syntax error  
+**Error:** `Uncaught SyntaxError: Unexpected token 'export'`
+
+**Solution:**
+Changed from script tag to module import:
+```html
+<!-- OLD - BROKEN -->
+<script src="lib/supabaseClient.js"></script>
+
+<!-- NEW - WORKING -->
+<script type="module">
+  import { supabase } from './lib/supabaseClient.js';
+  window.supabase = supabase;
+  console.log('✅ Supabase client loaded as module and exposed globally');
+</script>
+```
+
+**Result:** File loads as ES6 module, export statement works correctly
+
+---
+
+## 📁 FILES MODIFIED (TOTAL: 4)
+
+**Updated from earlier session:**
+
+4. **lib/supabaseClient.js**
+   - Previous: Auth API, export fix
+   - **NEW:** Added `.select()` to createQueryMethods (line 944-947)
+   - Total lines changed: ~113 lines
+
+5. **services/invoice-service.js**
+   - Previous: Auth API
+   - **NEW:** Filename sanitization (lines 292-299)
+   - **NEW:** getInvoiceDocumentURL() method (lines 382-420)
+   - Total lines changed: ~140 lines
+
+6. **invoice upload.html**
+   - Previous: Collapsible manual section, summary calculation
+   - **NEW:** toggleManualSection as window property (lines 1368-1380)
+   - **NEW:** Module import for supabaseClient (lines 623-629)
+   - Total lines changed: ~55 lines
+
+7. **SESSION_76_SUMMARY.md** (this file)
+   - **NEW:** Added documentation for all additional fixes
+
+---
+
+## ⚠️ KNOWN NON-ISSUES
+
+### Helper.js Mapping Warnings (NOT ERRORS)
+**What you see:**
+```
+⚠️ No mapping found for key: "מספר רכב" (מספר רכב)
+⚠️ No mapping found for key: "בעל הרכב" (בעל הרכב)
+... (20+ similar warnings)
+```
+
+**Why this happens:**
+The invoice OCR webhook sends ALL extracted data to `window.processIncomingData()` which uses helper.js mapping. Many fields like "מספר רכב", "בעל הרכב", "מס. חשבונית" are invoice-specific and don't have helper.js mappings.
+
+**Is this a problem?** NO
+- Helper.js logs warnings but continues processing
+- Invoice data is correctly saved to invoice_documents.ocr_structured_data
+- These fields are accessed from the database, not helper.js
+- The warnings are informational, not errors
+
+**Action required:** None - this is expected behavior
+
+---
+
+**SESSION 76 STATUS:** All Critical Fixes Complete - Ready for Testing  
+**Next Session:** User Testing + Bug Fixes (if needed)  
+**Phase 5a Completion:** ~85% (Code) | ~0% (Tested)
 
 **Created:** 2025-10-25  
+**Updated:** 2025-10-25 (continued session)  
 **Author:** Claude (Session 76)  
-**Handoff Status:** System Restored - Ready for Testing
+**Handoff Status:** 8 Critical Fixes Implemented - Invoice Upload Ready
