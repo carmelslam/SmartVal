@@ -9179,17 +9179,41 @@ window.renderPaymentsTable = function(payments) {
       ? new Date(payment.fee_invoice_date).toLocaleDateString('he-IL', { day: '2-digit', month: '2-digit', year: 'numeric' })
       : '<span style="color: #666;">לא צורף</span>';
 
-    // Format invoice count badge
+    // Format invoice count and view/manage buttons
     const invoiceCount = payment.invoice_count || 0;
-    let invoiceBadgeColor = '#666';
-    if (invoiceCount === 0) invoiceBadgeColor = '#dc2626';
-    else if (invoiceCount >= 1 && invoiceCount <= 2) invoiceBadgeColor = '#f59e0b';
-    else invoiceBadgeColor = '#16a34a';
+    let invoiceColumnHtml = '';
 
-    const invoiceCountHtml = `
-      <span style="background: ${invoiceBadgeColor}; color: white; padding: 4px 8px; border-radius: 12px; font-size: 11px; font-weight: bold; display: inline-block;">
-        ${invoiceCount}/3
-      </span>`;
+    if (invoiceCount === 0) {
+      // No invoices - show upload button
+      invoiceColumnHtml = `
+        <div style="text-align: center;">
+          <div style="color: #999; font-size: 11px; margin-bottom: 4px;">אין חשבוניות</div>
+          <button onclick="openFeeInvoiceModal('${payment.id}', '${payment.plate}')"
+                  style="padding: 4px 8px; background: #16a34a; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 10px; width: 100%;">
+            ➕ העלה
+          </button>
+        </div>`;
+    } else {
+      // Has invoices - show count badge + view + manage buttons
+      invoiceColumnHtml = `
+        <div style="text-align: center;">
+          <div style="margin-bottom: 4px;">
+            <span style="background: #3b82f6; color: white; padding: 3px 8px; border-radius: 10px; font-size: 11px; font-weight: bold;">
+              ${invoiceCount} ${invoiceCount === 1 ? 'חשבונית' : 'חשבוניות'}
+            </span>
+          </div>
+          <div style="display: flex; gap: 4px; justify-content: center;">
+            <button onclick="viewInvoicesQuick('${payment.plate}')"
+                    style="padding: 4px 8px; background: #3b82f6; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 10px; flex: 1;">
+              👁️ צפה
+            </button>
+            <button onclick="openFeeInvoiceModal('${payment.id}', '${payment.plate}')"
+                    style="padding: 4px 8px; background: #059669; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 10px; flex: 1;">
+              📄 נהל
+            </button>
+          </div>
+        </div>`;
+    }
 
     html += `
       <tr style="border-bottom: 1px solid #333; color: #e0e0e0;" data-payment-id="${payment.id}">
@@ -9206,12 +9230,8 @@ window.renderPaymentsTable = function(payments) {
           </button>
         </td>
         <td style="padding: 10px; font-size: 12px; text-align: center;">${invoiceDateStr}</td>
-        <td style="padding: 8px; text-align: center;">
-          ${invoiceCountHtml}
-          <button onclick="openFeeInvoiceModal('${payment.id}', '${payment.plate}')"
-                  style="padding: 4px 8px; background: #059669; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 10px; margin-top: 4px; width: 100%;">
-            📄 נהל
-          </button>
+        <td style="padding: 8px;">
+          ${invoiceColumnHtml}
         </td>
         <td style="padding: 10px;">${formattedDate}</td>
         <td style="padding: 10px; ${daysClass}">${daysUntil !== 'N/A' ? (daysUntil >= 0 ? `+${daysUntil}` : daysUntil) : 'N/A'}</td>
@@ -9844,6 +9864,96 @@ window.uploadFeeInvoice = async function() {
   } finally {
     uploadBtn.disabled = false;
     uploadBtn.innerHTML = originalText;
+  }
+};
+
+/**
+ * Quick view of invoices - Opens a popup with invoice list and direct view links
+ */
+window.viewInvoicesQuick = async function(plate) {
+  try {
+    console.log('👁️ Quick view invoices for plate:', plate);
+
+    // Fetch invoices
+    const invoices = await adminSupabaseService.getFeeInvoices(plate);
+
+    if (!invoices || invoices.length === 0) {
+      alert('⚠️ לא נמצאו חשבוניות');
+      return;
+    }
+
+    // Build popup content
+    const typeNames = {
+      'initial': 'ראשונית',
+      'supplementary': 'משלימה',
+      'final': 'סופית'
+    };
+
+    let popupHtml = `
+      <div style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 3000; background: #2a2a2a; border: 2px solid #3b82f6; border-radius: 12px; padding: 20px; min-width: 400px; max-width: 600px; box-shadow: 0 8px 32px rgba(0,0,0,0.6);">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; padding-bottom: 10px; border-bottom: 2px solid #444;">
+          <h3 style="color: #3b82f6; margin: 0; font-size: 18px;">📄 חשבוניות - ${plate}</h3>
+          <button onclick="document.getElementById('invoiceQuickViewPopup').remove(); document.getElementById('invoiceQuickViewOverlay').remove();"
+                  style="background: #dc2626; color: white; border: none; padding: 5px 15px; border-radius: 4px; cursor: pointer; font-weight: bold;">
+            ✕
+          </button>
+        </div>
+        <div style="max-height: 400px; overflow-y: auto;">`;
+
+    invoices.forEach(invoice => {
+      const typeName = typeNames[invoice.invoice_type] || invoice.invoice_type;
+      const dateStr = invoice.invoice_date
+        ? new Date(invoice.invoice_date).toLocaleDateString('he-IL')
+        : 'לא צוין';
+      const amountStr = invoice.invoice_amount
+        ? `₪${Number(invoice.invoice_amount).toLocaleString('he-IL')}`
+        : '-';
+
+      popupHtml += `
+        <div style="background: #333; padding: 12px; border-radius: 6px; margin-bottom: 10px; border-right: 3px solid #3b82f6;">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div style="flex: 1;">
+              <div style="color: #3b82f6; font-weight: bold; margin-bottom: 4px;">חשבונית ${typeName}</div>
+              <div style="color: #e0e0e0; font-size: 12px;">
+                תאריך: ${dateStr} | סכום: ${amountStr}
+              </div>
+              <div style="color: #999; font-size: 11px; margin-top: 3px;">
+                ${invoice.file_name}
+              </div>
+            </div>
+            <button onclick="viewFeeInvoice('${invoice.file_path}')"
+                    style="padding: 6px 12px; background: #3b82f6; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px; margin-right: 10px; white-space: nowrap;">
+              👁️ פתח
+            </button>
+          </div>
+        </div>`;
+    });
+
+    popupHtml += `
+        </div>
+      </div>`;
+
+    // Create overlay
+    const overlay = document.createElement('div');
+    overlay.id = 'invoiceQuickViewOverlay';
+    overlay.style.cssText = 'position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 2999;';
+    overlay.onclick = function() {
+      this.remove();
+      document.getElementById('invoiceQuickViewPopup').remove();
+    };
+
+    // Create popup
+    const popup = document.createElement('div');
+    popup.id = 'invoiceQuickViewPopup';
+    popup.innerHTML = popupHtml;
+
+    // Add to DOM
+    document.body.appendChild(overlay);
+    document.body.appendChild(popup);
+
+  } catch (error) {
+    console.error('❌ Error viewing invoices:', error);
+    alert(`❌ שגיאה בטעינת חשבוניות:\n${error.message}`);
   }
 };
 
