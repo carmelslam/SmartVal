@@ -73,21 +73,25 @@ USING (bucket_id = 'estimate-reports');
 -- =====================================================
 
 -- Some Supabase versions need UPDATE policy for upsert parameter
-CREATE POLICY IF NOT EXISTS "Allow authenticated update expertise"
+DROP POLICY IF EXISTS "Allow authenticated update expertise" ON storage.objects;
+DROP POLICY IF EXISTS "Allow authenticated update final" ON storage.objects;
+DROP POLICY IF EXISTS "Allow authenticated update estimate" ON storage.objects;
+
+CREATE POLICY "Allow authenticated update expertise"
 ON storage.objects
 FOR UPDATE
 TO authenticated
 USING (bucket_id = 'expertise-reports')
 WITH CHECK (bucket_id = 'expertise-reports');
 
-CREATE POLICY IF NOT EXISTS "Allow authenticated update final"
+CREATE POLICY "Allow authenticated update final"
 ON storage.objects
 FOR UPDATE
 TO authenticated
 USING (bucket_id = 'final-reports')
 WITH CHECK (bucket_id = 'final-reports');
 
-CREATE POLICY IF NOT EXISTS "Allow authenticated update estimate"
+CREATE POLICY "Allow authenticated update estimate"
 ON storage.objects
 FOR UPDATE
 TO authenticated
