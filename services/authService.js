@@ -3,8 +3,7 @@
 // Date: 2025-10-22
 
 // Cache-busting import to prevent browser cache issues
-const VERSION = '1.0.1';
-import { supabase } from `../lib/supabaseClient.js?v=${VERSION}`;
+import { supabase } from '../lib/supabaseClient.js?v=1.0.1';
 
 class AuthService {
   constructor() {
