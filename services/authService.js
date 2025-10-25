@@ -2,7 +2,9 @@
 // Handles Supabase Auth integration for user authentication
 // Date: 2025-10-22
 
-import { supabase } from '../lib/supabaseClient.js';
+// Cache-busting import to prevent browser cache issues
+const VERSION = '1.0.1';
+import { supabase } from `../lib/supabaseClient.js?v=${VERSION}`;
 
 class AuthService {
   constructor() {
