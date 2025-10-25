@@ -255,7 +255,7 @@ RETURNS TABLE (
   damage_center_name TEXT,
   description TEXT,
   status TEXT,
-  timestamp TIMESTAMPTZ
+  record_timestamp TIMESTAMPTZ
 ) AS $$
 BEGIN
   RETURN QUERY
@@ -281,7 +281,7 @@ RETURNS TABLE (
   total_work NUMERIC,
   final_compensation NUMERIC,
   status TEXT,
-  timestamp TIMESTAMPTZ
+  record_timestamp TIMESTAMPTZ
 ) AS $$
 BEGIN
   RETURN QUERY
@@ -307,7 +307,7 @@ RETURNS TABLE (
   id UUID,
   status TEXT,
   is_current BOOLEAN,
-  timestamp TIMESTAMPTZ,
+  record_timestamp TIMESTAMPTZ,
   damage_center_count INT
 ) AS $$
 BEGIN
