@@ -1015,6 +1015,67 @@
       }
     };
 
+    // Helper function to save report drafts to Supabase
+    async function saveReportDraftToSupabase(reportType, status) {
+      try {
+        const helper = window.helper || JSON.parse(sessionStorage.getItem('helper') || '{}');
+        let caseIdOrNumber = helper.case_info?.supabase_case_id || helper.meta?.case_id;
+        const plate = helper.car_details?.plate || helper.vehicle?.plate || helper.meta?.plate;
+
+        if (!caseIdOrNumber || !plate || !window.supabase) {
+          console.warn(`⚠️ Missing data for ${reportType} draft save - skipping`);
+          return;
+        }
+
+        console.log(`💾 Saving ${reportType} ${status} to Supabase...`, { caseIdOrNumber, plate });
+
+        // Check if case_id is a valid UUID
+        const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+        let actualCaseId = caseIdOrNumber;
+
+        if (!uuidPattern.test(caseIdOrNumber)) {
+          const { data: caseData, error: lookupError } = await window.supabase
+            .from('cases')
+            .select('id')
+            .or(`case_number.eq.${caseIdOrNumber},plate.eq.${plate?.replace(/-/g, '')}`)
+            .limit(1)
+            .single();
+
+          if (lookupError || !caseData) {
+            console.warn(`⚠️ Could not find case UUID for ${reportType} - skipping`);
+            return;
+          }
+          actualCaseId = caseData.id;
+        }
+
+        // Transform helper structure for SQL function
+        const centersData = helper[reportType]?.centers || helper.centers || helper.damage_centers || [];
+        const helperForSupabase = {
+          ...helper,
+          [reportType]: {
+            ...helper[reportType],
+            centers: centersData
+          }
+        };
+
+        const { data, error } = await window.supabase.rpc('upsert_tracking_final_report_from_helper', {
+          helper_json: helperForSupabase,
+          p_case_id: actualCaseId,
+          p_plate: plate?.replace(/-/g, ''),
+          p_report_type: reportType,
+          p_status: status
+        });
+
+        if (error) {
+          console.error(`❌ ${reportType} ${status} save failed:`, error);
+        } else {
+          console.log(`✅ ${reportType} ${status} saved to Supabase (${data} records)`);
+        }
+      } catch (error) {
+        console.error(`❌ Error saving ${reportType} ${status}:`, error);
+      }
+    }
+
     window.submitFinalExpertise = function() {
       console.log('🔄 Starting submit process...');
       
@@ -1350,13 +1411,16 @@
               .then(async () => {
                 console.log('✅ 3/5 HELPER_EXPORT sent successfully');
                 console.log('📤 4/5 Sending SUBMIT_ESTIMATE_DRAFT...');
-                
+
+                // 💾 Save estimate DRAFT to Supabase BEFORE webhook
+                await saveReportDraftToSupabase('estimate', 'draft');
+
                 // Fetch estimate HTML from the actual report URL
                 const estimateHTML = await fetchReportHTML(
                   'https://yaron-cayouf-portal.netlify.app/estimate-report-builder.html?from=expertise&skipValidation=true',
                   'Estimate'
                 );
-                
+
                 const estimatePayload = {
                   plate: payload.plate,
                   owner_name: payload.owner_name,
@@ -1366,19 +1430,22 @@
                   case_id: payload.meta?.case_id || `YC-${payload.plate.replace(/[-\/]/g, '')}-${new Date().getFullYear()}`,
                   callbackUrl: null
                 };
-                
+
                 return sendToWebhook('SUBMIT_ESTIMATE_DRAFT', estimatePayload);
               })
               .then(async () => {
                 console.log('✅ 4/5 SUBMIT_ESTIMATE_DRAFT sent successfully');
                 console.log('📤 5/5 Sending FINAL_REPORT_DRAFT...');
-                
+
+                // 💾 Save final report DRAFT to Supabase BEFORE webhook
+                await saveReportDraftToSupabase('final_report', 'draft');
+
                 // Fetch final report HTML from the actual report URL
                 const finalReportHTML = await fetchReportHTML(
                   'https://yaron-cayouf-portal.netlify.app/final-report-template-builder.html?from=expertise&skipValidation=true',
                   'Final Report'
                 );
-                
+
                 const finalReportPayload = {
                   plate: payload.plate,
                   owner_name: payload.owner_name,
@@ -1388,7 +1455,7 @@
                   case_id: payload.meta?.case_id || `YC-${payload.plate.replace(/[-\/]/g, '')}-${new Date().getFullYear()}`,
                   callbackUrl: null
                 };
-                
+
                 return sendToWebhook('FINAL_REPORT_DRAFT', finalReportPayload);
               })
               .then(() => {
