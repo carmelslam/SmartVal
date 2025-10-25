@@ -1287,19 +1287,26 @@
                     console.log('✅ Found case UUID:', actualCaseId);
                   }
 
-                  // 🔍 DEBUG: Log RPC call parameters
+                  // 🔧 FIX: Transform helper structure for SQL function
+                  // SQL expects helper.damage_assessment.centers but data is at helper.centers
+                  const centersData = helper.centers || helper.damage_centers || [];
+                  const helperForSupabase = {
+                    ...helper,
+                    damage_assessment: {
+                      ...helper.damage_assessment,
+                      centers: centersData
+                    }
+                  };
+
                   console.log('🔍 DEBUG: Calling RPC with parameters:', {
                     p_case_id: actualCaseId,
                     p_plate: plate?.replace(/-/g, ''),
-                    helper_json_preview: {
-                      has_damage_assessment: !!helper.damage_assessment,
-                      has_centers: !!helper.damage_assessment?.centers,
-                      centers_length: helper.damage_assessment?.centers?.length
-                    }
+                    centers_found: centersData.length,
+                    centers_source: helper.centers ? 'helper.centers' : helper.damage_centers ? 'helper.damage_centers' : 'none'
                   });
 
                   const { data, error } = await window.supabase.rpc('upsert_tracking_expertise_from_helper', {
-                    helper_json: helper,
+                    helper_json: helperForSupabase,
                     p_case_id: actualCaseId,
                     p_plate: plate?.replace(/-/g, '')
                   });
