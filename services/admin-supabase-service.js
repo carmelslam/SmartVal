@@ -62,7 +62,7 @@ class AdminSupabaseService {
         .from('tracking_final_report')
         .select('*')
         .eq('plate', plate)
-        .order('record_timestamp', { ascending: false })
+        .order('timestamp', { ascending: false })
         .limit(2);
 
       if (reportError && reportError.code !== 'PGRST116') {
