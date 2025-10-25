@@ -1198,10 +1198,28 @@ class InvoiceProcessor {
         helper.invoices = [];
       }
       
-      helper.invoices.push({
+      // SESSION 76: Prevent duplicates based on invoice_number
+      // Remove any existing invoice with the same invoice_number
+      const invoiceNumber = result.invoice_number || result['מס. חשבונית'] || result.invoiceNumber;
+      
+      if (invoiceNumber) {
+        helper.invoices = helper.invoices.filter(inv => {
+          const existingInvNum = inv.invoice_number || inv['מס. חשבונית'] || inv.invoiceNumber;
+          return existingInvNum !== invoiceNumber;
+        });
+        
+        console.log(`🔍 Checking for duplicate invoice: ${invoiceNumber}`);
+        console.log(`📋 Existing invoices count: ${helper.invoices.length}`);
+      }
+      
+      // Add new invoice data
+      const invoiceData = {
         ...result,
-        processed_at: new Date().toISOString()
-      });
+        processed_at: new Date().toISOString(),
+        invoice_number: invoiceNumber
+      };
+      
+      helper.invoices.push(invoiceData);
       
       // Update meta information
       helper.meta = helper.meta || {};
@@ -1216,6 +1234,8 @@ class InvoiceProcessor {
         window.updateHelper('invoices', helper.invoices, 'invoice-upload');
         window.updateHelper('meta', helper.meta, 'invoice-upload');
       }
+      
+      console.log(`✅ Invoice ${invoiceNumber} added to helper (total: ${helper.invoices.length})`);
       
     } catch (e) {
       console.warn('Could not update helper with invoice results:', e);
@@ -1263,12 +1283,43 @@ class InvoiceProcessor {
 
   clearForm() {
     if (confirm('האם לנקות את כל הנתונים?')) {
+      // SESSION 76: Remove current invoice from helper.invoices before clearing
+      if (this.currentInvoiceId) {
+        try {
+          const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+          
+          if (helper.invoices && Array.isArray(helper.invoices)) {
+            // Remove invoice with matching invoice_id
+            helper.invoices = helper.invoices.filter(inv => inv.invoice_id !== this.currentInvoiceId);
+            
+            // Update meta
+            helper.meta = helper.meta || {};
+            helper.meta.total_invoices = helper.invoices.length;
+            
+            // Save back to sessionStorage
+            sessionStorage.setItem('helper', JSON.stringify(helper));
+            
+            // Update via helper system
+            if (typeof window.updateHelper === 'function') {
+              window.updateHelper('invoices', helper.invoices, 'invoice-upload-clear');
+              window.updateHelper('meta', helper.meta, 'invoice-upload-clear');
+            }
+            
+            console.log('✅ Removed invoice from helper:', this.currentInvoiceId);
+          }
+        } catch (e) {
+          console.warn('Could not remove invoice from helper:', e);
+        }
+      }
+      
       // Clear form fields
       document.getElementById('invoice-form').reset();
       
       // Clear internal state
       this.uploadedFile = null;
       this.ocrResults = [];
+      this.currentDocumentId = null;
+      this.currentInvoiceId = null;
       
       // Hide sections
       document.getElementById('preview-container').style.display = 'none';
@@ -1279,7 +1330,7 @@ class InvoiceProcessor {
       // Reload case data
       this.loadCaseData();
       
-      this.showAlert('טופס נוקה', 'success');
+      this.showAlert('טופס נוקה וחשבונית הוסרה', 'success');
     }
   }
 
