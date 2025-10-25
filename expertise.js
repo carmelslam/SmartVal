@@ -2,7 +2,9 @@
 
 import { MathEngine } from './math.js';
 import { sendToWebhook } from './webhook.js';
-import { getVehicleData, getDamageData, getValuationData, getFinancialData } from './helper.js';
+
+// ✅ FIX: helper.js is not an ES6 module, use window object
+const { getVehicleData, getDamageData, getValuationData, getFinancialData } = window;
 
 const helper = JSON.parse(sessionStorage.getItem("expertise")) || {
   meta: {},

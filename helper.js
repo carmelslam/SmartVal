@@ -6105,19 +6105,20 @@ if (document.readyState === 'loading') {
 
 // Data getter functions
 // ❌ SESSION 45 FIX: Removed export - helper.js is not an ES6 module
-function getDamageData() {
+// Attach to window for global access
+window.getDamageData = function getDamageData() {
   return window.helper?.damage_assessment || {};
-}
+};
 
 // ❌ SESSION 45 FIX: Removed export - helper.js is not an ES6 module
-function getValuationData() {
+window.getValuationData = function getValuationData() {
   return window.helper?.valuation || {};
-}
+};
 
 // ❌ SESSION 45 FIX: Removed export - helper.js is not an ES6 module
-function getFinancialData() {
+window.getFinancialData = function getFinancialData() {
   return window.helper?.financials || {};
-}
+};
 
 // ❌ SESSION 45 FIX: Removed export - helper.js is not an ES6 module
 function getVehicleData() {
