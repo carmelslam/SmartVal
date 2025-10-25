@@ -1318,11 +1318,6 @@
                 if (caseIdOrNumber && plate && window.supabase) {
                   console.log('💾 Saving expertise to Supabase...', { caseIdOrNumber, plate });
 
-                  // 🔍 DEBUG: Log helper structure to understand data format
-                  console.log('🔍 DEBUG: helper.damage_assessment =', helper.damage_assessment);
-                  console.log('🔍 DEBUG: helper.damage_assessment?.centers =', helper.damage_assessment?.centers);
-                  console.log('🔍 DEBUG: Full helper keys =', Object.keys(helper));
-
                   // Check if case_id is a valid UUID (format: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx)
                   const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
                   let actualCaseId = caseIdOrNumber;
@@ -1348,6 +1343,34 @@
                     console.log('✅ Found case UUID:', actualCaseId);
                   }
 
+                  // 📄 Upload HTML as PDF to Supabase Storage (like parts system)
+                  console.log('☁️ Uploading expertise PDF to Supabase Storage...');
+                  const timestamp = new Date().toISOString().replace(/[:.]/g, '-').substring(0, 19);
+                  const normalizedPlate = plate?.replace(/-/g, '') || 'UNKNOWN';
+                  const filename = `${normalizedPlate}_expertise_${timestamp}.html`; // Store as HTML for now
+                  const storagePath = `${caseIdOrNumber}/${filename}`;
+
+                  // Upload HTML to storage
+                  const htmlBlob = new Blob([htmlContent], { type: 'text/html' });
+                  const { data: uploadData, error: uploadError } = await window.supabase.storage
+                    .from('expertise-reports')
+                    .upload(storagePath, htmlBlob, {
+                      contentType: 'text/html',
+                      upsert: false
+                    });
+
+                  if (uploadError) {
+                    console.error('❌ Storage upload error:', uploadError);
+                    // Continue without PDF URL
+                  }
+
+                  // Get public URL
+                  const { data: { publicUrl } } = window.supabase.storage
+                    .from('expertise-reports')
+                    .getPublicUrl(storagePath);
+
+                  console.log('✅ PDF uploaded to storage:', publicUrl);
+
                   // 🔧 FIX: Transform helper structure for SQL function
                   // SQL expects helper.damage_assessment.centers but data is at helper.centers
                   const centersData = helper.centers || helper.damage_centers || [];
@@ -1363,14 +1386,17 @@
                     p_case_id: actualCaseId,
                     p_plate: plate?.replace(/-/g, ''),
                     centers_found: centersData.length,
-                    centers_source: helper.centers ? 'helper.centers' : helper.damage_centers ? 'helper.damage_centers' : 'none'
+                    centers_source: helper.centers ? 'helper.centers' : helper.damage_centers ? 'helper.damage_centers' : 'none',
+                    pdf_url: publicUrl
                   });
 
                   const { data, error } = await window.supabase.rpc('upsert_tracking_expertise_from_helper', {
                     helper_json: helperForSupabase,
                     p_case_id: actualCaseId,
                     p_plate: plate?.replace(/-/g, ''),
-                    p_status: 'final'  // ✅ Expertise is always final (no draft state)
+                    p_status: 'final',  // ✅ Expertise is always final (no draft state)
+                    p_pdf_storage_path: uploadError ? null : storagePath,
+                    p_pdf_public_url: uploadError ? null : publicUrl
                   });
 
                   // 🔍 DEBUG: Log RPC response
