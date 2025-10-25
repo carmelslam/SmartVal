@@ -517,6 +517,248 @@ class AdminSupabaseService {
   }
 
   /**
+   * ========================================
+   * FEE INVOICE MANAGEMENT METHODS
+   * Phase 9: Admin Hub Enhancement
+   * ========================================
+   */
+
+  /**
+   * Upload fee invoice to Supabase Storage and create database record
+   * @param {string} plate - Vehicle plate number
+   * @param {File} file - File object from input
+   * @param {object} metadata - Invoice metadata (type, amount, date, etc.)
+   * @returns {object} Created invoice record
+   */
+  async uploadFeeInvoice(plate, file, metadata) {
+    try {
+      const supabase = this._getSupabase();
+      console.log(`📄 Uploading fee invoice for plate: ${plate}`);
+
+      // Generate unique filename with timestamp
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+      const extension = file.name.split('.').pop();
+      const fileName = `${metadata.invoice_type}-${timestamp}.${extension}`;
+      const filePath = `fee-invoices/${plate}/${fileName}`;
+
+      // Upload file to Supabase Storage
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('fee-invoices')
+        .upload(filePath, file, {
+          cacheControl: '3600',
+          upsert: false
+        });
+
+      if (uploadError) throw uploadError;
+
+      // Create database record
+      const invoiceRecord = {
+        case_id: metadata.case_id,
+        payment_tracking_id: metadata.payment_tracking_id,
+        plate: plate,
+        invoice_type: metadata.invoice_type,
+        invoice_number: metadata.invoice_number || null,
+        invoice_date: metadata.invoice_date || null,
+        invoice_amount: metadata.invoice_amount || null,
+        file_path: filePath,
+        file_name: file.name,
+        file_size: file.size,
+        file_type: file.type,
+        date_extracted_from_ocr: metadata.date_extracted_from_ocr || false,
+        ocr_confidence: metadata.ocr_confidence || null,
+        extraction_metadata: metadata.extraction_metadata || null,
+        uploaded_by: metadata.uploaded_by,
+        notes: metadata.notes || null
+      };
+
+      const { data: invoiceData, error: insertError } = await supabase
+        .from('fee_invoices')
+        .insert([invoiceRecord])
+        .select()
+        .single();
+
+      if (insertError) throw insertError;
+
+      console.log('✅ Fee invoice uploaded successfully:', invoiceData.id);
+      return invoiceData;
+    } catch (error) {
+      console.error('Error uploading fee invoice:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get all fee invoices for a plate
+   * Uses database function get_fee_invoices() which includes uploader details
+   * @param {string} plate - Vehicle plate number
+   * @returns {array} Array of invoice records with uploader info
+   */
+  async getFeeInvoices(plate) {
+    try {
+      const supabase = this._getSupabase();
+      console.log(`📋 Fetching fee invoices for plate: ${plate}`);
+
+      const { data, error } = await supabase.rpc('get_fee_invoices', {
+        p_plate: plate
+      });
+
+      if (error) throw error;
+
+      return data || [];
+    } catch (error) {
+      console.error('Error fetching fee invoices:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get invoice counts by type for a plate
+   * @param {string} plate - Vehicle plate number
+   * @returns {object} Invoice counts by type
+   */
+  async getInvoiceCounts(plate) {
+    try {
+      const supabase = this._getSupabase();
+      console.log(`🔢 Fetching invoice counts for plate: ${plate}`);
+
+      const { data, error } = await supabase.rpc('get_invoice_counts', {
+        p_plate: plate
+      });
+
+      if (error) throw error;
+
+      return data || { total: 0, by_type: {} };
+    } catch (error) {
+      console.error('Error fetching invoice counts:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Delete fee invoice (record + storage file)
+   * Uses database function delete_fee_invoice() which returns file path for cleanup
+   * @param {string} invoiceId - Invoice UUID
+   * @returns {object} Result with file_path for storage cleanup
+   */
+  async deleteFeeInvoice(invoiceId) {
+    try {
+      const supabase = this._getSupabase();
+      console.log(`🗑️ Deleting fee invoice: ${invoiceId}`);
+
+      // Call database function to delete record and get file path
+      const { data: result, error: dbError } = await supabase.rpc('delete_fee_invoice', {
+        p_invoice_id: invoiceId
+      });
+
+      if (dbError) throw dbError;
+
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to delete invoice record');
+      }
+
+      // Delete file from storage
+      const filePath = result.file_path.replace('fee-invoices/', '');
+      const { error: storageError } = await supabase.storage
+        .from('fee-invoices')
+        .remove([filePath]);
+
+      if (storageError) {
+        console.warn('⚠️ Storage file deletion failed:', storageError);
+        // Don't throw - record is already deleted
+      }
+
+      console.log('✅ Fee invoice deleted successfully');
+      return result;
+    } catch (error) {
+      console.error('Error deleting fee invoice:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Download/get public URL for fee invoice file
+   * @param {string} filePath - Full file path in storage (e.g., "fee-invoices/22184003/invoice.pdf")
+   * @returns {string} Public URL for download
+   */
+  async getFeeInvoiceUrl(filePath) {
+    try {
+      const supabase = this._getSupabase();
+      console.log(`🔗 Getting URL for invoice: ${filePath}`);
+
+      // Extract path without bucket name
+      const path = filePath.replace('fee-invoices/', '');
+
+      const { data, error } = await supabase.storage
+        .from('fee-invoices')
+        .createSignedUrl(path, 3600); // 1 hour expiry
+
+      if (error) throw error;
+
+      return data.signedUrl;
+    } catch (error) {
+      console.error('Error getting invoice URL:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Update last contact info for payment tracking
+   * Uses database function update_payment_last_contact()
+   * @param {string} paymentId - Payment tracking UUID
+   * @param {string} userId - User ID who made the contact
+   * @param {string} notes - Optional contact notes
+   * @returns {object} Updated payment record
+   */
+  async updateLastContact(paymentId, userId, notes = null) {
+    try {
+      const supabase = this._getSupabase();
+      console.log(`📞 Updating last contact for payment: ${paymentId}`);
+
+      const { data, error } = await supabase.rpc('update_payment_last_contact', {
+        p_payment_id: paymentId,
+        p_user_id: userId,
+        p_notes: notes
+      });
+
+      if (error) throw error;
+
+      console.log('✅ Last contact updated successfully');
+      return data;
+    } catch (error) {
+      console.error('Error updating last contact:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Update fee invoice date for payment tracking
+   * Note: This is usually auto-updated by trigger when invoice is uploaded
+   * This method is for manual override if needed
+   * @param {string} paymentId - Payment tracking UUID
+   * @param {string} date - Invoice date (YYYY-MM-DD)
+   * @returns {object} Updated payment record
+   */
+  async updateFeeInvoiceDate(paymentId, date) {
+    try {
+      const supabase = this._getSupabase();
+      console.log(`📅 Updating fee invoice date for payment: ${paymentId}`);
+
+      const { data, error } = await supabase.rpc('set_fee_invoice_date', {
+        p_payment_id: paymentId,
+        p_invoice_date: date
+      });
+
+      if (error) throw error;
+
+      console.log('✅ Fee invoice date updated successfully');
+      return data;
+    } catch (error) {
+      console.error('Error updating fee invoice date:', error);
+      throw error;
+    }
+  }
+
+  /**
    * Helper: Format date for Hebrew display
    */
   _formatDate(dateString) {
