@@ -313,6 +313,13 @@ class InvoiceService {
       if (uploadError) throw uploadError;
 
       console.log('✅ File uploaded to storage:', filePath);
+      console.log('📦 Upload response data:', uploadData);
+      console.log('📁 Storage path from response:', uploadData?.path);
+      
+      // SESSION 79: The actual storage path is the filePath we used for upload
+      // uploadData.path may be undefined in some Supabase versions
+      const actualStoragePath = uploadData?.path || filePath;
+      console.log('💾 Using storage path:', actualStoragePath);
 
       // 2. Create invoice_documents record
       const documentInsert = {
@@ -322,7 +329,7 @@ class InvoiceService {
         filename: file.name,
         file_size: file.size,
         mime_type: file.type,
-        storage_path: uploadData.path,
+        storage_path: actualStoragePath,
         storage_bucket: 'docs',
         ocr_status: 'pending',
         processing_method: 'make_ocr',
