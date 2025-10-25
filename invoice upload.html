@@ -562,10 +562,13 @@
         </tbody>
       </table>
       
-      <!-- SESSION 76: Manual Override Section - Collapsible -->
+      <!-- SESSION 76: Manual Override Section - For rare cases without physical invoice -->
       <div class="section">
-        <h3 onclick="toggleManualSection()" style="cursor: pointer; user-select: none;">
-          <span id="manual-toggle-icon">▼</span> הוספה ידנית (לחץ להצגה/הסתרה)
+        <h3 onclick="toggleManualSection()" style="cursor: pointer; user-select: none; background: #fff3cd; padding: 10px; border-radius: 6px; border-left: 4px solid #ffc107;">
+          <span id="manual-toggle-icon">▼</span> ✏️ הוספת פריטים ידנית
+          <small style="display: block; font-size: 12px; color: #856404; font-weight: normal; margin-top: 5px;">
+            למקרים נדירים שבהם אין חשבונית פיזית במערכת - לחץ להצגה/הסתרה
+          </small>
         </h3>
         <div id="manual-section-content" style="display: none;">
           <div class="form-row">
@@ -962,20 +965,96 @@ class InvoiceProcessor {
     // Show OCR results section
     ocrContainer.classList.add('show');
     
-    // SESSION 76: Calculate total correctly
-    const calculatedTotal = this.ocrResults.reduce((sum, item) => {
-      return sum + ((item.quantity || 1) * (item.unit_price || 0));
-    }, 0);
+    // SESSION 76: Calculate totals by category
+    let totalParts = 0, totalWorks = 0, totalRepairs = 0, totalOther = 0;
     
-    // Display summary
+    this.ocrResults.forEach(item => {
+      const lineTotal = (item.quantity || 1) * (item.unit_price || 0);
+      const category = this.categorizeItem(item.name || item.description || '');
+      
+      if (category === 'PART') totalParts += lineTotal;
+      else if (category === 'WORK') totalWorks += lineTotal;
+      else if (category === 'REPAIR') totalRepairs += lineTotal;
+      else totalOther += lineTotal;
+    });
+    
+    const calculatedTotal = totalParts + totalWorks + totalRepairs + totalOther;
+    
+    // Get invoice details
+    const invoiceNumber = result['מס. חשבונית'] || result.invoice_number || `INV-${Date.now()}`;
+    const garageName = document.getElementById('garage_name').value || result['שם מוסך'] || 'לא צוין';
+    const plate = document.getElementById('plate').value || 'לא צוין';
+    const invoiceDate = document.getElementById('date').value || new Date().toISOString().split('T')[0];
+    
+    // Display enhanced summary
     summaryContainer.innerHTML = `
-      <div style="background: #e8f5e8; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
-        <h4 style="margin: 0 0 10px 0; color: #2c3e50;">סיכום החשבונית</h4>
-        <div style="display: flex; gap: 20px; flex-wrap: wrap;">
-          <div><strong>מספר פריטים:</strong> ${this.ocrResults.length}</div>
-          <div id="summary-total"><strong>סה"כ:</strong> ₪${calculatedTotal.toFixed(2)}</div>
-          <div><strong>דיוק OCR:</strong> ${result.confidence || 'לא זמין'}%</div>
+      <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 20px; border-radius: 12px; margin-bottom: 20px; color: white; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+        <h4 style="margin: 0 0 15px 0; font-size: 20px; border-bottom: 2px solid rgba(255,255,255,0.3); padding-bottom: 10px;">📋 סיכום חשבונית</h4>
+        
+        <!-- Invoice Header Info -->
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 15px;">
+          <div style="background: rgba(255,255,255,0.15); padding: 10px; border-radius: 8px;">
+            <div style="font-size: 12px; opacity: 0.9;">מספר חשבונית</div>
+            <div style="font-size: 18px; font-weight: bold; margin-top: 5px;">${invoiceNumber}</div>
+          </div>
+          <div style="background: rgba(255,255,255,0.15); padding: 10px; border-radius: 8px;">
+            <div style="font-size: 12px; opacity: 0.9;">מוסך</div>
+            <div style="font-size: 16px; font-weight: bold; margin-top: 5px;">${garageName}</div>
+          </div>
+          <div style="background: rgba(255,255,255,0.15); padding: 10px; border-radius: 8px;">
+            <div style="font-size: 12px; opacity: 0.9;">מספר רכב</div>
+            <div style="font-size: 18px; font-weight: bold; margin-top: 5px;">${plate}</div>
+          </div>
+          <div style="background: rgba(255,255,255,0.15); padding: 10px; border-radius: 8px;">
+            <div style="font-size: 12px; opacity: 0.9;">תאריך</div>
+            <div style="font-size: 16px; font-weight: bold; margin-top: 5px;">${invoiceDate}</div>
+          </div>
         </div>
+        
+        <!-- Cost Breakdown by Category -->
+        <div style="background: rgba(255,255,255,0.2); padding: 15px; border-radius: 8px; margin-bottom: 15px;">
+          <div style="font-size: 14px; margin-bottom: 10px; font-weight: bold;">פירוט עלויות לפי קטגוריה:</div>
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px;">
+            <div style="background: rgba(76, 175, 80, 0.3); padding: 8px; border-radius: 6px; text-align: center;">
+              <div style="font-size: 11px; opacity: 0.9;">🔧 חלקים</div>
+              <div style="font-size: 16px; font-weight: bold;">₪${totalParts.toFixed(2)}</div>
+            </div>
+            <div style="background: rgba(33, 150, 243, 0.3); padding: 8px; border-radius: 6px; text-align: center;">
+              <div style="font-size: 11px; opacity: 0.9;">👷 עבודות</div>
+              <div style="font-size: 16px; font-weight: bold;">₪${totalWorks.toFixed(2)}</div>
+            </div>
+            <div style="background: rgba(255, 152, 0, 0.3); padding: 8px; border-radius: 6px; text-align: center;">
+              <div style="font-size: 11px; opacity: 0.9;">🔨 תיקונים</div>
+              <div style="font-size: 16px; font-weight: bold;">₪${totalRepairs.toFixed(2)}</div>
+            </div>
+            ${totalOther > 0 ? `
+            <div style="background: rgba(158, 158, 158, 0.3); padding: 8px; border-radius: 6px; text-align: center;">
+              <div style="font-size: 11px; opacity: 0.9;">📦 אחר</div>
+              <div style="font-size: 16px; font-weight: bold;">₪${totalOther.toFixed(2)}</div>
+            </div>
+            ` : ''}
+          </div>
+        </div>
+        
+        <!-- Total and Stats -->
+        <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.2); padding: 12px; border-radius: 8px;">
+          <div>
+            <div style="font-size: 12px; opacity: 0.9;">מספר פריטים: <strong>${this.ocrResults.length}</strong></div>
+            <div style="font-size: 12px; opacity: 0.9;">דיוק OCR: <strong>${result.confidence || 'לא זמין'}%</strong></div>
+          </div>
+          <div style="text-align: left;">
+            <div id="summary-total" style="font-size: 14px; opacity: 0.9;">סה"כ לתשלום</div>
+            <div style="font-size: 28px; font-weight: bold;">₪${calculatedTotal.toFixed(2)}</div>
+          </div>
+        </div>
+        
+        ${this.currentDocumentId ? `
+        <div style="margin-top: 15px; text-align: center;">
+          <button onclick="window.invoiceProcessor.viewInvoicePDF()" class="btn" style="background: rgba(255,255,255,0.9); color: #667eea; padding: 10px 20px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold;">
+            📄 צפה בחשבונית המקורית
+          </button>
+        </div>
+        ` : ''}
       </div>
     `;
     
@@ -1024,14 +1103,71 @@ class InvoiceProcessor {
   }
 
   updateOverallTotals() {
-    const total = this.ocrResults.reduce((sum, item) => {
-      return sum + ((item.quantity || 1) * (item.unit_price || 0));
-    }, 0);
+    // SESSION 76: Recalculate totals by category
+    let totalParts = 0, totalWorks = 0, totalRepairs = 0, totalOther = 0;
     
-    // SESSION 76: Update summary total correctly
+    this.ocrResults.forEach(item => {
+      const lineTotal = (item.quantity || 1) * (item.unit_price || 0);
+      const category = this.categorizeItem(item.name || item.description || '');
+      
+      if (category === 'PART') totalParts += lineTotal;
+      else if (category === 'WORK') totalWorks += lineTotal;
+      else if (category === 'REPAIR') totalRepairs += lineTotal;
+      else totalOther += lineTotal;
+    });
+    
+    const total = totalParts + totalWorks + totalRepairs + totalOther;
+    
+    // Update summary total display
     const totalElement = document.getElementById('summary-total');
     if (totalElement) {
-      totalElement.innerHTML = `<strong>סה"כ:</strong> ₪${total.toFixed(2)}`;
+      totalElement.innerHTML = `סה"כ לתשלום<br><span style="font-size: 28px; font-weight: bold;">₪${total.toFixed(2)}</span>`;
+    }
+  }
+  
+  // SESSION 76: Categorize invoice items
+  categorizeItem(text) {
+    const lowerText = text.toLowerCase();
+    
+    // Parts keywords
+    if (lowerText.includes('חלק') || lowerText.includes('פנס') || lowerText.includes('מראה') || 
+        lowerText.includes('דלת') || lowerText.includes('פגוש') || lowerText.includes('גלגל') ||
+        lowerText.includes('צמיג') || lowerText.includes('מנוע') || lowerText.includes('part')) {
+      return 'PART';
+    }
+    
+    // Work/Labor keywords  
+    if (lowerText.includes('עבודה') || lowerText.includes('שעת') || lowerText.includes('שעות') ||
+        lowerText.includes('התקנה') || lowerText.includes('labor') || lowerText.includes('work')) {
+      return 'WORK';
+    }
+    
+    // Repair keywords
+    if (lowerText.includes('תיקון') || lowerText.includes('תיק') || lowerText.includes('repair') ||
+        lowerText.includes('צבע') || lowerText.includes('paint') || lowerText.includes('ריתוך')) {
+      return 'REPAIR';
+    }
+    
+    return 'OTHER';
+  }
+  
+  // SESSION 76: View invoice PDF in new tab
+  async viewInvoicePDF() {
+    try {
+      if (!this.currentDocumentId) {
+        this.showAlert('לא נמצא מסמך', 'error');
+        return;
+      }
+      
+      this.showAlert('מייצר קישור לצפייה...', 'info');
+      
+      const url = await this.invoiceService.getInvoiceDocumentURL(this.currentDocumentId);
+      window.open(url, '_blank');
+      
+      this.showAlert('החשבונית נפתחה בחלון חדש', 'success');
+    } catch (error) {
+      console.error('Error viewing PDF:', error);
+      this.showAlert('שגיאה בפתיחת החשבונית', 'error');
     }
   }
 
