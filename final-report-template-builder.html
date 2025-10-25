@@ -1638,6 +1638,34 @@
               console.log('✅ Found case UUID:', actualCaseId);
             }
 
+            // 📄 Upload HTML to Supabase Storage (like parts system)
+            console.log('☁️ Uploading final report to Supabase Storage...');
+            const timestamp = new Date().toISOString().replace(/[:.]/g, '-').substring(0, 19);
+            const normalizedPlate = plate?.replace(/-/g, '') || 'UNKNOWN';
+            const filename = `${normalizedPlate}_final_report_${timestamp}.html`;
+            const storagePath = `${caseIdOrNumber}/${filename}`;
+
+            // Upload HTML to storage
+            const htmlBlob = new Blob([cleanHTML], { type: 'text/html' });
+            const { data: uploadData, error: uploadError } = await window.supabase.storage
+              .from('final-reports')
+              .upload(storagePath, htmlBlob, {
+                contentType: 'text/html',
+                upsert: false
+              });
+
+            let publicUrl = null;
+            if (!uploadError) {
+              // Get public URL
+              const { data: { publicUrl: url } } = window.supabase.storage
+                .from('final-reports')
+                .getPublicUrl(storagePath);
+              publicUrl = url;
+              console.log('✅ Final report uploaded to storage:', publicUrl);
+            } else {
+              console.error('❌ Storage upload error:', uploadError);
+            }
+
             // 🔧 FIX: Transform helper structure for SQL function
             // SQL expects helper.final_report.centers but data might be at helper.centers
             const centersData = helper.final_report?.centers || helper.centers || helper.damage_centers || [];
@@ -1654,7 +1682,9 @@
               p_case_id: actualCaseId,
               p_plate: plate?.replace(/-/g, ''),
               p_report_type: 'final_report',
-              p_status: 'final'  // ✅ Export button creates final version
+              p_status: 'final',  // ✅ Export button creates final version
+              p_pdf_storage_path: uploadError ? null : storagePath,
+              p_pdf_public_url: publicUrl
             });
 
             if (error) {
