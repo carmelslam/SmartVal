@@ -2278,20 +2278,8 @@
         // 💾 CRITICAL FIX: Save to Supabase BEFORE webhook
         // This ensures estimates are backed up to database
         try {
-          // 🔍 DEBUG: Log helper structure to see what data we have
-          console.log('🔍 Estimate Helper Debug:', {
-            'meta': helper.meta,
-            'meta.case_id': helper.meta?.case_id,
-            'estimate.vehicle': helper.estimate?.vehicle,
-            'vehicle': helper.vehicle,
-            'car_details': helper.car_details,
-            'estimate.vehicle.plateNumber': helper.estimate?.vehicle?.plateNumber,
-            'vehicle.plate_number': helper.vehicle?.plate_number,
-            'car_details.plate': helper.car_details?.plate,
-            'meta.plate': helper.meta?.plate
-          });
-
-          let caseIdOrNumber = helper.meta?.case_id;
+          // ✅ FIX: Check supabase_case_id first (actual UUID), fallback to case_id (filing ID)
+          let caseIdOrNumber = helper.case_info?.supabase_case_id || helper.meta?.case_id;
           const plate = helper.estimate?.vehicle?.plateNumber || helper.vehicle?.plate_number || helper.car_details?.plate || helper.meta?.plate;
 
           console.log('🔍 Extracted values:', { caseIdOrNumber, plate, hasSupabase: !!window.supabase });
