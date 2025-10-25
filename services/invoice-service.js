@@ -288,9 +288,21 @@ class InvoiceService {
 
       const userId = this.currentUser?.user_id || session.user.id;
       const timestamp = Date.now();
-      const filePath = `${caseId}/invoices/${timestamp}_${file.name}`;
+      
+      // SESSION 76: Sanitize filename - remove Hebrew and special characters
+      const sanitizedFilename = file.name
+        .replace(/[\u0590-\u05FF]/g, '') // Remove Hebrew characters
+        .replace(/[\u200E\u200F\u202A-\u202E]/g, '') // Remove RTL/LTR marks
+        .replace(/[^\x00-\x7F]/g, '') // Remove all non-ASCII
+        .replace(/[^a-zA-Z0-9._-]/g, '_') // Replace special chars with underscore
+        .replace(/_+/g, '_') // Replace multiple underscores with single
+        .replace(/^_|_$/g, ''); // Remove leading/trailing underscores
+      
+      const filePath = `${caseId}/invoices/${timestamp}_${sanitizedFilename}`;
 
       console.log('📁 Upload path:', filePath);
+      console.log('📝 Original filename:', file.name);
+      console.log('📝 Sanitized filename:', sanitizedFilename);
       console.log('👤 User ID:', userId);
 
       // 1. Upload to Supabase Storage 'docs' bucket

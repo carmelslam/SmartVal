@@ -620,8 +620,13 @@
 
 <!-- SESSION 56: Load helper.js as regular script BEFORE module script -->
 <script src="helper.js"></script>
-<!-- SESSION 76: Load Supabase client BEFORE invoice services -->
-<script src="lib/supabaseClient.js"></script>
+<!-- SESSION 76: Load all scripts as modules to support export statements -->
+<script type="module">
+// Import Supabase client and expose globally for non-module code
+import { supabase } from './lib/supabaseClient.js';
+window.supabase = supabase;
+console.log('✅ Supabase client loaded as module and exposed globally');
+</script>
 <script src="services/invoice-service.js"></script>
 <script src="services/invoice-helper-sync.js"></script>
 <script type="module">
@@ -1364,21 +1369,21 @@ document.addEventListener('DOMContentLoaded', () => {
   
   // Auto-populate on page load
   populateVehicleDataFromHelper();
-});
-
-// SESSION 76: Toggle manual section visibility
-function toggleManualSection() {
-  const content = document.getElementById('manual-section-content');
-  const icon = document.getElementById('manual-toggle-icon');
   
-  if (content.style.display === 'none') {
-    content.style.display = 'block';
-    icon.textContent = '▲';
-  } else {
-    content.style.display = 'none';
-    icon.textContent = '▼';
-  }
-}
+  // SESSION 76: Expose toggleManualSection globally
+  window.toggleManualSection = function() {
+    const content = document.getElementById('manual-section-content');
+    const icon = document.getElementById('manual-toggle-icon');
+    
+    if (content.style.display === 'none') {
+      content.style.display = 'block';
+      icon.textContent = '▲';
+    } else {
+      content.style.display = 'none';
+      icon.textContent = '▼';
+    }
+  };
+});
 
 </script>
 <script src="password-prefill.js"></script>
