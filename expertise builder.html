@@ -1392,25 +1392,15 @@
               }
             })();
 
-            // Send all 5 webhooks sequentially for better reliability
-            console.log('📤 1/5 Sending EXPERTISE_HTML...');
+            // Send 3 essential webhooks sequentially for better reliability
+            console.log('📤 1/3 Sending EXPERTISE_HTML...');
             console.log('🔍 DEBUG: EXPERTISE_HTML payload size:', JSON.stringify(htmlPayload).length, 'characters');
             console.log('🔍 DEBUG: HTML content preview:', htmlPayload.html.substring(0, 500) + '...');
             console.log('🔍 DEBUG: HTML contains populated data?', htmlPayload.html.includes(payload.plate), htmlPayload.html.includes('דו"ח אקספרטיזה'));
             return sendToWebhook('EXPERTISE_HTML', htmlPayload)
-              .then(() => {
-                console.log('✅ 1/5 EXPERTISE_HTML sent successfully');
-                console.log('📤 2/5 Sending LAUNCH_EXPERTISE...');
-                return sendToWebhook('LAUNCH_EXPERTISE', payload);
-              })
-              .then(() => {
-                console.log('✅ 2/5 LAUNCH_EXPERTISE sent successfully');
-                console.log('📤 3/5 Sending HELPER_EXPORT...');
-                return sendToWebhook('HELPER_EXPORT', helperExportPayload);
-              })
               .then(async () => {
-                console.log('✅ 3/5 HELPER_EXPORT sent successfully');
-                console.log('📤 4/5 Sending SUBMIT_ESTIMATE_DRAFT...');
+                console.log('✅ 1/3 EXPERTISE_HTML sent successfully');
+                console.log('📤 2/3 Sending SUBMIT_ESTIMATE_DRAFT...');
 
                 // 💾 Save estimate DRAFT to Supabase BEFORE webhook
                 await saveReportDraftToSupabase('estimate', 'draft');
@@ -1434,8 +1424,8 @@
                 return sendToWebhook('SUBMIT_ESTIMATE_DRAFT', estimatePayload);
               })
               .then(async () => {
-                console.log('✅ 4/5 SUBMIT_ESTIMATE_DRAFT sent successfully');
-                console.log('📤 5/5 Sending FINAL_REPORT_DRAFT...');
+                console.log('✅ 2/3 SUBMIT_ESTIMATE_DRAFT sent successfully');
+                console.log('📤 3/3 Sending FINAL_REPORT_DRAFT...');
 
                 // 💾 Save final report DRAFT to Supabase BEFORE webhook
                 await saveReportDraftToSupabase('final_report', 'draft');
@@ -1459,14 +1449,14 @@
                 return sendToWebhook('FINAL_REPORT_DRAFT', finalReportPayload);
               })
               .then(() => {
-                console.log('✅ 5/5 FINAL_REPORT_DRAFT sent successfully');
-                console.log('🎉 All 5 webhooks sent successfully');
-                return { success: true, webhooks_sent: 5 };
+                console.log('✅ 3/3 FINAL_REPORT_DRAFT sent successfully');
+                console.log('🎉 All 3 webhooks sent successfully');
+                return { success: true, webhooks_sent: 3 };
               });
           })
           .then(() => {
             console.log('✅ All webhooks completed successfully');
-            alert('האקספירטיזה נשלחה בהצלחה! (5 webhooks sent)');
+            alert('האקספירטיזה נשלחה בהצלחה! (3 webhooks sent)');
             // Keep button disabled after successful submission
             submitButton.innerHTML = '✅ נשלח בהצלחה';
             submitButton.style.backgroundColor = '#059669';
