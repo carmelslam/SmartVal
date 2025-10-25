@@ -1244,7 +1244,39 @@
                 return `<html><body><h1>${reportType} Report - Setup Error</h1><p>Plate: ${payload.plate}</p><p>Generated: ${new Date().toLocaleString()}</p><p>Setup error: ${error.message}</p></body></html>`;
               }
             }
-            
+
+            // 💾 CRITICAL FIX: Save to Supabase BEFORE webhooks
+            // This ensures expertise reports are backed up to database
+            (async () => {
+              try {
+                const helper = window.helper || JSON.parse(sessionStorage.getItem('helper') || '{}');
+                const caseId = helper.meta?.case_id;
+                const plate = helper.car_details?.plate || helper.vehicle?.plate || payload.plate;
+
+                if (caseId && plate && window.supabase) {
+                  console.log('💾 Saving expertise to Supabase...', { caseId, plate });
+
+                  const { data, error } = await window.supabase.rpc('upsert_tracking_expertise_from_helper', {
+                    helper_json: helper,
+                    p_case_id: caseId,
+                    p_plate: plate?.replace(/-/g, '')
+                  });
+
+                  if (error) {
+                    console.error('❌ Supabase save failed:', error);
+                    console.warn('⚠️ Expertise will still be sent to Make.com webhooks');
+                  } else {
+                    console.log('✅ Expertise saved to Supabase successfully');
+                  }
+                } else {
+                  console.warn('⚠️ Missing case_id or plate - skipping Supabase save');
+                }
+              } catch (error) {
+                console.error('❌ Error saving expertise to Supabase:', error);
+                console.warn('⚠️ Continuing with webhooks despite Supabase error');
+              }
+            })();
+
             // Send all 5 webhooks sequentially for better reliability
             console.log('📤 1/5 Sending EXPERTISE_HTML...');
             console.log('🔍 DEBUG: EXPERTISE_HTML payload size:', JSON.stringify(htmlPayload).length, 'characters');

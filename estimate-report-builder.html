@@ -2274,7 +2274,37 @@
           report_type: 'estimate',
           date: new Date().toISOString()
         };
-        
+
+        // 💾 CRITICAL FIX: Save to Supabase BEFORE webhook
+        // This ensures estimates are backed up to database
+        try {
+          const caseId = helper.meta?.case_id;
+          const plate = helper.estimate?.vehicle?.plateNumber || helper.vehicle?.plate_number || helper.car_details?.plate || helper.meta?.plate;
+
+          if (caseId && plate && window.supabase) {
+            console.log('💾 Saving estimate to Supabase...', { caseId, plate });
+
+            const { data, error } = await window.supabase.rpc('upsert_tracking_final_report_from_helper', {
+              helper_json: helper,
+              p_case_id: caseId,
+              p_plate: plate?.replace(/-/g, ''),
+              p_report_type: 'estimate'
+            });
+
+            if (error) {
+              console.error('❌ Supabase save failed:', error);
+              console.warn('⚠️ Estimate will still be sent to Make.com webhook');
+            } else {
+              console.log('✅ Estimate saved to Supabase successfully');
+            }
+          } else {
+            console.warn('⚠️ Missing case_id or plate - skipping Supabase save');
+          }
+        } catch (supabaseError) {
+          console.error('❌ Error saving estimate to Supabase:', supabaseError);
+          console.warn('⚠️ Continuing with webhook despite Supabase error');
+        }
+
         // Send to webhook with correct parameter order: (id, payload)
         const result = await sendToWebhook('SUBMIT_ESTIMATE', payload);
         
