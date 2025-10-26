@@ -467,6 +467,58 @@ const supabase = {
           };
         },
 
+        createSignedUrl: async (path, expiresIn = 3600) => {
+          try {
+            const url = `${supabaseUrl}/storage/v1/object/sign/${bucketName}/${path}`;
+
+            // Get user session token for signed URLs
+            const authData = sessionStorage.getItem('auth');
+            const accessToken = authData ? JSON.parse(authData).session?.access_token : null;
+
+            console.log(`🔐 Creating signed URL for: ${bucketName}/${path}`);
+
+            const response = await fetch(url, {
+              method: 'POST',
+              headers: {
+                'apikey': supabaseAnonKey,
+                'Authorization': `Bearer ${accessToken || supabaseAnonKey}`,
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({ expiresIn })
+            });
+
+            if (!response.ok) {
+              const errorText = await response.text();
+              console.error(`❌ SESSION 29: Signed URL error ${response.status}:`, errorText);
+              return {
+                data: null,
+                error: {
+                  message: `Signed URL failed: ${response.status} ${errorText}`,
+                  code: response.status.toString()
+                }
+              };
+            }
+
+            const data = await response.json();
+            const signedUrl = `${supabaseUrl}/storage/v1${data.signedURL}`;
+
+            console.log('✅ SESSION 29: Signed URL created');
+            return {
+              data: { signedUrl },
+              error: null
+            };
+          } catch (error) {
+            console.error('❌ SESSION 29: Signed URL error:', error);
+            return {
+              data: null,
+              error: {
+                message: error.message,
+                code: 'SIGNED_URL_ERROR'
+              }
+            };
+          }
+        },
+
         download: async (path) => {
           try {
             const url = `${supabaseUrl}/storage/v1/object/${bucketName}/${path}`;
