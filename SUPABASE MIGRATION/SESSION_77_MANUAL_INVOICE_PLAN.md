@@ -5,6 +5,374 @@
 **Status:** Planning Phase - Awaiting User Approval
 
 ---
+task description :
+
+Create a manual invoice input form for Hebrew automotive repair invoices that mirrors the automated webhook data structure. This form is a fallback when OCR processing is unavailable.
+
+**CONTEXT:**
+This form integrates with an existing invoice processing system that uses:
+- Google Vision OCR → Claude Opus → Claude Sonnet → Parse JSON → Webhook
+- SessionStorage helper object for data flow between modules
+- Supabase database for persistence
+- Hebrew language with RTL support
+
+**AUTOMATED WEBHOOK OUTPUT STRUCTURE (to mirror):**
+
+The automated system produces this structure:
+```
+{
+  "מספר רכב": "698-42-003",
+  "יצרן": "טויוטה",
+  "דגם": "C-HR LOUNGE S",
+  "שנת ייצור": "",
+  "מד אוץ": "34970",
+  "בעל הרכב": "שרה חסון",
+  "מספר תיק": "839",
+  "תאריך": "15/04/25",
+  "מס. חשבונית": "6",
+  "שם מוסך": "מוסך ש.מ קוסמטיקאר בע\"מ",
+  "דוא"ל מוסך": "sh.m kosmtekar@walla.com",
+  "טלפון מוסך": "053-2344434 04-840960",
+  "כתובת מוסך": "ניו יורק 1 דאלית אל כרמל",
+  "מוקד נזק": "מגן אחורי",
+  "סהכ חלקים": "18724.00",
+  "סהכ עבודות": "4120.00",
+  "סהכ תיקונים": "0",
+  "עלות כוללת ללא מע״מ": "22844.00",
+  "מע"מ": "18%",
+  "ערך מע"מ": "4111.92",
+  "עלות כוללת": "26955.92",
+  "הערות": "",
+  "לינק": "",
+  "חלקים": [
+    {
+      "מק"ט חלק": "1-004-52159F913",
+      "שם חלק": "מגן אחורי עליון",
+      "תיאור": "מגן אחורי עליון",
+      "כמות": "1",
+      "מקור": "מקורי",
+      "עלות": "8239.00"
+    }
+  ],
+  "עבודות": [
+    {
+      "סוג העבודה": "KM",
+      "תיאור עבודות": "פחחות",
+      "עלות עבודות": "1320.00"
+    }
+  ],
+  "תיקונים": [],
+  "ח.פ.": "517109013",
+  "source": "manual_input",
+  "processed_at": "ISO_TIMESTAMP"
+}
+```
+
+**REQUIREMENTS:**
+
+**1. FORM STRUCTURE:**
+
+Create a single HTML file with embedded JavaScript and CSS containing:
+
+**Header Section:**
+- Title: "הזנת חשבונית ידנית" (Manual Invoice Input)
+- Visual indicator badge: "קלט ידני" in distinctive color
+- Save button (fixed at top or bottom)
+
+**Fixed Fields Section (Required):**
+Hebrew labels with RTL support:
+- מספר רכב (Vehicle number)
+- יצרן (Manufacturer)
+- דגם (Model)
+- שנת ייצור (Production year)
+- מד אוץ (Odometer)
+- בעל הרכב (Owner name) *
+- מספר תיק (File number)
+- תאריך (Date - dd/mm/yy format) *
+- מס. חשבונית (Invoice number) *
+- שם מוסך (Garage name) *
+- דוא"ל מוסך (Garage email)
+- טלפון מוסך (Garage phone) *
+- כתובת מוסך (Garage address)
+- מוקד נזק (Damage area)
+- הערות (Notes)
+- ח.פ. (Company number)
+
+Fields marked * are required for save.
+
+**Dynamic Categories Section:**
+
+Three collapsible category blocks (start with all three visible):
+
+**1. חלקים (Parts):**
+Each item row has:
+- מק"ט חלק (Part code) - text input
+- שם חלק (Part name) - text input, RTL
+- תיאור (Description) - text input, RTL
+- כמות (Quantity) - number input
+- מקור (Source) - dropdown: מקורי/תחליפי/אחר
+- עלות (Cost) - number input, auto-format to 2 decimals
+- Remove row button (×)
+
+Footer:
+- "+ הוסף חלק" button
+- "סהכ חלקים:" (Parts total) - calculated, read-only, highlighted
+
+**2. עבודות (Works):**
+Each item row has:
+- סוג העבודה (Work type/code) - text input
+- תיאור עבודות (Work description) - text input, RTL
+- עלות עבודות (Work cost) - number input, auto-format to 2 decimals
+- Remove row button (×)
+
+Footer:
+- "+ הוסף עבודה" button
+- "סהכ עבודות:" (Works total) - calculated, read-only, highlighted
+
+**3. תיקונים (Repairs):**
+Each item row has:
+- סוג תיקון (Repair type) - text input
+- תיאור התיקון (Repair description) - text input, RTL
+- עלות תיקונים (Repair cost) - number input, auto-format to 2 decimals
+- Remove row button (×)
+
+Footer:
+- "+ הוסף תיקון" button
+- "סהכ תיקונים:" (Repairs total) - calculated, read-only, highlighted
+
+**Grand Totals Section (Bottom):**
+All calculated, read-only, prominently displayed:
+- עלות כוללת ללא מע״מ (Subtotal before VAT) = sum of all category totals
+- מע"מ (VAT %) - default 18%, editable
+- ערך מע"מ (VAT amount) = subtotal × (VAT% / 100)
+- עלות כוללת (Total with VAT) = subtotal + VAT amount
+- Format all amounts with ₪ symbol and thousand separators
+
+**Signature Section:**
+- "מולא על ידי:" (Filled by) - auto-fill from user context or input field
+- "תאריך:" (Date) - auto-fill with current date
+- "מקור: קלט ידני" (Source: Manual input) - static text
+
+**2. CALCULATION LOGIC:**
+
+Real-time calculations (no refresh needed):
+- Category totals update when any item cost changes
+- Grand totals update when any category total changes
+- VAT amount updates when subtotal or VAT% changes
+- Use debounced event listeners (300ms delay) for performance
+- All numbers stored as strings in format "1234.00" (2 decimals, no commas)
+
+**3. DATA FLOW & SAVE MECHANISM:**
+
+**On Save Button Click:**
+
+Step 1: Validate required fields (marked with *)
+- Show error message if validation fails
+- Highlight missing required fields in red
+
+Step 2: Build data object matching webhook structure exactly:
+```javascript
+const invoiceData = {
+  // Fixed fields
+  "מספר רכב": getValue("vehicle_number"),
+  "יצרן": getValue("manufacturer"),
+  "דגם": getValue("model"),
+  // ... all fields
+  
+  // Category arrays
+  "חלקים": getPartsArray(),
+  "עבודות": getWorksArray(),
+  "תיקונים": getRepairsArray(),
+  
+  // Totals
+  "סהכ חלקים": calculatePartsTotal(),
+  "סהכ עבודות": calculateWorksTotal(),
+  "סהכ תיקונים": calculateRepairsTotal(),
+  "עלות כוללת ללא מע״מ": calculateSubtotal(),
+  "מע"מ": getVATPercent() + "%",
+  "ערך מע"מ": calculateVATAmount(),
+  "עלות כוללת": calculateTotal(),
+  
+  // Metadata
+  "source": "manual_input",
+  "processed_at": new Date().toISOString()
+};
+```
+
+Step 3: Save to sessionStorage helper object:
+```javascript
+const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+helper.manualInvoice = invoiceData;
+sessionStorage.setItem('helper', JSON.stringify(helper));
+```
+
+Step 4: Save to Supabase (provide placeholder for table name):
+```javascript
+// Supabase client initialization code here
+// Insert to table: [SPECIFY_TABLE_NAME]
+```
+
+Step 5: Show success/error feedback
+- Green checkmark + "נשמר בהצלחה" (Saved successfully)
+- Or red X + error message
+
+**4. TECHNICAL SPECIFICATIONS:**
+
+**File Structure:**
+- Single HTML file: `manual_invoice_input.html`
+- Embedded CSS in `<style>` tags
+- Embedded JavaScript in `<script>` tags
+- No external dependencies (vanilla JS only)
+
+**Key JavaScript Functions to Include:**
+```javascript
+// Data manipulation
+function addPartRow() { }
+function addWorkRow() { }
+function addRepairRow() { }
+function removeRow(rowId) { }
+
+// Calculations
+function calculateCategoryTotal(category) { }
+function calculateSubtotal() { }
+function calculateVATAmount() { }
+function calculateTotal() { }
+
+// Data collection
+function collectFormData() { }
+function getPartsArray() { }
+function getWorksArray() { }
+function getRepairsArray() { }
+
+// Validation
+function validateRequiredFields() { }
+function highlightErrors(fieldIds) { }
+
+// Save operations
+function saveToHelper(data) { }
+function saveToSupabase(data) { }
+function handleSave() { }
+
+// UI feedback
+function showSuccessMessage() { }
+function showErrorMessage(msg) { }
+```
+
+**CSS Requirements:**
+- RTL support for Hebrew text inputs
+- LTR for number inputs
+- Responsive design (mobile-friendly)
+- Clear visual hierarchy
+- Highlighted calculated fields (light blue background, read-only)
+- Required field indicators (red asterisk)
+- Collapsible sections with smooth animations
+- Professional invoice-like appearance
+
+**Hebrew/RTL Support:**
+```css
+body {
+  direction: rtl;
+  text-align: right;
+  font-family: 'Arial', sans-serif;
+}
+
+input[type="number"] {
+  direction: ltr;
+  text-align: left;
+}
+
+.calculated-field {
+  background-color: #e3f2fd;
+  cursor: not-allowed;
+}
+```
+
+**5. USER EXPERIENCE:**
+
+**On Page Load:**
+- Display all three category sections
+- Each category starts with 1 empty row
+- Focus on first required field
+- Load existing data from helper if available (edit mode)
+
+**Add Row Behavior:**
+- Clicking "+ הוסף חלק" adds new row to Parts
+- New row appears below existing rows
+- Focus moves to first input of new row
+- Smooth slide-in animation
+
+**Remove Row Behavior:**
+- Shows confirmation if row has data
+- Removes row with fade-out animation
+- Recalculates category total immediately
+
+**Real-time Feedback:**
+- Category totals update as user types (debounced)
+- Grand totals update when categories change
+- Number inputs auto-format on blur (1234.56 format)
+- Invalid inputs show red border
+
+**6. INTEGRATION WITH EXISTING SYSTEM:**
+
+The form must integrate with:
+- Helper object in sessionStorage (existing structure)
+- Supabase database (provide connection template)
+- Other modules that consume invoice data (damage centers wizard, final report builder)
+
+**Helper Object Integration:**
+Check on load if helper.manualInvoice exists:
+- If yes: populate form for editing
+- If no: start with empty form
+
+**Data Consistency:**
+Manual entries must be indistinguishable from automated entries in downstream modules, except for the "source" field.
+
+**7. ERROR HANDLING:**
+
+Handle these scenarios gracefully:
+- Network failure on Supabase save → show retry button
+- Invalid number formats → highlight field, show format hint
+- Required fields empty → prevent save, show which fields needed
+- sessionStorage full → show warning
+- Hebrew character encoding issues → ensure UTF-8
+
+**8. ADDITIONAL FEATURES:**
+
+**Optional but helpful:**
+- "נקה טופס" (Clear form) button with confirmation
+- "שכפל שורה" (Duplicate row) for repeated items
+- Export to JSON button for debugging
+- Print-friendly CSS
+- Keyboard shortcuts (Ctrl+S to save, Ctrl+Enter to add row)
+
+**DELIVERABLES:**
+
+1. Single HTML file with complete functionality
+2. Inline comments explaining key sections
+3. Brief usage instructions in Hebrew (as HTML comment at top)
+4. Sample data object showing expected output format
+5. Placeholder for Supabase connection details (to be filled by user)
+
+**TESTING CHECKLIST:**
+
+Before delivery, verify:
+- ✓ All calculations work correctly
+- ✓ Hebrew text displays properly (RTL)
+- ✓ Required field validation works
+- ✓ Data structure matches webhook format exactly
+- ✓ sessionStorage save/load works
+- ✓ Mobile responsive
+- ✓ No console errors
+
+**CONSTRAINTS:**
+- No external libraries (vanilla JS/CSS/HTML only)
+- Must work in modern browsers (Chrome, Firefox, Safari, Edge)
+- File size under 100KB
+- Accessible (keyboard navigation, screen reader friendly)
+
+Start by creating the HTML structure, then add JavaScript functionality, then styling. Test thoroughly with sample data before delivery.
+
+claude's paln:
 
 ## 📋 OVERVIEW
 
