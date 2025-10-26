@@ -1151,9 +1151,12 @@ class InvoiceProcessor {
         </div>
         
         ${this.currentDocumentId ? `
-        <div style="margin-top: 15px; text-align: center;">
+        <div style="margin-top: 15px; text-align: center; display: flex; gap: 10px; justify-content: center;">
           <button onclick="window.invoiceProcessor.viewInvoicePDF()" class="btn" style="background: rgba(255,255,255,0.9); color: #667eea; padding: 10px 20px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold;">
-            📄 צפה בחשבונית המקורית
+            📄 צפה בחשבונית
+          </button>
+          <button onclick="window.invoiceProcessor.saveEditsToHelper()" class="btn" style="background: rgba(34,197,94,0.9); color: white; padding: 10px 20px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold;">
+            ✏️ שמור עריכות
           </button>
         </div>
         ` : ''}
@@ -1218,13 +1221,16 @@ class InvoiceProcessor {
       
       // Update total display
       const row = field.closest('tr');
-      const totalCell = row.querySelector('.total-cell');
+      const totalCell = row.querySelector('td:nth-last-child(2)'); // Total is 2nd from end
       const quantity = parseFloat(row.querySelector('[data-field="quantity"]').value) || 0;
       const unitPrice = parseFloat(row.querySelector('[data-field="unit_price"]').value) || 0;
-      totalCell.textContent = `₪${quantity * unitPrice}`;
+      totalCell.textContent = `₪${(quantity * unitPrice).toLocaleString()}`;
       
       // Update overall totals
       this.updateOverallTotals();
+      
+      // SESSION 79: Mark as edited
+      this.hasUnsavedEdits = true;
     }
   }
 
@@ -1234,7 +1240,7 @@ class InvoiceProcessor {
     
     this.ocrResults.forEach(item => {
       const lineTotal = (item.quantity || 1) * (item.unit_price || 0);
-      const category = this.categorizeItem(item.name || item.description || '');
+      const category = item.category || this.categorizeItem(item.name || item.description || '');
       
       if (category === 'PART') totalParts += lineTotal;
       else if (category === 'WORK') totalWorks += lineTotal;
@@ -1244,11 +1250,8 @@ class InvoiceProcessor {
     
     const total = totalParts + totalWorks + totalRepairs + totalOther;
     
-    // Update summary total display
-    const totalElement = document.getElementById('summary-total');
-    if (totalElement) {
-      totalElement.innerHTML = `סה"כ לתשלום<br><span style="font-size: 28px; font-weight: bold;">₪${total.toFixed(2)}</span>`;
-    }
+    // Update summary total display - this won't exist in the DOM, just track internally
+    console.log('📊 Updated totals - Parts:', totalParts, 'Works:', totalWorks, 'Repairs:', totalRepairs, 'Total:', total);
   }
   
   // SESSION 76: Categorize invoice items
@@ -1346,11 +1349,127 @@ class InvoiceProcessor {
   removeItem(index) {
     if (confirm('האם למחוק פריט זה?')) {
       this.ocrResults.splice(index, 1);
-      this.displayOCRResults({
+      this.displayOCRResults(this.lastOCRResult || {
         items: this.ocrResults,
         total: this.ocrResults.reduce((sum, item) => sum + (item.quantity * item.unit_price), 0)
       });
+      this.hasUnsavedEdits = true;
       this.showAlert('פריט הוסר', 'success');
+    }
+  }
+
+  // SESSION 79: Save edits back to helper.invoices and Supabase
+  async saveEditsToHelper() {
+    try {
+      console.log('💾 Saving edits to helper and Supabase...');
+      
+      if (!this.hasUnsavedEdits) {
+        this.showAlert('אין שינויים לשמירה', 'info');
+        return;
+      }
+      
+      // Update lastOCRResult with edited items
+      if (this.lastOCRResult) {
+        // Rebuild parts, works, repairs arrays from edited ocrResults
+        const parts = this.ocrResults.filter(item => item.category === 'PART');
+        const works = this.ocrResults.filter(item => item.category === 'WORK');
+        const repairs = this.ocrResults.filter(item => item.category === 'REPAIR');
+        
+        // Map back to Hebrew structure
+        this.lastOCRResult['חלקים'] = parts.map(item => ({
+          'שם חלק': item.name,
+          'תיאור': item.description,
+          'כמות': String(item.quantity),
+          'עלות': String(item.unit_price)
+        }));
+        
+        this.lastOCRResult['עבודות'] = works.map(item => ({
+          'סוג העבודה': item.name,
+          'תיאור עבודות': item.description,
+          'עלות עבודות': String(item.unit_price)
+        }));
+        
+        this.lastOCRResult['תיקונים'] = repairs.map(item => ({
+          'סוג תיקון': item.name,
+          'תיאור התיקון': item.description,
+          'עלות תיקונים': String(item.unit_price)
+        }));
+        
+        // Recalculate totals
+        const partsTotal = parts.reduce((sum, item) => sum + (item.quantity * item.unit_price), 0);
+        const worksTotal = works.reduce((sum, item) => sum + (item.quantity * item.unit_price), 0);
+        const repairsTotal = repairs.reduce((sum, item) => sum + (item.quantity * item.unit_price), 0);
+        
+        this.lastOCRResult['סהכ חלקים'] = partsTotal.toLocaleString();
+        this.lastOCRResult['סהכ עבודות'] = worksTotal.toLocaleString();
+        this.lastOCRResult['סהכ תיקונים'] = repairsTotal.toLocaleString();
+      }
+      
+      // Update helper.invoices
+      const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+      if (helper.invoices && helper.invoices.length > 0) {
+        const invoiceNumber = this.lastOCRResult?.['מס. חשבונית'] || this.lastOCRResult?.invoice_number;
+        const invoiceIndex = helper.invoices.findIndex(inv => {
+          const invNum = inv['מס. חשבונית'] || inv.invoice_number;
+          return invNum === invoiceNumber;
+        });
+        
+        if (invoiceIndex >= 0) {
+          helper.invoices[invoiceIndex] = this.lastOCRResult;
+          sessionStorage.setItem('helper', JSON.stringify(helper));
+          console.log('✅ Updated helper.invoices');
+        }
+      }
+      
+      // Update Supabase if invoice was saved
+      if (this.currentInvoiceId && this.invoiceService) {
+        const lines = this.ocrResults.map((item, index) => ({
+          line_number: index + 1,
+          description: item.name || item.description || '',
+          quantity: item.quantity || 1,
+          unit_price: item.unit_price || 0,
+          line_total: (item.quantity || 1) * (item.unit_price || 0)
+        }));
+        
+        // Delete old lines and insert new ones
+        const { error: deleteError } = await window.supabase
+          .from('invoice_lines')
+          .delete()
+          .eq('invoice_id', this.currentInvoiceId);
+        
+        if (deleteError) throw deleteError;
+        
+        const linesInsert = lines.map(line => ({
+          invoice_id: this.currentInvoiceId,
+          line_number: line.line_number,
+          description: line.description,
+          quantity: line.quantity,
+          unit_price: line.unit_price,
+          line_total: line.line_total,
+          discount_percent: 0
+        }));
+        
+        const { error: insertError } = await window.supabase
+          .from('invoice_lines')
+          .insert(linesInsert);
+        
+        if (insertError) throw insertError;
+        
+        console.log('✅ Updated Supabase invoice_lines');
+      }
+      
+      // Update OCR data in invoice_documents
+      if (this.currentDocumentId && this.lastOCRResult) {
+        await this.invoiceService.updateOCRResults(this.currentDocumentId, this.lastOCRResult);
+        console.log('✅ Updated invoice_documents.ocr_structured_data');
+      }
+      
+      this.hasUnsavedEdits = false;
+      this.showAlert('✅ השינויים נשמרו בהצלחה', 'success');
+      
+    } catch (error) {
+      console.error('❌ Error saving edits:', error);
+      this.showAlert('❌ שגיאה בשמירת השינויים', 'error');
     }
   }
 
