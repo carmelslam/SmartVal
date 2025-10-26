@@ -551,12 +551,12 @@
       <table class="results-table" id="results-table">
         <thead>
           <tr>
-            <th>פריט</th>
+            <th style="width: 100px;">קוד</th>
             <th>תיאור</th>
-            <th>כמות</th>
-            <th>מחיר יחידה</th>
-            <th>סה"כ</th>
-            <th>פעולות</th>
+            <th style="width: 60px;">כמות</th>
+            <th style="width: 80px;">מחיר יחידה</th>
+            <th style="width: 85px;">סה"כ</th>
+            <th style="width: 70px;">פעולות</th>
           </tr>
         </thead>
         <tbody id="results-body">
@@ -1189,7 +1189,7 @@ class InvoiceProcessor {
         const row = document.createElement('tr');
         row.style.background = '#64748b';
         row.innerHTML = `
-          <td style="padding: 4px 6px;"><input type="text" value="${item.name || ''}" data-field="name" data-index="${globalIndex}" class="result-field" style="width: 100%; padding: 4px 6px; font-size: 11px; color: #000; border: 1px solid #94a3b8; border-radius: 3px; background: #fff;"></td>
+          <td style="padding: 4px 6px; width: 100px;"><input type="text" value="${item.name || ''}" data-field="name" data-index="${globalIndex}" class="result-field" style="width: 100%; padding: 4px 6px; font-size: 11px; color: #000; border: 1px solid #94a3b8; border-radius: 3px; background: #fff;"></td>
           <td style="padding: 4px 6px;"><input type="text" value="${item.description || ''}" data-field="description" data-index="${globalIndex}" class="result-field" style="width: 100%; padding: 4px 6px; font-size: 11px; color: #000; border: 1px solid #94a3b8; border-radius: 3px; background: #fff;"></td>
           <td style="padding: 4px 6px; width: 60px;"><input type="number" value="${item.quantity || 1}" data-field="quantity" data-index="${globalIndex}" class="result-field" min="1" style="width: 100%; padding: 4px; font-size: 11px; color: #000; border: 1px solid #94a3b8; border-radius: 3px; background: #fff; text-align: center;"></td>
           <td style="padding: 4px 6px; width: 80px;"><input type="number" value="${item.unit_price || 0}" data-field="unit_price" data-index="${globalIndex}" class="result-field" step="0.01" style="width: 100%; padding: 4px; font-size: 11px; color: #000; border: 1px solid #94a3b8; border-radius: 3px; background: #fff; text-align: center;"></td>
@@ -1587,6 +1587,53 @@ class InvoiceProcessor {
                 console.log('✅ Document linked to invoice successfully');
               }
             }
+            
+            // SESSION 79: Create validation record and send to Drive webhook
+            const userId = this.invoiceService?.currentUser?.user_id;
+            if (userId && this.currentInvoiceId) {
+              // Create invoice validation record
+              const { error: validationError } = await window.supabase
+                .from('invoice_validations')
+                .insert({
+                  invoice_id: this.currentInvoiceId,
+                  reviewed_by: userId,
+                  validation_status: 'approved',
+                  reviewed_at: new Date().toISOString()
+                });
+              
+              if (validationError) {
+                console.error('❌ Failed to create validation:', validationError);
+              } else {
+                console.log('✅ Validation record created');
+              }
+              
+              // Get PDF URL
+              const pdfUrl = this.currentDocumentId ? 
+                await this.invoiceService.getInvoiceDocumentURL(this.currentDocumentId) : null;
+              
+              // Generate case filing ID: YC-PLATE-YEAR
+              const year = new Date().getFullYear();
+              const caseFilingId = `YC-${plate}-${year}`;
+              
+              // Send to SAVE_INVOICE_TO_DRIVE webhook
+              const webhookPayload = {
+                plate: plate,
+                case_filing_id: caseFilingId,
+                pdf_url: pdfUrl,
+                invoice_id: this.currentInvoiceId,
+                case_id: caseId,
+                invoice_number: invoiceData.invoice_number,
+                supplier_name: invoiceData.supplier_name,
+                total_amount: invoiceData.total_amount
+              };
+              
+              console.log('📤 Sending to SAVE_INVOICE_TO_DRIVE webhook:', webhookPayload);
+              
+              const { sendToWebhook } = await import('./webhook.js');
+              await sendToWebhook('SAVE_INVOICE_TO_DRIVE', webhookPayload);
+              
+              console.log('✅ Invoice sent to Drive');
+            }
           }
         } catch (supabaseError) {
           console.error('❌ Supabase save failed:', supabaseError);
@@ -1600,10 +1647,7 @@ class InvoiceProcessor {
       // This preserves all Hebrew fields: חלקים, עבודות, תיקונים, etc.
       this.updateHelperWithResults(this.lastOCRResult || resultData);
       
-      // SESSION 79: Skip webhook - not needed, data already in Supabase
-      // await sendToWebhook('SAVE_INVOICE_RESULTS', resultData);
-      
-      this.showAlert('✅ חשבונית נשמרה בהצלחה', 'success');
+      this.showAlert('✅ חשבונית נשמרה ונשלחה ל-Drive', 'success');
       
     } catch (error) {
       console.error('Save error:', error);

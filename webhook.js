@@ -19,6 +19,7 @@ SAVE_EXPERTISE_SUMMARY: 'https://hook.eu2.make.com/ysj95d4nk7igro19k0dgi4mj0p9ue
 FINAL_REPORT_DRAFT: 'https://hook.eu2.make.com/j5qb0obvpa6maab9j4a7t71o70brqdfp',
   SUBMIT_FINAL_REPORT: 'https://hook.eu2.make.com/humgj4nyifchtnivuatdrh6u9slj8xrh',
   OCR_INVOICES: 'https://hook.eu2.make.com/9xs0avqydq7uyq944189dyt584ccknmh',
+  SAVE_INVOICE_TO_DRIVE: 'https://hook.eu2.make.com/nrqbicadvl9i6ade41b2wg7eevt2zjie',
   FILL_FINAL_REPORT: 'https://hook.eu2.make.com/bd81gxcw37qavq62avte893czvgjuwr5',
 
   SEARCH_MODULE: 'https://hook.eu2.make.com/n3bbnj3izbymrmq6baj0vgaqhhin9fmd',
