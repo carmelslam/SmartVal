@@ -404,9 +404,13 @@ const supabase = {
             const formData = new FormData();
             formData.append('file', file);
 
+            // Get user session token for authenticated uploads
+            const authData = sessionStorage.getItem('auth');
+            const accessToken = authData ? JSON.parse(authData).session?.access_token : null;
+
             const headers = {
               'apikey': supabaseAnonKey,
-              'Authorization': `Bearer ${supabaseAnonKey}`
+              'Authorization': `Bearer ${accessToken || supabaseAnonKey}`  // Use user token if logged in
             };
 
             if (options.contentType) {
@@ -466,10 +470,15 @@ const supabase = {
         download: async (path) => {
           try {
             const url = `${supabaseUrl}/storage/v1/object/${bucketName}/${path}`;
+
+            // Get user session token for authenticated downloads
+            const authData = sessionStorage.getItem('auth');
+            const accessToken = authData ? JSON.parse(authData).session?.access_token : null;
+
             const response = await fetch(url, {
               headers: {
                 'apikey': supabaseAnonKey,
-                'Authorization': `Bearer ${supabaseAnonKey}`
+                'Authorization': `Bearer ${accessToken || supabaseAnonKey}`
               }
             });
 
@@ -501,11 +510,16 @@ const supabase = {
         remove: async (paths) => {
           try {
             const url = `${supabaseUrl}/storage/v1/object/${bucketName}`;
+
+            // Get user session token for authenticated deletes
+            const authData = sessionStorage.getItem('auth');
+            const accessToken = authData ? JSON.parse(authData).session?.access_token : null;
+
             const response = await fetch(url, {
               method: 'DELETE',
               headers: {
                 'apikey': supabaseAnonKey,
-                'Authorization': `Bearer ${supabaseAnonKey}`,
+                'Authorization': `Bearer ${accessToken || supabaseAnonKey}`,
                 'Content-Type': 'application/json'
               },
               body: JSON.stringify({ prefixes: paths })
