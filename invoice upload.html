@@ -959,16 +959,27 @@ class InvoiceProcessor {
     // Webhook returns: { חלקים: [], עבודות: [], תיקונים: [] }
     // Need to combine into flat items array for UI
     
+    // SESSION 79 FIX: Store OCR result for use in saveResults()
+    this.lastOCRResult = result;
+    
     const parts = result.חלקים || result.parts || [];
     const works = result.עבודות || result.works || [];
     const repairs = result.תיקונים || result.repairs || [];
+    
+    // SESSION 79 FIX: Helper function to parse prices with comma separators
+    const parsePrice = (value) => {
+      if (!value) return 0;
+      const strValue = String(value).replace(/,/g, ''); // Remove commas
+      const parsed = parseFloat(strValue);
+      return isNaN(parsed) ? 0 : parsed;
+    };
     
     // Convert parts to items format
     const partItems = parts.map(part => ({
       name: part['שם חלק'] || part.name || part['תיאור'] || part.description,
       description: part['תיאור'] || part.description || part['מק"ט חלק'] || '',
-      quantity: parseFloat(part['כמות'] || part.quantity || 1),
-      unit_price: parseFloat(part['עלות'] || part.price || part.unit_price || 0),
+      quantity: parsePrice(part['כמות'] || part.quantity || 1),
+      unit_price: parsePrice(part['עלות'] || part.price || part.unit_price),
       category: 'PART'
     }));
     
@@ -977,7 +988,7 @@ class InvoiceProcessor {
       name: work['סוג העבודה'] || work['תיאור עבודות'] || work.name || work.description,
       description: work['תיאור עבודות'] || work.description || '',
       quantity: 1,
-      unit_price: parseFloat(work['עלות עבודות'] || work.price || work.unit_price || 0),
+      unit_price: parsePrice(work['עלות עבודות'] || work.price || work.unit_price),
       category: 'WORK'
     }));
     
@@ -986,7 +997,7 @@ class InvoiceProcessor {
       name: repair['סוג תיקון'] || repair['תיאור התיקון'] || repair.name || repair.description,
       description: repair['תיאור התיקון'] || repair.description || '',
       quantity: 1,
-      unit_price: parseFloat(repair['עלות תיקונים'] || repair.price || repair.unit_price || 0),
+      unit_price: parsePrice(repair['עלות תיקונים'] || repair.price || repair.unit_price),
       category: 'REPAIR'
     })).filter(item => item.unit_price > 0); // Filter out "אין מידע" entries
     
@@ -1345,16 +1356,28 @@ class InvoiceProcessor {
       // SESSION 74: Save to Supabase if case ID exists
       if (caseId && this.invoiceService) {
         try {
+          // SESSION 79 FIX: Helper function to parse prices with comma separators
+          const parsePrice = (value) => {
+            if (!value) return null;
+            const strValue = String(value).replace(/,/g, ''); // Remove commas
+            const parsed = parseFloat(strValue);
+            return isNaN(parsed) ? null : parsed;
+          };
+          
+          // SESSION 79 FIX: Use OCR data for invoice header, not form fields
+          const ocrResult = this.lastOCRResult || {};
+          
           // SESSION 79: Prepare invoice data - match actual schema
           // invoice_type must be: 'PARTS', 'LABOR', 'TOWING', 'OTHER'
           const invoiceData = {
             plate: plate,
-            invoice_number: `INV-${Date.now()}`, // Generate unique number
-            supplier_name: document.getElementById('garage_name').value,
+            invoice_number: ocrResult['מס. חשבונית'] || ocrResult.invoice_number || `INV-${Date.now()}`,
+            supplier_name: ocrResult['שם מוסך'] || document.getElementById('garage_name').value || 'לא צוין',
+            supplier_tax_id: ocrResult['עוסק מורשה'] || null,
             invoice_type: 'OTHER', // Default to OTHER (mixed invoice)
-            total_amount: resultData.total,
-            total_before_tax: null, // TODO: Calculate from items
-            tax_amount: null, // TODO: Calculate VAT
+            total_amount: parsePrice(ocrResult['עלות כוללת']) || resultData.total,
+            total_before_tax: parsePrice(ocrResult['עלות כוללת ללא מע״מ']),
+            tax_amount: parsePrice(ocrResult['מע"מ']),
             status: 'DRAFT'
           };
           
@@ -1406,8 +1429,8 @@ class InvoiceProcessor {
       // Save to helper system (backward compatibility)
       this.updateHelperWithResults(resultData);
       
-      // Send to webhook for processing
-      await sendToWebhook('SAVE_INVOICE_RESULTS', resultData);
+      // SESSION 79: Skip webhook - not needed, data already in Supabase
+      // await sendToWebhook('SAVE_INVOICE_RESULTS', resultData);
       
       this.showAlert('✅ חשבונית נשמרה בהצלחה', 'success');
       
