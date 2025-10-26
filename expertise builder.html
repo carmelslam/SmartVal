@@ -1408,14 +1408,11 @@
                   console.log('✅ PDF uploaded to storage:', publicUrl);
 
                   // 🔧 FIX: Transform helper structure for SQL function
-                  // SQL expects helper.damage_assessment.centers but data is at helper.centers
+                  // SQL expects helper.centers at TOP LEVEL (not damage_assessment.centers)
                   const centersData = helper.centers || helper.damage_centers || [];
                   const helperForSupabase = {
                     ...helper,
-                    damage_assessment: {
-                      ...helper.damage_assessment,
-                      centers: centersData
-                    }
+                    centers: centersData  // Put centers at top level for SQL
                   };
 
                   console.log('🔍 DEBUG: Calling RPC with parameters:', {
@@ -1425,6 +1422,16 @@
                     centers_source: helper.centers ? 'helper.centers' : helper.damage_centers ? 'helper.damage_centers' : 'none',
                     pdf_url: publicUrl
                   });
+
+                  // 🔍 DEBUG: Log first center structure to verify field names
+                  if (centersData.length > 0) {
+                    console.log('🔍 DEBUG: First center structure:', JSON.stringify(centersData[0], null, 2));
+                    console.log('🔍 DEBUG: First center Location:', centersData[0]?.Location);
+                    console.log('🔍 DEBUG: First center Description:', centersData[0]?.Description);
+                    console.log('🔍 DEBUG: First center Parts:', centersData[0]?.Parts);
+                  }
+
+                  console.log('🔍 DEBUG: helperForSupabase.centers:', helperForSupabase.centers);
 
                   const { data, error } = await window.supabase.rpc('upsert_tracking_expertise_from_helper', {
                     helper_json: helperForSupabase,
