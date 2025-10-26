@@ -277,6 +277,31 @@
       background: linear-gradient(135deg, #c0392b, #a93226);
     }
     
+    .btn-loading {
+      position: relative;
+      pointer-events: none;
+      opacity: 0.8;
+    }
+    
+    .btn-loading::after {
+      content: '';
+      position: absolute;
+      width: 16px;
+      height: 16px;
+      top: 50%;
+      left: 50%;
+      margin-left: -8px;
+      margin-top: -8px;
+      border: 3px solid rgba(255, 255, 255, 0.3);
+      border-top-color: white;
+      border-radius: 50%;
+      animation: spin 0.6s linear infinite;
+    }
+    
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    
     .processing-status {
       display: none;
       background: #f8f9fa;
@@ -1508,6 +1533,12 @@ class InvoiceProcessor {
       return;
     }
     
+    // Add loading animation to save button
+    const saveButton = document.getElementById('save-results');
+    saveButton.classList.add('btn-loading');
+    const originalText = saveButton.textContent;
+    saveButton.textContent = 'שומר...';
+    
     try {
       console.log('💾 Saving invoice results...');
       
@@ -1658,6 +1689,11 @@ class InvoiceProcessor {
     } catch (error) {
       console.error('Save error:', error);
       this.showAlert('❌ שגיאה בשמירת החשבונית', 'error');
+    } finally {
+      // Remove loading animation
+      const saveButton = document.getElementById('save-results');
+      saveButton.classList.remove('btn-loading');
+      saveButton.textContent = originalText;
     }
   }
 
