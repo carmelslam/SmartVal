@@ -821,12 +821,12 @@
           
           <div>
             <label style="display: block; font-size: 12px; font-weight: bold; margin-bottom: 4px; color: #334155;">מולא על ידי:</label>
-            <input type="text" id="manual-filled-by" readonly style="width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px; background: #f1f5f9;" />
+            <input type="text" id="manual-filled-by" readonly style="width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px; color: #000; background: #e5e7eb; cursor: not-allowed;" />
           </div>
           
           <div>
             <label style="display: block; font-size: 12px; font-weight: bold; margin-bottom: 4px; color: #334155;">תאריך מילוי:</label>
-            <input type="text" id="manual-fill-date" readonly style="width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px; background: #f1f5f9;" />
+            <input type="date" id="manual-fill-date" style="width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px; color: #000;" />
           </div>
           
           <div>
@@ -982,9 +982,34 @@ class InvoiceProcessor {
         const manualFileNumberField = document.getElementById('manual-file-number');
         if (manualFileNumberField) manualFileNumberField.value = helper.car_details.case_number;
       }
+      
+      // SESSION 77: Auto-populate signature section
+      this.populateSignatureSection();
+      
       // SESSION 74: Password auth removed - using Supabase auth only
     } catch (e) {
       console.warn('Could not load helper data:', e);
+    }
+  }
+  
+  populateSignatureSection() {
+    // Auto-fill user name from auth (readonly)
+    try {
+      const authData = sessionStorage.getItem('auth');
+      if (authData) {
+        const auth = JSON.parse(authData);
+        const userName = auth.user?.email || auth.user?.user_metadata?.full_name || 'לא ידוע';
+        const filledByField = document.getElementById('manual-filled-by');
+        if (filledByField) filledByField.value = userName;
+      }
+    } catch (e) {
+      console.warn('Could not load auth data for signature:', e);
+    }
+    
+    // Auto-fill current date (editable via date picker)
+    const fillDateField = document.getElementById('manual-fill-date');
+    if (fillDateField) {
+      fillDateField.value = new Date().toISOString().split('T')[0];
     }
   }
 
@@ -2266,14 +2291,6 @@ class InvoiceProcessor {
 
   async saveManualInvoice() {
     console.log('💾 Saving manual invoice...');
-    
-    // SESSION 77: Auto-fill signature fields
-    const authData = sessionStorage.getItem('auth');
-    const userName = authData ? JSON.parse(authData).user?.name || 'לא ידוע' : 'לא ידוע';
-    const currentDate = new Date().toLocaleDateString('he-IL');
-    
-    document.getElementById('manual-filled-by').value = userName;
-    document.getElementById('manual-fill-date').value = currentDate;
     
     // SESSION 77: Validate required fields
     const requiredFields = [
