@@ -962,17 +962,21 @@ class InvoiceProcessor {
         const manualOdometerField = document.getElementById('manual-odometer');
         if (manualOdometerField) manualOdometerField.value = helper.car_details.odometer || '';
       }
-      if (helper.general_info) {
-        document.getElementById('owner').value = helper.general_info.owner_name || '';
-        // SESSION 77: Auto-populate manual section owner
+      
+      // SESSION 77: Load owner from stakeholders (single source of truth)
+      const ownerName = helper.stakeholders?.owner?.name || '';
+      if (ownerName) {
+        document.getElementById('owner').value = ownerName;
         const manualOwnerField = document.getElementById('manual-car-owner');
-        if (manualOwnerField) manualOwnerField.value = helper.general_info.owner_name || '';
-        
-        // Load garage name from helper if available
-        if (helper.general_info.garage_name) {
-          document.getElementById('garage_name').value = helper.general_info.garage_name;
-        }
+        if (manualOwnerField) manualOwnerField.value = ownerName;
       }
+      
+      // Load garage name from stakeholders
+      const garageName = helper.stakeholders?.garage?.name || '';
+      if (garageName) {
+        document.getElementById('garage_name').value = garageName;
+      }
+      
       // SESSION 77: Auto-populate file number from case_id
       if (helper.case_id) {
         const manualFileNumberField = document.getElementById('manual-file-number');
