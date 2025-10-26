@@ -551,7 +551,7 @@
       <table class="results-table" id="results-table">
         <thead>
           <tr>
-            <th style="width: 100px;">קוד</th>
+            <th style="width: 120px;">פריט</th>
             <th>תיאור</th>
             <th style="width: 60px;">כמות</th>
             <th style="width: 80px;">מחיר יחידה</th>
@@ -978,8 +978,9 @@ class InvoiceProcessor {
     
     // Convert parts to items format
     const partItems = parts.map(part => ({
+      code: part['מק"ט חלק'] || part.code || '',
       name: part['שם חלק'] || part.name || part['תיאור'] || part.description,
-      description: part['תיאור'] || part.description || part['מק"ט חלק'] || '',
+      description: part['תיאור'] || part.description || '',
       quantity: parsePrice(part['כמות'] || part.quantity || 1),
       unit_price: parsePrice(part['עלות'] || part.price || part.unit_price),
       category: 'PART'
@@ -987,7 +988,8 @@ class InvoiceProcessor {
     
     // Convert works to items format
     const workItems = works.map(work => ({
-      name: work['סוג העבודה'] || work['תיאור עבודות'] || work.name || work.description,
+      code: work['סוג'] || work['סוג העבודה'] || work.code || '',
+      name: work['תיאור עבודות'] || work.name || work.description,
       description: work['תיאור עבודות'] || work.description || '',
       quantity: 1,
       unit_price: parsePrice(work['עלות עבודות'] || work.price || work.unit_price),
@@ -996,7 +998,8 @@ class InvoiceProcessor {
     
     // Convert repairs to items format
     const repairItems = repairs.map(repair => ({
-      name: repair['סוג תיקון'] || repair['תיאור התיקון'] || repair.name || repair.description,
+      code: repair['קוד'] || repair['סוג תיקון'] || repair.code || '',
+      name: repair['תיאור התיקון'] || repair.name || repair.description,
       description: repair['תיאור התיקון'] || repair.description || '',
       quantity: 1,
       unit_price: parsePrice(repair['עלות תיקונים'] || repair.price || repair.unit_price),
@@ -1189,7 +1192,7 @@ class InvoiceProcessor {
         const row = document.createElement('tr');
         row.style.background = '#64748b';
         row.innerHTML = `
-          <td style="padding: 4px 6px; width: 100px;"><input type="text" value="${item.name || ''}" data-field="name" data-index="${globalIndex}" class="result-field" style="width: 100%; padding: 4px 6px; font-size: 11px; color: #000; border: 1px solid #94a3b8; border-radius: 3px; background: #fff;"></td>
+          <td style="padding: 4px 6px; width: 120px;"><input type="text" value="${item.code || ''}" data-field="code" data-index="${globalIndex}" class="result-field" style="width: 100%; padding: 4px 6px; font-size: 11px; color: #000; border: 1px solid #94a3b8; border-radius: 3px; background: #fff;"></td>
           <td style="padding: 4px 6px;"><input type="text" value="${item.description || ''}" data-field="description" data-index="${globalIndex}" class="result-field" style="width: 100%; padding: 4px 6px; font-size: 11px; color: #000; border: 1px solid #94a3b8; border-radius: 3px; background: #fff;"></td>
           <td style="padding: 4px 6px; width: 60px;"><input type="number" value="${item.quantity || 1}" data-field="quantity" data-index="${globalIndex}" class="result-field" min="1" style="width: 100%; padding: 4px; font-size: 11px; color: #000; border: 1px solid #94a3b8; border-radius: 3px; background: #fff; text-align: center;"></td>
           <td style="padding: 4px 6px; width: 80px;"><input type="number" value="${item.unit_price || 0}" data-field="unit_price" data-index="${globalIndex}" class="result-field" step="0.01" style="width: 100%; padding: 4px; font-size: 11px; color: #000; border: 1px solid #94a3b8; border-radius: 3px; background: #fff; text-align: center;"></td>
