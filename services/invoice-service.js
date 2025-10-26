@@ -77,7 +77,9 @@ class InvoiceService {
         throw new Error('User not authenticated');
       }
 
-      // 1. Insert invoice record
+      // SESSION 79: Insert invoice record
+      // Note: Using 'status' not 'approval_status' (column doesn't exist)
+      // Schema has: status TEXT DEFAULT 'DRAFT' CHECK (status IN ('DRAFT', 'SENT', 'PAID', 'CANCELLED'))
       const invoiceInsert = {
         case_id: caseId,
         plate: invoiceData.plate,
@@ -89,8 +91,7 @@ class InvoiceService {
         total_amount: invoiceData.total_amount,
         vat_amount: invoiceData.vat_amount || null,
         currency: invoiceData.currency || 'ILS',
-        payment_status: invoiceData.payment_status || 'pending',
-        approval_status: invoiceData.approval_status || 'pending',
+        status: invoiceData.status || 'DRAFT',
         metadata: invoiceData.metadata || null,
         notes: invoiceData.notes || null,
         created_by: userId,
