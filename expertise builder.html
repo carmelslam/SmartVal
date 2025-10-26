@@ -1062,78 +1062,85 @@
 
           // Open HTML in hidden window for rendering
           const reviewWindow = window.open('', '_blank');
-          reviewWindow.document.write(htmlContent);
-          reviewWindow.document.close();
 
-          // Wait for content to load
-          await new Promise(resolve => setTimeout(resolve, 1000));
+          // Check if popup was blocked
+          if (!reviewWindow) {
+            console.warn('⚠️ Popup blocked - cannot generate PDF. Saving metadata only.');
+            // Continue without PDF - just save metadata
+          } else {
+            reviewWindow.document.write(htmlContent);
+            reviewWindow.document.close();
 
-          // Use html2canvas with REDUCED scale to avoid 413 error
-          const canvas = await html2canvas(reviewWindow.document.body, {
-            scale: 1,
-            useCORS: true,
-            allowTaint: true,
-            logging: false,
-            imageTimeout: 0,
-            ignoreElements: (element) => {
-              return element.tagName === 'IMG' && element.src.includes('carmelcayouf.com');
-            }
-          });
+            // Wait for content to load
+            await new Promise(resolve => setTimeout(resolve, 1000));
 
-          // Convert canvas to PDF with multiple pages and margins
-          const { jsPDF } = window.jspdf;
-          const pdf = new jsPDF('p', 'mm', 'a4');
-          const imgData = canvas.toDataURL('image/jpeg', 0.7);
-          const pageWidth = 210;
-          const pageHeight = 297;
-          const topMargin = 15;
-          const bottomMargin = 15;
-          const leftMargin = 10;
-          const rightMargin = 10;
-          const contentWidth = pageWidth - leftMargin - rightMargin;
-          const contentHeight = pageHeight - topMargin - bottomMargin;
-          const imgHeight = (canvas.height * contentWidth) / canvas.width;
-          let heightLeft = imgHeight;
-          let position = topMargin;
-
-          pdf.addImage(imgData, 'JPEG', leftMargin, position, contentWidth, imgHeight);
-          heightLeft -= contentHeight;
-
-          while (heightLeft > 0) {
-            position = -(imgHeight - heightLeft) + topMargin;
-            pdf.addPage();
-            pdf.addImage(imgData, 'JPEG', leftMargin, position, contentWidth, imgHeight);
-            heightLeft -= contentHeight;
-          }
-
-          reviewWindow.close();
-
-          const pdfBlob = pdf.output('blob');
-
-          console.log(`☁️ Uploading ${reportType} PDF to Supabase Storage...`);
-          const timestamp = new Date().toISOString().replace(/[:.]/g, '-').substring(0, 19);
-          const normalizedPlate = plate?.replace(/-/g, '') || 'UNKNOWN';
-          const filename = `${normalizedPlate}_${reportType}_${status}_${timestamp}.pdf`;
-          const bucketName = reportType === 'estimate' ? 'estimate-reports' : 'final-reports';
-          storagePath = `${caseIdOrNumber}/${filename}`;
-
-          const { data: uploadData, error: uploadError } = await window.supabase.storage
-            .from(bucketName)
-            .upload(storagePath, pdfBlob, {
-              contentType: 'application/pdf',
-              upsert: false
+            // Use html2canvas with REDUCED scale to avoid 413 error
+            const canvas = await html2canvas(reviewWindow.document.body, {
+              scale: 1,
+              useCORS: true,
+              allowTaint: true,
+              logging: false,
+              imageTimeout: 0,
+              ignoreElements: (element) => {
+                return element.tagName === 'IMG' && element.src.includes('carmelcayouf.com');
+              }
             });
 
-          if (uploadError) {
-            console.error(`❌ Storage upload error for ${reportType}:`, uploadError);
-          } else {
-            // Get public URL (simple, no signing needed - bucket is public)
-            const { data: { publicUrl: url } } = window.supabase.storage
-              .from(bucketName)
-              .getPublicUrl(storagePath);
+            // Convert canvas to PDF with multiple pages and margins
+            const { jsPDF } = window.jspdf;
+            const pdf = new jsPDF('p', 'mm', 'a4');
+            const imgData = canvas.toDataURL('image/jpeg', 0.7);
+            const pageWidth = 210;
+            const pageHeight = 297;
+            const topMargin = 15;
+            const bottomMargin = 15;
+            const leftMargin = 10;
+            const rightMargin = 10;
+            const contentWidth = pageWidth - leftMargin - rightMargin;
+            const contentHeight = pageHeight - topMargin - bottomMargin;
+            const imgHeight = (canvas.height * contentWidth) / canvas.width;
+            let heightLeft = imgHeight;
+            let position = topMargin;
 
-            publicUrl = url;
-            console.log(`✅ ${reportType} PDF uploaded to storage:`, publicUrl);
+            pdf.addImage(imgData, 'JPEG', leftMargin, position, contentWidth, imgHeight);
+            heightLeft -= contentHeight;
+
+            while (heightLeft > 0) {
+              position = -(imgHeight - heightLeft) + topMargin;
+              pdf.addPage();
+              pdf.addImage(imgData, 'JPEG', leftMargin, position, contentWidth, imgHeight);
+              heightLeft -= contentHeight;
+            }
+
+            reviewWindow.close();
+
+            const pdfBlob = pdf.output('blob');
+
+            console.log(`☁️ Uploading ${reportType} PDF to Supabase Storage...`);
+            const timestamp = new Date().toISOString().replace(/[:.]/g, '-').substring(0, 19);
+            const normalizedPlate = plate?.replace(/-/g, '') || 'UNKNOWN';
+            const filename = `${normalizedPlate}_${reportType}_${status}_${timestamp}.pdf`;
+            const bucketName = reportType === 'estimate' ? 'estimate-reports' : 'final-reports';
+            storagePath = `${caseIdOrNumber}/${filename}`;
+
+            const { data: uploadData, error: uploadError } = await window.supabase.storage
+              .from(bucketName)
+              .upload(storagePath, pdfBlob, {
+                contentType: 'application/pdf',
+                upsert: false
+              });
+
+            if (uploadError) {
+              console.error(`❌ Storage upload error for ${reportType}:`, uploadError);
+            } else {
+              // Get public URL (simple, no signing needed - bucket is public)
+              const { data: { publicUrl: url } } = window.supabase.storage
+                .from(bucketName)
+                .getPublicUrl(storagePath);
+
+              publicUrl = url;
+              console.log(`✅ ${reportType} PDF uploaded to storage:`, publicUrl);
+            }
           }
         }
 
@@ -1439,6 +1446,13 @@
 
                   // Open HTML in hidden window for rendering
                   const reviewWindow = window.open('', '_blank');
+
+                  // Check if popup was blocked
+                  if (!reviewWindow) {
+                    console.error('❌ Popup blocked - cannot generate PDF');
+                    throw new Error('Popup blocked - please allow popups for this site');
+                  }
+
                   reviewWindow.document.write(htmlContent);
                   reviewWindow.document.close();
 
