@@ -1624,6 +1624,20 @@ class InvoiceProcessor {
             
             // SESSION 79: Create validation record and send to Drive webhook
             const userId = this.invoiceService?.currentUser?.user_id;
+            
+            console.log('🔍 Webhook check:', {
+              userId: userId,
+              currentInvoiceId: this.currentInvoiceId,
+              currentDocumentId: this.currentDocumentId
+            });
+            
+            if (!userId) {
+              console.error('❌ Cannot send webhook: No user ID');
+            }
+            if (!this.currentInvoiceId) {
+              console.error('❌ Cannot send webhook: No invoice ID');
+            }
+            
             if (userId && this.currentInvoiceId) {
               // Create invoice validation record
               const { error: validationError } = await window.supabase
@@ -1642,8 +1656,17 @@ class InvoiceProcessor {
               }
               
               // Get PDF URL
-              const pdfUrl = this.currentDocumentId ? 
-                await this.invoiceService.getInvoiceDocumentURL(this.currentDocumentId) : null;
+              let pdfUrl = null;
+              if (this.currentDocumentId) {
+                try {
+                  pdfUrl = await this.invoiceService.getInvoiceDocumentURL(this.currentDocumentId);
+                  console.log('✅ PDF URL generated');
+                } catch (pdfError) {
+                  console.error('❌ Failed to get PDF URL:', pdfError);
+                }
+              } else {
+                console.warn('⚠️ No document ID, PDF URL will be null');
+              }
               
               // Generate case filing ID: YC-PLATE-YEAR
               const year = new Date().getFullYear();
@@ -1668,8 +1691,11 @@ class InvoiceProcessor {
                 console.log('✅ Invoice sent to Drive successfully');
               } catch (webhookError) {
                 console.error('❌ Webhook error:', webhookError);
+                console.error('Webhook error details:', webhookError.message, webhookError.stack);
                 this.showAlert('⚠️ חשבונית נשמרה אך שליחה ל-Drive נכשלה', 'warning');
               }
+            } else {
+              console.warn('⚠️ Skipping webhook - missing userId or invoiceId');
             }
           }
         } catch (supabaseError) {
