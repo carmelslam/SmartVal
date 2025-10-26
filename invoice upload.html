@@ -1067,13 +1067,14 @@ class InvoiceProcessor {
     // SESSION 79 FIX: Get totals from OCR data, not calculated (OCR has final totals)
     const parsePrice = (value) => {
       if (!value) return 0;
-      const strValue = String(value).replace(/,/g, '');
+      const strValue = String(value).replace(/,/g, '').replace(/%/g, '');
       const parsed = parseFloat(strValue);
       return isNaN(parsed) ? 0 : parsed;
     };
     
-    const totalBeforeVAT = parsePrice(result['עלות כוללת ללא מע״מ']);
-    const vatAmount = parsePrice(result['מע"מ']);
+    const totalBeforeVAT = parsePrice(result['עלות כוללת ללא מץ״מ']);
+    const vatPercentage = parsePrice(result['מע"מ']) || 17; // VAT percentage
+    const vatAmount = parsePrice(result['ערך מע"מ']); // VAT amount value
     const totalWithVAT = parsePrice(result['עלות כוללת']);
     const partsTotal = parsePrice(result['סהכ חלקים']);
     const worksTotal = parsePrice(result['סהכ עבודות']);
@@ -1140,7 +1141,7 @@ class InvoiceProcessor {
             <span style="font-size: 14px; font-weight: bold;">₪${totalBeforeVAT.toLocaleString()}</span>
           </div>
           <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
-            <span style="font-size: 13px;">מע"מ (17%):</span>
+            <span style="font-size: 13px;">מע"מ (${vatPercentage}%):</span>
             <span style="font-size: 14px; font-weight: bold;">₪${vatAmount.toLocaleString()}</span>
           </div>
           <div style="display: flex; justify-content: space-between; padding-top: 8px; border-top: 2px solid rgba(255,255,255,0.3);">
@@ -1172,7 +1173,7 @@ class InvoiceProcessor {
       
       const headerRow = document.createElement('tr');
       headerRow.innerHTML = `
-        <td colspan="6" style="background: #f0f0f0; color: #333; font-weight: bold; padding: 8px; text-align: right;">
+        <td colspan="6" style="background: #475569; color: white; font-weight: bold; padding: 10px; text-align: right; font-size: 14px;">
           ${icon} ${categoryName} (${items.length} פריטים)
         </td>
       `;
@@ -1181,13 +1182,14 @@ class InvoiceProcessor {
       items.forEach((item, index) => {
         const globalIndex = this.ocrResults.indexOf(item);
         const row = document.createElement('tr');
+        row.style.background = '#64748b';
         row.innerHTML = `
-          <td style="padding: 8px;"><input type="text" value="${item.name || ''}" data-field="name" data-index="${globalIndex}" class="result-field" style="width: 100%; padding: 5px; border: 1px solid #ddd; border-radius: 4px;"></td>
-          <td style="padding: 8px;"><input type="text" value="${item.description || ''}" data-field="description" data-index="${globalIndex}" class="result-field" style="width: 100%; padding: 5px; border: 1px solid #ddd; border-radius: 4px;"></td>
-          <td style="padding: 8px; width: 80px;"><input type="number" value="${item.quantity || 1}" data-field="quantity" data-index="${globalIndex}" class="result-field" min="1" style="width: 100%; padding: 5px; border: 1px solid #ddd; border-radius: 4px;"></td>
-          <td style="padding: 8px; width: 100px;"><input type="number" value="${item.unit_price || 0}" data-field="unit_price" data-index="${globalIndex}" class="result-field" step="0.01" style="width: 100%; padding: 5px; border: 1px solid #ddd; border-radius: 4px;"></td>
-          <td style="padding: 8px; width: 100px; font-weight: bold; color: #333;">₪${((item.quantity || 1) * (item.unit_price || 0)).toLocaleString()}</td>
-          <td style="padding: 8px; width: 80px;"><button type="button" onclick="window.invoiceProcessor.removeItem(${globalIndex})" class="btn btn-danger" style="padding: 5px 10px; font-size: 12px;">הסר</button></td>
+          <td style="padding: 10px;"><input type="text" value="${item.name || ''}" data-field="name" data-index="${globalIndex}" class="result-field" style="width: 100%; padding: 8px; font-size: 14px; border: 1px solid #94a3b8; border-radius: 4px; background: #f1f5f9;"></td>
+          <td style="padding: 10px;"><input type="text" value="${item.description || ''}" data-field="description" data-index="${globalIndex}" class="result-field" style="width: 100%; padding: 8px; font-size: 14px; border: 1px solid #94a3b8; border-radius: 4px; background: #f1f5f9;"></td>
+          <td style="padding: 10px; width: 90px;"><input type="number" value="${item.quantity || 1}" data-field="quantity" data-index="${globalIndex}" class="result-field" min="1" style="width: 100%; padding: 8px; font-size: 14px; border: 1px solid #94a3b8; border-radius: 4px; background: #f1f5f9; text-align: center;"></td>
+          <td style="padding: 10px; width: 120px;"><input type="number" value="${item.unit_price || 0}" data-field="unit_price" data-index="${globalIndex}" class="result-field" step="0.01" style="width: 100%; padding: 8px; font-size: 14px; border: 1px solid #94a3b8; border-radius: 4px; background: #f1f5f9; text-align: center;"></td>
+          <td style="padding: 10px; width: 120px; font-weight: bold; color: white; font-size: 15px; text-align: center;">₪${((item.quantity || 1) * (item.unit_price || 0)).toLocaleString()}</td>
+          <td style="padding: 10px; width: 90px; text-align: center;"><button type="button" onclick="window.invoiceProcessor.removeItem(${globalIndex})" class="btn btn-danger" style="padding: 6px 12px; font-size: 13px; background: #ef4444; color: white; border: none; border-radius: 4px; cursor: pointer;">הסר</button></td>
         `;
         resultsBody.appendChild(row);
       });
@@ -1424,7 +1426,7 @@ class InvoiceProcessor {
             invoice_type: 'OTHER', // Default to OTHER (mixed invoice)
             total_amount: parsePrice(ocrResult['עלות כוללת']) || resultData.total,
             total_before_tax: parsePrice(ocrResult['עלות כוללת ללא מע״מ']),
-            tax_amount: parsePrice(ocrResult['מע"מ']),
+            tax_amount: parsePrice(ocrResult['ערך מע"מ']), // SESSION 79: Use 'ערך מע"מ' for VAT amount value
             status: 'DRAFT'
           };
           
