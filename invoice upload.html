@@ -1629,10 +1629,13 @@ class InvoiceProcessor {
               
               console.log('📤 Sending to SAVE_INVOICE_TO_DRIVE webhook:', webhookPayload);
               
-              const { sendToWebhook } = await import('./webhook.js');
-              await sendToWebhook('SAVE_INVOICE_TO_DRIVE', webhookPayload);
-              
-              console.log('✅ Invoice sent to Drive');
+              try {
+                await sendToWebhook('SAVE_INVOICE_TO_DRIVE', webhookPayload);
+                console.log('✅ Invoice sent to Drive successfully');
+              } catch (webhookError) {
+                console.error('❌ Webhook error:', webhookError);
+                this.showAlert('⚠️ חשבונית נשמרה אך שליחה ל-Drive נכשלה', 'warning');
+              }
             }
           }
         } catch (supabaseError) {
