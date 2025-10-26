@@ -1062,66 +1062,90 @@ class InvoiceProcessor {
     const garageName = result['שם מוסך'] || document.getElementById('garage_name').value || 'לא צוין';
     const plate = result['מספר רכב'] || document.getElementById('plate').value || 'לא צוין';
     const invoiceDate = result['תאריך'] || document.getElementById('date').value || new Date().toISOString().split('T')[0];
+    const carOwner = result['בעל הרכב'] || 'לא צוין';
     
-    // Display enhanced summary
+    // SESSION 79 FIX: Get totals from OCR data, not calculated (OCR has final totals)
+    const parsePrice = (value) => {
+      if (!value) return 0;
+      const strValue = String(value).replace(/,/g, '');
+      const parsed = parseFloat(strValue);
+      return isNaN(parsed) ? 0 : parsed;
+    };
+    
+    const totalBeforeVAT = parsePrice(result['עלות כוללת ללא מע״מ']);
+    const vatAmount = parsePrice(result['מע"מ']);
+    const totalWithVAT = parsePrice(result['עלות כוללת']);
+    const partsTotal = parsePrice(result['סהכ חלקים']);
+    const worksTotal = parsePrice(result['סהכ עבודות']);
+    const repairsTotal = parsePrice(result['סהכ תיקונים']);
+    
+    // SESSION 79 FIX: Display enhanced summary with correct OCR data
     summaryContainer.innerHTML = `
       <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 20px; border-radius: 12px; margin-bottom: 20px; color: white; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
         <h4 style="margin: 0 0 15px 0; font-size: 20px; border-bottom: 2px solid rgba(255,255,255,0.3); padding-bottom: 10px;">📋 סיכום חשבונית</h4>
         
         <!-- Invoice Header Info -->
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 15px;">
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin-bottom: 15px;">
           <div style="background: rgba(255,255,255,0.15); padding: 10px; border-radius: 8px;">
-            <div style="font-size: 12px; opacity: 0.9;">מספר חשבונית</div>
-            <div style="font-size: 18px; font-weight: bold; margin-top: 5px;">${invoiceNumber}</div>
+            <div style="font-size: 11px; opacity: 0.8;">מספר חשבונית</div>
+            <div style="font-size: 16px; font-weight: bold; margin-top: 3px;">${invoiceNumber}</div>
           </div>
           <div style="background: rgba(255,255,255,0.15); padding: 10px; border-radius: 8px;">
-            <div style="font-size: 12px; opacity: 0.9;">מוסך</div>
-            <div style="font-size: 16px; font-weight: bold; margin-top: 5px;">${garageName}</div>
+            <div style="font-size: 11px; opacity: 0.8;">בעל הרכב</div>
+            <div style="font-size: 14px; font-weight: bold; margin-top: 3px;">${carOwner}</div>
           </div>
           <div style="background: rgba(255,255,255,0.15); padding: 10px; border-radius: 8px;">
-            <div style="font-size: 12px; opacity: 0.9;">מספר רכב</div>
-            <div style="font-size: 18px; font-weight: bold; margin-top: 5px;">${plate}</div>
+            <div style="font-size: 11px; opacity: 0.8;">מספר רכב</div>
+            <div style="font-size: 16px; font-weight: bold; margin-top: 3px;">${plate}</div>
           </div>
           <div style="background: rgba(255,255,255,0.15); padding: 10px; border-radius: 8px;">
-            <div style="font-size: 12px; opacity: 0.9;">תאריך</div>
-            <div style="font-size: 16px; font-weight: bold; margin-top: 5px;">${invoiceDate}</div>
+            <div style="font-size: 11px; opacity: 0.8;">מוסך</div>
+            <div style="font-size: 13px; font-weight: bold; margin-top: 3px;">${garageName}</div>
+          </div>
+          <div style="background: rgba(255,255,255,0.15); padding: 10px; border-radius: 8px;">
+            <div style="font-size: 11px; opacity: 0.8;">תאריך</div>
+            <div style="font-size: 14px; font-weight: bold; margin-top: 3px;">${invoiceDate}</div>
           </div>
         </div>
         
         <!-- Cost Breakdown by Category -->
         <div style="background: rgba(255,255,255,0.2); padding: 15px; border-radius: 8px; margin-bottom: 15px;">
-          <div style="font-size: 14px; margin-bottom: 10px; font-weight: bold;">פירוט עלויות לפי קטגוריה:</div>
-          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px;">
+          <div style="font-size: 13px; margin-bottom: 10px; font-weight: bold;">פירוט עלויות:</div>
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px;">
+            ${partsTotal > 0 ? `
             <div style="background: rgba(76, 175, 80, 0.3); padding: 8px; border-radius: 6px; text-align: center;">
-              <div style="font-size: 11px; opacity: 0.9;">🔧 חלקים</div>
-              <div style="font-size: 16px; font-weight: bold;">₪${totalParts.toFixed(2)}</div>
+              <div style="font-size: 10px; opacity: 0.9;">🔧 חלקים</div>
+              <div style="font-size: 15px; font-weight: bold;">₪${partsTotal.toLocaleString()}</div>
             </div>
+            ` : ''}
+            ${worksTotal > 0 ? `
             <div style="background: rgba(33, 150, 243, 0.3); padding: 8px; border-radius: 6px; text-align: center;">
-              <div style="font-size: 11px; opacity: 0.9;">👷 עבודות</div>
-              <div style="font-size: 16px; font-weight: bold;">₪${totalWorks.toFixed(2)}</div>
+              <div style="font-size: 10px; opacity: 0.9;">👷 עבודות</div>
+              <div style="font-size: 15px; font-weight: bold;">₪${worksTotal.toLocaleString()}</div>
             </div>
+            ` : ''}
+            ${repairsTotal > 0 ? `
             <div style="background: rgba(255, 152, 0, 0.3); padding: 8px; border-radius: 6px; text-align: center;">
-              <div style="font-size: 11px; opacity: 0.9;">🔨 תיקונים</div>
-              <div style="font-size: 16px; font-weight: bold;">₪${totalRepairs.toFixed(2)}</div>
-            </div>
-            ${totalOther > 0 ? `
-            <div style="background: rgba(158, 158, 158, 0.3); padding: 8px; border-radius: 6px; text-align: center;">
-              <div style="font-size: 11px; opacity: 0.9;">📦 אחר</div>
-              <div style="font-size: 16px; font-weight: bold;">₪${totalOther.toFixed(2)}</div>
+              <div style="font-size: 10px; opacity: 0.9;">🔨 תיקונים</div>
+              <div style="font-size: 15px; font-weight: bold;">₪${repairsTotal.toLocaleString()}</div>
             </div>
             ` : ''}
           </div>
         </div>
         
-        <!-- Total and Stats -->
-        <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.2); padding: 12px; border-radius: 8px;">
-          <div>
-            <div style="font-size: 12px; opacity: 0.9;">מספר פריטים: <strong>${this.ocrResults.length}</strong></div>
-            <div style="font-size: 12px; opacity: 0.9;">דיוק OCR: <strong>${result.confidence || 'לא זמין'}%</strong></div>
+        <!-- VAT Breakdown -->
+        <div style="background: rgba(0,0,0,0.2); padding: 12px; border-radius: 8px; margin-bottom: 10px;">
+          <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+            <span style="font-size: 13px;">סה"כ לפני מע"מ:</span>
+            <span style="font-size: 14px; font-weight: bold;">₪${totalBeforeVAT.toLocaleString()}</span>
           </div>
-          <div style="text-align: left;">
-            <div id="summary-total" style="font-size: 14px; opacity: 0.9;">סה"כ לתשלום</div>
-            <div style="font-size: 28px; font-weight: bold;">₪${calculatedTotal.toFixed(2)}</div>
+          <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+            <span style="font-size: 13px;">מע"מ (17%):</span>
+            <span style="font-size: 14px; font-weight: bold;">₪${vatAmount.toLocaleString()}</span>
+          </div>
+          <div style="display: flex; justify-content: space-between; padding-top: 8px; border-top: 2px solid rgba(255,255,255,0.3);">
+            <span style="font-size: 15px; font-weight: bold;">סה"כ כולל מע"מ:</span>
+            <span style="font-size: 20px; font-weight: bold;">₪${totalWithVAT.toLocaleString()}</span>
           </div>
         </div>
         
@@ -1135,20 +1159,43 @@ class InvoiceProcessor {
       </div>
     `;
     
-    // Display results table
+    // SESSION 79 FIX: Display results table - simple, clean, organized by category
     resultsBody.innerHTML = '';
-    this.ocrResults.forEach((item, index) => {
-      const row = document.createElement('tr');
-      row.innerHTML = `
-        <td><input type="text" value="${item.name || ''}" data-field="name" data-index="${index}" class="result-field"></td>
-        <td><input type="text" value="${item.description || ''}" data-field="description" data-index="${index}" class="result-field"></td>
-        <td><input type="number" value="${item.quantity || 1}" data-field="quantity" data-index="${index}" class="result-field" min="1"></td>
-        <td><input type="number" value="${item.unit_price || 0}" data-field="unit_price" data-index="${index}" class="result-field" step="0.01"></td>
-        <td><span class="total-cell">₪${(item.quantity || 1) * (item.unit_price || 0)}</span></td>
-        <td><button type="button" onclick="window.invoiceProcessor.removeItem(${index})" class="btn btn-danger">הסר</button></td>
+    
+    // Group items by category
+    const partItems = this.ocrResults.filter(item => item.category === 'PART');
+    const workItems = this.ocrResults.filter(item => item.category === 'WORK');
+    const repairItems = this.ocrResults.filter(item => item.category === 'REPAIR');
+    
+    const renderCategory = (items, categoryName, icon) => {
+      if (items.length === 0) return;
+      
+      const headerRow = document.createElement('tr');
+      headerRow.innerHTML = `
+        <td colspan="6" style="background: #f0f0f0; color: #333; font-weight: bold; padding: 8px; text-align: right;">
+          ${icon} ${categoryName} (${items.length} פריטים)
+        </td>
       `;
-      resultsBody.appendChild(row);
-    });
+      resultsBody.appendChild(headerRow);
+      
+      items.forEach((item, index) => {
+        const globalIndex = this.ocrResults.indexOf(item);
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td style="padding: 8px;"><input type="text" value="${item.name || ''}" data-field="name" data-index="${globalIndex}" class="result-field" style="width: 100%; padding: 5px; border: 1px solid #ddd; border-radius: 4px;"></td>
+          <td style="padding: 8px;"><input type="text" value="${item.description || ''}" data-field="description" data-index="${globalIndex}" class="result-field" style="width: 100%; padding: 5px; border: 1px solid #ddd; border-radius: 4px;"></td>
+          <td style="padding: 8px; width: 80px;"><input type="number" value="${item.quantity || 1}" data-field="quantity" data-index="${globalIndex}" class="result-field" min="1" style="width: 100%; padding: 5px; border: 1px solid #ddd; border-radius: 4px;"></td>
+          <td style="padding: 8px; width: 100px;"><input type="number" value="${item.unit_price || 0}" data-field="unit_price" data-index="${globalIndex}" class="result-field" step="0.01" style="width: 100%; padding: 5px; border: 1px solid #ddd; border-radius: 4px;"></td>
+          <td style="padding: 8px; width: 100px; font-weight: bold; color: #333;">₪${((item.quantity || 1) * (item.unit_price || 0)).toLocaleString()}</td>
+          <td style="padding: 8px; width: 80px;"><button type="button" onclick="window.invoiceProcessor.removeItem(${globalIndex})" class="btn btn-danger" style="padding: 5px 10px; font-size: 12px;">הסר</button></td>
+        `;
+        resultsBody.appendChild(row);
+      });
+    };
+    
+    renderCategory(partItems, 'חלקים', '🔧');
+    renderCategory(workItems, 'עבודות', '👷');
+    renderCategory(repairItems, 'תיקונים', '🔨');
     
     // Add event listeners for real-time calculation
     document.querySelectorAll('.result-field').forEach(field => {
