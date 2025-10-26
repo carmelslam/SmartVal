@@ -1345,17 +1345,20 @@ class InvoiceProcessor {
       // SESSION 74: Save to Supabase if case ID exists
       if (caseId && this.invoiceService) {
         try {
-          // Prepare invoice data
+          // SESSION 79: Prepare invoice data - match actual schema
+          // invoice_type must be: 'PARTS', 'LABOR', 'TOWING', 'OTHER'
           const invoiceData = {
             plate: plate,
             invoice_number: `INV-${Date.now()}`, // Generate unique number
             supplier_name: document.getElementById('garage_name').value,
-            issue_date: document.getElementById('date').value,
-            invoice_type: document.getElementById('invoice-type').value?.toUpperCase() || 'MIXED',
+            invoice_type: 'OTHER', // Default to OTHER (mixed invoice)
             total_amount: resultData.total,
-            currency: 'ILS',
-            approval_status: 'pending'
+            total_before_tax: null, // TODO: Calculate from items
+            tax_amount: null, // TODO: Calculate VAT
+            status: 'DRAFT'
           };
+          
+          console.log('📋 Invoice data prepared:', invoiceData);
           
           // Prepare invoice lines
           const lines = this.ocrResults.map((item, index) => ({
