@@ -457,6 +457,11 @@
       }
     }
   </style>
+
+  <!-- PDF Export Libraries (same as parts search) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
   <script>
     let helper = {};
     
@@ -1048,43 +1053,87 @@
           actualCaseId = caseData.id;
         }
 
-        // 📄 Upload HTML to Supabase Storage (like parts system)
+        // 📄 Generate PDF from HTML (exact copy from parts search)
         let storagePath = null;
         let publicUrl = null;
 
         if (htmlContent) {
-          console.log(`☁️ Uploading ${reportType} HTML to Supabase Storage...`);
+          console.log(`📄 Generating ${reportType} PDF using html2canvas...`);
+
+          // Open HTML in hidden window for rendering
+          const reviewWindow = window.open('', '_blank');
+          reviewWindow.document.write(htmlContent);
+          reviewWindow.document.close();
+
+          // Wait for content to load
+          await new Promise(resolve => setTimeout(resolve, 1000));
+
+          // Use html2canvas with REDUCED scale to avoid 413 error
+          const canvas = await html2canvas(reviewWindow.document.body, {
+            scale: 1,
+            useCORS: true,
+            allowTaint: true,
+            logging: false,
+            imageTimeout: 0,
+            ignoreElements: (element) => {
+              return element.tagName === 'IMG' && element.src.includes('carmelcayouf.com');
+            }
+          });
+
+          // Convert canvas to PDF with multiple pages and margins
+          const { jsPDF } = window.jspdf;
+          const pdf = new jsPDF('p', 'mm', 'a4');
+          const imgData = canvas.toDataURL('image/jpeg', 0.7);
+          const pageWidth = 210;
+          const pageHeight = 297;
+          const topMargin = 15;
+          const bottomMargin = 15;
+          const leftMargin = 10;
+          const rightMargin = 10;
+          const contentWidth = pageWidth - leftMargin - rightMargin;
+          const contentHeight = pageHeight - topMargin - bottomMargin;
+          const imgHeight = (canvas.height * contentWidth) / canvas.width;
+          let heightLeft = imgHeight;
+          let position = topMargin;
+
+          pdf.addImage(imgData, 'JPEG', leftMargin, position, contentWidth, imgHeight);
+          heightLeft -= contentHeight;
+
+          while (heightLeft > 0) {
+            position = -(imgHeight - heightLeft) + topMargin;
+            pdf.addPage();
+            pdf.addImage(imgData, 'JPEG', leftMargin, position, contentWidth, imgHeight);
+            heightLeft -= contentHeight;
+          }
+
+          reviewWindow.close();
+
+          const pdfBlob = pdf.output('blob');
+
+          console.log(`☁️ Uploading ${reportType} PDF to Supabase Storage...`);
           const timestamp = new Date().toISOString().replace(/[:.]/g, '-').substring(0, 19);
           const normalizedPlate = plate?.replace(/-/g, '') || 'UNKNOWN';
-          const filename = `${normalizedPlate}_${reportType}_${status}_${timestamp}.html`;
+          const filename = `${normalizedPlate}_${reportType}_${status}_${timestamp}.pdf`;
           const bucketName = reportType === 'estimate' ? 'estimate-reports' : 'final-reports';
           storagePath = `${caseIdOrNumber}/${filename}`;
 
-          // Upload HTML to storage
-          const htmlBlob = new Blob([htmlContent], { type: 'text/html' });
           const { data: uploadData, error: uploadError } = await window.supabase.storage
             .from(bucketName)
-            .upload(storagePath, htmlBlob, {
-              contentType: 'text/html',
+            .upload(storagePath, pdfBlob, {
+              contentType: 'application/pdf',
               upsert: false
             });
 
           if (uploadError) {
             console.error(`❌ Storage upload error for ${reportType}:`, uploadError);
           } else {
-            // Get signed URL (expires in 1 year)
-            const { data: urlData, error: urlError } = await window.supabase.storage
+            // Get public URL (simple, no signing needed - bucket is public)
+            const { data: { publicUrl: url } } = window.supabase.storage
               .from(bucketName)
-              .createSignedUrl(storagePath, 31536000);
+              .getPublicUrl(storagePath);
 
-            if (urlError) {
-              console.error(`❌ Signed URL error for ${reportType}:`, urlError);
-            }
-
-            // Create viewer URL that wraps the signed URL
-            const signedUrl = urlData?.signedUrl;
-            publicUrl = signedUrl ? `/report-viewer.html?url=${encodeURIComponent(signedUrl)}` : null;
-            console.log(`✅ ${reportType} uploaded to storage with viewer URL:`, publicUrl);
+            publicUrl = url;
+            console.log(`✅ ${reportType} PDF uploaded to storage:`, publicUrl);
           }
         }
 
@@ -1385,40 +1434,90 @@
                     console.log('✅ Found case UUID:', actualCaseId);
                   }
 
-                  // 📄 Upload HTML as PDF to Supabase Storage (like parts system)
+                  // 📄 Generate PDF from HTML (exact copy from parts search)
+                  console.log('📄 Generating PDF using html2canvas...');
+
+                  // Open HTML in hidden window for rendering
+                  const reviewWindow = window.open('', '_blank');
+                  reviewWindow.document.write(htmlContent);
+                  reviewWindow.document.close();
+
+                  // Wait for content to load
+                  await new Promise(resolve => setTimeout(resolve, 1000));
+
+                  // Use html2canvas with REDUCED scale to avoid 413 error
+                  const canvas = await html2canvas(reviewWindow.document.body, {
+                    scale: 1,
+                    useCORS: true,
+                    allowTaint: true,
+                    logging: false,
+                    imageTimeout: 0,
+                    ignoreElements: (element) => {
+                      return element.tagName === 'IMG' && element.src.includes('carmelcayouf.com');
+                    }
+                  });
+
+                  // Convert canvas to PDF with multiple pages and margins
+                  const { jsPDF } = window.jspdf;
+                  const pdf = new jsPDF('p', 'mm', 'a4');
+                  const imgData = canvas.toDataURL('image/jpeg', 0.7);  // JPEG with 70% quality
+                  const pageWidth = 210; // A4 width in mm
+                  const pageHeight = 297; // A4 height in mm
+                  const topMargin = 15;
+                  const bottomMargin = 15;
+                  const leftMargin = 10;
+                  const rightMargin = 10;
+                  const contentWidth = pageWidth - leftMargin - rightMargin;
+                  const contentHeight = pageHeight - topMargin - bottomMargin;
+                  const imgHeight = (canvas.height * contentWidth) / canvas.width;
+                  let heightLeft = imgHeight;
+                  let position = topMargin;
+
+                  // Add first page with all margins
+                  pdf.addImage(imgData, 'JPEG', leftMargin, position, contentWidth, imgHeight);
+                  heightLeft -= contentHeight;
+
+                  // Add additional pages if content is longer than one page
+                  while (heightLeft > 0) {
+                    position = -(imgHeight - heightLeft) + topMargin;
+                    pdf.addPage();
+                    pdf.addImage(imgData, 'JPEG', leftMargin, position, contentWidth, imgHeight);
+                    heightLeft -= contentHeight;
+                  }
+
+                  // Close preview window
+                  reviewWindow.close();
+
+                  // Get PDF as blob
+                  const pdfBlob = pdf.output('blob');
+
                   console.log('☁️ Uploading expertise PDF to Supabase Storage...');
                   const timestamp = new Date().toISOString().replace(/[:.]/g, '-').substring(0, 19);
                   const normalizedPlate = plate?.replace(/-/g, '') || 'UNKNOWN';
-                  const filename = `${normalizedPlate}_expertise_${timestamp}.html`; // Store as HTML for now
+                  const filename = `${normalizedPlate}_expertise_${timestamp}.pdf`;
                   const storagePath = `${caseIdOrNumber}/${filename}`;
 
-                  // Upload HTML to storage
-                  const htmlBlob = new Blob([htmlContent], { type: 'text/html' });
+                  // Upload PDF to Supabase Storage
                   const { data: uploadData, error: uploadError } = await window.supabase.storage
                     .from('expertise-reports')
-                    .upload(storagePath, htmlBlob, {
-                      contentType: 'text/html',
+                    .upload(storagePath, pdfBlob, {
+                      contentType: 'application/pdf',
                       upsert: false
                     });
 
                   if (uploadError) {
                     console.error('❌ Storage upload error:', uploadError);
-                    // Continue without PDF URL
+                    throw new Error('Failed to upload PDF: ' + uploadError.message);
                   }
 
-                  // Get signed URL (expires in 1 year = 31536000 seconds)
-                  const { data: urlData, error: urlError } = await window.supabase.storage
+                  console.log('✅ PDF uploaded to storage:', storagePath);
+
+                  // Get public URL (simple, no signing needed - bucket is public)
+                  const { data: { publicUrl } } = window.supabase.storage
                     .from('expertise-reports')
-                    .createSignedUrl(storagePath, 31536000);
+                    .getPublicUrl(storagePath);
 
-                  if (urlError) {
-                    console.error('❌ Signed URL error:', urlError);
-                  }
-
-                  // Create viewer URL that wraps the signed URL
-                  const signedUrl = urlData?.signedUrl;
-                  const viewerUrl = signedUrl ? `/report-viewer.html?url=${encodeURIComponent(signedUrl)}` : null;
-                  console.log('✅ PDF uploaded to storage with viewer URL:', viewerUrl);
+                  console.log('🔗 PDF public URL:', publicUrl);
 
                   // 🔧 FIX: Transform helper structure for SQL function
                   // SQL expects helper.centers at TOP LEVEL (not damage_assessment.centers)
@@ -1433,7 +1532,7 @@
                     p_plate: plate?.replace(/-/g, ''),
                     centers_found: centersData.length,
                     centers_source: helper.centers ? 'helper.centers' : helper.damage_centers ? 'helper.damage_centers' : 'none',
-                    pdf_url: viewerUrl
+                    pdf_url: publicUrl
                   });
 
                   // 🔍 DEBUG: Log first center structure to verify field names
@@ -1452,7 +1551,7 @@
                     p_plate: plate?.replace(/-/g, ''),
                     p_status: 'final',  // ✅ Expertise is always final (no draft state)
                     p_pdf_storage_path: uploadError ? null : storagePath,
-                    p_pdf_public_url: uploadError || urlError ? null : viewerUrl
+                    p_pdf_public_url: uploadError ? null : publicUrl
                   });
 
                   // 🔍 DEBUG: Log RPC response
