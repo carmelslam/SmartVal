@@ -1643,19 +1643,26 @@ class InvoiceProcessor {
         return;
       }
       
-      // SESSION 80: Capture edited general details AND cost fields from input fields
+      // SESSION 80: Capture edited general details from input fields
       const editedInvoiceNumber = document.getElementById('edit-invoice-number')?.value;
       const editedCarOwner = document.getElementById('edit-car-owner')?.value;
       const editedPlate = document.getElementById('edit-plate')?.value;
       const editedGarageName = document.getElementById('edit-garage-name')?.value;
       const editedDate = document.getElementById('edit-date')?.value;
-      const editedPartsTotal = parseFloat(document.getElementById('edit-parts-total')?.value) || 0;
-      const editedWorksTotal = parseFloat(document.getElementById('edit-works-total')?.value) || 0;
-      const editedRepairsTotal = parseFloat(document.getElementById('edit-repairs-total')?.value) || 0;
-      const editedTotalBeforeVAT = parseFloat(document.getElementById('edit-total-before-vat')?.value) || 0;
-      const editedVATPercentage = parseFloat(document.getElementById('edit-vat-percentage')?.value) || 0;
-      const editedVATAmount = parseFloat(document.getElementById('edit-vat-amount')?.value) || 0;
-      const editedTotalWithVAT = parseFloat(document.getElementById('edit-total-with-vat')?.value) || 0;
+      
+      // SESSION 80: Recalculate totals from edited table data (ocrResults)
+      const parts = this.ocrResults.filter(item => item.category === 'PART');
+      const works = this.ocrResults.filter(item => item.category === 'WORK');
+      const repairs = this.ocrResults.filter(item => item.category === 'REPAIR');
+      
+      const editedPartsTotal = parts.reduce((sum, item) => sum + (item.quantity || 1) * (item.unit_price || 0), 0);
+      const editedWorksTotal = works.reduce((sum, item) => sum + (item.quantity || 1) * (item.unit_price || 0), 0);
+      const editedRepairsTotal = repairs.reduce((sum, item) => sum + (item.quantity || 1) * (item.unit_price || 0), 0);
+      
+      const editedTotalBeforeVAT = editedPartsTotal + editedWorksTotal + editedRepairsTotal;
+      const editedVATPercentage = 18; // Default VAT percentage
+      const editedVATAmount = editedTotalBeforeVAT * (editedVATPercentage / 100);
+      const editedTotalWithVAT = editedTotalBeforeVAT + editedVATAmount;
       
       // Update lastOCRResult with edited items
       if (this.lastOCRResult) {
