@@ -1737,57 +1737,67 @@ class InvoiceProcessor {
       if (this.currentInvoiceId && this.invoiceService) {
         // SESSION 80: Update invoice header fields AND totals in Supabase
         const invoiceUpdate = {};
+        
+        // Update all general fields
         if (editedInvoiceNumber) invoiceUpdate.invoice_number = editedInvoiceNumber;
         if (editedGarageName) invoiceUpdate.supplier_name = editedGarageName;
         if (editedPlate) invoiceUpdate.plate = editedPlate;
+        if (editedDate) invoiceUpdate.invoice_date = editedDate;
         
-        // SESSION 80: Update cost totals
+        // SESSION 80: Update cost totals - always update these
         invoiceUpdate.total_before_tax = editedTotalBeforeVAT;
         invoiceUpdate.tax_amount = editedVATAmount;
         invoiceUpdate.total_amount = editedTotalWithVAT;
         
-        if (Object.keys(invoiceUpdate).length > 0) {
-          const { error: updateHeaderError } = await window.supabase
-            .from('invoices')
-            .update(invoiceUpdate)
-            .eq('id', this.currentInvoiceId);
-          
-          if (updateHeaderError) throw updateHeaderError;
-          console.log('✅ Updated Supabase invoice header + totals:', invoiceUpdate);
+        console.log('📝 Updating Supabase invoice with:', invoiceUpdate);
+        
+        const { error: updateHeaderError } = await window.supabase
+          .from('invoices')
+          .update(invoiceUpdate)
+          .eq('id', this.currentInvoiceId);
+        
+        if (updateHeaderError) {
+          console.error('❌ Failed to update invoice header:', updateHeaderError);
+          throw updateHeaderError;
         }
+        console.log('✅ Updated Supabase invoice header + totals');
         
-        // Update invoice lines
-        const lines = this.ocrResults.map((item, index) => ({
-          line_number: index + 1,
-          description: item.name || item.description || '',
-          quantity: item.quantity || 1,
-          unit_price: item.unit_price || 0,
-          line_total: (item.quantity || 1) * (item.unit_price || 0)
-        }));
+        // Update invoice lines - delete old and insert new with edited values
+        console.log('📝 Updating invoice lines, current ocrResults:', this.ocrResults);
         
-        // Delete old lines and insert new ones
+        // Delete old lines first
         const { error: deleteError } = await window.supabase
           .from('invoice_lines')
           .delete()
           .eq('invoice_id', this.currentInvoiceId);
         
-        if (deleteError) throw deleteError;
+        if (deleteError) {
+          console.error('❌ Failed to delete old invoice lines:', deleteError);
+          throw deleteError;
+        }
         
-        const linesInsert = lines.map(line => ({
+        // Build new lines from edited ocrResults
+        const linesInsert = this.ocrResults.map((item, index) => ({
           invoice_id: this.currentInvoiceId,
-          line_number: line.line_number,
-          description: line.description,
-          quantity: line.quantity,
-          unit_price: line.unit_price,
-          line_total: line.line_total,
-          discount_percent: 0
+          line_number: index + 1,
+          description: item.name || item.description || '',
+          quantity: item.quantity || 1,
+          unit_price: item.unit_price || 0,
+          line_total: (item.quantity || 1) * (item.unit_price || 0),
+          discount_percent: 0,
+          category: item.category || 'OTHER'
         }));
+        
+        console.log('📝 Inserting updated invoice lines:', linesInsert);
         
         const { error: insertError } = await window.supabase
           .from('invoice_lines')
           .insert(linesInsert);
         
-        if (insertError) throw insertError;
+        if (insertError) {
+          console.error('❌ Failed to insert invoice lines:', insertError);
+          throw insertError;
+        }
         
         console.log('✅ Updated Supabase invoice_lines');
       }
