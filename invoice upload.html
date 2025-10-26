@@ -992,18 +992,32 @@ class InvoiceProcessor {
     }
   }
   
-  populateSignatureSection() {
-    // Auto-fill user name from auth (readonly)
+  async populateSignatureSection() {
+    // Auto-fill user name from profiles table (readonly)
     try {
       const authData = sessionStorage.getItem('auth');
       if (authData) {
         const auth = JSON.parse(authData);
-        const userName = auth.user?.email || auth.user?.user_metadata?.full_name || 'לא ידוע';
-        const filledByField = document.getElementById('manual-filled-by');
-        if (filledByField) filledByField.value = userName;
+        const userId = auth.user?.id;
+        
+        if (userId && window.supabase) {
+          // Fetch user name from profiles table
+          const { data: profile, error } = await window.supabase
+            .from('profiles')
+            .select('name')
+            .eq('user_id', userId)
+            .single();
+          
+          if (error) {
+            console.warn('Could not fetch profile:', error);
+          } else if (profile?.name) {
+            const filledByField = document.getElementById('manual-filled-by');
+            if (filledByField) filledByField.value = profile.name;
+          }
+        }
       }
     } catch (e) {
-      console.warn('Could not load auth data for signature:', e);
+      console.warn('Could not load profile data for signature:', e);
     }
     
     // Auto-fill current date (editable via date picker)
