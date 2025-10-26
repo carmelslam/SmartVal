@@ -1656,12 +1656,17 @@
 
             let publicUrl = null;
             if (!uploadError) {
-              // Get public URL
-              const { data: { publicUrl: url } } = window.supabase.storage
+              // Get signed URL (expires in 1 year)
+              const { data: urlData, error: urlError } = await window.supabase.storage
                 .from('final-reports')
-                .getPublicUrl(storagePath);
-              publicUrl = url;
-              console.log('✅ Final report uploaded to storage:', publicUrl);
+                .createSignedUrl(storagePath, 31536000);
+
+              if (urlError) {
+                console.error('❌ Signed URL error:', urlError);
+              }
+
+              publicUrl = urlData?.signedUrl;
+              console.log('✅ Final report uploaded to storage with signed URL:', publicUrl);
             } else {
               console.error('❌ Storage upload error:', uploadError);
             }
