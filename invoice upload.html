@@ -609,8 +609,7 @@
     </div>
   </form>
 
-  <!-- SESSION 76: Manual Invoice Entry - COMPLETELY SEPARATE from OCR upload -->
-  <!-- For rare cases when there's no physical invoice document available -->
+  <!-- SESSION 77: Manual Invoice Entry - REBUILT with proper table structure -->
   <div class="section" style="margin-top: 40px; border-top: 3px solid #ffc107; padding-top: 20px;">
     <h3 onclick="toggleManualSection()" style="cursor: pointer; user-select: none; background: linear-gradient(135deg, #ffc107 0%, #ff9800 100%); padding: 15px; border-radius: 8px; color: white; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
       <span id="manual-toggle-icon">▼</span> ✏️ הזנת חשבונית ידנית
@@ -619,29 +618,116 @@
       </small>
     </h3>
     <div id="manual-section-content" style="display: none; background: #fff9e6; padding: 20px; border-radius: 8px; margin-top: 10px;">
-      <p style="color: #856404; font-size: 14px; margin-bottom: 15px; font-weight: bold;">
-        📝 השתמש באפשרות זו רק אם אין אפשרות להעלות חשבונית - הזן פרטים ידנית
-      </p>
-      <div class="form-row">
-        <div class="form-group">
-          <label for="manual-item">פריט:</label>
-          <input id="manual-item" type="text" placeholder="שם הפריט" />
+      
+      <!-- Manual Entry Tables - Matching OCR Style -->
+      <div style="margin-bottom: 20px;">
+        <h4 style="background: rgba(76, 175, 80, 0.3); padding: 8px; border-radius: 6px; margin-bottom: 10px; font-size: 15px;">🔧 חלקים</h4>
+        <table class="results-table" id="manual-parts-table">
+          <thead>
+            <tr>
+              <th style="width: 150px;">מק"ט</th>
+              <th>שם חלק</th>
+              <th>תיאור</th>
+              <th style="width: 60px;">כמות</th>
+              <th style="width: 100px;">מקור</th>
+              <th style="width: 80px;">מחיר יחידה</th>
+              <th style="width: 70px;">פעולות</th>
+            </tr>
+          </thead>
+          <tbody id="manual-parts-body">
+            <!-- Parts rows added dynamically -->
+          </tbody>
+          <tfoot>
+            <tr>
+              <td colspan="6" style="text-align: left; padding: 8px;">
+                <button type="button" onclick="window.invoiceProcessor.addManualPartRow()" class="btn btn-success" style="font-size: 13px; padding: 6px 12px;">+ הוסף חלק</button>
+              </td>
+              <td style="text-align: right; font-weight: bold; color: #2e7d32; padding: 8px;">
+                <span id="manual-parts-total">₪0.00</span>
+              </td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+
+      <div style="margin-bottom: 20px;">
+        <h4 style="background: rgba(33, 150, 243, 0.3); padding: 8px; border-radius: 6px; margin-bottom: 10px; font-size: 15px;">👷 עבודות</h4>
+        <table class="results-table" id="manual-works-table">
+          <thead>
+            <tr>
+              <th style="width: 100px;">קוד</th>
+              <th colspan="2">תיאור עבודות</th>
+              <th style="width: 80px;">מחיר</th>
+              <th style="width: 70px;">פעולות</th>
+            </tr>
+          </thead>
+          <tbody id="manual-works-body">
+            <!-- Works rows added dynamically -->
+          </tbody>
+          <tfoot>
+            <tr>
+              <td colspan="3" style="text-align: left; padding: 8px;">
+                <button type="button" onclick="window.invoiceProcessor.addManualWorkRow()" class="btn btn-success" style="font-size: 13px; padding: 6px 12px;">+ הוסף עבודה</button>
+              </td>
+              <td style="text-align: right; font-weight: bold; color: #1976d2; padding: 8px;">
+                <span id="manual-works-total">₪0.00</span>
+              </td>
+              <td></td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+
+      <div style="margin-bottom: 20px;">
+        <h4 style="background: rgba(255, 152, 0, 0.3); padding: 8px; border-radius: 6px; margin-bottom: 10px; font-size: 15px;">🔨 תיקונים</h4>
+        <table class="results-table" id="manual-repairs-table">
+          <thead>
+            <tr>
+              <th style="width: 100px;">סוג תיקון</th>
+              <th colspan="2">תיאור התיקון</th>
+              <th style="width: 80px;">מחיר</th>
+              <th style="width: 70px;">פעולות</th>
+            </tr>
+          </thead>
+          <tbody id="manual-repairs-body">
+            <!-- Repairs rows added dynamically -->
+          </tbody>
+          <tfoot>
+            <tr>
+              <td colspan="3" style="text-align: left; padding: 8px;">
+                <button type="button" onclick="window.invoiceProcessor.addManualRepairRow()" class="btn btn-success" style="font-size: 13px; padding: 6px 12px;">+ הוסף תיקון</button>
+              </td>
+              <td style="text-align: right; font-weight: bold; color: #f57c00; padding: 8px;">
+                <span id="manual-repairs-total">₪0.00</span>
+              </td>
+              <td></td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+
+      <!-- Manual Entry Totals Summary -->
+      <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 15px; border-radius: 8px; color: white; margin-top: 20px;">
+        <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+          <span>סה"כ לפני מע"מ:</span>
+          <span id="manual-subtotal" style="font-weight: bold;">₪0.00</span>
         </div>
-        <div class="form-group">
-          <label for="manual-desc">תיאור:</label>
-          <input id="manual-desc" type="text" placeholder="תיאור" />
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+          <span>מע"מ (%):</span>
+          <input type="number" id="manual-vat-percent" value="18" min="0" max="100" step="0.1" onchange="window.invoiceProcessor.recalculateManualTotals()" style="width: 80px; padding: 4px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.3); text-align: center;" />
         </div>
-        <div class="form-group">
-          <label for="manual-qty">כמות:</label>
-          <input id="manual-qty" type="number" min="1" value="1" />
+        <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+          <span>ערך מע"מ:</span>
+          <span id="manual-vat-amount" style="font-weight: bold;">₪0.00</span>
         </div>
-        <div class="form-group">
-          <label for="manual-price">מחיר:</label>
-          <input id="manual-price" type="number" step="0.01" placeholder="0.00" />
+        <div style="display: flex; justify-content: space-between; padding-top: 8px; border-top: 2px solid rgba(255,255,255,0.3);">
+          <span style="font-size: 16px; font-weight: bold;">סה"כ כולל מע"מ:</span>
+          <span id="manual-grand-total" style="font-size: 18px; font-weight: bold;">₪0.00</span>
         </div>
       </div>
-      <button type="button" id="add-manual-item" class="btn btn-warning" style="font-size: 16px; padding: 12px 24px;">
-        ➕ הוסף פריט לרשימה
+
+      <button type="button" onclick="window.invoiceProcessor.saveManualInvoice()" class="btn btn-warning" style="font-size: 16px; padding: 12px 24px; width: 100%; margin-top: 15px;">
+        💾 שמור חשבונית ידנית
       </button>
     </div>
   </div>
@@ -717,10 +803,7 @@ class InvoiceProcessor {
       console.error('❌ Invoice form element not found - invoice-form missing');
     }
 
-    // Manual item addition
-    document.getElementById('add-manual-item').addEventListener('click', () => {
-      this.addManualItem();
-    });
+    // SESSION 77: Manual item addition - removed old listener (now using onclick in HTML)
 
     // Clear form
     document.getElementById('clear-form').addEventListener('click', () => {
@@ -1364,40 +1447,7 @@ class InvoiceProcessor {
     }
   }
 
-  addManualItem() {
-    const name = document.getElementById('manual-item').value.trim();
-    const description = document.getElementById('manual-desc').value.trim();
-    const quantity = parseFloat(document.getElementById('manual-qty').value) || 1;
-    const unitPrice = parseFloat(document.getElementById('manual-price').value) || 0;
-    
-    if (!name) {
-      this.showAlert('אנא הכנס שם פריט', 'error');
-      return;
-    }
-    
-    const newItem = {
-      name,
-      description,
-      quantity,
-      unit_price: unitPrice
-    };
-    
-    this.ocrResults.push(newItem);
-    
-    // Refresh display
-    this.displayOCRResults({
-      items: this.ocrResults,
-      total: this.ocrResults.reduce((sum, item) => sum + (item.quantity * item.unit_price), 0)
-    });
-    
-    // Clear manual input fields
-    document.getElementById('manual-item').value = '';
-    document.getElementById('manual-desc').value = '';
-    document.getElementById('manual-qty').value = '1';
-    document.getElementById('manual-price').value = '';
-    
-    this.showAlert('פריט נוסף בהצלחה', 'success');
-  }
+  // SESSION 77: Old addManualItem removed - replaced with proper table-based manual entry
 
   removeItem(index) {
     if (confirm('האם למחוק פריט זה?')) {
@@ -1954,6 +2004,232 @@ class InvoiceProcessor {
     setTimeout(() => {
       alert.remove();
     }, 5000);
+  }
+
+  // SESSION 77: Manual Invoice Entry Functions
+  manualRowCounters = { parts: 0, works: 0, repairs: 0 };
+
+  addManualPartRow() {
+    const rowId = `manual-part-${++this.manualRowCounters.parts}`;
+    const tbody = document.getElementById('manual-parts-body');
+    const row = document.createElement('tr');
+    row.dataset.rowId = rowId;
+    row.style.background = '#64748b';
+    
+    row.innerHTML = `
+      <td style="padding: 4px;"><input type="text" placeholder="מק״ט" style="width: 100%; padding: 4px; font-size: 11px; border: 1px solid #94a3b8; border-radius: 3px;" /></td>
+      <td style="padding: 4px;"><input type="text" placeholder="שם חלק" style="width: 100%; padding: 4px; font-size: 11px; border: 1px solid #94a3b8; border-radius: 3px;" /></td>
+      <td style="padding: 4px;"><input type="text" placeholder="תיאור" style="width: 100%; padding: 4px; font-size: 11px; border: 1px solid #94a3b8; border-radius: 3px;" /></td>
+      <td style="padding: 4px;"><input type="number" value="1" min="1" class="manual-qty" style="width: 100%; padding: 4px; font-size: 11px; border: 1px solid #94a3b8; border-radius: 3px; text-align: center;" /></td>
+      <td style="padding: 4px;">
+        <select style="width: 100%; padding: 4px; font-size: 11px; border: 1px solid #94a3b8; border-radius: 3px;">
+          <option value="מקורי">מקורי</option>
+          <option value="תחליפי">תחליפי</option>
+          <option value="אחר">אחר</option>
+        </select>
+      </td>
+      <td style="padding: 4px;"><input type="number" step="0.01" placeholder="0.00" class="manual-price" style="width: 100%; padding: 4px; font-size: 11px; border: 1px solid #94a3b8; border-radius: 3px; text-align: left;" /></td>
+      <td style="padding: 4px; text-align: center;"><button type="button" onclick="window.invoiceProcessor.removeManualRow('${rowId}')" style="padding: 4px 8px; font-size: 10px; background: #dc2626; color: white; border: none; border-radius: 3px; cursor: pointer;">הסר</button></td>
+    `;
+    
+    tbody.appendChild(row);
+    row.querySelectorAll('.manual-qty, .manual-price').forEach(input => {
+      input.addEventListener('input', () => this.recalculateManualTotals());
+    });
+  }
+
+  addManualWorkRow() {
+    const rowId = `manual-work-${++this.manualRowCounters.works}`;
+    const tbody = document.getElementById('manual-works-body');
+    const row = document.createElement('tr');
+    row.dataset.rowId = rowId;
+    row.style.background = '#64748b';
+    
+    row.innerHTML = `
+      <td style="padding: 4px;"><input type="text" placeholder="קוד" style="width: 100%; padding: 4px; font-size: 11px; border: 1px solid #94a3b8; border-radius: 3px;" /></td>
+      <td colspan="2" style="padding: 4px;"><input type="text" placeholder="תיאור עבודות" style="width: 100%; padding: 4px; font-size: 11px; border: 1px solid #94a3b8; border-radius: 3px;" /></td>
+      <td style="padding: 4px;"><input type="number" step="0.01" placeholder="0.00" class="manual-price" style="width: 100%; padding: 4px; font-size: 11px; border: 1px solid #94a3b8; border-radius: 3px; text-align: left;" /></td>
+      <td style="padding: 4px; text-align: center;"><button type="button" onclick="window.invoiceProcessor.removeManualRow('${rowId}')" style="padding: 4px 8px; font-size: 10px; background: #dc2626; color: white; border: none; border-radius: 3px; cursor: pointer;">הסר</button></td>
+    `;
+    
+    tbody.appendChild(row);
+    row.querySelectorAll('.manual-price').forEach(input => {
+      input.addEventListener('input', () => this.recalculateManualTotals());
+    });
+  }
+
+  addManualRepairRow() {
+    const rowId = `manual-repair-${++this.manualRowCounters.repairs}`;
+    const tbody = document.getElementById('manual-repairs-body');
+    const row = document.createElement('tr');
+    row.dataset.rowId = rowId;
+    row.style.background = '#64748b';
+    
+    row.innerHTML = `
+      <td style="padding: 4px;"><input type="text" placeholder="סוג" style="width: 100%; padding: 4px; font-size: 11px; border: 1px solid #94a3b8; border-radius: 3px;" /></td>
+      <td colspan="2" style="padding: 4px;"><input type="text" placeholder="תיאור התיקון" style="width: 100%; padding: 4px; font-size: 11px; border: 1px solid #94a3b8; border-radius: 3px;" /></td>
+      <td style="padding: 4px;"><input type="number" step="0.01" placeholder="0.00" class="manual-price" style="width: 100%; padding: 4px; font-size: 11px; border: 1px solid #94a3b8; border-radius: 3px; text-align: left;" /></td>
+      <td style="padding: 4px; text-align: center;"><button type="button" onclick="window.invoiceProcessor.removeManualRow('${rowId}')" style="padding: 4px 8px; font-size: 10px; background: #dc2626; color: white; border: none; border-radius: 3px; cursor: pointer;">הסר</button></td>
+    `;
+    
+    tbody.appendChild(row);
+    row.querySelectorAll('.manual-price').forEach(input => {
+      input.addEventListener('input', () => this.recalculateManualTotals());
+    });
+  }
+
+  removeManualRow(rowId) {
+    const row = document.querySelector(`tr[data-row-id="${rowId}"]`);
+    if (row && confirm('האם למחוק שורה זו?')) {
+      row.remove();
+      this.recalculateManualTotals();
+    }
+  }
+
+  recalculateManualTotals() {
+    // Calculate parts total
+    let partsTotal = 0;
+    document.querySelectorAll('#manual-parts-body tr').forEach(row => {
+      const qty = parseFloat(row.querySelector('.manual-qty')?.value) || 0;
+      const price = parseFloat(row.querySelector('.manual-price')?.value) || 0;
+      partsTotal += qty * price;
+    });
+    
+    // Calculate works total
+    let worksTotal = 0;
+    document.querySelectorAll('#manual-works-body tr').forEach(row => {
+      const price = parseFloat(row.querySelector('.manual-price')?.value) || 0;
+      worksTotal += price;
+    });
+    
+    // Calculate repairs total
+    let repairsTotal = 0;
+    document.querySelectorAll('#manual-repairs-body tr').forEach(row => {
+      const price = parseFloat(row.querySelector('.manual-price')?.value) || 0;
+      repairsTotal += price;
+    });
+    
+    // Update category totals
+    document.getElementById('manual-parts-total').textContent = `₪${partsTotal.toLocaleString('he-IL', {minimumFractionDigits: 2})}`;
+    document.getElementById('manual-works-total').textContent = `₪${worksTotal.toLocaleString('he-IL', {minimumFractionDigits: 2})}`;
+    document.getElementById('manual-repairs-total').textContent = `₪${repairsTotal.toLocaleString('he-IL', {minimumFractionDigits: 2})}`;
+    
+    // Calculate grand totals
+    const subtotal = partsTotal + worksTotal + repairsTotal;
+    const vatPercent = parseFloat(document.getElementById('manual-vat-percent')?.value) || 0;
+    const vatAmount = subtotal * (vatPercent / 100);
+    const grandTotal = subtotal + vatAmount;
+    
+    document.getElementById('manual-subtotal').textContent = `₪${subtotal.toLocaleString('he-IL', {minimumFractionDigits: 2})}`;
+    document.getElementById('manual-vat-amount').textContent = `₪${vatAmount.toLocaleString('he-IL', {minimumFractionDigits: 2})}`;
+    document.getElementById('manual-grand-total').textContent = `₪${grandTotal.toLocaleString('he-IL', {minimumFractionDigits: 2})}`;
+  }
+
+  async saveManualInvoice() {
+    console.log('💾 Saving manual invoice...');
+    
+    // Collect data from manual entry tables
+    const parts = [];
+    document.querySelectorAll('#manual-parts-body tr').forEach(row => {
+      const inputs = row.querySelectorAll('input, select');
+      parts.push({
+        "מק\"ט חלק": inputs[0].value,
+        "שם חלק": inputs[1].value,
+        "תיאור": inputs[2].value,
+        "כמות": inputs[3].value,
+        "מקור": inputs[4].value,
+        "עלות": (parseFloat(inputs[3].value) * parseFloat(inputs[5].value)).toFixed(2)
+      });
+    });
+    
+    const works = [];
+    document.querySelectorAll('#manual-works-body tr').forEach(row => {
+      const inputs = row.querySelectorAll('input');
+      works.push({
+        "סוג העבודה": inputs[0].value,
+        "תיאור עבודות": inputs[1].value,
+        "עלות עבודות": parseFloat(inputs[2].value).toFixed(2)
+      });
+    });
+    
+    const repairs = [];
+    document.querySelectorAll('#manual-repairs-body tr').forEach(row => {
+      const inputs = row.querySelectorAll('input');
+      repairs.push({
+        "סוג תיקון": inputs[0].value,
+        "תיאור התיקון": inputs[1].value,
+        "עלות תיקונים": parseFloat(inputs[2].value).toFixed(2)
+      });
+    });
+    
+    // Get helper data
+    const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+    const caseId = helper.case_id;
+    const plate = helper.plate || document.getElementById('plate')?.value || '';
+    
+    const subtotal = parseFloat(document.getElementById('manual-subtotal').textContent.replace(/[^\d.-]/g, ''));
+    const vatPercent = parseFloat(document.getElementById('manual-vat-percent').value);
+    const vatAmount = parseFloat(document.getElementById('manual-vat-amount').textContent.replace(/[^\d.-]/g, ''));
+    const grandTotal = parseFloat(document.getElementById('manual-grand-total').textContent.replace(/[^\d.-]/g, ''));
+    
+    // Build invoice data matching OCR structure
+    const invoiceData = {
+      "מספר רכב": plate,
+      "בעל הרכב": document.getElementById('car_owner')?.value || '',
+      "מס. חשבונית": `MANUAL-${Date.now()}`,
+      "שם מוסך": document.getElementById('garage_name')?.value || 'קלט ידני',
+      "חלקים": parts,
+      "עבודות": works,
+      "תיקונים": repairs,
+      "סהכ חלקים": parts.reduce((sum, p) => sum + parseFloat(p.עלות), 0).toFixed(2),
+      "סהכ עבודות": works.reduce((sum, w) => sum + parseFloat(w['עלות עבודות']), 0).toFixed(2),
+      "סהכ תיקונים": repairs.reduce((sum, r) => sum + parseFloat(r['עלות תיקונים']), 0).toFixed(2),
+      "עלות כוללת ללא מע״מ": subtotal.toFixed(2),
+      "מע\"מ": vatPercent + "%",
+      "ערך מע\"מ": vatAmount.toFixed(2),
+      "עלות כוללת": grandTotal.toFixed(2),
+      "source": "manual_input",
+      "processed_at": new Date().toISOString()
+    };
+    
+    // Save to helper
+    if (!helper.invoices) helper.invoices = [];
+    helper.invoices.push(invoiceData);
+    sessionStorage.setItem('helper', JSON.stringify(helper));
+    console.log('✅ Saved to helper.invoices');
+    
+    // Save to Supabase if case exists
+    if (caseId && this.invoiceService) {
+      try {
+        const invoiceInsert = {
+          case_id: caseId,
+          plate: plate,
+          invoice_number: invoiceData['מס. חשבונית'],
+          invoice_type: 'PARTS',
+          supplier_name: invoiceData['שם מוסך'],
+          status: 'DRAFT',
+          total_before_tax: subtotal,
+          tax_amount: vatAmount,
+          total_amount: grandTotal
+        };
+        
+        const { data: invoice, error: invoiceError } = await window.supabase
+          .from('invoices')
+          .insert(invoiceInsert)
+          .select()
+          .single();
+        
+        if (invoiceError) throw invoiceError;
+        console.log('✅ Manual invoice saved to Supabase:', invoice.id);
+        
+        this.showAlert('✅ חשבונית ידנית נשמרה בהצלחה', 'success');
+      } catch (error) {
+        console.error('❌ Failed to save manual invoice:', error);
+        this.showAlert('⚠️ נשמר ל-helper אבל שגיאה בשמירה למסד נתונים', 'warning');
+      }
+    } else {
+      this.showAlert('✅ חשבונית ידנית נשמרה ל-helper', 'success');
+    }
   }
 }
 
