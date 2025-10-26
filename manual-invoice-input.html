@@ -1,0 +1,1148 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>הזנת חשבונית ידנית - SmartVal</title>
+  
+  <!--
+  MANUAL INVOICE INPUT FORM
+  ==========================
+  Purpose: Fallback form for manual invoice entry when OCR is unavailable
+  Output: Identical JSON structure to automated OCR webhook
+  Integration: SessionStorage helper + Supabase invoices/invoice_lines tables
+  
+  USAGE INSTRUCTIONS (Hebrew):
+  
+  1. מלא את השדות החובה (מסומנים ב-*)
+  2. הוסף פריטים לכל קטגוריה (חלקים, עבודות, תיקונים) לפי הצורך
+  3. הסכומים מתעדכנים אוטומטית
+  4. לחץ "שמור חשבונית" לשמירה
+  5. הנתונים נשמרים ל-helper.invoices וגם ל-Supabase
+  
+  DATA STRUCTURE OUTPUT:
+  {
+    "מס. חשבונית": "6",
+    "שם מוסך": "...",
+    "בעל הרכב": "...",
+    "חלקים": [{...}],
+    "עבודות": [{...}],
+    "תיקונים": [{...}],
+    "source": "manual_input"
+  }
+  -->
+  
+  <style>
+    /* === CORE STYLES === */
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    
+    body {
+      direction: rtl;
+      text-align: right;
+      font-family: 'Arial', 'Segoe UI', 'Tahoma', sans-serif;
+      background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+      min-height: 100vh;
+      padding: 20px;
+    }
+    
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    
+    /* === HEADER === */
+    header {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 20px;
+      border-radius: 12px;
+      margin-bottom: 20px;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+      text-align: center;
+      position: relative;
+    }
+    
+    header h1 {
+      font-size: 28px;
+      margin-bottom: 10px;
+    }
+    
+    .badge {
+      display: inline-block;
+      background: #f59e0b;
+      color: white;
+      padding: 6px 16px;
+      border-radius: 20px;
+      font-size: 13px;
+      font-weight: bold;
+    }
+    
+    .save-btn-top {
+      position: absolute;
+      top: 20px;
+      left: 20px;
+      background: white;
+      color: #667eea;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 16px;
+      font-weight: bold;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+      transition: all 0.3s ease;
+    }
+    
+    .save-btn-top:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+    }
+    
+    /* === SECTIONS === */
+    section {
+      background: white;
+      padding: 20px;
+      border-radius: 12px;
+      margin-bottom: 20px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    section h2 {
+      font-size: 20px;
+      color: #1e293b;
+      margin-bottom: 15px;
+      border-bottom: 2px solid #e2e8f0;
+      padding-bottom: 10px;
+    }
+    
+    /* === FIXED FIELDS === */
+    .fixed-fields {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 15px;
+    }
+    
+    .field-group {
+      display: flex;
+      flex-direction: column;
+    }
+    
+    .field-group label {
+      font-size: 13px;
+      font-weight: bold;
+      margin-bottom: 5px;
+      color: #334155;
+    }
+    
+    .field-group input,
+    .field-group select {
+      padding: 10px;
+      border: 1px solid #cbd5e1;
+      border-radius: 6px;
+      font-size: 14px;
+      transition: all 0.2s ease;
+    }
+    
+    .field-group input:focus,
+    .field-group select:focus {
+      outline: none;
+      border-color: #667eea;
+      box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    }
+    
+    .field-group input.error {
+      border-color: #dc2626;
+      background: #fef2f2;
+    }
+    
+    .required {
+      color: #dc2626;
+      font-weight: bold;
+    }
+    
+    /* LTR for numbers and dates */
+    input[type="number"],
+    input[type="date"],
+    input[dir="ltr"] {
+      direction: ltr;
+      text-align: left;
+    }
+    
+    /* === CATEGORY TABLES === */
+    .category-section {
+      margin-bottom: 20px;
+    }
+    
+    .category-section h3 {
+      font-size: 18px;
+      color: #1e293b;
+      margin-bottom: 15px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    
+    thead th {
+      background: #64748b;
+      color: white;
+      padding: 10px 8px;
+      text-align: right;
+      font-size: 13px;
+      font-weight: bold;
+    }
+    
+    tbody td {
+      padding: 8px;
+      border-bottom: 1px solid #e2e8f0;
+    }
+    
+    tbody input,
+    tbody select {
+      width: 100%;
+      padding: 6px 8px;
+      border: 1px solid #cbd5e1;
+      border-radius: 4px;
+      font-size: 13px;
+    }
+    
+    tbody input:focus,
+    tbody select:focus {
+      outline: none;
+      border-color: #667eea;
+    }
+    
+    .cost-field {
+      text-align: left;
+      font-weight: bold;
+    }
+    
+    tfoot {
+      background: #f1f5f9;
+    }
+    
+    tfoot td {
+      padding: 12px 8px;
+      font-weight: bold;
+    }
+    
+    .category-total {
+      font-size: 16px;
+      color: #0f172a;
+    }
+    
+    /* === BUTTONS === */
+    .add-btn {
+      background: #22c55e;
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: bold;
+      transition: all 0.2s ease;
+    }
+    
+    .add-btn:hover {
+      background: #16a34a;
+      transform: translateY(-1px);
+    }
+    
+    .remove-btn {
+      background: #dc2626;
+      color: white;
+      border: none;
+      padding: 4px 10px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 16px;
+      font-weight: bold;
+      transition: all 0.2s ease;
+    }
+    
+    .remove-btn:hover {
+      background: #b91c1c;
+    }
+    
+    .save-btn-bottom {
+      width: 100%;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border: none;
+      padding: 16px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 18px;
+      font-weight: bold;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+      transition: all 0.3s ease;
+    }
+    
+    .save-btn-bottom:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 10px rgba(0,0,0,0.3);
+    }
+    
+    /* === GRAND TOTALS === */
+    .grand-totals {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 20px;
+      border-radius: 12px;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+    }
+    
+    .total-line {
+      display: flex;
+      justify-content: space-between;
+      padding: 8px 0;
+      font-size: 15px;
+    }
+    
+    .total-line.editable {
+      align-items: center;
+    }
+    
+    .total-line.editable input {
+      width: 80px;
+      padding: 5px;
+      border: 1px solid rgba(255,255,255,0.3);
+      border-radius: 4px;
+      font-size: 14px;
+      text-align: center;
+      background: rgba(255,255,255,0.9);
+    }
+    
+    .total-line.grand {
+      border-top: 2px solid rgba(255,255,255,0.3);
+      padding-top: 12px;
+      margin-top: 8px;
+      font-size: 20px;
+      font-weight: bold;
+    }
+    
+    .calculated {
+      background: rgba(255,255,255,0.2);
+      padding: 5px 12px;
+      border-radius: 6px;
+      font-weight: bold;
+      min-width: 120px;
+      text-align: left;
+    }
+    
+    /* === SIGNATURE === */
+    .signature {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 15px;
+      padding: 15px;
+      background: #f1f5f9;
+      border-radius: 8px;
+    }
+    
+    .sig-field {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+    
+    .sig-field label {
+      font-weight: bold;
+      color: #475569;
+    }
+    
+    .sig-field span {
+      color: #0f172a;
+    }
+    
+    /* === ANIMATIONS === */
+    @keyframes slideIn {
+      from {
+        opacity: 0;
+        transform: translateY(-10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+    
+    @keyframes fadeOut {
+      from {
+        opacity: 1;
+      }
+      to {
+        opacity: 0;
+      }
+    }
+    
+    @keyframes slideInRight {
+      from {
+        opacity: 0;
+        transform: translateX(50px);
+      }
+      to {
+        opacity: 1;
+        transform: translateX(0);
+      }
+    }
+    
+    .item-row {
+      animation: slideIn 0.3s ease-out;
+    }
+    
+    /* === ALERTS === */
+    .alert {
+      position: fixed;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      padding: 15px 30px;
+      border-radius: 8px;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+      z-index: 10000;
+      font-weight: bold;
+      animation: slideInRight 0.3s ease-out;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    
+    .alert-success {
+      background: #22c55e;
+      color: white;
+    }
+    
+    .alert-error {
+      background: #dc2626;
+      color: white;
+    }
+    
+    /* === RESPONSIVE === */
+    @media (max-width: 768px) {
+      .fixed-fields {
+        grid-template-columns: 1fr;
+      }
+      
+      table {
+        font-size: 12px;
+      }
+      
+      thead th,
+      tbody td {
+        padding: 6px 4px;
+      }
+      
+      .save-btn-top {
+        position: static;
+        width: 100%;
+        margin-bottom: 10px;
+      }
+      
+      header {
+        text-align: center;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <!-- HEADER -->
+    <header>
+      <button type="button" class="save-btn-top" onclick="handleSave()">💾 שמור חשבונית</button>
+      <h1>הזנת חשבונית ידנית</h1>
+      <span class="badge">קלט ידני</span>
+    </header>
+
+    <!-- FIXED FIELDS SECTION -->
+    <section>
+      <h2>פרטי חשבונית</h2>
+      <div class="fixed-fields">
+        <div class="field-group">
+          <label for="car-owner">בעל הרכב <span class="required">*</span></label>
+          <input type="text" id="car-owner" required dir="rtl" />
+        </div>
+        
+        <div class="field-group">
+          <label for="invoice-number">מס. חשבונית <span class="required">*</span></label>
+          <input type="text" id="invoice-number" required dir="ltr" />
+        </div>
+        
+        <div class="field-group">
+          <label for="date">תאריך <span class="required">*</span></label>
+          <input type="date" id="date" required />
+        </div>
+        
+        <div class="field-group">
+          <label for="garage-name">שם מוסך <span class="required">*</span></label>
+          <input type="text" id="garage-name" required dir="rtl" />
+        </div>
+        
+        <div class="field-group">
+          <label for="garage-phone">טלפון מוסך <span class="required">*</span></label>
+          <input type="tel" id="garage-phone" required dir="ltr" />
+        </div>
+        
+        <div class="field-group">
+          <label for="vehicle-plate">מספר רכב</label>
+          <input type="text" id="vehicle-plate" dir="ltr" />
+        </div>
+        
+        <div class="field-group">
+          <label for="manufacturer">יצרן</label>
+          <input type="text" id="manufacturer" dir="rtl" />
+        </div>
+        
+        <div class="field-group">
+          <label for="model">דגם</label>
+          <input type="text" id="model" dir="rtl" />
+        </div>
+        
+        <div class="field-group">
+          <label for="production-year">שנת ייצור</label>
+          <input type="text" id="production-year" dir="ltr" />
+        </div>
+        
+        <div class="field-group">
+          <label for="odometer">מד אוץ</label>
+          <input type="text" id="odometer" dir="ltr" />
+        </div>
+        
+        <div class="field-group">
+          <label for="file-number">מספר תיק</label>
+          <input type="text" id="file-number" dir="ltr" />
+        </div>
+        
+        <div class="field-group">
+          <label for="garage-email">דוא"ל מוסך</label>
+          <input type="email" id="garage-email" dir="ltr" />
+        </div>
+        
+        <div class="field-group">
+          <label for="garage-address">כתובת מוסך</label>
+          <input type="text" id="garage-address" dir="rtl" />
+        </div>
+        
+        <div class="field-group">
+          <label for="damage-area">מוקד נזק</label>
+          <input type="text" id="damage-area" dir="rtl" />
+        </div>
+        
+        <div class="field-group">
+          <label for="company-number">ח.פ.</label>
+          <input type="text" id="company-number" dir="ltr" />
+        </div>
+        
+        <div class="field-group">
+          <label for="notes">הערות</label>
+          <input type="text" id="notes" dir="rtl" />
+        </div>
+      </div>
+    </section>
+
+    <!-- PARTS SECTION -->
+    <section class="category-section">
+      <h3>🔧 חלקים</h3>
+      <table id="parts-table">
+        <thead>
+          <tr>
+            <th style="width: 150px;">מק"ט חלק</th>
+            <th>שם חלק</th>
+            <th>תיאור</th>
+            <th style="width: 70px;">כמות</th>
+            <th style="width: 100px;">מקור</th>
+            <th style="width: 100px;">עלות (₪)</th>
+            <th style="width: 60px;"></th>
+          </tr>
+        </thead>
+        <tbody id="parts-tbody">
+          <!-- Rows added dynamically -->
+        </tbody>
+        <tfoot>
+          <tr>
+            <td colspan="6" style="text-align: left;">
+              <button type="button" class="add-btn" onclick="addPartRow()">+ הוסף חלק</button>
+            </td>
+            <td style="text-align: right;">
+              <span class="category-total" id="parts-total">₪0.00</span>
+            </td>
+          </tr>
+        </tfoot>
+      </table>
+    </section>
+
+    <!-- WORKS SECTION -->
+    <section class="category-section">
+      <h3>👷 עבודות</h3>
+      <table id="works-table">
+        <thead>
+          <tr>
+            <th style="width: 100px;">קוד</th>
+            <th>תיאור עבודות</th>
+            <th style="width: 100px;">עלות (₪)</th>
+            <th style="width: 60px;"></th>
+          </tr>
+        </thead>
+        <tbody id="works-tbody">
+          <!-- Rows added dynamically -->
+        </tbody>
+        <tfoot>
+          <tr>
+            <td colspan="2" style="text-align: left;">
+              <button type="button" class="add-btn" onclick="addWorkRow()">+ הוסף עבודה</button>
+            </td>
+            <td style="text-align: right;">
+              <span class="category-total" id="works-total">₪0.00</span>
+            </td>
+            <td></td>
+          </tr>
+        </tfoot>
+      </table>
+    </section>
+
+    <!-- REPAIRS SECTION -->
+    <section class="category-section">
+      <h3>🔨 תיקונים</h3>
+      <table id="repairs-table">
+        <thead>
+          <tr>
+            <th style="width: 100px;">סוג תיקון</th>
+            <th>תיאור התיקון</th>
+            <th style="width: 100px;">עלות (₪)</th>
+            <th style="width: 60px;"></th>
+          </tr>
+        </thead>
+        <tbody id="repairs-tbody">
+          <!-- Rows added dynamically -->
+        </tbody>
+        <tfoot>
+          <tr>
+            <td colspan="2" style="text-align: left;">
+              <button type="button" class="add-btn" onclick="addRepairRow()">+ הוסף תיקון</button>
+            </td>
+            <td style="text-align: right;">
+              <span class="category-total" id="repairs-total">₪0.00</span>
+            </td>
+            <td></td>
+          </tr>
+        </tfoot>
+      </table>
+    </section>
+
+    <!-- GRAND TOTALS -->
+    <section class="grand-totals">
+      <div class="total-line">
+        <span>עלות כוללת ללא מע"מ:</span>
+        <span id="subtotal" class="calculated">₪0.00</span>
+      </div>
+      <div class="total-line editable">
+        <label for="vat-percent">מע"מ (%):</label>
+        <input type="number" id="vat-percent" value="18" min="0" max="100" step="0.1" onchange="recalculateAll()" />
+      </div>
+      <div class="total-line">
+        <span>ערך מע"מ:</span>
+        <span id="vat-amount" class="calculated">₪0.00</span>
+      </div>
+      <div class="total-line grand">
+        <span>עלות כוללת:</span>
+        <span id="grand-total" class="calculated">₪0.00</span>
+      </div>
+    </section>
+
+    <!-- SIGNATURE -->
+    <section class="signature">
+      <div class="sig-field">
+        <label>מולא על ידי:</label>
+        <span id="filled-by">...</span>
+      </div>
+      <div class="sig-field">
+        <label>תאריך:</label>
+        <span id="sig-date">...</span>
+      </div>
+      <div class="sig-field">
+        <label>מקור:</label>
+        <span class="badge">קלט ידני</span>
+      </div>
+    </section>
+
+    <!-- SAVE BUTTON (BOTTOM) -->
+    <button type="button" class="save-btn-bottom" onclick="handleSave()">💾 שמור חשבונית</button>
+  </div>
+
+  <script>
+    // === GLOBAL STATE ===
+    let rowCounter = {
+      parts: 0,
+      works: 0,
+      repairs: 0
+    };
+    
+    let calculationTimer = null;
+
+    // === INITIALIZATION ===
+    window.addEventListener('DOMContentLoaded', () => {
+      initializeForm();
+      addPartRow(); // Start with one part row
+      addWorkRow(); // Start with one work row
+      addRepairRow(); // Start with one repair row
+    });
+
+    function initializeForm() {
+      // Set signature info
+      const auth = JSON.parse(sessionStorage.getItem('auth') || '{}');
+      const user = auth.user;
+      const userName = user?.user_metadata?.full_name || user?.email || 'משתמש';
+      document.getElementById('filled-by').textContent = userName;
+      
+      const now = new Date();
+      const sigDate = `${now.getDate().toString().padStart(2, '0')}.${(now.getMonth() + 1).toString().padStart(2, '0')}.${now.getFullYear()}`;
+      document.getElementById('sig-date').textContent = sigDate;
+      
+      // Set default date to today
+      const today = now.toISOString().split('T')[0];
+      document.getElementById('date').value = today;
+    }
+
+    // === ROW MANAGEMENT ===
+    function addPartRow() {
+      const rowId = `part-${++rowCounter.parts}`;
+      const tbody = document.getElementById('parts-tbody');
+      const row = document.createElement('tr');
+      row.className = 'item-row';
+      row.dataset.category = 'parts';
+      row.dataset.rowId = rowId;
+      
+      row.innerHTML = `
+        <td><input type="text" name="part-code" placeholder="מק״ט" dir="ltr" /></td>
+        <td><input type="text" name="part-name" placeholder="שם חלק" dir="rtl" /></td>
+        <td><input type="text" name="part-desc" placeholder="תיאור" dir="rtl" /></td>
+        <td><input type="number" name="part-qty" value="1" min="1" dir="ltr" class="qty-field" /></td>
+        <td>
+          <select name="part-source" dir="rtl">
+            <option value="מקורי">מקורי</option>
+            <option value="תחליפי">תחליפי</option>
+            <option value="אחר">אחר</option>
+          </select>
+        </td>
+        <td><input type="number" name="part-cost" placeholder="0.00" step="0.01" dir="ltr" class="cost-field" /></td>
+        <td><button type="button" class="remove-btn" onclick="removeRow('${rowId}')">×</button></td>
+      `;
+      
+      tbody.appendChild(row);
+      attachRowListeners(row);
+      row.querySelector('input').focus();
+    }
+
+    function addWorkRow() {
+      const rowId = `work-${++rowCounter.works}`;
+      const tbody = document.getElementById('works-tbody');
+      const row = document.createElement('tr');
+      row.className = 'item-row';
+      row.dataset.category = 'works';
+      row.dataset.rowId = rowId;
+      
+      row.innerHTML = `
+        <td><input type="text" name="work-code" placeholder="קוד" dir="ltr" /></td>
+        <td><input type="text" name="work-desc" placeholder="תיאור עבודות" dir="rtl" /></td>
+        <td><input type="number" name="work-cost" placeholder="0.00" step="0.01" dir="ltr" class="cost-field" /></td>
+        <td><button type="button" class="remove-btn" onclick="removeRow('${rowId}')">×</button></td>
+      `;
+      
+      tbody.appendChild(row);
+      attachRowListeners(row);
+      row.querySelector('input').focus();
+    }
+
+    function addRepairRow() {
+      const rowId = `repair-${++rowCounter.repairs}`;
+      const tbody = document.getElementById('repairs-tbody');
+      const row = document.createElement('tr');
+      row.className = 'item-row';
+      row.dataset.category = 'repairs';
+      row.dataset.rowId = rowId;
+      
+      row.innerHTML = `
+        <td><input type="text" name="repair-code" placeholder="סוג" dir="ltr" /></td>
+        <td><input type="text" name="repair-desc" placeholder="תיאור התיקון" dir="rtl" /></td>
+        <td><input type="number" name="repair-cost" placeholder="0.00" step="0.01" dir="ltr" class="cost-field" /></td>
+        <td><button type="button" class="remove-btn" onclick="removeRow('${rowId}')">×</button></td>
+      `;
+      
+      tbody.appendChild(row);
+      attachRowListeners(row);
+      row.querySelector('input').focus();
+    }
+
+    function removeRow(rowId) {
+      const row = document.querySelector(`tr[data-row-id="${rowId}"]`);
+      if (!row) return;
+      
+      // Check if row has data
+      const hasData = Array.from(row.querySelectorAll('input, select'))
+        .some(field => field.value && field.value !== '1');
+      
+      if (hasData && !confirm('האם למחוק שורה זו? הנתונים יאבדו.')) {
+        return;
+      }
+      
+      row.style.animation = 'fadeOut 0.2s ease-out';
+      setTimeout(() => {
+        row.remove();
+        recalculateAll();
+      }, 200);
+    }
+
+    function attachRowListeners(row) {
+      const fields = row.querySelectorAll('.cost-field, .qty-field');
+      fields.forEach(field => {
+        field.addEventListener('input', debounceCalculate);
+      });
+    }
+
+    // === CALCULATIONS ===
+    function debounceCalculate() {
+      clearTimeout(calculationTimer);
+      calculationTimer = setTimeout(recalculateAll, 300);
+    }
+
+    function recalculateAll() {
+      const partsTotal = calculateCategoryTotal('parts');
+      const worksTotal = calculateCategoryTotal('works');
+      const repairsTotal = calculateCategoryTotal('repairs');
+      
+      document.getElementById('parts-total').textContent = formatCurrency(partsTotal);
+      document.getElementById('works-total').textContent = formatCurrency(worksTotal);
+      document.getElementById('repairs-total').textContent = formatCurrency(repairsTotal);
+      
+      const subtotal = partsTotal + worksTotal + repairsTotal;
+      document.getElementById('subtotal').textContent = formatCurrency(subtotal);
+      
+      const vatPercent = parseFloat(document.getElementById('vat-percent').value) || 0;
+      const vatAmount = subtotal * (vatPercent / 100);
+      document.getElementById('vat-amount').textContent = formatCurrency(vatAmount);
+      
+      const grandTotal = subtotal + vatAmount;
+      document.getElementById('grand-total').textContent = formatCurrency(grandTotal);
+    }
+
+    function calculateCategoryTotal(category) {
+      const rows = document.querySelectorAll(`tr[data-category="${category}"]`);
+      let total = 0;
+      
+      rows.forEach(row => {
+        const qty = parseFloat(row.querySelector('.qty-field')?.value) || 1;
+        const cost = parseFloat(row.querySelector('.cost-field')?.value) || 0;
+        total += qty * cost;
+      });
+      
+      return total;
+    }
+
+    function formatCurrency(amount) {
+      return `₪${amount.toLocaleString('he-IL', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+    }
+
+    function formatAmount(num) {
+      return num.toFixed(2); // Returns "1234.56" (no commas for storage)
+    }
+
+    // === DATA COLLECTION ===
+    function getValue(id) {
+      return document.getElementById(id)?.value || '';
+    }
+
+    function getPartsArray() {
+      const rows = document.querySelectorAll('tr[data-category="parts"]');
+      return Array.from(rows).map(row => ({
+        "מק\"ט חלק": row.querySelector('[name="part-code"]').value,
+        "שם חלק": row.querySelector('[name="part-name"]').value,
+        "תיאור": row.querySelector('[name="part-desc"]').value,
+        "כמות": row.querySelector('[name="part-qty"]').value,
+        "מקור": row.querySelector('[name="part-source"]').value,
+        "עלות": formatAmount(parseFloat(row.querySelector('[name="part-cost"]').value) || 0)
+      })).filter(part => part['שם חלק'] || part['תיאור'] || parseFloat(part['עלות']) > 0);
+    }
+
+    function getWorksArray() {
+      const rows = document.querySelectorAll('tr[data-category="works"]');
+      return Array.from(rows).map(row => ({
+        "סוג העבודה": row.querySelector('[name="work-code"]').value,
+        "תיאור עבודות": row.querySelector('[name="work-desc"]').value,
+        "עלות עבודות": formatAmount(parseFloat(row.querySelector('[name="work-cost"]').value) || 0)
+      })).filter(work => work['תיאור עבודות'] || parseFloat(work['עלות עבודות']) > 0);
+    }
+
+    function getRepairsArray() {
+      const rows = document.querySelectorAll('tr[data-category="repairs"]');
+      return Array.from(rows).map(row => ({
+        "סוג תיקון": row.querySelector('[name="repair-code"]').value,
+        "תיאור התיקון": row.querySelector('[name="repair-desc"]').value,
+        "עלות תיקונים": formatAmount(parseFloat(row.querySelector('[name="repair-cost"]').value) || 0)
+      })).filter(repair => repair['תיאור התיקון'] || parseFloat(repair['עלות תיקונים']) > 0);
+    }
+
+    function collectFormData() {
+      const partsTotal = calculateCategoryTotal('parts');
+      const worksTotal = calculateCategoryTotal('works');
+      const repairsTotal = calculateCategoryTotal('repairs');
+      const subtotal = partsTotal + worksTotal + repairsTotal;
+      const vatPercent = parseFloat(document.getElementById('vat-percent').value) || 0;
+      const vatAmount = subtotal * (vatPercent / 100);
+      const grandTotal = subtotal + vatAmount;
+      
+      return {
+        "מספר רכב": getValue('vehicle-plate'),
+        "יצרן": getValue('manufacturer'),
+        "דגם": getValue('model'),
+        "שנת ייצור": getValue('production-year'),
+        "מד אוץ": getValue('odometer'),
+        "בעל הרכב": getValue('car-owner'),
+        "מספר תיק": getValue('file-number'),
+        "תאריך": getValue('date'),
+        "מס. חשבונית": getValue('invoice-number'),
+        "שם מוסך": getValue('garage-name'),
+        "דוא\"ל מוסך": getValue('garage-email'),
+        "טלפון מוסך": getValue('garage-phone'),
+        "כתובת מוסך": getValue('garage-address'),
+        "מוקד נזק": getValue('damage-area'),
+        "הערות": getValue('notes'),
+        "חלקים": getPartsArray(),
+        "עבודות": getWorksArray(),
+        "תיקונים": getRepairsArray(),
+        "סהכ חלקים": formatAmount(partsTotal),
+        "סהכ עבודות": formatAmount(worksTotal),
+        "סהכ תיקונים": formatAmount(repairsTotal),
+        "עלות כוללת ללא מע״מ": formatAmount(subtotal),
+        "מע\"מ": vatPercent + "%",
+        "ערך מע\"מ": formatAmount(vatAmount),
+        "עלות כוללת": formatAmount(grandTotal),
+        "ח.פ.": getValue('company-number'),
+        "לינק": "",
+        "source": "manual_input",
+        "processed_at": new Date().toISOString()
+      };
+    }
+
+    // === VALIDATION ===
+    function validateRequiredFields() {
+      const requiredFields = [
+        { id: 'car-owner', label: 'בעל הרכב' },
+        { id: 'date', label: 'תאריך' },
+        { id: 'invoice-number', label: 'מס. חשבונית' },
+        { id: 'garage-name', label: 'שם מוסך' },
+        { id: 'garage-phone', label: 'טלפון מוסך' }
+      ];
+      
+      const missing = [];
+      
+      requiredFields.forEach(field => {
+        const input = document.getElementById(field.id);
+        if (!input.value.trim()) {
+          missing.push(field.label);
+          input.classList.add('error');
+        } else {
+          input.classList.remove('error');
+        }
+      });
+      
+      return missing;
+    }
+
+    // === SAVE OPERATIONS ===
+    function saveToHelper(data) {
+      const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+      
+      if (!helper.invoices) helper.invoices = [];
+      
+      const existingIndex = helper.invoices.findIndex(inv => 
+        inv['מס. חשבונית'] === data['מס. חשבונית']
+      );
+      
+      if (existingIndex >= 0) {
+        helper.invoices[existingIndex] = data;
+      } else {
+        helper.invoices.push(data);
+      }
+      
+      sessionStorage.setItem('helper', JSON.stringify(helper));
+    }
+
+    async function saveToSupabase(data) {
+      const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+      const caseId = helper.case_id;
+      
+      if (!caseId) {
+        throw new Error('לא נמצא מספר תיק (case_id) ב-helper. אנא צור תיק חדש תחילה.');
+      }
+      
+      const subtotal = parseFloat(data['עלות כוללת ללא מע״מ']);
+      const vatAmount = parseFloat(data['ערך מע"מ']);
+      const total = parseFloat(data['עלות כוללת']);
+      
+      const invoiceInsert = {
+        case_id: caseId,
+        plate: data['מספר רכב'],
+        invoice_number: data['מס. חשבונית'],
+        invoice_type: 'PARTS',
+        supplier_name: data['שם מוסך'],
+        status: 'DRAFT',
+        total_before_tax: subtotal,
+        tax_amount: vatAmount,
+        total_amount: total
+      };
+      
+      const { data: invoice, error: invoiceError } = await window.supabase
+        .from('invoices')
+        .insert(invoiceInsert)
+        .select()
+        .single();
+      
+      if (invoiceError) throw invoiceError;
+      
+      console.log('✅ Invoice inserted:', invoice.id);
+      
+      const lines = [];
+      let lineNumber = 1;
+      
+      data['חלקים'].forEach(part => {
+        lines.push({
+          invoice_id: invoice.id,
+          line_number: lineNumber++,
+          description: part['שם חלק'] || part['תיאור'],
+          quantity: parseFloat(part['כמות']),
+          unit_price: parseFloat(part['עלות']),
+          line_total: parseFloat(part['כמות']) * parseFloat(part['עלות']),
+          discount_percent: 0,
+          metadata: {
+            category: 'PART',
+            code: part['מק"ט חלק'],
+            source: part['מקור']
+          }
+        });
+      });
+      
+      data['עבודות'].forEach(work => {
+        lines.push({
+          invoice_id: invoice.id,
+          line_number: lineNumber++,
+          description: work['תיאור עבודות'],
+          quantity: 1,
+          unit_price: parseFloat(work['עלות עבודות']),
+          line_total: parseFloat(work['עלות עבודות']),
+          discount_percent: 0,
+          metadata: {
+            category: 'WORK',
+            code: work['סוג העבודה']
+          }
+        });
+      });
+      
+      data['תיקונים'].forEach(repair => {
+        lines.push({
+          invoice_id: invoice.id,
+          line_number: lineNumber++,
+          description: repair['תיאור התיקון'],
+          quantity: 1,
+          unit_price: parseFloat(repair['עלות תיקונים']),
+          line_total: parseFloat(repair['עלות תיקונים']),
+          discount_percent: 0,
+          metadata: {
+            category: 'REPAIR',
+            code: repair['סוג תיקון']
+          }
+        });
+      });
+      
+      if (lines.length > 0) {
+        const { error: linesError } = await window.supabase
+          .from('invoice_lines')
+          .insert(lines);
+        
+        if (linesError) throw linesError;
+        console.log(`✅ Inserted ${lines.length} invoice lines`);
+      }
+      
+      return invoice.id;
+    }
+
+    async function handleSave() {
+      console.log('💾 Starting manual invoice save...');
+      
+      const missingFields = validateRequiredFields();
+      if (missingFields.length > 0) {
+        showErrorMessage(`שדות חובה חסרים: ${missingFields.join(', ')}`);
+        return;
+      }
+      
+      const invoiceData = collectFormData();
+      console.log('📋 Collected invoice data:', invoiceData);
+      
+      try {
+        saveToHelper(invoiceData);
+        console.log('✅ Saved to helper.invoices');
+      } catch (error) {
+        console.error('❌ Helper save failed:', error);
+        showErrorMessage('שגיאה בשמירה ל-sessionStorage');
+        return;
+      }
+      
+      try {
+        const invoiceId = await saveToSupabase(invoiceData);
+        console.log('✅ Saved to Supabase, invoice_id:', invoiceId);
+        showSuccessMessage('✅ חשבונית נשמרה בהצלחה');
+      } catch (error) {
+        console.error('❌ Supabase save failed:', error);
+        showErrorMessage(`שגיאה בשמירה למסד הנתונים: ${error.message}`);
+      }
+    }
+
+    // === UI FEEDBACK ===
+    function showSuccessMessage(msg) {
+      const alert = document.createElement('div');
+      alert.className = 'alert alert-success';
+      alert.innerHTML = `
+        <span style="font-size: 24px;">✅</span>
+        <span>${msg}</span>
+      `;
+      
+      document.body.appendChild(alert);
+      
+      setTimeout(() => {
+        alert.style.animation = 'fadeOut 0.3s ease-out';
+        setTimeout(() => alert.remove(), 300);
+      }, 3000);
+    }
+
+    function showErrorMessage(msg) {
+      const alert = document.createElement('div');
+      alert.className = 'alert alert-error';
+      alert.innerHTML = `
+        <span style="font-size: 24px;">❌</span>
+        <span>${msg}</span>
+      `;
+      
+      document.body.appendChild(alert);
+      
+      setTimeout(() => {
+        alert.style.animation = 'fadeOut 0.3s ease-out';
+        setTimeout(() => alert.remove(), 300);
+      }, 5000);
+    }
+
+    // Load Supabase client
+    const script = document.createElement('script');
+    script.src = './lib/supabaseClient.js';
+    document.head.appendChild(script);
+  </script>
+</body>
+</html>
