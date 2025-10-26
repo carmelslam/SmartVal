@@ -1021,7 +1021,7 @@
     };
 
     // Helper function to save report drafts to Supabase
-    async function saveReportDraftToSupabase(reportType, status, htmlContent) {
+    async function saveReportDraftToSupabase(reportType, status, htmlContent, skipPdfGeneration = false) {
       try {
         const helper = window.helper || JSON.parse(sessionStorage.getItem('helper') || '{}');
         let caseIdOrNumber = helper.case_info?.supabase_case_id || helper.meta?.case_id;
@@ -1053,11 +1053,11 @@
           actualCaseId = caseData.id;
         }
 
-        // 📄 Generate PDF from HTML (exact copy from parts search)
+        // 📄 Generate PDF from HTML (skip for drafts during expertise submit)
         let storagePath = null;
         let publicUrl = null;
 
-        if (htmlContent) {
+        if (htmlContent && !skipPdfGeneration) {
           console.log(`📄 Generating ${reportType} PDF using html2canvas...`);
 
           // Open HTML in hidden window for rendering
@@ -1065,7 +1065,7 @@
 
           // Check if popup was blocked
           if (!reviewWindow) {
-            console.warn('⚠️ Popup blocked - cannot generate PDF. Saving metadata only.');
+            console.warn(`⚠️ Popup blocked - ${reportType} will be saved without PDF`);
             // Continue without PDF - just save metadata
           } else {
             reviewWindow.document.write(htmlContent);
@@ -1604,8 +1604,8 @@
                   'Estimate'
                 );
 
-                // 💾 Save estimate DRAFT to Supabase with HTML
-                await saveReportDraftToSupabase('estimate', 'draft', estimateHTML);
+                // 💾 Save estimate DRAFT to Supabase WITHOUT PDF (metadata only)
+                await saveReportDraftToSupabase('estimate', 'draft', estimateHTML, true);
 
                 const estimatePayload = {
                   plate: payload.plate,
@@ -1629,8 +1629,8 @@
                   'Final Report'
                 );
 
-                // 💾 Save final report DRAFT to Supabase with HTML
-                await saveReportDraftToSupabase('final_report', 'draft', finalReportHTML);
+                // 💾 Save final report DRAFT to Supabase WITHOUT PDF (metadata only)
+                await saveReportDraftToSupabase('final_report', 'draft', finalReportHTML, true);
 
                 const finalReportPayload = {
                   plate: payload.plate,
