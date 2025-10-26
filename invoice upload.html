@@ -1426,8 +1426,9 @@ class InvoiceProcessor {
         console.warn('⚠️ No case ID, skipping Supabase save');
       }
       
-      // Save to helper system (backward compatibility)
-      this.updateHelperWithResults(resultData);
+      // SESSION 79 FIX: Save ORIGINAL OCR data to helper, not rebuilt resultData
+      // This preserves all Hebrew fields: חלקים, עבודות, תיקונים, etc.
+      this.updateHelperWithResults(this.lastOCRResult || resultData);
       
       // SESSION 79: Skip webhook - not needed, data already in Supabase
       // await sendToWebhook('SAVE_INVOICE_RESULTS', resultData);
