@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="he">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>צפייה בדוח - SmartVal</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      background: #f3f4f6;
+      overflow: hidden;
+    }
+
+    #toolbar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      background: linear-gradient(135deg, #1e3a8a, #3b82f6);
+      color: white;
+      padding: 12px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+      z-index: 1000;
+      height: 60px;
+    }
+
+    #toolbar .title {
+      font-size: 18px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    #toolbar .buttons {
+      display: flex;
+      gap: 10px;
+    }
+
+    button {
+      background: white;
+      color: #1e3a8a;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 14px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.2s;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    button:hover {
+      background: #eff6ff;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+    }
+
+    button:active {
+      transform: translateY(0);
+    }
+
+    button.secondary {
+      background: transparent;
+      color: white;
+      border: 2px solid white;
+    }
+
+    button.secondary:hover {
+      background: rgba(255, 255, 255, 0.1);
+    }
+
+    #loadingScreen {
+      position: fixed;
+      top: 60px;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: white;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 20px;
+      z-index: 999;
+    }
+
+    .spinner {
+      width: 50px;
+      height: 50px;
+      border: 4px solid #e5e7eb;
+      border-top-color: #3b82f6;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    #loadingScreen p {
+      color: #6b7280;
+      font-size: 16px;
+    }
+
+    #reportFrame {
+      position: fixed;
+      top: 60px;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      width: 100%;
+      height: calc(100vh - 60px);
+      border: none;
+      background: white;
+    }
+
+    #errorScreen {
+      position: fixed;
+      top: 60px;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: white;
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 20px;
+      padding: 40px;
+      text-align: center;
+    }
+
+    #errorScreen .icon {
+      font-size: 64px;
+    }
+
+    #errorScreen h2 {
+      color: #dc2626;
+      font-size: 24px;
+    }
+
+    #errorScreen p {
+      color: #6b7280;
+      font-size: 16px;
+      max-width: 500px;
+    }
+
+    @media print {
+      #toolbar, #loadingScreen, #errorScreen {
+        display: none !important;
+      }
+
+      #reportFrame {
+        position: static;
+        width: 100%;
+        height: auto;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- Toolbar -->
+  <div id="toolbar">
+    <div class="title">
+      📄 צפייה בדוח
+    </div>
+    <div class="buttons">
+      <button onclick="printReport()" title="הדפס דוח">
+        🖨️ הדפס
+      </button>
+      <button onclick="downloadReport()" title="הורד דוח">
+        📥 הורד
+      </button>
+      <button class="secondary" onclick="closeViewer()" title="סגור">
+        ✕ סגור
+      </button>
+    </div>
+  </div>
+
+  <!-- Loading Screen -->
+  <div id="loadingScreen">
+    <div class="spinner"></div>
+    <p>טוען דוח...</p>
+  </div>
+
+  <!-- Error Screen -->
+  <div id="errorScreen">
+    <div class="icon">⚠️</div>
+    <h2>שגיאה בטעינת הדוח</h2>
+    <p id="errorMessage">לא ניתן לטעון את הדוח. נא לבדוק את הקישור ולנסות שוב.</p>
+    <button onclick="window.close()">סגור חלון</button>
+  </div>
+
+  <!-- Report Frame -->
+  <iframe id="reportFrame"></iframe>
+
+  <script>
+    // Get URL parameter
+    const params = new URLSearchParams(window.location.search);
+    const reportUrl = params.get('url');
+
+    const loadingScreen = document.getElementById('loadingScreen');
+    const errorScreen = document.getElementById('errorScreen');
+    const reportFrame = document.getElementById('reportFrame');
+
+    // Check if URL provided
+    if (!reportUrl) {
+      showError('לא סופק קישור לדוח');
+    } else {
+      loadReport(reportUrl);
+    }
+
+    function loadReport(url) {
+      console.log('📄 Loading report from:', url);
+
+      // Set iframe source
+      reportFrame.src = url;
+
+      // Handle iframe load
+      reportFrame.onload = function() {
+        console.log('✅ Report loaded successfully');
+        loadingScreen.style.display = 'none';
+      };
+
+      // Handle iframe error
+      reportFrame.onerror = function() {
+        console.error('❌ Error loading report');
+        showError('שגיאה בטעינת הדוח מהשרת');
+      };
+
+      // Timeout fallback (10 seconds)
+      setTimeout(() => {
+        if (loadingScreen.style.display !== 'none') {
+          console.warn('⚠️ Report load timeout');
+          loadingScreen.style.display = 'none';
+        }
+      }, 10000);
+    }
+
+    function showError(message) {
+      loadingScreen.style.display = 'none';
+      errorScreen.style.display = 'flex';
+      document.getElementById('errorMessage').textContent = message;
+    }
+
+    function printReport() {
+      console.log('🖨️ Printing report');
+
+      try {
+        // Try to print the iframe content
+        if (reportFrame.contentWindow) {
+          reportFrame.contentWindow.print();
+        } else {
+          // Fallback: print entire window
+          window.print();
+        }
+      } catch (error) {
+        console.error('❌ Print error:', error);
+        alert('שגיאה בהדפסה. נסה להדפיס ישירות מהדפדפן (Ctrl+P)');
+      }
+    }
+
+    function downloadReport() {
+      console.log('📥 Downloading report');
+
+      if (reportUrl) {
+        // Open report in new tab for download
+        window.open(reportUrl, '_blank');
+      } else {
+        alert('❌ לא ניתן להוריד את הדוח');
+      }
+    }
+
+    function closeViewer() {
+      console.log('🚪 Closing viewer');
+
+      // Try to close window
+      if (window.opener) {
+        window.close();
+      } else {
+        // If can't close, go back
+        window.history.back();
+      }
+    }
+
+    // Keyboard shortcuts
+    document.addEventListener('keydown', function(e) {
+      // Ctrl/Cmd + P for print
+      if ((e.ctrlKey || e.metaKey) && e.key === 'p') {
+        e.preventDefault();
+        printReport();
+      }
+
+      // ESC to close
+      if (e.key === 'Escape') {
+        closeViewer();
+      }
+    });
+
+    // Log for debugging
+    console.log('📄 Report Viewer initialized');
+    console.log('Report URL:', reportUrl);
+  </script>
+</body>
+</html>

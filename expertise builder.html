@@ -1081,8 +1081,10 @@
               console.error(`❌ Signed URL error for ${reportType}:`, urlError);
             }
 
-            publicUrl = urlData?.signedUrl;
-            console.log(`✅ ${reportType} uploaded to storage with signed URL:`, publicUrl);
+            // Create viewer URL that wraps the signed URL
+            const signedUrl = urlData?.signedUrl;
+            publicUrl = signedUrl ? `/report-viewer.html?url=${encodeURIComponent(signedUrl)}` : null;
+            console.log(`✅ ${reportType} uploaded to storage with viewer URL:`, publicUrl);
           }
         }
 
@@ -1413,8 +1415,10 @@
                     console.error('❌ Signed URL error:', urlError);
                   }
 
-                  const publicUrl = urlData?.signedUrl;
-                  console.log('✅ PDF uploaded to storage with signed URL:', publicUrl);
+                  // Create viewer URL that wraps the signed URL
+                  const signedUrl = urlData?.signedUrl;
+                  const viewerUrl = signedUrl ? `/report-viewer.html?url=${encodeURIComponent(signedUrl)}` : null;
+                  console.log('✅ PDF uploaded to storage with viewer URL:', viewerUrl);
 
                   // 🔧 FIX: Transform helper structure for SQL function
                   // SQL expects helper.centers at TOP LEVEL (not damage_assessment.centers)
@@ -1429,7 +1433,7 @@
                     p_plate: plate?.replace(/-/g, ''),
                     centers_found: centersData.length,
                     centers_source: helper.centers ? 'helper.centers' : helper.damage_centers ? 'helper.damage_centers' : 'none',
-                    pdf_url: publicUrl
+                    pdf_url: viewerUrl
                   });
 
                   // 🔍 DEBUG: Log first center structure to verify field names
@@ -1448,7 +1452,7 @@
                     p_plate: plate?.replace(/-/g, ''),
                     p_status: 'final',  // ✅ Expertise is always final (no draft state)
                     p_pdf_storage_path: uploadError ? null : storagePath,
-                    p_pdf_public_url: uploadError ? null : publicUrl
+                    p_pdf_public_url: uploadError || urlError ? null : viewerUrl
                   });
 
                   // 🔍 DEBUG: Log RPC response
