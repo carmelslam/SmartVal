@@ -2432,6 +2432,130 @@
                 console.warn('⚠️ Estimate will still be sent to Make.com webhook');
               } else {
                 console.log('✅ Estimate saved to Supabase successfully');
+
+                // 📄 ALSO save final_report draft (workflow requirement)
+                try {
+                  console.log('📄 Generating final_report draft PDF...');
+
+                  // Fetch final report HTML
+                  const finalReportIframe = document.createElement('iframe');
+                  finalReportIframe.style.display = 'none';
+                  document.body.appendChild(finalReportIframe);
+
+                  const finalReportHTML = await new Promise((resolve, reject) => {
+                    const timeout = setTimeout(() => {
+                      document.body.removeChild(finalReportIframe);
+                      reject(new Error('Timeout loading final report'));
+                    }, 10000);
+
+                    finalReportIframe.onload = () => {
+                      try {
+                        clearTimeout(timeout);
+                        const html = finalReportIframe.contentDocument.documentElement.outerHTML;
+                        document.body.removeChild(finalReportIframe);
+                        resolve(html);
+                      } catch (err) {
+                        clearTimeout(timeout);
+                        document.body.removeChild(finalReportIframe);
+                        reject(err);
+                      }
+                    };
+
+                    finalReportIframe.src = 'https://yaron-cayouf-portal.netlify.app/final-report-template-builder.html?from=estimate&skipValidation=true';
+                  });
+
+                  // Generate PDF from final report HTML
+                  const frReviewWindow = window.open('', '_blank');
+
+                  if (!frReviewWindow) {
+                    console.warn('⚠️ Popup blocked - skipping final_report draft PDF');
+                  } else {
+                    frReviewWindow.document.write(finalReportHTML);
+                    frReviewWindow.document.close();
+                    await new Promise(resolve => setTimeout(resolve, 1000));
+
+                    const frCanvas = await html2canvas(frReviewWindow.document.body, {
+                      scale: 1,
+                      useCORS: true,
+                      allowTaint: true,
+                      logging: false,
+                      imageTimeout: 0,
+                      ignoreElements: (element) => {
+                        return element.tagName === 'IMG' && element.src.includes('carmelcayouf.com');
+                      }
+                    });
+
+                    const { jsPDF } = window.jspdf;
+                    const frPdf = new jsPDF('p', 'mm', 'a4');
+                    const frImgData = frCanvas.toDataURL('image/jpeg', 0.7);
+                    const frPageWidth = 210;
+                    const frPageHeight = 297;
+                    const frTopMargin = 15;
+                    const frLeftMargin = 10;
+                    const frRightMargin = 10;
+                    const frContentWidth = frPageWidth - frLeftMargin - frRightMargin;
+                    const frContentHeight = frPageHeight - frTopMargin - 15;
+                    const frImgHeight = (frCanvas.height * frContentWidth) / frCanvas.width;
+                    let frHeightLeft = frImgHeight;
+                    let frPosition = frTopMargin;
+
+                    frPdf.addImage(frImgData, 'JPEG', frLeftMargin, frPosition, frContentWidth, frImgHeight);
+                    frHeightLeft -= frContentHeight;
+
+                    while (frHeightLeft > 0) {
+                      frPosition = -(frImgHeight - frHeightLeft) + frTopMargin;
+                      frPdf.addPage();
+                      frPdf.addImage(frImgData, 'JPEG', frLeftMargin, frPosition, frContentWidth, frImgHeight);
+                      frHeightLeft -= frContentHeight;
+                    }
+
+                    frReviewWindow.close();
+                    const frPdfBlob = frPdf.output('blob');
+
+                    // Upload final_report draft PDF
+                    const frTimestamp = new Date().toISOString().replace(/[:.]/g, '-').substring(0, 19);
+                    const frFilename = `${normalizedPlate}_final_report_draft_${frTimestamp}.pdf`;
+                    const frStoragePath = `${caseIdOrNumber}/${frFilename}`;
+
+                    const { error: frUploadError } = await window.supabase.storage
+                      .from('final-reports')
+                      .upload(frStoragePath, frPdfBlob, {
+                        contentType: 'application/pdf',
+                        upsert: false
+                      });
+
+                    if (!frUploadError) {
+                      const { data: { publicUrl: frPublicUrl } } = window.supabase.storage
+                        .from('final-reports')
+                        .getPublicUrl(frStoragePath);
+
+                      // Save final_report draft to database
+                      const frCentersData = helper.final_report?.centers || helper.centers || helper.damage_centers || [];
+                      const frHelperForSupabase = {
+                        ...helper,
+                        final_report: {
+                          ...helper.final_report,
+                          centers: frCentersData
+                        }
+                      };
+
+                      await window.supabase.rpc('upsert_tracking_final_report_from_helper', {
+                        helper_json: frHelperForSupabase,
+                        p_case_id: actualCaseId,
+                        p_plate: plate?.replace(/-/g, ''),
+                        p_report_type: 'final_report',
+                        p_status: 'draft',  // Draft when generated from estimate export
+                        p_pdf_storage_path: frStoragePath,
+                        p_pdf_public_url: frPublicUrl
+                      });
+
+                      console.log('✅ Final report draft saved successfully');
+                    }
+                  }
+                } catch (finalReportError) {
+                  console.warn('⚠️ Failed to save final_report draft:', finalReportError);
+                  // Continue anyway - estimate was saved successfully
+                }
               }
             }
           } else {
