@@ -77,25 +77,20 @@ class InvoiceService {
         throw new Error('User not authenticated');
       }
 
-      // SESSION 79: Insert invoice record
-      // Note: Using 'status' not 'approval_status' (column doesn't exist)
-      // Schema has: status TEXT DEFAULT 'DRAFT' CHECK (status IN ('DRAFT', 'SENT', 'PAID', 'CANCELLED'))
+      // SESSION 79: Insert invoice record - MATCH ACTUAL SCHEMA
+      // Actual columns: id, case_id, plate, invoice_number, invoice_type, supplier_name, 
+      //                 supplier_tax_id, status, total_before_tax, tax_amount, total_amount
       const invoiceInsert = {
         case_id: caseId,
         plate: invoiceData.plate,
         invoice_number: invoiceData.invoice_number,
+        invoice_type: invoiceData.invoice_type || 'PARTS',
         supplier_name: invoiceData.supplier_name,
         supplier_tax_id: invoiceData.supplier_tax_id || null,
-        issue_date: invoiceData.issue_date,
-        due_date: invoiceData.due_date || null,
-        total_amount: invoiceData.total_amount,
-        vat_amount: invoiceData.vat_amount || null,
-        currency: invoiceData.currency || 'ILS',
         status: invoiceData.status || 'DRAFT',
-        metadata: invoiceData.metadata || null,
-        notes: invoiceData.notes || null,
-        created_by: userId,
-        updated_by: userId
+        total_before_tax: invoiceData.total_before_tax || null,
+        tax_amount: invoiceData.tax_amount || invoiceData.vat_amount || null,
+        total_amount: invoiceData.total_amount
       };
 
       const { data: invoice, error: invoiceError } = await this.supabase
@@ -108,25 +103,25 @@ class InvoiceService {
 
       console.log('✅ Invoice created:', invoice.id);
 
-      // 2. Insert invoice_lines
+      // SESSION 79: Insert invoice_lines - MATCH ACTUAL SCHEMA
+      // Actual columns: id, invoice_id, line_number, description, part_id, quantity, 
+      //                 unit_price, discount_percent, line_total, metadata
       if (lines && lines.length > 0) {
         const linesInsert = lines.map((line, index) => ({
           invoice_id: invoice.id,
           line_number: line.line_number || (index + 1),
-          description: line.description,
+          description: line.description || line.name,
+          part_id: line.part_id || null,
           quantity: line.quantity || 1,
           unit_price: line.unit_price,
-          line_total: line.line_total || (line.quantity * line.unit_price),
-          unit: line.unit || 'יחידה',
           discount_percent: line.discount_percent || 0,
-          vat_rate: line.vat_rate || 17,
-          part_id: line.part_id || null,
-          item_category: line.item_category || null, // Auto-categorized by trigger if null
-          category_confidence: line.category_confidence || null,
-          category_method: line.category_method || null,
-          metadata: line.metadata || null,
-          created_by: userId,
-          updated_by: userId
+          line_total: line.line_total || (line.quantity * line.unit_price),
+          metadata: {
+            category: line.category || line.item_category,
+            unit: line.unit || 'יחידה',
+            vat_rate: line.vat_rate || 17,
+            ...line.metadata
+          }
         }));
 
         const { data: createdLines, error: linesError } = await this.supabase
