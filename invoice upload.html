@@ -975,10 +975,19 @@ class InvoiceProcessor {
         return;
       }
       
-      const invoiceData = JSON.parse(selectedOption.dataset.invoiceData);
-      await this.populateOcrSectionFromInvoice(invoiceData);
+      // SESSION 82 FIX: Re-fetch full invoice with lines and documents instead of using dataset
+      const invoiceId = selectedOption.value;
+      console.log('🔄 Fetching full invoice data for:', invoiceId);
       
-      document.getElementById('viewInvoiceBtn').style.display = 'block';
+      try {
+        const fullInvoice = await this.invoiceService.getInvoiceWithLines(invoiceId);
+        console.log('✅ Fetched invoice with', fullInvoice.lines?.length || 0, 'lines and', fullInvoice.documents?.length || 0, 'documents');
+        await this.populateOcrSectionFromInvoice(fullInvoice);
+        document.getElementById('viewInvoiceBtn').style.display = 'block';
+      } catch (error) {
+        console.error('❌ Error fetching invoice:', error);
+        this.showAlert('שגיאה בטעינת החשבונית', 'error');
+      }
     });
     
     // SESSION 82: View invoice document button
