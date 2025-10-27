@@ -1342,7 +1342,7 @@ class InvoiceProcessor {
         
         if (category === 'PART') {
           lineData['שם חלק'] = line.description || '';
-          lineData['מק"ט חלק'] = line.part_id || '';
+          lineData['מק"ט חלק'] = line.part_id || ''; // SESSION 82: Load code from part_id
           ocrResult['חלקים'].push(lineData);
           ocrResult['סהכ חלקים'] += line.line_total || 0;
         } else if (category === 'WORK') {
@@ -1979,20 +1979,28 @@ class InvoiceProcessor {
       });
     });
     
-    // SESSION 80: Add event listeners for editable general details (identification fields only, totals are auto-calculated)
-    const generalDetailsFields = [
+    // SESSION 82: Add event listeners for ALL editable fields in invoice summary
+    const editableFields = [
       'edit-invoice-number',
       'edit-car-owner', 
       'edit-plate',
       'edit-garage-name',
-      'edit-date'
+      'edit-date',
+      'edit-parts-total',
+      'edit-works-total',
+      'edit-repairs-total',
+      'edit-total-before-vat',
+      'edit-vat-percentage',
+      'edit-vat-amount',
+      'edit-total-with-vat'
     ];
     
-    generalDetailsFields.forEach(fieldId => {
+    editableFields.forEach(fieldId => {
       const field = document.getElementById(fieldId);
       if (field) {
         field.addEventListener('input', () => {
           this.hasUnsavedEdits = true;
+          console.log(`✏️ Field ${fieldId} edited, hasUnsavedEdits = true`);
         });
       }
     });
@@ -2314,11 +2322,15 @@ class InvoiceProcessor {
           invoice_id: this.currentInvoiceId,
           line_number: index + 1,
           description: item.name || item.description || '',
+          part_id: item.code || null, // SESSION 82: Save code to part_id column
           quantity: item.quantity || 1,
           unit_price: item.unit_price || 0,
           line_total: (item.quantity || 1) * (item.unit_price || 0),
           discount_percent: 0,
-          category: item.category || 'OTHER'
+          metadata: {
+            category: item.category || 'OTHER',
+            unit: 'יחידה'
+          }
         }));
         
         console.log('📝 Inserting updated invoice lines:', linesInsert);
@@ -2343,6 +2355,11 @@ class InvoiceProcessor {
       
       this.hasUnsavedEdits = false;
       this.showAlert('✅ השינויים נשמרו בהצלחה', 'success');
+      
+      // SESSION 82: Refresh display to show saved values
+      console.log('🔄 Refreshing display with saved values...');
+      this.displayOCRResults(this.lastOCRResult);
+      console.log('✅ Display refreshed');
       
     } catch (error) {
       console.error('❌ Error saving edits:', error);
@@ -2438,6 +2455,7 @@ class InvoiceProcessor {
           const lines = this.ocrResults.map((item, index) => ({
             line_number: index + 1,
             description: item.name || item.description || '',
+            part_id: item.code || null, // SESSION 82: Include part code
             quantity: item.quantity || 1,
             unit_price: item.unit_price || 0,
             line_total: (item.quantity || 1) * (item.unit_price || 0),
