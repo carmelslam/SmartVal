@@ -1351,8 +1351,52 @@ class InvoiceProcessor {
       repairs: ocrResult['סהכ תיקונים']
     });
     
-    // SESSION 82 FIX: Call handleOCRResults to populate this.ocrResults array
-    await this.handleOCRResults(ocrResult);
+    // SESSION 82 FIX: When loading existing invoice, populate this.ocrResults manually
+    // DO NOT call handleOCRResults() as it will re-save OCR data and corrupt totals
+    const parts = ocrResult['חלקים'] || [];
+    const works = ocrResult['עבודות'] || [];
+    const repairs = ocrResult['תיקונים'] || [];
+    
+    const parsePrice = (value) => {
+      if (!value) return 0;
+      const strValue = String(value).replace(/,/g, '');
+      const parsed = parseFloat(strValue);
+      return isNaN(parsed) ? 0 : parsed;
+    };
+    
+    const partItems = parts.map(part => ({
+      code: part['מק"ט חלק'] || part.code || '',
+      name: part['שם חלק'] || part.name || part['תיאור'] || part.description,
+      description: part['תיאור'] || part.description || '',
+      quantity: parsePrice(part['כמות'] || part.quantity || 1),
+      unit_price: parsePrice(part['עלות'] || part.price || part.unit_price),
+      category: 'PART'
+    }));
+    
+    const workItems = works.map(work => ({
+      code: work['סוג העבודה'] || work['סוג'] || work.code || '',
+      name: work['תיאור עבודות'] || work.name || work.description,
+      description: work['תיאור עבודות'] || work.description || '',
+      quantity: 1,
+      unit_price: parsePrice(work['עלות עבודות'] || work.price || work.unit_price),
+      category: 'WORK'
+    }));
+    
+    const repairItems = repairs.map(repair => ({
+      code: repair['קוד'] || repair['סוג תיקון'] || repair.code || '',
+      name: repair['תיאור התיקון'] || repair.name || repair.description,
+      description: repair['תיאור התיקון'] || repair.description || '',
+      quantity: 1,
+      unit_price: parsePrice(repair['עלות תיקונים'] || repair.price || repair.unit_price),
+      category: 'REPAIR'
+    })).filter(item => item.unit_price > 0);
+    
+    this.ocrResults = [...partItems, ...workItems, ...repairItems];
+    this.lastOCRResult = ocrResult;
+    
+    // Display results without re-saving OCR data
+    this.displayOCRResults(ocrResult);
+    this.updateHelperWithResults(ocrResult);
     
     // SESSION 82 FIX: Set invoice ID and document ID
     this.currentInvoiceId = invoiceData.id;
