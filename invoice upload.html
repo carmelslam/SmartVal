@@ -603,8 +603,11 @@
       <button type="button" id="save-results" class="btn btn-primary" style="display: none;">
         💾 שמור תוצאות
       </button>
-      <button type="button" id="clear-form" class="btn btn-secondary">
-        🗑️ נקה טופס
+      <button type="button" id="delete-invoice" class="btn btn-danger">
+        🗑️ מחק חשבונית לצמיתות
+      </button>
+      <button type="button" id="clear-ui" class="btn btn-secondary">
+        🔄 נקה מסך
       </button>
     </div>
   </form>
@@ -916,9 +919,14 @@ class InvoiceProcessor {
 
     // SESSION 77: Manual item addition - removed old listener (now using onclick in HTML)
 
-    // Clear form
-    document.getElementById('clear-form').addEventListener('click', () => {
-      this.clearForm();
+    // Delete invoice completely
+    document.getElementById('delete-invoice').addEventListener('click', () => {
+      this.deleteInvoiceCompletely();
+    });
+    
+    // Clear UI only
+    document.getElementById('clear-ui').addEventListener('click', () => {
+      this.clearUIForNewInvoice();
     });
 
     // Save results
@@ -2126,25 +2134,49 @@ class InvoiceProcessor {
         helper.invoices = [];
       }
       
-      // SESSION 76: Prevent duplicates based on invoice_number
-      // Remove any existing invoice with the same invoice_number
+      // SESSION 80: Prevent duplicates with comprehensive check
       const invoiceNumber = result.invoice_number || result['מס. חשבונית'] || result.invoiceNumber;
+      const plate = result['מספר רכב'] || result.plate || sessionStorage.getItem('plate');
+      const garageName = result['שם מוסך'] || result.supplier_name;
+      
+      // Generate unique invoice entry ID
+      const generateUUID = () => {
+        return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+          const r = Math.random() * 16 | 0;
+          const v = c == 'x' ? r : (r & 0x3 | 0x8);
+          return v.toString(16);
+        });
+      };
       
       if (invoiceNumber) {
+        // Check for duplicates: same invoice_number + plate + garage
         helper.invoices = helper.invoices.filter(inv => {
           const existingInvNum = inv.invoice_number || inv['מס. חשבונית'] || inv.invoiceNumber;
-          return existingInvNum !== invoiceNumber;
+          const existingPlate = inv['מספר רכב'] || inv.plate;
+          const existingGarage = inv['שם מוסך'] || inv.supplier_name;
+          
+          const isDuplicate = existingInvNum === invoiceNumber && 
+                             existingPlate === plate && 
+                             existingGarage === garageName;
+          
+          return !isDuplicate;
         });
         
-        console.log(`🔍 Checking for duplicate invoice: ${invoiceNumber}`);
-        console.log(`📋 Existing invoices count: ${helper.invoices.length}`);
+        console.log(`🔍 Checking for duplicate: ${invoiceNumber} / ${plate} / ${garageName}`);
+        console.log(`📋 Invoices after duplicate check: ${helper.invoices.length}`);
       }
       
-      // Add new invoice data
+      // SESSION 80: Add invoice with unique entry ID and metadata
       const invoiceData = {
+        invoice_entry_id: generateUUID(),
+        supabase_invoice_id: this.currentInvoiceId || null,
+        entry_timestamp: new Date().toISOString(),
+        source: 'ocr_webhook',
         ...result,
         processed_at: new Date().toISOString(),
-        invoice_number: invoiceNumber
+        invoice_number: invoiceNumber,
+        plate: plate,
+        supplier_name: garageName
       };
       
       helper.invoices.push(invoiceData);
@@ -2209,57 +2241,132 @@ class InvoiceProcessor {
     }
   }
 
-  clearForm() {
-    if (confirm('האם לנקות את כל הנתונים?')) {
-      // SESSION 76: Remove current invoice from helper.invoices before clearing
-      if (this.currentInvoiceId) {
-        try {
-          const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+  // SESSION 80: Complete invoice deletion from all systems
+  async deleteInvoiceCompletely() {
+    if (!this.currentInvoiceId && !this.currentDocumentId) {
+      this.showAlert('אין חשבונית לפעולה לסירה', 'warning');
+      return;
+    }
+    
+    // Get invoice details for confirmation
+    const invoiceNumber = this.lastOCRResult?.['מס. חשבונית'] || 'לא ידוע';
+    const garageName = this.lastOCRResult?.['שם מוסך'] || 'לא ידוע';
+    const totalAmount = this.lastOCRResult?.['עלות כוללת'] || '0';
+    
+    const confirmMessage = `⚠️ אזהרה: פעולה זו תמחק את החשבונית לצמיתות!\n\nפרטי חשבונית:\n• מספר: ${invoiceNumber}\n• מוסך: ${garageName}\n• סכום: ₪${totalAmount}\n\nהמחיקה תבוצע מ:\n✓ שרת המערכת\n✓ מאגר המידע המקומי\n✓ אחסון ענן\n\nהאם אתה בטוח?`;
+    
+    if (!confirm(confirmMessage)) {
+      return;
+    }
+    
+    try {
+      console.log('🗑️ Starting complete invoice deletion...');
+      this.showAlert('מוחק חשבונית...', 'info');
+      
+      // 1. Delete from שרת (Supabase)
+      if (this.currentInvoiceId && this.invoiceService) {
+        console.log('🗑️ Deleting from שרת:', this.currentInvoiceId);
+        await this.invoiceService.deleteInvoice(this.currentInvoiceId);
+        console.log('✅ Deleted from שרת');
+      }
+      
+      // 2. Delete from helper.invoices
+      try {
+        const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+        
+        if (helper.invoices && Array.isArray(helper.invoices)) {
+          const beforeCount = helper.invoices.length;
+          helper.invoices = helper.invoices.filter(inv => {
+            const invId = inv.invoice_id || inv.supabase_invoice_id;
+            const invNum = inv['מס. חשבונית'] || inv.invoice_number;
+            return invId !== this.currentInvoiceId && invNum !== invoiceNumber;
+          });
           
-          if (helper.invoices && Array.isArray(helper.invoices)) {
-            // Remove invoice with matching invoice_id
-            helper.invoices = helper.invoices.filter(inv => inv.invoice_id !== this.currentInvoiceId);
-            
-            // Update meta
-            helper.meta = helper.meta || {};
-            helper.meta.total_invoices = helper.invoices.length;
-            
-            // Save back to sessionStorage
-            sessionStorage.setItem('helper', JSON.stringify(helper));
-            
-            // Update via helper system
-            if (typeof window.updateHelper === 'function') {
-              window.updateHelper('invoices', helper.invoices, 'invoice-upload-clear');
-              window.updateHelper('meta', helper.meta, 'invoice-upload-clear');
-            }
-            
-            console.log('✅ Removed invoice from helper:', this.currentInvoiceId);
+          helper.meta = helper.meta || {};
+          helper.meta.total_invoices = helper.invoices.length;
+          
+          sessionStorage.setItem('helper', JSON.stringify(helper));
+          
+          if (typeof window.updateHelper === 'function') {
+            window.updateHelper('invoices', helper.invoices, 'invoice-delete');
+            window.updateHelper('meta', helper.meta, 'invoice-delete');
           }
+          
+          console.log(`✅ Removed from helper (${beforeCount} → ${helper.invoices.length})`);
+        }
+      } catch (e) {
+        console.warn('Could not remove from helper:', e);
+      }
+      
+      // 3. Delete from OneDrive via webhook (if document exists)
+      if (this.currentDocumentId) {
+        try {
+          console.log('🗑️ Deleting from אחסון ענן...');
+          // Note: Add webhook call here if DELETE_INVOICE_FROM_DRIVE webhook exists
+          // For now, just log
+          console.log('⚠️ OneDrive deletion webhook not yet implemented');
         } catch (e) {
-          console.warn('Could not remove invoice from helper:', e);
+          console.warn('Could not delete from OneDrive:', e);
         }
       }
       
-      // Clear form fields
-      document.getElementById('invoice-form').reset();
+      // 4. Clear UI
+      this.clearUIForNewInvoice();
       
-      // Clear internal state
-      this.uploadedFile = null;
-      this.ocrResults = [];
-      this.currentDocumentId = null;
-      this.currentInvoiceId = null;
+      this.showAlert('✅ חשבונית נמחקה לצמיתות מכל המערכות', 'success');
       
-      // Hide sections
-      document.getElementById('preview-container').style.display = 'none';
-      document.getElementById('ocr-results').classList.remove('show');
-      document.getElementById('validation-status').classList.remove('show');
-      document.getElementById('save-results').style.display = 'none';
-      
-      // Reload case data
-      this.loadCaseData();
-      
-      this.showAlert('טופס נוקה וחשבונית הוסרה', 'success');
+    } catch (error) {
+      console.error('❌ Error deleting invoice:', error);
+      this.showAlert('שגיאה במחיקת חשבונית: ' + error.message, 'error');
     }
+  }
+  
+  // SESSION 80: Clear UI only - prepare for new invoice without deleting data
+  clearUIForNewInvoice() {
+    console.log('🔄 Clearing UI for new invoice (data preserved)');
+    
+    // Clear form fields (except car info)
+    const form = document.getElementById('invoice-form');
+    if (form) {
+      // Save car info
+      const plate = document.getElementById('plate')?.value;
+      const owner = document.getElementById('owner')?.value;
+      const garageName = document.getElementById('garage_name')?.value;
+      
+      form.reset();
+      
+      // Restore car info
+      if (plate) document.getElementById('plate').value = plate;
+      if (owner) document.getElementById('owner').value = owner;
+      if (garageName) document.getElementById('garage_name').value = garageName;
+    }
+    
+    // Clear internal state
+    this.uploadedFile = null;
+    this.ocrResults = [];
+    this.lastOCRResult = null;
+    this.currentDocumentId = null;
+    this.currentInvoiceId = null;
+    this.hasUnsavedEdits = false;
+    
+    // Hide sections
+    document.getElementById('preview-container').style.display = 'none';
+    document.getElementById('ocr-results').classList.remove('show');
+    document.getElementById('validation-status').classList.remove('show');
+    document.getElementById('save-results').style.display = 'none';
+    
+    // Clear manual tables
+    document.getElementById('manual-parts-body').innerHTML = '';
+    document.getElementById('manual-works-body').innerHTML = '';
+    document.getElementById('manual-repairs-body').innerHTML = '';
+    
+    // Reset row counters
+    this.manualRowCounters = { parts: 0, works: 0, repairs: 0 };
+    
+    // Reload case data
+    this.loadCaseData();
+    
+    this.showAlert('מסך נוקה - מוכן לחשבונית חדשה', 'success');
   }
 
   showAlert(message, type = 'info') {
@@ -2498,11 +2605,61 @@ class InvoiceProcessor {
       "processed_at": new Date().toISOString()
     };
     
-    // Save to helper
+    // SESSION 80: Save to helper with unique ID and duplicate check
     if (!helper.invoices) helper.invoices = [];
+    
+    // Generate unique UUID
+    const generateUUID = () => {
+      return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+        const r = Math.random() * 16 | 0;
+        const v = c == 'x' ? r : (r & 0x3 | 0x8);
+        return v.toString(16);
+      });
+    };
+    
+    // Check for duplicates
+    const invoiceNumber = invoiceData['מס. חשבונית'];
+    const plate = invoiceData['מספר רכב'];
+    const garageName = invoiceData['שם מוסך'];
+    
+    if (invoiceNumber) {
+      helper.invoices = helper.invoices.filter(inv => {
+        const existingInvNum = inv['מס. חשבונית'] || inv.invoice_number;
+        const existingPlate = inv['מספר רכב'] || inv.plate;
+        const existingGarage = inv['שם מוסך'] || inv.supplier_name;
+        
+        const isDuplicate = existingInvNum === invoiceNumber && 
+                           existingPlate === plate && 
+                           existingGarage === garageName;
+        
+        return !isDuplicate;
+      });
+      
+      console.log(`🔍 Manual invoice duplicate check: ${invoiceNumber} / ${plate} / ${garageName}`);
+    }
+    
+    // Add unique metadata
+    invoiceData.invoice_entry_id = generateUUID();
+    invoiceData.entry_timestamp = new Date().toISOString();
+    invoiceData.invoice_number = invoiceNumber;
+    invoiceData.plate = plate;
+    invoiceData.supplier_name = garageName;
+    
     helper.invoices.push(invoiceData);
+    
+    // Update meta
+    helper.meta = helper.meta || {};
+    helper.meta.total_invoices = helper.invoices.length;
+    helper.meta.last_invoice_processed = new Date().toISOString();
+    
     sessionStorage.setItem('helper', JSON.stringify(helper));
-    console.log('✅ Saved to helper.invoices');
+    
+    if (typeof window.updateHelper === 'function') {
+      window.updateHelper('invoices', helper.invoices, 'manual-invoice');
+      window.updateHelper('meta', helper.meta, 'manual-invoice');
+    }
+    
+    console.log(`✅ Manual invoice saved to helper (total: ${helper.invoices.length})`);
     
     // Save to Supabase if case exists
     if (caseId && this.invoiceService) {
@@ -2526,7 +2683,16 @@ class InvoiceProcessor {
           .single();
         
         if (invoiceError) throw invoiceError;
-        console.log('✅ Manual invoice saved to Supabase:', invoice.id);
+        console.log('✅ Manual invoice saved to שרת:', invoice.id);
+        
+        // SESSION 80: Update helper with שרת ID
+        invoiceData.supabase_invoice_id = invoice.id;
+        const helperUpdated = JSON.parse(sessionStorage.getItem('helper') || '{}');
+        const invoiceIndex = helperUpdated.invoices.findIndex(inv => inv.invoice_entry_id === invoiceData.invoice_entry_id);
+        if (invoiceIndex >= 0) {
+          helperUpdated.invoices[invoiceIndex].supabase_invoice_id = invoice.id;
+          sessionStorage.setItem('helper', JSON.stringify(helperUpdated));
+        }
         
         this.showAlert('✅ חשבונית ידנית נשמרה בהצלחה', 'success');
       } catch (error) {

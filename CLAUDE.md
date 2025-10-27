@@ -18,3 +18,6 @@ Standard Workflow
 **NEVER HARDCOR VAT RATE**
 
 **VAT RATE IS ALWAYS TAKEN FROM calculations.vat_rate EXCEPT IN OCR / WEBHOOK RESPONSES WHERE THE RATE IS ACCORDING TO THE RESULTS**
+
+**dont use teh word supabase in the UI  = always use שרת**
+**dont use teh word make.com in the UI = always use עיבוד or varinats of עיבוד**
