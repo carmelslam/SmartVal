@@ -1743,26 +1743,26 @@ class InvoiceProcessor {
       'עלות כוללת': result['עלות כוללת']
     });
     
-    // SESSION 82 FIX: Calculate category totals from items if not provided in result
-    let partsTotal = parsePrice(result['סהכ חלקים']);
-    let worksTotal = parsePrice(result['סהכ עבודות']);
-    let repairsTotal = parsePrice(result['סהכ תיקונים']);
+    // SESSION 82 FIX: Get category totals from result - check multiple Hebrew key variations
+    let partsTotal = parsePrice(result['סהכ חלקים']) || parsePrice(result['יתרת חלקים']);
+    let worksTotal = parsePrice(result['סהכ עבודות']) || parsePrice(result['יתרת עבודות']);
+    let repairsTotal = parsePrice(result['סהכ תיקונים']) || parsePrice(result['יתרת תיקונים']);
     
-    // If totals are 0 or missing, calculate from items
-    if (partsTotal === 0 && this.ocrResults.length > 0) {
+    console.log('🔍 Category totals from OCR result:', { partsTotal, worksTotal, repairsTotal });
+    
+    // ONLY calculate from items if ALL totals are 0 or missing
+    if (partsTotal === 0 && worksTotal === 0 && repairsTotal === 0 && this.ocrResults.length > 0) {
+      console.warn('⚠️ No category totals in OCR result, calculating from items...');
       partsTotal = this.ocrResults
         .filter(item => item.category === 'PART')
         .reduce((sum, item) => sum + ((item.quantity || 1) * (item.unit_price || 0)), 0);
-    }
-    if (worksTotal === 0 && this.ocrResults.length > 0) {
       worksTotal = this.ocrResults
         .filter(item => item.category === 'WORK')
         .reduce((sum, item) => sum + ((item.quantity || 1) * (item.unit_price || 0)), 0);
-    }
-    if (repairsTotal === 0 && this.ocrResults.length > 0) {
       repairsTotal = this.ocrResults
         .filter(item => item.category === 'REPAIR')
         .reduce((sum, item) => sum + ((item.quantity || 1) * (item.unit_price || 0)), 0);
+      console.log('📊 Calculated totals:', { partsTotal, worksTotal, repairsTotal });
     }
     
     const totalBeforeVAT = parsePrice(result["עלות כוללת ללא מע'מ"]); // Single quote in OCR
