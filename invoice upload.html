@@ -1440,9 +1440,12 @@ class InvoiceProcessor {
         </div>
         
         ${this.currentDocumentId ? `
-        <div style="margin-top: 15px; text-align: center; display: flex; gap: 10px; justify-content: center;">
+        <div style="margin-top: 15px; text-align: center; display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
           <button onclick="window.invoiceProcessor.viewInvoicePDF()" class="btn" style="background: rgba(255,255,255,0.9); color: #667eea; padding: 10px 20px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold;">
             📄 צפה בחשבונית
+          </button>
+          <button onclick="window.invoiceProcessor.reprocessOCR()" class="btn" style="background: rgba(255,193,7,0.9); color: #1e293b; padding: 10px 20px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold;">
+            🔄 עבד חשבונית שוב
           </button>
           <button onclick="window.invoiceProcessor.saveEditsToHelper()" class="btn" style="background: rgba(34,197,94,0.9); color: white; padding: 10px 20px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold;">
             ✏️ שמור עריכות
@@ -1460,36 +1463,50 @@ class InvoiceProcessor {
     const workItems = this.ocrResults.filter(item => item.category === 'WORK');
     const repairItems = this.ocrResults.filter(item => item.category === 'REPAIR');
     
-    const renderCategory = (items, categoryName, icon) => {
-      if (items.length === 0) return;
-      
+    const renderCategory = (items, categoryName, icon, categoryType) => {
+      // SESSION 80: Always show header even if empty, with add button
       const headerRow = document.createElement('tr');
       headerRow.innerHTML = `
-        <td colspan="6" style="background: #334155; color: white; font-weight: bold; padding: 6px 8px; text-align: right; font-size: 11px;">
+        <td colspan="5" style="background: #334155; color: white; font-weight: bold; padding: 6px 8px; text-align: right; font-size: 11px;">
           ${icon} ${categoryName} (${items.length})
+        </td>
+        <td style="background: #334155; padding: 4px 6px; text-align: center;">
+          <button type="button" onclick="window.invoiceProcessor.addLineToCategory('${categoryType}')" class="btn btn-success" style="padding: 4px 8px; font-size: 10px; background: #22c55e; color: white; border: none; border-radius: 3px; cursor: pointer;">+ הוסף</button>
         </td>
       `;
       resultsBody.appendChild(headerRow);
       
-      items.forEach((item, index) => {
-        const globalIndex = this.ocrResults.indexOf(item);
-        const row = document.createElement('tr');
-        row.style.background = '#64748b';
-        row.innerHTML = `
-          <td style="padding: 4px 6px; width: 150px;"><input type="text" value="${item.code || ''}" data-field="code" data-index="${globalIndex}" class="result-field" style="width: 100%; padding: 4px 6px; font-size: 11px; color: #000; border: 1px solid #94a3b8; border-radius: 3px; background: #fff;"></td>
-          <td style="padding: 4px 6px;"><input type="text" value="${item.description || ''}" data-field="description" data-index="${globalIndex}" class="result-field" style="width: 100%; padding: 4px 6px; font-size: 11px; color: #000; border: 1px solid #94a3b8; border-radius: 3px; background: #fff;"></td>
-          <td style="padding: 4px 6px; width: 60px;"><input type="number" value="${item.quantity || 1}" data-field="quantity" data-index="${globalIndex}" class="result-field" min="1" style="width: 100%; padding: 4px; font-size: 11px; color: #000; border: 1px solid #94a3b8; border-radius: 3px; background: #fff; text-align: center;"></td>
-          <td style="padding: 4px 6px; width: 80px;"><input type="number" value="${item.unit_price || 0}" data-field="unit_price" data-index="${globalIndex}" class="result-field" step="0.01" style="width: 100%; padding: 4px; font-size: 11px; color: #000; border: 1px solid #94a3b8; border-radius: 3px; background: #fff; text-align: center;"></td>
-          <td style="padding: 4px 6px; width: 85px; font-weight: bold; color: #fff; font-size: 11px; text-align: center;">₪${((item.quantity || 1) * (item.unit_price || 0)).toLocaleString()}</td>
-          <td style="padding: 4px 6px; width: 70px; text-align: center;"><button type="button" onclick="window.invoiceProcessor.removeItem(${globalIndex})" class="btn btn-danger" style="padding: 4px 8px; font-size: 10px; background: #dc2626; color: white; border: none; border-radius: 3px; cursor: pointer;">הסר</button></td>
+      if (items.length === 0) {
+        // Show empty state row
+        const emptyRow = document.createElement('tr');
+        emptyRow.style.background = '#475569';
+        emptyRow.innerHTML = `
+          <td colspan="6" style="padding: 8px; text-align: center; color: #cbd5e1; font-size: 11px; font-style: italic;">
+            אין פריטים בקטגוריה זו - לחץ '+ הוסף' להוספה
+          </td>
         `;
-        resultsBody.appendChild(row);
-      });
+        resultsBody.appendChild(emptyRow);
+      } else {
+        items.forEach((item, index) => {
+          const globalIndex = this.ocrResults.indexOf(item);
+          const row = document.createElement('tr');
+          row.style.background = '#64748b';
+          row.innerHTML = `
+            <td style="padding: 4px 6px; width: 150px;"><input type="text" value="${item.code || ''}" data-field="code" data-index="${globalIndex}" class="result-field" style="width: 100%; padding: 4px 6px; font-size: 11px; color: #000; border: 1px solid #94a3b8; border-radius: 3px; background: #fff;"></td>
+            <td style="padding: 4px 6px;"><input type="text" value="${item.description || ''}" data-field="description" data-index="${globalIndex}" class="result-field" style="width: 100%; padding: 4px 6px; font-size: 11px; color: #000; border: 1px solid #94a3b8; border-radius: 3px; background: #fff;"></td>
+            <td style="padding: 4px 6px; width: 60px;"><input type="number" value="${item.quantity || 1}" data-field="quantity" data-index="${globalIndex}" class="result-field" min="1" style="width: 100%; padding: 4px; font-size: 11px; color: #000; border: 1px solid #94a3b8; border-radius: 3px; background: #fff; text-align: center;"></td>
+            <td style="padding: 4px 6px; width: 80px;"><input type="number" value="${item.unit_price || 0}" data-field="unit_price" data-index="${globalIndex}" class="result-field" step="0.01" style="width: 100%; padding: 4px; font-size: 11px; color: #000; border: 1px solid #94a3b8; border-radius: 3px; background: #fff; text-align: center;"></td>
+            <td style="padding: 4px 6px; width: 85px; font-weight: bold; color: #fff; font-size: 11px; text-align: center;">₪${((item.quantity || 1) * (item.unit_price || 0)).toLocaleString()}</td>
+            <td style="padding: 4px 6px; width: 70px; text-align: center;"><button type="button" onclick="window.invoiceProcessor.removeItem(${globalIndex})" class="btn btn-danger" style="padding: 4px 8px; font-size: 10px; background: #dc2626; color: white; border: none; border-radius: 3px; cursor: pointer;">הסר</button></td>
+          `;
+          resultsBody.appendChild(row);
+        });
+      }
     };
     
-    renderCategory(partItems, 'חלקים', '🔧');
-    renderCategory(workItems, 'עבודות', '👷');
-    renderCategory(repairItems, 'תיקונים', '🔨');
+    renderCategory(partItems, 'חלקים', '🔧', 'PART');
+    renderCategory(workItems, 'עבודות', '👷', 'WORK');
+    renderCategory(repairItems, 'תיקונים', '🔨', 'REPAIR');
     
     // Add event listeners for real-time calculation
     document.querySelectorAll('.result-field').forEach(field => {
@@ -1621,6 +1638,57 @@ class InvoiceProcessor {
         this.showAlert(`שגיאה: ${error.message || 'לא ניתן לפתוח חשבונית'}`, 'error');
       }
     }
+  }
+
+  // SESSION 80: Reprocess OCR - sends uploaded file to OCR webhook again
+  async reprocessOCR() {
+    try {
+      if (!this.uploadedFile) {
+        this.showAlert('אין קובץ נטען לעיבוד מחדש', 'error');
+        return;
+      }
+      
+      if (!confirm('האם לעבד את החשבונית מחדש? פעולה זו תשכתב את התוצאות הנוכחיות.')) {
+        return;
+      }
+      
+      console.log('🔄 Reprocessing OCR for existing file');
+      this.showAlert('שולח לעיבוד מחדש...', 'info');
+      
+      // Call processInvoice to send to OCR webhook again
+      await this.processInvoice();
+      
+      this.showAlert('✅ חשבונית עובדה מחדש', 'success');
+    } catch (error) {
+      console.error('❌ Error reprocessing OCR:', error);
+      this.showAlert('שגיאה בעיבוד מחדש: ' + error.message, 'error');
+    }
+  }
+
+  // SESSION 80: Add new line to specific category
+  addLineToCategory(categoryType) {
+    console.log('➕ Adding new line to category:', categoryType);
+    
+    // Create new empty item with the specified category
+    const newItem = {
+      code: '',
+      name: '',
+      description: '',
+      quantity: 1,
+      unit_price: 0,
+      category: categoryType
+    };
+    
+    // Add to ocrResults array
+    this.ocrResults.push(newItem);
+    
+    // Mark as edited
+    this.hasUnsavedEdits = true;
+    
+    // Refresh display
+    this.displayOCRResults(this.lastOCRResult);
+    
+    this.showAlert(`שורה חדשה נוספה לקטגוריה ${categoryType}`, 'success');
   }
 
   // SESSION 77: Old addManualItem removed - replaced with proper table-based manual entry
