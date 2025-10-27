@@ -975,13 +975,49 @@ class InvoiceProcessor {
         return;
       }
       
-      // SESSION 82 FIX: Re-fetch full invoice with lines and documents instead of using dataset
+      // SESSION 82 FIX: Fetch invoice, lines, and documents separately due to RLS
       const invoiceId = selectedOption.value;
       console.log('🔄 Fetching full invoice data for:', invoiceId);
       
       try {
-        const fullInvoice = await this.invoiceService.getInvoiceWithLines(invoiceId);
-        console.log('✅ Fetched invoice with', fullInvoice.lines?.length || 0, 'lines and', fullInvoice.documents?.length || 0, 'documents');
+        // Fetch invoice header
+        const { data: invoice, error: invError } = await window.supabase
+          .from('invoices')
+          .select('*')
+          .eq('id', invoiceId)
+          .single();
+        
+        if (invError) throw invError;
+        
+        // Fetch lines separately
+        const { data: lines, error: linesError } = await window.supabase
+          .from('invoice_lines')
+          .select('*')
+          .eq('invoice_id', invoiceId)
+          .order('line_number');
+        
+        if (linesError) {
+          console.warn('⚠️ Error fetching lines:', linesError);
+        }
+        
+        // Fetch documents separately
+        const { data: documents, error: docsError } = await window.supabase
+          .from('invoice_documents')
+          .select('*')
+          .eq('invoice_id', invoiceId);
+        
+        if (docsError) {
+          console.warn('⚠️ Error fetching documents:', docsError);
+        }
+        
+        // Combine into full invoice object
+        const fullInvoice = {
+          ...invoice,
+          lines: lines || [],
+          documents: documents || []
+        };
+        
+        console.log('✅ Fetched invoice with', fullInvoice.lines.length, 'lines and', fullInvoice.documents.length, 'documents');
         await this.populateOcrSectionFromInvoice(fullInvoice);
         document.getElementById('viewInvoiceBtn').style.display = 'block';
       } catch (error) {
