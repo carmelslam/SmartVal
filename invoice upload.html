@@ -544,6 +544,33 @@
       </div>
     </div>
 
+    <!-- SESSION 82: Load Existing Invoices Section -->
+    <div class="section" style="border: 2px solid rgba(139, 92, 246, 0.3);">
+      <h3 style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); margin: -25px -25px 20px -25px; padding: 15px 25px; border-radius: 20px 20px 0 0; color: white;">📂 טעינת חשבוניות קיימות</h3>
+      
+      <button type="button" id="loadInvoicesBtn" class="btn" style="background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%); width: 100%; padding: 15px; font-size: 16px; margin-bottom: 15px;">
+        📂 טען חשבוניות ממאגר
+      </button>
+      
+      <div id="invoiceDropdownContainer" style="display: none;">
+        <div class="form-group" style="margin-bottom: 15px;">
+          <label style="font-size: 14px; margin-bottom: 8px; display: block;">בחר חשבונית קיימת:</label>
+          <select id="existingInvoicesDropdown" style="width: 100%; padding: 14px; font-size: 15px; border-radius: 12px; border: 1.5px solid rgba(139, 92, 246, 0.3); background: rgba(255, 255, 255, 0.05); color: #e2e8f0;">
+            <option value="">-- בחר חשבונית --</option>
+          </select>
+        </div>
+        
+        <button type="button" id="viewInvoiceBtn" class="btn btn-secondary" style="display: none; width: 100%;">
+          📄 צפה בחשבונית
+        </button>
+      </div>
+      
+      <div id="invoiceLoadingSpinner" style="display: none; text-align: center; padding: 20px;">
+        <div style="display: inline-block; width: 40px; height: 40px; border: 4px solid rgba(139, 92, 246, 0.3); border-top-color: #8b5cf6; border-radius: 50%; animation: spin 0.8s linear infinite;"></div>
+        <p style="color: #cbd5e1; margin-top: 10px; font-size: 14px;">טוען חשבוניות...</p>
+      </div>
+    </div>
+
     <!-- File Upload Section -->
     <div class="section">
       <h3>העלאת חשבונית</h3>
@@ -933,6 +960,31 @@ class InvoiceProcessor {
     document.getElementById('save-results').addEventListener('click', () => {
       this.saveResults();
     });
+    
+    // SESSION 82: Load existing invoices button
+    document.getElementById('loadInvoicesBtn').addEventListener('click', () => {
+      this.loadExistingInvoices();
+    });
+    
+    // SESSION 82: Existing invoices dropdown change
+    document.getElementById('existingInvoicesDropdown').addEventListener('change', async (e) => {
+      const selectedOption = e.target.options[e.target.selectedIndex];
+      
+      if (!selectedOption.value) {
+        document.getElementById('viewInvoiceBtn').style.display = 'none';
+        return;
+      }
+      
+      const invoiceData = JSON.parse(selectedOption.dataset.invoiceData);
+      await this.populateOcrSectionFromInvoice(invoiceData);
+      
+      document.getElementById('viewInvoiceBtn').style.display = 'block';
+    });
+    
+    // SESSION 82: View invoice document button
+    document.getElementById('viewInvoiceBtn').addEventListener('click', () => {
+      this.viewInvoiceDocument();
+    });
   }
 
   loadCaseData() {
@@ -1046,6 +1098,193 @@ class InvoiceProcessor {
   validatePassword() {
     // No password validation needed - Supabase handles authentication
     return true;
+  }
+
+  // SESSION 82: Load existing invoices from Supabase
+  validateInvoiceLoadContext() {
+    const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+    
+    if (!helper.case_info?.supabase_case_id) {
+      console.error('❌ Missing case UUID in helper.case_info.supabase_case_id');
+      this.showAlert('שגיאה: לא נמצא מזהה תיק במערכת', 'error');
+      return false;
+    }
+    
+    if (!helper.case_info?.plate_number) {
+      console.error('❌ Missing plate number in helper.case_info');
+      this.showAlert('שגיאה: לא נמצא מספר רישוי במערכת', 'error');
+      return false;
+    }
+    
+    console.log('✅ Context validation passed:', {
+      case_uuid: helper.case_info.supabase_case_id,
+      plate_number: helper.case_info.plate_number
+    });
+    
+    return true;
+  }
+
+  async loadExistingInvoices() {
+    if (!this.validateInvoiceLoadContext()) {
+      return;
+    }
+    
+    const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+    const caseId = helper.case_info.supabase_case_id;
+    const plateNumber = helper.case_info.plate_number;
+    
+    const spinner = document.getElementById('invoiceLoadingSpinner');
+    const loadBtn = document.getElementById('loadInvoicesBtn');
+    
+    spinner.style.display = 'block';
+    loadBtn.disabled = true;
+    
+    try {
+      console.log('📂 Loading invoices for case:', caseId, 'plate:', plateNumber);
+      
+      const invoices = await this.invoiceService.getInvoicesByCase(caseId);
+      
+      const filteredInvoices = invoices.filter(inv => inv.plate === plateNumber);
+      
+      console.log(`📊 Found ${filteredInvoices.length} invoices for this case and plate`);
+      
+      if (filteredInvoices && filteredInvoices.length > 0) {
+        this.populateInvoiceDropdown(filteredInvoices);
+        document.getElementById('invoiceDropdownContainer').style.display = 'block';
+        this.showAlert(`נמצאו ${filteredInvoices.length} חשבוניות`, 'success');
+      } else {
+        this.showAlert('לא נמצאו חשבוניות קיימות לתיק זה', 'info');
+      }
+      
+    } catch (error) {
+      console.error('❌ Error loading invoices:', error);
+      this.showAlert('שגיאה בטעינת חשבוניות מהמאגר', 'error');
+    } finally {
+      spinner.style.display = 'none';
+      loadBtn.disabled = false;
+    }
+  }
+
+  populateInvoiceDropdown(invoices) {
+    const dropdown = document.getElementById('existingInvoicesDropdown');
+    
+    dropdown.innerHTML = '<option value="">-- בחר חשבונית --</option>';
+    
+    invoices.forEach(invoice => {
+      const option = document.createElement('option');
+      
+      const displayDate = new Date(invoice.created_at).toLocaleDateString('he-IL');
+      const supplierName = invoice.supplier_name || 'לא צוין';
+      option.text = `${supplierName} - ${displayDate}`;
+      option.value = invoice.id;
+      
+      option.dataset.invoiceData = JSON.stringify(invoice);
+      
+      dropdown.appendChild(option);
+    });
+  }
+
+  async populateOcrSectionFromInvoice(invoiceData) {
+    console.log('📥 Populating OCR section from invoice:', invoiceData);
+    
+    const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+    if (invoiceData.case_id !== helper.case_info?.supabase_case_id) {
+      console.error('❌ Invoice case UUID mismatch!');
+      this.showAlert('שגיאה: חשבונית לא שייכת לתיק זה', 'error');
+      return;
+    }
+    
+    const ocrResult = {
+      'מס. חשבונית': invoiceData.invoice_number || '',
+      'שם מוסך': invoiceData.supplier_name || '',
+      'מספר רכב': invoiceData.plate || '',
+      'בעל הרכב': helper.stakeholders?.owner?.name || '',
+      'תאריך': invoiceData.created_at ? new Date(invoiceData.created_at).toISOString().split('T')[0] : '',
+      "עלות כוללת ללא מע'מ": invoiceData.total_before_tax || 0,
+      "ערך מע'מ": invoiceData.tax_amount || 0,
+      'עלות כוללת': invoiceData.total_amount || 0,
+      'חלקים': [],
+      'עבודות': [],
+      'תיקונים': [],
+      'סהכ חלקים': 0,
+      'סהכ עבודות': 0,
+      'סהכ תיקונים': 0
+    };
+    
+    if (invoiceData.lines && Array.isArray(invoiceData.lines)) {
+      invoiceData.lines.forEach(line => {
+        const lineData = {
+          'תיאור': line.description || '',
+          'כמות': String(line.quantity || 1),
+          'עלות': String(line.unit_price || 0)
+        };
+        
+        const metadata = line.metadata || {};
+        const category = metadata.category || 'part';
+        
+        if (category === 'part') {
+          lineData['שם חלק'] = line.description || '';
+          ocrResult['חלקים'].push(lineData);
+          ocrResult['סהכ חלקים'] += line.line_total || 0;
+        } else if (category === 'work') {
+          lineData['סוג העבודה'] = line.description || '';
+          lineData['תיאור עבודות'] = line.description || '';
+          lineData['עלות עבודות'] = String(line.unit_price || 0);
+          ocrResult['עבודות'].push(lineData);
+          ocrResult['סהכ עבודות'] += line.line_total || 0;
+        } else if (category === 'repair') {
+          lineData['סוג תיקון'] = line.description || '';
+          lineData['תיאור התיקון'] = line.description || '';
+          lineData['עלות תיקונים'] = String(line.unit_price || 0);
+          ocrResult['תיקונים'].push(lineData);
+          ocrResult['סהכ תיקונים'] += line.line_total || 0;
+        }
+      });
+    }
+    
+    this.lastOCRResult = ocrResult;
+    this.currentInvoiceId = invoiceData.id;
+    
+    helper.current_invoice = {
+      invoice_id: invoiceData.id,
+      case_uuid: invoiceData.case_id,
+      source: 'existing',
+      document_id: null
+    };
+    
+    sessionStorage.setItem('helper', JSON.stringify(helper));
+    
+    this.displayOCRResults(ocrResult);
+    
+    document.getElementById('save-results').style.display = 'inline-block';
+    document.getElementById('delete-invoice').style.display = 'inline-block';
+    document.getElementById('clear-ui').style.display = 'inline-block';
+    
+    this.showAlert('✅ חשבונית נטענה בהצלחה', 'success');
+  }
+
+  async viewInvoiceDocument() {
+    try {
+      const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+      const documentId = helper.current_invoice?.document_id;
+      
+      if (!documentId) {
+        this.showAlert('לא נמצא קובץ חשבונית לצפייה', 'info');
+        return;
+      }
+      
+      console.log('📄 Getting document URL for:', documentId);
+      const url = await this.invoiceService.getInvoiceDocumentURL(documentId);
+      
+      if (url) {
+        window.open(url, '_blank');
+      } else {
+        this.showAlert('שגיאה: לא ניתן לקבל קישור לחשבונית', 'error');
+      }
+    } catch (error) {
+      console.error('❌ Error viewing invoice document:', error);
+      this.showAlert('שגיאה בפתיחת החשבונית', 'error');
+    }
   }
 
   setupDragAndDrop() {
@@ -2029,12 +2268,54 @@ class InvoiceProcessor {
             description: item.name || item.description || '',
             quantity: item.quantity || 1,
             unit_price: item.unit_price || 0,
-            line_total: (item.quantity || 1) * (item.unit_price || 0)
-            // item_category will be auto-filled by SQL trigger
+            line_total: (item.quantity || 1) * (item.unit_price || 0),
+            metadata: {
+              category: item.category || 'part'
+            }
           }));
           
-          // Create invoice in Supabase
-          const result = await this.invoiceService.createInvoice(invoiceData, lines, caseId);
+          // SESSION 82: Check if updating existing invoice or creating new
+          const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+          const existingInvoiceId = helper.current_invoice?.invoice_id || this.currentInvoiceId;
+          
+          let result;
+          if (existingInvoiceId) {
+            console.log('🔄 Updating existing invoice:', existingInvoiceId);
+            
+            await this.invoiceService.updateInvoice(existingInvoiceId, invoiceData);
+            
+            const { data: deleteResult, error: deleteError } = await window.supabase
+              .from('invoice_lines')
+              .delete()
+              .eq('invoice_id', existingInvoiceId);
+            
+            if (deleteError) console.error('❌ Error deleting old lines:', deleteError);
+            
+            const linesInsert = lines.map(line => ({
+              ...line,
+              invoice_id: existingInvoiceId
+            }));
+            
+            const { data: newLines, error: linesError } = await window.supabase
+              .from('invoice_lines')
+              .insert(linesInsert)
+              .select();
+            
+            if (linesError) throw linesError;
+            
+            result = { 
+              success: true, 
+              invoice: { 
+                id: existingInvoiceId, 
+                lines: newLines 
+              } 
+            };
+            
+            console.log('✅ Invoice updated successfully');
+          } else {
+            console.log('➕ Creating new invoice');
+            result = await this.invoiceService.createInvoice(invoiceData, lines, caseId);
+          }
           
           if (result.success) {
             this.currentInvoiceId = result.invoice.id;
