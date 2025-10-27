@@ -1157,9 +1157,27 @@ class InvoiceProcessor {
       if (filteredInvoices && filteredInvoices.length > 0) {
         this.populateInvoiceDropdown(filteredInvoices);
         document.getElementById('invoiceDropdownContainer').style.display = 'block';
-        this.showAlert(`נמצאו ${filteredInvoices.length} חשבוניות`, 'success');
+        this.showAlert(`נמצאו ${filteredInvoices.length} חשבוניות שמורות`, 'success');
       } else {
-        this.showAlert('לא נמצאו חשבוניות קיימות לתיק זה', 'info');
+        console.log('⚠️ No invoices in invoices table, checking invoice_documents...');
+        
+        const { data: documents, error: docError } = await window.supabase
+          .from('invoice_documents')
+          .select('*')
+          .eq('case_id', caseId)
+          .eq('plate', plateNumber)
+          .order('created_at', { ascending: false });
+        
+        if (docError) {
+          console.error('❌ Error checking invoice_documents:', docError);
+        }
+        
+        if (documents && documents.length > 0) {
+          console.log(`📄 Found ${documents.length} invoice documents that need to be saved`);
+          this.showAlert(`נמצאו ${documents.length} מסמכי חשבונית שטרם נשמרו. אנא העלה ושמור אותם כדי לצפות בהם כאן.`, 'info');
+        } else {
+          this.showAlert('לא נמצאו חשבוניות קיימות לתיק זה', 'info');
+        }
       }
       
     } catch (error) {
@@ -3076,6 +3094,23 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Initialize invoice processor
   window.invoiceProcessor = new InvoiceProcessor();
+  
+  // SESSION 82: Initialize InvoiceService to ensure currentUser is set
+  async function initializeInvoiceService() {
+    if (window.invoiceService) {
+      try {
+        await window.invoiceService.initialize();
+        console.log('✅ InvoiceService initialized with user:', window.invoiceService.currentUser?.email);
+      } catch (error) {
+        console.error('❌ Failed to initialize InvoiceService:', error);
+        console.warn('⚠️ Invoice saving may fail - user authentication required');
+      }
+    } else {
+      console.error('❌ window.invoiceService not available');
+    }
+  }
+  
+  initializeInvoiceService();
   
   // ENHANCED: Auto-populate vehicle data from helper
   function populateVehicleDataFromHelper() {
