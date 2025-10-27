@@ -2435,20 +2435,22 @@ class InvoiceProcessor {
             }
             
             if (userId && this.currentInvoiceId) {
-              // Create invoice validation record
+              // SESSION 82: Upsert invoice validation record (handles both new and existing)
               const { error: validationError } = await window.supabase
                 .from('invoice_validations')
-                .insert({
+                .upsert({
                   invoice_id: this.currentInvoiceId,
                   reviewed_by: userId,
                   approval_status: 'approved',
                   review_date: new Date().toISOString()
+                }, {
+                  onConflict: 'invoice_id'
                 });
               
               if (validationError) {
-                console.error('❌ Failed to create validation:', validationError);
+                console.error('❌ Failed to upsert validation:', validationError);
               } else {
-                console.log('✅ Validation record created');
+                console.log('✅ Validation record saved');
               }
               
               // Get PDF URL
