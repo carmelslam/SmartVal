@@ -1210,6 +1210,8 @@ class InvoiceProcessor {
 
   async populateOcrSectionFromInvoice(invoiceData) {
     console.log('📥 Populating OCR section from invoice:', invoiceData);
+    console.log('📦 Invoice has lines:', invoiceData.lines?.length || 0);
+    console.log('📄 Invoice has documents:', invoiceData.documents?.length || 0);
     
     const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
     if (invoiceData.case_id !== helper.case_info?.supabase_case_id) {
@@ -1222,6 +1224,8 @@ class InvoiceProcessor {
     const totalBeforeTax = invoiceData.total_before_tax || 0;
     const taxAmount = invoiceData.tax_amount || 0;
     const vatPercentage = totalBeforeTax > 0 ? ((taxAmount / totalBeforeTax) * 100).toFixed(1) : 0;
+    
+    console.log('💰 Invoice amounts:', { totalBeforeTax, taxAmount, vatPercentage, total: invoiceData.total_amount });
     
     const ocrResult = {
       'מס. חשבונית': invoiceData.invoice_number || '',
@@ -1250,7 +1254,17 @@ class InvoiceProcessor {
     }
     
     if (invoiceData.lines && Array.isArray(invoiceData.lines)) {
-      invoiceData.lines.forEach(line => {
+      console.log('🔄 Processing', invoiceData.lines.length, 'lines...');
+      
+      invoiceData.lines.forEach((line, index) => {
+        console.log(`  Line ${index + 1}:`, {
+          desc: line.description,
+          qty: line.quantity,
+          price: line.unit_price,
+          total: line.line_total,
+          metadata: line.metadata
+        });
+        
         const lineData = {
           'תיאור': line.description || '',
           'כמות': String(line.quantity || 1),
@@ -1260,6 +1274,8 @@ class InvoiceProcessor {
         // SESSION 82 FIX: Check metadata.category (uppercase) or fallback to 'PART'
         const metadata = line.metadata || {};
         const category = (metadata.category || 'PART').toUpperCase();
+        
+        console.log(`    Category: ${category}`);
         
         if (category === 'PART') {
           lineData['שם חלק'] = line.description || '';
@@ -1280,6 +1296,8 @@ class InvoiceProcessor {
           ocrResult['סהכ תיקונים'] += line.line_total || 0;
         }
       });
+    } else {
+      console.warn('⚠️ No lines array found in invoice data');
     }
     
     console.log('📊 Loaded invoice totals:', {
