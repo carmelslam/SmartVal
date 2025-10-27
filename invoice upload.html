@@ -2304,38 +2304,63 @@ class InvoiceProcessor {
           
           let result;
           if (existingInvoiceId) {
-            console.log('🔄 Updating existing invoice:', existingInvoiceId);
+            console.log('🔄 Attempting to update existing invoice:', existingInvoiceId);
             
-            await this.invoiceService.updateInvoice(existingInvoiceId, invoiceData);
+            // SESSION 82: Verify invoice exists before trying to update
+            const { data: existingInvoice, error: checkError } = await window.supabase
+              .from('invoices')
+              .select('id')
+              .eq('id', existingInvoiceId)
+              .single();
             
-            const { data: deleteResult, error: deleteError } = await window.supabase
-              .from('invoice_lines')
-              .delete()
-              .eq('invoice_id', existingInvoiceId);
-            
-            if (deleteError) console.error('❌ Error deleting old lines:', deleteError);
-            
-            const linesInsert = lines.map(line => ({
-              ...line,
-              invoice_id: existingInvoiceId
-            }));
-            
-            const { data: newLines, error: linesError } = await window.supabase
-              .from('invoice_lines')
-              .insert(linesInsert)
-              .select();
-            
-            if (linesError) throw linesError;
-            
-            result = { 
-              success: true, 
-              invoice: { 
-                id: existingInvoiceId, 
-                lines: newLines 
-              } 
-            };
-            
-            console.log('✅ Invoice updated successfully');
+            if (checkError || !existingInvoice) {
+              console.warn('⚠️ Invoice ID not found in database, creating new instead');
+              console.log('➕ Creating new invoice (previous ID was invalid)');
+              console.log('📦 Case ID:', caseId);
+              console.log('📦 Invoice data:', invoiceData);
+              console.log('📦 Lines count:', lines.length);
+              console.log('📦 InvoiceService currentUser:', this.invoiceService.currentUser);
+              
+              try {
+                result = await this.invoiceService.createInvoice(invoiceData, lines, caseId);
+                console.log('✅ createInvoice returned:', result);
+              } catch (createError) {
+                console.error('❌ createInvoice threw error:', createError);
+                throw createError;
+              }
+            } else {
+              console.log('✅ Invoice exists, proceeding with update');
+              await this.invoiceService.updateInvoice(existingInvoiceId, invoiceData);
+              
+              const { data: deleteResult, error: deleteError } = await window.supabase
+                .from('invoice_lines')
+                .delete()
+                .eq('invoice_id', existingInvoiceId);
+              
+              if (deleteError) console.error('❌ Error deleting old lines:', deleteError);
+              
+              const linesInsert = lines.map(line => ({
+                ...line,
+                invoice_id: existingInvoiceId
+              }));
+              
+              const { data: newLines, error: linesError } = await window.supabase
+                .from('invoice_lines')
+                .insert(linesInsert)
+                .select();
+              
+              if (linesError) throw linesError;
+              
+              result = { 
+                success: true, 
+                invoice: { 
+                  id: existingInvoiceId, 
+                  lines: newLines 
+                } 
+              };
+              
+              console.log('✅ Invoice updated successfully');
+            }
           } else {
             console.log('➕ Creating new invoice');
             console.log('📦 Case ID:', caseId);
