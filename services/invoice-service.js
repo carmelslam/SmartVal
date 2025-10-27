@@ -43,12 +43,24 @@ class InvoiceService {
     try {
       const supabase = this.ensureSupabase();
 
-      const user = await supabase.from('profiles')
+      const { data: { user: authUser } } = await supabase.auth.getUser();
+      
+      if (!authUser) {
+        console.error('❌ No authenticated user found');
+        return false;
+      }
+
+      const { data: profile, error } = await supabase.from('profiles')
         .select('user_id, email, full_name, role')
-        .eq('user_id', supabase.auth?.user()?.id)
+        .eq('user_id', authUser.id)
         .single();
 
-      this.currentUser = user.data;
+      if (error) {
+        console.error('❌ Error fetching profile:', error);
+        return false;
+      }
+
+      this.currentUser = profile;
       console.log('📄 InvoiceService initialized for user:', this.currentUser?.email);
       return true;
     } catch (error) {
