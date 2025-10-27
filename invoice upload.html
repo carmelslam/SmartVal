@@ -2435,22 +2435,45 @@ class InvoiceProcessor {
             }
             
             if (userId && this.currentInvoiceId) {
-              // SESSION 82: Upsert invoice validation record (handles both new and existing)
-              const { error: validationError } = await window.supabase
+              // SESSION 82: Check if validation record exists, then UPDATE or INSERT
+              const { data: existingValidation, error: checkError } = await window.supabase
                 .from('invoice_validations')
-                .upsert({
-                  invoice_id: this.currentInvoiceId,
-                  reviewed_by: userId,
-                  approval_status: 'approved',
-                  review_date: new Date().toISOString()
-                }, {
-                  onConflict: 'invoice_id'
-                });
+                .select('id')
+                .eq('invoice_id', this.currentInvoiceId)
+                .single();
               
-              if (validationError) {
-                console.error('❌ Failed to upsert validation:', validationError);
+              if (existingValidation) {
+                // Update existing validation
+                const { error: validationError } = await window.supabase
+                  .from('invoice_validations')
+                  .update({
+                    reviewed_by: userId,
+                    approval_status: 'approved',
+                    review_date: new Date().toISOString()
+                  })
+                  .eq('invoice_id', this.currentInvoiceId);
+                
+                if (validationError) {
+                  console.error('❌ Failed to update validation:', validationError);
+                } else {
+                  console.log('✅ Validation record updated');
+                }
               } else {
-                console.log('✅ Validation record saved');
+                // Create new validation
+                const { error: validationError } = await window.supabase
+                  .from('invoice_validations')
+                  .insert({
+                    invoice_id: this.currentInvoiceId,
+                    reviewed_by: userId,
+                    approval_status: 'approved',
+                    review_date: new Date().toISOString()
+                  });
+                
+                if (validationError) {
+                  console.error('❌ Failed to create validation:', validationError);
+                } else {
+                  console.log('✅ Validation record created');
+                }
               }
               
               // Get PDF URL
