@@ -2338,10 +2338,21 @@ class InvoiceProcessor {
             console.log('✅ Invoice updated successfully');
           } else {
             console.log('➕ Creating new invoice');
-            result = await this.invoiceService.createInvoice(invoiceData, lines, caseId);
+            console.log('📦 Case ID:', caseId);
+            console.log('📦 Invoice data:', invoiceData);
+            console.log('📦 Lines count:', lines.length);
+            console.log('📦 InvoiceService currentUser:', this.invoiceService.currentUser);
+            
+            try {
+              result = await this.invoiceService.createInvoice(invoiceData, lines, caseId);
+              console.log('✅ createInvoice returned:', result);
+            } catch (createError) {
+              console.error('❌ createInvoice threw error:', createError);
+              throw createError;
+            }
           }
           
-          if (result.success) {
+          if (result && result.success) {
             this.currentInvoiceId = result.invoice.id;
             console.log('✅ Invoice saved to Supabase:', this.currentInvoiceId);
             
