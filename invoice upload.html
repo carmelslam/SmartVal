@@ -1660,7 +1660,15 @@ class InvoiceProcessor {
       const editedRepairsTotal = repairs.reduce((sum, item) => sum + (item.quantity || 1) * (item.unit_price || 0), 0);
       
       const editedTotalBeforeVAT = editedPartsTotal + editedWorksTotal + editedRepairsTotal;
-      const editedVATPercentage = 18; // Default VAT percentage
+      
+      // Extract VAT percentage from lastOCRResult (preserve original value from OCR)
+      const parsePrice = (value) => {
+        if (!value) return 0;
+        const strValue = String(value).replace(/,/g, '').replace(/%/g, '');
+        const parsed = parseFloat(strValue);
+        return isNaN(parsed) ? 0 : parsed;
+      };
+      const editedVATPercentage = parsePrice(this.lastOCRResult?.['מע"מ']) || 17;
       const editedVATAmount = editedTotalBeforeVAT * (editedVATPercentage / 100);
       const editedTotalWithVAT = editedTotalBeforeVAT + editedVATAmount;
       
