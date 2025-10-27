@@ -1371,8 +1371,8 @@ class InvoiceProcessor {
     };
     
     const totalBeforeVAT = parsePrice(result['עלות כוללת ללא מע״מ']);
-    const vatPercentage = parsePrice(result['מע"מ']); // VAT percentage from OCR
-    const vatAmount = parsePrice(result['ערך מע"מ']); // VAT amount value
+    const vatPercentage = parsePrice(result['מע"מ %'] || result['מע"מ']); // VAT percentage from OCR - try both keys
+    const vatAmount = parsePrice(result['ערך מע"מ'] || result['מע"מ']); // VAT amount value
     const totalWithVAT = parsePrice(result['עלות כוללת']);
     const partsTotal = parsePrice(result['סהכ חלקים']);
     const worksTotal = parsePrice(result['סהכ עבודות']);
@@ -1413,15 +1413,15 @@ class InvoiceProcessor {
           <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px;">
             <div style="background: rgba(76, 175, 80, 0.3); padding: 8px; border-radius: 6px;">
               <div style="font-size: 10px; opacity: 0.9; margin-bottom: 3px;">🔧 חלקים</div>
-              <div style="width: 100%; padding: 4px; font-size: 14px; font-weight: bold; border: 1px solid rgba(255,255,255,0.5); border-radius: 4px; background: rgba(255,255,255,0.9); color: #000; text-align: center;">₪${parseFloat(partsTotal).toLocaleString('he-IL', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>
+              <input type="number" id="edit-parts-total" value="${partsTotal}" step="0.01" style="width: 100%; padding: 4px; font-size: 14px; font-weight: bold; border: 1px solid rgba(255,255,255,0.5); border-radius: 4px; background: rgba(255,255,255,0.9); color: #000; text-align: center;" />
             </div>
             <div style="background: rgba(33, 150, 243, 0.3); padding: 8px; border-radius: 6px;">
               <div style="font-size: 10px; opacity: 0.9; margin-bottom: 3px;">👷 עבודות</div>
-              <div style="width: 100%; padding: 4px; font-size: 14px; font-weight: bold; border: 1px solid rgba(255,255,255,0.5); border-radius: 4px; background: rgba(255,255,255,0.9); color: #000; text-align: center;">₪${parseFloat(worksTotal).toLocaleString('he-IL', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>
+              <input type="number" id="edit-works-total" value="${worksTotal}" step="0.01" style="width: 100%; padding: 4px; font-size: 14px; font-weight: bold; border: 1px solid rgba(255,255,255,0.5); border-radius: 4px; background: rgba(255,255,255,0.9); color: #000; text-align: center;" />
             </div>
             <div style="background: rgba(255, 152, 0, 0.3); padding: 8px; border-radius: 6px;">
               <div style="font-size: 10px; opacity: 0.9; margin-bottom: 3px;">🔨 תיקונים</div>
-              <div style="width: 100%; padding: 4px; font-size: 14px; font-weight: bold; border: 1px solid rgba(255,255,255,0.5); border-radius: 4px; background: rgba(255,255,255,0.9); color: #000; text-align: center;">₪${parseFloat(repairsTotal).toLocaleString('he-IL', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>
+              <input type="number" id="edit-repairs-total" value="${repairsTotal}" step="0.01" style="width: 100%; padding: 4px; font-size: 14px; font-weight: bold; border: 1px solid rgba(255,255,255,0.5); border-radius: 4px; background: rgba(255,255,255,0.9); color: #000; text-align: center;" />
             </div>
           </div>
         </div>
@@ -1430,19 +1430,19 @@ class InvoiceProcessor {
         <div style="background: rgba(0,0,0,0.2); padding: 12px; border-radius: 8px; margin-bottom: 10px;">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
             <span style="font-size: 13px;">סה"כ לפני מע"מ:</span>
-            <span style="padding: 4px 8px; font-size: 13px; font-weight: bold; border: 1px solid rgba(255,255,255,0.3); border-radius: 4px; background: rgba(255,255,255,0.9); color: #000;">₪${parseFloat(totalBeforeVAT).toLocaleString('he-IL', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
+            <input type="number" id="edit-total-before-vat" value="${totalBeforeVAT}" step="0.01" style="padding: 4px 8px; font-size: 13px; font-weight: bold; border: 1px solid rgba(255,255,255,0.3); border-radius: 4px; background: rgba(255,255,255,0.9); color: #000; width: 150px; text-align: right;" />
           </div>
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
             <span style="font-size: 13px;">מע"מ (%):</span>
-            <span style="padding: 4px 8px; font-size: 13px; font-weight: bold; border: 1px solid rgba(255,255,255,0.3); border-radius: 4px; background: rgba(255,255,255,0.9); color: #000;">${vatPercentage}%</span>
+            <input type="number" id="edit-vat-percentage" value="${vatPercentage}" step="0.1" min="0" max="100" style="padding: 4px 8px; font-size: 13px; font-weight: bold; border: 1px solid rgba(255,255,255,0.3); border-radius: 4px; background: rgba(255,255,255,0.9); color: #000; width: 80px; text-align: right;" />
           </div>
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
             <span style="font-size: 13px;">ערך מע"מ:</span>
-            <span style="padding: 4px 8px; font-size: 13px; font-weight: bold; border: 1px solid rgba(255,255,255,0.3); border-radius: 4px; background: rgba(255,255,255,0.9); color: #000;">₪${parseFloat(vatAmount).toLocaleString('he-IL', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
+            <input type="number" id="edit-vat-amount" value="${vatAmount}" step="0.01" style="padding: 4px 8px; font-size: 13px; font-weight: bold; border: 1px solid rgba(255,255,255,0.3); border-radius: 4px; background: rgba(255,255,255,0.9); color: #000; width: 150px; text-align: right;" />
           </div>
           <div style="display: flex; justify-content: space-between; align-items: center; padding-top: 8px; border-top: 2px solid rgba(255,255,255,0.3);">
             <span style="font-size: 15px; font-weight: bold;">סה"כ כולל מע"מ:</span>
-            <span style="padding: 6px 12px; font-size: 16px; font-weight: bold; border: 1px solid rgba(255,255,255,0.3); border-radius: 4px; background: rgba(255,255,255,0.9); color: #000;">₪${parseFloat(totalWithVAT).toLocaleString('he-IL', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
+            <input type="number" id="edit-total-with-vat" value="${totalWithVAT}" step="0.01" style="padding: 6px 12px; font-size: 16px; font-weight: bold; border: 1px solid rgba(255,255,255,0.3); border-radius: 4px; background: rgba(255,255,255,0.9); color: #000; width: 150px; text-align: right;" />
           </div>
         </div>
         
@@ -1730,27 +1730,20 @@ class InvoiceProcessor {
       const editedGarageName = document.getElementById('edit-garage-name')?.value;
       const editedDate = document.getElementById('edit-date')?.value;
       
-      // SESSION 80: Recalculate totals from edited table data (ocrResults)
-      const parts = this.ocrResults.filter(item => item.category === 'PART');
-      const works = this.ocrResults.filter(item => item.category === 'WORK');
-      const repairs = this.ocrResults.filter(item => item.category === 'REPAIR');
-      
-      const editedPartsTotal = parts.reduce((sum, item) => sum + (item.quantity || 1) * (item.unit_price || 0), 0);
-      const editedWorksTotal = works.reduce((sum, item) => sum + (item.quantity || 1) * (item.unit_price || 0), 0);
-      const editedRepairsTotal = repairs.reduce((sum, item) => sum + (item.quantity || 1) * (item.unit_price || 0), 0);
-      
-      const editedTotalBeforeVAT = editedPartsTotal + editedWorksTotal + editedRepairsTotal;
-      
-      // Extract VAT percentage from lastOCRResult (preserve original value from OCR)
-      const parsePrice = (value) => {
+      // SESSION 80: Capture edited cost totals from input fields
+      const parseNum = (value) => {
         if (!value) return 0;
-        const strValue = String(value).replace(/,/g, '').replace(/%/g, '');
-        const parsed = parseFloat(strValue);
-        return isNaN(parsed) ? 0 : parsed;
+        const num = parseFloat(String(value).replace(/,/g, ''));
+        return isNaN(num) ? 0 : num;
       };
-      const editedVATPercentage = parsePrice(this.lastOCRResult?.['מע"מ']) || 17;
-      const editedVATAmount = editedTotalBeforeVAT * (editedVATPercentage / 100);
-      const editedTotalWithVAT = editedTotalBeforeVAT + editedVATAmount;
+      
+      const editedPartsTotal = parseNum(document.getElementById('edit-parts-total')?.value);
+      const editedWorksTotal = parseNum(document.getElementById('edit-works-total')?.value);
+      const editedRepairsTotal = parseNum(document.getElementById('edit-repairs-total')?.value);
+      const editedTotalBeforeVAT = parseNum(document.getElementById('edit-total-before-vat')?.value);
+      const editedVATPercentage = parseNum(document.getElementById('edit-vat-percentage')?.value);
+      const editedVATAmount = parseNum(document.getElementById('edit-vat-amount')?.value);
+      const editedTotalWithVAT = parseNum(document.getElementById('edit-total-with-vat')?.value);
       
       // Update lastOCRResult with edited items
       if (this.lastOCRResult) {
@@ -1761,12 +1754,12 @@ class InvoiceProcessor {
         if (editedGarageName) this.lastOCRResult['שם מוסך'] = editedGarageName;
         if (editedDate) this.lastOCRResult['תאריך'] = editedDate;
         
-        // SESSION 80: Update cost totals in OCR result
+        // SESSION 80: Update cost totals in OCR result from edited fields
         this.lastOCRResult['סהכ חלקים'] = editedPartsTotal.toFixed(2);
         this.lastOCRResult['סהכ עבודות'] = editedWorksTotal.toFixed(2);
         this.lastOCRResult['סהכ תיקונים'] = editedRepairsTotal.toFixed(2);
         this.lastOCRResult['עלות כוללת ללא מע״מ'] = editedTotalBeforeVAT.toFixed(2);
-        this.lastOCRResult['מע"מ'] = editedVATPercentage + '%';
+        this.lastOCRResult['מע"מ %'] = editedVATPercentage.toString();
         this.lastOCRResult['ערך מע"מ'] = editedVATAmount.toFixed(2);
         this.lastOCRResult['עלות כוללת'] = editedTotalWithVAT.toFixed(2);
         
