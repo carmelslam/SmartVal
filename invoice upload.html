@@ -1587,19 +1587,24 @@ class InvoiceProcessor {
     return 'OTHER';
   }
   
-  // SESSION 76: View invoice PDF in new tab
+  // SESSION 76: View invoice PDF in new tab - NO WEBHOOK CALL
   async viewInvoicePDF() {
     try {
+      console.log('📄 viewInvoicePDF called - NO WEBHOOK WILL BE TRIGGERED');
+      
       if (!this.currentDocumentId) {
         this.showAlert('לא נמצא מסמך', 'error');
         return;
       }
       
-      console.log('🔍 Attempting to view PDF for document ID:', this.currentDocumentId);
+      console.log('🔍 Getting signed URL from Supabase storage for document ID:', this.currentDocumentId);
+      console.log('⚠️ IMPORTANT: This function ONLY gets a URL, NO webhook call');
       this.showAlert('מייצר קישור לצפייה...', 'info');
       
+      // SESSION 80: This only calls Supabase storage API - NO WEBHOOK
       const url = await this.invoiceService.getInvoiceDocumentURL(this.currentDocumentId);
-      console.log('✅ Got signed URL, opening in new tab');
+      console.log('✅ Got signed URL from Supabase, opening in new tab');
+      console.log('📍 URL source: Supabase Storage (NOT Make.com webhook)');
       window.open(url, '_blank');
       
       this.showAlert('החשבונית נפתחה בחלון חדש', 'success');
