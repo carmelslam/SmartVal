@@ -1218,14 +1218,20 @@ class InvoiceProcessor {
       return;
     }
     
+    // SESSION 82 FIX: Calculate VAT percentage from amounts
+    const totalBeforeTax = invoiceData.total_before_tax || 0;
+    const taxAmount = invoiceData.tax_amount || 0;
+    const vatPercentage = totalBeforeTax > 0 ? ((taxAmount / totalBeforeTax) * 100).toFixed(1) : 0;
+    
     const ocrResult = {
       'מס. חשבונית': invoiceData.invoice_number || '',
       'שם מוסך': invoiceData.supplier_name || '',
       'מספר רכב': invoiceData.plate || '',
       'בעל הרכב': helper.stakeholders?.owner?.name || '',
       'תאריך': invoiceData.created_at ? new Date(invoiceData.created_at).toISOString().split('T')[0] : '',
-      "עלות כוללת ללא מע'מ": invoiceData.total_before_tax || 0,
-      "ערך מע'מ": invoiceData.tax_amount || 0,
+      "עלות כוללת ללא מע'מ": totalBeforeTax,
+      "מע'מ": vatPercentage,
+      "ערך מע'מ": taxAmount,
       'עלות כוללת': invoiceData.total_amount || 0,
       'חלקים': [],
       'עבודות': [],
@@ -1235,6 +1241,14 @@ class InvoiceProcessor {
       'סהכ תיקונים': 0
     };
     
+    // SESSION 82 FIX: Get document_id from invoice.documents array if available
+    let documentId = null;
+    if (invoiceData.documents && invoiceData.documents.length > 0) {
+      documentId = invoiceData.documents[0].id;
+      this.currentDocumentId = documentId;
+      console.log('📄 Found document ID:', documentId);
+    }
+    
     if (invoiceData.lines && Array.isArray(invoiceData.lines)) {
       invoiceData.lines.forEach(line => {
         const lineData = {
@@ -1243,20 +1257,22 @@ class InvoiceProcessor {
           'עלות': String(line.unit_price || 0)
         };
         
+        // SESSION 82 FIX: Check metadata.category (uppercase) or fallback to 'PART'
         const metadata = line.metadata || {};
-        const category = metadata.category || 'part';
+        const category = (metadata.category || 'PART').toUpperCase();
         
-        if (category === 'part') {
+        if (category === 'PART') {
           lineData['שם חלק'] = line.description || '';
+          lineData['מק"ט חלק'] = line.part_id || '';
           ocrResult['חלקים'].push(lineData);
           ocrResult['סהכ חלקים'] += line.line_total || 0;
-        } else if (category === 'work') {
+        } else if (category === 'WORK') {
           lineData['סוג העבודה'] = line.description || '';
           lineData['תיאור עבודות'] = line.description || '';
           lineData['עלות עבודות'] = String(line.unit_price || 0);
           ocrResult['עבודות'].push(lineData);
           ocrResult['סהכ עבודות'] += line.line_total || 0;
-        } else if (category === 'repair') {
+        } else if (category === 'REPAIR') {
           lineData['סוג תיקון'] = line.description || '';
           lineData['תיאור התיקון'] = line.description || '';
           lineData['עלות תיקונים'] = String(line.unit_price || 0);
@@ -1266,19 +1282,26 @@ class InvoiceProcessor {
       });
     }
     
-    this.lastOCRResult = ocrResult;
+    console.log('📊 Loaded invoice totals:', {
+      parts: ocrResult['סהכ חלקים'],
+      works: ocrResult['סהכ עבודות'],
+      repairs: ocrResult['סהכ תיקונים']
+    });
+    
+    // SESSION 82 FIX: Call handleOCRResults to populate this.ocrResults array
+    await this.handleOCRResults(ocrResult);
+    
+    // SESSION 82 FIX: Set invoice ID and document ID
     this.currentInvoiceId = invoiceData.id;
     
     helper.current_invoice = {
       invoice_id: invoiceData.id,
       case_uuid: invoiceData.case_id,
       source: 'existing',
-      document_id: null
+      document_id: documentId
     };
     
     sessionStorage.setItem('helper', JSON.stringify(helper));
-    
-    this.displayOCRResults(ocrResult);
     
     document.getElementById('save-results').style.display = 'inline-block';
     document.getElementById('delete-invoice').style.display = 'inline-block';

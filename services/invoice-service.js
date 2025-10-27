@@ -165,7 +165,8 @@ class InvoiceService {
         .from('invoices')
         .select(`
           *,
-          lines:invoice_lines(*)
+          lines:invoice_lines(*),
+          documents:invoice_documents(*)
         `)
         .eq('case_id', caseId)
         .order('created_at', { ascending: false });
