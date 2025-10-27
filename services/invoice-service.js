@@ -51,7 +51,7 @@ class InvoiceService {
       }
 
       const { data: profile, error } = await supabase.from('profiles')
-        .select('user_id, email, full_name, role')
+        .select('user_id, email, name, role')
         .eq('user_id', authUser.id)
         .single();
 
