@@ -1272,6 +1272,8 @@ class InvoiceProcessor {
     
     console.log('💰 Invoice amounts:', { totalBeforeTax, taxAmount, vatPercentage, total: invoiceData.total_amount });
     
+    // SESSION 82 FIX: Don't recalculate category totals - they're not stored in invoice header
+    // Show all category totals as 0 when loading existing (we lost the original OCR breakdown)
     const ocrResult = {
       'מס. חשבונית': invoiceData.invoice_number || '',
       'שם מוסך': invoiceData.supplier_name || '',
@@ -1285,17 +1287,33 @@ class InvoiceProcessor {
       'חלקים': [],
       'עבודות': [],
       'תיקונים': [],
+      // NOTE: Category totals are NOT stored in invoices table, only in invoice_documents.ocr_structured_data
+      // When loading from invoices table, we cannot reliably reconstruct these totals
       'סהכ חלקים': 0,
       'סהכ עבודות': 0,
       'סהכ תיקונים': 0
     };
     
-    // SESSION 82 FIX: Get document_id from invoice.documents array if available
+    // SESSION 82 FIX: Get document_id and OCR data from invoice.documents array
     let documentId = null;
     if (invoiceData.documents && invoiceData.documents.length > 0) {
       documentId = invoiceData.documents[0].id;
       this.currentDocumentId = documentId;
       console.log('📄 Found document ID:', documentId);
+      
+      // SESSION 82 FIX: Load category totals from original OCR data
+      const ocrData = invoiceData.documents[0].ocr_structured_data;
+      if (ocrData) {
+        console.log('📊 Loading category totals from OCR data:', ocrData);
+        ocrResult['סהכ חלקים'] = parseFloat(ocrData['יתרת חלקים'] || ocrData['סהכ חלקים'] || 0);
+        ocrResult['סהכ עבודות'] = parseFloat(ocrData['יתרת עבודות'] || ocrData['סהכ עבודות'] || 0);
+        ocrResult['סהכ תיקונים'] = parseFloat(ocrData['יתרת תיקונים'] || ocrData['סהכ תיקונים'] || 0);
+        console.log('✅ Category totals from OCR:', {
+          parts: ocrResult['סהכ חלקים'],
+          works: ocrResult['סהכ עבודות'],
+          repairs: ocrResult['סהכ תיקונים']
+        });
+      }
     }
     
     if (invoiceData.lines && Array.isArray(invoiceData.lines)) {
@@ -1787,27 +1805,13 @@ class InvoiceProcessor {
       'עלות כוללת': result['עלות כוללת']
     });
     
-    // SESSION 82 FIX: Get category totals from result - check multiple Hebrew key variations
-    let partsTotal = parsePrice(result['סהכ חלקים']) || parsePrice(result['יתרת חלקים']);
-    let worksTotal = parsePrice(result['סהכ עבודות']) || parsePrice(result['יתרת עבודות']);
-    let repairsTotal = parsePrice(result['סהכ תיקונים']) || parsePrice(result['יתרת תיקונים']);
+    // SESSION 82 FIX: Use category totals directly from webhook - NEVER calculate
+    // The webhook returns correct totals, we should trust those values
+    let partsTotal = parsePrice(result['סהכ חלקים']) || parsePrice(result['יתרת חלקים']) || 0;
+    let worksTotal = parsePrice(result['סהכ עבודות']) || parsePrice(result['יתרת עבודות']) || 0;
+    let repairsTotal = parsePrice(result['סהכ תיקונים']) || parsePrice(result['יתרת תיקונים']) || 0;
     
-    console.log('🔍 Category totals from OCR result:', { partsTotal, worksTotal, repairsTotal });
-    
-    // ONLY calculate from items if ALL totals are 0 or missing
-    if (partsTotal === 0 && worksTotal === 0 && repairsTotal === 0 && this.ocrResults.length > 0) {
-      console.warn('⚠️ No category totals in OCR result, calculating from items...');
-      partsTotal = this.ocrResults
-        .filter(item => item.category === 'PART')
-        .reduce((sum, item) => sum + ((item.quantity || 1) * (item.unit_price || 0)), 0);
-      worksTotal = this.ocrResults
-        .filter(item => item.category === 'WORK')
-        .reduce((sum, item) => sum + ((item.quantity || 1) * (item.unit_price || 0)), 0);
-      repairsTotal = this.ocrResults
-        .filter(item => item.category === 'REPAIR')
-        .reduce((sum, item) => sum + ((item.quantity || 1) * (item.unit_price || 0)), 0);
-      console.log('📊 Calculated totals:', { partsTotal, worksTotal, repairsTotal });
-    }
+    console.log('✅ Using category totals from OCR webhook:', { partsTotal, worksTotal, repairsTotal });
     
     const totalBeforeVAT = parsePrice(result["עלות כוללת ללא מע'מ"]); // Single quote in OCR
     const vatPercentage = parsePrice(result["מע'מ"]); // Single quote in OCR
@@ -2241,14 +2245,9 @@ class InvoiceProcessor {
           'עלות תיקונים': String(item.unit_price)
         }));
         
-        // Recalculate totals
-        const partsTotal = parts.reduce((sum, item) => sum + (item.quantity * item.unit_price), 0);
-        const worksTotal = works.reduce((sum, item) => sum + (item.quantity * item.unit_price), 0);
-        const repairsTotal = repairs.reduce((sum, item) => sum + (item.quantity * item.unit_price), 0);
-        
-        this.lastOCRResult['סהכ חלקים'] = partsTotal.toLocaleString();
-        this.lastOCRResult['סהכ עבודות'] = worksTotal.toLocaleString();
-        this.lastOCRResult['סהכ תיקונים'] = repairsTotal.toLocaleString();
+        // SESSION 82 FIX: DO NOT recalculate totals - use the edited values from fields
+        // The user may have manually adjusted the category totals in the UI
+        // Totals were already set correctly on lines 2215-2217 from the edit fields
       }
       
       // Update helper.invoices
