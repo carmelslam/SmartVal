@@ -1657,9 +1657,28 @@ class InvoiceProcessor {
       'עלות כוללת': result['עלות כוללת']
     });
     
-    const partsTotal = parsePrice(result['סהכ חלקים']);
-    const worksTotal = parsePrice(result['סהכ עבודות']);
-    const repairsTotal = parsePrice(result['סהכ תיקונים']);
+    // SESSION 82 FIX: Calculate category totals from items if not provided in result
+    let partsTotal = parsePrice(result['סהכ חלקים']);
+    let worksTotal = parsePrice(result['סהכ עבודות']);
+    let repairsTotal = parsePrice(result['סהכ תיקונים']);
+    
+    // If totals are 0 or missing, calculate from items
+    if (partsTotal === 0 && this.ocrResults.length > 0) {
+      partsTotal = this.ocrResults
+        .filter(item => item.category === 'PART')
+        .reduce((sum, item) => sum + ((item.quantity || 1) * (item.unit_price || 0)), 0);
+    }
+    if (worksTotal === 0 && this.ocrResults.length > 0) {
+      worksTotal = this.ocrResults
+        .filter(item => item.category === 'WORK')
+        .reduce((sum, item) => sum + ((item.quantity || 1) * (item.unit_price || 0)), 0);
+    }
+    if (repairsTotal === 0 && this.ocrResults.length > 0) {
+      repairsTotal = this.ocrResults
+        .filter(item => item.category === 'REPAIR')
+        .reduce((sum, item) => sum + ((item.quantity || 1) * (item.unit_price || 0)), 0);
+    }
+    
     const totalBeforeVAT = parsePrice(result["עלות כוללת ללא מע'מ"]); // Single quote in OCR
     const vatPercentage = parsePrice(result["מע'מ"]); // Single quote in OCR
     const vatAmount = parsePrice(result["ערך מע'מ"]); // Single quote in OCR
