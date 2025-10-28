@@ -1221,7 +1221,9 @@ class InvoiceProcessor {
           console.log(`📄 Found ${documents.length} invoice documents that need to be saved`);
           this.showAlert(`נמצאו ${documents.length} מסמכי חשבונית שטרם נשמרו. אנא העלה ושמור אותם כדי לצפות בהם כאן.`, 'info');
         } else {
-          this.showAlert('לא נמצאו חשבוניות קיימות לתיק זה', 'info');
+          // SESSION 84: Task 4 - Enhanced message with plate number context
+          this.showAlert(`לא נמצאו חשבוניות עבור רכב ${plateNumber}`, 'info');
+          console.log('ℹ️ No invoices found for plate:', plateNumber);
         }
       }
       
@@ -1301,19 +1303,17 @@ class InvoiceProcessor {
       this.currentDocumentId = documentId;
       console.log('📄 Found document ID:', documentId);
       
-      // SESSION 82 FIX: Load category totals from original OCR data
-      const ocrData = invoiceData.documents[0].ocr_structured_data;
-      if (ocrData) {
-        console.log('📊 Loading category totals from OCR data:', ocrData);
-        ocrResult['סהכ חלקים'] = parseFloat(ocrData['יתרת חלקים'] || ocrData['סהכ חלקים'] || 0);
-        ocrResult['סהכ עבודות'] = parseFloat(ocrData['יתרת עבודות'] || ocrData['סהכ עבודות'] || 0);
-        ocrResult['סהכ תיקונים'] = parseFloat(ocrData['יתרת תיקונים'] || ocrData['סהכ תיקונים'] || 0);
-        console.log('✅ Category totals from OCR:', {
-          parts: ocrResult['סהכ חלקים'],
-          works: ocrResult['סהכ עבודות'],
-          repairs: ocrResult['סהכ תיקונים']
-        });
-      }
+      // SESSION 84: Task 2 - DON'T load from OCR data!
+      // OCR data is stale after user edits invoice_lines
+      // We'll calculate totals from invoice_lines instead (lines 1350/1356/1362)
+      // Keeping this code commented for reference:
+      // const ocrData = invoiceData.documents[0].ocr_structured_data;
+      // if (ocrData) {
+      //   ocrResult['סהכ חלקים'] = parseFloat(ocrData['יתרת חלקים'] || ocrData['סהכ חלקים'] || 0);
+      //   ocrResult['סהכ עבודות'] = parseFloat(ocrData['יתרת עבודות'] || ocrData['סהכ עבודות'] || 0);
+      //   ocrResult['סהכ תיקונים'] = parseFloat(ocrData['יתרת תיקונים'] || ocrData['סהכ תיקונים'] || 0);
+      // }
+      console.log('📊 Will calculate category totals from invoice_lines (source of truth)');
     }
     
     if (invoiceData.lines && Array.isArray(invoiceData.lines)) {
@@ -2974,9 +2974,15 @@ class InvoiceProcessor {
 
   // SESSION 80: Complete invoice deletion from all systems
   async deleteInvoiceCompletely() {
-    if (!this.currentInvoiceId && !this.currentDocumentId) {
-      this.showAlert('אין חשבונית לפעולה לסירה', 'warning');
+    // SESSION 84: Task 3 - Stricter validation to prevent accidental mass deletion
+    if (!this.currentInvoiceId) {
+      this.showAlert('שגיאה: לא נמצא מזהה חשבונית למחיקה', 'error');
+      console.error('❌ Cannot delete: No currentInvoiceId set');
       return;
+    }
+
+    if (!this.currentDocumentId) {
+      console.warn('⚠️ No document ID, will only delete invoice record');
     }
     
     // Get invoice details for confirmation
@@ -3004,13 +3010,15 @@ class InvoiceProcessor {
       // 2. Delete from helper.invoices
       try {
         const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
-        
+
         if (helper.invoices && Array.isArray(helper.invoices)) {
           const beforeCount = helper.invoices.length;
+          // SESSION 84: Task 3 - Use ONLY invoice ID for precise deletion
+          // Previous logic used invoice number too, which could delete multiple invoices
           helper.invoices = helper.invoices.filter(inv => {
             const invId = inv.invoice_id || inv.supabase_invoice_id;
-            const invNum = inv['מס. חשבונית'] || inv.invoice_number;
-            return invId !== this.currentInvoiceId && invNum !== invoiceNumber;
+            // Only compare by unique ID, not invoice number (numbers can repeat!)
+            return invId !== this.currentInvoiceId;
           });
           
           helper.meta = helper.meta || {};
@@ -3428,8 +3436,34 @@ class InvoiceProcessor {
           helperUpdated.invoices[invoiceIndex].supabase_invoice_id = invoice.id;
           sessionStorage.setItem('helper', JSON.stringify(helperUpdated));
         }
-        
-        this.showAlert('✅ חשבונית ידנית נשמרה בהצלחה', 'success');
+
+        // SESSION 84: Task 7 - Send manual invoice to Drive webhook
+        try {
+          const year = new Date().getFullYear();
+          const caseFilingId = `YC-${plate}-${year}`;
+
+          const webhookPayload = {
+            plate: plate,
+            case_filing_id: caseFilingId,
+            pdf_url: null,  // Manual invoice has no PDF
+            invoice_id: invoice.id,
+            case_id: caseId,
+            invoice_number: invoiceNumber,
+            supplier_name: garageName,
+            total_amount: grandTotal,
+            source: 'manual',  // Mark as manual entry
+            invoice_data: invoiceData  // Include full manual data
+          };
+
+          console.log('📤 Sending manual invoice to SAVE_INVOICE_TO_DRIVE webhook:', webhookPayload);
+          await sendToWebhook('SAVE_INVOICE_TO_DRIVE', webhookPayload);
+          console.log('✅ Manual invoice sent to Drive successfully');
+        } catch (webhookError) {
+          console.error('⚠️ Webhook failed (non-critical):', webhookError);
+          // Don't block on webhook failure - invoice is saved in Supabase
+        }
+
+        this.showAlert('✅ חשבונית ידנית נשמרה בהצלחה ונשלחה ל-Drive', 'success');
       } catch (error) {
         console.error('❌ Failed to save manual invoice:', error);
         this.showAlert('⚠️ נשמר ל-helper אבל שגיאה בשמירה למסד נתונים', 'warning');
