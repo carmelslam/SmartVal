@@ -1,7 +1,7 @@
 # Session 85: Parts Search & Required Parts - Database Schema Fix - HANDOVER
 
 **Date**: 2025-10-28  
-**Status**: ⏸️ AWAITING USER TESTING  
+**Status**: ✅ COMPLETED - ALL FIXES CONFIRMED WORKING  
 **Agent**: Claude Code Session 85
 
 ---
@@ -79,8 +79,8 @@ const plateWithDashes = queryPlate.includes('-') ? queryPlate :
 - OR catches everything
 
 **Impact:**
-- ✅ Parts search button now works (user confirmed)
-- 🔄 Floating screen Tab 2 should work (needs testing)
+- ✅ Parts search button now works (user confirmed: "it worked!")
+- ✅ Floating screen Tab 2 now works (user confirmed: "the floating screen wrks")
 
 ---
 
