@@ -2014,9 +2014,40 @@ class InvoiceProcessor {
         field.addEventListener('input', () => {
           this.hasUnsavedEdits = true;
           console.log(`✏️ Field ${fieldId} edited, hasUnsavedEdits = true`);
+          
+          // SESSION 83: Auto-recalculate when category totals or VAT% change
+          if (['edit-parts-total', 'edit-works-total', 'edit-repairs-total', 'edit-vat-percentage'].includes(fieldId)) {
+            this.recalculateInvoiceTotals();
+          }
         });
       }
     });
+  }
+  
+  recalculateInvoiceTotals() {
+    // Get category totals
+    const partsTotal = parseFloat(document.getElementById('edit-parts-total')?.value || 0);
+    const worksTotal = parseFloat(document.getElementById('edit-works-total')?.value || 0);
+    const repairsTotal = parseFloat(document.getElementById('edit-repairs-total')?.value || 0);
+    
+    // Calculate total before VAT
+    const totalBeforeVAT = partsTotal + worksTotal + repairsTotal;
+    
+    // Get VAT percentage
+    const vatPercentage = parseFloat(document.getElementById('edit-vat-percentage')?.value || 0);
+    
+    // Calculate VAT amount
+    const vatAmount = (totalBeforeVAT * vatPercentage) / 100;
+    
+    // Calculate total with VAT
+    const totalWithVAT = totalBeforeVAT + vatAmount;
+    
+    // Update the fields
+    document.getElementById('edit-total-before-vat').value = totalBeforeVAT.toFixed(2);
+    document.getElementById('edit-vat-amount').value = vatAmount.toFixed(2);
+    document.getElementById('edit-total-with-vat').value = totalWithVAT.toFixed(2);
+    
+    console.log('🔢 Recalculated totals:', { totalBeforeVAT, vatAmount, totalWithVAT });
   }
 
   updateItemCalculation(field) {
@@ -2296,7 +2327,7 @@ class InvoiceProcessor {
         if (editedInvoiceNumber) invoiceUpdate.invoice_number = editedInvoiceNumber;
         if (editedGarageName) invoiceUpdate.supplier_name = editedGarageName;
         if (editedPlate) invoiceUpdate.plate = editedPlate;
-        if (editedDate) invoiceUpdate.invoice_date = editedDate;
+        // NOTE: Date is stored in created_at (auto), not invoice_date
         
         // SESSION 80: Update cost totals - always update these
         invoiceUpdate.total_before_tax = editedTotalBeforeVAT;
