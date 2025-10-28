@@ -71,12 +71,12 @@ Someone copied code from `selected_parts` table structure (which HAS vehicle col
 
 **Changes**:
 ```javascript
-// SESSION 84: Prepare both plate formats (with and without dashes)
+// SESSION 85: Prepare both plate formats (with and without dashes)
 const plateNoDashes = queryPlate.replace(/-/g, '');
 const plateWithDashes = queryPlate.includes('-') ? queryPlate : 
                         queryPlate.replace(/(\d{3})(\d{2})(\d{3})/, '$1-$2-$3');
 
-// SESSION 84: Use OR filter to match BOTH formats
+// SESSION 85: Use OR filter to match BOTH formats
 query = window.supabase
   .from('selected_parts')
   .select('*')
@@ -104,7 +104,7 @@ query = window.supabase
 
 **Changes**:
 ```javascript
-// SESSION 84: Removed non-existent columns from parts_required
+// SESSION 85: Removed non-existent columns from parts_required
 // unit_price: updatedPrice,  // ❌ Column doesn't exist
 // price: totalCost,  // ❌ Column doesn't exist  
 // manufacturer: partMetadata.manufacturer || '',  // ❌ Column doesn't exist
@@ -112,7 +112,7 @@ query = window.supabase
 // model: window.helper?.vehicle?.model || '',  // ❌ Column doesn't exist
 // ... (7 more vehicle columns removed)
 
-// SESSION 84: Store vehicle data in metadata JSONB instead
+// SESSION 85: Store vehicle data in metadata JSONB instead
 metadata: {
   ...partMetadata,
   vehicle: {
@@ -155,7 +155,7 @@ Created by: Original migration + SESSION 36
 ### Selected Parts Display
 - [x] Click "🗂️ הצג רשימת חלקים נבחרים עדכנית" - shows parts ✅
 - [ ] Floating screen Tab 2 shows selected parts
-- [ ] Console shows: `🔧 SESSION 84: Plate formats - Original: "..." Without dashes: "..." With dashes: "..."`
+- [ ] Console shows: `🔧 SESSION 85: Plate formats - Original: "..." Without dashes: "..." With dashes: "..."`
 - [ ] Console shows: `✅ SESSION 19: Retrieved X parts from Supabase`
 - [ ] No errors about empty results
 
