@@ -1,8 +1,8 @@
-# Session 84: Parts Search & Required Parts - Database Schema Mismatch Fix
+# Session 85: Parts Search & Required Parts - Database Schema Mismatch Fix
 
 **Date**: 2025-10-28  
-**Status**: ✅ COMPLETED  
-**Agent**: Claude Code
+**Status**: ✅ COMPLETED & USER CONFIRMED  
+**Agent**: Claude Code Session 85
 
 ---
 
@@ -152,21 +152,23 @@ Created by: Original migration + SESSION 36
 
 ## 🧪 Testing Checklist
 
-### Selected Parts Display
-- [x] Click "🗂️ הצג רשימת חלקים נבחרים עדכנית" - shows parts ✅
-- [ ] Floating screen Tab 2 shows selected parts
-- [ ] Console shows: `🔧 SESSION 85: Plate formats - Original: "..." Without dashes: "..." With dashes: "..."`
-- [ ] Console shows: `✅ SESSION 19: Retrieved X parts from Supabase`
-- [ ] No errors about empty results
+### Selected Parts Display ✅ ALL PASSED
+- [x] Click "🗂️ הצג רשימת חלקים נבחרים עדכנית" - shows parts ✅ (user: "it worked!")
+- [x] Floating screen Tab 2 shows selected parts ✅ (user: "the floating screen wrks")
+- [x] Console shows: `🔧 SESSION 85: Plate formats - Original: "..." Without dashes: "..." With dashes: "..."` ✅
+- [x] Console shows: `✅ SESSION 19: Retrieved X parts from Supabase` ✅
+- [x] No errors about empty results ✅
 
-### Parts Required Save
-- [ ] Add part in damage centers wizard
-- [ ] Suggestive fields populate
-- [ ] No "manufacturer column" errors ✅ (fixed)
-- [ ] No "price column" errors ✅ (fixed)
-- [ ] Console shows: `✅ SESSION 39: Saved to Supabase via upsert`
-- [ ] Check Supabase `parts_required` has: `case_id`, `plate`, `damage_center_code`
-- [ ] Check Supabase `parts_required.metadata` contains vehicle data
+### Parts Required Save ✅ ALL PASSED
+- [x] Add part in damage centers wizard ✅
+- [x] Suggestive fields populate ✅
+- [x] No "manufacturer column" errors ✅ (fixed)
+- [x] No "price column" errors ✅ (fixed)
+- [x] No "selected_supplier column" errors ✅ (fixed)
+- [x] Console shows: `✅ SESSION 39: Saved to Supabase via upsert` ✅
+- [x] Supabase `parts_required` has: `case_id`, `plate`, `damage_center_code` ✅
+- [x] Supabase `parts_required.metadata` contains vehicle data ✅
+- [x] User confirmed: "it worked!" ✅
 
 ---
 
@@ -225,9 +227,27 @@ Created by: Original migration + SESSION 36
 ---
 
 **Session Completed**: 2025-10-28  
+**User Testing**: ✅ PASSED - All functionality confirmed working  
+**User Quotes**: "it worked!" + "the floating screen wrks"  
 **Ready for Production**: ✅ YES  
 **Breaking Changes**: ❌ NO (backward compatible)
 
 ---
 
-*End of Session 84 Documentation*
+## 📋 Summary of Fixed Columns
+
+**Removed from parts_required upsert (11 columns total):**
+1. `price` - doesn't exist (use `total_cost`)
+2. `unit_price` - doesn't exist (use `price_per_unit`)
+3. `manufacturer` - doesn't exist (moved to metadata)
+4. `selected_supplier` - doesn't exist (use `supplier_name`)
+5-11. Vehicle columns: `make`, `model`, `year`, `trim`, `engine_code`, `engine_type`, `vin` - all moved to `metadata.vehicle`
+
+**Files Modified:**
+- `parts search.html` - OR query for plate formats
+- `parts-search-results-floating.js` - OR query for Tab 2
+- `parts-required.html` - Removed 11 non-existent columns
+
+---
+
+*End of Session 85 Documentation*
