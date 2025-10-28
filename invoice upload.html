@@ -1267,56 +1267,63 @@ class InvoiceProcessor {
       return;
     }
     
-    // SESSION 82 FIX: Calculate VAT percentage from amounts
-    const totalBeforeTax = invoiceData.total_before_tax || 0;
-    const taxAmount = invoiceData.tax_amount || 0;
-    const vatPercentage = totalBeforeTax > 0 ? ((taxAmount / totalBeforeTax) * 100).toFixed(1) : 17;
-
-    console.log('💰 Invoice amounts:', { totalBeforeTax, taxAmount, vatPercentage, total: invoiceData.total_amount });
-
-    // SESSION 84: Build ocrResult with summary totals from invoices table
-    // Category totals will be calculated from invoice_lines below (lines 1350/1356/1362)
-    const ocrResult = {
-      'מס. חשבונית': invoiceData.invoice_number || '',
-      'שם מוסך': invoiceData.supplier_name || '',
-      'מספר רכב': invoiceData.plate || '',
-      'בעל הרכב': helper.stakeholders?.owner?.name || '',
-      'תאריך': invoiceData.created_at ? new Date(invoiceData.created_at).toISOString().split('T')[0] : '',
-      "עלות כוללת ללא מע'מ": totalBeforeTax,  // SESSION 84: From invoices table
-      "מע'מ": vatPercentage,                    // SESSION 84: Calculated from table
-      "ערך מע'מ": taxAmount,                    // SESSION 84: From invoices table
-      'עלות כוללת': invoiceData.total_amount || 0,  // SESSION 84: From invoices table
-      'חלקים': [],
-      'עבודות': [],
-      'תיקונים': [],
-      // Category totals start at 0, will be calculated from invoice_lines below
-      'סהכ חלקים': 0,
-      'סהכ עבודות': 0,
-      'סהכ תיקונים': 0
-    };
-    
-    // SESSION 82 FIX: Get document_id and OCR data from invoice.documents array
+    // SESSION 84: CRITICAL FIX - Load invoice data from invoice_documents OCR JSON
+    // DON'T mix with case/helper data - show invoice EXACTLY as saved!
+    let ocrResult = null;
     let documentId = null;
+    let usingOriginalOCR = false; // Track if we're using original OCR data
+
+    // Try to get original OCR data from invoice_documents first
     if (invoiceData.documents && invoiceData.documents.length > 0) {
       documentId = invoiceData.documents[0].id;
       this.currentDocumentId = documentId;
-      console.log('📄 Found document ID:', documentId);
-      
-      // SESSION 84: Task 2 - DON'T load from OCR data!
-      // OCR data is stale after user edits invoice_lines
-      // We'll calculate totals from invoice_lines instead (lines 1350/1356/1362)
-      // Keeping this code commented for reference:
-      // const ocrData = invoiceData.documents[0].ocr_structured_data;
-      // if (ocrData) {
-      //   ocrResult['סהכ חלקים'] = parseFloat(ocrData['יתרת חלקים'] || ocrData['סהכ חלקים'] || 0);
-      //   ocrResult['סהכ עבודות'] = parseFloat(ocrData['יתרת עבודות'] || ocrData['סהכ עבודות'] || 0);
-      //   ocrResult['סהכ תיקונים'] = parseFloat(ocrData['יתרת תיקונים'] || ocrData['סהכ תיקונים'] || 0);
-      // }
-      console.log('📊 Will calculate category totals from invoice_lines (source of truth)');
+
+      const originalOCR = invoiceData.documents[0].ocr_structured_data;
+      if (originalOCR && typeof originalOCR === 'object') {
+        // Use ORIGINAL OCR data as-is (preserves invoice exactly as uploaded)
+        console.log('✅ SESSION 84: Using ORIGINAL invoice data from invoice_documents.ocr_structured_data');
+        console.log('   This preserves the invoice EXACTLY as saved - no reconstruction!');
+        ocrResult = originalOCR;
+        usingOriginalOCR = true;
+      }
     }
-    
-    if (invoiceData.lines && Array.isArray(invoiceData.lines)) {
-      console.log('🔄 Processing', invoiceData.lines.length, 'lines from invoice_lines table...');
+
+    // Fallback: If no OCR data, reconstruct from invoices table + invoice_lines
+    if (!ocrResult) {
+      console.warn('⚠️ No OCR data found, reconstructing from invoices table + invoice_lines');
+
+      const totalBeforeTax = invoiceData.total_before_tax || 0;
+      const taxAmount = invoiceData.tax_amount || 0;
+      const vatPercentage = totalBeforeTax > 0 ? ((taxAmount / totalBeforeTax) * 100).toFixed(1) : 17;
+
+      ocrResult = {
+        'מס. חשבונית': invoiceData.invoice_number || '',
+        'שם מוסך': invoiceData.supplier_name || '',
+        'מספר רכב': invoiceData.plate || '',
+        'בעל הרכב': '',  // Will be filled from invoice_lines if available
+        'תאריך': invoiceData.created_at ? new Date(invoiceData.created_at).toISOString().split('T')[0] : '',
+        "עלות כוללת ללא מע'מ": totalBeforeTax,
+        "מע'מ": vatPercentage,
+        "ערך מע'מ": taxAmount,
+        'עלות כוללת': invoiceData.total_amount || 0,
+        'חלקים': [],
+        'עבודות': [],
+        'תיקונים': [],
+        'סהכ חלקים': 0,
+        'סהכ עבודות': 0,
+        'סהכ תיקונים': 0
+      };
+    }
+
+    console.log('📄 Invoice data source:', usingOriginalOCR ? 'ORIGINAL OCR (no reconstruction)' : 'Reconstructed from tables');
+
+    // SESSION 84: CRITICAL - Only process invoice_lines if we're in reconstruction mode!
+    // If we have original OCR data, SKIP this entirely to avoid overwriting correct data
+    if (!usingOriginalOCR && invoiceData.lines && Array.isArray(invoiceData.lines)) {
+      console.log('🔄 RECONSTRUCTION MODE: Processing', invoiceData.lines.length, 'lines from invoice_lines table...');
+
+      const totalBeforeTax = invoiceData.total_before_tax || 0;
+      const taxAmount = invoiceData.tax_amount || 0;
 
       invoiceData.lines.forEach((line, index) => {
         const metadata = line.metadata || {};
@@ -1358,36 +1365,44 @@ class InvoiceProcessor {
           console.log(`    ✅ REPAIR: Added ${line.line_total} to repairs total (now: ${ocrResult['סהכ תיקונים']})`);
         }
       });
-    } else {
-      console.warn('⚠️ No lines array found in invoice data');
-    }
 
-    // SESSION 84: Compare calculated category totals with invoices table
-    const calculatedTotal = ocrResult['סהכ חלקים'] + ocrResult['סהכ עבודות'] + ocrResult['סהכ תיקונים'];
-    console.log('📊 SESSION 84 - Totals comparison:', {
-      'Category totals (from invoice_lines)': {
-        parts: ocrResult['סהכ חלקים'],
-        works: ocrResult['סהכ עבודות'],
-        repairs: ocrResult['סהכ תיקונים'],
-        calculated_sum: calculatedTotal
-      },
-      'Invoice table totals': {
-        total_before_tax: totalBeforeTax,
-        tax_amount: taxAmount,
-        total_amount: invoiceData.total_amount
-      },
-      'MISMATCH': calculatedTotal !== totalBeforeTax ? '⚠️ YES - Category totals do not match invoice total!' : '✅ Match'
-    });
+      // Only recalculate totals in reconstruction mode
+      const calculatedTotal = ocrResult['סהכ חלקים'] + ocrResult['סהכ עבודות'] + ocrResult['סהכ תיקונים'];
+      console.log('📊 SESSION 84 - Totals comparison (RECONSTRUCTION MODE):', {
+        'Category totals (from invoice_lines)': {
+          parts: ocrResult['סהכ חלקים'],
+          works: ocrResult['סהכ עבודות'],
+          repairs: ocrResult['סהכ תיקונים'],
+          calculated_sum: calculatedTotal
+        },
+        'Invoice table totals': {
+          total_before_tax: totalBeforeTax,
+          tax_amount: taxAmount,
+          total_amount: invoiceData.total_amount
+        },
+        'MISMATCH': calculatedTotal !== totalBeforeTax ? '⚠️ YES - Category totals do not match invoice total!' : '✅ Match'
+      });
 
-    // SESSION 84: SAFETY FIX - If invoices table has missing/zero totals, recalculate from lines
-    if (totalBeforeTax === 0 || !totalBeforeTax) {
-      console.warn('⚠️ Invoice table has missing totals! Recalculating from invoice_lines...');
-      const recalcVatPercent = ocrResult["מע'מ"] || 17;
-      ocrResult["עלות כוללת ללא מע'מ"] = calculatedTotal;
-      ocrResult["מע'מ"] = recalcVatPercent;
-      ocrResult["ערך מע'מ"] = (calculatedTotal * recalcVatPercent) / 100;
-      ocrResult['עלות כוללת'] = calculatedTotal + ocrResult["ערך מע'מ"];
-      console.log('✅ Recalculated totals:', ocrResult);
+      // SESSION 84: SAFETY FIX - If invoices table has missing/zero totals, recalculate from lines
+      if (totalBeforeTax === 0 || !totalBeforeTax) {
+        console.warn('⚠️ Invoice table has missing totals! Recalculating from invoice_lines...');
+        const recalcVatPercent = ocrResult["מע'מ"] || 17;
+        ocrResult["עלות כוללת ללא מע'מ"] = calculatedTotal;
+        ocrResult["מע'מ"] = recalcVatPercent;
+        ocrResult["ערך מע'מ"] = (calculatedTotal * recalcVatPercent) / 100;
+        ocrResult['עלות כוללת'] = calculatedTotal + ocrResult["ערך מע'מ"];
+        console.log('✅ Recalculated totals:', ocrResult);
+      }
+    } else if (usingOriginalOCR) {
+      console.log('✅ SESSION 84: SKIPPING invoice_lines reconstruction - using original OCR data as-is!');
+      console.log('   Invoice will display EXACTLY as it was saved:', {
+        'Owner': ocrResult['בעל הרכב'],
+        'Plate': ocrResult['מספר רכב'],
+        'Date': ocrResult['תאריך'],
+        'Parts Total': ocrResult['סהכ חלקים'],
+        'Works Total': ocrResult['סהכ עבודות'],
+        'Repairs Total': ocrResult['סהכ תיקונים']
+      });
     }
     
     // SESSION 82 FIX: When loading existing invoice, populate this.ocrResults manually
