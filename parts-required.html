@@ -2865,18 +2865,33 @@ function savePartsData() {
         supplier_name: supplier || partMetadata.supplier_name || partMetadata.ספק || '',
         cat_num_desc: partMetadata.cat_num_desc || '',
         part_family: partMetadata.part_family || '',
-        manufacturer: partMetadata.manufacturer || '',
+        // SESSION 84: manufacturer column doesn't exist in parts_required table - removed
+        // manufacturer: partMetadata.manufacturer || '',
         selected_supplier: supplier || partMetadata.supplier_name || '',
         
-        make: window.helper?.vehicle?.manufacturer || '',
-        model: window.helper?.vehicle?.model || '',
-        year: window.helper?.vehicle?.year || '',
-        trim: window.helper?.vehicle?.trim || '',
-        engine_code: window.helper?.vehicle?.engine_code || '',
-        engine_type: window.helper?.vehicle?.fuel_type || '',
-        vin: window.helper?.vehicle?.vin || '',
+        // SESSION 84: Vehicle columns don't exist in parts_required - store in metadata instead
+        // make: window.helper?.vehicle?.manufacturer || '',
+        // model: window.helper?.vehicle?.model || '',
+        // year: window.helper?.vehicle?.year || '',
+        // trim: window.helper?.vehicle?.trim || '',
+        // engine_code: window.helper?.vehicle?.engine_code || '',
+        // engine_type: window.helper?.vehicle?.fuel_type || '',
+        // vin: window.helper?.vehicle?.vin || '',
         
-        metadata: partMetadata,
+        // SESSION 84: Store vehicle data in metadata JSONB instead
+        metadata: {
+          ...partMetadata,
+          vehicle: {
+            manufacturer: window.helper?.vehicle?.manufacturer || '',
+            make: window.helper?.vehicle?.manufacturer || '',
+            model: window.helper?.vehicle?.model || '',
+            year: window.helper?.vehicle?.year || '',
+            trim: window.helper?.vehicle?.trim || '',
+            engine_code: window.helper?.vehicle?.engine_code || '',
+            engine_type: window.helper?.vehicle?.fuel_type || '',
+            vin: window.helper?.vehicle?.vin || ''
+          }
+        },
         updated_at: new Date().toISOString()
       };
       

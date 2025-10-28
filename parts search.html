@@ -1441,6 +1441,10 @@ ${part.supplier ? `   ספק: ${part.supplier}` : ''}
       return [];
     }
     
+    // SESSION 84: Normalize plate (remove dashes) to match Supabase storage format
+    const normalizedPlate = queryPlate.replace(/-/g, '');
+    console.log(`🔧 SESSION 84: Normalized plate "${queryPlate}" → "${normalizedPlate}"`);
+    
     // Check cache (30 seconds)
     const now = Date.now();
     if (partsCache && cacheTimestamp && (now - cacheTimestamp) < CACHE_DURATION) {
@@ -1453,7 +1457,8 @@ ${part.supplier ? `   ספק: ${part.supplier}` : ''}
       const caseId = window.helper?.meta?.case_id;
       
       // Primary source: Supabase selected_parts table
-      console.log('🔍 SESSION 19: Querying Supabase for plate:', queryPlate, 'case_id:', caseId || 'N/A');
+      // SESSION 84: Use normalized plate (without dashes) for consistent querying
+      console.log('🔍 SESSION 19: Querying Supabase for plate:', normalizedPlate, 'case_id:', caseId || 'N/A');
       
       let query;
       
@@ -1465,7 +1470,7 @@ ${part.supplier ? `   ספק: ${part.supplier}` : ''}
         query = window.supabase
           .from('selected_parts')
           .select('*')
-          .eq('plate', queryPlate)
+          .eq('plate', normalizedPlate)
           .order('selected_at', { ascending: false });
       } else {
         // Fallback: filter by plate only (backwards compatible)
@@ -1473,7 +1478,7 @@ ${part.supplier ? `   ספק: ${part.supplier}` : ''}
         query = window.supabase
           .from('selected_parts')
           .select('*')
-          .eq('plate', queryPlate)
+          .eq('plate', normalizedPlate)
           .order('selected_at', { ascending: false });
       }
       
@@ -1484,7 +1489,7 @@ ${part.supplier ? `   ספק: ${part.supplier}` : ''}
         throw error;
       }
       
-      console.log(`📊 SESSION 24: Supabase query result for plate "${queryPlate}":`, {
+      console.log(`📊 SESSION 24: Supabase query result for plate "${normalizedPlate}":`, {
         rowCount: data?.length || 0,
         hasData: !!data,
         hasError: !!error
@@ -1499,7 +1504,8 @@ ${part.supplier ? `   ספק: ${part.supplier}` : ''}
             .limit(20);
           const uniquePlates = [...new Set(allPlates?.map(p => p.plate) || [])];
           console.log('🔍 SESSION 24: Found these plates in selected_parts table:', uniquePlates);
-          console.log('💡 Your query plate:', queryPlate);
+          console.log('💡 Your query plate (normalized):', normalizedPlate);
+          console.log('💡 Your query plate (original):', queryPlate);
         } catch (e) {
           console.log('⚠️ Could not fetch plate list:', e.message);
         }
@@ -1516,8 +1522,8 @@ ${part.supplier ? `   ספק: ${part.supplier}` : ''}
         return filterParts(data, filter, limit, offset);
       }
       
-      console.log('ℹ️ SESSION 19: No parts found in Supabase for plate:', queryPlate);
-      console.log('💡 TIP: Check if plate format matches (with/without dashes)');
+      console.log('ℹ️ SESSION 19: No parts found in Supabase for plate:', normalizedPlate, '(original:', queryPlate + ')');
+      console.log('💡 SESSION 84: Plate was normalized by removing dashes');
       return [];
       
     } catch (error) {
