@@ -1342,7 +1342,8 @@ class InvoiceProcessor {
         
         if (category === 'PART') {
           lineData['שם חלק'] = line.description || '';
-          lineData['מק"ט חלק'] = line.part_id || ''; // SESSION 82: Load code from part_id for parts
+          lineData['מק"ט חלק'] = line.part_id || metadata.code || ''; // SESSION 82: Load code from part_id or metadata
+          console.log(`  📦 Part code loaded: "${lineData['מק"ט חלק']}" from part_id="${line.part_id}", metadata.code="${metadata.code}"`);
           ocrResult['חלקים'].push(lineData);
           ocrResult['סהכ חלקים'] += line.line_total || 0;
         } else if (category === 'WORK') {
@@ -1382,14 +1383,18 @@ class InvoiceProcessor {
       return isNaN(parsed) ? 0 : parsed;
     };
     
-    const partItems = parts.map(part => ({
-      code: part['מק"ט חלק'] || part.code || '',
-      name: part['שם חלק'] || part.name || part['תיאור'] || part.description,
-      description: part['תיאור'] || part.description || '',
-      quantity: parsePrice(part['כמות'] || part.quantity || 1),
-      unit_price: parsePrice(part['עלות'] || part.price || part.unit_price),
-      category: 'PART'
-    }));
+    const partItems = parts.map(part => {
+      const code = part['מק"ט חלק'] || part.code || '';
+      console.log(`📦 populateOcrSectionFromInvoice - Mapping part: code="${code}", name="${part['שם חלק']}"`, part);
+      return {
+        code: code,
+        name: part['שם חלק'] || part.name || part['תיאור'] || part.description,
+        description: part['תיאור'] || part.description || '',
+        quantity: parsePrice(part['כמות'] || part.quantity || 1),
+        unit_price: parsePrice(part['עלות'] || part.price || part.unit_price),
+        category: 'PART'
+      };
+    });
     
     const workItems = works.map(work => ({
       code: work['סוג העבודה'] || work['סוג'] || work.code || '',
@@ -1689,14 +1694,18 @@ class InvoiceProcessor {
     };
     
     // Convert parts to items format
-    const partItems = parts.map(part => ({
-      code: part['מק"ט חלק'] || part.code || '',
-      name: part['שם חלק'] || part.name || part['תיאור'] || part.description,
-      description: part['תיאור'] || part.description || '',
-      quantity: parsePrice(part['כמות'] || part.quantity || 1),
-      unit_price: parsePrice(part['עלות'] || part.price || part.unit_price),
-      category: 'PART'
-    }));
+    const partItems = parts.map(part => {
+      const code = part['מק"ט חלק'] || part.code || '';
+      console.log(`📦 handleOCRResults - Mapping part: code="${code}", name="${part['שם חלק']}"`, part);
+      return {
+        code: code,
+        name: part['שם חלק'] || part.name || part['תיאור'] || part.description,
+        description: part['תיאור'] || part.description || '',
+        quantity: parsePrice(part['כמות'] || part.quantity || 1),
+        unit_price: parsePrice(part['עלות'] || part.price || part.unit_price),
+        category: 'PART'
+      };
+    });
     
     // Convert works to items format
     const workItems = works.map(work => ({
@@ -1953,6 +1962,7 @@ class InvoiceProcessor {
       } else {
         items.forEach((item, index) => {
           const globalIndex = this.ocrResults.indexOf(item);
+          console.log(`🔍 Rendering item ${index}, code: "${item.code}", name: "${item.name}", category: "${item.category}"`);
           const row = document.createElement('tr');
           row.style.background = '#64748b';
           row.innerHTML = `
@@ -2318,21 +2328,26 @@ class InvoiceProcessor {
         }
         
         // Build new lines from edited ocrResults
-        const linesInsert = this.ocrResults.map((item, index) => ({
-          invoice_id: this.currentInvoiceId,
-          line_number: index + 1,
-          description: item.name || item.description || '',
-          part_id: item.category === 'PART' ? (item.code || null) : null, // SESSION 82: Only set part_id for parts
-          quantity: item.quantity || 1,
-          unit_price: item.unit_price || 0,
-          line_total: (item.quantity || 1) * (item.unit_price || 0),
-          discount_percent: 0,
-          metadata: {
-            category: item.category || 'OTHER',
-            unit: 'יחידה',
-            code: item.code || null // SESSION 82: Store code for all types in metadata
-          }
-        }));
+        const linesInsert = this.ocrResults.map((item, index) => {
+          const itemCode = item.code || null;
+          console.log(`💾 saveEditsToHelper - Saving line ${index + 1}: category="${item.category}", code="${itemCode}", name="${item.name}"`);
+          return {
+            invoice_id: this.currentInvoiceId,
+            line_number: index + 1,
+            description: item.name || item.description || '',
+            part_id: item.category === 'PART' ? itemCode : null, // SESSION 82: Only set part_id for parts
+            quantity: item.quantity || 1,
+            unit_price: item.unit_price || 0,
+            line_total: (item.quantity || 1) * (item.unit_price || 0),
+            discount_percent: 0,
+            metadata: {
+              category: item.category || 'OTHER',
+              unit: 'יחידה',
+              code: itemCode, // SESSION 82: ALWAYS store code in metadata (backup)
+              name: item.name || item.description || ''
+            }
+          };
+        });
         
         console.log('📝 Inserting updated invoice lines:', linesInsert);
         
@@ -2453,18 +2468,23 @@ class InvoiceProcessor {
           console.log('📋 Invoice data prepared:', invoiceData);
           
           // Prepare invoice lines
-          const lines = this.ocrResults.map((item, index) => ({
-            line_number: index + 1,
-            description: item.name || item.description || '',
-            part_id: item.category === 'PART' ? (item.code || null) : null, // SESSION 82: Only set part_id for parts
-            quantity: item.quantity || 1,
-            unit_price: item.unit_price || 0,
-            line_total: (item.quantity || 1) * (item.unit_price || 0),
-            metadata: {
-              category: item.category || 'part',
-              code: item.code || null // SESSION 82: Store code for all types in metadata
-            }
-          }));
+          const lines = this.ocrResults.map((item, index) => {
+            const itemCode = item.code || null;
+            console.log(`💾 Saving line ${index + 1}: category="${item.category}", code="${itemCode}", name="${item.name}"`);
+            return {
+              line_number: index + 1,
+              description: item.name || item.description || '',
+              part_id: item.category === 'PART' ? itemCode : null, // SESSION 82: Only set part_id for parts
+              quantity: item.quantity || 1,
+              unit_price: item.unit_price || 0,
+              line_total: (item.quantity || 1) * (item.unit_price || 0),
+              metadata: {
+                category: item.category || 'part',
+                code: itemCode, // SESSION 82: ALWAYS store code in metadata (backup)
+                name: item.name || item.description || ''
+              }
+            };
+          });
           
           // SESSION 82: Check if updating existing invoice or creating new
           const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
