@@ -1326,13 +1326,17 @@
         return;
       }
       
-      // EXACT COPY from getSelectedParts() - parts search.html:1441-1464
-      console.log('🔍 SESSION 50: Querying Supabase for plate:', plate);
+      // SESSION 84: Use OR query to match both plate formats (with and without dashes)
+      const plateNoDashes = plate.replace(/-/g, '');
+      const plateWithDashes = plate.includes('-') ? plate : 
+                              plate.replace(/(\d{3})(\d{2})(\d{3})/, '$1-$2-$3');
+      
+      console.log('🔍 SESSION 84: Querying Supabase for plate (both formats):', plateNoDashes, 'OR', plateWithDashes);
       
       const { data, error } = await window.supabase
         .from('selected_parts')
         .select('*')
-        .eq('plate', plate)
+        .or(`plate.eq.${plateNoDashes},plate.eq.${plateWithDashes}`)
         .order('selected_at', { ascending: false });
       
       if (error) {

@@ -63,20 +63,31 @@ Someone copied code from `selected_parts` table structure (which HAS vehicle col
 
 ## ✅ Solutions Implemented
 
-### Fix 1: Normalize Plate in `getSelectedParts()`
+### Fix 1: Use OR Query to Match Both Plate Formats
 
-**File**: `parts search.html`  
-**Lines**: 1444-1446, 1461, 1473, 1481, 1492, 1507-1508, 1525-1526
+**Files**: 
+- `parts search.html` (lines 1444-1472)
+- `parts-search-results-floating.js` (lines 1329-1340)
 
 **Changes**:
 ```javascript
-// SESSION 84: Normalize plate (remove dashes) to match Supabase storage format
-const normalizedPlate = queryPlate.replace(/-/g, '');
-console.log(`🔧 SESSION 84: Normalized plate "${queryPlate}" → "${normalizedPlate}"`);
+// SESSION 84: Prepare both plate formats (with and without dashes)
+const plateNoDashes = queryPlate.replace(/-/g, '');
+const plateWithDashes = queryPlate.includes('-') ? queryPlate : 
+                        queryPlate.replace(/(\d{3})(\d{2})(\d{3})/, '$1-$2-$3');
 
-// Use normalizedPlate in all queries
-.eq('plate', normalizedPlate)
+// SESSION 84: Use OR filter to match BOTH formats
+query = window.supabase
+  .from('selected_parts')
+  .select('*')
+  .or(`plate.eq.${plateNoDashes},plate.eq.${plateWithDashes}`)
+  .order('selected_at', { ascending: false });
 ```
+
+**Why OR instead of normalization?**
+- Supabase has BOTH formats: `"22184003"` AND `"221-84-003"`
+- Can't predict which format was used when saving
+- OR query catches both, ensuring nothing is missed
 
 **Impact**:
 - ✅ Queries now match Supabase data
@@ -89,11 +100,13 @@ console.log(`🔧 SESSION 84: Normalized plate "${queryPlate}" → "${normalized
 ### Fix 2: Remove Non-Existent Columns from `parts_required` Upsert
 
 **File**: `parts-required.html`  
-**Lines**: 2863-2894
+**Lines**: 2860-2894
 
 **Changes**:
 ```javascript
-// SESSION 84: Removed non-existent columns
+// SESSION 84: Removed non-existent columns from parts_required
+// unit_price: updatedPrice,  // ❌ Column doesn't exist
+// price: totalCost,  // ❌ Column doesn't exist  
 // manufacturer: partMetadata.manufacturer || '',  // ❌ Column doesn't exist
 // make: window.helper?.vehicle?.manufacturer || '',  // ❌ Column doesn't exist
 // model: window.helper?.vehicle?.model || '',  // ❌ Column doesn't exist
@@ -140,17 +153,19 @@ Created by: Original migration + SESSION 36
 ## 🧪 Testing Checklist
 
 ### Selected Parts Display
-- [ ] Click "🗂️ הצג רשימת חלקים נבחרים עדכנית" - shows parts
-- [ ] Floating screen shows selected parts
-- [ ] Console shows: `🔧 SESSION 84: Normalized plate "12-34-567" → "1234567"`
+- [x] Click "🗂️ הצג רשימת חלקים נבחרים עדכנית" - shows parts ✅
+- [ ] Floating screen Tab 2 shows selected parts
+- [ ] Console shows: `🔧 SESSION 84: Plate formats - Original: "..." Without dashes: "..." With dashes: "..."`
 - [ ] Console shows: `✅ SESSION 19: Retrieved X parts from Supabase`
 - [ ] No errors about empty results
 
 ### Parts Required Save
 - [ ] Add part in damage centers wizard
 - [ ] Suggestive fields populate
-- [ ] No "manufacturer column" errors
+- [ ] No "manufacturer column" errors ✅ (fixed)
+- [ ] No "price column" errors ✅ (fixed)
 - [ ] Console shows: `✅ SESSION 39: Saved to Supabase via upsert`
+- [ ] Check Supabase `parts_required` has: `case_id`, `plate`, `damage_center_code`
 - [ ] Check Supabase `parts_required.metadata` contains vehicle data
 
 ---
@@ -183,13 +198,19 @@ Created by: Original migration + SESSION 36
 
 ## 📝 Files Modified
 
-1. **parts search.html** (lines 1444-1526)
-   - Added plate normalization
-   - Updated console logs with both formats
+1. **parts search.html** (lines 1444-1516)
+   - Changed from single plate normalization to OR query with both formats
+   - Updated console logs to show both plate formats
    
-2. **parts-required.html** (lines 2863-2894)
-   - Removed non-existent column references
+2. **parts-search-results-floating.js** (lines 1329-1340)
+   - Applied same OR query fix for Tab 2 selected parts display
+   
+3. **parts-required.html** (lines 2860-2894)
+   - Removed `unit_price` and `price` column references (don't exist)
+   - Removed `manufacturer` column reference (doesn't exist)
+   - Removed 7 vehicle columns (make, model, year, etc.)
    - Moved vehicle data to metadata JSONB
+   - **Kept**: `case_id`, `plate`, `damage_center_code` (these DO exist and are required)
 
 ---
 
