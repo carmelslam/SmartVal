@@ -128,8 +128,9 @@ metadata: {
 ```
 
 **Impact:**
-- 🔄 Should fix all schema cache errors (needs testing)
-- ✅ `case_id`, `plate`, `damage_center_code` still saved correctly
+- ✅ Fixed all schema cache errors (user confirmed: "it worked!")
+- ✅ `case_id`, `plate`, `damage_center_code` saved correctly
+- ✅ Parts required save now works without errors
 
 ---
 
