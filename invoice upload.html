@@ -2050,7 +2050,7 @@ class InvoiceProcessor {
     console.log('🔢 Recalculated totals:', { totalBeforeVAT, vatAmount, totalWithVAT });
   }
 
-  updateItemCalculation(field) {
+  async updateItemCalculation(field) {
     const index = field.dataset.index;
     const fieldType = field.dataset.field;
     const value = field.value;
@@ -2071,6 +2071,56 @@ class InvoiceProcessor {
       
       // SESSION 79: Mark as edited
       this.hasUnsavedEdits = true;
+      
+      // SESSION 83: Auto-save to Supabase if invoice already exists
+      if (this.currentInvoiceId) {
+        await this.autoSaveItemLine(index);
+      }
+    }
+  }
+  
+  async autoSaveItemLine(index) {
+    try {
+      const item = this.ocrResults[index];
+      if (!item) return;
+      
+      console.log(`💾 Auto-saving line ${index + 1}: ${item.name}`);
+      
+      // Update the specific line in Supabase
+      const lineNumber = index + 1;
+      const itemCode = item.code || null;
+      
+      const { error } = await window.supabase
+        .from('invoice_lines')
+        .update({
+          description: item.name || item.description || '',
+          quantity: item.quantity || 1,
+          unit_price: item.unit_price || 0,
+          line_total: (item.quantity || 1) * (item.unit_price || 0),
+          metadata: {
+            category: item.category || 'OTHER',
+            code: itemCode,
+            name: item.name || item.description || ''
+          }
+        })
+        .eq('invoice_id', this.currentInvoiceId)
+        .eq('line_number', lineNumber);
+      
+      if (error) {
+        console.error('❌ Auto-save failed:', error);
+      } else {
+        console.log(`✅ Auto-saved line ${lineNumber}`);
+        // Show subtle success indicator
+        const row = document.querySelector(`[data-index="${index}"]`)?.closest('tr');
+        if (row) {
+          row.style.background = '#10b981'; // Green flash
+          setTimeout(() => {
+            row.style.background = '#64748b'; // Back to normal
+          }, 500);
+        }
+      }
+    } catch (error) {
+      console.error('❌ Auto-save error:', error);
     }
   }
 
@@ -2410,10 +2460,18 @@ class InvoiceProcessor {
         console.log('✅ Updated Supabase invoice_lines');
       }
       
-      // Update OCR data in invoice_documents
+      // SESSION 83: Update OCR data DIRECTLY via Supabase - don't use invoiceService to avoid webhook trigger
       if (this.currentDocumentId && this.lastOCRResult) {
-        await this.invoiceService.updateOCRResults(this.currentDocumentId, this.lastOCRResult);
-        console.log('✅ Updated invoice_documents.ocr_structured_data');
+        const { error: ocrUpdateError } = await window.supabase
+          .from('invoice_documents')
+          .update({ ocr_structured_data: this.lastOCRResult })
+          .eq('id', this.currentDocumentId);
+        
+        if (ocrUpdateError) {
+          console.error('❌ Failed to update OCR data:', ocrUpdateError);
+        } else {
+          console.log('✅ Updated invoice_documents.ocr_structured_data');
+        }
       }
       
       this.hasUnsavedEdits = false;
@@ -2775,14 +2833,25 @@ class InvoiceProcessor {
       
       this.showAlert('✅ חשבונית נשמרה ונשלחה ל-Drive', 'success');
       
+      // SESSION 83: Disable save button after first save - use שמור עריכות or auto-save instead
+      const saveButton = document.getElementById('save-results');
+      if (saveButton) {
+        saveButton.disabled = true;
+        saveButton.style.opacity = '0.5';
+        saveButton.style.cursor = 'not-allowed';
+        saveButton.title = 'החשבונית כבר נשמרה - השתמש ב"שמור עריכות" לעדכון';
+      }
+      
     } catch (error) {
       console.error('Save error:', error);
       this.showAlert('❌ שגיאה בשמירת החשבונית', 'error');
-    } finally {
-      // Remove loading animation
+      
+      // Remove loading animation even on error
       const saveButton = document.getElementById('save-results');
-      saveButton.classList.remove('btn-loading');
-      saveButton.textContent = originalText;
+      if (saveButton) {
+        saveButton.classList.remove('btn-loading');
+        saveButton.textContent = originalText;
+      }
     }
   }
 
