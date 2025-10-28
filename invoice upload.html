@@ -1384,7 +1384,8 @@ class InvoiceProcessor {
     };
     
     const partItems = parts.map(part => {
-      const code = part['מק"ט חלק'] || part.code || '';
+      // Try ALL possible quote variations: ', ", ״ (Hebrew Gershayim)
+      const code = part['מק״ט חלק'] || part['מק\'ט חלק'] || part['מק"ט חלק'] || part.code || '';
       console.log(`📦 populateOcrSectionFromInvoice - Mapping part: code="${code}", name="${part['שם חלק']}"`, part);
       return {
         code: code,
@@ -1695,7 +1696,8 @@ class InvoiceProcessor {
     
     // Convert parts to items format
     const partItems = parts.map(part => {
-      const code = part['מק"ט חלק'] || part.code || '';
+      // Try ALL possible quote variations: ', ", ״ (Hebrew Gershayim)
+      const code = part['מק״ט חלק'] || part['מק\'ט חלק'] || part['מק"ט חלק'] || part.code || '';
       console.log(`📦 handleOCRResults - Mapping part: code="${code}", name="${part['שם חלק']}"`, part);
       return {
         code: code,
@@ -1822,9 +1824,10 @@ class InvoiceProcessor {
     
     console.log('✅ Using category totals from OCR webhook:', { partsTotal, worksTotal, repairsTotal });
     
-    const totalBeforeVAT = parsePrice(result["עלות כוללת ללא מע'מ"]); // Single quote in OCR
-    const vatPercentage = parsePrice(result["מע'מ"]); // Single quote in OCR
-    const vatAmount = parsePrice(result["ערך מע'מ"]); // Single quote in OCR
+    // Try ALL quote variations for VAT fields: ', ", ״ (Hebrew Gershayim)
+    const totalBeforeVAT = parsePrice(result["עלות כוללת ללא מע״מ"] || result["עלות כוללת ללא מע'מ"] || result["עלות כוללת ללא מע\"מ"]);
+    const vatPercentage = parsePrice(result["מע״מ"] || result["מע'מ"] || result["מע\"מ"]);
+    const vatAmount = parsePrice(result["ערך מע״מ"] || result["ערך מע'מ"] || result["ערך מע\"מ"]);
     const totalWithVAT = parsePrice(result['עלות כוללת']);
     
     console.log('💰 Parsed values:', { partsTotal, worksTotal, repairsTotal, totalBeforeVAT, vatPercentage, vatAmount, totalWithVAT });
