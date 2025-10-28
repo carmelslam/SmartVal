@@ -2224,11 +2224,24 @@ class InvoiceProcessor {
   // SESSION 79: Save edits back to helper.invoices and Supabase
   // SESSION 80: Extended to save general details changes too
   async saveEditsToHelper() {
+    // SESSION 83: Add loading animation to button
+    const saveButton = document.querySelector('button[onclick*="saveEditsToHelper"]');
+    if (saveButton) {
+      saveButton.disabled = true;
+      saveButton.style.opacity = '0.6';
+      saveButton.innerHTML = '⏳ שומר...';
+    }
+    
     try {
       console.log('💾 Saving edits to helper and Supabase...');
       
       if (!this.hasUnsavedEdits) {
         this.showAlert('אין שינויים לשמירה', 'info');
+        if (saveButton) {
+          saveButton.disabled = false;
+          saveButton.style.opacity = '1';
+          saveButton.innerHTML = '✏️ שמור עריכות';
+        }
         return;
       }
       
@@ -2404,6 +2417,19 @@ class InvoiceProcessor {
       }
       
       this.hasUnsavedEdits = false;
+      
+      // SESSION 83: Success animation
+      if (saveButton) {
+        saveButton.innerHTML = '✅ נשמר!';
+        saveButton.style.background = 'rgba(34,197,94,1)';
+        setTimeout(() => {
+          saveButton.disabled = false;
+          saveButton.style.opacity = '1';
+          saveButton.innerHTML = '✏️ שמור עריכות';
+          saveButton.style.background = 'rgba(34,197,94,0.9)';
+        }, 1500);
+      }
+      
       this.showAlert('✅ השינויים נשמרו בהצלחה', 'success');
       
       // SESSION 82: Refresh display to show saved values
@@ -2413,6 +2439,19 @@ class InvoiceProcessor {
       
     } catch (error) {
       console.error('❌ Error saving edits:', error);
+      
+      // SESSION 83: Error animation
+      if (saveButton) {
+        saveButton.innerHTML = '❌ שגיאה';
+        saveButton.style.background = 'rgba(239,68,68,0.9)';
+        setTimeout(() => {
+          saveButton.disabled = false;
+          saveButton.style.opacity = '1';
+          saveButton.innerHTML = '✏️ שמור עריכות';
+          saveButton.style.background = 'rgba(34,197,94,0.9)';
+        }, 2000);
+      }
+      
       this.showAlert('❌ שגיאה בשמירת השינויים', 'error');
     }
   }
