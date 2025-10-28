@@ -1,9 +1,59 @@
-# Phase 9: Admin Hub Enhancement & Supabase Integration - SESSION 75
+# SESSION 84: Invoice Upload Critical Fixes
+
+**Date:** 2025-10-28
+**Session:** 84
+**Branch:** `claude/session-011CUZZR8SCDV891SbrzDbAV`
+**Status:** 📋 PLANNING - Awaiting User Approval
+
+---
+
+## 📋 PLAN SUMMARY
+
+Fix 10 critical issues in invoice upload.html without breaking Session 83 functionality.
+
+### Implementation Strategy: 3-Phase Approach
+
+**PHASE 1 - Low Risk (70 min)**: UI/Safety improvements
+- Task 4: No invoices message with plate context
+- Task 10: OCR reprocess confirmation
+- Task 9: SAVE_INVOICE_TO_DRIVE webhook
+- Task 6: Manual invoice CSS matching
+
+**PHASE 2 - Medium Risk (135 min)**: Data tracking enhancements
+- Task 5: User validation input system (getUserName)
+- Task 1: Items table auto-save syncing helper
+
+**PHASE 3 - High Risk (450 min)**: Core functionality fixes
+- Task 2: Invoice reload changing costs
+- Task 3: Delete button deleting all invoices (CRITICAL)
+- Task 7: Manual invoice save with webhook
+- Task 8: Parts field suggestions
+
+**Total Estimated Time**: 10.5 hours
+
+### Key Safety Measures:
+✅ All Session 83 fixes preserved (Hebrew encoding, auto-save, etc.)
+✅ No database schema changes required
+✅ All changes additive (no deletions)
+✅ Comprehensive rollback procedures documented
+✅ Phase-by-phase testing after each task
+
+### Critical Issues Addressed:
+🔴 **CRITICAL**: Delete button deletes ALL invoices (Task 3)
+🔴 **HIGH**: Invoice reload corrupts costs (Task 2)
+🔴 **HIGH**: Manual invoice save missing webhook (Task 7)
+🔴 **HIGH**: Complex parts autocomplete integration (Task 8)
+
+**Full Details**: See `/home/user/SmartVal/SUPABASE MIGRATION/SESSION_84_invoices.md`
+
+---
+
+## Phase 9: Admin Hub Enhancement & Supabase Integration - SESSION 75
 
 **Date:** 2025-10-24
 **Session:** 75
 **Branch:** `claude/admin-hub-supabase-migration-011CUSAFsDx27ZtmstAjEGQm`
-**Status:** Planning Phase - Awaiting User Approval
+**Status:** Planning Phase - On Hold
 
 ---
 
