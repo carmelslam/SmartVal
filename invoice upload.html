@@ -1342,17 +1342,17 @@ class InvoiceProcessor {
         
         if (category === 'PART') {
           lineData['שם חלק'] = line.description || '';
-          lineData['מק"ט חלק'] = line.part_id || ''; // SESSION 82: Load code from part_id
+          lineData['מק"ט חלק'] = line.part_id || ''; // SESSION 82: Load code from part_id for parts
           ocrResult['חלקים'].push(lineData);
           ocrResult['סהכ חלקים'] += line.line_total || 0;
         } else if (category === 'WORK') {
-          lineData['סוג העבודה'] = line.description || '';
+          lineData['סוג העבודה'] = metadata.code || line.description || ''; // SESSION 82: Load code from metadata
           lineData['תיאור עבודות'] = line.description || '';
           lineData['עלות עבודות'] = String(line.unit_price || 0);
           ocrResult['עבודות'].push(lineData);
           ocrResult['סהכ עבודות'] += line.line_total || 0;
         } else if (category === 'REPAIR') {
-          lineData['סוג תיקון'] = line.description || '';
+          lineData['סוג תיקון'] = metadata.code || line.description || ''; // SESSION 82: Load code from metadata
           lineData['תיאור התיקון'] = line.description || '';
           lineData['עלות תיקונים'] = String(line.unit_price || 0);
           ocrResult['תיקונים'].push(lineData);
@@ -2322,14 +2322,15 @@ class InvoiceProcessor {
           invoice_id: this.currentInvoiceId,
           line_number: index + 1,
           description: item.name || item.description || '',
-          part_id: item.code || null, // SESSION 82: Save code to part_id column
+          part_id: item.category === 'PART' ? (item.code || null) : null, // SESSION 82: Only set part_id for parts
           quantity: item.quantity || 1,
           unit_price: item.unit_price || 0,
           line_total: (item.quantity || 1) * (item.unit_price || 0),
           discount_percent: 0,
           metadata: {
             category: item.category || 'OTHER',
-            unit: 'יחידה'
+            unit: 'יחידה',
+            code: item.code || null // SESSION 82: Store code for all types in metadata
           }
         }));
         
@@ -2455,12 +2456,13 @@ class InvoiceProcessor {
           const lines = this.ocrResults.map((item, index) => ({
             line_number: index + 1,
             description: item.name || item.description || '',
-            part_id: item.code || null, // SESSION 82: Include part code
+            part_id: item.category === 'PART' ? (item.code || null) : null, // SESSION 82: Only set part_id for parts
             quantity: item.quantity || 1,
             unit_price: item.unit_price || 0,
             line_total: (item.quantity || 1) * (item.unit_price || 0),
             metadata: {
-              category: item.category || 'part'
+              category: item.category || 'part',
+              code: item.code || null // SESSION 82: Store code for all types in metadata
             }
           }));
           
