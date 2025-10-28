@@ -2083,14 +2083,14 @@ class InvoiceProcessor {
     try {
       const item = this.ocrResults[index];
       if (!item) return;
-      
-      console.log(`💾 Auto-saving line ${index + 1}: ${item.name}`);
-      
-      // Update the specific line in Supabase
+
+      console.log(`💾 Auto-saving line ${index + 1}:`, item);
+
       const lineNumber = index + 1;
       const itemCode = item.code || null;
-      
-      const { error } = await window.supabase
+
+      // STEP 1: Update invoice_lines table
+      const { error: lineError } = await window.supabase
         .from('invoice_lines')
         .update({
           description: item.name || item.description || '',
@@ -2105,22 +2105,173 @@ class InvoiceProcessor {
         })
         .eq('invoice_id', this.currentInvoiceId)
         .eq('line_number', lineNumber);
-      
-      if (error) {
-        console.error('❌ Auto-save failed:', error);
-      } else {
-        console.log(`✅ Auto-saved line ${lineNumber}`);
-        // Show subtle success indicator
-        const row = document.querySelector(`[data-index="${index}"]`)?.closest('tr');
-        if (row) {
-          row.style.background = '#10b981'; // Green flash
-          setTimeout(() => {
-            row.style.background = '#64748b'; // Back to normal
-          }, 500);
+
+      if (lineError) {
+        console.error('❌ invoice_lines update failed:', lineError);
+        throw lineError;
+      }
+
+      // SESSION 84: STEP 2 - Update invoice_documents.ocr_structured_data JSON
+      if (this.currentDocumentId && this.lastOCRResult) {
+        // Update the specific item in the OCR JSON structure
+        const categoryMap = {
+          'PART': 'חלקים',
+          'part': 'חלקים',
+          'WORK': 'עבודות',
+          'work': 'עבודות',
+          'REPAIR': 'תיקונים',
+          'repair': 'תיקונים'
+        };
+
+        const categoryKey = categoryMap[item.category] || 'חלקים';
+
+        if (this.lastOCRResult[categoryKey] && Array.isArray(this.lastOCRResult[categoryKey])) {
+          // Find and update the item in the OCR array
+          const ocrItemIndex = this.lastOCRResult[categoryKey].findIndex((ocrItem, idx) => idx === index);
+          if (ocrItemIndex !== -1) {
+            this.lastOCRResult[categoryKey][ocrItemIndex] = {
+              ...this.lastOCRResult[categoryKey][ocrItemIndex],
+              'תיאור': item.description || item.name,
+              'כמות': String(item.quantity || 1),
+              'עלות': String(item.unit_price || 0)
+            };
+
+            // Update invoice_documents.ocr_structured_data
+            const { error: docError } = await window.supabase
+              .from('invoice_documents')
+              .update({ ocr_structured_data: this.lastOCRResult })
+              .eq('id', this.currentDocumentId);
+
+            if (docError) {
+              console.error('❌ invoice_documents JSON update failed:', docError);
+            } else {
+              console.log('✅ Updated invoice_documents OCR JSON');
+            }
+          }
         }
       }
+
+      // SESSION 84: STEP 3 - Update helper.invoices for this specific item
+      const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+      if (helper.invoices && Array.isArray(helper.invoices)) {
+        const invoiceIndex = helper.invoices.findIndex(inv =>
+          (inv.invoice_id || inv.supabase_invoice_id || inv.id) === this.currentInvoiceId
+        );
+
+        if (invoiceIndex !== -1) {
+          const invoice = helper.invoices[invoiceIndex];
+
+          // Update the specific category array in helper
+          const helperCategoryMap = {
+            'PART': 'חלקים',
+            'part': 'חלקים',
+            'WORK': 'עבודות',
+            'work': 'עבודות',
+            'REPAIR': 'תיקונים',
+            'repair': 'תיקונים'
+          };
+
+          const helperCategoryKey = helperCategoryMap[item.category];
+          if (helperCategoryKey && invoice[helperCategoryKey]) {
+            // Update the specific item in the helper category array
+            const helperItemIndex = invoice[helperCategoryKey].findIndex((helperItem, idx) => idx === index);
+            if (helperItemIndex !== -1) {
+              invoice[helperCategoryKey][helperItemIndex] = {
+                ...invoice[helperCategoryKey][helperItemIndex],
+                'תיאור': item.description || item.name,
+                'כמות': String(item.quantity || 1),
+                'עלות': String(item.unit_price || 0)
+              };
+
+              sessionStorage.setItem('helper', JSON.stringify(helper));
+              console.log('✅ Updated helper.invoices item');
+            }
+          }
+        }
+      }
+
+      // SESSION 84: STEP 4 - Recalculate and update invoices table totals
+      await this.recalculateInvoiceTotals();
+
+      // Visual feedback - green flash
+      console.log(`✅ Auto-saved line ${lineNumber} to all systems`);
+      const row = document.querySelector(`[data-index="${index}"]`)?.closest('tr');
+      if (row) {
+        row.style.background = '#10b981';
+        setTimeout(() => {
+          row.style.background = '#64748b';
+        }, 500);
+      }
+
     } catch (error) {
       console.error('❌ Auto-save error:', error);
+      const row = document.querySelector(`[data-index="${index}"]`)?.closest('tr');
+      if (row) {
+        row.style.background = '#ef4444'; // Red flash on error
+        setTimeout(() => {
+          row.style.background = '#64748b';
+        }, 500);
+      }
+    }
+  }
+
+  // SESSION 84: New function to recalculate invoice totals
+  async recalculateInvoiceTotals() {
+    if (!this.currentInvoiceId) return;
+
+    try {
+      // Fetch all lines for this invoice
+      const { data: lines, error: fetchError } = await window.supabase
+        .from('invoice_lines')
+        .select('*')
+        .eq('invoice_id', this.currentInvoiceId);
+
+      if (fetchError) throw fetchError;
+
+      // Calculate category totals
+      const partsTotal = lines
+        .filter(line => (line.metadata?.category || '').toUpperCase() === 'PART')
+        .reduce((sum, line) => sum + (line.line_total || 0), 0);
+
+      const worksTotal = lines
+        .filter(line => (line.metadata?.category || '').toUpperCase() === 'WORK')
+        .reduce((sum, line) => sum + (line.line_total || 0), 0);
+
+      const repairsTotal = lines
+        .filter(line => (line.metadata?.category || '').toUpperCase() === 'REPAIR')
+        .reduce((sum, line) => sum + (line.line_total || 0), 0);
+
+      const totalBeforeVAT = partsTotal + worksTotal + repairsTotal;
+
+      // Get VAT% from UI or calculate
+      const vatPercentage = parseFloat(document.getElementById('edit-vat-percentage')?.value) || 17;
+      const vatAmount = (totalBeforeVAT * vatPercentage) / 100;
+      const totalWithVAT = totalBeforeVAT + vatAmount;
+
+      // Update invoices table
+      const { error: updateError } = await window.supabase
+        .from('invoices')
+        .update({
+          total_before_tax: totalBeforeVAT,
+          tax_amount: vatAmount,
+          total_amount: totalWithVAT,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', this.currentInvoiceId);
+
+      if (updateError) throw updateError;
+
+      console.log('✅ Recalculated invoice totals:', {
+        parts: partsTotal,
+        works: worksTotal,
+        repairs: repairsTotal,
+        totalBeforeVAT,
+        vatAmount,
+        totalWithVAT
+      });
+
+    } catch (error) {
+      console.error('❌ Failed to recalculate totals:', error);
     }
   }
 
@@ -3437,33 +3588,9 @@ class InvoiceProcessor {
           sessionStorage.setItem('helper', JSON.stringify(helperUpdated));
         }
 
-        // SESSION 84: Task 7 - Send manual invoice to Drive webhook
-        try {
-          const year = new Date().getFullYear();
-          const caseFilingId = `YC-${plate}-${year}`;
-
-          const webhookPayload = {
-            plate: plate,
-            case_filing_id: caseFilingId,
-            pdf_url: null,  // Manual invoice has no PDF
-            invoice_id: invoice.id,
-            case_id: caseId,
-            invoice_number: invoiceNumber,
-            supplier_name: garageName,
-            total_amount: grandTotal,
-            source: 'manual',  // Mark as manual entry
-            invoice_data: invoiceData  // Include full manual data
-          };
-
-          console.log('📤 Sending manual invoice to SAVE_INVOICE_TO_DRIVE webhook:', webhookPayload);
-          await sendToWebhook('SAVE_INVOICE_TO_DRIVE', webhookPayload);
-          console.log('✅ Manual invoice sent to Drive successfully');
-        } catch (webhookError) {
-          console.error('⚠️ Webhook failed (non-critical):', webhookError);
-          // Don't block on webhook failure - invoice is saved in Supabase
-        }
-
-        this.showAlert('✅ חשבונית ידנית נשמרה בהצלחה ונשלחה ל-Drive', 'success');
+        // SESSION 84: Task 7 - Manual invoices save to Supabase/helper only (NO webhook)
+        // Webhook is only for OCR invoices via "שמור תוצאות" button
+        this.showAlert('✅ חשבונית ידנית נשמרה בהצלחה', 'success');
       } catch (error) {
         console.error('❌ Failed to save manual invoice:', error);
         this.showAlert('⚠️ נשמר ל-helper אבל שגיאה בשמירה למסד נתונים', 'warning');
