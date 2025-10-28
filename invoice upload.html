@@ -3436,8 +3436,34 @@ class InvoiceProcessor {
           helperUpdated.invoices[invoiceIndex].supabase_invoice_id = invoice.id;
           sessionStorage.setItem('helper', JSON.stringify(helperUpdated));
         }
-        
-        this.showAlert('✅ חשבונית ידנית נשמרה בהצלחה', 'success');
+
+        // SESSION 84: Task 7 - Send manual invoice to Drive webhook
+        try {
+          const year = new Date().getFullYear();
+          const caseFilingId = `YC-${plate}-${year}`;
+
+          const webhookPayload = {
+            plate: plate,
+            case_filing_id: caseFilingId,
+            pdf_url: null,  // Manual invoice has no PDF
+            invoice_id: invoice.id,
+            case_id: caseId,
+            invoice_number: invoiceNumber,
+            supplier_name: garageName,
+            total_amount: grandTotal,
+            source: 'manual',  // Mark as manual entry
+            invoice_data: invoiceData  // Include full manual data
+          };
+
+          console.log('📤 Sending manual invoice to SAVE_INVOICE_TO_DRIVE webhook:', webhookPayload);
+          await sendToWebhook('SAVE_INVOICE_TO_DRIVE', webhookPayload);
+          console.log('✅ Manual invoice sent to Drive successfully');
+        } catch (webhookError) {
+          console.error('⚠️ Webhook failed (non-critical):', webhookError);
+          // Don't block on webhook failure - invoice is saved in Supabase
+        }
+
+        this.showAlert('✅ חשבונית ידנית נשמרה בהצלחה ונשלחה ל-Drive', 'success');
       } catch (error) {
         console.error('❌ Failed to save manual invoice:', error);
         this.showAlert('⚠️ נשמר ל-helper אבל שגיאה בשמירה למסד נתונים', 'warning');
