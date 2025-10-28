@@ -1342,8 +1342,8 @@ class InvoiceProcessor {
         
         if (category === 'PART') {
           lineData['שם חלק'] = line.description || '';
-          lineData['מק"ט חלק'] = line.part_id || metadata.code || ''; // SESSION 82: Load code from part_id or metadata
-          console.log(`  📦 Part code loaded: "${lineData['מק"ט חלק']}" from part_id="${line.part_id}", metadata.code="${metadata.code}"`);
+          lineData['מק״ט חלק'] = metadata.code || ''; // SESSION 83: Catalog codes always in metadata
+          console.log(`  📦 Part code loaded: "${lineData['מק״ט חלק']}" from metadata.code="${metadata.code}"`);
           ocrResult['חלקים'].push(lineData);
           ocrResult['סהכ חלקים'] += line.line_total || 0;
         } else if (category === 'WORK') {
@@ -2338,7 +2338,7 @@ class InvoiceProcessor {
             invoice_id: this.currentInvoiceId,
             line_number: index + 1,
             description: item.name || item.description || '',
-            part_id: item.category === 'PART' ? itemCode : null, // SESSION 82: Only set part_id for parts
+            part_id: null, // SESSION 83: part_id is UUID - catalog codes go in metadata only
             quantity: item.quantity || 1,
             unit_price: item.unit_price || 0,
             line_total: (item.quantity || 1) * (item.unit_price || 0),
@@ -2346,7 +2346,7 @@ class InvoiceProcessor {
             metadata: {
               category: item.category || 'OTHER',
               unit: 'יחידה',
-              code: itemCode, // SESSION 82: ALWAYS store code in metadata (backup)
+              code: itemCode, // Catalog code stored here for all types
               name: item.name || item.description || ''
             }
           };
@@ -2477,13 +2477,13 @@ class InvoiceProcessor {
             return {
               line_number: index + 1,
               description: item.name || item.description || '',
-              part_id: item.category === 'PART' ? itemCode : null, // SESSION 82: Only set part_id for parts
+              part_id: null, // SESSION 83: part_id is UUID - catalog codes go in metadata only
               quantity: item.quantity || 1,
               unit_price: item.unit_price || 0,
               line_total: (item.quantity || 1) * (item.unit_price || 0),
               metadata: {
                 category: item.category || 'part',
-                code: itemCode, // SESSION 82: ALWAYS store code in metadata (backup)
+                code: itemCode, // Catalog code stored here for all types
                 name: item.name || item.description || ''
               }
             };
