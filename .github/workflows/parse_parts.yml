@@ -1,37 +1,66 @@
 name: Parse Parts Catalog
+
 on:
   workflow_dispatch:
     inputs:
       supplier_slug:
-        description: 'Supplier slug'
+        description: Supplier slug
         required: true
-        default: 'm-pines'
+        default: m-pines
       signed_url:
-        description: 'Signed URL to PDF'
+        description: Signed URL to PDF (temporary)
         required: true
-        default: 'https://m-pines.com/wp-content/uploads/2025/06/מחירון-06-25.pdf'
+        default: https://m-pines.com/wp-content/uploads/2025/06/מחירון-06-25.pdf
       version_date:
-        description: 'Version date'
+        description: Version date (YYYY-MM-DD)
         required: true
-        default: '2025-01-27'
+        default: 2025-06-01
       source_path:
-        description: 'Source path'
+        description: Raw storage path or label
         required: true
-        default: 'm-pines-2025-06'
+        default: vendor_raw/m-pines/2025-06.pdf
+
+  repository_dispatch:
+    types: [catalog_parse]
+
 jobs:
   parse:
     runs-on: ubuntu-latest
+    env:
+      # Secrets (Settings → Secrets and variables → Actions)
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+
+      # Prefer repository_dispatch payload; else manual inputs; else defaults
+      SUPPLIER_SLUG: ${{ github.event.client_payload.supplier_slug || github.event.inputs.supplier_slug || 'm-pines' }}
+      SIGNED_URL:    ${{ github.event.client_payload.signed_url    || github.event.inputs.signed_url    || 'https://example.com/file.pdf' }}
+      VERSION_DATE:  ${{ github.event.client_payload.version       || github.event.inputs.version_date  || '2025-06-01' }}
+      SOURCE_PATH:   ${{ github.event.client_payload.raw_path      || github.event.inputs.source_path   || 'vendor_raw/m-pines/2025-06.pdf' }}
+      PARSED_PATH:   ${{ github.event.client_payload.parsed_path   || 'vendor_parsed/m-pines/2025-06.ndjson' }}
+
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-python@v4
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Show resolved inputs (debug)
+        run: |
+          echo "Triggered by: $GITHUB_EVENT_NAME"
+          echo "Supplier     : $SUPPLIER_SLUG"
+          echo "Version date : $VERSION_DATE"
+          echo "Signed URL   : $SIGNED_URL"
+          echo "Raw path     : $SOURCE_PATH"
+          echo "Parsed path  : $PARSED_PATH"
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
         with:
-          python-version: '3.10'
-      - run: pip install requests beautifulsoup4 pdfplumber supabase
-      - run: python parse_mpines_fixed.py
-        env:
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
-          SUPPLIER_SLUG: ${{ github.event.inputs.supplier_slug }}
-          VERSION_DATE: ${{ github.event.inputs.version_date }}
-          SIGNED_URL: ${{ github.event.inputs.signed_url }}
-          SOURCE_PATH: ${{ github.event.inputs.source_path }}
+          python-version: '3.11'
+
+     - name: Install dependencies
+  run: |
+    python -m pip install --upgrade pip
+    pip install requests pdfplumber python-bidi arabic-reshaper supabase-py
+
+      - name: Run parser
+        run: |
+          python parse_mpines_fixed.py

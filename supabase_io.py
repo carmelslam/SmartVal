@@ -1,60 +1,117 @@
-import os
-from supabase import create_client
+# tools/parts_search/supabase_io.py
+import os, requests
+from typing import List, Dict, Any, Optional
 
-# Get credentials from environment
+# ---- Env ----
 SUPABASE_URL = os.environ.get("SUPABASE_URL", "").rstrip("/")
-SUPABASE_SERVICE_KEY = os.environ.get("SUPABASE_SERVICE_KEY", "")
+SERVICE_KEY  = os.environ.get("SUPABASE_SERVICE_KEY", "")
+
+if not SUPABASE_URL or not SERVICE_KEY:
+    raise ValueError("Missing SUPABASE_URL or SUPABASE_SERVICE_KEY")
+
+# Try SDK; if missing, we auto-fallback to REST
+try:
+    from supabase import create_client, Client  # type: ignore
+    _SDK_AVAILABLE = True
+except Exception:
+    _SDK_AVAILABLE = False
+
+REST_BASE = f"{SUPABASE_URL}/rest/v1"
+STORAGE_BASE = f"{SUPABASE_URL}/storage/v1"
+
+def _headers(json: bool = True, extra: Optional[Dict[str, str]] = None) -> Dict[str, str]:
+    h = {"Authorization": f"Bearer {SERVICE_KEY}", "apikey": SERVICE_KEY}
+    if json:
+        h["Content-Type"] = "application/json"
+    if extra:
+        h.update(extra)
+    return h
+
+# ---------------- Core (kept API) ----------------
 
 def get_client():
-    """Get Supabase client instance"""
-    if not SUPABASE_URL or not SUPABASE_SERVICE_KEY:
-        raise ValueError("Missing SUPABASE_URL or SUPABASE_SERVICE_KEY environment variables")
-    return create_client(SUPABASE_URL, SUPABASE_SERVICE_KEY)
+    """Return Supabase SDK client if available; else None (REST will be used)."""
+    if _SDK_AVAILABLE:
+        return create_client(SUPABASE_URL, SERVICE_KEY)
+    return None
 
-def upsert_rows(table_name, rows):
-    """Insert or update rows in a Supabase table"""
+def upsert_rows(table_name: str, rows: List[Dict[str, Any]], on_conflict: str = "row_hash") -> int:
+    """Upsert rows into a table. Uses SDK if available, otherwise REST (PostgREST)."""
     if not rows:
         return 0
-    
-    client = get_client()
-    
-    # Upsert the rows (will update if row_hash matches, insert if new)
-    try:
-        response = client.table(table_name).upsert(rows, on_conflict="row_hash").execute()
+    if _SDK_AVAILABLE:
+        client = get_client()
+        client.table(table_name).upsert(rows, on_conflict=on_conflict).execute()
         return len(rows)
-    except Exception as e:
-        print(f"Error upserting rows: {e}")
-        # Try without on_conflict if row_hash doesn't exist
-        try:
-            response = client.table(table_name).insert(rows).execute()
-            return len(rows)
-        except Exception as e2:
-            print(f"Error inserting rows: {e2}")
-            return 0
 
-def upsert_supplier(slug, name):
-    """Create or update a supplier"""
-    client = get_client()
-    
-    supplier_data = {
-        "slug": slug,
-        "name": name,
-        "type": "catalog"
-    }
-    
-    try:
-        response = client.table("suppliers").upsert(supplier_data, on_conflict="slug").execute()
-        return response.data[0] if response.data else None
-    except Exception as e:
-        print(f"Error upserting supplier: {e}")
-        return None
+    # REST fallback
+    url = f"{REST_BASE}/{table_name}?on_conflict={on_conflict}"
+    r = requests.post(
+        url,
+        headers=_headers(True, {"Prefer": "resolution=merge-duplicates"}),
+        json=rows,
+        timeout=60,
+    )
+    if r.status_code not in (201, 204):
+        raise RuntimeError(f"Upsert {table_name} failed ({r.status_code}): {r.text}")
+    return len(rows)
 
-def upsert_catalog(supplier_slug, version_date, source_path):
-    """Create a catalog entry (if you have a catalogs table)"""
-    # Skip if you don't have a catalogs table
+def upsert_supplier(slug: str, name: str):
+    """Create/update a supplier row (public.suppliers with UNIQUE slug)."""
+    payload = [{"slug": slug, "name": name, "type": "catalog"}]
+
+    if _SDK_AVAILABLE:
+        client = get_client()
+        client.table("suppliers").upsert(payload, on_conflict="slug").execute()
+        return {"slug": slug, "name": name, "type": "catalog"}
+
+    url = f"{REST_BASE}/suppliers?on_conflict=slug"
+    r = requests.post(
+        url,
+        headers=_headers(True, {"Prefer": "resolution=merge-duplicates"}),
+        json=payload,
+        timeout=30,
+    )
+    if r.status_code not in (201, 204):
+        raise RuntimeError(f"Upsert suppliers failed ({r.status_code}): {r.text}")
+    return {"slug": slug, "name": name, "type": "catalog"}
+
+def upsert_catalog(supplier_slug: str, version_date: str, source_path: str):
+    """No-op unless you add a catalogs table (kept for compatibility)."""
     return True
 
-def mark_catalog_done(supplier_slug, version_date):
-    """Mark catalog as done (if you have a catalogs table)"""
-    # Skip if you don't have a catalogs table
+def mark_catalog_done(supplier_slug: str, version_date: str):
+    """No-op unless you add a catalogs table (kept for compatibility)."""
     return True
+
+# ------------- Storage helpers (new, safe to use anywhere) -------------
+
+def download_signed(signed_url: str) -> bytes:
+    """GET a signed URL (private bucket)."""
+    r = requests.get(signed_url, timeout=600)
+    r.raise_for_status()
+    return r.content
+
+def storage_put(path: str, content: bytes, content_type: str):
+    """Upload to Storage via REST. path example: vendor_parsed/m-pines/2025-06.ndjson"""
+    url = f"{STORAGE_BASE}/object/{path}"
+    r = requests.put(
+        url,
+        headers=_headers(False, {"Content-Type": content_type, "x-upsert": "true"}),
+        data=content,
+        timeout=120,
+    )
+    r.raise_for_status()
+
+def sign_object(path: str, expires_in: int = 10800) -> str:
+    """Create a signed URL for a stored object and return an absolute URL."""
+    url = f"{STORAGE_BASE}/object/sign/{path}"
+    r = requests.post(
+        url,
+        headers=_headers(True),
+        json={"expiresIn": expires_in},
+        timeout=60,
+    )
+    r.raise_for_status()
+    rel = r.json().get("signedURL")
+    return f"{STORAGE_BASE}{rel}"  # API returns /object/sign/...; prefix it
