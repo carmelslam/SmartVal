@@ -19,6 +19,7 @@ on:
         description: Raw storage path or label
         required: true
         default: vendor_raw/m-pines/2025-06.pdf
+
   repository_dispatch:
     types: [catalog_parse]
 
@@ -26,11 +27,11 @@ jobs:
   parse:
     runs-on: ubuntu-latest
     env:
-      # Secrets from repo settings → Settings > Secrets and variables > Actions
+      # Secrets (Settings → Secrets and variables → Actions)
       SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
       SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
 
-      # Read from repository_dispatch first, else workflow_dispatch inputs, else defaults
+      # Prefer repository_dispatch payload; else manual inputs; else defaults
       SUPPLIER_SLUG: ${{ github.event.client_payload.supplier_slug || github.event.inputs.supplier_slug || 'm-pines' }}
       SIGNED_URL:    ${{ github.event.client_payload.signed_url    || github.event.inputs.signed_url    || 'https://example.com/file.pdf' }}
       VERSION_DATE:  ${{ github.event.client_payload.version       || github.event.inputs.version_date  || '2025-06-01' }}
@@ -55,11 +56,10 @@ jobs:
         with:
           python-version: '3.11'
 
-     - name: Install dependencies
-  run: |
-    python -m pip install --upgrade pip
-    pip install requests pdfplumber python-bidi arabic-reshaper supabase
-
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install requests pdfplumber python-bidi arabic-reshaper
 
       - name: Run parser
         run: |
