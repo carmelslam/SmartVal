@@ -8,7 +8,6 @@ Suggestive logic to differentials section in the final report builder
 --------------------------------------------------------
 
 
-**HERE'S YOUR COMPLETE TASK DOCUMENT FOR CLAUDE ON CURSOR:**
 
 ---
 
@@ -1397,6 +1396,7 @@ Add to `styles.css`:
 
 ## **CRITICAL SAFETY NOTES**
 
+**THE DAMGE CENTERS SECTION SIN TEH FINAL REPORT BUILDER ALREADY WRITE DIRECTLY ON CENTERS - KEEP AS IS . YOU NEED TOO ADD A LOCATION IN HELPER.FINAL_REPORT AS EXPLAINED ABOVE - BUT DONT BREAK HOW THE DAMAGE CENTERS CURRENTLY WRITE**
 ⚠️ **DO NOT:**
 - Modify existing helper.damage_centers structure
 - Auto-apply assignments without user confirmation
