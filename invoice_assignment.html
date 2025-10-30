@@ -1376,8 +1376,8 @@
             mapping_status: 'pending',
             validation_status: 'approved',
             mapping_confidence: 100,
-            is_user_modified: true,
-            mapped_by: window.helper?.user_id || null
+            is_user_modified: true
+            // mapped_by: null // Skip this field for now due to UUID constraints
           })
           .select()
           .single();
@@ -1417,7 +1417,9 @@
             catalog_code: catalogCode,
             supplier_name: supplierName,
             garage_name: garageName,
-            corrected_category: categoryFromMeta || fieldType.toUpperCase()
+            item_category: fieldType, // Override with correct category
+            corrected_category: categoryFromMeta || fieldType.toUpperCase(),
+            original_item_category: invoiceLine.item_category // Keep original for reference
           },
           assigned_at: new Date().toISOString(),
           assigned_by: window.helper?.user_id || null,
@@ -1429,6 +1431,9 @@
         window.helper.final_report.invoice_assignments.push(assignment);
         console.log('✅ Added assignment to helper.final_report:', assignment);
         console.log('📊 New assignments count:', window.helper.final_report.invoice_assignments.length);
+        
+        // 🎯 SESSION 86: Also immediately apply to helper.centers for private reports
+        await applyAssignmentToCenters(assignment);
         
         // Save helper to sessionStorage immediately
         sessionStorage.setItem('helper', JSON.stringify(window.helper));
@@ -1629,6 +1634,180 @@
       document.getElementById('invoices-content').style.display = 'none';
       document.getElementById('no-results-state').style.display = 'none';
       document.getElementById('error-state').style.display = 'none';
+    }
+    
+    /**
+     * SESSION 86: Apply assignment to helper.centers immediately
+     */
+    async function applyAssignmentToCenters(assignment) {
+      try {
+        console.log('🎯 Applying assignment to helper.centers:', assignment);
+        
+        // Ensure helper.centers exists
+        if (!window.helper.centers) {
+          window.helper.centers = [];
+        }
+        
+        // Find the target damage center
+        let targetCenter = window.helper.centers.find(c => c.Id === assignment.damage_center_id);
+        
+        if (!targetCenter) {
+          console.log('⚠️ Damage center not found in helper.centers, skipping assignment');
+          return;
+        }
+        
+        console.log('🎯 Found target center:', targetCenter['Damage center Number']);
+        
+        // Apply based on field_type
+        if (assignment.field_type === 'part') {
+          await applyPartAssignment(targetCenter, assignment);
+        } else if (assignment.field_type === 'work') {
+          await applyWorkAssignment(targetCenter, assignment);
+        } else if (assignment.field_type === 'repair') {
+          await applyRepairAssignment(targetCenter, assignment);
+        }
+        
+        console.log('✅ Assignment applied to centers successfully');
+        
+      } catch (error) {
+        console.error('❌ Error applying assignment to centers:', error);
+      }
+    }
+    
+    /**
+     * Apply part assignment to damage center
+     */
+    async function applyPartAssignment(center, assignment) {
+      const invoiceLine = assignment.invoice_line;
+      
+      // Ensure Parts structure exists
+      if (!center.Parts) {
+        center.Parts = { parts_required: [], parts_meta: { total_items: 0, total_cost: 0 } };
+      }
+      if (!center.Parts.parts_required) {
+        center.Parts.parts_required = [];
+      }
+      
+      // Create part object matching helper.centers structure
+      const part = {
+        row_uuid: generateUUID(),
+        case_id: currentCase.id,
+        plate: currentCase.plate,
+        damage_center_code: center.Id,
+        part_name: invoiceLine.description,
+        description: invoiceLine.description,
+        pcode: assignment.catalog_code || '',
+        oem: assignment.catalog_code || '',
+        supplier_name: assignment.supplier_name || assignment.garage_name || '',
+        price_per_unit: parseFloat(invoiceLine.unit_price || 0),
+        reduction_percentage: 0,
+        wear_percentage: 0,
+        updated_price: parseFloat(invoiceLine.unit_price || 0),
+        total_cost: parseFloat(invoiceLine.line_total || 0),
+        quantity: parseInt(invoiceLine.quantity || 1),
+        source: 'invoice', // Mark as from invoice
+        _invoice_line_id: assignment.invoice_line_id,
+        _invoice_id: assignment.invoice_id,
+        make: '',
+        model: '',
+        year: '',
+        מחיר: parseFloat(invoiceLine.unit_price || 0),
+        מיקום: 'ישראל',
+        הערות: '',
+        זמינות: 'זמין',
+        metadata: {},
+        updated_at: new Date().toISOString()
+      };
+      
+      center.Parts.parts_required.push(part);
+      
+      // Recalculate meta
+      center.Parts.parts_meta = {
+        total_items: center.Parts.parts_required.length,
+        total_cost: center.Parts.parts_required.reduce((sum, p) => sum + (p.total_cost || 0), 0),
+        timestamp: new Date().toISOString()
+      };
+      
+      console.log('✅ Part added to center:', part.part_name);
+    }
+    
+    /**
+     * Apply work assignment to damage center
+     */
+    async function applyWorkAssignment(center, assignment) {
+      const invoiceLine = assignment.invoice_line;
+      
+      // Ensure Works structure exists
+      if (!center.Works) {
+        center.Works = { works: [], works_meta: { total_items: 0, total_cost: 0 } };
+      }
+      if (!center.Works.works) {
+        center.Works.works = [];
+      }
+      
+      const work = {
+        category: invoiceLine.description,
+        cost: parseFloat(invoiceLine.line_total || 0),
+        comments: 'מחשבונית: ' + (assignment.catalog_code || ''),
+        added_at: new Date().toISOString(),
+        source: 'invoice',
+        _invoice_line_id: assignment.invoice_line_id,
+        _invoice_id: assignment.invoice_id
+      };
+      
+      center.Works.works.push(work);
+      
+      // Recalculate meta
+      center.Works.works_meta = {
+        total_items: center.Works.works.length,
+        total_cost: center.Works.works.reduce((sum, w) => sum + (w.cost || 0), 0),
+        timestamp: new Date().toISOString()
+      };
+      
+      console.log('✅ Work added to center:', work.category);
+    }
+    
+    /**
+     * Apply repair assignment to damage center
+     */
+    async function applyRepairAssignment(center, assignment) {
+      const invoiceLine = assignment.invoice_line;
+      
+      // Ensure Repairs structure exists
+      if (!center.Repairs) {
+        center.Repairs = { repairs: [], repairs_meta: { total_items: 0, total_cost: 0 } };
+      }
+      if (!center.Repairs.repairs) {
+        center.Repairs.repairs = [];
+      }
+      
+      const repair = {
+        name: invoiceLine.description,
+        cost: parseFloat(invoiceLine.line_total || 0),
+        description: 'מחשבונית: ' + (assignment.catalog_code || ''),
+        added_at: new Date().toISOString(),
+        source: 'invoice',
+        _invoice_line_id: assignment.invoice_line_id,
+        _invoice_id: assignment.invoice_id
+      };
+      
+      center.Repairs.repairs.push(repair);
+      
+      // Recalculate meta
+      center.Repairs.repairs_meta = {
+        total_items: center.Repairs.repairs.length,
+        total_cost: center.Repairs.repairs.reduce((sum, r) => sum + (r.cost || 0), 0),
+        timestamp: new Date().toISOString()
+      };
+      
+      console.log('✅ Repair added to center:', repair.name);
+    }
+    
+    function generateUUID() {
+      return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+        var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
+        return v.toString(16);
+      });
     }
   </script>
 </body>
