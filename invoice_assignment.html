@@ -1330,6 +1330,21 @@
         const categoryFromMeta = (invoiceLine?.metadata?.category || '').toUpperCase();
         const fieldType = (categoryFromMeta || invoiceLine?.item_category || 'other').toLowerCase();
         
+        // Get damage center details
+        const damageCenter = damageCenters.find(dc => (dc.Id || dc.id) === dcId);
+        const damageCenterName = `${damageCenter?.['Damage center Number'] || '?'} - ${damageCenter?.Description || damageCenter?.Location || 'ללא תיאור'}`;
+        
+        // Get catalog code
+        const catalogCode = invoiceLine?.metadata?.['מק״ט חלק'] || 
+                           invoiceLine?.metadata?.['מק\'ט חלק'] || 
+                           invoiceLine?.metadata?.['מק"ט חלק'] || 
+                           invoiceLine?.metadata?.code || 
+                           invoiceLine?.code || '';
+        
+        // Clean supplier vs garage name
+        const supplierName = invoiceLine?._supplier_name?.includes('מוסך') ? '' : (invoiceLine?._supplier_name || '');
+        const garageName = invoiceLine?._supplier_name?.includes('מוסך') ? invoiceLine?._supplier_name : '';
+        
         // Create mapping in database
         const { data: mapping, error } = await window.supabase
           .from('invoice_damage_center_mappings')
