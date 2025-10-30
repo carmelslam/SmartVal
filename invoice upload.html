@@ -3871,94 +3871,35 @@ class InvoiceProcessor {
     
     console.log(`✅ Manual invoice saved to helper (total: ${helper.invoices.length})`);
 
-    // SESSION 87: Save to Supabase (always, not just when case exists)
-    if (window.supabase) {
+    // SESSION 87: Save to Supabase using invoiceService (SAME AS OCR)
+    if (caseId && this.invoiceService) {
       try {
-        // SESSION 87: Get user name for tracking
-        const userName = window.getUserName();
-
-        // SESSION 87: Generate UUID for invoice ID (in case Supabase doesn't auto-generate)
-        const generateUUID = () => {
-          return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
-            const r = Math.random() * 16 | 0;
-            const v = c == 'x' ? r : (r & 0x3 | 0x8);
-            return v.toString(16);
-          });
-        };
-        const invoiceId = generateUUID();
-        console.log('🆔 SESSION 87: Generated invoice ID:', invoiceId);
-
-        // STEP 1: Save to invoices table
-        const invoiceInsert = {
-          id: invoiceId,  // SESSION 87: Explicitly provide ID
-          case_id: caseId,
+        // Prepare invoice data - match OCR pattern exactly
+        const invoiceDataForSupabase = {
           plate: invoiceData['מספר רכב'],
           invoice_number: invoiceData['מס. חשבונית'],
-          invoice_type: 'PARTS',
           supplier_name: invoiceData['שם מוסך'],
-          status: 'DRAFT',
+          supplier_tax_id: invoiceData['ח.פ.'] || null,
+          invoice_type: 'OTHER', // Mixed invoice with parts, works, repairs
+          total_amount: grandTotal,
           total_before_tax: subtotal,
           tax_amount: vatAmount,
-          total_amount: grandTotal
+          status: 'DRAFT'
         };
 
-        console.log('💾 SESSION 87: Inserting to invoices table:', invoiceInsert);
-        const { data: invoice, error: invoiceError } = await window.supabase
-          .from('invoices')
-          .insert(invoiceInsert)
-          .select()
-          .single();
+        console.log('📋 SESSION 87: Invoice data prepared for manual invoice:', invoiceDataForSupabase);
 
-        if (invoiceError) throw invoiceError;
-        console.log('✅ SESSION 87: Invoice response:', invoice);
-        console.log('✅ SESSION 87: Invoice ID from response:', invoice?.id);
-
-        // Use generated ID if response doesn't have one
-        const finalInvoiceId = invoice?.id || invoiceId;
-        console.log('✅ SESSION 87: Final invoice ID to use:', finalInvoiceId);
-
-        if (!finalInvoiceId) {
-          throw new Error('Invoice was created but has no ID - check Supabase table configuration');
-        }
-
-        console.log('✅ SESSION 87: Manual invoice saved to invoices table:', finalInvoiceId);
-
-        // STEP 2: Save to invoice_documents table (match OCR structure)
-        const documentInsert = {
-          case_id: caseId,
-          plate: invoiceData['מספר רכב'],
-          ocr_structured_data: invoiceData,  // Store manual data as if from OCR
-          ocr_status: 'manual',
-          created_at: new Date().toISOString()
-        };
-
-        console.log('💾 SESSION 87: Inserting to invoice_documents:', documentInsert);
-        const { data: document, error: documentError } = await window.supabase
-          .from('invoice_documents')
-          .insert(documentInsert)
-          .select()
-          .single();
-
-        if (documentError) throw documentError;
-        console.log('✅ SESSION 87: Manual invoice saved to invoice_documents:', document.id);
-
-        // Link invoice to document
-        await window.supabase
-          .from('invoices')
-          .update({ document_id: document.id })
-          .eq('id', finalInvoiceId);
-
-        // STEP 3: Save to invoice_lines table
-        const lineItems = [];
+        // Prepare invoice lines - match OCR pattern exactly
+        const lines = [];
         let lineNumber = 0;
 
         // Add parts as line items
         parts.forEach(part => {
           lineNumber++;
-          lineItems.push({
-            invoice_id: finalInvoiceId,
+          lines.push({
             line_number: lineNumber,
             description: `${part['שם חלק']} - ${part['תיאור']}`,
+            part_id: null, // Catalog codes go in metadata
             quantity: parseFloat(part['כמות']) || 1,
             unit_price: parseFloat(part['עלות']) / (parseFloat(part['כמות']) || 1),
             line_total: parseFloat(part['עלות']),
@@ -3974,10 +3915,10 @@ class InvoiceProcessor {
         // Add works as line items
         works.forEach(work => {
           lineNumber++;
-          lineItems.push({
-            invoice_id: finalInvoiceId,
+          lines.push({
             line_number: lineNumber,
             description: work['תיאור עבודות'],
+            part_id: null,
             quantity: 1,
             unit_price: parseFloat(work['עלות עבודות']),
             line_total: parseFloat(work['עלות עבודות']),
@@ -3991,10 +3932,10 @@ class InvoiceProcessor {
         // Add repairs as line items
         repairs.forEach(repair => {
           lineNumber++;
-          lineItems.push({
-            invoice_id: finalInvoiceId,
+          lines.push({
             line_number: lineNumber,
             description: repair['תיאור התיקון'],
+            part_id: null,
             quantity: 1,
             unit_price: parseFloat(repair['עלות תיקונים']),
             line_total: parseFloat(repair['עלות תיקונים']),
@@ -4005,39 +3946,52 @@ class InvoiceProcessor {
           });
         });
 
-        // Insert all line items
-        if (lineItems.length > 0) {
-          const { error: linesError } = await window.supabase
-            .from('invoice_lines')
-            .insert(lineItems);
+        console.log('📋 SESSION 87: Lines prepared:', lines.length);
 
-          if (linesError) throw linesError;
-          console.log(`✅ SESSION 87: Saved ${lineItems.length} line items to invoice_lines`);
-        }
+        // Use invoiceService.createInvoice() - SAME AS OCR
+        const result = await this.invoiceService.createInvoice(invoiceDataForSupabase, lines, caseId);
 
-        // STEP 4: Generate PDF with watermark
-        if (document.id) {
-          console.log('📄 SESSION 87: Generating PDF with watermark...');
-          const pdfUrl = await window.generateManualInvoicePDF(invoiceData, document.id);
-          if (pdfUrl) {
-            console.log('✅ SESSION 87: Manual invoice PDF available at:', pdfUrl);
+        if (result && result.success) {
+          this.currentInvoiceId = result.invoice.id;
+          console.log('✅ SESSION 87: Manual invoice saved to Supabase:', this.currentInvoiceId);
+          console.log('✅ SESSION 87: Lines saved:', result.invoice.lines?.length || 0);
+
+          // SESSION 87: Save invoice_documents record (for manual invoice PDF/data)
+          const documentInsert = {
+            invoice_id: this.currentInvoiceId,
+            case_id: caseId,
+            plate: invoiceData['מספר רכב'],
+            ocr_structured_data: invoiceData,  // Store complete manual data
+            ocr_status: 'manual'
+          };
+
+          console.log('💾 SESSION 87: Saving to invoice_documents:', documentInsert);
+          const { data: document, error: documentError } = await window.supabase
+            .from('invoice_documents')
+            .insert(documentInsert)
+            .select()
+            .single();
+
+          if (documentError) {
+            console.error('⚠️ SESSION 87: Failed to save invoice_documents:', documentError);
           } else {
-            console.warn('⚠️ SESSION 87: PDF generation failed, but invoice saved successfully');
+            console.log('✅ SESSION 87: Saved to invoice_documents:', document.id);
+            this.currentDocumentId = document.id;
           }
-        }
 
-        // SESSION 80: Update helper with שרת ID
-        invoiceData.supabase_invoice_id = finalInvoiceId;
-        const helperUpdated = JSON.parse(sessionStorage.getItem('helper') || '{}');
-        const invoiceIndex = helperUpdated.invoices.findIndex(inv => inv.invoice_entry_id === invoiceData.invoice_entry_id);
-        if (invoiceIndex >= 0) {
-          helperUpdated.invoices[invoiceIndex].supabase_invoice_id = finalInvoiceId;
-          helperUpdated.invoices[invoiceIndex].document_id = document.id;
-          sessionStorage.setItem('helper', JSON.stringify(helperUpdated));
-        }
+          // SESSION 80: Update helper with שרת ID
+          invoiceData.supabase_invoice_id = this.currentInvoiceId;
+          const helperUpdated = JSON.parse(sessionStorage.getItem('helper') || '{}');
+          const invoiceIndex = helperUpdated.invoices.findIndex(inv => inv.invoice_entry_id === invoiceData.invoice_entry_id);
+          if (invoiceIndex >= 0) {
+            helperUpdated.invoices[invoiceIndex].supabase_invoice_id = this.currentInvoiceId;
+            helperUpdated.invoices[invoiceIndex].document_id = document?.id;
+            sessionStorage.setItem('helper', JSON.stringify(helperUpdated));
+          }
 
-        // SESSION 87: Success message
-        this.showAlert(`✅ חשבונית ידנית נשמרה בהצלחה (${lineItems.length} פריטים)`, 'success');
+          // SESSION 87: Success message
+          this.showAlert(`✅ חשבונית ידנית נשמרה בהצלחה (${lines.length} פריטים)`, 'success');
+        }
       } catch (error) {
         console.error('❌ Failed to save manual invoice:', error);
         this.showAlert('⚠️ נשמר ל-helper אבל שגיאה בשמירה למסד נתונים', 'warning');
