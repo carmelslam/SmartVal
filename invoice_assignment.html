@@ -655,16 +655,36 @@
         console.log('📋 SESSION 86: Helper data:', {
           plate: window.helper.plate,
           case_id: window.helper.case_id,
-          case_info: window.helper.case_info
+          case_info: window.helper.case_info,
+          vehicle: window.helper.vehicle,
+          meta: window.helper.meta
         });
         
-        if (window.helper.plate) {
+        // SESSION 86 FIX: Get plate from multiple possible locations
+        const plate = window.helper.plate || 
+                     window.helper.vehicle?.plate || 
+                     window.helper.meta?.plate ||
+                     window.helper.case_info?.plate;
+        
+        const caseId = window.helper.case_info?.supabase_case_id || 
+                      window.helper.case_id;
+        
+        if (caseId && plate) {
           const caseData = {
-            id: window.helper.case_info?.supabase_case_id || window.helper.case_id || generateCaseId(),
-            plate: window.helper.plate,
+            id: caseId,
+            plate: plate,
             owner: window.helper.owner || window.helper.case_info?.owner || ''
           };
           console.log('✅ SESSION 86: Using helper case data:', caseData);
+          return caseData;
+        } else if (caseId) {
+          // Even if no plate, try with case ID only
+          const caseData = {
+            id: caseId,
+            plate: 'unknown',
+            owner: window.helper.owner || window.helper.case_info?.owner || ''
+          };
+          console.log('⚠️ SESSION 86: Using helper case data without plate:', caseData);
           return caseData;
         }
       }
@@ -700,13 +720,39 @@
       if (helperStored) {
         try {
           const helper = JSON.parse(helperStored);
-          if (helper.plate) {
+          console.log('💾 SESSION 86: Session helper data:', {
+            plate: helper.plate,
+            case_id: helper.case_id,
+            case_info: helper.case_info,
+            vehicle: helper.vehicle,
+            meta: helper.meta
+          });
+          
+          // SESSION 86 FIX: Get plate from multiple possible locations
+          const plate = helper.plate || 
+                       helper.vehicle?.plate || 
+                       helper.meta?.plate ||
+                       helper.case_info?.plate;
+          
+          const caseId = helper.case_info?.supabase_case_id || 
+                        helper.case_id;
+          
+          if (caseId && plate) {
             const helperData = {
-              id: helper.case_info?.supabase_case_id || helper.case_id || generateCaseId(),
-              plate: helper.plate,
+              id: caseId,
+              plate: plate,
               owner: helper.owner || helper.case_info?.owner || ''
             };
             console.log('✅ SESSION 86: Using session helper case data:', helperData);
+            return helperData;
+          } else if (caseId) {
+            // Even if no plate, try with case ID only
+            const helperData = {
+              id: caseId,
+              plate: 'unknown',
+              owner: helper.owner || helper.case_info?.owner || ''
+            };
+            console.log('⚠️ SESSION 86: Using session helper case data without plate:', helperData);
             return helperData;
           }
         } catch (e) {
