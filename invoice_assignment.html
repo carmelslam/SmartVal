@@ -450,6 +450,7 @@
         overflow-x: auto;
         display: block;
         white-space: nowrap;
+        min-width: 800px;
       }
 
       .items-table thead,
@@ -458,6 +459,18 @@
         display: table;
         width: 100%;
         table-layout: fixed;
+      }
+
+      /* Mobile: Hide catalog column on very small screens */
+      @media (max-width: 480px) {
+        .items-table th:first-child,
+        .items-table td:first-child {
+          display: none;
+        }
+        
+        .items-table {
+          min-width: 650px;
+        }
       }
 
       .dc-selector {
@@ -1085,18 +1098,19 @@
           <table class="items-table">
             <thead>
               <tr>
-                <th style="width: 25%;">תיאור</th>
+                <th style="width: 15%;">מק"ט</th>
+                <th style="width: 22%;">תיאור</th>
                 <th style="width: 8%;">כמות</th>
                 <th style="width: 12%;">מחיר יחידה</th>
-                <th style="width: 12%;">סה"כ</th>
-                <th style="width: 25%;">מוקד נזק</th>
-                <th style="width: 18%;">פעולות</th>
+                <th style="width: 10%;">סה"כ</th>
+                <th style="width: 20%;">מוקד נזק</th>
+                <th style="width: 13%;">פעולות</th>
               </tr>
             </thead>
             <tbody>
               ${items.length > 0 
                 ? items.map(item => renderItemRow(item, dcOptions)).join('')
-                : `<tr><td colspan="6" style="text-align: center; padding: 20px; color: #666; font-style: italic;">אין פריטי ${title} בחשבונית זו</td></tr>`
+                : `<tr><td colspan="7" style="text-align: center; padding: 20px; color: #666; font-style: italic;">אין פריטי ${title} בחשבונית זו</td></tr>`
               }
             </tbody>
           </table>
@@ -1116,8 +1130,16 @@
       const categoryFromMeta = (item.metadata?.category || '').toUpperCase();
       const itemCategory = categoryFromMeta || item.item_category || 'other';
 
+      // Get catalog number from metadata
+      const catalogNumber = item.metadata?.['מק״ט חלק'] || 
+                           item.metadata?.['מק\'ט חלק'] || 
+                           item.metadata?.['מק"ט חלק'] || 
+                           item.metadata?.code || 
+                           item.code || '';
+
       return `
         <tr class="${rowClass}" data-line-id="${item.id}" data-category="${itemCategory}">
+          <td style="font-family: monospace; font-size: 12px; color: #666;">${catalogNumber}</td>
           <td>${item.description || 'ללא תיאור'}</td>
           <td>${item.quantity || 1}</td>
           <td>${formatCurrency(item.unit_price || 0)}</td>
