@@ -1022,13 +1022,15 @@
           };
         }
 
-        // Categorize lines using the same logic as invoice upload
-        const category = categorizeItem(line.description || line.name || '');
-        if (category === 'part') {
+        // Use the actual category from database metadata
+        const categoryFromMeta = (line.metadata?.category || '').toUpperCase();
+        const category = categoryFromMeta || line.item_category || 'OTHER';
+        
+        if (category === 'PART' || category === 'part') {
           grouped[invoiceId].parts.push(line);
-        } else if (category === 'work') {
+        } else if (category === 'WORK' || category === 'work') {
           grouped[invoiceId].works.push(line);
-        } else if (category === 'repair') {
+        } else if (category === 'REPAIR' || category === 'repair') {
           grouped[invoiceId].repairs.push(line);
         } else {
           grouped[invoiceId].other.push(line);
@@ -1110,8 +1112,9 @@
       const assignedDcId = existingAssignments.get(item.id);
       const rowClass = isAssigned ? 'assigned' : '';
       
-      // Use the categorized type instead of database field
-      const itemCategory = categorizeItem(item.description || item.name || '');
+      // Use the actual category from database metadata
+      const categoryFromMeta = (item.metadata?.category || '').toUpperCase();
+      const itemCategory = categoryFromMeta || item.item_category || 'other';
 
       return `
         <tr class="${rowClass}" data-line-id="${item.id}" data-category="${itemCategory}">
@@ -1236,9 +1239,10 @@
         btn.disabled = true;
         btn.textContent = 'שומר...';
 
-        // Get invoice line to determine correct category
+        // Get invoice line to determine correct category from metadata
         const invoiceLine = invoiceLines.find(l => l.id === lineId);
-        const fieldType = categorizeItem(invoiceLine?.description || invoiceLine?.name || '');
+        const categoryFromMeta = (invoiceLine?.metadata?.category || '').toUpperCase();
+        const fieldType = (categoryFromMeta || invoiceLine?.item_category || 'other').toLowerCase();
         
         // Create mapping in database
         const { error } = await window.supabase
