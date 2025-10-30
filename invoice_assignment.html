@@ -1345,7 +1345,7 @@
         const supplierName = invoiceLine?._supplier_name?.includes('מוסך') ? '' : (invoiceLine?._supplier_name || '');
         const garageName = invoiceLine?._supplier_name?.includes('מוסך') ? invoiceLine?._supplier_name : '';
         
-        // Create mapping in database
+        // Create mapping in database with complete data
         const { data: mapping, error } = await window.supabase
           .from('invoice_damage_center_mappings')
           .insert({
@@ -1353,9 +1353,31 @@
             invoice_line_id: lineId,
             case_id: currentCase.id,
             damage_center_id: dcId,
+            damage_center_name: damageCenterName,
             field_type: fieldType,
+            original_field_data: {
+              description: invoiceLine.description,
+              quantity: invoiceLine.quantity,
+              unit_price: invoiceLine.unit_price,
+              line_total: invoiceLine.line_total,
+              catalog_code: catalogCode,
+              supplier_name: supplierName,
+              garage_name: garageName,
+              invoice_number: invoiceLine._invoice_number,
+              plate: invoiceLine._plate
+            },
+            mapped_data: {
+              damage_center_id: dcId,
+              damage_center_name: damageCenterName,
+              field_type: fieldType,
+              assigned_at: new Date().toISOString(),
+              catalog_code: catalogCode
+            },
             mapping_status: 'pending',
-            mapped_by: window.helper?.user_id || null
+            validation_status: 'approved',
+            mapping_confidence: 100,
+            is_user_modified: true,
+            mapped_by: window.helper?.user_id || 'manual_assignment'
           })
           .select()
           .single();
@@ -1385,10 +1407,20 @@
           invoice_line_id: lineId,
           invoice_id: invoiceLine.invoice_id,
           damage_center_id: dcId,
+          damage_center_name: damageCenterName,
           field_type: fieldType,
-          invoice_line: invoiceLine,
+          catalog_code: catalogCode,
+          supplier_name: supplierName,
+          garage_name: garageName,
+          invoice_line: {
+            ...invoiceLine,
+            catalog_code: catalogCode,
+            supplier_name: supplierName,
+            garage_name: garageName,
+            corrected_category: categoryFromMeta || fieldType.toUpperCase()
+          },
           assigned_at: new Date().toISOString(),
-          assigned_by: window.helper?.user_id || null,
+          assigned_by: window.helper?.user_id || 'manual_assignment',
           assignment_status: 'pending',
           applied_at: null,
           applied_by: null
