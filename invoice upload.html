@@ -6,6 +6,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="icon" type="image/webp" href="https://carmelcayouf.com/wp-content/uploads/2025/06/g.webp">
   <link href="https://fonts.googleapis.com/css2?family=Assistant&display=swap" rel="stylesheet" />
+  <!-- SESSION 87: jsPDF library for manual invoice PDF generation -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <style>
     * {
       margin: 0;
@@ -897,6 +899,268 @@ import { sendToWebhook, getWebhook } from './webhook.js';
 // SESSION 56: helper.js is NOT an ES6 module - use window.updateHelper
 // import { updateHelper } from './helper.js';
 // SESSION 74: Phase 5a Invoice Integration with Supabase
+
+// SESSION 87: User tracking system - prompt/cache for created_by, uploaded_by, updated_by
+let cachedUserName = null;
+
+function getUserName() {
+  // Return cached value if available
+  if (cachedUserName) {
+    return cachedUserName;
+  }
+
+  // Check helper.user
+  const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+  if (helper.user?.name) {
+    cachedUserName = helper.user.name;
+    return cachedUserName;
+  }
+
+  // Check Supabase auth
+  const auth = sessionStorage.getItem('auth');
+  if (auth) {
+    try {
+      const authData = JSON.parse(auth);
+      const user = authData.session?.user || authData.user;
+      if (user?.email) {
+        cachedUserName = user.email;
+        return cachedUserName;
+      }
+    } catch (e) {
+      console.error('❌ Error parsing auth:', e);
+    }
+  }
+
+  // Prompt user for name
+  const userName = prompt('אנא הזן שם משתמש לזיהוי:');
+  if (!userName || userName.trim() === '') {
+    return 'משתמש לא ידוע';
+  }
+
+  // Cache and save to helper
+  cachedUserName = userName.trim();
+  helper.user = helper.user || {};
+  helper.user.name = cachedUserName;
+  sessionStorage.setItem('helper', JSON.stringify(helper));
+
+  console.log('✅ SESSION 87: User name cached:', cachedUserName);
+  return cachedUserName;
+}
+
+// SESSION 87: Autocomplete for manual parts from PARTS_BANK
+function flattenPartsBank() {
+  if (!window.PARTS_BANK) {
+    console.warn('⚠️ window.PARTS_BANK not loaded');
+    return [];
+  }
+
+  const flatList = [];
+  Object.keys(window.PARTS_BANK).forEach(category => {
+    window.PARTS_BANK[category].forEach(partName => {
+      flatList.push({
+        category: category,
+        name: partName
+      });
+    });
+  });
+
+  return flatList;
+}
+
+function showManualPartSuggestions(input) {
+  const searchText = input.value.toLowerCase().trim();
+
+  if (searchText.length < 1) {
+    hideManualPartSuggestions(input);
+    return;
+  }
+
+  // Get flattened parts list
+  const allParts = flattenPartsBank();
+
+  // Filter by search text
+  const matches = allParts.filter(part =>
+    part.name.toLowerCase().includes(searchText)
+  ).slice(0, 15); // Limit to 15 suggestions
+
+  // Get dropdown element
+  const dropdown = input.nextElementSibling;
+  if (!dropdown || !dropdown.classList.contains('manual-part-dropdown')) {
+    return;
+  }
+
+  // Populate dropdown
+  if (matches.length === 0) {
+    dropdown.innerHTML = '<div style="padding: 8px; color: #999; text-align: center;">אין תוצאות</div>';
+    dropdown.style.display = 'block';
+    return;
+  }
+
+  dropdown.innerHTML = matches.map(part => `
+    <div class="suggestion-item"
+         onmousedown="selectManualPartSuggestion(this, '${escapeHtml(part.name)}', '${escapeHtml(part.category)}')"
+         style="padding: 8px; cursor: pointer; border-bottom: 1px solid #e2e8f0;">
+      <div style="font-weight: bold; color: #1e293b; font-size: 11px;">${escapeHtml(part.name)}</div>
+      <div style="font-size: 9px; color: #64748b;">${escapeHtml(part.category)}</div>
+    </div>
+  `).join('');
+
+  dropdown.style.display = 'block';
+
+  // Add hover effect
+  dropdown.querySelectorAll('.suggestion-item').forEach(item => {
+    item.addEventListener('mouseenter', () => {
+      item.style.background = '#f1f5f9';
+    });
+    item.addEventListener('mouseleave', () => {
+      item.style.background = 'white';
+    });
+  });
+}
+
+function selectManualPartSuggestion(element, partName, category) {
+  // Find the input field
+  const row = element.closest('tr');
+  if (!row) return;
+
+  // Fill the part name field
+  const nameInput = row.querySelector('.manual-part-name');
+  if (nameInput) {
+    nameInput.value = partName;
+
+    // Hide dropdown
+    const dropdown = nameInput.nextElementSibling;
+    if (dropdown) dropdown.style.display = 'none';
+  }
+
+  console.log('✅ SESSION 87: Selected part from PARTS_BANK:', { name: partName, category: category });
+}
+
+function hideManualPartSuggestions(input) {
+  // Delay to allow click on suggestion
+  setTimeout(() => {
+    const dropdown = input.nextElementSibling;
+    if (dropdown && dropdown.classList.contains('manual-part-dropdown')) {
+      dropdown.style.display = 'none';
+    }
+  }, 200);
+}
+
+function escapeHtml(text) {
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
+}
+
+// SESSION 87: Generate PDF for manual invoice with watermark
+async function generateManualInvoicePDF(invoiceData, documentId) {
+  try {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+
+    // Add watermark - "חשבונית ידנית"
+    doc.setFontSize(60);
+    doc.setTextColor(220, 220, 220);
+    doc.text('חשבונית ידנית', 105, 150, { align: 'center', angle: 45 });
+
+    // Reset for content
+    doc.setFontSize(12);
+    doc.setTextColor(0, 0, 0);
+
+    // Add title
+    doc.setFontSize(18);
+    doc.text('חשבונית ידנית / משוחזרת', 105, 20, { align: 'center' });
+
+    // Add invoice details
+    let y = 40;
+    doc.setFontSize(12);
+    doc.text(`מס. חשבונית: ${invoiceData['מס. חשבונית'] || 'לא צוין'}`, 20, y);
+    y += 10;
+    doc.text(`מוסך: ${invoiceData['שם מוסך'] || 'לא צוין'}`, 20, y);
+    y += 10;
+    doc.text(`תאריך: ${invoiceData['תאריך'] || 'לא צוין'}`, 20, y);
+    y += 10;
+    doc.text(`רכב: ${invoiceData['מספר רכב'] || 'לא צוין'}`, 20, y);
+    y += 10;
+    doc.text(`בעל רכב: ${invoiceData['בעל הרכב'] || 'לא צוין'}`, 20, y);
+
+    // Add parts summary if exists
+    if (invoiceData['חלקים'] && invoiceData['חלקים'].length > 0) {
+      y += 15;
+      doc.setFontSize(14);
+      doc.text(`חלקים (${invoiceData['חלקים'].length}):`, 20, y);
+      y += 8;
+      doc.setFontSize(10);
+      invoiceData['חלקים'].slice(0, 5).forEach(part => {
+        doc.text(`• ${part['שם חלק'] || part['תיאור'] || 'חלק'}: ${part['עלות'] || '0'} ₪`, 25, y);
+        y += 6;
+      });
+      if (invoiceData['חלקים'].length > 5) {
+        doc.text(`... ועוד ${invoiceData['חלקים'].length - 5} חלקים`, 25, y);
+        y += 6;
+      }
+    }
+
+    // Add totals
+    y += 15;
+    doc.setFontSize(14);
+    doc.text('סיכום:', 20, y);
+    y += 10;
+    doc.setFontSize(12);
+    doc.text(`חלקים: ${invoiceData['סהכ חלקים'] || '0'} ₪`, 30, y);
+    y += 8;
+    doc.text(`עבודות: ${invoiceData['סהכ עבודות'] || '0'} ₪`, 30, y);
+    y += 8;
+    doc.text(`תיקונים: ${invoiceData['סהכ תיקונים'] || '0'} ₪`, 30, y);
+    y += 8;
+    doc.text(`סה"כ לפני מע"מ: ${invoiceData['עלות כוללת ללא מע״מ'] || '0'} ₪`, 30, y);
+    y += 8;
+    doc.text(`מע"מ (${invoiceData['מע"מ'] || '17%'}): ${invoiceData['ערך מע"מ'] || '0'} ₪`, 30, y);
+    y += 8;
+    doc.setFontSize(14);
+    doc.setTextColor(255, 140, 0);  // Orange color
+    doc.text(`סה"כ כולל מע"מ: ${invoiceData['עלות כוללת'] || '0'} ₪`, 30, y);
+
+    // Footer watermark
+    doc.setFontSize(10);
+    doc.setTextColor(150, 150, 150);
+    doc.text('מסמך זה נוצר ידנית במערכת SmartVal - EVALIX', 105, 280, { align: 'center' });
+
+    // Convert to blob
+    const pdfBlob = doc.output('blob');
+
+    // Upload to Supabase storage
+    const fileName = `manual_invoice_${invoiceData['מס. חשבונית']}_${Date.now()}.pdf`;
+    const { data: uploadData, error: uploadError } = await window.supabase.storage
+      .from('invoices')
+      .upload(fileName, pdfBlob);
+
+    if (uploadError) {
+      console.error('❌ SESSION 87: PDF upload error:', uploadError);
+      throw uploadError;
+    }
+
+    // Get public URL
+    const { data: urlData } = window.supabase.storage
+      .from('invoices')
+      .getPublicUrl(fileName);
+
+    const pdfUrl = urlData.publicUrl;
+
+    // Update invoice_documents with PDF URL
+    await window.supabase
+      .from('invoice_documents')
+      .update({ storage_url: pdfUrl })
+      .eq('id', documentId);
+
+    console.log('✅ SESSION 87: PDF generated and uploaded:', pdfUrl);
+    return pdfUrl;
+
+  } catch (error) {
+    console.error('❌ SESSION 87: PDF generation failed:', error);
+    return null;
+  }
+}
 
 // Enhanced Invoice Processing System
 class InvoiceProcessor {
@@ -3323,7 +3587,16 @@ class InvoiceProcessor {
     
     row.innerHTML = `
       <td style="padding: 4px;"><input type="text" placeholder="מק״ט" style="width: 100%; padding: 4px; font-size: 11px; border: 1px solid #94a3b8; border-radius: 3px;" /></td>
-      <td style="padding: 4px;"><input type="text" placeholder="שם חלק" style="width: 100%; padding: 4px; font-size: 11px; border: 1px solid #94a3b8; border-radius: 3px;" /></td>
+      <td style="padding: 4px; position: relative;">
+        <input type="text"
+               placeholder="שם חלק"
+               class="manual-part-name"
+               oninput="showManualPartSuggestions(this)"
+               onfocus="showManualPartSuggestions(this)"
+               onblur="hideManualPartSuggestions(this)"
+               style="width: 100%; padding: 4px; font-size: 11px; border: 1px solid #94a3b8; border-radius: 3px;" />
+        <div class="manual-part-dropdown" style="display: none; position: absolute; top: 100%; right: 0; left: 0; background: white; border: 1px solid #94a3b8; max-height: 200px; overflow-y: auto; z-index: 1000; box-shadow: 0 4px 6px rgba(0,0,0,0.1);"></div>
+      </td>
       <td style="padding: 4px;"><input type="text" placeholder="תיאור" style="width: 100%; padding: 4px; font-size: 11px; border: 1px solid #94a3b8; border-radius: 3px;" /></td>
       <td style="padding: 4px;"><input type="number" value="1" min="1" class="manual-qty" style="width: 100%; padding: 4px; font-size: 11px; border: 1px solid #94a3b8; border-radius: 3px; text-align: center;" /></td>
       <td style="padding: 4px;">
@@ -3593,6 +3866,10 @@ class InvoiceProcessor {
     // Save to Supabase if case exists
     if (caseId && this.invoiceService) {
       try {
+        // SESSION 87: Get user name for tracking
+        const userName = getUserName();
+
+        // STEP 1: Save to invoices table
         const invoiceInsert = {
           case_id: caseId,
           plate: invoiceData['מספר רכב'],
@@ -3602,30 +3879,139 @@ class InvoiceProcessor {
           status: 'DRAFT',
           total_before_tax: subtotal,
           tax_amount: vatAmount,
-          total_amount: grandTotal
+          total_amount: grandTotal,
+          created_by: userName,     // SESSION 87: Track creator
+          uploaded_by: userName     // SESSION 87: Track uploader
         };
-        
+
         const { data: invoice, error: invoiceError } = await window.supabase
           .from('invoices')
           .insert(invoiceInsert)
           .select()
           .single();
-        
+
         if (invoiceError) throw invoiceError;
-        console.log('✅ Manual invoice saved to שרת:', invoice.id);
-        
+        console.log('✅ SESSION 87: Manual invoice saved to invoices table:', invoice.id);
+
+        // STEP 2: Save to invoice_documents table (match OCR structure)
+        const documentInsert = {
+          case_id: caseId,
+          plate: invoiceData['מספר רכב'],
+          storage_url: null,  // No physical PDF yet (will be generated in STEP 4)
+          source: 'manual_input',
+          ocr_structured_data: invoiceData,  // Store manual data as if from OCR
+          ocr_status: 'manual',
+          created_at: new Date().toISOString()
+        };
+
+        const { data: document, error: documentError } = await window.supabase
+          .from('invoice_documents')
+          .insert(documentInsert)
+          .select()
+          .single();
+
+        if (documentError) throw documentError;
+        console.log('✅ SESSION 87: Manual invoice saved to invoice_documents:', document.id);
+
+        // Link invoice to document
+        await window.supabase
+          .from('invoices')
+          .update({ document_id: document.id })
+          .eq('id', invoice.id);
+
+        // STEP 3: Save to invoice_lines table
+        const lineItems = [];
+        let lineNumber = 0;
+
+        // Add parts as line items
+        parts.forEach(part => {
+          lineNumber++;
+          lineItems.push({
+            invoice_id: invoice.id,
+            line_number: lineNumber,
+            description: `${part['שם חלק']} - ${part['תיאור']}`,
+            quantity: parseFloat(part['כמות']) || 1,
+            unit_price: parseFloat(part['עלות']) / (parseFloat(part['כמות']) || 1),
+            line_total: parseFloat(part['עלות']),
+            metadata: {
+              category: 'part',
+              code: part['מק"ט חלק'],
+              name: part['שם חלק'],
+              source: part['מקור']
+            },
+            updated_by: userName  // SESSION 87: Track creator
+          });
+        });
+
+        // Add works as line items
+        works.forEach(work => {
+          lineNumber++;
+          lineItems.push({
+            invoice_id: invoice.id,
+            line_number: lineNumber,
+            description: work['תיאור עבודות'],
+            quantity: 1,
+            unit_price: parseFloat(work['עלות עבודות']),
+            line_total: parseFloat(work['עלות עבודות']),
+            metadata: {
+              category: 'work',
+              code: work['סוג העבודה']
+            },
+            updated_by: userName  // SESSION 87: Track creator
+          });
+        });
+
+        // Add repairs as line items
+        repairs.forEach(repair => {
+          lineNumber++;
+          lineItems.push({
+            invoice_id: invoice.id,
+            line_number: lineNumber,
+            description: repair['תיאור התיקון'],
+            quantity: 1,
+            unit_price: parseFloat(repair['עלות תיקונים']),
+            line_total: parseFloat(repair['עלות תיקונים']),
+            metadata: {
+              category: 'repair',
+              code: repair['סוג תיקון']
+            },
+            updated_by: userName  // SESSION 87: Track creator
+          });
+        });
+
+        // Insert all line items
+        if (lineItems.length > 0) {
+          const { error: linesError } = await window.supabase
+            .from('invoice_lines')
+            .insert(lineItems);
+
+          if (linesError) throw linesError;
+          console.log(`✅ SESSION 87: Saved ${lineItems.length} line items to invoice_lines`);
+        }
+
+        // STEP 4: Generate PDF with watermark
+        if (document.id) {
+          console.log('📄 SESSION 87: Generating PDF with watermark...');
+          const pdfUrl = await generateManualInvoicePDF(invoiceData, document.id);
+          if (pdfUrl) {
+            console.log('✅ SESSION 87: Manual invoice PDF available at:', pdfUrl);
+          } else {
+            console.warn('⚠️ SESSION 87: PDF generation failed, but invoice saved successfully');
+          }
+        }
+
         // SESSION 80: Update helper with שרת ID
         invoiceData.supabase_invoice_id = invoice.id;
         const helperUpdated = JSON.parse(sessionStorage.getItem('helper') || '{}');
         const invoiceIndex = helperUpdated.invoices.findIndex(inv => inv.invoice_entry_id === invoiceData.invoice_entry_id);
         if (invoiceIndex >= 0) {
           helperUpdated.invoices[invoiceIndex].supabase_invoice_id = invoice.id;
+          helperUpdated.invoices[invoiceIndex].document_id = document.id;
           sessionStorage.setItem('helper', JSON.stringify(helperUpdated));
         }
 
-        // SESSION 84: Task 7 - Manual invoices save to Supabase/helper only (NO webhook)
-        // Webhook is only for OCR invoices via "שמור תוצאות" button
-        this.showAlert('✅ חשבונית ידנית נשמרה בהצלחה', 'success');
+        // SESSION 87: Success message
+        this.showAlert(`✅ חשבונית ידנית נשמרה בהצלחה (${lineItems.length} פריטים)`, 'success');
       } catch (error) {
         console.error('❌ Failed to save manual invoice:', error);
         this.showAlert('⚠️ נשמר ל-helper אבל שגיאה בשמירה למסד נתונים', 'warning');
