@@ -3880,8 +3880,20 @@ class InvoiceProcessor {
         // SESSION 87: Get user name for tracking
         const userName = window.getUserName();
 
+        // SESSION 87: Generate UUID for invoice ID (in case Supabase doesn't auto-generate)
+        const generateUUID = () => {
+          return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+            const r = Math.random() * 16 | 0;
+            const v = c == 'x' ? r : (r & 0x3 | 0x8);
+            return v.toString(16);
+          });
+        };
+        const invoiceId = generateUUID();
+        console.log('🆔 SESSION 87: Generated invoice ID:', invoiceId);
+
         // STEP 1: Save to invoices table
         const invoiceInsert = {
+          id: invoiceId,  // SESSION 87: Explicitly provide ID
           case_id: caseId,
           plate: invoiceData['מספר רכב'],
           invoice_number: invoiceData['מס. חשבונית'],
@@ -3902,13 +3914,17 @@ class InvoiceProcessor {
 
         if (invoiceError) throw invoiceError;
         console.log('✅ SESSION 87: Invoice response:', invoice);
-        console.log('✅ SESSION 87: Invoice ID:', invoice?.id);
+        console.log('✅ SESSION 87: Invoice ID from response:', invoice?.id);
 
-        if (!invoice || !invoice.id) {
+        // Use generated ID if response doesn't have one
+        const finalInvoiceId = invoice?.id || invoiceId;
+        console.log('✅ SESSION 87: Final invoice ID to use:', finalInvoiceId);
+
+        if (!finalInvoiceId) {
           throw new Error('Invoice was created but has no ID - check Supabase table configuration');
         }
 
-        console.log('✅ SESSION 87: Manual invoice saved to invoices table:', invoice.id);
+        console.log('✅ SESSION 87: Manual invoice saved to invoices table:', finalInvoiceId);
 
         // STEP 2: Save to invoice_documents table (match OCR structure)
         const documentInsert = {
@@ -3934,7 +3950,7 @@ class InvoiceProcessor {
         await window.supabase
           .from('invoices')
           .update({ document_id: document.id })
-          .eq('id', invoice.id);
+          .eq('id', finalInvoiceId);
 
         // STEP 3: Save to invoice_lines table
         const lineItems = [];
@@ -3944,7 +3960,7 @@ class InvoiceProcessor {
         parts.forEach(part => {
           lineNumber++;
           lineItems.push({
-            invoice_id: invoice.id,
+            invoice_id: finalInvoiceId,
             line_number: lineNumber,
             description: `${part['שם חלק']} - ${part['תיאור']}`,
             quantity: parseFloat(part['כמות']) || 1,
@@ -3963,7 +3979,7 @@ class InvoiceProcessor {
         works.forEach(work => {
           lineNumber++;
           lineItems.push({
-            invoice_id: invoice.id,
+            invoice_id: finalInvoiceId,
             line_number: lineNumber,
             description: work['תיאור עבודות'],
             quantity: 1,
@@ -3980,7 +3996,7 @@ class InvoiceProcessor {
         repairs.forEach(repair => {
           lineNumber++;
           lineItems.push({
-            invoice_id: invoice.id,
+            invoice_id: finalInvoiceId,
             line_number: lineNumber,
             description: repair['תיאור התיקון'],
             quantity: 1,
@@ -4015,11 +4031,11 @@ class InvoiceProcessor {
         }
 
         // SESSION 80: Update helper with שרת ID
-        invoiceData.supabase_invoice_id = invoice.id;
+        invoiceData.supabase_invoice_id = finalInvoiceId;
         const helperUpdated = JSON.parse(sessionStorage.getItem('helper') || '{}');
         const invoiceIndex = helperUpdated.invoices.findIndex(inv => inv.invoice_entry_id === invoiceData.invoice_entry_id);
         if (invoiceIndex >= 0) {
-          helperUpdated.invoices[invoiceIndex].supabase_invoice_id = invoice.id;
+          helperUpdated.invoices[invoiceIndex].supabase_invoice_id = finalInvoiceId;
           helperUpdated.invoices[invoiceIndex].document_id = document.id;
           sessionStorage.setItem('helper', JSON.stringify(helperUpdated));
         }
