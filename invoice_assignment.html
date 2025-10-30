@@ -402,6 +402,23 @@
       transform: none;
       box-shadow: none;
     }
+    
+    .secondary-btn {
+      background: #6c757d;
+      color: white;
+      border: none;
+      padding: 12px 20px;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+    
+    .secondary-btn:hover {
+      background: #5a6268;
+      transform: translateY(-1px);
+    }
 
     /* Mobile Responsiveness */
     @media (max-width: 768px) {
@@ -461,7 +478,29 @@
         table-layout: fixed;
       }
 
-      /* Mobile: Hide catalog column on very small screens */
+      /* Mobile: Better table handling */
+      @media (max-width: 768px) {
+        .items-table {
+          min-width: 700px;
+          font-size: 11px;
+        }
+        
+        .items-table th,
+        .items-table td {
+          padding: 6px 4px;
+        }
+        
+        .dc-selector {
+          font-size: 11px;
+          padding: 4px 6px;
+        }
+        
+        .btn {
+          font-size: 11px;
+          padding: 4px 8px;
+        }
+      }
+      
       @media (max-width: 480px) {
         .items-table th:first-child,
         .items-table td:first-child {
@@ -469,7 +508,12 @@
         }
         
         .items-table {
-          min-width: 650px;
+          min-width: 600px;
+        }
+        
+        .category-header {
+          font-size: 13px;
+          padding: 8px 10px;
         }
       }
 
@@ -623,9 +667,20 @@
             </div>
           </div>
 
-          <button id="save-and-continue-btn" class="primary-btn" disabled>
-            שמור שיוכים והמשך לדוח סופי
-          </button>
+          <div style="display: flex; flex-direction: column; gap: 10px;">
+            <button id="save-and-continue-btn" class="primary-btn" disabled>
+              שמור שיוכים והמשך לדוח סופי
+            </button>
+            
+            <div style="display: flex; gap: 10px;">
+              <button id="back-to-invoices-btn" class="secondary-btn" style="flex: 1;">
+                🔙 חזור לחשבוניות
+              </button>
+              <button id="back-to-home-btn" class="secondary-btn" style="flex: 1;">
+                🏠 חזור לבית
+              </button>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -1240,6 +1295,15 @@
 
       // Save and continue button
       document.getElementById('save-and-continue-btn').addEventListener('click', saveAndContinue);
+      
+      // Navigation buttons
+      document.getElementById('back-to-invoices-btn')?.addEventListener('click', () => {
+        window.location.href = 'invoice upload.html';
+      });
+      
+      document.getElementById('back-to-home-btn')?.addEventListener('click', () => {
+        window.location.href = 'selection.html';
+      });
     }
 
     /**
@@ -1283,6 +1347,28 @@
 
         // Update local state
         existingAssignments.set(lineId, dcId);
+        
+        // Update helper.final_report with new assignment
+        if (!window.helper.final_report.invoice_assignments) {
+          window.helper.final_report.invoice_assignments = [];
+        }
+        
+        const assignment = {
+          assignment_id: Math.random().toString(36).substr(2, 9), // Generate temp ID
+          invoice_line_id: lineId,
+          invoice_id: invoiceLine.invoice_id,
+          damage_center_id: dcId,
+          field_type: fieldType,
+          invoice_line: invoiceLine,
+          assigned_at: new Date().toISOString(),
+          assigned_by: window.helper?.user_id || null,
+          assignment_status: 'pending',
+          applied_at: null,
+          applied_by: null
+        };
+        
+        window.helper.final_report.invoice_assignments.push(assignment);
+        console.log('✅ Added assignment to helper.final_report:', assignment);
 
         // Update UI
         row.classList.add('assigned');
@@ -1327,6 +1413,17 @@
 
         // Update local state
         existingAssignments.delete(lineId);
+        
+        // Remove from helper.final_report
+        if (window.helper.final_report && window.helper.final_report.invoice_assignments) {
+          const assignmentIndex = window.helper.final_report.invoice_assignments.findIndex(
+            a => a.invoice_line_id === lineId && a.assignment_status === 'pending'
+          );
+          if (assignmentIndex !== -1) {
+            window.helper.final_report.invoice_assignments.splice(assignmentIndex, 1);
+            console.log('✅ Removed assignment from helper.final_report for line:', lineId);
+          }
+        }
 
         // Update UI
         row.classList.remove('assigned');
