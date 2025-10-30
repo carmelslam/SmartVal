@@ -159,10 +159,17 @@
     /* Category Tables */
     .category-section {
       margin-bottom: 25px;
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+
+    .category-section:last-child {
+      margin-bottom: 0;
     }
 
     .category-header {
-      background: #667eea;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
       color: white;
       padding: 12px 15px;
       border-radius: 8px 8px 0 0;
@@ -170,6 +177,25 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
+      font-size: 16px;
+      box-shadow: 0 2px 4px rgba(102, 126, 234, 0.3);
+    }
+
+    /* Category-specific colors */
+    .category-section[data-category="part"] .category-header {
+      background: linear-gradient(135deg, #4ade80 0%, #22c55e 100%);
+    }
+
+    .category-section[data-category="work"] .category-header {
+      background: linear-gradient(135deg, #fb7185 0%, #e11d48 100%);
+    }
+
+    .category-section[data-category="repair"] .category-header {
+      background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+    }
+
+    .category-section[data-category="other"] .category-header {
+      background: linear-gradient(135deg, #94a3b8 0%, #64748b 100%);
     }
 
     .category-count {
@@ -183,6 +209,9 @@
       width: 100%;
       border-collapse: collapse;
       background: white;
+      border-radius: 0 0 8px 8px;
+      overflow: hidden;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
     }
 
     .items-table th,
@@ -197,6 +226,7 @@
       font-weight: 600;
       color: #555;
       font-size: 14px;
+      border-bottom: 2px solid #e9ecef;
     }
 
     .items-table td {
@@ -406,6 +436,40 @@
         padding: 8px 6px;
       }
 
+      .category-header {
+        font-size: 14px;
+        padding: 10px 12px;
+      }
+
+      .category-count {
+        font-size: 11px;
+      }
+
+      /* Better mobile table handling */
+      .items-table {
+        overflow-x: auto;
+        display: block;
+        white-space: nowrap;
+      }
+
+      .items-table thead,
+      .items-table tbody,
+      .items-table tr {
+        display: table;
+        width: 100%;
+        table-layout: fixed;
+      }
+
+      .dc-selector {
+        font-size: 12px;
+        padding: 6px 8px;
+      }
+
+      .btn {
+        font-size: 12px;
+        padding: 6px 12px;
+      }
+
       .summary-stats {
         grid-template-columns: 1fr;
       }
@@ -451,6 +515,18 @@
     .currency {
       font-weight: 600;
       color: #2e7d32;
+      direction: ltr;
+      text-align: left;
+    }
+
+    /* Table improvements */
+    .items-table tbody tr:hover {
+      background: #f8f9ff !important;
+      transition: background 0.2s ease;
+    }
+
+    .items-table tbody tr.assigned:hover {
+      background: #e8f5e9 !important;
     }
 
     /* Empty state */
@@ -912,6 +988,16 @@
       });
 
       container.innerHTML = html;
+      
+      // Set pre-selected damage centers for assigned items
+      setTimeout(() => {
+        existingAssignments.forEach((dcId, lineId) => {
+          const selector = document.querySelector(`select[data-line-id="${lineId}"]`);
+          if (selector) {
+            selector.value = dcId;
+          }
+        });
+      }, 100);
     }
 
     /**
@@ -969,41 +1055,47 @@
             </div>
           </div>
 
-          ${group.parts.length > 0 ? renderCategorySection('חלקים', group.parts, 'part') : ''}
-          ${group.works.length > 0 ? renderCategorySection('עבודות', group.works, 'work') : ''}
-          ${group.repairs.length > 0 ? renderCategorySection('תיקונים', group.repairs, 'repair') : ''}
+          ${renderCategorySection('חלקים', group.parts, 'part')}
+          ${renderCategorySection('עבודות', group.works, 'work')}
+          ${renderCategorySection('תיקונים', group.repairs, 'repair')}
           ${group.other.length > 0 ? renderCategorySection('אחר', group.other, 'other') : ''}
         </div>
       `;
     }
 
     /**
-     * SESSION 86: Render category section (parts/works/repairs)
+     * SESSION 86: Render category section (parts/works/repairs) with proper division
      */
     function renderCategorySection(title, items, category) {
       const dcOptions = damageCenters.map(dc => 
         `<option value="${dc.Id || dc.id}">${dc['Damage center Number'] || dc.number || '?'} - ${dc.Description || dc.Location || 'ללא תיאור'}</option>`
       ).join('');
 
+      // Get category icon
+      const categoryIcon = getCategoryIcon(category);
+
       return `
-        <div class="category-section">
+        <div class="category-section" data-category="${category}">
           <div class="category-header">
-            <span>${title}</span>
+            <span>${categoryIcon} ${title}</span>
             <span class="category-count">${items.length}</span>
           </div>
           <table class="items-table">
             <thead>
               <tr>
-                <th>תיאור</th>
-                <th>כמות</th>
-                <th>מחיר יחידה</th>
-                <th>סה"כ</th>
-                <th>מוקד נזק</th>
-                <th>פעולות</th>
+                <th style="width: 25%;">תיאור</th>
+                <th style="width: 8%;">כמות</th>
+                <th style="width: 12%;">מחיר יחידה</th>
+                <th style="width: 12%;">סה"כ</th>
+                <th style="width: 25%;">מוקד נזק</th>
+                <th style="width: 18%;">פעולות</th>
               </tr>
             </thead>
             <tbody>
-              ${items.map(item => renderItemRow(item, dcOptions)).join('')}
+              ${items.length > 0 
+                ? items.map(item => renderItemRow(item, dcOptions)).join('')
+                : `<tr><td colspan="6" style="text-align: center; padding: 20px; color: #666; font-style: italic;">אין פריטי ${title} בחשבונית זו</td></tr>`
+              }
             </tbody>
           </table>
         </div>
@@ -1025,7 +1117,7 @@
           <td>${formatCurrency(item.unit_price || 0)}</td>
           <td>${formatCurrency(item.line_total || 0)}</td>
           <td>
-            <select class="dc-selector" ${isAssigned ? 'disabled' : ''}>
+            <select class="dc-selector" ${isAssigned ? 'disabled' : ''} data-line-id="${item.id}">
               <option value="">בחר מוקד נזק...</option>
               ${dcOptions}
             </select>
@@ -1163,6 +1255,7 @@
         // Update UI
         row.classList.add('assigned');
         selector.disabled = true;
+        selector.value = dcId;
         btn.className = 'btn btn-unassign';
         btn.textContent = 'בטל שיוך';
         btn.onclick = handleUnassignClick;
@@ -1250,6 +1343,15 @@
         minimumFractionDigits: 0,
         maximumFractionDigits: 0
       }).format(amount || 0);
+    }
+
+    function getCategoryIcon(category) {
+      switch(category) {
+        case 'part': return '🔧';
+        case 'work': return '👷';
+        case 'repair': return '🔨';
+        default: return '📝';
+      }
     }
 
     function generateCaseId() {
