@@ -1022,8 +1022,8 @@
           };
         }
 
-        // Categorize lines
-        const category = line.item_category || 'other';
+        // Categorize lines using the same logic as invoice upload
+        const category = categorizeItem(line.description || line.name || '');
         if (category === 'part') {
           grouped[invoiceId].parts.push(line);
         } else if (category === 'work') {
@@ -1109,9 +1109,12 @@
       const isAssigned = existingAssignments.has(item.id);
       const assignedDcId = existingAssignments.get(item.id);
       const rowClass = isAssigned ? 'assigned' : '';
+      
+      // Use the categorized type instead of database field
+      const itemCategory = categorizeItem(item.description || item.name || '');
 
       return `
-        <tr class="${rowClass}" data-line-id="${item.id}" data-category="${item.item_category || 'other'}">
+        <tr class="${rowClass}" data-line-id="${item.id}" data-category="${itemCategory}">
           <td>${item.description || 'ללא תיאור'}</td>
           <td>${item.quantity || 1}</td>
           <td>${formatCurrency(item.unit_price || 0)}</td>
@@ -1221,7 +1224,6 @@
       const btn = event.target;
       const row = btn.closest('tr');
       const lineId = row.dataset.lineId;
-      const category = row.dataset.category;
       const selector = row.querySelector('.dc-selector');
       const dcId = selector.value;
 
@@ -1234,15 +1236,19 @@
         btn.disabled = true;
         btn.textContent = 'שומר...';
 
+        // Get invoice line to determine correct category
+        const invoiceLine = invoiceLines.find(l => l.id === lineId);
+        const fieldType = categorizeItem(invoiceLine?.description || invoiceLine?.name || '');
+        
         // Create mapping in database
         const { error } = await window.supabase
           .from('invoice_damage_center_mappings')
           .insert({
-            invoice_id: invoiceLines.find(l => l.id === lineId).invoice_id,
+            invoice_id: invoiceLine.invoice_id,
             invoice_line_id: lineId,
             case_id: currentCase.id,
             damage_center_id: dcId,
-            field_type: category,
+            field_type: fieldType,
             mapping_status: 'pending',
             mapped_by: window.helper?.user_id || null
           });
@@ -1352,6 +1358,38 @@
         case 'repair': return '🔨';
         default: return '📝';
       }
+    }
+
+    /**
+     * SESSION 86: Categorize items based on description text (copied from invoice upload)
+     */
+    function categorizeItem(text) {
+      const lowerText = (text || '').toLowerCase();
+      
+      // Parts keywords
+      if (lowerText.includes('חלק') || lowerText.includes('פנס') || lowerText.includes('מראה') || 
+          lowerText.includes('דלת') || lowerText.includes('פגוש') || lowerText.includes('גלגל') ||
+          lowerText.includes('צמיג') || lowerText.includes('מנוע') || lowerText.includes('part') ||
+          lowerText.includes('מגן') || lowerText.includes('כנף') || lowerText.includes('מכסה') ||
+          lowerText.includes('קישוט') || lowerText.includes('רשת') || lowerText.includes('שמשה')) {
+        return 'part';
+      }
+      
+      // Work/Labor keywords  
+      if (lowerText.includes('עבודה') || lowerText.includes('שעת') || lowerText.includes('שעות') ||
+          lowerText.includes('התקנה') || lowerText.includes('labor') || lowerText.includes('work') ||
+          lowerText.includes('הובלה') || lowerText.includes('חישובי') || lowerText.includes('עיבוד')) {
+        return 'work';
+      }
+      
+      // Repair keywords
+      if (lowerText.includes('תיקון') || lowerText.includes('תיק') || lowerText.includes('repair') ||
+          lowerText.includes('צבע') || lowerText.includes('paint') || lowerText.includes('ריתוך') ||
+          lowerText.includes('חיזוק') || lowerText.includes('שיקום') || lowerText.includes('שימון')) {
+        return 'repair';
+      }
+      
+      return 'other';
     }
 
     function generateCaseId() {
