@@ -20,14 +20,14 @@ on:
         required: true
         default: vendor_raw/m-pines/2025-06.pdf
 
-  repository_dispatch:
-    types: [catalog_parse]
+  # Listen to ALL repository_dispatch events (no type filter)
+  repository_dispatch: {}
 
 jobs:
   parse:
     runs-on: ubuntu-latest
     env:
-      # Secrets (Settings → Secrets and variables → Actions)
+      # Secrets
       SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
       SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
 
@@ -56,10 +56,10 @@ jobs:
         with:
           python-version: '3.11'
 
-     - name: Install dependencies
-  run: |
-    python -m pip install --upgrade pip
-    pip install requests pdfplumber python-bidi arabic-reshaper supabase-py
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install requests pdfplumber
 
       - name: Run parser
         run: |
