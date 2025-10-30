@@ -1,0 +1,1174 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <title>שיוך פריטי חשבונית למוקדי נזק - ירון כיוף</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" href="https://carmelcayouf.com/wp-content/uploads/2025/06/g.webp" type="image/webp">
+  <style>
+    /* SESSION 86: Modern Mobile-First Design */
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+      min-height: 100vh;
+      padding: 20px 10px;
+      color: #333;
+      line-height: 1.6;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      background: white;
+      border-radius: 16px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+      overflow: hidden;
+    }
+
+    .header {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 30px 20px;
+      text-align: center;
+    }
+
+    .logo {
+      width: 80px;
+      height: 80px;
+      margin: 0 auto 15px;
+      background: white;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .logo img {
+      width: 60px;
+      height: auto;
+    }
+
+    .header h1 {
+      font-size: 28px;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+
+    .header p {
+      font-size: 16px;
+      opacity: 0.9;
+    }
+
+    .content {
+      padding: 30px 20px;
+    }
+
+    .section {
+      margin-bottom: 30px;
+    }
+
+    .section-title {
+      font-size: 22px;
+      font-weight: 600;
+      color: #667eea;
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .section-title .icon {
+      font-size: 24px;
+    }
+
+    /* Loading and Status States */
+    .loading {
+      text-align: center;
+      padding: 40px;
+      color: #666;
+    }
+
+    .spinner {
+      width: 40px;
+      height: 40px;
+      border: 4px solid #f3f3f3;
+      border-top: 4px solid #667eea;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin: 0 auto 20px;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    .error-message {
+      background: #fee;
+      border: 1px solid #fcc;
+      color: #c33;
+      padding: 15px;
+      border-radius: 8px;
+      margin: 20px 0;
+    }
+
+    .success-message {
+      background: #efe;
+      border: 1px solid #cfc;
+      color: #3c3;
+      padding: 15px;
+      border-radius: 8px;
+      margin: 20px 0;
+    }
+
+    /* Invoice Section */
+    .invoice-group {
+      background: #f9f9f9;
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 20px;
+      border-left: 4px solid #667eea;
+    }
+
+    .invoice-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 15px;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .invoice-title {
+      font-size: 18px;
+      font-weight: 600;
+      color: #333;
+    }
+
+    .invoice-meta {
+      font-size: 14px;
+      color: #666;
+    }
+
+    /* Category Tables */
+    .category-section {
+      margin-bottom: 25px;
+    }
+
+    .category-header {
+      background: #667eea;
+      color: white;
+      padding: 12px 15px;
+      border-radius: 8px 8px 0 0;
+      font-weight: 600;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .category-count {
+      background: rgba(255,255,255,0.2);
+      padding: 4px 8px;
+      border-radius: 12px;
+      font-size: 12px;
+    }
+
+    .items-table {
+      width: 100%;
+      border-collapse: collapse;
+      background: white;
+    }
+
+    .items-table th,
+    .items-table td {
+      padding: 12px;
+      text-align: right;
+      border-bottom: 1px solid #eee;
+    }
+
+    .items-table th {
+      background: #f8f9fa;
+      font-weight: 600;
+      color: #555;
+      font-size: 14px;
+    }
+
+    .items-table td {
+      font-size: 14px;
+    }
+
+    .items-table tr:hover {
+      background: #f8f9ff;
+    }
+
+    .items-table tr.assigned {
+      background: #e8f5e9;
+      border-right: 3px solid #4caf50;
+    }
+
+    /* Form Controls */
+    .dc-selector {
+      width: 100%;
+      padding: 8px 12px;
+      border: 2px solid #ddd;
+      border-radius: 6px;
+      font-size: 14px;
+      background: white;
+      transition: border-color 0.3s;
+    }
+
+    .dc-selector:focus {
+      outline: none;
+      border-color: #667eea;
+      box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    }
+
+    .dc-selector:disabled {
+      background: #f5f5f5;
+      cursor: not-allowed;
+    }
+
+    /* Action Buttons */
+    .btn {
+      padding: 8px 16px;
+      border: none;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s;
+      text-decoration: none;
+      display: inline-block;
+      text-align: center;
+    }
+
+    .btn-assign {
+      background: #4caf50;
+      color: white;
+    }
+
+    .btn-assign:hover {
+      background: #45a049;
+      transform: translateY(-1px);
+    }
+
+    .btn-unassign {
+      background: #f44336;
+      color: white;
+    }
+
+    .btn-unassign:hover {
+      background: #da190b;
+      transform: translateY(-1px);
+    }
+
+    .btn:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    /* Summary Panel */
+    .summary-panel {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border-radius: 12px;
+      padding: 25px;
+      position: sticky;
+      top: 20px;
+    }
+
+    .summary-title {
+      font-size: 20px;
+      font-weight: 600;
+      margin-bottom: 20px;
+      text-align: center;
+    }
+
+    .summary-stats {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 15px;
+      margin-bottom: 25px;
+    }
+
+    .stat-item {
+      background: rgba(255,255,255,0.1);
+      padding: 15px;
+      border-radius: 8px;
+      text-align: center;
+    }
+
+    .stat-label {
+      font-size: 12px;
+      opacity: 0.8;
+      margin-bottom: 5px;
+    }
+
+    .stat-value {
+      font-size: 20px;
+      font-weight: 700;
+    }
+
+    .center-summary {
+      background: rgba(255,255,255,0.1);
+      border-radius: 8px;
+      padding: 15px;
+      margin-bottom: 10px;
+    }
+
+    .center-summary h4 {
+      margin-bottom: 10px;
+      font-size: 16px;
+    }
+
+    .center-summary ul {
+      list-style: none;
+      padding: 0;
+    }
+
+    .center-summary li {
+      padding: 3px 0;
+      font-size: 14px;
+      opacity: 0.9;
+    }
+
+    .center-total {
+      font-weight: 600;
+      margin-top: 10px;
+      text-align: center;
+      font-size: 16px;
+    }
+
+    /* Primary Action Button */
+    .primary-btn {
+      background: #4caf50;
+      color: white;
+      border: none;
+      padding: 15px 30px;
+      border-radius: 8px;
+      font-size: 16px;
+      font-weight: 600;
+      width: 100%;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+
+    .primary-btn:hover {
+      background: #45a049;
+      transform: translateY(-2px);
+      box-shadow: 0 5px 15px rgba(76, 175, 80, 0.3);
+    }
+
+    .primary-btn:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
+    }
+
+    /* Mobile Responsiveness */
+    @media (max-width: 768px) {
+      .container {
+        margin: 0;
+        border-radius: 0;
+      }
+
+      .header {
+        padding: 20px 15px;
+      }
+
+      .header h1 {
+        font-size: 24px;
+      }
+
+      .content {
+        padding: 20px 15px;
+      }
+
+      .invoice-header {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+
+      .items-table {
+        font-size: 12px;
+      }
+
+      .items-table th,
+      .items-table td {
+        padding: 8px 6px;
+      }
+
+      .summary-stats {
+        grid-template-columns: 1fr;
+      }
+
+      .summary-panel {
+        position: static;
+        margin-top: 20px;
+      }
+    }
+
+    /* Large Screen Layout */
+    @media (min-width: 1200px) {
+      .content {
+        display: grid;
+        grid-template-columns: 2fr 1fr;
+        gap: 30px;
+        align-items: start;
+      }
+
+      .invoices-section {
+        grid-column: 1;
+      }
+
+      .summary-section {
+        grid-column: 2;
+      }
+    }
+
+    /* No Results State */
+    .no-results {
+      text-align: center;
+      padding: 40px;
+      color: #666;
+    }
+
+    .no-results .icon {
+      font-size: 48px;
+      margin-bottom: 15px;
+      opacity: 0.5;
+    }
+
+    /* Currency formatting */
+    .currency {
+      font-weight: 600;
+      color: #2e7d32;
+    }
+
+    /* Empty state */
+    .empty-state {
+      text-align: center;
+      padding: 40px;
+      color: #666;
+    }
+
+    .empty-state .icon {
+      font-size: 64px;
+      margin-bottom: 20px;
+      opacity: 0.3;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- Header -->
+    <div class="header">
+      <div class="logo">
+        <img src="https://carmelcayouf.com/wp-content/uploads/2025/06/g.webp" alt="לוגו">
+      </div>
+      <h1>שיוך פריטי חשבונית למוקדי נזק</h1>
+      <p>שייך פריטים מהחשבונית למוקדי הנזק המתאימים</p>
+    </div>
+
+    <div class="content">
+      <!-- Main Content Area -->
+      <div class="invoices-section">
+        <!-- Loading State -->
+        <div id="loading-state" class="loading">
+          <div class="spinner"></div>
+          <p>טוען נתוני חשבוניות...</p>
+        </div>
+
+        <!-- Error State -->
+        <div id="error-state" class="error-message" style="display: none;">
+          <strong>שגיאה:</strong> <span id="error-message"></span>
+        </div>
+
+        <!-- Success Messages -->
+        <div id="success-state" class="success-message" style="display: none;">
+          <span id="success-message"></span>
+        </div>
+
+        <!-- No Results State -->
+        <div id="no-results-state" class="no-results" style="display: none;">
+          <div class="icon">📄</div>
+          <h3>לא נמצאו חשבוניות</h3>
+          <p>לא נמצאו חשבוניות עבור תיק זה. אנא העלה חשבוניות תחילה.</p>
+        </div>
+
+        <!-- Invoices Content -->
+        <div id="invoices-content" style="display: none;">
+          <!-- Dynamic content will be inserted here -->
+        </div>
+      </div>
+
+      <!-- Summary Panel -->
+      <div class="summary-section">
+        <div class="summary-panel">
+          <div class="summary-title">סיכום שיוכים</div>
+          
+          <div class="summary-stats">
+            <div class="stat-item">
+              <div class="stat-label">סה"כ שיוכים</div>
+              <div class="stat-value" id="total-assignments">0</div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-label">סה"כ עלות</div>
+              <div class="stat-value" id="total-cost">₪0</div>
+            </div>
+          </div>
+
+          <div id="assignments-by-center">
+            <div class="empty-state">
+              <div class="icon">📋</div>
+              <p>טרם בוצעו שיוכים</p>
+            </div>
+          </div>
+
+          <button id="save-and-continue-btn" class="primary-btn" disabled>
+            שמור שיוכים והמשך לדוח סופי
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SESSION 86: Invoice Assignment Logic -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="helper.js"></script>
+  <script>
+    // SESSION 86: Global State Management
+    let currentCase = null;
+    let invoiceLines = [];
+    let damageCenters = [];
+    let existingAssignments = new Map();
+    let assignmentStats = {
+      totalAssignments: 0,
+      totalCost: 0,
+      byCenter: {}
+    };
+
+    // SESSION 86: Initialize on page load
+    document.addEventListener('DOMContentLoaded', async () => {
+      console.log('🚀 SESSION 86: Invoice Assignment UI Starting...');
+      await initializeAssignmentUI();
+    });
+
+    /**
+     * SESSION 86: Initialize the assignment UI
+     */
+    async function initializeAssignmentUI() {
+      try {
+        showLoading('טוען נתונים...');
+
+        // Get current case from helper or URL params
+        currentCase = await getCurrentCase();
+        if (!currentCase) {
+          showError('לא נמצא תיק פעיל. אנא בחר תיק תחילה.');
+          return;
+        }
+
+        console.log('📋 SESSION 86: Current case:', currentCase);
+
+        // Load damage centers
+        damageCenters = await loadDamageCenters(currentCase.id);
+        if (!damageCenters || damageCenters.length === 0) {
+          showError('לא נמצאו מוקדי נזק. נא ליצור מוקדי נזק תחילה.');
+          return;
+        }
+
+        console.log('🎯 SESSION 86: Loaded damage centers:', damageCenters.length);
+
+        // Load invoice lines for this case only
+        invoiceLines = await loadInvoiceLinesForCase(currentCase.id);
+        if (!invoiceLines || invoiceLines.length === 0) {
+          showNoResults();
+          return;
+        }
+
+        console.log('📄 SESSION 86: Loaded invoice lines:', invoiceLines.length);
+
+        // Load existing assignments
+        existingAssignments = await loadExistingAssignments(currentCase.id);
+        console.log('🔗 SESSION 86: Existing assignments:', existingAssignments.size);
+
+        // Initialize helper.final_report if needed
+        initializeFinalReportHelper();
+
+        // Render the UI
+        renderInvoicesContent();
+        updateSummaryPanel();
+        attachEventListeners();
+
+        hideLoading();
+        showContent();
+
+      } catch (error) {
+        console.error('❌ SESSION 86: Initialization failed:', error);
+        showError('שגיאה בטעינת הנתונים: ' + error.message);
+      }
+    }
+
+    /**
+     * SESSION 86: Get current case from helper or URL
+     */
+    async function getCurrentCase() {
+      // Try to get from helper first
+      if (window.helper && window.helper.plate) {
+        return {
+          id: window.helper.case_id || generateCaseId(),
+          plate: window.helper.plate,
+          owner: window.helper.owner || ''
+        };
+      }
+
+      // Try URL parameters
+      const urlParams = new URLSearchParams(window.location.search);
+      const caseId = urlParams.get('case_id');
+      const plate = urlParams.get('plate');
+      
+      if (caseId && plate) {
+        return { id: caseId, plate: plate, owner: '' };
+      }
+
+      // Try session storage
+      const stored = sessionStorage.getItem('currentCase');
+      if (stored) {
+        return JSON.parse(stored);
+      }
+
+      return null;
+    }
+
+    /**
+     * SESSION 86: Load damage centers from helper
+     */
+    async function loadDamageCenters(caseId) {
+      // Primary: Load from helper.damage_centers
+      if (window.helper && window.helper.damage_centers) {
+        return window.helper.damage_centers;
+      }
+
+      // Fallback: Load from helper.centers
+      if (window.helper && window.helper.centers) {
+        return window.helper.centers;
+      }
+
+      // Last resort: Create dummy center for testing
+      return [{
+        Id: 'dc_1',
+        'Damage center Number': '1',
+        Location: 'מוקד נזק כללי',
+        Description: 'מוקד נזק ראשי'
+      }];
+    }
+
+    /**
+     * SESSION 86: Load invoice lines for specific case only
+     */
+    async function loadInvoiceLinesForCase(caseId) {
+      try {
+        // Get all invoices for this case only
+        const { data: invoices, error: invError } = await window.supabase
+          .from('invoices')
+          .select('id, invoice_number, supplier_name, plate, total_amount')
+          .eq('case_id', caseId);
+
+        if (invError) throw invError;
+        if (!invoices || invoices.length === 0) {
+          console.log('📄 SESSION 86: No invoices found for case:', caseId);
+          return [];
+        }
+
+        console.log('📄 SESSION 86: Found invoices for case:', invoices.length);
+
+        // Get all invoice lines for these invoices
+        const invoiceIds = invoices.map(inv => inv.id);
+        const { data: lines, error: linesError } = await window.supabase
+          .from('invoice_lines')
+          .select('*')
+          .in('invoice_id', invoiceIds)
+          .order('line_number', { ascending: true });
+
+        if (linesError) throw linesError;
+
+        // Enrich lines with invoice info
+        const enrichedLines = lines.map(line => {
+          const invoice = invoices.find(inv => inv.id === line.invoice_id);
+          return {
+            ...line,
+            _invoice_number: invoice?.invoice_number,
+            _supplier_name: invoice?.supplier_name,
+            _plate: invoice?.plate,
+            _invoice_total: invoice?.total_amount
+          };
+        });
+
+        console.log('📄 SESSION 86: Loaded invoice lines:', enrichedLines.length);
+        return enrichedLines;
+
+      } catch (error) {
+        console.error('❌ SESSION 86: Failed to load invoice lines:', error);
+        throw error;
+      }
+    }
+
+    /**
+     * SESSION 86: Load existing assignments from database
+     */
+    async function loadExistingAssignments(caseId) {
+      try {
+        const { data: mappings, error } = await window.supabase
+          .from('invoice_damage_center_mappings')
+          .select('*')
+          .eq('case_id', caseId)
+          .eq('mapping_status', 'pending');
+
+        if (error) throw error;
+
+        const assignmentsMap = new Map();
+        if (mappings) {
+          mappings.forEach(mapping => {
+            assignmentsMap.set(mapping.invoice_line_id, mapping.damage_center_id);
+          });
+        }
+
+        return assignmentsMap;
+      } catch (error) {
+        console.error('❌ SESSION 86: Failed to load existing assignments:', error);
+        return new Map();
+      }
+    }
+
+    /**
+     * SESSION 86: Initialize helper.final_report structure
+     */
+    function initializeFinalReportHelper() {
+      if (!window.helper) {
+        window.helper = {};
+      }
+
+      if (!window.helper.final_report) {
+        window.helper.final_report = {
+          case_id: currentCase.id,
+          plate: currentCase.plate,
+          invoice_assignments: [],
+          assignments_by_center: {},
+          total_assignments: 0,
+          pending_assignments: 0,
+          applied_assignments: 0,
+          total_assigned_cost: 0,
+          last_assignment_at: null,
+          last_applied_at: null
+        };
+      }
+    }
+
+    /**
+     * SESSION 86: Render invoices content
+     */
+    function renderInvoicesContent() {
+      const container = document.getElementById('invoices-content');
+      
+      // Group lines by invoice
+      const invoiceGroups = groupLinesByInvoice(invoiceLines);
+      
+      let html = '';
+      invoiceGroups.forEach(group => {
+        html += renderInvoiceGroup(group);
+      });
+
+      container.innerHTML = html;
+    }
+
+    /**
+     * SESSION 86: Group invoice lines by invoice
+     */
+    function groupLinesByInvoice(lines) {
+      const grouped = {};
+      
+      lines.forEach(line => {
+        const invoiceId = line.invoice_id;
+        if (!grouped[invoiceId]) {
+          grouped[invoiceId] = {
+            invoice_id: invoiceId,
+            invoice_number: line._invoice_number,
+            supplier_name: line._supplier_name,
+            plate: line._plate,
+            total_amount: line._invoice_total,
+            parts: [],
+            works: [],
+            repairs: [],
+            other: []
+          };
+        }
+
+        // Categorize lines
+        const category = line.item_category || 'other';
+        if (category === 'part') {
+          grouped[invoiceId].parts.push(line);
+        } else if (category === 'work') {
+          grouped[invoiceId].works.push(line);
+        } else if (category === 'repair') {
+          grouped[invoiceId].repairs.push(line);
+        } else {
+          grouped[invoiceId].other.push(line);
+        }
+      });
+
+      return Object.values(grouped);
+    }
+
+    /**
+     * SESSION 86: Render single invoice group
+     */
+    function renderInvoiceGroup(group) {
+      const totalLines = group.parts.length + group.works.length + group.repairs.length + group.other.length;
+      
+      return `
+        <div class="invoice-group">
+          <div class="invoice-header">
+            <div class="invoice-title">
+              ${group.supplier_name || 'ספק לא ידוע'} - חשבונית ${group.invoice_number || 'לא מזוהה'}
+            </div>
+            <div class="invoice-meta">
+              רכב: ${group.plate} | סה"כ פריטים: ${totalLines} | סכום: ${formatCurrency(group.total_amount || 0)}
+            </div>
+          </div>
+
+          ${group.parts.length > 0 ? renderCategorySection('חלקים', group.parts, 'part') : ''}
+          ${group.works.length > 0 ? renderCategorySection('עבודות', group.works, 'work') : ''}
+          ${group.repairs.length > 0 ? renderCategorySection('תיקונים', group.repairs, 'repair') : ''}
+          ${group.other.length > 0 ? renderCategorySection('אחר', group.other, 'other') : ''}
+        </div>
+      `;
+    }
+
+    /**
+     * SESSION 86: Render category section (parts/works/repairs)
+     */
+    function renderCategorySection(title, items, category) {
+      const dcOptions = damageCenters.map(dc => 
+        `<option value="${dc.Id || dc.id}">${dc['Damage center Number'] || dc.number || '?'} - ${dc.Description || dc.Location || 'ללא תיאור'}</option>`
+      ).join('');
+
+      return `
+        <div class="category-section">
+          <div class="category-header">
+            <span>${title}</span>
+            <span class="category-count">${items.length}</span>
+          </div>
+          <table class="items-table">
+            <thead>
+              <tr>
+                <th>תיאור</th>
+                <th>כמות</th>
+                <th>מחיר יחידה</th>
+                <th>סה"כ</th>
+                <th>מוקד נזק</th>
+                <th>פעולות</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${items.map(item => renderItemRow(item, dcOptions)).join('')}
+            </tbody>
+          </table>
+        </div>
+      `;
+    }
+
+    /**
+     * SESSION 86: Render single item row
+     */
+    function renderItemRow(item, dcOptions) {
+      const isAssigned = existingAssignments.has(item.id);
+      const assignedDcId = existingAssignments.get(item.id);
+      const rowClass = isAssigned ? 'assigned' : '';
+
+      return `
+        <tr class="${rowClass}" data-line-id="${item.id}" data-category="${item.item_category || 'other'}">
+          <td>${item.description || 'ללא תיאור'}</td>
+          <td>${item.quantity || 1}</td>
+          <td>${formatCurrency(item.unit_price || 0)}</td>
+          <td>${formatCurrency(item.line_total || 0)}</td>
+          <td>
+            <select class="dc-selector" ${isAssigned ? 'disabled' : ''}>
+              <option value="">בחר מוקד נזק...</option>
+              ${dcOptions}
+            </select>
+          </td>
+          <td>
+            ${isAssigned 
+              ? `<button class="btn btn-unassign" data-dc-id="${assignedDcId}">בטל שיוך</button>`
+              : `<button class="btn btn-assign">שייך</button>`
+            }
+          </td>
+        </tr>
+      `;
+    }
+
+    /**
+     * SESSION 86: Update summary panel
+     */
+    function updateSummaryPanel() {
+      // Calculate stats
+      let totalAssignments = 0;
+      let totalCost = 0;
+      const byCenter = {};
+
+      existingAssignments.forEach((dcId, lineId) => {
+        const line = invoiceLines.find(l => l.id === lineId);
+        if (line) {
+          totalAssignments++;
+          totalCost += parseFloat(line.line_total || 0);
+
+          if (!byCenter[dcId]) {
+            const dc = damageCenters.find(d => (d.Id || d.id) === dcId);
+            byCenter[dcId] = {
+              name: `${dc?.['Damage center Number'] || dc?.number || '?'} - ${dc?.Description || dc?.Location || 'ללא תיאור'}`,
+              count: 0,
+              cost: 0
+            };
+          }
+          byCenter[dcId].count++;
+          byCenter[dcId].cost += parseFloat(line.line_total || 0);
+        }
+      });
+
+      // Update UI
+      document.getElementById('total-assignments').textContent = totalAssignments;
+      document.getElementById('total-cost').textContent = formatCurrency(totalCost);
+
+      const centerContainer = document.getElementById('assignments-by-center');
+      if (totalAssignments === 0) {
+        centerContainer.innerHTML = `
+          <div class="empty-state">
+            <div class="icon">📋</div>
+            <p>טרם בוצעו שיוכים</p>
+          </div>
+        `;
+      } else {
+        let centerHtml = '';
+        Object.values(byCenter).forEach(center => {
+          centerHtml += `
+            <div class="center-summary">
+              <h4>${center.name}</h4>
+              <ul>
+                <li>${center.count} פריטים</li>
+              </ul>
+              <div class="center-total">${formatCurrency(center.cost)}</div>
+            </div>
+          `;
+        });
+        centerContainer.innerHTML = centerHtml;
+      }
+
+      // Enable/disable save button
+      const saveBtn = document.getElementById('save-and-continue-btn');
+      saveBtn.disabled = totalAssignments === 0;
+      
+      // Store stats globally
+      assignmentStats = { totalAssignments, totalCost, byCenter };
+    }
+
+    /**
+     * SESSION 86: Attach event listeners
+     */
+    function attachEventListeners() {
+      // Assign buttons
+      document.querySelectorAll('.btn-assign').forEach(btn => {
+        btn.addEventListener('click', handleAssignClick);
+      });
+
+      // Unassign buttons
+      document.querySelectorAll('.btn-unassign').forEach(btn => {
+        btn.addEventListener('click', handleUnassignClick);
+      });
+
+      // Save and continue button
+      document.getElementById('save-and-continue-btn').addEventListener('click', saveAndContinue);
+    }
+
+    /**
+     * SESSION 86: Handle assign button click
+     */
+    async function handleAssignClick(event) {
+      const btn = event.target;
+      const row = btn.closest('tr');
+      const lineId = row.dataset.lineId;
+      const category = row.dataset.category;
+      const selector = row.querySelector('.dc-selector');
+      const dcId = selector.value;
+
+      if (!dcId) {
+        showError('נא לבחור מוקד נזק');
+        return;
+      }
+
+      try {
+        btn.disabled = true;
+        btn.textContent = 'שומר...';
+
+        // Create mapping in database
+        const { error } = await window.supabase
+          .from('invoice_damage_center_mappings')
+          .insert({
+            invoice_id: invoiceLines.find(l => l.id === lineId).invoice_id,
+            invoice_line_id: lineId,
+            case_id: currentCase.id,
+            damage_center_id: dcId,
+            field_type: category,
+            mapping_status: 'pending',
+            mapped_by: window.helper?.user_id || null
+          });
+
+        if (error) throw error;
+
+        // Update local state
+        existingAssignments.set(lineId, dcId);
+
+        // Update UI
+        row.classList.add('assigned');
+        selector.disabled = true;
+        btn.className = 'btn btn-unassign';
+        btn.textContent = 'בטל שיוך';
+        btn.onclick = handleUnassignClick;
+
+        updateSummaryPanel();
+        showSuccess('השיוך נשמר בהצלחה');
+
+      } catch (error) {
+        console.error('❌ SESSION 86: Assign failed:', error);
+        showError('שגיאה בשיוך: ' + error.message);
+        btn.disabled = false;
+        btn.textContent = 'שייך';
+      }
+    }
+
+    /**
+     * SESSION 86: Handle unassign button click
+     */
+    async function handleUnassignClick(event) {
+      const btn = event.target;
+      const row = btn.closest('tr');
+      const lineId = row.dataset.lineId;
+
+      try {
+        btn.disabled = true;
+        btn.textContent = 'מוחק...';
+
+        // Delete from database
+        const { error } = await window.supabase
+          .from('invoice_damage_center_mappings')
+          .delete()
+          .eq('invoice_line_id', lineId)
+          .eq('case_id', currentCase.id)
+          .eq('mapping_status', 'pending');
+
+        if (error) throw error;
+
+        // Update local state
+        existingAssignments.delete(lineId);
+
+        // Update UI
+        row.classList.remove('assigned');
+        row.querySelector('.dc-selector').disabled = false;
+        btn.className = 'btn btn-assign';
+        btn.textContent = 'שייך';
+        btn.onclick = handleAssignClick;
+
+        updateSummaryPanel();
+        showSuccess('השיוך בוטל בהצלחה');
+
+      } catch (error) {
+        console.error('❌ SESSION 86: Unassign failed:', error);
+        showError('שגיאה בביטול שיוך: ' + error.message);
+        btn.disabled = false;
+        btn.textContent = 'בטל שיוך';
+      }
+    }
+
+    /**
+     * SESSION 86: Save assignments and continue to final report
+     */
+    function saveAndContinue() {
+      // Update helper.final_report
+      if (window.helper && window.helper.final_report) {
+        window.helper.final_report.total_assignments = assignmentStats.totalAssignments;
+        window.helper.final_report.pending_assignments = assignmentStats.totalAssignments;
+        window.helper.final_report.total_assigned_cost = assignmentStats.totalCost;
+        window.helper.final_report.assignments_by_center = assignmentStats.byCenter;
+        window.helper.final_report.last_assignment_at = new Date().toISOString();
+      }
+
+      // Save to session storage
+      sessionStorage.setItem('helper_final_report', JSON.stringify(window.helper.final_report));
+      sessionStorage.setItem('currentCase', JSON.stringify(currentCase));
+
+      // Navigate to final report builder
+      window.location.href = 'final-report-builder.html';
+    }
+
+    // Utility Functions
+    function formatCurrency(amount) {
+      return new Intl.NumberFormat('he-IL', {
+        style: 'currency',
+        currency: 'ILS',
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 0
+      }).format(amount || 0);
+    }
+
+    function generateCaseId() {
+      return 'case_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+    }
+
+    function showLoading(message) {
+      document.getElementById('loading-state').style.display = 'block';
+      document.getElementById('loading-state').querySelector('p').textContent = message;
+      hideOtherStates();
+    }
+
+    function hideLoading() {
+      document.getElementById('loading-state').style.display = 'none';
+    }
+
+    function showContent() {
+      document.getElementById('invoices-content').style.display = 'block';
+    }
+
+    function showError(message) {
+      document.getElementById('error-message').textContent = message;
+      document.getElementById('error-state').style.display = 'block';
+      hideOtherStates();
+    }
+
+    function showSuccess(message) {
+      document.getElementById('success-message').textContent = message;
+      document.getElementById('success-state').style.display = 'block';
+      setTimeout(() => {
+        document.getElementById('success-state').style.display = 'none';
+      }, 3000);
+    }
+
+    function showNoResults() {
+      document.getElementById('no-results-state').style.display = 'block';
+      hideOtherStates();
+    }
+
+    function hideOtherStates() {
+      document.getElementById('invoices-content').style.display = 'none';
+      document.getElementById('no-results-state').style.display = 'none';
+      document.getElementById('error-state').style.display = 'none';
+    }
+  </script>
+</body>
+</html>
