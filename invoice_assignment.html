@@ -806,30 +806,39 @@
 
         console.log('📄 SESSION 86: Found invoices for case:', invoices.length);
 
-        // Get all invoice lines for these invoices
-        const invoiceIds = invoices.map(inv => inv.id);
-        const { data: lines, error: linesError } = await window.supabase
-          .from('invoice_lines')
-          .select('*')
-          .in('invoice_id', invoiceIds)
-          .order('line_number', { ascending: true });
+        // SESSION 86 FIX: Get invoice lines for each invoice separately (no .in() method)
+        let allLines = [];
+        for (const invoice of invoices) {
+          console.log('📄 SESSION 86: Loading lines for invoice:', invoice.id);
+          
+          const { data: lines, error: linesError } = await window.supabase
+            .from('invoice_lines')
+            .select('*')
+            .eq('invoice_id', invoice.id)
+            .order('line_number', { ascending: true });
 
-        if (linesError) throw linesError;
+          if (linesError) {
+            console.error('❌ SESSION 86: Error loading lines for invoice:', invoice.id, linesError);
+            continue; // Skip this invoice but continue with others
+          }
 
-        // Enrich lines with invoice info
-        const enrichedLines = lines.map(line => {
-          const invoice = invoices.find(inv => inv.id === line.invoice_id);
-          return {
-            ...line,
-            _invoice_number: invoice?.invoice_number,
-            _supplier_name: invoice?.supplier_name,
-            _plate: invoice?.plate,
-            _invoice_total: invoice?.total_amount
-          };
-        });
+          if (lines && lines.length > 0) {
+            // Enrich lines with invoice info
+            const enrichedLines = lines.map(line => ({
+              ...line,
+              _invoice_number: invoice.invoice_number,
+              _supplier_name: invoice.supplier_name,
+              _plate: invoice.plate,
+              _invoice_total: invoice.total_amount
+            }));
+            
+            allLines = allLines.concat(enrichedLines);
+            console.log('📄 SESSION 86: Added', enrichedLines.length, 'lines from invoice:', invoice.invoice_number);
+          }
+        }
 
-        console.log('📄 SESSION 86: Loaded invoice lines:', enrichedLines.length);
-        return enrichedLines;
+        console.log('📄 SESSION 86: Total loaded invoice lines:', allLines.length);
+        return allLines;
 
       } catch (error) {
         console.error('❌ SESSION 86: Failed to load invoice lines:', error);
