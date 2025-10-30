@@ -875,6 +875,10 @@
 
   <div class="footer-btns">
     <button class="btn btn-secondary" onclick="window.location.href='selection.html'">🏠 עמוד הבית</button>
+    <!-- SESSION 86: Add navigation to invoice assignment UI -->
+    <button id="assign-to-damage-centers-btn" class="btn btn-primary" onclick="navigateToInvoiceAssignment()" style="display: none;">
+      🔗 שיוך למוקדי נזק
+    </button>
     <button class="btn btn-danger" onclick="logout()">🚪 יציאה</button>
   </div>
 
@@ -3751,6 +3755,66 @@ document.addEventListener('DOMContentLoaded', () => {
       icon.textContent = '▼';
     }
   };
+
+  // SESSION 86: Navigation to invoice assignment UI
+  window.navigateToInvoiceAssignment = function() {
+    console.log('🔗 SESSION 86: Navigating to invoice assignment UI...');
+    
+    // Preserve current case context
+    const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+    if (helper.case_info?.supabase_case_id && helper.plate) {
+      const caseData = {
+        id: helper.case_info.supabase_case_id,
+        plate: helper.plate,
+        owner: helper.owner || helper.case_info?.owner || ''
+      };
+      sessionStorage.setItem('currentCase', JSON.stringify(caseData));
+      console.log('💾 SESSION 86: Saved case context for assignment UI:', caseData);
+    }
+    
+    // Navigate to assignment UI
+    window.location.href = 'invoice_assignment.html';
+  };
+
+  // SESSION 86: Check for invoices and show assignment button
+  async function checkAndShowAssignmentButton() {
+    try {
+      const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+      const caseId = helper.case_info?.supabase_case_id;
+      
+      if (!caseId || !window.supabase) {
+        return; // No case ID or Supabase not loaded
+      }
+
+      console.log('🔍 SESSION 86: Checking for invoices in case:', caseId);
+
+      // Check if there are any invoices for this case
+      const { data: invoices, error } = await window.supabase
+        .from('invoices')
+        .select('id')
+        .eq('case_id', caseId)
+        .limit(1);
+
+      if (error) {
+        console.error('❌ SESSION 86: Error checking invoices:', error);
+        return;
+      }
+
+      const assignBtn = document.getElementById('assign-to-damage-centers-btn');
+      if (invoices && invoices.length > 0) {
+        console.log('✅ SESSION 86: Found invoices, showing assignment button');
+        assignBtn.style.display = 'inline-block';
+      } else {
+        console.log('📄 SESSION 86: No invoices found, hiding assignment button');
+        assignBtn.style.display = 'none';
+      }
+    } catch (error) {
+      console.error('❌ SESSION 86: Error in checkAndShowAssignmentButton:', error);
+    }
+  }
+
+  // SESSION 86: Check for assignment button on load and after invoice operations
+  setTimeout(checkAndShowAssignmentButton, 2000); // Delay to ensure Supabase is loaded
 });
 
 </script>

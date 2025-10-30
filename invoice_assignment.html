@@ -474,8 +474,9 @@
       <div class="logo">
         <img src="https://carmelcayouf.com/wp-content/uploads/2025/06/g.webp" alt="לוגו">
       </div>
-      <h1>שיוך פריטי חשבונית למוקדי נזק</h1>
-      <p>שייך פריטים מהחשבונית למוקדי הנזק המתאימים</p>
+      <h1>ירון כיוף - שמאות וייעוץ</h1>
+      <p>שמאות והערכת נזקי רכב ורכוש</p>
+      <h2 style="font-size: 20px; margin-top: 15px; color: rgba(255,255,255,0.9);">שיוך פריטי חשבונית למוקדי נזק</h2>
     </div>
 
     <div class="content">
@@ -541,9 +542,19 @@
     </div>
   </div>
 
-  <!-- SESSION 86: Invoice Assignment Logic -->
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <!-- SESSION 86: Add footer with business branding -->
+  <div class="footer" style="text-align: center; font-size: 12px; margin-top: 20px; color: #95a5a6; padding: 20px;">
+    @2025 Carmel Cayouf. All rights reserved. SmartVal Pro System by Eval ©
+  </div>
+
+  <!-- SESSION 86: Load helper.js first, then Supabase -->
   <script src="helper.js"></script>
+  <script type="module">
+    // Import Supabase client and expose globally for non-module code
+    import { supabase } from './lib/supabaseClient.js';
+    window.supabase = supabase;
+    console.log('✅ SESSION 86: Supabase client loaded and exposed globally');
+  </script>
   <script>
     // SESSION 86: Global State Management
     let currentCase = null;
@@ -556,9 +567,24 @@
       byCenter: {}
     };
 
-    // SESSION 86: Initialize on page load
+    // SESSION 86: Initialize on page load with delay for Supabase
     document.addEventListener('DOMContentLoaded', async () => {
       console.log('🚀 SESSION 86: Invoice Assignment UI Starting...');
+      
+      // Wait for Supabase to be loaded
+      let attempts = 0;
+      while (!window.supabase && attempts < 10) {
+        console.log('⏳ Waiting for Supabase client...');
+        await new Promise(resolve => setTimeout(resolve, 200));
+        attempts++;
+      }
+      
+      if (!window.supabase) {
+        showError('שגיאה: לא ניתן לטעון את מערכת הנתונים');
+        return;
+      }
+      
+      console.log('✅ SESSION 86: Supabase client ready, initializing...');
       await initializeAssignmentUI();
     });
 
@@ -621,30 +647,74 @@
      * SESSION 86: Get current case from helper or URL
      */
     async function getCurrentCase() {
+      console.log('🔍 SESSION 86: Getting current case...');
+      
       // Try to get from helper first
-      if (window.helper && window.helper.plate) {
-        return {
-          id: window.helper.case_id || generateCaseId(),
+      console.log('📋 SESSION 86: Checking window.helper:', !!window.helper);
+      if (window.helper) {
+        console.log('📋 SESSION 86: Helper data:', {
           plate: window.helper.plate,
-          owner: window.helper.owner || ''
-        };
+          case_id: window.helper.case_id,
+          case_info: window.helper.case_info
+        });
+        
+        if (window.helper.plate) {
+          const caseData = {
+            id: window.helper.case_info?.supabase_case_id || window.helper.case_id || generateCaseId(),
+            plate: window.helper.plate,
+            owner: window.helper.owner || window.helper.case_info?.owner || ''
+          };
+          console.log('✅ SESSION 86: Using helper case data:', caseData);
+          return caseData;
+        }
       }
 
       // Try URL parameters
+      console.log('🔗 SESSION 86: Checking URL parameters...');
       const urlParams = new URLSearchParams(window.location.search);
       const caseId = urlParams.get('case_id');
       const plate = urlParams.get('plate');
       
       if (caseId && plate) {
-        return { id: caseId, plate: plate, owner: '' };
+        const urlData = { id: caseId, plate: plate, owner: '' };
+        console.log('✅ SESSION 86: Using URL case data:', urlData);
+        return urlData;
       }
 
       // Try session storage
+      console.log('💾 SESSION 86: Checking session storage...');
       const stored = sessionStorage.getItem('currentCase');
       if (stored) {
-        return JSON.parse(stored);
+        try {
+          const sessionData = JSON.parse(stored);
+          console.log('✅ SESSION 86: Using session case data:', sessionData);
+          return sessionData;
+        } catch (e) {
+          console.error('❌ SESSION 86: Failed to parse session case data:', e);
+        }
       }
 
+      // Try helper from session storage
+      console.log('💾 SESSION 86: Checking helper in session storage...');
+      const helperStored = sessionStorage.getItem('helper');
+      if (helperStored) {
+        try {
+          const helper = JSON.parse(helperStored);
+          if (helper.plate) {
+            const helperData = {
+              id: helper.case_info?.supabase_case_id || helper.case_id || generateCaseId(),
+              plate: helper.plate,
+              owner: helper.owner || helper.case_info?.owner || ''
+            };
+            console.log('✅ SESSION 86: Using session helper case data:', helperData);
+            return helperData;
+          }
+        } catch (e) {
+          console.error('❌ SESSION 86: Failed to parse session helper:', e);
+        }
+      }
+
+      console.log('❌ SESSION 86: No case data found anywhere');
       return null;
     }
 
