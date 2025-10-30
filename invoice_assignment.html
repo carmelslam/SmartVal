@@ -1331,7 +1331,7 @@
         const fieldType = (categoryFromMeta || invoiceLine?.item_category || 'other').toLowerCase();
         
         // Create mapping in database
-        const { error } = await window.supabase
+        const { data: mapping, error } = await window.supabase
           .from('invoice_damage_center_mappings')
           .insert({
             invoice_id: invoiceLine.invoice_id,
@@ -1341,7 +1341,11 @@
             field_type: fieldType,
             mapping_status: 'pending',
             mapped_by: window.helper?.user_id || null
-          });
+          })
+          .select()
+          .single();
+          
+        console.log('💾 Database mapping result:', { mapping, error });
 
         if (error) throw error;
 
@@ -1349,12 +1353,20 @@
         existingAssignments.set(lineId, dcId);
         
         // Update helper.final_report with new assignment
+        console.log('🔍 Current helper state:', {
+          hasHelper: !!window.helper,
+          hasFinalReport: !!window.helper?.final_report,
+          hasAssignments: !!window.helper?.final_report?.invoice_assignments,
+          assignmentsLength: window.helper?.final_report?.invoice_assignments?.length || 0
+        });
+        
         if (!window.helper.final_report.invoice_assignments) {
           window.helper.final_report.invoice_assignments = [];
+          console.log('⚙️ Initialized empty invoice_assignments array');
         }
         
         const assignment = {
-          assignment_id: Math.random().toString(36).substr(2, 9), // Generate temp ID
+          assignment_id: mapping?.id || Math.random().toString(36).substr(2, 9),
           invoice_line_id: lineId,
           invoice_id: invoiceLine.invoice_id,
           damage_center_id: dcId,
@@ -1369,6 +1381,11 @@
         
         window.helper.final_report.invoice_assignments.push(assignment);
         console.log('✅ Added assignment to helper.final_report:', assignment);
+        console.log('📊 New assignments count:', window.helper.final_report.invoice_assignments.length);
+        
+        // Save helper to sessionStorage immediately
+        sessionStorage.setItem('helper', JSON.stringify(window.helper));
+        console.log('💾 Saved updated helper to sessionStorage');
 
         // Update UI
         row.classList.add('assigned');
@@ -1420,9 +1437,18 @@
             a => a.invoice_line_id === lineId && a.assignment_status === 'pending'
           );
           if (assignmentIndex !== -1) {
-            window.helper.final_report.invoice_assignments.splice(assignmentIndex, 1);
-            console.log('✅ Removed assignment from helper.final_report for line:', lineId);
+            const removedAssignment = window.helper.final_report.invoice_assignments.splice(assignmentIndex, 1)[0];
+            console.log('✅ Removed assignment from helper.final_report:', removedAssignment);
+            console.log('📊 Remaining assignments count:', window.helper.final_report.invoice_assignments.length);
+            
+            // Save helper to sessionStorage immediately
+            sessionStorage.setItem('helper', JSON.stringify(window.helper));
+            console.log('💾 Saved updated helper to sessionStorage after removal');
+          } else {
+            console.log('⚠️ Assignment not found in helper for line:', lineId);
           }
+        } else {
+          console.log('⚠️ No helper.final_report.invoice_assignments found');
         }
 
         // Update UI
