@@ -10,11 +10,11 @@ on:
       signed_url:
         description: Signed URL to PDF (temporary)
         required: true
-        default: https://m-pines.com/wp-content/uploads/2025/06/מחירון-06-25.pdf
+        default: "https://m-pines.com/wp-content/uploads/2025/06/מחירון-06-25.pdf"
       version_date:
         description: Version date (YYYY-MM-DD)
         required: true
-        default: 2025-06-01
+        default: "2025-06-01"
       source_path:
         description: Raw storage path or label
         required: true
@@ -56,18 +56,16 @@ jobs:
         with:
           python-version: '3.11'
 
-- name: Install dependencies
-  run: |
-    python -m pip install --upgrade pip
-    pip install requests pdfplumber supabase
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install requests pdfplumber supabase
 
-# Your repo has a folder named "supabase" which shadows the SDK.
-# Rename it during CI so `from supabase import create_client` imports the package.
-- name: Avoid local 'supabase' package shadowing
-  run: |
-    if [ -d "supabase" ]; then mv supabase supabase_project_ci; fi
+      # Your repo has a folder named "supabase" that shadows the SDK package.
+      - name: Avoid local 'supabase' package shadowing
+        run: |
+          if [ -d "supabase" ]; then mv supabase supabase_project_ci; fi
 
-- name: Run parser
-  run: |
-    python parse_mpines_fixed.py
-
+      - name: Run parser
+        run: |
+          python parse_mpines_fixed.py
