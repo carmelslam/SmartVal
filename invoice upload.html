@@ -3774,7 +3774,8 @@ class InvoiceProcessor {
     
     // SESSION 77: Collect ALL fixed field data
     const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
-    const caseId = helper.case_id;
+    const caseId = helper.case_info?.supabase_case_id || helper.case_id;  // SESSION 87: Fix case_id path
+    console.log('🆔 SESSION 87: Using case_id:', caseId);
     
     const subtotal = parseFloat(document.getElementById('manual-subtotal').textContent.replace(/[^\d.-]/g, ''));
     const vatPercent = parseFloat(document.getElementById('manual-vat-percent').value);
@@ -3927,12 +3928,12 @@ class InvoiceProcessor {
           case_id: caseId,
           plate: invoiceData['מספר רכב'],
           storage_url: null,  // No physical PDF yet (will be generated in STEP 4)
-          source: 'manual_input',
           ocr_structured_data: invoiceData,  // Store manual data as if from OCR
           ocr_status: 'manual',
           created_at: new Date().toISOString()
         };
 
+        console.log('💾 SESSION 87: Inserting to invoice_documents:', documentInsert);
         const { data: document, error: documentError } = await window.supabase
           .from('invoice_documents')
           .insert(documentInsert)
