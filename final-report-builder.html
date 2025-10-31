@@ -18699,6 +18699,17 @@
       console.log('🔍 SESSION 47: Creating differential row with data:', data);
 
       div.innerHTML = `
+        <!-- SESSION 88: Invoice Lines Dropdown -->
+        <div style="margin-bottom: 15px; padding: 10px; background: #e3f2fd; border-radius: 6px; border: 1px solid #2196f3;">
+          <label style="display: block; font-size: 12px; color: #1565c0; margin-bottom: 4px; font-weight: 600;">חשבונית - בחר פריט</label>
+          <select class="diff-invoice-line" onchange="populateFromInvoiceLine(this)" style="width:100%; padding:10px; border-radius:6px; border:1px solid #2196f3; font-size:14px; background: white;">
+            <option value="">בחר פריט מחשבונית...</option>
+          </select>
+          <div style="font-size: 11px; color: #666; margin-top: 4px;">
+            בחירת פריט תמלא אוטומטית את כל השדות בשורה
+          </div>
+        </div>
+        
         <!-- Row 1: Details (3 fields) - Responsive -->
         <div class="diff-details-row" style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 15px;">
           <div>
@@ -18824,8 +18835,203 @@
         setTimeout(saveDifferentialsToHelper, 100);
       });
       
+      // SESSION 88: Populate invoice lines dropdown after creating the row
+      setTimeout(() => {
+        populateInvoiceLinesDropdown(div);
+      }, 100);
+      
       return div;
     }
+
+    // ============================================================================
+    // SESSION 88: INVOICE LINES INTEGRATION FOR DIFFERENTIALS
+    // ============================================================================
+
+    /**
+     * Populate invoice lines dropdown in a differential row
+     */
+    async function populateInvoiceLinesDropdown(rowElement) {
+      try {
+        const dropdown = rowElement.querySelector('.diff-invoice-line');
+        if (!dropdown) return;
+
+        console.log('📋 SESSION 88: Populating invoice lines dropdown...');
+
+        // Get invoice lines from multiple sources
+        const invoiceLines = await getInvoiceLinesForCase();
+        
+        if (!invoiceLines || invoiceLines.length === 0) {
+          dropdown.innerHTML = '<option value="">אין חשבוניות זמינות</option>';
+          console.log('ℹ️ SESSION 88: No invoice lines found');
+          return;
+        }
+
+        // Build dropdown options
+        let optionsHTML = '<option value="">בחר פריט מחשבונית...</option>';
+        
+        invoiceLines.forEach((line, index) => {
+          const displayText = `${line.invoice_number || 'חשבונית'} - ${line.description || 'פריט'} (₪${(line.line_total || 0).toLocaleString()})`;
+          optionsHTML += `<option value="${index}" data-line='${JSON.stringify(line)}'>${displayText}</option>`;
+        });
+
+        dropdown.innerHTML = optionsHTML;
+        console.log(`✅ SESSION 88: Populated dropdown with ${invoiceLines.length} invoice lines`);
+
+      } catch (error) {
+        console.error('❌ SESSION 88: Error populating invoice lines dropdown:', error);
+        const dropdown = rowElement.querySelector('.diff-invoice-line');
+        if (dropdown) {
+          dropdown.innerHTML = '<option value="">שגיאה בטעינת חשבוניות</option>';
+        }
+      }
+    }
+
+    /**
+     * Get invoice lines for the current case from multiple sources
+     */
+    async function getInvoiceLinesForCase() {
+      try {
+        const helper = window.helper || {};
+        const caseId = helper.meta?.case_id;
+        
+        let allLines = [];
+
+        // Source 1: Check helper.invoices (from invoice upload)
+        if (helper.invoices && Array.isArray(helper.invoices)) {
+          helper.invoices.forEach(invoice => {
+            if (invoice.lines && Array.isArray(invoice.lines)) {
+              invoice.lines.forEach(line => {
+                allLines.push({
+                  ...line,
+                  invoice_id: invoice.id,
+                  invoice_number: invoice.invoice_number || invoice.number,
+                  supplier_name: invoice.supplier_name,
+                  source: 'helper_invoices'
+                });
+              });
+            }
+          });
+        }
+
+        // Source 2: Check helper.final_report.invoice_assignments
+        if (helper.final_report?.invoice_assignments && Array.isArray(helper.final_report.invoice_assignments)) {
+          helper.final_report.invoice_assignments.forEach(assignment => {
+            if (assignment.lines && Array.isArray(assignment.lines)) {
+              assignment.lines.forEach(line => {
+                allLines.push({
+                  ...line,
+                  invoice_id: assignment.invoice_id || assignment.id,
+                  invoice_number: assignment.invoice_number || assignment.number,
+                  supplier_name: assignment.supplier_name,
+                  source: 'helper_final_report'
+                });
+              });
+            }
+          });
+        }
+
+        // Source 3: Query Supabase for current case
+        if (window.supabase && caseId && allLines.length === 0) {
+          const { data: invoices, error } = await window.supabase
+            .from('invoices')
+            .select(`
+              id,
+              invoice_number,
+              supplier_name,
+              lines:invoice_lines(*)
+            `)
+            .eq('case_id', caseId)
+            .in('status', ['pending_assignment', 'ready_for_assignment', 'assigned']);
+
+          if (!error && invoices) {
+            invoices.forEach(invoice => {
+              if (invoice.lines) {
+                invoice.lines.forEach(line => {
+                  allLines.push({
+                    ...line,
+                    invoice_id: invoice.id,
+                    invoice_number: invoice.invoice_number,
+                    supplier_name: invoice.supplier_name,
+                    source: 'supabase'
+                  });
+                });
+              }
+            });
+          }
+        }
+
+        console.log(`📊 SESSION 88: Found ${allLines.length} total invoice lines from all sources`);
+        return allLines;
+
+      } catch (error) {
+        console.error('❌ SESSION 88: Error getting invoice lines:', error);
+        return [];
+      }
+    }
+
+    /**
+     * Populate differential row fields from selected invoice line
+     */
+    function populateFromInvoiceLine(selectElement) {
+      try {
+        const selectedIndex = selectElement.value;
+        if (!selectedIndex) return;
+
+        const selectedOption = selectElement.options[selectElement.selectedIndex];
+        const lineData = JSON.parse(selectedOption.getAttribute('data-line'));
+        
+        console.log('📝 SESSION 88: Populating row from invoice line:', lineData);
+
+        const row = selectElement.closest('.differential-row');
+        if (!row) return;
+
+        // Populate fields
+        const partField = row.querySelector('.diff-part');
+        const natureDropdown = row.querySelector('.diff-nature-dropdown');
+        const reasonField = row.querySelector('.diff-reason');
+        const amountField = row.querySelector('.diff-amount');
+
+        if (partField) {
+          partField.value = lineData.description || lineData.part_name || '';
+        }
+
+        if (natureDropdown) {
+          const category = lineData.metadata?.category || lineData.category;
+          if (category === 'part') {
+            natureDropdown.value = 'parts';
+          } else if (category === 'work') {
+            natureDropdown.value = 'works';
+          } else if (category === 'repair') {
+            natureDropdown.value = 'repairs';
+          } else {
+            natureDropdown.value = 'other';
+          }
+          
+          // Trigger change event to handle "other" field
+          toggleNatureOtherField(natureDropdown);
+        }
+
+        if (reasonField) {
+          reasonField.value = `חשבונית ${lineData.invoice_number} - ${lineData.supplier_name || 'ספק'}`;
+        }
+
+        if (amountField) {
+          amountField.value = lineData.line_total || lineData.total_cost || 0;
+        }
+
+        // Update calculations
+        updateDifferentialsSummary();
+        setTimeout(saveDifferentialsToHelper, 100);
+
+        console.log('✅ SESSION 88: Row populated successfully from invoice line');
+
+      } catch (error) {
+        console.error('❌ SESSION 88: Error populating from invoice line:', error);
+      }
+    }
+
+    // Make function available globally
+    window.populateFromInvoiceLine = populateFromInvoiceLine;
     
     // SESSION 47: UPDATE ALL DIFFERENTIALS SUBTOTALS
     function updateAllDifferentialsSubtotals() {
