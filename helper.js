@@ -6292,6 +6292,121 @@ if (document.readyState === 'loading') {
   setTimeout(() => window.setupUniversalInputCapture(), 1000);
 }
 
+// ============================================================================
+// 🛠️ SESSION 86: HELPER UTILITIES (ADDITIVE)
+// ============================================================================
+
+/**
+ * Generate UUID v4
+ * @returns {string} UUID string
+ */
+window.generateUUID = function() {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+    var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
+    return v.toString(16);
+  });
+};
+
+/**
+ * Format currency in Hebrew locale (ILS)
+ * @param {number} amount - Amount to format
+ * @returns {string} Formatted currency string
+ */
+window.formatCurrency = function(amount) {
+  if (isNaN(amount) || amount === null || amount === undefined) {
+    return '₪0.00';
+  }
+  
+  return new Intl.NumberFormat('he-IL', {
+    style: 'currency',
+    currency: 'ILS',
+    minimumFractionDigits: 2
+  }).format(amount);
+};
+
+/**
+ * Escape HTML to prevent XSS
+ * @param {string} text - Text to escape
+ * @returns {string} Escaped HTML
+ */
+window.escapeHtml = function(text) {
+  if (!text) return '';
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
+};
+
+// NOTE: Removed recalculateCenterSummary - existing calculations work perfectly
+// The system already has comprehensive calculation logic in place
+
+/**
+ * Show loading overlay with message
+ * @param {string} message - Loading message to display
+ */
+window.showLoadingOverlay = function(message = 'טוען...') {
+  // Remove existing overlay
+  window.hideLoadingOverlay();
+  
+  const overlay = document.createElement('div');
+  overlay.id = 'loading-overlay-helper';
+  overlay.style.cssText = `
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0,0,0,0.7);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+    color: white;
+    font-family: 'Assistant', Arial, sans-serif;
+    direction: rtl;
+  `;
+  
+  overlay.innerHTML = `
+    <div style="
+      border: 4px solid #f3f3f3;
+      border-top: 4px solid #3498db;
+      border-radius: 50%;
+      width: 50px;
+      height: 50px;
+      animation: spin 1s linear infinite;
+      margin-bottom: 20px;
+    "></div>
+    <p style="margin: 0; font-size: 18px;">${message}</p>
+  `;
+  
+  // Add spin animation
+  const style = document.createElement('style');
+  style.textContent = `
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+  `;
+  if (!document.head.querySelector('style[data-loading-spinner]')) {
+    style.setAttribute('data-loading-spinner', 'true');
+    document.head.appendChild(style);
+  }
+  
+  document.body.appendChild(overlay);
+};
+
+/**
+ * Hide loading overlay
+ */
+window.hideLoadingOverlay = function() {
+  const overlay = document.getElementById('loading-overlay-helper');
+  if (overlay) {
+    overlay.remove();
+  }
+};
+
+console.log('✅ SESSION 86: Helper utilities loaded successfully');
+
 // ✅ COMMENTED OUT: All exports to prevent syntax errors in damage centers wizard
 // Export all the functions that other modules need
 // export const helper = window.helper;
