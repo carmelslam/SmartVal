@@ -1253,16 +1253,6 @@
               gap: 10px;
               justify-content: flex-end;
             ">
-              <button id="showInvoicesDifferentials" onclick="showInvoicesDifferentials()" style="
-                background: #ff9800;
-                color: white;
-                border: none;
-                padding: 8px 16px;
-                border-radius: 4px;
-                cursor: pointer;
-                font-size: 14px;
-                font-weight: 500;
-              ">הצג הפרשי חשבוניות</button>
               <button id="acceptInvoiceAssignment" onclick="acceptInvoiceAssignment()" style="
                 background: #4caf50;
                 color: white;
@@ -11614,34 +11604,81 @@
           return sum + (parseFloat(part.total_cost) || 0);
         }, 0);
         
-        // Archive parts data to Supabase using parts_search_archive table
+        // Archive parts data to Supabase using required_parts_archive table
         if (window.supabase) {
           try {
-            const archiveRecord = {
-              case_id: helper.meta?.case_id,
-              plate: helper.meta?.plate || helper.vehicle?.plate || helper.car_details?.plate,
+            console.log('📦 SESSION 88: Archiving parts to required_parts_archive table...');
+            
+            // Prepare archive records from parts_search.required_parts
+            const archiveRecords = helper.parts_search.required_parts.map(part => ({
+              case_id: helper.case_info?.supabase_case_id,
+              plate: helper.case_info?.plate,
+              damage_center_code: part.damage_center_code || null,
               archive_type: 'pre_invoice_assignment',
-              parts_data: helper.parts_search.required_parts,
-              parts_count: partsCount,
-              total_value: totalPartsValue,
-              archived_at: new Date().toISOString(),
+              archive_reason: 'Parts archived before invoice assignment to preserve wizard data',
+              archived_by: helper.user?.id || null,
+              
+              // Part information (same structure as parts_required)
+              part_name: part.part_name,
+              quantity: part.quantity || 1,
+              status: 'ARCHIVED',
               metadata: {
-                trigger_event: 'invoice_assignment',
-                original_helper_path: 'parts_search.required_parts',
-                notes: 'Parts archived before invoice assignment to preserve wizard data'
+                source: 'parts_search_wizard',
+                original_status: part.status,
+                session: 'SESSION_88',
+                ...part.metadata
+              },
+              
+              // Vehicle information
+              make: part.make || helper.vehicle?.make,
+              model: part.model || helper.vehicle?.model,
+              trim: part.trim || helper.vehicle?.trim,
+              year: part.year || helper.vehicle?.year,
+              engine_volume: part.engine_volume || helper.vehicle?.engine_volume,
+              engine_code: part.engine_code || helper.vehicle?.engine_code,
+              engine_type: part.engine_type || helper.vehicle?.engine_type,
+              vin: part.vin || helper.vehicle?.vin,
+              
+              // Part details
+              pcode: part.pcode,
+              cat_num_desc: part.cat_num_desc,
+              source: part.source,
+              oem: part.oem,
+              availability: part.availability,
+              location: part.location,
+              comments: part.comments,
+              supplier_name: part.supplier_name,
+              part_family: part.part_family,
+              description: part.description,
+              
+              // Pricing
+              price_per_unit: parseFloat(part.price_per_unit) || null,
+              reduction_percentage: parseFloat(part.reduction_percentage) || 0,
+              wear_percentage: parseFloat(part.wear_percentage) || 0,
+              updated_price: parseFloat(part.updated_price) || null,
+              total_cost: parseFloat(part.total_cost) || null,
+              
+              // Original identifiers
+              original_row_uuid: part.row_uuid,
+              original_created_at: part.created_at || null,
+              original_updated_at: part.updated_at || null,
+              original_created_by: part.created_by || null,
+              original_updated_by: part.updated_by || null
+            }));
+            
+            if (archiveRecords.length > 0) {
+              const { data: archiveData, error: archiveError } = await window.supabase
+                .from('required_parts_archive')
+                .insert(archiveRecords)
+                .select();
+              
+              if (archiveError) {
+                console.error('❌ SESSION 88: Error archiving to Supabase:', archiveError);
+              } else {
+                console.log(`✅ SESSION 88: ${archiveData.length} parts archived to required_parts_archive table`);
               }
-            };
-            
-            const { data: archiveData, error: archiveError } = await window.supabase
-              .from('parts_search_archive')
-              .insert(archiveRecord)
-              .select()
-              .single();
-            
-            if (archiveError) {
-              console.error('❌ SESSION 88: Error archiving to Supabase:', archiveError);
             } else {
-              console.log('✅ SESSION 88: Parts archived to Supabase parts_search_archive:', archiveData.id);
+              console.log('ℹ️ SESSION 88: No parts to archive');
             }
             
           } catch (supabaseError) {
@@ -11808,16 +11845,20 @@
       
       const invoiceIds = invoices.map(i => i.id);
       
-      const { error } = await window.supabase
-        .from('invoices')
-        .update({ 
-          status: status,
-          assigned_at: new Date().toISOString()
-        })
-        .in('id', invoiceIds);
-      
-      if (error) {
-        throw error;
+      // Update invoices one by one since .in() doesn't exist in this Supabase client version
+      for (const invoiceId of invoiceIds) {
+        const { error: updateError } = await window.supabase
+          .from('invoices')
+          .update({ 
+            status: status,
+            assigned_at: new Date().toISOString()
+          })
+          .eq('id', invoiceId);
+        
+        if (updateError) {
+          console.error(`❌ Error updating invoice ${invoiceId}:`, updateError);
+          throw updateError;
+        }
       }
       
       console.log(`✅ SESSION 88: Updated ${invoiceIds.length} invoices to status: ${status}`);
