@@ -11242,14 +11242,25 @@
         const caseId = helper.case_info?.supabase_case_id;
         const plateNumber = helper.case_info?.plate;
         
-        console.log('🔍 SESSION 88 DEBUG:', {
-          caseId,
-          plateNumber,
-          case_info: helper.case_info
-        });
+        console.log('🔍 SESSION 88 COMPREHENSIVE DEBUG:');
+        console.log('  helper keys:', Object.keys(helper));
+        console.log('  helper.case_info:', helper.case_info);
+        console.log('  caseId:', caseId);
+        console.log('  plateNumber:', plateNumber);
+        console.log('  window.supabase available:', !!window.supabase);
+        console.log('  window.invoiceService available:', !!window.invoiceService);
         
-        if (!caseId || !plateNumber) {
-          console.log('ℹ️ SESSION 88: No case_id or plate, skipping invoice check');
+        if (!caseId) {
+          console.log('❌ SESSION 88: No case_id found - cannot check invoices');
+          console.log('  helper.case_info?.supabase_case_id:', helper.case_info?.supabase_case_id);
+          console.log('  helper.case_id:', helper.case_id);
+          console.log('  helper.meta?.case_id:', helper.meta?.case_id);
+          hideInvoiceAssignmentBanner();
+          return;
+        }
+        
+        if (!plateNumber) {
+          console.log('❌ SESSION 88: No plate number found - cannot filter invoices');
           hideInvoiceAssignmentBanner();
           return;
         }
@@ -11259,28 +11270,70 @@
           return;
         }
         
-        // Use invoiceService like invoice upload.html does
+        // Try direct Supabase query first (fallback if invoiceService not available)
         if (!window.invoiceService) {
-          console.warn('⚠️ SESSION 88: invoiceService not available');
+          console.warn('⚠️ SESSION 88: invoiceService not available, trying direct Supabase query...');
+          
+          const { data: allInvoices, error } = await window.supabase
+            .from('invoices')
+            .select('*')
+            .eq('case_id', caseId);
+          
+          if (error) {
+            console.error('❌ SESSION 88: Error querying invoices directly:', error);
+            return;
+          }
+          
+          console.log('📦 SESSION 88: Direct Supabase query - all invoices:', allInvoices);
+          
+          if (!allInvoices || allInvoices.length === 0) {
+            console.log('ℹ️ SESSION 88: No invoices found in database for this case');
+            hideInvoiceAssignmentBanner();
+            return;
+          }
+          
+          // Filter by plate
+          const plateInvoices = allInvoices.filter(inv => {
+            console.log(`  Direct query - Comparing: "${inv.plate}" === "${plateNumber}" → ${inv.plate === plateNumber}`);
+            return inv.plate === plateNumber;
+          });
+          
+          console.log(`📊 SESSION 88: Direct query - Found ${plateInvoices.length} invoices for this plate`);
+          
+          if (plateInvoices.length === 0) {
+            console.log('ℹ️ SESSION 88: No invoices found for this plate');
+            hideInvoiceAssignmentBanner();
+            return;
+          }
+          
+          // Show these invoices (even without mappings for now)
+          console.log('📋 SESSION 88: Showing available invoices (direct query):', plateInvoices);
+          showInvoiceAssignmentBanner(plateInvoices.map(inv => ({ ...inv, assignment_count: 0 })));
           return;
         }
         
-        console.log(`📂 SESSION 88: Loading invoices for case: ${caseId}, plate: ${plateNumber}`);
+        console.log(`📂 SESSION 88: Loading invoices via invoiceService for case: ${caseId}, plate: ${plateNumber}`);
         
         // Get all invoices for this case (same as invoice upload.html)
         const allInvoices = await window.invoiceService.getInvoicesByCase(caseId);
-        console.log('📦 SESSION 88: All invoices from database:', allInvoices);
+        console.log('📦 SESSION 88: invoiceService result - all invoices:', allInvoices);
+        
+        if (!allInvoices || allInvoices.length === 0) {
+          console.log('ℹ️ SESSION 88: No invoices returned by invoiceService');
+          hideInvoiceAssignmentBanner();
+          return;
+        }
         
         // Filter by plate (same as invoice upload.html)
         const plateInvoices = allInvoices.filter(inv => {
-          console.log(`  Comparing: "${inv.plate}" === "${plateNumber}" → ${inv.plate === plateNumber}`);
+          console.log(`  invoiceService - Comparing: "${inv.plate}" === "${plateNumber}" → ${inv.plate === plateNumber}`);
           return inv.plate === plateNumber;
         });
         
-        console.log(`📊 SESSION 88: Found ${plateInvoices.length} invoices for this case and plate`);
+        console.log(`📊 SESSION 88: invoiceService - Found ${plateInvoices.length} invoices for this case and plate`);
         
         if (!plateInvoices || plateInvoices.length === 0) {
-          console.log('ℹ️ SESSION 88: No invoices found for this plate');
+          console.log('ℹ️ SESSION 88: No invoices found for this plate via invoiceService');
           hideInvoiceAssignmentBanner();
           return;
         }
@@ -12182,6 +12235,14 @@
     /**
      * Debug function to show current helper invoice assignments
      */
+    /**
+     * Manual trigger for testing invoice banner
+     */
+    window.testInvoiceBanner = async function() {
+      console.log('🧪 MANUAL TEST: Triggering invoice banner check...');
+      await checkForAvailableInvoices();
+    };
+
     window.debugInvoiceAssignments = async function() {
       const helper = window.helper || {};
       const caseId = helper.case_info?.supabase_case_id;
