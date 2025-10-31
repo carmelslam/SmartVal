@@ -11239,7 +11239,7 @@
         console.log('📄 SESSION 88: Checking for available invoices from Supabase only...');
         
         const helper = window.helper || {};
-        const caseId = helper.meta?.case_id;
+        const caseId = helper.case_info?.supabase_case_id;
         
         if (!caseId) {
           console.log('ℹ️ SESSION 88: No case_id, skipping invoice check');
@@ -12179,7 +12179,7 @@
      */
     window.debugInvoiceAssignments = async function() {
       const helper = window.helper || {};
-      const caseId = helper.meta?.case_id;
+      const caseId = helper.case_info?.supabase_case_id;
       
       console.log('🔍 SESSION 88 DEBUG REPORT:');
       console.log('  Case ID:', caseId);
@@ -12234,6 +12234,7 @@
         invoice_assignments: helper.final_report?.invoice_assignments,
         invoices: helper.invoices,
         case_id: caseId,
+        case_info: helper.case_info,
         plate: helper.meta?.plate || helper.vehicle?.plate || helper.car_details?.plate
       };
     };
@@ -18991,7 +18992,12 @@
     async function getInvoiceLinesForCase() {
       try {
         const helper = window.helper || {};
-        const caseId = helper.meta?.case_id;
+        const caseId = helper.case_info?.supabase_case_id;
+        
+        console.log('🔍 SESSION 88 DEBUG: getInvoiceLinesForCase called');
+        console.log('  helper.case_info:', helper.case_info);
+        console.log('  case_id:', caseId);
+        console.log('  window.supabase available:', !!window.supabase);
         
         if (!caseId || !window.supabase) {
           console.log('ℹ️ SESSION 88: No case_id or Supabase, cannot get invoice lines');
@@ -19017,22 +19023,43 @@
           return [];
         }
         
+        console.log('🔍 SESSION 88 DEBUG: Raw mappings data:', mappings);
+        console.log('  Number of mappings:', mappings?.length || 0);
+        
         if (!mappings || mappings.length === 0) {
           console.log('ℹ️ SESSION 88: No invoice mappings found');
           return [];
         }
         
+        // Debug each mapping structure
+        mappings.forEach((mapping, index) => {
+          console.log(`🔍 Mapping ${index}:`, {
+            id: mapping.id,
+            invoice: mapping.invoice,
+            invoice_line: mapping.invoice_line,
+            case_id: mapping.case_id
+          });
+        });
+        
         // Convert mappings to invoice lines format
-        const allLines = mappings.map(mapping => ({
-          ...mapping.invoice_line,
-          invoice_id: mapping.invoice.id,
-          invoice_number: mapping.invoice.invoice_number,
-          supplier_name: mapping.invoice.supplier_name,
-          damage_center_id: mapping.damage_center_id,
-          field_type: mapping.field_type,
-          mapping_id: mapping.id,
-          source: 'applied_mappings'
-        }));
+        const allLines = mappings.map(mapping => {
+          // Check for missing invoice data
+          if (!mapping.invoice) {
+            console.warn('⚠️ SESSION 88: Missing invoice data in mapping:', mapping.id);
+            return null;
+          }
+          
+          return {
+            ...mapping.invoice_line,
+            invoice_id: mapping.invoice.id,
+            invoice_number: mapping.invoice.invoice_number,
+            supplier_name: mapping.invoice.supplier_name,
+            damage_center_id: mapping.damage_center_id,
+            field_type: mapping.field_type,
+            mapping_id: mapping.id,
+            source: 'applied_mappings'
+          };
+        }).filter(line => line !== null); // Remove null entries
 
         console.log(`📊 SESSION 88: Found ${allLines.length} invoice lines from applied mappings`);
         return allLines;
