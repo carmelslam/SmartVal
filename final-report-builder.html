@@ -11242,8 +11242,30 @@
         const plate = helper.meta?.plate || helper.vehicle?.plate || helper.car_details?.plate;
         const caseId = helper.meta?.case_id;
         
+        // First check if there are invoice assignments in helper.final_report
+        if (helper.final_report?.invoice_assignments && 
+            Array.isArray(helper.final_report.invoice_assignments) && 
+            helper.final_report.invoice_assignments.length > 0) {
+          
+          console.log(`📋 SESSION 88: Found ${helper.final_report.invoice_assignments.length} invoice assignments in helper.final_report`);
+          
+          // Convert helper assignments to invoice format for banner display
+          const helperInvoices = helper.final_report.invoice_assignments.map(assignment => ({
+            id: assignment.invoice_id || assignment.id,
+            invoice_number: assignment.invoice_number || assignment.number,
+            supplier_name: assignment.supplier_name || assignment.supplier,
+            total_amount: assignment.total_amount || assignment.amount || 0,
+            status: 'ready_for_assignment',
+            lines: assignment.lines || []
+          }));
+          
+          showInvoiceAssignmentBanner(helperInvoices);
+          return;
+        }
+        
+        // If no helper assignments, check Supabase for pending invoices
         if (!plate || !caseId) {
-          console.log('ℹ️ SESSION 88: No plate or case_id, skipping invoice check');
+          console.log('ℹ️ SESSION 88: No plate or case_id, skipping Supabase invoice check');
           return;
         }
         
@@ -11264,7 +11286,7 @@
             lines:invoice_lines(*)
           `)
           .eq('case_id', caseId)
-          .eq('status', 'pending_assignment');
+          .in('status', ['pending_assignment', 'ready_for_assignment']);
         
         if (error) {
           console.error('❌ SESSION 88: Error querying invoices:', error);
@@ -11272,16 +11294,17 @@
         }
         
         if (!invoices || invoices.length === 0) {
-          console.log('ℹ️ SESSION 88: No pending invoices found');
+          console.log('ℹ️ SESSION 88: No pending invoices found in Supabase');
           hideInvoiceAssignmentBanner();
           return;
         }
         
-        console.log(`📋 SESSION 88: Found ${invoices.length} pending invoices`);
+        console.log(`📋 SESSION 88: Found ${invoices.length} pending invoices in Supabase`);
         showInvoiceAssignmentBanner(invoices);
         
       } catch (error) {
         console.error('❌ SESSION 88: Error checking for invoices:', error);
+        hideInvoiceAssignmentBanner();
       }
     }
 
@@ -11298,9 +11321,12 @@
       }
       
       // Build invoice list HTML
+      const isHelperSource = invoices[0]?.status === 'ready_for_assignment';
+      const sourceText = isHelperSource ? 'מוכנות להקצאה' : 'ממתינות להקצאה';
+      
       let invoiceListHtml = `
         <div style="margin-bottom: 10px; font-weight: 600; color: #1565c0;">
-          נמצאו ${invoices.length} חשבוניות ממתינות להקצאה:
+          נמצאו ${invoices.length} חשבוניות ${sourceText}:
         </div>
       `;
       
@@ -12060,6 +12086,59 @@
       }
     }
 
+    // ============================================================================
+    // SESSION 88: DEBUG AND TESTING FUNCTIONS
+    // ============================================================================
+
+    /**
+     * Manual test function to force show banner with sample data
+     */
+    window.testInvoiceBanner = function() {
+      const sampleInvoices = [
+        {
+          id: 'test-invoice-1',
+          invoice_number: 'INV-001',
+          supplier_name: 'ספק לדוגמה',
+          total_amount: 5000,
+          status: 'pending_assignment',
+          lines: [
+            { id: 'line1', description: 'חלק דוגמה', line_total: 2500, metadata: { category: 'part' } },
+            { id: 'line2', description: 'עבודה דוגמה', line_total: 2500, metadata: { category: 'work' } }
+          ]
+        }
+      ];
+      
+      console.log('🧪 SESSION 88: Testing banner with sample data');
+      showInvoiceAssignmentBanner(sampleInvoices);
+    };
+
+    /**
+     * Manual function to refresh invoice check
+     */
+    window.refreshInvoiceCheck = function() {
+      console.log('🔄 SESSION 88: Manual refresh of invoice check');
+      sessionStorage.removeItem('invoiceAssignmentDismissed');
+      checkForAvailableInvoices();
+    };
+
+    /**
+     * Debug function to show current helper invoice assignments
+     */
+    window.debugInvoiceAssignments = function() {
+      const helper = window.helper || {};
+      console.log('🔍 SESSION 88 DEBUG:');
+      console.log('  helper.final_report?.invoice_assignments:', helper.final_report?.invoice_assignments);
+      console.log('  helper.invoices:', helper.invoices);
+      console.log('  case_id:', helper.meta?.case_id);
+      console.log('  plate:', helper.meta?.plate || helper.vehicle?.plate || helper.car_details?.plate);
+      return {
+        invoice_assignments: helper.final_report?.invoice_assignments,
+        invoices: helper.invoices,
+        case_id: helper.meta?.case_id,
+        plate: helper.meta?.plate || helper.vehicle?.plate || helper.car_details?.plate
+      };
+    };
+
     // Initialize on load - FIXED ORDER
     document.addEventListener('DOMContentLoaded', async () => {
       
@@ -12109,7 +12188,11 @@
         // SESSION 88: Check for available invoices after data loads
         setTimeout(() => {
           if (!sessionStorage.getItem('invoiceAssignmentDismissed')) {
+            console.log('🔍 SESSION 88: Checking for invoice assignments...');
+            console.log('  helper.final_report?.invoice_assignments:', window.helper?.final_report?.invoice_assignments);
             checkForAvailableInvoices();
+          } else {
+            console.log('ℹ️ SESSION 88: Invoice assignment banner dismissed by user');
           }
         }, 200);
         
