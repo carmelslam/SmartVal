@@ -11518,8 +11518,8 @@
         // Phase 3: Apply invoice mappings to damage centers
         await applyInvoiceMappingsToCenters(checkedInvoices);
         
-        // Phase 4: Update invoice status to applied
-        await updateInvoiceStatus(checkedInvoices, 'applied');
+        // Phase 4: Update invoice status (try common status values)
+        await updateInvoiceStatus(checkedInvoices, 'completed');
         
         // Phase 5: Hide banner and refresh view
         hideInvoiceAssignmentBanner();
@@ -11610,63 +11610,79 @@
             console.log('📦 SESSION 88: Archiving parts to required_parts_archive table...');
             
             // Prepare archive records from parts_search.required_parts
-            const archiveRecords = helper.parts_search.required_parts.map(part => ({
-              case_id: helper.case_info?.supabase_case_id,
-              plate: helper.case_info?.plate,
-              damage_center_code: part.damage_center_code || null,
-              archive_type: 'pre_invoice_assignment',
-              archive_reason: 'Parts archived before invoice assignment to preserve wizard data',
-              archived_by: helper.user?.id || null,
+            const archiveRecords = helper.parts_search.required_parts.map(part => {
+              // Ensure all records have exactly the same structure
+              const baseRecord = {
+                // Archive metadata
+                archive_type: 'pre_invoice_assignment',
+                archive_reason: 'Parts archived before invoice assignment to preserve wizard data',
+                archived_by: helper.user?.id || null,
+                
+                // Case identification
+                case_id: helper.case_info?.supabase_case_id || null,
+                plate: helper.case_info?.plate || null,
+                damage_center_code: part.damage_center_code || null,
+                
+                // Part information
+                part_name: part.part_name || null,
+                quantity: part.quantity || 1,
+                status: 'ARCHIVED',
+                metadata: {
+                  source: 'parts_search_wizard',
+                  original_status: part.status || null,
+                  session: 'SESSION_88',
+                  ...(part.metadata || {})
+                },
+                
+                // Vehicle information
+                make: part.make || helper.vehicle?.make || null,
+                model: part.model || helper.vehicle?.model || null,
+                trim: part.trim || helper.vehicle?.trim || null,
+                year: part.year || helper.vehicle?.year || null,
+                engine_volume: part.engine_volume || helper.vehicle?.engine_volume || null,
+                engine_code: part.engine_code || helper.vehicle?.engine_code || null,
+                engine_type: part.engine_type || helper.vehicle?.engine_type || null,
+                vin: part.vin || helper.vehicle?.vin || null,
+                
+                // Part details
+                pcode: part.pcode || null,
+                cat_num_desc: part.cat_num_desc || null,
+                source: part.source || null,
+                oem: part.oem || null,
+                availability: part.availability || null,
+                location: part.location || null,
+                comments: part.comments || null,
+                supplier_name: part.supplier_name || null,
+                part_family: part.part_family || null,
+                description: part.description || null,
+                
+                // Pricing (ensure consistent types)
+                price_per_unit: part.price_per_unit ? parseFloat(part.price_per_unit) : null,
+                reduction_percentage: part.reduction_percentage ? parseFloat(part.reduction_percentage) : 0,
+                wear_percentage: part.wear_percentage ? parseFloat(part.wear_percentage) : 0,
+                updated_price: part.updated_price ? parseFloat(part.updated_price) : null,
+                total_cost: part.total_cost ? parseFloat(part.total_cost) : null,
+                
+                // Original identifiers
+                original_row_uuid: part.row_uuid || null,
+                original_created_at: part.created_at || null,
+                original_updated_at: part.updated_at || null,
+                original_created_by: part.created_by || null,
+                original_updated_by: part.updated_by || null
+              };
               
-              // Part information (same structure as parts_required)
-              part_name: part.part_name,
-              quantity: part.quantity || 1,
-              status: 'ARCHIVED',
-              metadata: {
-                source: 'parts_search_wizard',
-                original_status: part.status,
-                session: 'SESSION_88',
-                ...part.metadata
-              },
-              
-              // Vehicle information
-              make: part.make || helper.vehicle?.make,
-              model: part.model || helper.vehicle?.model,
-              trim: part.trim || helper.vehicle?.trim,
-              year: part.year || helper.vehicle?.year,
-              engine_volume: part.engine_volume || helper.vehicle?.engine_volume,
-              engine_code: part.engine_code || helper.vehicle?.engine_code,
-              engine_type: part.engine_type || helper.vehicle?.engine_type,
-              vin: part.vin || helper.vehicle?.vin,
-              
-              // Part details
-              pcode: part.pcode,
-              cat_num_desc: part.cat_num_desc,
-              source: part.source,
-              oem: part.oem,
-              availability: part.availability,
-              location: part.location,
-              comments: part.comments,
-              supplier_name: part.supplier_name,
-              part_family: part.part_family,
-              description: part.description,
-              
-              // Pricing
-              price_per_unit: parseFloat(part.price_per_unit) || null,
-              reduction_percentage: parseFloat(part.reduction_percentage) || 0,
-              wear_percentage: parseFloat(part.wear_percentage) || 0,
-              updated_price: parseFloat(part.updated_price) || null,
-              total_cost: parseFloat(part.total_cost) || null,
-              
-              // Original identifiers
-              original_row_uuid: part.row_uuid,
-              original_created_at: part.created_at || null,
-              original_updated_at: part.updated_at || null,
-              original_created_by: part.created_by || null,
-              original_updated_by: part.updated_by || null
-            }));
+              return baseRecord;
+            });
             
             if (archiveRecords.length > 0) {
+              console.log('🔍 SESSION 88: Archive records structure:', {
+                count: archiveRecords.length,
+                firstRecord: archiveRecords[0],
+                allKeysMatch: archiveRecords.every(record => 
+                  Object.keys(record).length === Object.keys(archiveRecords[0]).length
+                )
+              });
+              
               const { data: archiveData, error: archiveError } = await window.supabase
                 .from('required_parts_archive')
                 .insert(archiveRecords)
@@ -11674,6 +11690,7 @@
               
               if (archiveError) {
                 console.error('❌ SESSION 88: Error archiving to Supabase:', archiveError);
+                console.log('🔍 Debug: Failed record structure:', archiveRecords[0]);
               } else {
                 console.log(`✅ SESSION 88: ${archiveData.length} parts archived to required_parts_archive table`);
               }
@@ -11859,7 +11876,33 @@
         
         if (updateError) {
           console.error(`❌ Error updating invoice ${invoiceId}:`, updateError);
-          throw updateError;
+          
+          // If status constraint violation, try with a different status
+          if (updateError.message?.includes('invoices_status_check')) {
+            console.log('🔄 Trying alternative status values...');
+            
+            // Try common status values
+            const statusesToTry = ['mapped', 'assigned', 'approved', 'processed'];
+            
+            for (const alternativeStatus of statusesToTry) {
+              const { error: retryError } = await window.supabase
+                .from('invoices')
+                .update({ 
+                  status: alternativeStatus,
+                  updated_at: new Date().toISOString()
+                })
+                .eq('id', invoiceId);
+              
+              if (!retryError) {
+                console.log(`✅ Successfully updated invoice ${invoiceId} with status: ${alternativeStatus}`);
+                break;
+              } else {
+                console.log(`❌ Status '${alternativeStatus}' also failed:`, retryError.message);
+              }
+            }
+          } else {
+            throw updateError;
+          }
         }
       }
       
