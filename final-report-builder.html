@@ -12629,6 +12629,28 @@
       initializeApp();
     }
     
+    // Since DOMContentLoaded isn't firing, use timer-based approach
+    console.log('🔧 FALLBACK: Using timer-based approach since DOMContentLoaded may not fire...');
+    
+    // Try multiple approaches to ensure invoice check runs
+    setTimeout(() => {
+      console.log('🕐 TIMER 1000ms: Checking invoice system...');
+      if (typeof checkForAvailableInvoices === 'function' && window.helper) {
+        console.log('🚀 TIMER: Calling checkForAvailableInvoices...');
+        checkForAvailableInvoices().catch(e => console.error('🔧 Timer error:', e));
+      } else {
+        console.log('❌ TIMER: Function or helper not ready yet');
+      }
+    }, 1000);
+    
+    setTimeout(() => {
+      console.log('🕐 TIMER 3000ms: Secondary check for invoice system...');
+      if (typeof checkForAvailableInvoices === 'function' && window.helper) {
+        console.log('🚀 TIMER: Secondary call to checkForAvailableInvoices...');
+        checkForAvailableInvoices().catch(e => console.error('🔧 Timer 2 error:', e));
+      }
+    }, 3000);
+    
     // Also add a direct event listener for when DOM loads to test
     document.addEventListener('DOMContentLoaded', function() {
       console.log('🔥 DIRECT DOMContentLoaded FIRED! Now testing invoice functions...');
