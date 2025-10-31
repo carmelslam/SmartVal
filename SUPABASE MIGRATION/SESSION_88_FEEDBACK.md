@@ -687,3 +687,49 @@ When reimplemented correctly, verify:
 *Feedback Document*  
 *Date: October 31, 2025*  
 *Status: Critical Issues Identified - Awaiting Correct Reimplementation*
+
+
+create table public.invoice_damage_center_mappings (
+  id uuid not null default gen_random_uuid (),
+  invoice_id uuid not null,
+  invoice_line_id uuid null,
+  case_id uuid not null,
+  damage_center_id text not null,
+  damage_center_name text null,
+  field_type text not null,
+  field_index integer null,
+  field_id text null,
+  original_field_data jsonb null,
+  mapped_data jsonb null,
+  mapping_status text null default 'active'::text,
+  is_user_modified boolean null default false,
+  user_modifications jsonb null,
+  mapping_confidence numeric(5, 2) null,
+  validation_status text null default 'pending'::text,
+  mapped_by uuid null,
+  created_at timestamp with time zone null default now(),
+  updated_at timestamp with time zone null default now(),
+  constraint invoice_damage_center_mappings_pkey primary key (id),
+  constraint invoice_damage_center_mappings_case_id_fkey foreign KEY (case_id) references cases (id) on delete CASCADE,
+  constraint invoice_damage_center_mappings_invoice_id_fkey foreign KEY (invoice_id) references invoices (id) on delete CASCADE,
+  constraint invoice_damage_center_mappings_invoice_line_id_fkey foreign KEY (invoice_line_id) references invoice_lines (id) on delete set null,
+  constraint invoice_damage_center_mappings_mapped_by_fkey foreign KEY (mapped_by) references profiles (user_id)
+) TABLESPACE pg_default;
+
+create index IF not exists idx_invoice_dc_mappings_invoice_id on public.invoice_damage_center_mappings using btree (invoice_id) TABLESPACE pg_default;
+
+create index IF not exists idx_invoice_dc_mappings_case_id on public.invoice_damage_center_mappings using btree (case_id) TABLESPACE pg_default;
+
+create index IF not exists idx_invoice_dc_mappings_dc_id on public.invoice_damage_center_mappings using btree (damage_center_id) TABLESPACE pg_default;
+
+create index IF not exists idx_invoice_dc_mappings_dc_field on public.invoice_damage_center_mappings using btree (damage_center_id, field_type, field_index) TABLESPACE pg_default;
+
+create index IF not exists idx_invoice_dc_mappings_status on public.invoice_damage_center_mappings using btree (mapping_status) TABLESPACE pg_default
+where
+  (mapping_status = 'active'::text);
+
+create index IF not exists idx_invoice_dc_mappings_mapped_data_gin on public.invoice_damage_center_mappings using gin (mapped_data jsonb_path_ops) TABLESPACE pg_default;
+
+create trigger update_invoice_dc_mappings_updated_at BEFORE
+update on invoice_damage_center_mappings for EACH row
+execute FUNCTION update_updated_at ();
