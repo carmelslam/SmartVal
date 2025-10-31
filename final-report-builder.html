@@ -11394,35 +11394,47 @@
       `;
       
       invoices.forEach((invoice, index) => {
-        // Format display like invoice upload.html: supplier_name - date
-        // Try to get actual invoice date from helper or OCR data
+        // Extract invoice date following same pattern as other invoice fields (supplier_name, etc.)
         let invoiceDate = null;
         
-        // Extract invoice date like other invoice detail fields
-        // Check invoice OCR structured data first (primary source)
-        if (invoice.ocr_structured_data && invoice.ocr_structured_data['תאריך']) {
+        // Primary source: invoice.invoice_date field (if exists in database)
+        if (invoice.invoice_date) {
+          invoiceDate = invoice.invoice_date;
+        }
+        
+        // Secondary source: OCR structured data with Hebrew field name
+        if (!invoiceDate && invoice.ocr_structured_data && invoice.ocr_structured_data['תאריך']) {
           invoiceDate = invoice.ocr_structured_data['תאריך'];
         }
         
-        // Fallback to helper.invoices if OCR data not available
+        // Tertiary source: helper.invoices array (legacy data)
         if (!invoiceDate) {
-          const helperInvoice = helper.invoices?.find(inv => inv.id === invoice.id);
-          if (helperInvoice && helperInvoice['תאריך']) {
-            invoiceDate = helperInvoice['תאריך'];
+          const helperInvoice = helper.invoices?.find(inv => 
+            inv.id === invoice.id || 
+            (inv.invoice_number && inv.invoice_number === invoice.invoice_number)
+          );
+          if (helperInvoice) {
+            invoiceDate = helperInvoice['תאריך'] || helperInvoice.date || helperInvoice.invoice_date;
           }
         }
         
-        // Format the date
+        // Format date for display (same pattern as other fields)
         let displayDate;
         if (invoiceDate) {
           try {
-            displayDate = new Date(invoiceDate).toLocaleDateString('he-IL');
+            // Handle various date formats
+            const dateObj = new Date(invoiceDate);
+            if (!isNaN(dateObj.getTime())) {
+              displayDate = dateObj.toLocaleDateString('he-IL');
+            } else {
+              // If parsing fails, use string as-is (might be Hebrew date)
+              displayDate = invoiceDate.toString();
+            }
           } catch (e) {
-            // If date parsing fails, use the string as-is
-            displayDate = invoiceDate;
+            displayDate = invoiceDate.toString();
           }
         } else {
-          // Fallback to upload date
+          // Final fallback: upload date (same as supplier_name pattern: 'לא צוין')
           displayDate = new Date(invoice.created_at).toLocaleDateString('he-IL');
         }
         
@@ -11548,10 +11560,13 @@
         // Phase 3: Apply invoice mappings to damage centers
         await applyInvoiceMappingsToCenters(checkedInvoices);
         
-        // Phase 4: Update invoice status (try common status values)
-        await updateInvoiceStatus(checkedInvoices, 'completed');
+        // Phase 4: Save updated helper.damage_centers back to Supabase and sessionStorage
+        await saveUpdatedDamageCenters();
         
-        // Phase 5: Hide banner and refresh view
+        // Phase 5: Update invoice status (use allowed status value)
+        await updateInvoiceStatus(checkedInvoices, 'PAID');
+        
+        // Phase 6: Hide banner and refresh view
         hideInvoiceAssignmentBanner();
         
         // Reload the page or refresh damage centers display
@@ -11592,8 +11607,8 @@
     async function archiveCurrentCenters() {
       const helper = window.helper || {};
       
-      if (!helper.centers || helper.centers.length === 0) {
-        console.log('ℹ️ SESSION 88: No centers to archive');
+      if (!helper.damage_centers || helper.damage_centers.length === 0) {
+        console.log('ℹ️ SESSION 88: No damage_centers to archive');
         return;
       }
       
@@ -11602,8 +11617,8 @@
         await window.saveHelperVersion('Pre-Invoice Assignment Archive', {
           trigger_event: 'invoice_assignment',
           invoice_assignment_type: 'pre_assignment_archive',
-          centers_count: helper.centers.length,
-          notes: 'Centers archived before invoice assignment - wizard data preserved'
+          centers_count: helper.damage_centers.length,
+          notes: 'Damage centers archived before invoice assignment - wizard data preserved'
         });
         
         console.log('✅ SESSION 88: Centers archived to helper_versions');
@@ -11798,23 +11813,23 @@
           }
           
           console.log(`📊 Found ${mappings.length} mappings for invoice ${invoice.invoice_number}:`, mappings);
-          console.log(`🔍 Available centers in helper:`, helper.centers?.map(c => ({ Id: c.Id, code: c.code, name: c.name })));
+          console.log(`🔍 Available centers in helper.damage_centers:`, helper.damage_centers?.map(c => ({ Id: c.Id, code: c.code, name: c.name })));
           
           // Apply each mapping to the corresponding damage center
           mappings.forEach((mapping, index) => {
             console.log(`🔄 Processing mapping ${index + 1}/${mappings.length}:`, mapping);
             
             const centerCode = mapping.damage_center_id;
-            const center = helper.centers?.find(c => 
+            const center = helper.damage_centers?.find(c => 
               c.Id === centerCode || c.code === centerCode
             );
             
             console.log(`🔍 Looking for center '${centerCode}', found:`, center);
             
             if (!center) {
-              console.warn(`⚠️ Center ${centerCode} not found in helper.centers`);
-              console.log(`Available center IDs:`, helper.centers?.map(c => c.Id));
-              console.log(`Available center codes:`, helper.centers?.map(c => c.code));
+              console.warn(`⚠️ Center ${centerCode} not found in helper.damage_centers`);
+              console.log(`Available center IDs:`, helper.damage_centers?.map(c => c.Id));
+              console.log(`Available center codes:`, helper.damage_centers?.map(c => c.code));
               return;
             }
             
@@ -11907,6 +11922,64 @@
     }
 
     /**
+     * Save updated damage centers back to Supabase and sessionStorage
+     */
+    async function saveUpdatedDamageCenters() {
+      try {
+        console.log('💾 SESSION 88: Saving updated damage centers...');
+        
+        const helper = window.helper || {};
+        
+        if (!helper.damage_centers || helper.damage_centers.length === 0) {
+          console.log('ℹ️ SESSION 88: No damage centers to save');
+          return;
+        }
+        
+        // Update sessionStorage first
+        sessionStorage.setItem('helper', JSON.stringify(helper));
+        window.helper = helper;
+        console.log('✅ Updated helper in sessionStorage');
+        
+        // Save to Supabase if available and case_id exists
+        if (window.supabase && helper.case_info?.supabase_case_id) {
+          const caseId = helper.case_info.supabase_case_id;
+          
+          const { error } = await window.supabase
+            .from('cases')
+            .update({ 
+              damage_centers: helper.damage_centers,
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', caseId);
+          
+          if (error) {
+            console.error('❌ Error saving damage centers to Supabase:', error);
+          } else {
+            console.log('✅ Damage centers saved to Supabase cases table');
+          }
+        } else {
+          console.log('ℹ️ Supabase not available or no case_id - only saved to sessionStorage');
+        }
+        
+        // Save helper version for backup
+        if (typeof window.saveHelperVersion === 'function') {
+          await window.saveHelperVersion('Post-Invoice Assignment', {
+            trigger_event: 'invoice_assignment_completed',
+            centers_count: helper.damage_centers.length,
+            notes: 'Helper saved after invoice assignment - invoice data applied'
+          });
+          console.log('✅ Version saved to helper_versions for backup');
+        }
+        
+        console.log(`✅ SESSION 88: Saved ${helper.damage_centers.length} updated damage centers`);
+        
+      } catch (error) {
+        console.error('❌ SESSION 88: Error saving updated damage centers:', error);
+        // Don't throw - this shouldn't block the assignment process
+      }
+    }
+
+    /**
      * Update invoice status in Supabase
      */
     async function updateInvoiceStatus(invoices, status) {
@@ -11930,12 +12003,12 @@
         if (updateError) {
           console.error(`❌ Error updating invoice ${invoiceId}:`, updateError);
           
-          // If status constraint violation, try with a different status
+          // If status constraint violation, try with allowed status values only
           if (updateError.message?.includes('invoices_status_check')) {
-            console.log('🔄 Trying alternative status values...');
+            console.log('🔄 Trying allowed status values...');
             
-            // Try common status values
-            const statusesToTry = ['mapped', 'assigned', 'approved', 'processed'];
+            // Try only constraint-allowed status values: DRAFT, SENT, PAID, CANCELLED
+            const statusesToTry = ['SENT', 'PAID'];
             
             for (const alternativeStatus of statusesToTry) {
               const { error: retryError } = await window.supabase
@@ -11972,8 +12045,8 @@
         const helper = window.helper || {};
         const differentials = [];
         
-        // Get wizard data from helper.centers for comparison
-        const wizardCenters = helper.centers || [];
+        // Get wizard data from helper.damage_centers for comparison
+        const wizardCenters = helper.damage_centers || [];
         
         for (const invoice of invoices) {
           console.log(`📄 Processing invoice ${invoice.invoice_number}...`);
