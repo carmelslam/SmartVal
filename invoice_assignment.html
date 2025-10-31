@@ -936,23 +936,65 @@
      */
     async function loadInvoiceLinesForCase(caseId) {
       try {
-        // Get all invoices for this case only
+        console.log('🔍 SESSION 86: Loading invoices for case:', caseId);
+        console.log('🔍 SESSION 86: Current case plate:', currentCase.plate);
+        
+        // First try to get invoices by case_id
         const { data: invoices, error: invError } = await window.supabase
           .from('invoices')
-          .select('id, invoice_number, supplier_name, plate, total_amount')
+          .select('id, invoice_number, supplier_name, plate, total_amount, case_id')
           .eq('case_id', caseId);
 
-        if (invError) throw invError;
-        if (!invoices || invoices.length === 0) {
-          console.log('📄 SESSION 86: No invoices found for case:', caseId);
+        console.log('📄 SESSION 86: Invoices by case_id:', invoices?.length || 0, invoices);
+
+        if (invError) {
+          console.error('❌ SESSION 86: Error loading by case_id:', invError);
+          throw invError;
+        }
+        
+        let finalInvoices = invoices || [];
+        
+        // If no invoices found by case_id, try by plate as fallback
+        if (!finalInvoices || finalInvoices.length === 0) {
+          console.log('🔍 SESSION 86: No invoices by case_id, trying by plate...');
+          
+          const { data: invoicesByPlate, error: plateError } = await window.supabase
+            .from('invoices')
+            .select('id, invoice_number, supplier_name, plate, total_amount, case_id')
+            .eq('plate', currentCase.plate);
+            
+          console.log('📄 SESSION 86: Invoices by plate:', invoicesByPlate?.length || 0, invoicesByPlate);
+          
+          if (plateError) {
+            console.error('❌ SESSION 86: Error loading by plate:', plateError);
+          } else {
+            finalInvoices = invoicesByPlate || [];
+          }
+        }
+        
+        // If still no invoices, get all invoices for debugging
+        if (!finalInvoices || finalInvoices.length === 0) {
+          console.log('🔍 SESSION 86: No invoices found, getting all for debugging...');
+          
+          const { data: allInvoices, error: allError } = await window.supabase
+            .from('invoices')
+            .select('id, invoice_number, supplier_name, plate, total_amount, case_id')
+            .limit(10);
+            
+          console.log('📄 SESSION 86: Sample of all invoices:', allInvoices?.length || 0, allInvoices);
+          
+          if (allError) {
+            console.error('❌ SESSION 86: Error loading all invoices:', allError);
+          }
+          
           return [];
         }
 
-        console.log('📄 SESSION 86: Found invoices for case:', invoices.length);
+        console.log('📄 SESSION 86: Final invoices to process:', finalInvoices.length);
 
         // SESSION 86 FIX: Get invoice lines for each invoice separately (no .in() method)
         let allLines = [];
-        for (const invoice of invoices) {
+        for (const invoice of finalInvoices) {
           console.log('📄 SESSION 86: Loading lines for invoice:', invoice.id);
           
           const { data: lines, error: linesError } = await window.supabase
@@ -1637,11 +1679,11 @@
     }
     
     /**
-     * SESSION 86: Apply assignment to helper.centers immediately
+     * SESSION 86: Apply assignment to helper.centers using separate InvoiceAssignments array
      */
     async function applyAssignmentToCenters(assignment) {
       try {
-        console.log('🎯 Applying assignment to helper.centers:', assignment);
+        console.log('🎯 Applying assignment to helper.centers with separate InvoiceAssignments:', assignment);
         
         // Ensure helper.centers exists
         if (!window.helper.centers) {
@@ -1658,38 +1700,44 @@
         
         console.log('🎯 Found target center:', targetCenter['Damage center Number']);
         
-        // Apply based on field_type
-        if (assignment.field_type === 'part') {
-          await applyPartAssignment(targetCenter, assignment);
-        } else if (assignment.field_type === 'work') {
-          await applyWorkAssignment(targetCenter, assignment);
-        } else if (assignment.field_type === 'repair') {
-          await applyRepairAssignment(targetCenter, assignment);
+        // Initialize InvoiceAssignments if it doesn't exist
+        if (!targetCenter.InvoiceAssignments) {
+          targetCenter.InvoiceAssignments = {
+            parts: [],
+            works: [],
+            repairs: [],
+            meta: { total_cost: 0, total_items: 0, timestamp: new Date().toISOString() }
+          };
         }
         
-        console.log('✅ Assignment applied to centers successfully');
+        // Apply based on field_type to separate InvoiceAssignments arrays
+        if (assignment.field_type === 'part') {
+          await applyPartToInvoiceAssignments(targetCenter, assignment);
+        } else if (assignment.field_type === 'work') {
+          await applyWorkToInvoiceAssignments(targetCenter, assignment);
+        } else if (assignment.field_type === 'repair') {
+          await applyRepairToInvoiceAssignments(targetCenter, assignment);
+        }
+        
+        // Recalculate InvoiceAssignments meta
+        updateInvoiceAssignmentsMeta(targetCenter);
+        
+        console.log('✅ Assignment applied to InvoiceAssignments successfully');
         
       } catch (error) {
-        console.error('❌ Error applying assignment to centers:', error);
+        console.error('❌ Error applying assignment to InvoiceAssignments:', error);
       }
     }
     
     /**
-     * Apply part assignment to damage center
+     * Apply part assignment to InvoiceAssignments.parts array (separate from wizard data)
      */
-    async function applyPartAssignment(center, assignment) {
+    async function applyPartToInvoiceAssignments(center, assignment) {
       const invoiceLine = assignment.invoice_line;
       
-      // Ensure Parts structure exists
-      if (!center.Parts) {
-        center.Parts = { parts_required: [], parts_meta: { total_items: 0, total_cost: 0 } };
-      }
-      if (!center.Parts.parts_required) {
-        center.Parts.parts_required = [];
-      }
-      
-      // Create part object matching helper.centers structure
+      // Create part object for InvoiceAssignments
       const part = {
+        assignment_id: assignment.assignment_id,
         row_uuid: generateUUID(),
         case_id: currentCase.id,
         plate: currentCase.plate,
@@ -1700,107 +1748,89 @@
         oem: assignment.catalog_code || '',
         supplier_name: assignment.supplier_name || assignment.garage_name || '',
         price_per_unit: parseFloat(invoiceLine.unit_price || 0),
-        reduction_percentage: 0,
-        wear_percentage: 0,
-        updated_price: parseFloat(invoiceLine.unit_price || 0),
         total_cost: parseFloat(invoiceLine.line_total || 0),
         quantity: parseInt(invoiceLine.quantity || 1),
-        source: 'invoice', // Mark as from invoice
+        source: 'invoice',
         _invoice_line_id: assignment.invoice_line_id,
         _invoice_id: assignment.invoice_id,
-        make: '',
-        model: '',
-        year: '',
-        מחיר: parseFloat(invoiceLine.unit_price || 0),
-        מיקום: 'ישראל',
-        הערות: '',
-        זמינות: 'זמין',
-        metadata: {},
+        assigned_at: assignment.assigned_at,
         updated_at: new Date().toISOString()
       };
       
-      center.Parts.parts_required.push(part);
-      
-      // Recalculate meta
-      center.Parts.parts_meta = {
-        total_items: center.Parts.parts_required.length,
-        total_cost: center.Parts.parts_required.reduce((sum, p) => sum + (p.total_cost || 0), 0),
-        timestamp: new Date().toISOString()
-      };
-      
-      console.log('✅ Part added to center:', part.part_name);
+      center.InvoiceAssignments.parts.push(part);
+      console.log('✅ Part added to InvoiceAssignments:', part.part_name);
     }
     
     /**
-     * Apply work assignment to damage center
+     * Apply work assignment to InvoiceAssignments.works array (separate from wizard data)
      */
-    async function applyWorkAssignment(center, assignment) {
+    async function applyWorkToInvoiceAssignments(center, assignment) {
       const invoiceLine = assignment.invoice_line;
-      
-      // Ensure Works structure exists
-      if (!center.Works) {
-        center.Works = { works: [], works_meta: { total_items: 0, total_cost: 0 } };
-      }
-      if (!center.Works.works) {
-        center.Works.works = [];
-      }
       
       const work = {
+        assignment_id: assignment.assignment_id,
         category: invoiceLine.description,
+        description: invoiceLine.description,
         cost: parseFloat(invoiceLine.line_total || 0),
         comments: 'מחשבונית: ' + (assignment.catalog_code || ''),
-        added_at: new Date().toISOString(),
+        supplier_name: assignment.supplier_name || assignment.garage_name || '',
         source: 'invoice',
         _invoice_line_id: assignment.invoice_line_id,
-        _invoice_id: assignment.invoice_id
+        _invoice_id: assignment.invoice_id,
+        assigned_at: assignment.assigned_at,
+        updated_at: new Date().toISOString()
       };
       
-      center.Works.works.push(work);
-      
-      // Recalculate meta
-      center.Works.works_meta = {
-        total_items: center.Works.works.length,
-        total_cost: center.Works.works.reduce((sum, w) => sum + (w.cost || 0), 0),
-        timestamp: new Date().toISOString()
-      };
-      
-      console.log('✅ Work added to center:', work.category);
+      center.InvoiceAssignments.works.push(work);
+      console.log('✅ Work added to InvoiceAssignments:', work.category);
     }
     
     /**
-     * Apply repair assignment to damage center
+     * Apply repair assignment to InvoiceAssignments.repairs array (separate from wizard data)
      */
-    async function applyRepairAssignment(center, assignment) {
+    async function applyRepairToInvoiceAssignments(center, assignment) {
       const invoiceLine = assignment.invoice_line;
       
-      // Ensure Repairs structure exists
-      if (!center.Repairs) {
-        center.Repairs = { repairs: [], repairs_meta: { total_items: 0, total_cost: 0 } };
-      }
-      if (!center.Repairs.repairs) {
-        center.Repairs.repairs = [];
-      }
-      
       const repair = {
+        assignment_id: assignment.assignment_id,
         name: invoiceLine.description,
+        description: invoiceLine.description,
         cost: parseFloat(invoiceLine.line_total || 0),
-        description: 'מחשבונית: ' + (assignment.catalog_code || ''),
-        added_at: new Date().toISOString(),
+        comments: 'מחשבונית: ' + (assignment.catalog_code || ''),
+        supplier_name: assignment.supplier_name || assignment.garage_name || '',
         source: 'invoice',
         _invoice_line_id: assignment.invoice_line_id,
-        _invoice_id: assignment.invoice_id
+        _invoice_id: assignment.invoice_id,
+        assigned_at: assignment.assigned_at,
+        updated_at: new Date().toISOString()
       };
       
-      center.Repairs.repairs.push(repair);
+      center.InvoiceAssignments.repairs.push(repair);
+      console.log('✅ Repair added to InvoiceAssignments:', repair.name);
+    }
+    
+    /**
+     * Recalculate InvoiceAssignments meta data
+     */
+    function updateInvoiceAssignmentsMeta(center) {
+      const ia = center.InvoiceAssignments;
+      const totalItems = ia.parts.length + ia.works.length + ia.repairs.length;
+      const totalCost = [
+        ...ia.parts.map(p => p.total_cost || 0),
+        ...ia.works.map(w => w.cost || 0),
+        ...ia.repairs.map(r => r.cost || 0)
+      ].reduce((sum, cost) => sum + cost, 0);
       
-      // Recalculate meta
-      center.Repairs.repairs_meta = {
-        total_items: center.Repairs.repairs.length,
-        total_cost: center.Repairs.repairs.reduce((sum, r) => sum + (r.cost || 0), 0),
+      ia.meta = {
+        total_items: totalItems,
+        total_cost: totalCost,
+        parts_count: ia.parts.length,
+        works_count: ia.works.length,
+        repairs_count: ia.repairs.length,
         timestamp: new Date().toISOString()
       };
       
-      console.log('✅ Repair added to center:', repair.name);
+      console.log('📊 Updated InvoiceAssignments meta:', ia.meta);
     }
     
     function generateUUID() {
