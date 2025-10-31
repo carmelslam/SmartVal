@@ -11398,15 +11398,18 @@
         // Try to get actual invoice date from helper or OCR data
         let invoiceDate = null;
         
-        // Look for invoice date in helper.invoices
-        const helperInvoice = helper.invoices?.find(inv => inv.id === invoice.id);
-        if (helperInvoice && helperInvoice['תאריך']) {
-          invoiceDate = helperInvoice['תאריך'];
+        // Extract invoice date like other invoice detail fields
+        // Check invoice OCR structured data first (primary source)
+        if (invoice.ocr_structured_data && invoice.ocr_structured_data['תאריך']) {
+          invoiceDate = invoice.ocr_structured_data['תאריך'];
         }
         
-        // Fallback to OCR structured data if available
-        if (!invoiceDate && invoice.ocr_structured_data && invoice.ocr_structured_data['תאריך']) {
-          invoiceDate = invoice.ocr_structured_data['תאריך'];
+        // Fallback to helper.invoices if OCR data not available
+        if (!invoiceDate) {
+          const helperInvoice = helper.invoices?.find(inv => inv.id === invoice.id);
+          if (helperInvoice && helperInvoice['תאריך']) {
+            invoiceDate = helperInvoice['תאריך'];
+          }
         }
         
         // Format the date
