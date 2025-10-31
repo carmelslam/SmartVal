@@ -1146,21 +1146,24 @@ async function generateManualInvoicePDF(invoiceData, documentId) {
       throw uploadError;
     }
 
-    // Get public URL
-    const { data: urlData } = window.supabase.storage
-      .from('invoices')
-      .getPublicUrl(fileName);
+    console.log('✅ SESSION 87: PDF uploaded to storage:', uploadData);
 
-    const pdfUrl = urlData.publicUrl;
+    // Storage path is the file path in the bucket
+    const storagePath = fileName;
 
-    // Update invoice_documents with PDF URL
-    await window.supabase
+    // Update invoice_documents with storage_path
+    const { error: updateError } = await window.supabase
       .from('invoice_documents')
-      .update({ storage_url: pdfUrl })
+      .update({ storage_path: storagePath })
       .eq('id', documentId);
 
-    console.log('✅ SESSION 87: PDF generated and uploaded:', pdfUrl);
-    return pdfUrl;
+    if (updateError) {
+      console.error('❌ SESSION 87: Failed to update storage_path:', updateError);
+      throw updateError;
+    }
+
+    console.log('✅ SESSION 87: PDF generated and storage_path updated:', storagePath);
+    return storagePath;
 
   } catch (error) {
     console.error('❌ SESSION 87: PDF generation failed:', error);
@@ -4001,6 +4004,17 @@ class InvoiceProcessor {
               console.error('⚠️ SESSION 87: Failed to save invoice_validations:', validationError);
             } else {
               console.log('✅ SESSION 87: Saved to invoice_validations');
+            }
+          }
+
+          // SESSION 87: Generate PDF with watermark if document was created
+          if (document?.id) {
+            console.log('📄 SESSION 87: Generating PDF for manual invoice...');
+            const pdfUrl = await window.generateManualInvoicePDF(invoiceData, document.id);
+            if (pdfUrl) {
+              console.log('✅ SESSION 87: PDF generated and storage_path updated');
+            } else {
+              console.warn('⚠️ SESSION 87: PDF generation failed');
             }
           }
 
