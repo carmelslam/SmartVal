@@ -441,6 +441,21 @@ class AuthService {
 
       if (inactivityTime > TIMEOUT_DURATION) {
         console.log('⏰ Session timed out due to inactivity');
+        
+        // SESSION 88: Save version on system timeout BEFORE logout
+        if (window.saveHelperVersion && window.helper) {
+          try {
+            console.log('💾 SESSION 88: Saving version on system timeout...');
+            await window.saveHelperVersion('System Timeout', {
+              trigger_event: 'system_timeout',
+              notes: 'Auto-logout due to 15 minute inactivity'
+            });
+            console.log('✅ SESSION 88: Version saved successfully on timeout');
+          } catch (error) {
+            console.error('❌ SESSION 88: Failed to save version on timeout:', error);
+          }
+        }
+        
         await this.logout();
         if (onTimeout) onTimeout();
       }

@@ -2239,8 +2239,23 @@
     };
 
     // Generate estimate
-    window.generateEstimate = function() {
+    window.generateEstimate = async function() {
       console.log('📄 Generate estimate');
+      
+      // SESSION 88: Save version FIRST before estimate generation
+      if (window.saveHelperVersion && window.helper) {
+        try {
+          console.log('💾 SESSION 88: Saving version before estimate generation...');
+          await window.saveHelperVersion('Estimate Generation', {
+            trigger_event: 'estimate_generation',
+            notes: 'Pre-generation save of estimate data'
+          });
+          console.log('✅ SESSION 88: Version saved successfully before estimate generation');
+        } catch (error) {
+          console.error('❌ SESSION 88: Failed to save version before estimate generation:', error);
+        }
+      }
+      
       saveEstimate();
       // Navigate to validation page
       window.location.href = 'estimate-validation.html';

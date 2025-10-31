@@ -1564,13 +1564,27 @@
       }, 1500);
     }
     
-    function submitFinalReport() {
+    async function submitFinalReport() {
       // Get submit button and show loading state
       const submitButton = event.target;
       const originalText = submitButton.innerHTML;
       submitButton.innerHTML = '⏳ שולח דוח...';
       submitButton.disabled = true;
       submitButton.style.opacity = '0.7';
+      
+      // SESSION 88: Save version FIRST before submission
+      if (window.saveHelperVersion && window.helper) {
+        try {
+          console.log('💾 SESSION 88: Saving version before final report submission...');
+          await window.saveHelperVersion('Final Report Submission', {
+            trigger_event: 'final_report_submission',
+            notes: 'Pre-submission save of final report data'
+          });
+          console.log('✅ SESSION 88: Version saved successfully before final report submission');
+        } catch (error) {
+          console.error('❌ SESSION 88: Failed to save version before final report submission:', error);
+        }
+      }
       
       // Remove draft watermark before submission
       const watermarkElement = document.querySelector('[style*="טיוטה בלבד"]');

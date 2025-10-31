@@ -2127,6 +2127,20 @@
     window.generateEstimateReport = async function() {
       const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
       
+      // SESSION 88: Save version FIRST before estimate report generation
+      if (window.saveHelperVersion && window.helper) {
+        try {
+          console.log('💾 SESSION 88: Saving version before estimate report generation...');
+          await window.saveHelperVersion('Estimate Report Generation', {
+            trigger_event: 'estimate_report_generation',
+            notes: 'Pre-generation save of estimate report data'
+          });
+          console.log('✅ SESSION 88: Version saved successfully before estimate report generation');
+        } catch (error) {
+          console.error('❌ SESSION 88: Failed to save version before estimate report generation:', error);
+        }
+      }
+      
       try {
         console.log('🔄 Starting estimate submission to Make.com...');
         

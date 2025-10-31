@@ -50,9 +50,23 @@
     console.log('🔊 Failed to initialize car driving away sound:', e.message);
   }
   
-  // Global logout function with driving away sound and Supabase backup
+  // Global logout function with driving away sound and version saving
   window.logoutWithSound = async function() {
-    console.log('🚗 Logout initiated with driving away sound');
+    console.log('🚗 SESSION 88: Logout initiated with version save and sound');
+    
+    // SESSION 88: Save version FIRST (before clearing data)
+    if (window.saveHelperVersion && window.helper) {
+      try {
+        console.log('💾 SESSION 88: Saving version on manual logout...');
+        await window.saveHelperVersion('Manual Logout', {
+          trigger_event: 'manual_logout',
+          notes: 'User clicked logout button'
+        });
+        console.log('✅ SESSION 88: Version saved successfully on logout');
+      } catch (error) {
+        console.error('❌ SESSION 88: Failed to save version on logout:', error);
+      }
+    }
     
     // Play driving away sound
     if (carDrivingAwaySound) {
@@ -64,7 +78,7 @@
     // Show logout message
     showLogoutMessage();
     
-    // Preserve helper data and save to Supabase
+    // Preserve helper data and save to Supabase (legacy support)
     const helperData = sessionStorage.getItem('helper');
     
     if (helperData) {

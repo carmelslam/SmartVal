@@ -6044,6 +6044,245 @@ window.processComprehensiveInvoiceJSON = function(invoiceFile, comprehensiveJSON
   };
 };
 
+// ============================================================================
+// 🚀 SESSION 88: COMPREHENSIVE VERSION SAVING SYSTEM
+// ============================================================================
+
+/**
+ * Save current helper state as a version in Supabase
+ * @param {string} versionLabel - Human-readable label
+ * @param {object} metadata - Additional metadata
+ * @returns {Promise<object>} Saved version data
+ */
+window.saveHelperVersion = async function(versionLabel, metadata = {}) {
+  if (!window.helper) {
+    console.warn('⚠️ SESSION 88: No helper data to save version');
+    return false;
+  }
+  
+  try {
+    console.log(`💾 SESSION 88: Saving helper version: ${versionLabel}`);
+    
+    // Get current helper data and plate
+    const helperData = JSON.parse(JSON.stringify(window.helper));
+    const plate = helperData?.meta?.plate;
+    
+    if (!plate) {
+      console.warn('⚠️ SESSION 88: No plate found in helper data');
+      return false;
+    }
+    
+    // Normalize plate following existing pattern
+    const normalizedPlate = plate.replace(/[-\/\s]/g, '');
+    
+    // Get user ID for tracking (following existing auth pattern)
+    let userId = null;
+    try {
+      const authData = sessionStorage.getItem('auth');
+      if (authData) {
+        const auth = JSON.parse(authData);
+        userId = auth?.user?.id;
+      }
+    } catch (e) {
+      console.warn('⚠️ SESSION 88: Could not get user ID from auth');
+    }
+    
+    // Use existing supabaseHelperService if available (preferred method)
+    if (window.supabaseHelperService) {
+      try {
+        // Create helper name in existing format: {plate}_helper_v{timestamp}
+        const timestamp = Date.now();
+        const helperName = `${normalizedPlate}_helper_v${timestamp}`;
+        
+        const result = await window.supabaseHelperService.saveHelper({
+          plate: normalizedPlate,
+          helperData: helperData,
+          helperName: helperName,
+          timestamp: new Date().toISOString()
+        });
+        
+        if (result.success) {
+          console.log(`✅ SESSION 88: Version saved via supabaseHelperService (${versionLabel})`);
+          return true;
+        } else {
+          console.error('❌ SESSION 88: supabaseHelperService save failed:', result.error);
+        }
+      } catch (error) {
+        console.error('❌ SESSION 88: Error using supabaseHelperService:', error);
+      }
+    }
+    
+    // Fallback to direct Supabase save following existing case_helper pattern
+    if (window.supabase) {
+      let caseId = helperData?.case_info?.supabase_case_id;
+      
+      // Find or create case following existing pattern
+      if (!caseId) {
+        try {
+          const { data: caseData } = await window.supabase
+            .from('cases')
+            .select('id')
+            .eq('plate', normalizedPlate)
+            .or('status.eq.OPEN,status.eq.IN_PROGRESS')
+            .limit(1)
+            .single();
+          
+          if (caseData) {
+            caseId = caseData.id;
+            // Update helper with case_id for future use
+            helperData.case_info = helperData.case_info || {};
+            helperData.case_info.supabase_case_id = caseId;
+            window.helper.case_info = window.helper.case_info || {};
+            window.helper.case_info.supabase_case_id = caseId;
+          }
+        } catch (err) {
+          console.warn('⚠️ SESSION 88: Could not find case by plate:', err);
+        }
+      }
+      
+      if (caseId) {
+        // Get next version number from case_helper table (following existing pattern)
+        let version = 1;
+        try {
+          const { data: maxVer } = await window.supabase
+            .from('case_helper')
+            .select('version')
+            .eq('case_id', caseId)
+            .order('version', { ascending: false })
+            .limit(1)
+            .single();
+          
+          version = (maxVer?.version || 0) + 1;
+        } catch (err) {
+          console.warn('⚠️ SESSION 88: Version query failed, using version 1:', err);
+        }
+        
+        // Mark all previous versions as not current (following existing pattern)
+        await window.supabase
+          .from('case_helper')
+          .update({ 
+            is_current: false,
+            updated_by: userId,
+            updated_at: new Date().toISOString()
+          })
+          .eq('case_id', caseId);
+        
+        // Create helper name in existing format
+        const helperName = `${normalizedPlate}_helper_v${version}`;
+        const timestamp = new Date().toISOString();
+        
+        // Enhance helper_json with version metadata
+        const enrichedHelperData = {
+          ...helperData,
+          version_metadata: {
+            version_label: versionLabel,
+            ...metadata,
+            saved_at: timestamp
+          }
+        };
+        
+        // Save to case_helper table following existing structure
+        const { error } = await window.supabase
+          .from('case_helper')
+          .insert({
+            case_id: caseId,
+            version: version,
+            is_current: true,
+            helper_name: helperName,
+            helper_json: enrichedHelperData,
+            source: 'system',
+            sync_status: 'synced',
+            created_by: userId,
+            updated_by: userId,
+            created_at: timestamp,
+            updated_at: timestamp
+          });
+        
+        if (error) {
+          console.error('❌ SESSION 88: Failed to save to case_helper:', error);
+          return false;
+        }
+        
+        console.log(`✅ SESSION 88: Version ${version} saved to case_helper (${versionLabel})`);
+        return true;
+      } else {
+        console.warn('⚠️ SESSION 88: No case_id found, skipping Supabase save');
+      }
+    }
+    
+    return false;
+    
+  } catch (error) {
+    console.error('❌ SESSION 88: Error saving helper version:', error);
+    return false;
+  }
+};
+
+/**
+ * Check if helper has changed since last save
+ */
+window.hasHelperChanged = function() {
+  if (!window.lastSavedHelper) return true;
+  
+  // Compare stringified versions
+  const current = JSON.stringify(window.helper);
+  const previous = JSON.stringify(window.lastSavedHelper);
+  
+  return current !== previous;
+};
+
+/**
+ * Start auto-save timer (3 hours)
+ */
+window.startAutoSaveTimer = function() {
+  // Clear any existing timer
+  if (window.autoSaveTimer) {
+    clearInterval(window.autoSaveTimer);
+  }
+  
+  // Save every 3 hours
+  const THREE_HOURS = 3 * 60 * 60 * 1000;
+  
+  window.autoSaveTimer = setInterval(async () => {
+    if (window.hasHelperChanged()) {
+      console.log('🕐 SESSION 88: 3-hour auto-save triggered...');
+      
+      await window.saveHelperVersion('Auto-save (3 hours)', {
+        trigger_event: 'auto_save_3h',
+        notes: 'Automatic save after 3 hours of activity'
+      });
+      
+      // Update last saved state
+      window.lastSavedHelper = JSON.parse(JSON.stringify(window.helper));
+    } else {
+      console.log('🕐 SESSION 88: No changes detected, skipping auto-save');
+    }
+  }, THREE_HOURS);
+  
+  console.log('✅ SESSION 88: Auto-save timer started (3 hours)');
+};
+
+// Initialize auto-save on page load
+document.addEventListener('DOMContentLoaded', () => {
+  if (window.helper) {
+    window.startAutoSaveTimer();
+    window.lastSavedHelper = JSON.parse(JSON.stringify(window.helper));
+  }
+});
+
+// Save version on page unload (best effort)
+window.addEventListener('beforeunload', async (event) => {
+  if (window.hasHelperChanged()) {
+    console.log('📤 SESSION 88: Page unload - attempting version save...');
+    // This may not complete if page closes immediately
+    navigator.sendBeacon('/api/save-version', JSON.stringify({
+      helper: window.helper,
+      trigger: 'page_unload',
+      label: 'Page Unload Auto-save'
+    }));
+  }
+});
+
 // Auto-setup when DOM is ready
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', () => {

@@ -1174,7 +1174,7 @@
       }
     }
 
-    window.submitFinalExpertise = function() {
+    window.submitFinalExpertise = async function() {
       console.log('🔄 Starting submit process...');
       
       // Get submit button and disable it to prevent multiple submissions
@@ -1190,6 +1190,20 @@
         const originalText = submitButton.innerHTML;
         submitButton.innerHTML = '⏳ שולח... אנא המתן';
         submitButton.style.opacity = '0.6';
+        
+        // SESSION 88: Save version FIRST before submission
+        if (window.saveHelperVersion && window.helper) {
+          try {
+            console.log('💾 SESSION 88: Saving version before expertise submission...');
+            await window.saveHelperVersion('Expertise Submission', {
+              trigger_event: 'expertise_submission',
+              notes: 'Pre-submission save of expertise data'
+            });
+            console.log('✅ SESSION 88: Version saved successfully before expertise submission');
+          } catch (error) {
+            console.error('❌ SESSION 88: Failed to save version before expertise submission:', error);
+          }
+        }
         try {
           console.log('⏱️ Getting helper data...');
           const currentHelper = JSON.parse(sessionStorage.getItem('helper') || '{}');
