@@ -1193,6 +1193,90 @@
       <button class="collapsible-btn" type="button" onclick="toggleSection('damageCentersSummary')">סיכום מוקדי נזק (הצג/הסתר)</button>
       <div id="damageCentersSummary" style="display:none;">
         <h3>סיכום מוקדי נזק (ניתן לעריכה) </h3>
+        
+        <!-- SESSION 88: Invoice Assignment Banner -->
+        <div id="invoiceAssignmentBanner" style="display: none; margin-bottom: 15px;">
+          <div style="
+            background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+            border: 2px solid #2196f3;
+            border-radius: 8px;
+            padding: 15px;
+            position: relative;
+            box-shadow: 0 2px 8px rgba(33, 150, 243, 0.2);
+          ">
+            <div style="
+              display: flex;
+              align-items: center;
+              justify-content: space-between;
+              margin-bottom: 10px;
+            ">
+              <div style="
+                display: flex;
+                align-items: center;
+                gap: 10px;
+              ">
+                <span style="font-size: 20px;">📄</span>
+                <span style="
+                  font-weight: 600;
+                  color: #1565c0;
+                  font-size: 16px;
+                ">זמינות חשבוניות להקצאה</span>
+              </div>
+              <button id="dismissInvoiceBanner" onclick="dismissInvoiceAssignmentBanner()" style="
+                background: none;
+                border: none;
+                font-size: 18px;
+                cursor: pointer;
+                color: #666;
+                padding: 0;
+                width: 24px;
+                height: 24px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+              ">×</button>
+            </div>
+            
+            <div id="invoiceAssignmentContent" style="
+              background: white;
+              border-radius: 6px;
+              padding: 12px;
+              margin-bottom: 10px;
+            ">
+              <div style="color: #666; text-align: center;">
+                טוען חשבוניות זמינות...
+              </div>
+            </div>
+            
+            <div style="
+              display: flex;
+              gap: 10px;
+              justify-content: flex-end;
+            ">
+              <button id="showInvoicesDifferentials" onclick="showInvoicesDifferentials()" style="
+                background: #ff9800;
+                color: white;
+                border: none;
+                padding: 8px 16px;
+                border-radius: 4px;
+                cursor: pointer;
+                font-size: 14px;
+                font-weight: 500;
+              ">הצג הפרשי חשבוניות</button>
+              <button id="acceptInvoiceAssignment" onclick="acceptInvoiceAssignment()" style="
+                background: #4caf50;
+                color: white;
+                border: none;
+                padding: 8px 16px;
+                border-radius: 4px;
+                cursor: pointer;
+                font-size: 14px;
+                font-weight: 500;
+              ">אשר הקצאת חשבוניות</button>
+            </div>
+          </div>
+        </div>
+        
         <div style="background: #f8f9fa; border-radius: 6px; padding: 15px; min-height: 50px;" id="damageCentersContent">
           <div style="color: #666; text-align: center;">טוען נתוני מוקדי נזק...</div>
         </div>
@@ -11143,6 +11227,356 @@
       }
     }
 
+    // ============================================================================
+    // SESSION 88: INVOICE ASSIGNMENT BANNER SYSTEM
+    // ============================================================================
+
+    /**
+     * Check for available invoices and show assignment banner if any exist
+     */
+    async function checkForAvailableInvoices() {
+      try {
+        console.log('📄 SESSION 88: Checking for available invoices...');
+        
+        const helper = window.helper || {};
+        const plate = helper.meta?.plate || helper.vehicle?.plate || helper.car_details?.plate;
+        const caseId = helper.meta?.case_id;
+        
+        if (!plate || !caseId) {
+          console.log('ℹ️ SESSION 88: No plate or case_id, skipping invoice check');
+          return;
+        }
+        
+        if (!window.supabase) {
+          console.warn('⚠️ SESSION 88: Supabase not available for invoice check');
+          return;
+        }
+        
+        // Query for invoices for this case/plate
+        const { data: invoices, error } = await window.supabase
+          .from('invoices')
+          .select(`
+            id, 
+            invoice_number, 
+            supplier_name, 
+            total_amount,
+            status,
+            lines:invoice_lines(*)
+          `)
+          .eq('case_id', caseId)
+          .eq('status', 'pending_assignment');
+        
+        if (error) {
+          console.error('❌ SESSION 88: Error querying invoices:', error);
+          return;
+        }
+        
+        if (!invoices || invoices.length === 0) {
+          console.log('ℹ️ SESSION 88: No pending invoices found');
+          hideInvoiceAssignmentBanner();
+          return;
+        }
+        
+        console.log(`📋 SESSION 88: Found ${invoices.length} pending invoices`);
+        showInvoiceAssignmentBanner(invoices);
+        
+      } catch (error) {
+        console.error('❌ SESSION 88: Error checking for invoices:', error);
+      }
+    }
+
+    /**
+     * Show the invoice assignment banner with available invoices
+     */
+    function showInvoiceAssignmentBanner(invoices) {
+      const banner = document.getElementById('invoiceAssignmentBanner');
+      const content = document.getElementById('invoiceAssignmentContent');
+      
+      if (!banner || !content) {
+        console.warn('⚠️ SESSION 88: Invoice banner elements not found');
+        return;
+      }
+      
+      // Build invoice list HTML
+      let invoiceListHtml = `
+        <div style="margin-bottom: 10px; font-weight: 600; color: #1565c0;">
+          נמצאו ${invoices.length} חשבוניות ממתינות להקצאה:
+        </div>
+      `;
+      
+      invoices.forEach((invoice, index) => {
+        const lineCount = invoice.lines?.length || 0;
+        invoiceListHtml += `
+          <div style="
+            border: 1px solid #e0e0e0;
+            border-radius: 4px;
+            padding: 10px;
+            margin-bottom: 8px;
+            background: #fafafa;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+          ">
+            <div>
+              <div style="font-weight: 600; color: #333;">
+                ${invoice.invoice_number} - ${invoice.supplier_name}
+              </div>
+              <div style="font-size: 13px; color: #666;">
+                ${lineCount} פריטים | ₪${invoice.total_amount?.toLocaleString() || '0'}
+              </div>
+            </div>
+            <div>
+              <input type="checkbox" 
+                     id="invoice_${invoice.id}" 
+                     data-invoice-id="${invoice.id}"
+                     style="transform: scale(1.2);">
+            </div>
+          </div>
+        `;
+      });
+      
+      content.innerHTML = invoiceListHtml;
+      banner.style.display = 'block';
+      
+      // Store invoices data for later use
+      window.availableInvoices = invoices;
+      
+      console.log('✅ SESSION 88: Invoice assignment banner displayed');
+    }
+
+    /**
+     * Hide the invoice assignment banner
+     */
+    function hideInvoiceAssignmentBanner() {
+      const banner = document.getElementById('invoiceAssignmentBanner');
+      if (banner) {
+        banner.style.display = 'none';
+      }
+    }
+
+    /**
+     * Dismiss the invoice assignment banner (user clicked X)
+     */
+    function dismissInvoiceAssignmentBanner() {
+      hideInvoiceAssignmentBanner();
+      
+      // Mark as dismissed in session storage
+      sessionStorage.setItem('invoiceAssignmentDismissed', 'true');
+      
+      console.log('ℹ️ SESSION 88: Invoice assignment banner dismissed by user');
+    }
+
+    /**
+     * Show invoices differentials in a popup
+     */
+    async function showInvoicesDifferentials() {
+      try {
+        console.log('📊 SESSION 88: Showing invoice differentials...');
+        
+        const checkedInvoices = getSelectedInvoices();
+        if (checkedInvoices.length === 0) {
+          alert('אנא בחר לפחות חשבונית אחת להצגת הפרשים');
+          return;
+        }
+        
+        // Calculate differentials between wizard centers and invoice data
+        const differentials = await calculateInvoiceDifferentials(checkedInvoices);
+        
+        // Show in popup or floating screen
+        displayDifferentialsPopup(differentials);
+        
+      } catch (error) {
+        console.error('❌ SESSION 88: Error showing differentials:', error);
+        alert('שגיאה בהצגת הפרשי חשבוניות');
+      }
+    }
+
+    /**
+     * Accept invoice assignment and perform center duplication
+     */
+    async function acceptInvoiceAssignment() {
+      try {
+        console.log('✅ SESSION 88: Processing invoice assignment acceptance...');
+        
+        const checkedInvoices = getSelectedInvoices();
+        if (checkedInvoices.length === 0) {
+          alert('אנא בחר לפחות חשבונית אחת לאישור הקצאה');
+          return;
+        }
+        
+        if (!confirm(`האם אתה בטוח שברצונך לאשר הקצאת ${checkedInvoices.length} חשבוניות? פעולה זו תדרוס את נתוני המוקדים הקיימים.`)) {
+          return;
+        }
+        
+        // Show loading state
+        const acceptBtn = document.getElementById('acceptInvoiceAssignment');
+        if (acceptBtn) {
+          acceptBtn.disabled = true;
+          acceptBtn.textContent = 'מעבד...';
+        }
+        
+        // Phase 1: Archive current centers to helper_versions
+        await archiveCurrentCenters();
+        
+        // Phase 2: Duplicate centers with invoice data
+        await duplicateCentersWithInvoices(checkedInvoices);
+        
+        // Phase 3: Update invoice status to assigned
+        await updateInvoiceStatus(checkedInvoices, 'assigned');
+        
+        // Phase 4: Hide banner and refresh view
+        hideInvoiceAssignmentBanner();
+        
+        // Reload the page or refresh damage centers display
+        if (typeof loadDataFromHelper === 'function') {
+          loadDataFromHelper();
+        }
+        
+        alert('הקצאת חשבוניות הושלמה בהצלחה!');
+        
+      } catch (error) {
+        console.error('❌ SESSION 88: Error accepting invoice assignment:', error);
+        alert('שגיאה בעיבוד הקצאת חשבוניות');
+        
+        // Reset button state
+        const acceptBtn = document.getElementById('acceptInvoiceAssignment');
+        if (acceptBtn) {
+          acceptBtn.disabled = false;
+          acceptBtn.textContent = 'אשר הקצאת חשבוניות';
+        }
+      }
+    }
+
+    /**
+     * Get selected invoices from checkboxes
+     */
+    function getSelectedInvoices() {
+      const checkboxes = document.querySelectorAll('[data-invoice-id]:checked');
+      const selectedIds = Array.from(checkboxes).map(cb => cb.getAttribute('data-invoice-id'));
+      
+      return (window.availableInvoices || []).filter(invoice => 
+        selectedIds.includes(invoice.id)
+      );
+    }
+
+    /**
+     * Archive current centers before invoice assignment
+     */
+    async function archiveCurrentCenters() {
+      const helper = window.helper || {};
+      
+      if (!helper.centers || helper.centers.length === 0) {
+        console.log('ℹ️ SESSION 88: No centers to archive');
+        return;
+      }
+      
+      // Save version using the existing version saving system
+      if (typeof window.saveHelperVersion === 'function') {
+        await window.saveHelperVersion('Pre-Invoice Assignment Archive', {
+          trigger_event: 'invoice_assignment',
+          invoice_assignment_type: 'pre_assignment_archive',
+          centers_count: helper.centers.length,
+          notes: 'Centers archived before invoice assignment - wizard data preserved'
+        });
+        
+        console.log('✅ SESSION 88: Centers archived to helper_versions');
+      } else {
+        console.warn('⚠️ SESSION 88: saveHelperVersion not available, skipping archive');
+      }
+    }
+
+    /**
+     * Duplicate centers with invoice assignment
+     */
+    async function duplicateCentersWithInvoices(selectedInvoices) {
+      const helper = window.helper || {};
+      
+      console.log('🔄 SESSION 88: Duplicating centers with invoice data...');
+      
+      // For each selected invoice, modify the centers with invoice data
+      selectedInvoices.forEach(invoice => {
+        invoice.lines?.forEach(line => {
+          const centerCode = line.metadata?.damage_center_code;
+          if (!centerCode) return;
+          
+          // Find matching center in helper.centers
+          const center = helper.centers?.find(c => c.Id === centerCode || c.code === centerCode);
+          if (!center) return;
+          
+          // Add invoice data to center
+          if (!center.invoice_assignments) {
+            center.invoice_assignments = [];
+          }
+          
+          center.invoice_assignments.push({
+            invoice_id: invoice.id,
+            invoice_number: invoice.invoice_number,
+            line_id: line.id,
+            description: line.description,
+            quantity: line.quantity,
+            unit_price: line.unit_price,
+            line_total: line.line_total,
+            category: line.metadata?.category,
+            assigned_at: new Date().toISOString()
+          });
+          
+          // Mark center as having invoice data
+          center.has_invoice_data = true;
+          center.invoice_assignment_status = 'assigned';
+        });
+      });
+      
+      // Save updated helper
+      sessionStorage.setItem('helper', JSON.stringify(helper));
+      window.helper = helper;
+      
+      console.log('✅ SESSION 88: Centers duplicated with invoice data');
+    }
+
+    /**
+     * Update invoice status in Supabase
+     */
+    async function updateInvoiceStatus(invoices, status) {
+      if (!window.supabase) {
+        console.warn('⚠️ SESSION 88: Supabase not available for status update');
+        return;
+      }
+      
+      const invoiceIds = invoices.map(i => i.id);
+      
+      const { error } = await window.supabase
+        .from('invoices')
+        .update({ 
+          status: status,
+          assigned_at: new Date().toISOString()
+        })
+        .in('id', invoiceIds);
+      
+      if (error) {
+        throw error;
+      }
+      
+      console.log(`✅ SESSION 88: Updated ${invoiceIds.length} invoices to status: ${status}`);
+    }
+
+    /**
+     * Calculate differentials between wizard and invoice data
+     */
+    async function calculateInvoiceDifferentials(invoices) {
+      // This will be implemented in Phase 2.3
+      console.log('🔜 SESSION 88: Differentials calculation placeholder');
+      return [];
+    }
+
+    /**
+     * Display differentials in popup
+     */
+    function displayDifferentialsPopup(differentials) {
+      // This will be implemented in Phase 2.3
+      console.log('🔜 SESSION 88: Differentials popup placeholder');
+      alert('תצוגת הפרשים תהיה זמינה בשלב הבא');
+    }
+
     // Initialize on load - FIXED ORDER
     document.addEventListener('DOMContentLoaded', async () => {
       
@@ -11188,6 +11622,13 @@
         setTimeout(() => {
           calculateSummaryTotals();
         }, 100);
+        
+        // SESSION 88: Check for available invoices after data loads
+        setTimeout(() => {
+          if (!sessionStorage.getItem('invoiceAssignmentDismissed')) {
+            checkForAvailableInvoices();
+          }
+        }, 200);
         
         // DO NOT initialize admin hub communication here - wait for helper.js to load first
         console.log('ℹ️ Waiting for helper.js to load before initializing admin hub communication...');
