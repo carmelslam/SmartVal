@@ -11239,10 +11239,32 @@
         console.log('📄 SESSION 88: Checking for available invoices from Supabase only...');
         
         const helper = window.helper || {};
-        const caseId = helper.case_info?.supabase_case_id;
+        console.log('🔍 SESSION 88 FULL HELPER DEBUG:', {
+          helper_keys: Object.keys(helper),
+          case_info: helper.case_info,
+          meta: helper.meta,
+          car_details: helper.car_details,
+          vehicle: helper.vehicle
+        });
+        
+        // Try multiple possible case_id locations
+        const caseId = helper.case_info?.supabase_case_id || 
+                      helper.meta?.case_id || 
+                      helper.car_details?.case_id ||
+                      helper.vehicle?.case_id ||
+                      helper.case_id;
+        
+        console.log('🔍 SESSION 88: All possible case_id values:', {
+          'case_info.supabase_case_id': helper.case_info?.supabase_case_id,
+          'meta.case_id': helper.meta?.case_id,
+          'car_details.case_id': helper.car_details?.case_id,
+          'vehicle.case_id': helper.vehicle?.case_id,
+          'direct_case_id': helper.case_id,
+          'final_caseId': caseId
+        });
         
         if (!caseId) {
-          console.log('ℹ️ SESSION 88: No case_id, skipping invoice check');
+          console.log('ℹ️ SESSION 88: No case_id found in any location, skipping invoice check');
           return;
         }
         
@@ -18992,11 +19014,24 @@
     async function getInvoiceLinesForCase() {
       try {
         const helper = window.helper || {};
-        const caseId = helper.case_info?.supabase_case_id;
+        
+        // Try multiple possible case_id locations
+        const caseId = helper.case_info?.supabase_case_id || 
+                      helper.meta?.case_id || 
+                      helper.car_details?.case_id ||
+                      helper.vehicle?.case_id ||
+                      helper.case_id;
         
         console.log('🔍 SESSION 88 DEBUG: getInvoiceLinesForCase called');
         console.log('  helper.case_info:', helper.case_info);
-        console.log('  case_id:', caseId);
+        console.log('  All case_id attempts:', {
+          'case_info.supabase_case_id': helper.case_info?.supabase_case_id,
+          'meta.case_id': helper.meta?.case_id,
+          'car_details.case_id': helper.car_details?.case_id,
+          'vehicle.case_id': helper.vehicle?.case_id,
+          'direct_case_id': helper.case_id,
+          'final_caseId': caseId
+        });
         console.log('  window.supabase available:', !!window.supabase);
         
         if (!caseId || !window.supabase) {
