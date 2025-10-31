@@ -11551,20 +11551,20 @@
           acceptBtn.textContent = 'מעבד...';
         }
         
-        // Phase 1: Archive current centers to helper_versions
-        await archiveCurrentCenters();
+        // Phase 1: Archive entire helper to helper_versions (one-time per case)
+        await archiveEntireHelper();
         
         // Phase 2: Archive parts_search.required_parts before invoice import
         await archivePartsSearchData();
         
-        // Phase 3: Apply invoice mappings to damage centers
-        await applyInvoiceMappingsToCenters(checkedInvoices);
+        // Phase 3: Convert invoice mappings to helper format (no calculations)
+        await convertInvoiceMappingsToHelperFormat(checkedInvoices);
         
-        // Phase 4: Save updated helper.damage_centers back to Supabase and sessionStorage
-        await saveUpdatedDamageCenters();
+        // Phase 4: Save updated helper.centers back to Supabase and sessionStorage
+        await saveUpdatedHelper();
         
-        // Phase 5: Update invoice status (use allowed status value)
-        await updateInvoiceStatus(checkedInvoices, 'PAID');
+        // Phase 5: Update mapping status to 'applied' for tracking
+        await updateMappingStatus(checkedInvoices, 'applied');
         
         // Phase 6: Hide banner and refresh view
         hideInvoiceAssignmentBanner();
@@ -11602,26 +11602,36 @@
     }
 
     /**
-     * Archive current centers before invoice assignment
+     * Archive entire helper before invoice assignment (one-time per case)
      */
-    async function archiveCurrentCenters() {
+    async function archiveEntireHelper() {
       const helper = window.helper || {};
       
-      if (!helper.damage_centers || helper.damage_centers.length === 0) {
-        console.log('ℹ️ SESSION 88: No damage_centers to archive');
+      // Check if archive already exists for this case
+      if (helper.parts_search?.has_archived) {
+        console.log('ℹ️ SESSION 88: Archive already exists - skipping duplicate archive');
         return;
       }
       
-      // Save version using the existing version saving system
+      if (!helper.centers || helper.centers.length === 0) {
+        console.log('ℹ️ SESSION 88: No centers to archive');
+        return;
+      }
+      
+      // Save ENTIRE helper using the existing version saving system
       if (typeof window.saveHelperVersion === 'function') {
         await window.saveHelperVersion('Pre-Invoice Assignment Archive', {
-          trigger_event: 'invoice_assignment',
-          invoice_assignment_type: 'pre_assignment_archive',
-          centers_count: helper.damage_centers.length,
-          notes: 'Damage centers archived before invoice assignment - wizard data preserved'
+          trigger_event: 'before_invoice_import',
+          is_pre_invoice_wizard: true,  // Special flag for querying original wizard data
+          centers_count: helper.centers.length,
+          notes: 'Complete helper archived before invoice assignment - wizard data preserved'
         });
         
-        console.log('✅ SESSION 88: Centers archived to helper_versions');
+        // Mark as archived to prevent duplicate archives
+        if (!helper.parts_search) helper.parts_search = {};
+        helper.parts_search.has_archived = true;
+        
+        console.log('✅ SESSION 88: Entire helper archived to helper_versions with pre-invoice flag');
       } else {
         console.warn('⚠️ SESSION 88: saveHelperVersion not available, skipping archive');
       }
@@ -11772,11 +11782,11 @@
     }
 
     /**
-     * Apply invoice mappings to damage centers using invoice_damage_center_mappings table
+     * Convert invoice mappings to helper format (no calculations - UI handles those)
      */
-    async function applyInvoiceMappingsToCenters(selectedInvoices) {
+    async function convertInvoiceMappingsToHelperFormat(selectedInvoices) {
       try {
-        console.log('🔄 SESSION 88: Applying invoice mappings to damage centers...');
+        console.log('🔄 SESSION 88: Converting invoice mappings to helper format...');
         
         const helper = window.helper || {};
         const caseId = helper.case_info?.supabase_case_id;
@@ -11789,10 +11799,14 @@
           throw new Error('Supabase not available');
         }
         
+        if (!helper.centers) {
+          helper.centers = [];
+        }
+        
         for (const invoice of selectedInvoices) {
           console.log(`📋 Processing mappings for invoice ${invoice.invoice_number}...`);
           
-          // Get all mappings for this invoice
+          // Get all mappings for this invoice from invoice_damage_center_mappings table
           const { data: mappings, error } = await window.supabase
             .from('invoice_damage_center_mappings')
             .select(`
@@ -11800,7 +11814,8 @@
               invoice_line:invoice_lines!inner(*)
             `)
             .eq('invoice_id', invoice.id)
-            .eq('case_id', caseId);
+            .eq('case_id', caseId)
+            .eq('mapping_status', 'active');  // Only get active mappings
           
           if (error) {
             console.error('❌ Error fetching mappings:', error);
@@ -11813,89 +11828,53 @@
           }
           
           console.log(`📊 Found ${mappings.length} mappings for invoice ${invoice.invoice_number}:`, mappings);
-          console.log(`🔍 Available centers in helper.damage_centers:`, helper.damage_centers?.map(c => ({ Id: c.Id, code: c.code, name: c.name })));
+          console.log(`🔍 Available centers in helper.centers:`, helper.centers?.map(c => ({ Id: c.Id, name: c.Description || c.Location })));
           
-          // Apply each mapping to the corresponding damage center
+          // Convert each mapping to UI format and add to helper.centers
           mappings.forEach((mapping, index) => {
             console.log(`🔄 Processing mapping ${index + 1}/${mappings.length}:`, mapping);
             
             const centerCode = mapping.damage_center_id;
-            const center = helper.damage_centers?.find(c => 
+            const center = helper.centers?.find(c => 
               c.Id === centerCode || c.code === centerCode
             );
             
             console.log(`🔍 Looking for center '${centerCode}', found:`, center);
             
             if (!center) {
-              console.warn(`⚠️ Center ${centerCode} not found in helper.damage_centers`);
-              console.log(`Available center IDs:`, helper.damage_centers?.map(c => c.Id));
-              console.log(`Available center codes:`, helper.damage_centers?.map(c => c.code));
+              console.warn(`⚠️ Center ${centerCode} not found in helper.centers`);
+              console.log(`Available center IDs:`, helper.centers?.map(c => c.Id));
               return;
             }
             
-            // Apply mapping based on field_type
-            console.log(`🔧 Applying ${mapping.field_type} mapping to center ${centerCode}`);
+            // Convert mapping to UI format based on field_type (no calculations)
+            console.log(`🔧 Converting ${mapping.field_type} mapping to UI format for center ${centerCode}`);
             
             switch (mapping.field_type) {
               case 'parts':
-                console.log(`📦 Adding part to center ${centerCode}:`, mapping.invoice_line);
+                const partItem = convertMappingToPart(mapping, invoice);
                 if (!center.Parts) center.Parts = { parts_required: [] };
                 if (!center.Parts.parts_required) center.Parts.parts_required = [];
-                
-                const partData = {
-                  row_uuid: window.generateUUID ? window.generateUUID() : 'part_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9),
-                  part_name: mapping.invoice_line.description,
-                  catalog_code: mapping.invoice_line.metadata?.part_code || '',
-                  quantity: mapping.mapped_data?.quantity || mapping.invoice_line.quantity || 1,
-                  original_price: mapping.invoice_line.unit_price || 0,
-                  updated_price: mapping.mapped_data?.unit_price || mapping.invoice_line.unit_price || 0,
-                  total_cost: mapping.mapped_data?.line_total || mapping.invoice_line.line_total || 0,
-                  source: 'invoice_mapping',
-                  invoice_id: invoice.id,
-                  invoice_number: invoice.invoice_number,
-                  mapping_id: mapping.id,
-                  applied_at: new Date().toISOString()
-                };
-                
-                center.Parts.parts_required.push(partData);
+                center.Parts.parts_required.push(partItem);
                 console.log(`✅ Added part to center. Total parts now: ${center.Parts.parts_required.length}`);
                 break;
                 
               case 'works':
-                if (!center.Works) center.Works = { works_required: [] };
-                if (!center.Works.works_required) center.Works.works_required = [];
-                
-                center.Works.works_required.push({
-                  description: mapping.invoice_line.description,
-                  total_cost: mapping.mapped_data?.line_total || mapping.invoice_line.line_total || 0,
-                  source: 'invoice_mapping',
-                  invoice_id: invoice.id,
-                  invoice_number: invoice.invoice_number,
-                  mapping_id: mapping.id,
-                  applied_at: new Date().toISOString()
-                });
+                const workItem = convertMappingToWork(mapping, invoice);
+                if (!center.Works) center.Works = { works: [] };
+                if (!center.Works.works) center.Works.works = [];
+                center.Works.works.push(workItem);
+                console.log(`✅ Added work to center. Total works now: ${center.Works.works.length}`);
                 break;
                 
               case 'repairs':
-                if (!center.Repairs) center.Repairs = { repairs_required: [] };
-                if (!center.Repairs.repairs_required) center.Repairs.repairs_required = [];
-                
-                center.Repairs.repairs_required.push({
-                  description: mapping.invoice_line.description,
-                  total_cost: mapping.mapped_data?.line_total || mapping.invoice_line.line_total || 0,
-                  source: 'invoice_mapping',
-                  invoice_id: invoice.id,
-                  invoice_number: invoice.invoice_number,
-                  mapping_id: mapping.id,
-                  applied_at: new Date().toISOString()
-                });
+                const repairItem = convertMappingToRepair(mapping, invoice);
+                if (!center.Repairs) center.Repairs = { repairs: [] };
+                if (!center.Repairs.repairs) center.Repairs.repairs = [];
+                center.Repairs.repairs.push(repairItem);
+                console.log(`✅ Added repair to center. Total repairs now: ${center.Repairs.repairs.length}`);
                 break;
             }
-            
-            // Mark center as having invoice data
-            center.has_invoice_data = true;
-            center.invoice_assignment_status = 'applied';
-            center.applied_at = new Date().toISOString();
           });
         }
         
@@ -11922,16 +11901,16 @@
     }
 
     /**
-     * Save updated damage centers back to Supabase and sessionStorage
+     * Save updated helper to Supabase and sessionStorage
      */
-    async function saveUpdatedDamageCenters() {
+    async function saveUpdatedHelper() {
       try {
-        console.log('💾 SESSION 88: Saving updated damage centers...');
+        console.log('💾 SESSION 88: Saving updated helper...');
         
         const helper = window.helper || {};
         
-        if (!helper.damage_centers || helper.damage_centers.length === 0) {
-          console.log('ℹ️ SESSION 88: No damage centers to save');
+        if (!helper.centers || helper.centers.length === 0) {
+          console.log('ℹ️ SESSION 88: No centers to save');
           return;
         }
         
@@ -11947,15 +11926,15 @@
           const { error } = await window.supabase
             .from('cases')
             .update({ 
-              damage_centers: helper.damage_centers,
+              helper_data: helper,  // Save entire helper object
               updated_at: new Date().toISOString()
             })
             .eq('id', caseId);
           
           if (error) {
-            console.error('❌ Error saving damage centers to Supabase:', error);
+            console.error('❌ Error saving helper to Supabase:', error);
           } else {
-            console.log('✅ Damage centers saved to Supabase cases table');
+            console.log('✅ Helper saved to Supabase cases.helper_data');
           }
         } else {
           console.log('ℹ️ Supabase not available or no case_id - only saved to sessionStorage');
@@ -11971,7 +11950,7 @@
           console.log('✅ Version saved to helper_versions for backup');
         }
         
-        console.log(`✅ SESSION 88: Saved ${helper.damage_centers.length} updated damage centers`);
+        console.log(`✅ SESSION 88: Saved ${helper.centers.length} updated centers`);
         
       } catch (error) {
         console.error('❌ SESSION 88: Error saving updated damage centers:', error);
@@ -11980,59 +11959,110 @@
     }
 
     /**
-     * Update invoice status in Supabase
+     * Update mapping status for invoice tracking (instead of invoice 'PAID' status)
      */
-    async function updateInvoiceStatus(invoices, status) {
+    async function updateMappingStatus(invoices, status) {
       if (!window.supabase) {
-        console.warn('⚠️ SESSION 88: Supabase not available for status update');
+        console.warn('⚠️ SESSION 88: Supabase not available for mapping status update');
+        return;
+      }
+      
+      const helper = window.helper || {};
+      const caseId = helper.case_info?.supabase_case_id;
+      
+      if (!caseId) {
+        console.warn('⚠️ SESSION 88: No case_id found for mapping status update');
         return;
       }
       
       const invoiceIds = invoices.map(i => i.id);
       
-      // Update invoices one by one since .in() doesn't exist in this Supabase client version
+      // Update mapping status for each invoice
       for (const invoiceId of invoiceIds) {
-        const { error: updateError } = await window.supabase
-          .from('invoices')
+        const { error } = await window.supabase
+          .from('invoice_damage_center_mappings')
           .update({ 
-            status: status,
+            mapping_status: status,
             updated_at: new Date().toISOString()
           })
-          .eq('id', invoiceId);
+          .eq('invoice_id', invoiceId)
+          .eq('case_id', caseId);
         
-        if (updateError) {
-          console.error(`❌ Error updating invoice ${invoiceId}:`, updateError);
-          
-          // If status constraint violation, try with allowed status values only
-          if (updateError.message?.includes('invoices_status_check')) {
-            console.log('🔄 Trying allowed status values...');
-            
-            // Try only constraint-allowed status values: DRAFT, SENT, PAID, CANCELLED
-            const statusesToTry = ['SENT', 'PAID'];
-            
-            for (const alternativeStatus of statusesToTry) {
-              const { error: retryError } = await window.supabase
-                .from('invoices')
-                .update({ 
-                  status: alternativeStatus,
-                  updated_at: new Date().toISOString()
-                })
-                .eq('id', invoiceId);
-              
-              if (!retryError) {
-                console.log(`✅ Successfully updated invoice ${invoiceId} with status: ${alternativeStatus}`);
-                break;
-              } else {
-                console.log(`❌ Status '${alternativeStatus}' also failed:`, retryError.message);
-              }
-            }
-          } else {
-            throw updateError;
-          }
+        if (error) {
+          console.error(`❌ Error updating mapping status for invoice ${invoiceId}:`, error);
+        } else {
+          console.log(`✅ Updated mapping status to '${status}' for invoice ${invoiceId}`);
         }
       }
       
-      console.log(`✅ SESSION 88: Updated ${invoiceIds.length} invoices to status: ${status}`);
+      console.log(`✅ SESSION 88: Updated mapping status for ${invoiceIds.length} invoices to '${status}'`);
+    }
+
+    /**
+     * Convert mapping to part format (follows UI structure exactly)
+     */
+    function convertMappingToPart(mapping, invoice) {
+      const helper = window.helper || {};
+      
+      return {
+        row_uuid: window.generateUUID ? window.generateUUID() : 'part_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9),
+        case_id: helper.case_info?.supabase_case_id || mapping.case_id,
+        plate: helper.case_info?.plate || '',
+        damage_center_code: mapping.damage_center_id,
+        part_name: mapping.mapped_data?.description || mapping.invoice_line?.description || '',
+        description: mapping.mapped_data?.description || mapping.invoice_line?.description || '',
+        pcode: mapping.mapped_data?.part_code || mapping.invoice_line?.metadata?.part_code || '',
+        oem: mapping.mapped_data?.oem || mapping.invoice_line?.metadata?.oem || '',
+        supplier_name: mapping.mapped_data?.supplier_name || invoice?.supplier_name || '',
+        price_per_unit: mapping.mapped_data?.unit_price || mapping.invoice_line?.unit_price || 0,
+        reduction_percentage: mapping.user_modifications?.reduction_percentage || 0,
+        wear_percentage: mapping.user_modifications?.wear_percentage || 0,
+        updated_price: mapping.mapped_data?.updated_price || mapping.mapped_data?.unit_price || mapping.invoice_line?.unit_price || 0,
+        total_cost: mapping.mapped_data?.line_total || mapping.invoice_line?.line_total || 0,
+        quantity: mapping.mapped_data?.quantity || mapping.invoice_line?.quantity || 1,
+        source: 'invoice',
+        _invoice_line_id: mapping.invoice_line_id,
+        _invoice_id: mapping.invoice_id,
+        make: helper.vehicle?.make || '',
+        model: helper.vehicle?.model || '',
+        year: helper.vehicle?.year || '',
+        מחיר: mapping.mapped_data?.updated_price || mapping.mapped_data?.unit_price || mapping.invoice_line?.unit_price || 0,
+        מיקום: 'ישראל',
+        הערות: mapping.user_modifications?.notes || '',
+        זמינות: 'זמין',
+        metadata: mapping.original_field_data || {},
+        updated_at: new Date().toISOString()
+      };
+    }
+
+    /**
+     * Convert mapping to work format (follows UI structure exactly)
+     */
+    function convertMappingToWork(mapping, invoice) {
+      return {
+        category: mapping.mapped_data?.description || mapping.invoice_line?.description || '',
+        cost: mapping.mapped_data?.line_total || mapping.invoice_line?.line_total || 0,
+        comments: mapping.user_modifications?.notes || '',
+        added_at: new Date().toISOString(),
+        source: 'invoice',
+        _invoice_line_id: mapping.invoice_line_id,
+        _invoice_id: mapping.invoice_id
+      };
+    }
+
+    /**
+     * Convert mapping to repair format (follows UI structure exactly)
+     */
+    function convertMappingToRepair(mapping, invoice) {
+      return {
+        name: mapping.mapped_data?.description || mapping.invoice_line?.description || '',
+        cost: mapping.mapped_data?.line_total || mapping.invoice_line?.line_total || 0,
+        description: mapping.user_modifications?.notes || '',
+        added_at: new Date().toISOString(),
+        source: 'invoice',
+        _invoice_line_id: mapping.invoice_line_id,
+        _invoice_id: mapping.invoice_id
+      };
     }
 
     /**
