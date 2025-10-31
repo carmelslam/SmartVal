@@ -11919,22 +11919,24 @@
         window.helper = helper;
         console.log('✅ Updated helper in sessionStorage');
         
-        // Save to Supabase if available and case_id exists
+        // Save to case_helper table (correct structure)
         if (window.supabase && helper.case_info?.supabase_case_id) {
           const caseId = helper.case_info.supabase_case_id;
           
+          // Update current helper in case_helper table
           const { error } = await window.supabase
-            .from('cases')
+            .from('case_helper')
             .update({ 
-              helper_data: helper,  // Save entire helper object
+              helper_json: helper,
               updated_at: new Date().toISOString()
             })
-            .eq('id', caseId);
+            .eq('case_id', caseId)
+            .eq('is_current', true);
           
           if (error) {
-            console.error('❌ Error saving helper to Supabase:', error);
+            console.error('❌ Error saving helper to case_helper:', error);
           } else {
-            console.log('✅ Helper saved to Supabase cases.helper_data');
+            console.log('✅ Helper saved to case_helper table');
           }
         } else {
           console.log('ℹ️ Supabase not available or no case_id - only saved to sessionStorage');
