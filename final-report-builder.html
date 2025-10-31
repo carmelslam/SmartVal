@@ -11395,7 +11395,34 @@
       
       invoices.forEach((invoice, index) => {
         // Format display like invoice upload.html: supplier_name - date
-        const displayDate = new Date(invoice.created_at).toLocaleDateString('he-IL');
+        // Try to get actual invoice date from helper or OCR data
+        let invoiceDate = null;
+        
+        // Look for invoice date in helper.invoices
+        const helperInvoice = helper.invoices?.find(inv => inv.id === invoice.id);
+        if (helperInvoice && helperInvoice['תאריך']) {
+          invoiceDate = helperInvoice['תאריך'];
+        }
+        
+        // Fallback to OCR structured data if available
+        if (!invoiceDate && invoice.ocr_structured_data && invoice.ocr_structured_data['תאריך']) {
+          invoiceDate = invoice.ocr_structured_data['תאריך'];
+        }
+        
+        // Format the date
+        let displayDate;
+        if (invoiceDate) {
+          try {
+            displayDate = new Date(invoiceDate).toLocaleDateString('he-IL');
+          } catch (e) {
+            // If date parsing fails, use the string as-is
+            displayDate = invoiceDate;
+          }
+        } else {
+          // Fallback to upload date
+          displayDate = new Date(invoice.created_at).toLocaleDateString('he-IL');
+        }
+        
         const supplierName = invoice.supplier_name || 'לא צוין';
         const displayTitle = `${supplierName} - ${displayDate}`;
         const assignmentCount = invoice.assignment_count || 0;
@@ -11628,7 +11655,7 @@
                 quantity: part.quantity || 1,
                 status: 'ARCHIVED',
                 metadata: {
-                  source: 'parts_search_wizard',
+                  source: 'parts_search.required_parts',
                   original_status: part.status || null,
                   session: 'SESSION_88',
                   ...(part.metadata || {})
@@ -11767,27 +11794,37 @@
             continue;
           }
           
-          console.log(`📊 Found ${mappings.length} mappings for invoice ${invoice.invoice_number}`);
+          console.log(`📊 Found ${mappings.length} mappings for invoice ${invoice.invoice_number}:`, mappings);
+          console.log(`🔍 Available centers in helper:`, helper.centers?.map(c => ({ Id: c.Id, code: c.code, name: c.name })));
           
           // Apply each mapping to the corresponding damage center
-          mappings.forEach(mapping => {
+          mappings.forEach((mapping, index) => {
+            console.log(`🔄 Processing mapping ${index + 1}/${mappings.length}:`, mapping);
+            
             const centerCode = mapping.damage_center_id;
             const center = helper.centers?.find(c => 
               c.Id === centerCode || c.code === centerCode
             );
             
+            console.log(`🔍 Looking for center '${centerCode}', found:`, center);
+            
             if (!center) {
               console.warn(`⚠️ Center ${centerCode} not found in helper.centers`);
+              console.log(`Available center IDs:`, helper.centers?.map(c => c.Id));
+              console.log(`Available center codes:`, helper.centers?.map(c => c.code));
               return;
             }
             
             // Apply mapping based on field_type
+            console.log(`🔧 Applying ${mapping.field_type} mapping to center ${centerCode}`);
+            
             switch (mapping.field_type) {
               case 'parts':
+                console.log(`📦 Adding part to center ${centerCode}:`, mapping.invoice_line);
                 if (!center.Parts) center.Parts = { parts_required: [] };
                 if (!center.Parts.parts_required) center.Parts.parts_required = [];
                 
-                center.Parts.parts_required.push({
+                const partData = {
                   row_uuid: window.generateUUID ? window.generateUUID() : 'part_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9),
                   part_name: mapping.invoice_line.description,
                   catalog_code: mapping.invoice_line.metadata?.part_code || '',
@@ -11800,7 +11837,10 @@
                   invoice_number: invoice.invoice_number,
                   mapping_id: mapping.id,
                   applied_at: new Date().toISOString()
-                });
+                };
+                
+                center.Parts.parts_required.push(partData);
+                console.log(`✅ Added part to center. Total parts now: ${center.Parts.parts_required.length}`);
                 break;
                 
               case 'works':
@@ -11844,6 +11884,16 @@
         // Save updated helper
         sessionStorage.setItem('helper', JSON.stringify(helper));
         window.helper = helper;
+        
+        // Try to refresh the damage centers display
+        if (typeof loadDataFromHelper === 'function') {
+          console.log('🔄 Refreshing damage centers display...');
+          loadDataFromHelper();
+        } else if (typeof refreshDamageCenters === 'function') {
+          refreshDamageCenters();
+        } else {
+          console.log('ℹ️ No refresh function found - page may need manual refresh');
+        }
         
         console.log('✅ SESSION 88: Invoice mappings applied to damage centers');
         
