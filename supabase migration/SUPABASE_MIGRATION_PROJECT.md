@@ -974,6 +974,7 @@ supabase gen types typescript --local > types/supabase.ts
 5. **Never modify helper structure** without explicit approval
 6. **Use feature flags** for any UI-facing changes
 7. **Document all problems and solutions** for future reference
+8. **supabase case_id** is  helper.case_info.supabase_case_id - supabase case id is not YC-PLATE-YEAR
 
 ---
 
