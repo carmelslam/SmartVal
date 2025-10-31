@@ -11265,17 +11265,30 @@
         if (!window.invoiceService) {
           console.warn('⚠️ SESSION 88: invoiceService not available, trying direct Supabase query...');
           
-          const { data: allInvoices, error } = await window.supabase
-            .from('invoices')
-            .select('*')
-            .eq('case_id', caseId);
-          
-          if (error) {
-            console.error('❌ SESSION 88: Error querying invoices directly:', error);
+          try {
+            console.log('🔍 SESSION 88: About to execute Supabase query...');
+            const result = await window.supabase
+              .from('invoices')
+              .select('*')
+              .eq('case_id', caseId);
+            
+            console.log('📤 SESSION 88: Raw Supabase response:', result);
+            const { data: allInvoices, error } = result;
+            
+            if (error) {
+              console.error('❌ SESSION 88: Error querying invoices directly:', error);
+              console.error('❌ SESSION 88: Error details:', error.message, error.code, error.details);
+              return;
+            }
+            
+            console.log('📦 SESSION 88: Direct Supabase query - all invoices:', allInvoices);
+            console.log('📊 SESSION 88: Query result type:', typeof allInvoices);
+            console.log('📊 SESSION 88: Query result length:', allInvoices?.length);
+          } catch (queryError) {
+            console.error('❌ SESSION 88: Exception during Supabase query:', queryError);
+            console.error('❌ SESSION 88: Query error stack:', queryError.stack);
             return;
           }
-          
-          console.log('📦 SESSION 88: Direct Supabase query - all invoices:', allInvoices);
           
           if (!allInvoices || allInvoices.length === 0) {
             console.log('ℹ️ SESSION 88: No invoices found in database for this case');
