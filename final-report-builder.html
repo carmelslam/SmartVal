@@ -11236,35 +11236,21 @@
      */
     async function checkForAvailableInvoices() {
       try {
-        console.log('📄 SESSION 88: Checking for available invoices from Supabase only...');
+        console.log('📄 SESSION 88: Checking for available invoices (replicating invoice upload.html logic)...');
         
         const helper = window.helper || {};
-        console.log('🔍 SESSION 88 FULL HELPER DEBUG:', {
-          helper_keys: Object.keys(helper),
-          case_info: helper.case_info,
-          meta: helper.meta,
-          car_details: helper.car_details,
-          vehicle: helper.vehicle
+        const caseId = helper.case_info?.supabase_case_id;
+        const plateNumber = helper.case_info?.plate;
+        
+        console.log('🔍 SESSION 88 DEBUG:', {
+          caseId,
+          plateNumber,
+          case_info: helper.case_info
         });
         
-        // Try multiple possible case_id locations
-        const caseId = helper.case_info?.supabase_case_id || 
-                      helper.meta?.case_id || 
-                      helper.car_details?.case_id ||
-                      helper.vehicle?.case_id ||
-                      helper.case_id;
-        
-        console.log('🔍 SESSION 88: All possible case_id values:', {
-          'case_info.supabase_case_id': helper.case_info?.supabase_case_id,
-          'meta.case_id': helper.meta?.case_id,
-          'car_details.case_id': helper.car_details?.case_id,
-          'vehicle.case_id': helper.vehicle?.case_id,
-          'direct_case_id': helper.case_id,
-          'final_caseId': caseId
-        });
-        
-        if (!caseId) {
-          console.log('ℹ️ SESSION 88: No case_id found in any location, skipping invoice check');
+        if (!caseId || !plateNumber) {
+          console.log('ℹ️ SESSION 88: No case_id or plate, skipping invoice check');
+          hideInvoiceAssignmentBanner();
           return;
         }
         
@@ -11273,76 +11259,59 @@
           return;
         }
         
-        console.log(`🔍 SESSION 88 DEBUG: Querying invoices for case_id: ${caseId}`);
-        
-        // First, query for invoices that have mappings but haven't been applied to damage centers yet
-        // Look for invoices that have status = 'mapped' and have entries in invoice_damage_center_mappings
-        const { data: mappedInvoiceIds, error: mappingError } = await window.supabase
-          .from('invoice_damage_center_mappings')
-          .select('invoice_id')
-          .eq('case_id', caseId)
-          .eq('mapping_status', 'active'); // Only active mappings
-        
-        if (mappingError) {
-          console.error('❌ SESSION 88: Error querying invoice mappings:', mappingError);
+        // Use invoiceService like invoice upload.html does
+        if (!window.invoiceService) {
+          console.warn('⚠️ SESSION 88: invoiceService not available');
           return;
         }
         
-        console.log(`🔍 SESSION 88 DEBUG: Found ${mappedInvoiceIds?.length || 0} mapped invoice IDs:`, mappedInvoiceIds);
+        console.log(`📂 SESSION 88: Loading invoices for case: ${caseId}, plate: ${plateNumber}`);
         
-        if (!mappedInvoiceIds || mappedInvoiceIds.length === 0) {
-          console.log('ℹ️ SESSION 88: No mapped invoices found in invoice_damage_center_mappings');
+        // Get all invoices for this case (same as invoice upload.html)
+        const allInvoices = await window.invoiceService.getInvoicesByCase(caseId);
+        console.log('📦 SESSION 88: All invoices from database:', allInvoices);
+        
+        // Filter by plate (same as invoice upload.html)
+        const plateInvoices = allInvoices.filter(inv => {
+          console.log(`  Comparing: "${inv.plate}" === "${plateNumber}" → ${inv.plate === plateNumber}`);
+          return inv.plate === plateNumber;
+        });
+        
+        console.log(`📊 SESSION 88: Found ${plateInvoices.length} invoices for this case and plate`);
+        
+        if (!plateInvoices || plateInvoices.length === 0) {
+          console.log('ℹ️ SESSION 88: No invoices found for this plate');
           hideInvoiceAssignmentBanner();
           return;
         }
         
-        // Get unique invoice IDs that have mappings
-        const uniqueInvoiceIds = [...new Set(mappedInvoiceIds.map(m => m.invoice_id))];
-        console.log(`🔍 SESSION 88 DEBUG: Unique invoice IDs with mappings: ${uniqueInvoiceIds.length}`, uniqueInvoiceIds);
+        // Check which invoices have assignments that haven't been applied yet
+        const invoicesWithPendingAssignments = [];
         
-        // Now query the actual invoices for these specific IDs
-        const { data: invoices, error } = await window.supabase
-          .from('invoices')
-          .select(`
-            id, 
-            invoice_number, 
-            supplier_name, 
-            total_amount,
-            status,
-            case_id
-          `)
-          .in('id', uniqueInvoiceIds)
-          .eq('case_id', caseId); // Double-check case_id match
-        
-        if (error) {
-          console.error('❌ SESSION 88: Error querying invoices:', error);
-          return;
+        for (const invoice of plateInvoices) {
+          // Check if this invoice has mappings in helper.final_report.invoice_assignments
+          const helperAssignments = helper.final_report?.invoice_assignments || [];
+          const invoiceAssignments = helperAssignments.filter(assignment => 
+            assignment.invoice_id === invoice.id
+          );
+          
+          if (invoiceAssignments.length > 0) {
+            invoicesWithPendingAssignments.push({
+              ...invoice,
+              assignment_count: invoiceAssignments.length
+            });
+          }
         }
         
-        console.log(`🔍 SESSION 88 DEBUG: Retrieved ${invoices?.length || 0} invoices from database:`, invoices);
+        console.log(`📋 SESSION 88: Found ${invoicesWithPendingAssignments.length} invoices with pending assignments:`, invoicesWithPendingAssignments);
         
-        if (!invoices || invoices.length === 0) {
-          console.log('ℹ️ SESSION 88: No invoices found for mapped IDs');
+        if (invoicesWithPendingAssignments.length === 0) {
+          console.log('ℹ️ SESSION 88: No invoices with pending assignments');
           hideInvoiceAssignmentBanner();
           return;
         }
         
-        // Filter out invoices that already have status = 'applied' (already processed)
-        const pendingInvoices = invoices.filter(invoice => 
-          invoice.status !== 'applied' && 
-          invoice.case_id === caseId // Extra safety check
-        );
-        
-        console.log(`🔍 SESSION 88 DEBUG: After filtering applied invoices: ${pendingInvoices.length}`, pendingInvoices);
-        
-        if (pendingInvoices.length === 0) {
-          console.log('ℹ️ SESSION 88: No pending invoices (all already applied)');
-          hideInvoiceAssignmentBanner();
-          return;
-        }
-        
-        console.log(`📋 SESSION 88: Found ${pendingInvoices.length} pending invoices ready for assignment:`, pendingInvoices);
-        showInvoiceAssignmentBanner(pendingInvoices);
+        showInvoiceAssignmentBanner(invoicesWithPendingAssignments);
         
       } catch (error) {
         console.error('❌ SESSION 88: Error checking for invoices:', error);
@@ -11362,18 +11331,20 @@
         return;
       }
       
-      // Build invoice list HTML
-      const isHelperSource = invoices[0]?.status === 'ready_for_assignment';
-      const sourceText = isHelperSource ? 'מוכנות להקצאה' : 'ממתינות להקצאה';
-      
+      // Build invoice list HTML (matching invoice upload.html format)
       let invoiceListHtml = `
         <div style="margin-bottom: 10px; font-weight: 600; color: #1565c0;">
-          נמצאו ${invoices.length} חשבוניות ${sourceText}:
+          נמצאו ${invoices.length} חשבוניות עם הקצאות ממתינות להחלה:
         </div>
       `;
       
       invoices.forEach((invoice, index) => {
-        const lineCount = invoice.lines?.length || 0;
+        // Format display like invoice upload.html: supplier_name - date
+        const displayDate = new Date(invoice.created_at).toLocaleDateString('he-IL');
+        const supplierName = invoice.supplier_name || 'לא צוין';
+        const displayTitle = `${supplierName} - ${displayDate}`;
+        const assignmentCount = invoice.assignment_count || 0;
+        
         invoiceListHtml += `
           <div style="
             border: 1px solid #e0e0e0;
@@ -11387,10 +11358,10 @@
           ">
             <div>
               <div style="font-weight: 600; color: #333;">
-                ${invoice.invoice_number} - ${invoice.supplier_name}
+                ${displayTitle}
               </div>
               <div style="font-size: 13px; color: #666;">
-                ${lineCount} פריטים | ₪${invoice.total_amount?.toLocaleString() || '0'}
+                ${assignmentCount} הקצאות | ₪${invoice.total_amount?.toLocaleString() || '0'}
               </div>
             </div>
             <div>
@@ -19015,12 +18986,12 @@
       try {
         const helper = window.helper || {};
         
-        // Try multiple possible case_id locations
-        const caseId = helper.case_info?.supabase_case_id || 
+        // Try multiple possible case_id locations - based on debug output showing case_id directly available
+        const caseId = helper.case_id ||
+                      helper.case_info?.supabase_case_id || 
                       helper.meta?.case_id || 
                       helper.car_details?.case_id ||
-                      helper.vehicle?.case_id ||
-                      helper.case_id;
+                      helper.vehicle?.case_id;
         
         console.log('🔍 SESSION 88 DEBUG: getInvoiceLinesForCase called');
         console.log('  helper.case_info:', helper.case_info);
