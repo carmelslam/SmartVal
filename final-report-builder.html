@@ -11248,19 +11248,56 @@
             helper.final_report.invoice_assignments.length > 0) {
           
           console.log(`📋 SESSION 88: Found ${helper.final_report.invoice_assignments.length} invoice assignments in helper.final_report`);
+          console.log('🔍 SESSION 88: Invoice assignments data structure:', helper.final_report.invoice_assignments);
           
-          // Convert helper assignments to invoice format for banner display
-          const helperInvoices = helper.final_report.invoice_assignments.map(assignment => ({
-            id: assignment.invoice_id || assignment.id,
-            invoice_number: assignment.invoice_number || assignment.number,
-            supplier_name: assignment.supplier_name || assignment.supplier,
-            total_amount: assignment.total_amount || assignment.amount || 0,
-            status: 'ready_for_assignment',
-            lines: assignment.lines || []
-          }));
+          // Check if this is invoice lines (multiple per invoice) or actual invoices
+          const firstItem = helper.final_report.invoice_assignments[0];
+          console.log('🔍 SESSION 88: First assignment item:', firstItem);
           
-          showInvoiceAssignmentBanner(helperInvoices);
-          return;
+          // If the data looks like invoice lines, group by invoice_id/invoice_number
+          if (firstItem && (firstItem.line_id || firstItem.description || firstItem.line_total)) {
+            console.log('⚠️ SESSION 88: Detected invoice LINES data, not invoice headers - grouping by invoice...');
+            
+            // Group lines by invoice
+            const invoiceGroups = new Map();
+            helper.final_report.invoice_assignments.forEach(line => {
+              const invoiceKey = line.invoice_id || line.invoice_number || 'unknown';
+              if (!invoiceGroups.has(invoiceKey)) {
+                invoiceGroups.set(invoiceKey, {
+                  id: line.invoice_id,
+                  invoice_number: line.invoice_number,
+                  supplier_name: line.supplier_name,
+                  total_amount: 0,
+                  status: 'ready_for_assignment',
+                  lines: []
+                });
+              }
+              
+              const invoice = invoiceGroups.get(invoiceKey);
+              invoice.lines.push(line);
+              invoice.total_amount += (line.line_total || line.amount || 0);
+            });
+            
+            const helperInvoices = Array.from(invoiceGroups.values());
+            console.log(`📊 SESSION 88: Grouped ${helper.final_report.invoice_assignments.length} lines into ${helperInvoices.length} invoices`);
+            
+            showInvoiceAssignmentBanner(helperInvoices);
+            return;
+          } else {
+            // Treat as actual invoice headers
+            const helperInvoices = helper.final_report.invoice_assignments.map(assignment => ({
+              id: assignment.invoice_id || assignment.id,
+              invoice_number: assignment.invoice_number || assignment.number,
+              supplier_name: assignment.supplier_name || assignment.supplier,
+              total_amount: assignment.total_amount || assignment.amount || 0,
+              status: 'ready_for_assignment',
+              lines: assignment.lines || []
+            }));
+            
+            console.log(`📊 SESSION 88: Using ${helperInvoices.length} invoice headers directly`);
+            showInvoiceAssignmentBanner(helperInvoices);
+            return;
+          }
         }
         
         // If no helper assignments, check Supabase for pending invoices
@@ -18932,31 +18969,38 @@
 
         // Source 3: Query Supabase for current case
         if (window.supabase && caseId && allLines.length === 0) {
-          const { data: invoices, error } = await window.supabase
-            .from('invoices')
-            .select(`
-              id,
-              invoice_number,
-              supplier_name,
-              lines:invoice_lines(*)
-            `)
-            .eq('case_id', caseId)
-            .in('status', ['pending_assignment', 'ready_for_assignment', 'assigned']);
+          try {
+            const { data: invoices, error } = await window.supabase
+              .from('invoices')
+              .select(`
+                id,
+                invoice_number,
+                supplier_name,
+                lines:invoice_lines(*)
+              `)
+              .eq('case_id', caseId)
+              .or('status.eq.pending_assignment,status.eq.ready_for_assignment,status.eq.assigned');
 
-          if (!error && invoices) {
-            invoices.forEach(invoice => {
-              if (invoice.lines) {
-                invoice.lines.forEach(line => {
-                  allLines.push({
-                    ...line,
-                    invoice_id: invoice.id,
-                    invoice_number: invoice.invoice_number,
-                    supplier_name: invoice.supplier_name,
-                    source: 'supabase'
+            if (!error && invoices) {
+              invoices.forEach(invoice => {
+                if (invoice.lines) {
+                  invoice.lines.forEach(line => {
+                    allLines.push({
+                      ...line,
+                      invoice_id: invoice.id,
+                      invoice_number: invoice.invoice_number,
+                      supplier_name: invoice.supplier_name,
+                      source: 'supabase'
+                    });
                   });
-                });
-              }
-            });
+                }
+              });
+            } else if (error) {
+              console.warn('⚠️ SESSION 88: Supabase query error:', error);
+            }
+          } catch (supabaseError) {
+            console.warn('⚠️ SESSION 88: Supabase query failed:', supabaseError);
+            // Don't throw - just continue without Supabase data
           }
         }
 
