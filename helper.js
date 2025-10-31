@@ -6090,9 +6090,9 @@ window.saveHelperVersion = async function(versionLabel, metadata = {}) {
     // Use existing supabaseHelperService if available (preferred method)
     if (window.supabaseHelperService) {
       try {
-        // Create helper name in existing format: {plate}_helper_v{timestamp}
-        const timestamp = Date.now();
-        const helperName = `${normalizedPlate}_helper_v${timestamp}`;
+        // Create helper name with shorter timestamp to avoid integer overflow
+        const shortTimestamp = Math.floor(Date.now() / 1000); // Convert to seconds (smaller number)
+        const helperName = `${normalizedPlate}_helper_v${shortTimestamp}`;
         
         const result = await window.supabaseHelperService.saveHelper({
           plate: normalizedPlate,
@@ -6194,7 +6194,6 @@ window.saveHelperVersion = async function(versionLabel, metadata = {}) {
             sync_status: 'synced',
             created_by: userId,
             updated_by: userId,
-            created_at: timestamp,
             updated_at: timestamp
           });
         
