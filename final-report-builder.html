@@ -11532,17 +11532,26 @@
      */
     async function acceptInvoiceAssignment() {
       try {
-        console.log('✅ SESSION 88: Processing invoice assignment acceptance...');
+        console.log('🚀 SESSION 88: Processing invoice assignment acceptance...');
+        console.log('📋 Getting selected invoices...');
         
         const checkedInvoices = getSelectedInvoices();
+        console.log('📋 Selected invoices:', checkedInvoices);
+        
         if (checkedInvoices.length === 0) {
+          console.warn('⚠️ No invoices selected');
           alert('אנא בחר לפחות חשבונית אחת לאישור הקצאה');
           return;
         }
         
+        console.log(`✅ Found ${checkedInvoices.length} selected invoices, showing confirmation...`);
+        
         if (!confirm(`האם אתה בטוח שברצונך לאשר הקצאת ${checkedInvoices.length} חשבוניות? פעולה זו תדרוס את נתוני המוקדים הקיימים.`)) {
+          console.log('❌ User cancelled confirmation');
           return;
         }
+        
+        console.log('✅ User confirmed, starting process...');
         
         // Show loading state
         const acceptBtn = document.getElementById('acceptInvoiceAssignment');
@@ -11787,26 +11796,35 @@
     async function convertInvoiceMappingsToHelperFormat(selectedInvoices) {
       try {
         console.log('🔄 SESSION 88: Converting invoice mappings to helper format...');
+        console.log('📋 Selected invoices:', selectedInvoices);
         
         const helper = window.helper || {};
+        console.log('🔍 Helper case_info:', helper.case_info);
         const caseId = helper.case_info?.supabase_case_id;
+        console.log('🔍 Case ID:', caseId);
         
         if (!caseId) {
+          console.error('❌ No case_id found in helper');
           throw new Error('No case_id found in helper');
         }
         
         if (!window.supabase) {
+          console.error('❌ Supabase not available');
           throw new Error('Supabase not available');
         }
         
         if (!helper.centers) {
+          console.log('⚠️ No helper.centers found, initializing empty array');
           helper.centers = [];
         }
+        console.log('🔍 Current helper.centers count:', helper.centers.length);
         
         for (const invoice of selectedInvoices) {
           console.log(`📋 Processing mappings for invoice ${invoice.invoice_number}...`);
           
           // Get all mappings for this invoice from invoice_damage_center_mappings table
+          console.log(`🔍 Querying mappings for invoice_id: ${invoice.id}, case_id: ${caseId}`);
+          
           const { data: mappings, error } = await window.supabase
             .from('invoice_damage_center_mappings')
             .select(`
@@ -11817,6 +11835,8 @@
             .eq('case_id', caseId)
             .eq('mapping_status', 'active');  // Only get active mappings
           
+          console.log(`📋 Query result - mappings:`, mappings, 'error:', error);
+          
           if (error) {
             console.error('❌ Error fetching mappings:', error);
             continue;
@@ -11824,6 +11844,16 @@
           
           if (!mappings || mappings.length === 0) {
             console.warn(`⚠️ No mappings found for invoice ${invoice.invoice_number}`);
+            
+            // Debug: Check what mappings exist for this case/invoice without status filter
+            console.log(`🔍 DEBUG: Checking ALL mappings for invoice ${invoice.id}...`);
+            const { data: allMappings } = await window.supabase
+              .from('invoice_damage_center_mappings')
+              .select('*')
+              .eq('invoice_id', invoice.id)
+              .eq('case_id', caseId);
+            console.log(`🔍 DEBUG: All mappings found:`, allMappings);
+            
             continue;
           }
           
