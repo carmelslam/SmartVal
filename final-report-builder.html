@@ -12603,6 +12603,23 @@
     console.log('🔍 SCRIPT DEBUG: About to add DOMContentLoaded listener...');
     console.log('🔍 SCRIPT DEBUG: document.readyState:', document.readyState);
     
+    // Test checkForAvailableInvoices function immediately
+    console.log('🧪 IMMEDIATE TEST: checkForAvailableInvoices type:', typeof checkForAvailableInvoices);
+    console.log('🧪 IMMEDIATE TEST: checkForAvailableInvoices exists:', typeof checkForAvailableInvoices === 'function');
+    
+    // Create immediate test function available globally
+    window.immediateInvoiceTest = function() {
+      console.log('🧪 MANUAL IMMEDIATE TEST: Starting...');
+      console.log('🧪 checkForAvailableInvoices available:', typeof checkForAvailableInvoices === 'function');
+      
+      if (typeof checkForAvailableInvoices === 'function') {
+        console.log('🧪 Calling checkForAvailableInvoices now...');
+        checkForAvailableInvoices().catch(e => console.error('🧪 Error:', e));
+      } else {
+        console.error('🧪 Function not available yet');
+      }
+    };
+    
     // Check if DOM is already loaded
     if (document.readyState === 'loading') {
       console.log('🔍 SCRIPT DEBUG: DOM still loading, adding event listener...');
@@ -12611,6 +12628,20 @@
       console.log('🔍 SCRIPT DEBUG: DOM already loaded, calling initializeApp immediately...');
       initializeApp();
     }
+    
+    // Also add a direct event listener for when DOM loads to test
+    document.addEventListener('DOMContentLoaded', function() {
+      console.log('🔥 DIRECT DOMContentLoaded FIRED! Now testing invoice functions...');
+      console.log('🔥 checkForAvailableInvoices type after DOM loaded:', typeof checkForAvailableInvoices);
+      
+      // Try to call the function directly
+      if (typeof checkForAvailableInvoices === 'function') {
+        console.log('🔥 Calling checkForAvailableInvoices directly from DOMContentLoaded...');
+        setTimeout(() => {
+          checkForAvailableInvoices().catch(e => console.error('🔥 Error calling function:', e));
+        }, 1000);
+      }
+    });
     
     async function initializeApp() {
       console.log('🚀 SCRIPT DEBUG: initializeApp called!');
