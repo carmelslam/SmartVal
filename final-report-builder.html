@@ -11418,13 +11418,16 @@
         // Phase 1: Archive current centers to helper_versions
         await archiveCurrentCenters();
         
-        // Phase 2: Duplicate centers with invoice data
+        // Phase 2: Archive parts_search.required_parts before invoice import
+        await archivePartsSearchData();
+        
+        // Phase 3: Duplicate centers with invoice data
         await duplicateCentersWithInvoices(checkedInvoices);
         
-        // Phase 3: Update invoice status to assigned
+        // Phase 4: Update invoice status to assigned
         await updateInvoiceStatus(checkedInvoices, 'assigned');
         
-        // Phase 4: Hide banner and refresh view
+        // Phase 5: Hide banner and refresh view
         hideInvoiceAssignmentBanner();
         
         // Reload the page or refresh damage centers display
@@ -11486,12 +11489,94 @@
     }
 
     /**
+     * Archive parts_search.required_parts before invoice import
+     */
+    async function archivePartsSearchData() {
+      try {
+        console.log('📦 SESSION 88: Archiving parts_search.required_parts...');
+        
+        const helper = window.helper || {};
+        
+        if (!helper.parts_search?.required_parts || helper.parts_search.required_parts.length === 0) {
+          console.log('ℹ️ SESSION 88: No parts_search.required_parts to archive');
+          return;
+        }
+        
+        const partsCount = helper.parts_search.required_parts.length;
+        console.log(`📋 SESSION 88: Archiving ${partsCount} parts from parts_search.required_parts`);
+        
+        // Calculate total value of parts being archived
+        const totalPartsValue = helper.parts_search.required_parts.reduce((sum, part) => {
+          return sum + (parseFloat(part.total_cost) || 0);
+        }, 0);
+        
+        // Archive parts data to Supabase using parts_search_archive table
+        if (window.supabase) {
+          try {
+            const archiveRecord = {
+              case_id: helper.meta?.case_id,
+              plate: helper.meta?.plate || helper.vehicle?.plate || helper.car_details?.plate,
+              archive_type: 'pre_invoice_assignment',
+              parts_data: helper.parts_search.required_parts,
+              parts_count: partsCount,
+              total_value: totalPartsValue,
+              archived_at: new Date().toISOString(),
+              metadata: {
+                trigger_event: 'invoice_assignment',
+                original_helper_path: 'parts_search.required_parts',
+                notes: 'Parts archived before invoice assignment to preserve wizard data'
+              }
+            };
+            
+            const { data: archiveData, error: archiveError } = await window.supabase
+              .from('parts_search_archive')
+              .insert(archiveRecord)
+              .select()
+              .single();
+            
+            if (archiveError) {
+              console.error('❌ SESSION 88: Error archiving to Supabase:', archiveError);
+            } else {
+              console.log('✅ SESSION 88: Parts archived to Supabase parts_search_archive:', archiveData.id);
+            }
+            
+          } catch (supabaseError) {
+            console.error('❌ SESSION 88: Supabase archive failed:', supabaseError);
+          }
+        }
+        
+        // Also save version using existing version saving system for redundancy
+        if (typeof window.saveHelperVersion === 'function') {
+          await window.saveHelperVersion('Pre-Invoice Parts Archive', {
+            trigger_event: 'parts_archive_before_invoice',
+            archive_type: 'parts_search_required_parts',
+            parts_count: partsCount,
+            total_parts_value: totalPartsValue,
+            notes: 'parts_search.required_parts archived before invoice assignment'
+          });
+          
+          console.log('✅ SESSION 88: Parts also archived to helper_versions for redundancy');
+        }
+        
+        console.log(`✅ SESSION 88: Successfully archived ${partsCount} parts (₪${totalPartsValue.toLocaleString()})`);
+        
+      } catch (error) {
+        console.error('❌ SESSION 88: Error archiving parts_search data:', error);
+        // Don't throw - this shouldn't block the invoice assignment process
+      }
+    }
+
+    /**
      * Duplicate centers with invoice assignment
      */
     async function duplicateCentersWithInvoices(selectedInvoices) {
       const helper = window.helper || {};
       
       console.log('🔄 SESSION 88: Duplicating centers with invoice data...');
+      
+      // Initialize new parts array to replace parts_search.required_parts
+      const newRequiredParts = [];
+      let partsImported = 0;
       
       // For each selected invoice, modify the centers with invoice data
       selectedInvoices.forEach(invoice => {
@@ -11523,8 +11608,50 @@
           // Mark center as having invoice data
           center.has_invoice_data = true;
           center.invoice_assignment_status = 'assigned';
+          
+          // Import invoice line as required part (if it's a part)
+          if (line.metadata?.category === 'part') {
+            const newPart = {
+              row_uuid: window.generateUUID ? window.generateUUID() : 'part_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9),
+              part_name: line.description,
+              catalog_code: line.metadata?.part_code || '',
+              quantity: line.quantity || 1,
+              original_price: line.unit_price || 0,
+              updated_price: line.unit_price || 0,
+              total_cost: line.line_total || 0,
+              damage_center_code: centerCode,
+              source: 'invoice_import',
+              invoice_id: invoice.id,
+              invoice_number: invoice.invoice_number,
+              invoice_line_id: line.id,
+              imported_at: new Date().toISOString(),
+              case_id: helper.meta?.case_id,
+              plate: helper.meta?.plate || helper.vehicle?.plate || helper.car_details?.plate
+            };
+            
+            newRequiredParts.push(newPart);
+            partsImported++;
+          }
         });
       });
+      
+      // Replace parts_search.required_parts with invoice parts
+      if (partsImported > 0) {
+        if (!helper.parts_search) {
+          helper.parts_search = {};
+        }
+        
+        helper.parts_search.required_parts = newRequiredParts;
+        helper.parts_search.import_source = 'invoice_assignment';
+        helper.parts_search.imported_at = new Date().toISOString();
+        helper.parts_search.imported_invoices = selectedInvoices.map(inv => ({
+          id: inv.id,
+          invoice_number: inv.invoice_number,
+          supplier_name: inv.supplier_name
+        }));
+        
+        console.log(`📦 SESSION 88: Imported ${partsImported} parts from invoices to parts_search.required_parts`);
+      }
       
       // Save updated helper
       sessionStorage.setItem('helper', JSON.stringify(helper));
@@ -11563,18 +11690,374 @@
      * Calculate differentials between wizard and invoice data
      */
     async function calculateInvoiceDifferentials(invoices) {
-      // This will be implemented in Phase 2.3
-      console.log('🔜 SESSION 88: Differentials calculation placeholder');
-      return [];
+      try {
+        console.log('📊 SESSION 88: Calculating invoice differentials...');
+        
+        const helper = window.helper || {};
+        const differentials = [];
+        
+        // Get wizard data from helper.centers for comparison
+        const wizardCenters = helper.centers || [];
+        
+        for (const invoice of invoices) {
+          console.log(`📄 Processing invoice ${invoice.invoice_number}...`);
+          
+          for (const line of invoice.lines || []) {
+            const centerCode = line.metadata?.damage_center_code;
+            if (!centerCode) continue;
+            
+            // Find corresponding wizard center
+            const wizardCenter = wizardCenters.find(c => 
+              c.Id === centerCode || c.code === centerCode
+            );
+            
+            if (!wizardCenter) {
+              // Invoice line has no corresponding wizard center
+              differentials.push({
+                type: 'new_invoice_item',
+                center_code: centerCode,
+                invoice_id: invoice.id,
+                invoice_number: invoice.invoice_number,
+                line_id: line.id,
+                description: line.description,
+                category: line.metadata?.category,
+                invoice_amount: line.line_total || 0,
+                wizard_amount: 0,
+                difference: line.line_total || 0,
+                status: 'invoice_only'
+              });
+              continue;
+            }
+            
+            // Compare invoice line with wizard center data
+            const differential = await compareInvoiceLineWithWizardData(
+              line, wizardCenter, invoice
+            );
+            
+            if (differential) {
+              differentials.push(differential);
+            }
+          }
+        }
+        
+        // Check for wizard items not in invoices
+        wizardCenters.forEach(center => {
+          const centerInvoiceLines = [];
+          invoices.forEach(invoice => {
+            invoice.lines?.forEach(line => {
+              if (line.metadata?.damage_center_code === center.Id || 
+                  line.metadata?.damage_center_code === center.code) {
+                centerInvoiceLines.push(line);
+              }
+            });
+          });
+          
+          if (centerInvoiceLines.length === 0) {
+            // Wizard center has no corresponding invoice lines
+            const wizardTotal = calculateWizardCenterTotal(center);
+            if (wizardTotal > 0) {
+              differentials.push({
+                type: 'wizard_only_center',
+                center_code: center.Id || center.code,
+                center_description: center.name || center.description,
+                invoice_amount: 0,
+                wizard_amount: wizardTotal,
+                difference: -wizardTotal,
+                status: 'wizard_only'
+              });
+            }
+          }
+        });
+        
+        console.log(`📊 SESSION 88: Found ${differentials.length} differentials`);
+        return differentials;
+        
+      } catch (error) {
+        console.error('❌ SESSION 88: Error calculating differentials:', error);
+        return [];
+      }
+    }
+
+    /**
+     * Compare invoice line with wizard center data
+     */
+    async function compareInvoiceLineWithWizardData(line, wizardCenter, invoice) {
+      try {
+        const lineCategory = line.metadata?.category;
+        let wizardAmount = 0;
+        let comparison = null;
+        
+        // Calculate wizard amount based on category
+        switch (lineCategory) {
+          case 'part':
+            wizardAmount = calculateWizardPartsTotal(wizardCenter);
+            comparison = 'parts';
+            break;
+          case 'work':
+            wizardAmount = calculateWizardWorksTotal(wizardCenter);
+            comparison = 'works';
+            break;
+          case 'repair':
+            wizardAmount = calculateWizardRepairsTotal(wizardCenter);
+            comparison = 'repairs';
+            break;
+          default:
+            // Unknown category - treat as general
+            wizardAmount = calculateWizardCenterTotal(wizardCenter);
+            comparison = 'total';
+        }
+        
+        const invoiceAmount = line.line_total || 0;
+        const difference = invoiceAmount - wizardAmount;
+        
+        // Only create differential if there's a significant difference (> 1 ₪)
+        if (Math.abs(difference) > 1) {
+          return {
+            type: 'amount_difference',
+            center_code: wizardCenter.Id || wizardCenter.code,
+            center_description: wizardCenter.name || wizardCenter.description,
+            invoice_id: invoice.id,
+            invoice_number: invoice.invoice_number,
+            line_id: line.id,
+            description: line.description,
+            category: lineCategory,
+            comparison_type: comparison,
+            invoice_amount: invoiceAmount,
+            wizard_amount: wizardAmount,
+            difference: difference,
+            status: difference > 0 ? 'invoice_higher' : 'wizard_higher'
+          };
+        }
+        
+        return null;
+        
+      } catch (error) {
+        console.error('❌ SESSION 88: Error comparing line with wizard:', error);
+        return null;
+      }
+    }
+
+    /**
+     * Calculate total for wizard center parts
+     */
+    function calculateWizardPartsTotal(center) {
+      try {
+        if (!center.Parts?.parts_required) return 0;
+        
+        return center.Parts.parts_required.reduce((sum, part) => {
+          return sum + (parseFloat(part.total_cost) || 0);
+        }, 0);
+      } catch (error) {
+        console.error('❌ Error calculating wizard parts total:', error);
+        return 0;
+      }
+    }
+
+    /**
+     * Calculate total for wizard center works
+     */
+    function calculateWizardWorksTotal(center) {
+      try {
+        if (!center.Works?.works_required) return 0;
+        
+        return center.Works.works_required.reduce((sum, work) => {
+          return sum + (parseFloat(work.total_cost) || 0);
+        }, 0);
+      } catch (error) {
+        console.error('❌ Error calculating wizard works total:', error);
+        return 0;
+      }
+    }
+
+    /**
+     * Calculate total for wizard center repairs
+     */
+    function calculateWizardRepairsTotal(center) {
+      try {
+        if (!center.Repairs?.repairs_required) return 0;
+        
+        return center.Repairs.repairs_required.reduce((sum, repair) => {
+          return sum + (parseFloat(repair.total_cost) || 0);
+        }, 0);
+      } catch (error) {
+        console.error('❌ Error calculating wizard repairs total:', error);
+        return 0;
+      }
+    }
+
+    /**
+     * Calculate total cost for entire wizard center
+     */
+    function calculateWizardCenterTotal(center) {
+      try {
+        const partsTotal = calculateWizardPartsTotal(center);
+        const worksTotal = calculateWizardWorksTotal(center);
+        const repairsTotal = calculateWizardRepairsTotal(center);
+        
+        return partsTotal + worksTotal + repairsTotal;
+      } catch (error) {
+        console.error('❌ Error calculating wizard center total:', error);
+        return 0;
+      }
     }
 
     /**
      * Display differentials in popup
      */
     function displayDifferentialsPopup(differentials) {
-      // This will be implemented in Phase 2.3
-      console.log('🔜 SESSION 88: Differentials popup placeholder');
-      alert('תצוגת הפרשים תהיה זמינה בשלב הבא');
+      try {
+        console.log('📊 SESSION 88: Displaying differentials popup...');
+        
+        if (differentials.length === 0) {
+          alert('לא נמצאו הפרשים בין נתוני האשף לחשבוניות');
+          return;
+        }
+        
+        // Create popup overlay
+        const overlay = document.createElement('div');
+        overlay.id = 'differentialsOverlay';
+        overlay.style.cssText = `
+          position: fixed;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
+          background: rgba(0, 0, 0, 0.5);
+          z-index: 10000;
+          display: flex;
+          justify-content: center;
+          align-items: center;
+        `;
+        
+        // Create popup content
+        const popup = document.createElement('div');
+        popup.style.cssText = `
+          background: white;
+          border-radius: 12px;
+          padding: 20px;
+          max-width: 90vw;
+          max-height: 90vh;
+          overflow-y: auto;
+          box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+          direction: rtl;
+          font-family: sans-serif;
+        `;
+        
+        // Build popup HTML
+        let popupHTML = `
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 2px solid #e0e0e0; padding-bottom: 15px;">
+            <h2 style="margin: 0; color: #1565c0; font-size: 20px;">הפרשי חשבוניות מול אשף</h2>
+            <button onclick="document.getElementById('differentialsOverlay').remove()" style="
+              background: none;
+              border: none;
+              font-size: 24px;
+              cursor: pointer;
+              color: #666;
+              padding: 0;
+              width: 30px;
+              height: 30px;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+            ">×</button>
+          </div>
+          
+          <div style="margin-bottom: 15px; font-size: 14px; color: #666;">
+            נמצאו ${differentials.length} הפרשים בין נתוני האשף לחשבוניות
+          </div>
+          
+          <div style="max-height: 60vh; overflow-y: auto;">
+        `;
+        
+        // Add each differential
+        differentials.forEach((diff, index) => {
+          const statusColor = diff.status === 'invoice_higher' ? '#ff5722' : 
+                             diff.status === 'wizard_higher' ? '#2196f3' : 
+                             diff.status === 'invoice_only' ? '#ff9800' :
+                             diff.status === 'wizard_only' ? '#607d8b' : '#666';
+          
+          const statusText = diff.status === 'invoice_higher' ? 'חשבונית גבוהה' :
+                            diff.status === 'wizard_higher' ? 'אשף גבוה' :
+                            diff.status === 'invoice_only' ? 'רק בחשבונית' :
+                            diff.status === 'wizard_only' ? 'רק באשף' : 'הפרש';
+          
+          popupHTML += `
+            <div style="
+              border: 1px solid #e0e0e0;
+              border-radius: 8px;
+              padding: 15px;
+              margin-bottom: 10px;
+              background: #fafafa;
+            ">
+              <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 10px;">
+                <div>
+                  <div style="font-weight: 600; color: #333; margin-bottom: 5px;">
+                    ${diff.description || diff.center_description || 'פריט לא מזוהה'}
+                  </div>
+                  <div style="font-size: 13px; color: #666;">
+                    מוקד: ${diff.center_code} | 
+                    ${diff.invoice_number ? `חשבונית: ${diff.invoice_number}` : ''} |
+                    קטגוריה: ${diff.category || 'כללי'}
+                  </div>
+                </div>
+                <div style="
+                  background: ${statusColor};
+                  color: white;
+                  padding: 4px 8px;
+                  border-radius: 4px;
+                  font-size: 12px;
+                  font-weight: 600;
+                ">
+                  ${statusText}
+                </div>
+              </div>
+              
+              <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; font-size: 14px;">
+                <div style="text-align: center; padding: 8px; background: white; border-radius: 4px;">
+                  <div style="color: #666; font-size: 12px; margin-bottom: 2px;">חשבונית</div>
+                  <div style="font-weight: 600; color: #ff5722;">₪${diff.invoice_amount.toLocaleString()}</div>
+                </div>
+                <div style="text-align: center; padding: 8px; background: white; border-radius: 4px;">
+                  <div style="color: #666; font-size: 12px; margin-bottom: 2px;">אשף</div>
+                  <div style="font-weight: 600; color: #2196f3;">₪${diff.wizard_amount.toLocaleString()}</div>
+                </div>
+                <div style="text-align: center; padding: 8px; background: white; border-radius: 4px;">
+                  <div style="color: #666; font-size: 12px; margin-bottom: 2px;">הפרש</div>
+                  <div style="font-weight: 600; color: ${diff.difference > 0 ? '#ff5722' : '#2196f3'};">
+                    ${diff.difference > 0 ? '+' : ''}₪${diff.difference.toLocaleString()}
+                  </div>
+                </div>
+              </div>
+            </div>
+          `;
+        });
+        
+        popupHTML += `
+          </div>
+          
+          <div style="margin-top: 20px; text-align: center; border-top: 1px solid #e0e0e0; padding-top: 15px;">
+            <button onclick="document.getElementById('differentialsOverlay').remove()" style="
+              background: #6c757d;
+              color: white;
+              border: none;
+              padding: 10px 20px;
+              border-radius: 6px;
+              cursor: pointer;
+              font-size: 14px;
+            ">סגור</button>
+          </div>
+        `;
+        
+        popup.innerHTML = popupHTML;
+        overlay.appendChild(popup);
+        document.body.appendChild(overlay);
+        
+        console.log('✅ SESSION 88: Differentials popup displayed');
+        
+      } catch (error) {
+        console.error('❌ SESSION 88: Error displaying differentials popup:', error);
+        alert('שגיאה בהצגת הפרשים');
+      }
     }
 
     // Initialize on load - FIXED ORDER
