@@ -11285,20 +11285,32 @@
           return;
         }
         
-        // Check which invoices have assignments that haven't been applied yet
+        // Check which invoices have mappings in the database that haven't been applied yet
         const invoicesWithPendingAssignments = [];
         
         for (const invoice of plateInvoices) {
-          // Check if this invoice has mappings in helper.final_report.invoice_assignments
-          const helperAssignments = helper.final_report?.invoice_assignments || [];
-          const invoiceAssignments = helperAssignments.filter(assignment => 
-            assignment.invoice_id === invoice.id
-          );
+          // Query invoice_damage_center_mappings table for this invoice
+          const { data: mappings, error: mappingError } = await window.supabase
+            .from('invoice_damage_center_mappings')
+            .select('id, mapping_status, field_type, damage_center_id')
+            .eq('invoice_id', invoice.id)
+            .eq('case_id', caseId)
+            .eq('mapping_status', 'active'); // Only active mappings
           
-          if (invoiceAssignments.length > 0) {
+          if (mappingError) {
+            console.error(`❌ SESSION 88: Error querying mappings for invoice ${invoice.id}:`, mappingError);
+            continue;
+          }
+          
+          console.log(`🔍 SESSION 88: Invoice ${invoice.supplier_name} has ${mappings?.length || 0} active mappings`);
+          
+          if (mappings && mappings.length > 0) {
+            // Check if these mappings have been applied to damage centers already
+            // For now, assume if mapping_status = 'active', they need to be applied
             invoicesWithPendingAssignments.push({
               ...invoice,
-              assignment_count: invoiceAssignments.length
+              assignment_count: mappings.length,
+              mappings: mappings
             });
           }
         }
@@ -11613,7 +11625,7 @@
         console.log('🔄 SESSION 88: Applying invoice mappings to damage centers...');
         
         const helper = window.helper || {};
-        const caseId = helper.meta?.case_id;
+        const caseId = helper.case_info?.supabase_case_id;
         
         if (!caseId) {
           throw new Error('No case_id found in helper');
@@ -18986,23 +18998,11 @@
       try {
         const helper = window.helper || {};
         
-        // Try multiple possible case_id locations - based on debug output showing case_id directly available
-        const caseId = helper.case_id ||
-                      helper.case_info?.supabase_case_id || 
-                      helper.meta?.case_id || 
-                      helper.car_details?.case_id ||
-                      helper.vehicle?.case_id;
+        // Use the correct case_id path as specified in CLAUDE.md
+        const caseId = helper.case_info?.supabase_case_id;
         
         console.log('🔍 SESSION 88 DEBUG: getInvoiceLinesForCase called');
-        console.log('  helper.case_info:', helper.case_info);
-        console.log('  All case_id attempts:', {
-          'case_info.supabase_case_id': helper.case_info?.supabase_case_id,
-          'meta.case_id': helper.meta?.case_id,
-          'car_details.case_id': helper.car_details?.case_id,
-          'vehicle.case_id': helper.vehicle?.case_id,
-          'direct_case_id': helper.case_id,
-          'final_caseId': caseId
-        });
+        console.log('  case_id:', caseId);
         console.log('  window.supabase available:', !!window.supabase);
         
         if (!caseId || !window.supabase) {
