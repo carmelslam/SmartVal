@@ -3957,10 +3957,12 @@ class InvoiceProcessor {
           console.log('✅ SESSION 87: Lines saved:', result.invoice.lines?.length || 0);
 
           // SESSION 87: Save invoice_documents record (for manual invoice PDF/data)
+          const filename = `manual_invoice_${invoiceData['מס. חשבונית']}_${Date.now()}.pdf`;
           const documentInsert = {
             invoice_id: this.currentInvoiceId,
             case_id: caseId,
             plate: invoiceData['מספר רכב'],
+            filename: filename,  // SESSION 87: Required field
             ocr_structured_data: invoiceData,  // Store complete manual data
             ocr_status: 'manual'
           };
@@ -3977,6 +3979,29 @@ class InvoiceProcessor {
           } else {
             console.log('✅ SESSION 87: Saved to invoice_documents:', document.id);
             this.currentDocumentId = document.id;
+          }
+
+          // SESSION 87: Create invoice_validations record (user + timestamp)
+          const userId = this.invoiceService?.currentUser?.user_id;
+          if (userId) {
+            const validationInsert = {
+              invoice_id: this.currentInvoiceId,
+              reviewed_by: userId,
+              approval_status: 'draft',  // Manual invoices start as draft
+              review_date: new Date().toISOString(),
+              notes: 'חשבונית ידנית - נוצרה על ידי המשתמש'
+            };
+
+            console.log('💾 SESSION 87: Saving to invoice_validations:', validationInsert);
+            const { error: validationError } = await window.supabase
+              .from('invoice_validations')
+              .insert(validationInsert);
+
+            if (validationError) {
+              console.error('⚠️ SESSION 87: Failed to save invoice_validations:', validationError);
+            } else {
+              console.log('✅ SESSION 87: Saved to invoice_validations');
+            }
           }
 
           // SESSION 80: Update helper with שרת ID
