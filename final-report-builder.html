@@ -12600,7 +12600,20 @@
     };
 
     // Initialize on load - FIXED ORDER
-    document.addEventListener('DOMContentLoaded', async () => {
+    console.log('🔍 SCRIPT DEBUG: About to add DOMContentLoaded listener...');
+    console.log('🔍 SCRIPT DEBUG: document.readyState:', document.readyState);
+    
+    // Check if DOM is already loaded
+    if (document.readyState === 'loading') {
+      console.log('🔍 SCRIPT DEBUG: DOM still loading, adding event listener...');
+      document.addEventListener('DOMContentLoaded', initializeApp);
+    } else {
+      console.log('🔍 SCRIPT DEBUG: DOM already loaded, calling initializeApp immediately...');
+      initializeApp();
+    }
+    
+    async function initializeApp() {
+      console.log('🚀 SCRIPT DEBUG: initializeApp called!');
       
       // Initialize window.helper from sessionStorage FIRST
       window.helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
@@ -12625,8 +12638,12 @@
       
       // Then load data from helper after FinalReportCalculations is available
       setTimeout(() => {
-        console.log('🔍 DEBUG STEP 1: setTimeout started, calling loadDataFromHelper...');
-        loadDataFromHelper();
+        try {
+          console.log('🔍 DEBUG STEP 1: setTimeout started, calling loadDataFromHelper...');
+          loadDataFromHelper();
+        } catch (error) {
+          console.error('❌ FATAL ERROR in loadDataFromHelper:', error);
+        }
         console.log('🔍 DEBUG STEP 2: loadDataFromHelper completed, calling loadAttachmentsData...');
         loadAttachmentsData();
         console.log('🔍 DEBUG STEP 3: loadAttachmentsData completed, calling loadClaimsDataToUI...');
@@ -12920,7 +12937,7 @@
           }, 500); // Wait for summary blocks to update
         });
       }
-    });
+    } // End of initializeApp function
 
     // PARTS SEARCH FUNCTIONALITY
     function showPartSuggestions(input, centerIndex, partIndex) {
