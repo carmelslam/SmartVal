@@ -12611,6 +12611,8 @@
     window.immediateInvoiceTest = function() {
       console.log('🧪 MANUAL IMMEDIATE TEST: Starting...');
       console.log('🧪 checkForAvailableInvoices available:', typeof checkForAvailableInvoices === 'function');
+      console.log('🧪 window.helper available:', !!window.helper);
+      console.log('🧪 helper.case_info:', window.helper?.case_info);
       
       if (typeof checkForAvailableInvoices === 'function') {
         console.log('🧪 Calling checkForAvailableInvoices now...');
@@ -12619,6 +12621,35 @@
         console.error('🧪 Function not available yet');
       }
     };
+    
+    // Create a persistent checker that runs until it succeeds
+    let invoiceCheckAttempts = 0;
+    window.persistentInvoiceChecker = function() {
+      invoiceCheckAttempts++;
+      console.log(`🔁 PERSISTENT CHECK #${invoiceCheckAttempts}: Testing invoice system...`);
+      
+      if (typeof checkForAvailableInvoices === 'function' && window.helper && window.helper.case_info) {
+        console.log('✅ PERSISTENT CHECK: All requirements met, calling checkForAvailableInvoices...');
+        checkForAvailableInvoices().catch(e => console.error('🔁 Persistent error:', e));
+        return true; // Success
+      } else {
+        console.log('❌ PERSISTENT CHECK: Requirements not met yet');
+        console.log('  - Function available:', typeof checkForAvailableInvoices === 'function');
+        console.log('  - Helper available:', !!window.helper);
+        console.log('  - Helper.case_info available:', !!window.helper?.case_info);
+        
+        if (invoiceCheckAttempts < 10) {
+          setTimeout(window.persistentInvoiceChecker, 1000);
+        } else {
+          console.error('🔁 PERSISTENT CHECK: Gave up after 10 attempts');
+        }
+        return false; // Not ready yet
+      }
+    };
+    
+    // Start the persistent checker immediately
+    console.log('🔁 Starting persistent invoice checker...');
+    window.persistentInvoiceChecker();
     
     // Check if DOM is already loaded
     if (document.readyState === 'loading') {
