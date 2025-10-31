@@ -1620,45 +1620,80 @@
       console.log('Sending webhook with data size:', JSON.stringify(webhookData).length);
       console.log('Webhook payload:', webhookData);
 
-      // 💾 CRITICAL FIX: Save to Supabase BEFORE webhook
-      // This ensures reports are backed up to database
+      // 💾 SESSION 88: SIMPLIFIED DIRECT SAVE TO SUPABASE
+      // Skip complex HTML-to-PDF workflow, use existing case_helper version system
       (async () => {
         try {
-          const helper = window.helper || JSON.parse(sessionStorage.getItem('helper') || '{}');
-          // ✅ FIX: Check supabase_case_id first (actual UUID), fallback to case_id (filing ID)
-          let caseIdOrNumber = helper.case_info?.supabase_case_id || helper.meta?.case_id;
-          const plate = helper.car_details?.plate || helper.vehicle?.plate || helper.meta?.plate;
-
-          if (caseIdOrNumber && plate && window.supabase) {
-            console.log('💾 Saving final report to Supabase...', { caseIdOrNumber, plate });
-
-            // Check if case_id is a valid UUID (format: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx)
-            const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-            let actualCaseId = caseIdOrNumber;
-
-            if (!uuidPattern.test(caseIdOrNumber)) {
-              console.log('⚠️ case_id is not a UUID, looking up by case_number or plate...');
-
-              // Try to find the case UUID by case_number or plate
-              const { data: caseData, error: lookupError } = await window.supabase
-                .from('cases')
-                .select('id')
-                .or(`case_number.eq.${caseIdOrNumber},plate.eq.${plate?.replace(/-/g, '')}`)
-                .limit(1)
-                .single();
-
-              if (lookupError || !caseData) {
-                console.warn('⚠️ Could not find case UUID - skipping Supabase save');
-                console.warn('Lookup error:', lookupError);
-                return; // Skip Supabase save, continue with webhook
+          console.log('💾 SESSION 88: Starting direct final report save...');
+          
+          // Use existing supabaseHelperService for direct save (following existing patterns)
+          if (window.supabaseHelperService && window.helper) {
+            const helper = window.helper;
+            const plate = helper.meta?.plate || helper.car_details?.plate;
+            
+            if (plate) {
+              const normalizedPlate = plate.replace(/[-\/\s]/g, '');
+              const timestamp = Date.now();
+              const helperName = `${normalizedPlate}_final_report_v${timestamp}`;
+              
+              // Add final report metadata to helper
+              helper.final_report = helper.final_report || {};
+              helper.final_report.status = 'submitted';
+              helper.final_report.submitted_at = new Date().toISOString();
+              helper.final_report.html_content = cleanHTML;
+              
+              const result = await window.supabaseHelperService.saveHelper({
+                plate: normalizedPlate,
+                helperData: helper,
+                helperName: helperName,
+                timestamp: new Date().toISOString()
+              });
+              
+              if (result.success) {
+                console.log('✅ SESSION 88: Final report saved directly to case_helper');
+              } else {
+                console.error('❌ SESSION 88: Direct save failed:', result.error);
               }
-
-              actualCaseId = caseData.id;
-              console.log('✅ Found case UUID:', actualCaseId);
+            } else {
+              console.warn('⚠️ SESSION 88: No plate found for direct save');
             }
-
-            // 📄 Generate PDF from HTML (exact copy from parts search)
-            console.log('📄 Generating final report PDF using html2canvas...');
+          } else {
+            console.warn('⚠️ SESSION 88: supabaseHelperService not available for direct save');
+          }
+          
+        } catch (error) {
+          console.error('❌ SESSION 88: Error in direct save:', error);
+          console.warn('⚠️ SESSION 88: Continuing with webhook despite save error');
+        }
+      })();
+      
+      // Use the proper sendToWebhook function
+      window.sendToWebhook('SUBMIT_FINAL_REPORT', webhookData)
+        .then(response => {
+          console.log('Webhook success response:', response);
+          // Restore button state
+          submitButton.innerHTML = '✅ נשלח בהצלחה!';
+          submitButton.style.backgroundColor = '#28a745';
+          setTimeout(() => {
+            submitButton.innerHTML = originalText;
+            submitButton.disabled = false;
+            submitButton.style.opacity = '1';
+            submitButton.style.backgroundColor = '';
+          }, 3000);
+          alert('הדוח הסופי נשלח בהצלחה למערכת!');
+        })
+        .catch(error => {
+          console.error('Webhook error:', error);
+          submitButton.innerHTML = originalText;
+          submitButton.disabled = false;
+          submitButton.style.opacity = '1';
+          alert('שגיאה בשליחת הדוח: ' + error.message);
+        });
+    }
+    
+    // Load adjustments data when page loads
+    function loadAdjustmentsData() {
+      console.log('🔄 Loading adjustments data...');
 
             // Open HTML in hidden window for rendering
             const reviewWindow = window.open('', '_blank');
