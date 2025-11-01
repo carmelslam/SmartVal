@@ -13245,27 +13245,47 @@
       }
     }
 
-    // SESSION 89: Display part suggestions in dropdown format
+    // SESSION 89: Display part suggestions in dropdown format (matches parts-required style)
     function displayPartSuggestions(suggestionsDiv, parts, input, centerIndex, partIndex) {
+      // Update dropdown styling to match parts-required
+      suggestionsDiv.style.cssText = `
+        position: absolute;
+        top: 100%;
+        right: 0;
+        left: 0;
+        background: white;
+        border: 1px solid #ccc;
+        border-radius: 8px;
+        text-align: right;
+        z-index: 1000;
+        max-height: 200px;
+        overflow-y: auto;
+        max-width: 100%;
+        box-sizing: border-box;
+        contain: layout;
+        display: block;
+      `;
+      
       const suggestionsHTML = parts.map(part => `
         <div class="suggestion-item" 
-             style="padding: 8px; cursor: pointer; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center;"
+             style="padding: 8px 12px; cursor: pointer; font-size: 13px;"
              onmouseover="this.style.background='#f0f0f0'" 
              onmouseout="this.style.background='white'"
              onclick="selectInvoicePart(this, '${part.name}', '${part.price || 0}', '${part.source || ''}', ${centerIndex}, ${partIndex})">
-          <div>
-            <div style="font-weight: 500; color: #333;">${part.name}</div>
-            ${part.description ? `<div style="font-size: 12px; color: #666;">${part.description}</div>` : ''}
-          </div>
-          <div style="text-align: left;">
-            <div style="font-weight: 500; color: #2563eb;">₪${parseFloat(part.price || 0).toLocaleString()}</div>
-            <div style="font-size: 11px; color: #666; background: #f3f4f6; padding: 2px 6px; border-radius: 10px;">${part.source || 'חשבונית'}</div>
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div style="flex: 1;">
+              <div style="font-weight: 500; color: #333; font-size: 13px;">${part.name}</div>
+              ${part.description ? `<div style="font-size: 11px; color: #666; margin-top: 2px;">${part.description}</div>` : ''}
+            </div>
+            <div style="text-align: left; margin-left: 10px;">
+              <div style="font-weight: 500; color: #2563eb; font-size: 12px;">₪${parseFloat(part.price || 0).toLocaleString()}</div>
+              <div style="font-size: 10px; color: #666; background: #f3f4f6; padding: 1px 4px; border-radius: 6px; margin-top: 2px;">${part.source || 'חשבונית'}</div>
+            </div>
           </div>
         </div>
       `).join('');
       
       suggestionsDiv.innerHTML = suggestionsHTML;
-      suggestionsDiv.style.display = 'block';
     }
 
     // SESSION 89: Select invoice part and populate fields
@@ -13301,66 +13321,126 @@
       }
     }
 
-    // SESSION 89: Fallback function to get invoice parts directly from helper
-    function getInvoicePartsFromHelper(query = '') {
+    // SESSION 89: Get all 4-layer dropdown data (Invoice + Selected + Catalog + Bank)
+    function getCombinedDropdownData(query = '') {
       try {
-        console.log('🔍 SESSION 89: Extracting invoice parts from helper data...');
+        console.log('🔍 SESSION 89: Building 4-layer dropdown data...');
         const helper = window.helper;
-        const parts = [];
+        const allParts = [];
         
-        // Check multiple potential locations for invoice parts
-        const sources = [
-          { data: helper?.centers, label: 'centers' },
-          { data: helper?.damage_centers, label: 'damage_centers' },
-          { data: helper?.final_report?.invoice_assignments, label: 'invoice_assignments' },
-          { data: helper?.invoices, label: 'invoices' }
-        ];
+        // LAYER 1: 🧾 Invoice lines (from current case invoices)
+        console.log('📋 שכבה 1: בדיקת שורות חשבונית...');
+        if (helper?.invoices && Array.isArray(helper.invoices)) {
+          helper.invoices.forEach((invoice, idx) => {
+            if (invoice.line_items && Array.isArray(invoice.line_items)) {
+              invoice.line_items.forEach(line => {
+                if (line.description && (!query || line.description.toLowerCase().includes(query.toLowerCase()))) {
+                  allParts.push({
+                    name: line.description,
+                    description: line.details || line.notes || '',
+                    price: line.amount || line.total || line.unit_price || 0,
+                    source: `🧾 חשבונית ${invoice.invoice_number || idx + 1}`,
+                    layer: 1,
+                    original: line
+                  });
+                }
+              });
+            }
+          });
+        }
         
-        sources.forEach(source => {
-          if (source.data && Array.isArray(source.data)) {
-            console.log(`🔍 Checking ${source.label}:`, source.data.length, 'items');
-            
-            source.data.forEach((item, index) => {
-              // Extract parts from damage centers
-              if (item.parts && Array.isArray(item.parts)) {
-                item.parts.forEach(part => {
-                  if (part.name && (!query || part.name.toLowerCase().includes(query.toLowerCase()))) {
-                    parts.push({
-                      name: part.name,
-                      description: part.description || '',
-                      price: part.price || part.cost || 0,
-                      source: `${source.label} #${index + 1}`,
-                      original: part
-                    });
-                  }
-                });
-              }
-              
-              // Extract from invoice line items if present
-              if (item.line_items && Array.isArray(item.line_items)) {
-                item.line_items.forEach(line => {
-                  if (line.description && (!query || line.description.toLowerCase().includes(query.toLowerCase()))) {
-                    parts.push({
-                      name: line.description,
-                      description: line.details || '',
-                      price: line.amount || line.total || 0,
-                      source: `חשבונית ${item.invoice_number || 'לא ידוע'}`,
-                      original: line
-                    });
-                  }
-                });
-              }
-            });
-          }
+        // LAYER 2: 📋 Selected parts (from Supabase selected_parts table via helper)
+        console.log('📋 שכבה 2: בדיקת חלקים נבחרים...');
+        if (helper?.parts_search?.selected_parts && Array.isArray(helper.parts_search.selected_parts)) {
+          helper.parts_search.selected_parts.forEach(part => {
+            if (part.name && (!query || part.name.toLowerCase().includes(query.toLowerCase()))) {
+              allParts.push({
+                name: part.name,
+                description: part.description || '',
+                price: part.price || part.cost || 0,
+                source: '📋 חלקים נבחרים',
+                layer: 2,
+                original: part
+              });
+            }
+          });
+        }
+        
+        // Also check damage centers for existing parts
+        if (helper?.centers && Array.isArray(helper.centers)) {
+          helper.centers.forEach((center, idx) => {
+            if (center.parts && Array.isArray(center.parts)) {
+              center.parts.forEach(part => {
+                if (part.name && (!query || part.name.toLowerCase().includes(query.toLowerCase()))) {
+                  allParts.push({
+                    name: part.name,
+                    description: part.description || '',
+                    price: part.price || part.cost || 0,
+                    source: `📋 מרכז נזק ${idx + 1}`,
+                    layer: 2,
+                    original: part
+                  });
+                }
+              });
+            }
+          });
+        }
+        
+        // LAYER 3: 🏦 Global catalog (placeholder - when available)
+        console.log('📋 שכבה 3: קטלוג גלובלי (מקום שמור)...');
+        // This will be implemented when global catalog is available
+        // For now, add a sample entry to show the concept
+        if (!query || 'קטלוג גלובלי'.includes(query.toLowerCase())) {
+          allParts.push({
+            name: 'חלק מקטלוג גלובלי',
+            description: 'דוגמה לחלק מהקטלוג הגלובלי',
+            price: 0,
+            source: '🏦 קטלוג גלובלי',
+            layer: 3,
+            original: { placeholder: true }
+          });
+        }
+        
+        // LAYER 4: 📄 Parts.js bank (from PARTS_BANK)
+        console.log('📋 שכבה 4: בדיקת בנק חלקים...');
+        if (window.PARTS_BANK && Array.isArray(window.PARTS_BANK)) {
+          window.PARTS_BANK.forEach(category => {
+            if (category.parts && Array.isArray(category.parts)) {
+              category.parts.forEach(part => {
+                if (part.name && (!query || part.name.toLowerCase().includes(query.toLowerCase()))) {
+                  allParts.push({
+                    name: part.name,
+                    description: part.description || `מקטגוריה: ${category.name}`,
+                    price: part.price || 0,
+                    source: `📄 בנק חלקים (${category.name})`,
+                    layer: 4,
+                    original: part
+                  });
+                }
+              });
+            }
+          });
+        }
+        
+        console.log(`✅ SESSION 89: נמצאו ${allParts.length} חלקים ב-4 שכבות:`, {
+          'שכבה 1 - חשבוניות': allParts.filter(p => p.layer === 1).length,
+          'שכבה 2 - חלקים נבחרים': allParts.filter(p => p.layer === 2).length, 
+          'שכבה 3 - קטלוג גלובלי': allParts.filter(p => p.layer === 3).length,
+          'שכבה 4 - בנק חלקים': allParts.filter(p => p.layer === 4).length
         });
         
-        console.log(`✅ SESSION 89: Found ${parts.length} invoice parts from helper`);
-        return parts;
+        return allParts;
         
       } catch (error) {
-        console.error('❌ Error extracting invoice parts from helper:', error);
+        console.error('❌ Error building 4-layer dropdown data:', error);
         return [];
       }
+    }
+
+    // SESSION 89: Fallback function to get invoice parts directly from helper (legacy support)
+    function getInvoicePartsFromHelper(query = '') {
+      // Use the new 4-layer system
+      return getCombinedDropdownData(query);
     }
 
     // SESSION 89: Show visual feedback that part was selected from invoice
@@ -13729,41 +13809,54 @@
 
     // SESSION 89: DEBUG TEST FUNCTION - Call this manually to test
     window.testInvoiceIntegration = function() {
-      console.log('🧪 SESSION 89: Testing Invoice Integration...');
+      console.log('🧪 SESSION 89: בדיקת אינטגרציית חשבוניות...');
       
       // Test 1: Check if we detect invoice assignments
       const hasAssignments = hasInvoiceAssignments();
-      console.log('Test 1 - Has Assignments:', hasAssignments);
+      console.log('בדיקה 1 - זיהוי הקצאות:', hasAssignments);
       
       // Test 2: Check helper data structure
       const helper = window.helper;
-      console.log('Test 2 - Helper structure:', {
-        centers: helper?.centers?.length || 0,
-        invoices: helper?.invoices?.length || 0,
-        assignments: helper?.final_report?.invoice_assignments?.length || 0
+      console.log('בדיקה 2 - מבנה Helper:', {
+        'מרכזי נזק': helper?.centers?.length || 0,
+        'חשבוניות': helper?.invoices?.length || 0,
+        'הקצאות': helper?.final_report?.invoice_assignments?.length || 0
       });
       
       // Test 3: Check if mapper is available
-      console.log('Test 3 - Mapper available:', !!window.damageCenterMapper);
+      console.log('בדיקה 3 - Mapper זמין:', !!window.damageCenterMapper);
       
-      // Test 4: Try to get parts from helper
-      const helperParts = getInvoicePartsFromHelper('');
-      console.log('Test 4 - Helper Parts:', helperParts.length, 'found');
+      // Test 4: Try to get 4-layer parts data
+      const allParts = getCombinedDropdownData('');
+      console.log('בדיקה 4 - חלקים ב-4 שכבות:', allParts.length, 'נמצא');
+      
+      // Test 4b: Show breakdown by layer
+      const layerBreakdown = {
+        'חשבוניות (🧾)': allParts.filter(p => p.layer === 1).length,
+        'חלקים נבחרים (📋)': allParts.filter(p => p.layer === 2).length,
+        'קטלוג גלובלי (🏦)': allParts.filter(p => p.layer === 3).length,
+        'בנק חלקים (📄)': allParts.filter(p => p.layer === 4).length
+      };
+      console.log('פירוט לפי שכבות:', layerBreakdown);
       
       // Test 5: Show sample part field enhancement
       const partInput = document.querySelector('.part-name');
       if (partInput) {
-        console.log('Test 5 - Found part input, testing click handler...');
+        console.log('בדיקה 5 - נמצא שדה חלק, בדיקת טיפול בקליק...');
         handlePartClick(partInput, 0, 0);
       } else {
-        console.log('Test 5 - No part input found');
+        console.log('בדיקה 5 - לא נמצא שדה חלק');
       }
       
       return {
         hasAssignments,
-        helperStructure: { centers: helper?.centers?.length || 0 },
+        helperStructure: { 
+          centers: helper?.centers?.length || 0,
+          invoices: helper?.invoices?.length || 0 
+        },
         mapperAvailable: !!window.damageCenterMapper,
-        helperPartsCount: helperParts.length
+        totalParts: allParts.length,
+        layerBreakdown
       };
     };
 
