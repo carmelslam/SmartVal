@@ -1308,3 +1308,164 @@ To verify the fix works:
 
 ---
 
+# Works and Repairs Dropdown Investigation - Final Report
+
+## Investigation Overview
+User reported that after invoice assignment, not only parts but also works and repairs are not showing invoice data. This investigation examined the works/repairs dropdown behavior in the damage centers section of final-report-builder.html.
+
+## Key Findings
+
+### 1. Works Implementation Structure
+
+#### `createEditableWorkRow()` Function (Lines 4070-4102)
+- **Location**: final-report-builder.html
+- **Input Type**: Static dropdown with predefined options
+- **Options**: Hardcoded array of work types in Hebrew:
+  ```javascript
+  const workTypes = [
+    'כל עבודות הפחחות כולל פירוקים והרכבות',
+    'עבודות צבע', 
+    'עבודות חשמל', 
+    'עבודות מכונאות',
+    'עבודות מזגן', 
+    'עבודות ריפוד', 
+    'עבודות זגגות',
+    'איטום וזיפות', 
+    'בדיקת מתלה', 
+    'הנזק מחייב תקנה 309',
+    'כיול רדאר', 
+    'העברת חיישנים', 
+    'אחר'
+  ];
+  ```
+- **Fields**: Work type dropdown, notes field, cost field, delete button
+- **Special Feature**: "אחר" (Other) option shows additional text input
+
+#### `handleWorkTypeChange()` Function (Lines 14070-14084)
+- Handles dropdown changes
+- Shows/hides "other" text input based on selection
+- Calls `updateWorkCostFromType()` but cost remains manual
+
+### 2. Repairs Implementation Structure
+
+#### `createEditableRepairRow()` Function (Lines 4105-4132)
+- **Location**: final-report-builder.html
+- **Input Type**: Free-form text inputs (no dropdown)
+- **Fields**: 
+  - Repair name (text input)
+  - Repair description (textarea)
+  - Hours (number input)
+  - Cost (number input)
+  - Delete button
+- **No Predefined Options**: Unlike works, repairs use completely free-form inputs
+
+### 3. Critical Differences from Parts
+
+#### Parts vs Works/Repairs Behavior:
+| Feature | Parts | Works | Repairs |
+|---------|-------|-------|---------|
+| **Input Type** | Dynamic search with suggestions | Static dropdown | Free-form text |
+| **Suggestions** | `showPartSuggestions()` function | None | None |
+| **Search Integration** | `openPartsSearchModule()` | None | None |
+| **Autocomplete** | Yes (onkeyup trigger) | No | No |
+| **Data Source** | External parts catalog | Hardcoded list | User input only |
+
+#### Parts Suggestion System (Lines 13086-13140):
+- **Function**: `showPartSuggestions(input, centerIndex, partIndex)`
+- **Triggers**: onkeyup events on part name fields
+- **Features**: 
+  - Searches stored results
+  - Shows dropdown with suggestions
+  - Links to parts search module
+  - Auto-population of fields
+
+### 4. Invoice Integration Analysis
+
+#### Invoice Assignment Support:
+- **All Types Supported**: Parts, works, and repairs all have invoice integration
+- **Conversion Functions**:
+  - `convertMappingToPart()` (Lines 12095-12133)
+  - `convertMappingToWork()` (Lines 12138-12148)
+  - `convertMappingToRepair()` (Lines 12153-12163)
+
+#### Invoice Data Integration:
+- **Works**: Maps to `category` and `cost` fields from invoice data
+- **Repairs**: Maps to `name`, `cost`, and `description` fields from invoice data
+- **Source Tracking**: Both include `source: 'invoice'` and invoice IDs for traceability
+
+#### Invoice Assignment Trigger:
+- **Message System**: Uses `DAMAGE_CENTER_FIELD_CLICKED` message type
+- **Handler**: `handleDamageCenterMessage()` → `showInvoiceMappingModal()`
+- **Issue**: Current work/repair inputs may not be configured as clickable fields for invoice assignment
+
+### 5. Current System Limitations
+
+#### No Dynamic Suggestions for Works/Repairs:
+1. **Works**: Limited to predefined dropdown options
+2. **Repairs**: Completely manual entry
+3. **No Search Integration**: Unlike parts, no connection to external data sources
+4. **No Auto-completion**: No suggestion system like parts have
+
+#### Potential Issues with Invoice Assignment:
+1. **Clickable Field Setup**: Work/repair inputs may not trigger invoice mapping modal
+2. **Field Identification**: Current implementation may not properly identify work/repair fields for invoice assignment
+3. **Data Synchronization**: After invoice assignment, work/repair fields might not update to show invoice data
+
+### 6. Existing Flows That Must Be Preserved
+
+#### Legacy Input Systems:
+1. **damage-center-works.html**: Simple text inputs for work descriptions
+2. **damage-center-repairs.html**: Textarea inputs for repair descriptions
+3. **Predefined Work Categories**: Standard work types in Hebrew must be maintained
+4. **Manual Cost Entry**: Current manual cost calculation system
+5. **"Other" Work Type**: Special handling for custom work descriptions
+
+#### Data Structure Compatibility:
+- Work objects: `{category, cost, comments, type}`
+- Repair objects: `{name, description, cost, hours}`
+- Invoice integration format must match existing structure
+
+## Recommendations
+
+### 1. Immediate Fixes Needed:
+- **Enable Invoice Assignment**: Ensure work/repair input fields are clickable and trigger invoice mapping modal
+- **Update UI Feedback**: After invoice assignment, work/repair fields should show invoice data
+- **Field Recognition**: Verify that work/repair fields are properly identified in invoice assignment system
+
+### 2. Future Enhancements:
+- **Work Suggestions**: Consider adding dynamic suggestions for common work types
+- **Repair Templates**: Potentially add common repair templates while maintaining free-form input
+- **Search Integration**: Explore connecting repairs to external labor/repair databases
+
+### 3. Compatibility Requirements:
+- **Maintain Hebrew Interface**: All work types and labels must remain in Hebrew
+- **Preserve Manual Entry**: Keep ability for manual cost and description entry
+- **Legacy Support**: Ensure compatibility with existing damage center modules
+
+## Technical Implementation Notes
+
+### Current File Locations:
+- **Main Implementation**: `/final-report-builder.html` (Lines 4070-4132, 12138-12163)
+- **Legacy Modules**: `/damage-center-works.html`, `/damage-center-repairs.html`
+- **Invoice Integration**: Lines 11964-11978, 12138-12163
+
+### Key Functions to Examine:
+- `createEditableWorkRow()` - Work row creation
+- `createEditableRepairRow()` - Repair row creation  
+- `convertMappingToWork()` - Invoice to work data conversion
+- `convertMappingToRepair()` - Invoice to repair data conversion
+- `handleDamageCenterMessage()` - Invoice assignment trigger
+
+---
+
+## Investigation Status: COMPLETE
+✅ Analyzed work/repair dropdown creation and population logic
+✅ Identified differences from parts system (static vs dynamic)
+✅ Examined invoice integration capabilities
+✅ Documented existing flows and compatibility requirements
+✅ Identified potential issues with invoice assignment clickability
+
+The main issue appears to be that work/repair input fields may not be properly configured as clickable elements that trigger the invoice assignment modal, unlike parts which have extensive search and suggestion functionality.
+
+---
+
