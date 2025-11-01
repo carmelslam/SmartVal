@@ -29,7 +29,36 @@ Your audit will show if you understand:
 - Why the current code doesn't work
 
 ---
+⚠️ CRITICAL ARCHITECTURE CONCEPT:
 
+Data Exists in TWO Places:
+1. helper.final_report.invoice_assignments[] 
+   - LOCAL CACHE for UI performance
+   - Can be cleared, can be stale
+   - NOT source of truth
+
+2. invoice_damage_center_mappings (Supabase)
+   - DATABASE SOURCE OF TRUTH
+   - Persistent, authoritative
+   - ALWAYS query this
+
+Final Report MUST:
+✅ Query Supabase invoice_damage_center_mappings
+❌ NOT read from helper.final_report.invoice_assignments
+
+Why:
+- Supabase persists across sessions
+- Supabase survives browser clears  
+- Supabase works across devices
+- helper is just cache, not source
+
+ANALOGY: Banking
+- helper = teller's screen (cache)
+- Supabase = bank database (truth)
+- Always query the database
+
+If you find code reading from helper instead of Supabase,
+that is a CRITICAL BUG to document.
 ## ⚠️ CRITICAL: CORRECT UNDERSTANDING OF THE 2-PART FLOW
 
 **Previous implementations had a fundamental misunderstanding. Here is the CORRECT architecture:**

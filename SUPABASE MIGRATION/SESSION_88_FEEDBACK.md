@@ -733,3 +733,90 @@ create index IF not exists idx_invoice_dc_mappings_mapped_data_gin on public.inv
 create trigger update_invoice_dc_mappings_updated_at BEFORE
 update on invoice_damage_center_mappings for EACH row
 execute FUNCTION update_updated_at ();
+
+
+data flow :
+
+CRITICAL CONCEPT: Database as Source of Truth
+
+Assignment UI Flow:
+1. User assigns invoice to damage center
+2. Write to helper.final_report.invoice_assignments[] 
+   → For immediate UI update (cache)
+3. Write to Supabase invoice_damage_center_mappings
+   → For persistence (SOURCE OF TRUTH)
+
+Final Report Flow:
+1. Query Supabase invoice_damage_center_mappings
+   → Get authoritative data
+2. DO NOT read from helper
+   → helper might be stale, cleared, or outdated
+3. Even though data exists in helper, Supabase is authoritative
+
+Why:
+- Supabase persists across sessions
+- Supabase survives browser clears
+- Supabase works across devices
+- Supabase provides audit trail
+- Supabase is single source of truth
+
+helper is just a CACHE, not the SOURCE
+```
+
+### **Better Analogy for Claude:**
+```
+Think of Banking:
+
+When you deposit money:
+- Teller updates their screen (cache = helper)
+- Teller updates bank database (truth = Supabase)
+
+When you check balance later:
+- Do you trust teller's screen? NO (might be outdated)
+- Do you trust bank database? YES (authoritative)
+
+Same principle here:
+- helper = teller's screen (cache, temporary)
+- Supabase = bank database (authoritative, permanent)
+
+Always query the database
+```
+
+---
+
+## **Performance Consideration:**
+
+**"But querying Supabase is slower than reading helper!"**
+
+### **Answer: Not a Valid Concern**
+```
+Supabase Query:
+- Indexed table
+- Simple WHERE clause
+- ~10-50ms response time
+- Negligible for user experience
+
+helper Read:
+- Instant (~0ms)
+- But WRONG data if browser cleared
+- User frustrated = infinite negative time
+
+Correct data in 50ms > Wrong data in 0ms
+```
+
+The query is so fast it's imperceptible to users, and the architectural benefits far outweigh any microsecond performance difference.
+
+---
+
+## **Long-Term Implications:**
+
+### **If You Compromise (Read from helper):**
+```
+Year 1: Works mostly fine (with occasional sync issues)
+Year 2: Bug reports pile up (data disappearing)
+Year 3: Need to refactor (painful migration)
+Year 4: Regret not doing it right from start
+
+Cost: High technical debt
+Risk: Data loss incidents
+Pain: User complaints
