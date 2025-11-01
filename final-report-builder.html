@@ -12790,15 +12790,31 @@
       invoiceCheckAttempts++;
       console.log(`🔁 PERSISTENT CHECK #${invoiceCheckAttempts}: Testing invoice system...`);
       
-      if (typeof checkForAvailableInvoices === 'function' && window.helper && window.helper.case_info) {
+      // Check multiple sources for helper data
+      const helperFromWindow = window.helper;
+      const helperFromSession = (() => {
+        try {
+          return JSON.parse(sessionStorage.getItem('helper') || '{}');
+        } catch(e) {
+          return {};
+        }
+      })();
+      
+      const hasValidHelper = (helperFromWindow && helperFromWindow.case_info) || 
+                            (helperFromSession && helperFromSession.case_info);
+      
+      if (typeof checkForAvailableInvoices === 'function' && hasValidHelper) {
         console.log('✅ PERSISTENT CHECK: All requirements met, calling checkForAvailableInvoices...');
+        console.log('  - Using helper from:', helperFromWindow?.case_info ? 'window' : 'sessionStorage');
         checkForAvailableInvoices().catch(e => console.error('🔁 Persistent error:', e));
         return true; // Success
       } else {
         console.log('❌ PERSISTENT CHECK: Requirements not met yet');
         console.log('  - Function available:', typeof checkForAvailableInvoices === 'function');
-        console.log('  - Helper available:', !!window.helper);
-        console.log('  - Helper.case_info available:', !!window.helper?.case_info);
+        console.log('  - Helper (window) available:', !!helperFromWindow);
+        console.log('  - Helper (window).case_info available:', !!helperFromWindow?.case_info);
+        console.log('  - Helper (session) available:', !!helperFromSession && Object.keys(helperFromSession).length > 0);
+        console.log('  - Helper (session).case_info available:', !!helperFromSession?.case_info);
         
         if (invoiceCheckAttempts < 10) {
           setTimeout(window.persistentInvoiceChecker, 1000);
@@ -12828,19 +12844,55 @@
     // Try multiple approaches to ensure invoice check runs
     setTimeout(() => {
       console.log('🕐 TIMER 1000ms: Checking invoice system...');
-      if (typeof checkForAvailableInvoices === 'function' && window.helper) {
+      // Check multiple sources for helper data
+      const helperFromWindow = window.helper;
+      const helperFromSession = (() => {
+        try {
+          return JSON.parse(sessionStorage.getItem('helper') || '{}');
+        } catch(e) {
+          return {};
+        }
+      })();
+      
+      const hasValidHelper = (helperFromWindow && helperFromWindow.case_info) || 
+                            (helperFromSession && helperFromSession.case_info);
+      
+      if (typeof checkForAvailableInvoices === 'function' && hasValidHelper) {
         console.log('🚀 TIMER: Calling checkForAvailableInvoices...');
+        console.log('  - Using helper from:', helperFromWindow?.case_info ? 'window' : 'sessionStorage');
         checkForAvailableInvoices().catch(e => console.error('🔧 Timer error:', e));
       } else {
         console.log('❌ TIMER: Function or helper not ready yet');
+        console.log('  - Function available:', typeof checkForAvailableInvoices === 'function');
+        console.log('  - Helper (window) with case_info:', !!helperFromWindow?.case_info);
+        console.log('  - Helper (session) with case_info:', !!helperFromSession?.case_info);
       }
     }, 1000);
     
     setTimeout(() => {
       console.log('🕐 TIMER 3000ms: Secondary check for invoice system...');
-      if (typeof checkForAvailableInvoices === 'function' && window.helper) {
+      // Check multiple sources for helper data
+      const helperFromWindow = window.helper;
+      const helperFromSession = (() => {
+        try {
+          return JSON.parse(sessionStorage.getItem('helper') || '{}');
+        } catch(e) {
+          return {};
+        }
+      })();
+      
+      const hasValidHelper = (helperFromWindow && helperFromWindow.case_info) || 
+                            (helperFromSession && helperFromSession.case_info);
+      
+      if (typeof checkForAvailableInvoices === 'function' && hasValidHelper) {
         console.log('🚀 TIMER: Secondary call to checkForAvailableInvoices...');
+        console.log('  - Using helper from:', helperFromWindow?.case_info ? 'window' : 'sessionStorage');
         checkForAvailableInvoices().catch(e => console.error('🔧 Timer 2 error:', e));
+      } else {
+        console.log('❌ TIMER: Function or helper still not ready at 3000ms');
+        console.log('  - Function available:', typeof checkForAvailableInvoices === 'function');
+        console.log('  - Helper (window) with case_info:', !!helperFromWindow?.case_info);
+        console.log('  - Helper (session) with case_info:', !!helperFromSession?.case_info);
       }
     }, 3000);
     
