@@ -13116,6 +13116,10 @@
         const helper = window.helper;
         const caseId = helper?.case_info?.supabase_case_id;
         
+        console.log('🔍 SESSION 89: Checking for invoice assignments...');
+        console.log('  - Case ID:', caseId);
+        console.log('  - Helper centers:', helper?.centers?.length || 0);
+        
         // Check if we have invoice assignments in helper
         const assignments = helper?.final_report?.invoice_assignments;
         if (assignments && assignments.length > 0) {
@@ -13133,6 +13137,17 @@
             console.log('📋 Found mapped invoice parts in centers');
             return true;
           }
+        }
+        
+        // Additional check: Look for recent successful assignment in console
+        const recentLogs = console.history || [];
+        const hasRecentAssignment = recentLogs.some(log => 
+          log && log.includes && log.includes('הקצאת חשבוניות הושלמה בהצלחה')
+        );
+        
+        if (hasRecentAssignment) {
+          console.log('📋 Found recent successful assignment in logs');
+          return true;
         }
         
         console.log('📋 No invoice assignments found, using search fallback');
@@ -13176,8 +13191,15 @@
             showPartSuggestions(input, centerIndex, partIndex);
           }
         } else {
-          // Mapper not available, fallback to search
-          showPartSuggestions(input, centerIndex, partIndex);
+          console.log('⚠️ SESSION 89: damageCenterMapper not available, using direct helper fallback');
+          // Direct fallback: extract parts from helper data
+          const fallbackParts = getInvoicePartsFromHelper(query);
+          if (fallbackParts.length > 0) {
+            displayPartSuggestions(suggestionsDiv, fallbackParts, input, centerIndex, partIndex);
+          } else {
+            // No invoice data available, fallback to search
+            showPartSuggestions(input, centerIndex, partIndex);
+          }
         }
       } catch (error) {
         console.error('❌ Error showing invoice part suggestions:', error);
@@ -13201,6 +13223,17 @@
           
           if (invoiceParts.length > 0) {
             displayPartSuggestions(suggestionsDiv, invoiceParts, input, centerIndex, partIndex);
+          } else {
+            // No invoice parts available, show message
+            suggestionsDiv.innerHTML = '<div style="padding: 8px; color: #666; text-align: center;">אין חלפים זמינים מחשבוניות</div>';
+            suggestionsDiv.style.display = 'block';
+          }
+        } else {
+          console.log('⚠️ SESSION 89: damageCenterMapper not available, using direct helper fallback for all parts');
+          // Direct fallback: get all parts from helper data
+          const fallbackParts = getInvoicePartsFromHelper('');
+          if (fallbackParts.length > 0) {
+            displayPartSuggestions(suggestionsDiv, fallbackParts, input, centerIndex, partIndex);
           } else {
             // No invoice parts available, show message
             suggestionsDiv.innerHTML = '<div style="padding: 8px; color: #666; text-align: center;">אין חלפים זמינים מחשבוניות</div>';
@@ -13265,6 +13298,68 @@
         
       } catch (error) {
         console.error('❌ Error selecting invoice part:', error);
+      }
+    }
+
+    // SESSION 89: Fallback function to get invoice parts directly from helper
+    function getInvoicePartsFromHelper(query = '') {
+      try {
+        console.log('🔍 SESSION 89: Extracting invoice parts from helper data...');
+        const helper = window.helper;
+        const parts = [];
+        
+        // Check multiple potential locations for invoice parts
+        const sources = [
+          { data: helper?.centers, label: 'centers' },
+          { data: helper?.damage_centers, label: 'damage_centers' },
+          { data: helper?.final_report?.invoice_assignments, label: 'invoice_assignments' },
+          { data: helper?.invoices, label: 'invoices' }
+        ];
+        
+        sources.forEach(source => {
+          if (source.data && Array.isArray(source.data)) {
+            console.log(`🔍 Checking ${source.label}:`, source.data.length, 'items');
+            
+            source.data.forEach((item, index) => {
+              // Extract parts from damage centers
+              if (item.parts && Array.isArray(item.parts)) {
+                item.parts.forEach(part => {
+                  if (part.name && (!query || part.name.toLowerCase().includes(query.toLowerCase()))) {
+                    parts.push({
+                      name: part.name,
+                      description: part.description || '',
+                      price: part.price || part.cost || 0,
+                      source: `${source.label} #${index + 1}`,
+                      original: part
+                    });
+                  }
+                });
+              }
+              
+              // Extract from invoice line items if present
+              if (item.line_items && Array.isArray(item.line_items)) {
+                item.line_items.forEach(line => {
+                  if (line.description && (!query || line.description.toLowerCase().includes(query.toLowerCase()))) {
+                    parts.push({
+                      name: line.description,
+                      description: line.details || '',
+                      price: line.amount || line.total || 0,
+                      source: `חשבונית ${item.invoice_number || 'לא ידוע'}`,
+                      original: line
+                    });
+                  }
+                });
+              }
+            });
+          }
+        });
+        
+        console.log(`✅ SESSION 89: Found ${parts.length} invoice parts from helper`);
+        return parts;
+        
+      } catch (error) {
+        console.error('❌ Error extracting invoice parts from helper:', error);
+        return [];
       }
     }
 
@@ -13631,6 +13726,46 @@
         console.error('❌ Error showing repair selection feedback:', error);
       }
     }
+
+    // SESSION 89: DEBUG TEST FUNCTION - Call this manually to test
+    window.testInvoiceIntegration = function() {
+      console.log('🧪 SESSION 89: Testing Invoice Integration...');
+      
+      // Test 1: Check if we detect invoice assignments
+      const hasAssignments = hasInvoiceAssignments();
+      console.log('Test 1 - Has Assignments:', hasAssignments);
+      
+      // Test 2: Check helper data structure
+      const helper = window.helper;
+      console.log('Test 2 - Helper structure:', {
+        centers: helper?.centers?.length || 0,
+        invoices: helper?.invoices?.length || 0,
+        assignments: helper?.final_report?.invoice_assignments?.length || 0
+      });
+      
+      // Test 3: Check if mapper is available
+      console.log('Test 3 - Mapper available:', !!window.damageCenterMapper);
+      
+      // Test 4: Try to get parts from helper
+      const helperParts = getInvoicePartsFromHelper('');
+      console.log('Test 4 - Helper Parts:', helperParts.length, 'found');
+      
+      // Test 5: Show sample part field enhancement
+      const partInput = document.querySelector('.part-name');
+      if (partInput) {
+        console.log('Test 5 - Found part input, testing click handler...');
+        handlePartClick(partInput, 0, 0);
+      } else {
+        console.log('Test 5 - No part input found');
+      }
+      
+      return {
+        hasAssignments,
+        helperStructure: { centers: helper?.centers?.length || 0 },
+        mapperAvailable: !!window.damageCenterMapper,
+        helperPartsCount: helperParts.length
+      };
+    };
 
     // Original search function (preserved for fallback)
     function showPartSuggestions(input, centerIndex, partIndex) {
