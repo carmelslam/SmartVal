@@ -11552,17 +11552,25 @@
     /**
      * Accept invoice assignment and perform center duplication
      */
-    async function acceptInvoiceAssignment() {
+    window.acceptInvoiceAssignment = async function acceptInvoiceAssignment() {
       try {
         console.log('🚀 SESSION 88: Processing invoice assignment acceptance...');
+        console.log('🔍 DEBUG: Function called successfully');
         console.log('📋 Getting selected invoices...');
         
-        const checkedInvoices = getSelectedInvoices();
+        let checkedInvoices = getSelectedInvoices();
         console.log('📋 Selected invoices:', checkedInvoices);
         
+        // If no invoices are manually selected, use all available invoices
         if (checkedInvoices.length === 0) {
-          console.warn('⚠️ No invoices selected');
-          alert('אנא בחר לפחות חשבונית אחת לאישור הקצאה');
+          console.log('🔍 No invoices manually selected, checking available invoices...');
+          checkedInvoices = window.availableInvoices || [];
+          console.log('📋 Using all available invoices:', checkedInvoices);
+        }
+        
+        if (checkedInvoices.length === 0) {
+          console.warn('⚠️ No invoices available to process');
+          alert('לא נמצאו חשבוניות זמינות לעיבוד');
           return;
         }
         
@@ -11628,19 +11636,25 @@
           acceptBtn.textContent = 'אשר הקצאת חשבוניות';
         }
       }
-    }
+    };
 
     /**
      * Get selected invoices from checkboxes
      */
-    function getSelectedInvoices() {
+    window.getSelectedInvoices = function getSelectedInvoices() {
+      console.log('🔍 DEBUG: getSelectedInvoices called');
       const checkboxes = document.querySelectorAll('[data-invoice-id]:checked');
+      console.log('🔍 DEBUG: Found checkboxes:', checkboxes.length);
       const selectedIds = Array.from(checkboxes).map(cb => cb.getAttribute('data-invoice-id'));
+      console.log('🔍 DEBUG: Selected IDs:', selectedIds);
+      console.log('🔍 DEBUG: Available invoices:', window.availableInvoices);
       
-      return (window.availableInvoices || []).filter(invoice => 
+      const filtered = (window.availableInvoices || []).filter(invoice => 
         selectedIds.includes(invoice.id)
       );
-    }
+      console.log('🔍 DEBUG: Filtered invoices:', filtered);
+      return filtered;
+    };
 
     /**
      * Archive entire helper before invoice assignment (one-time per case)
@@ -12018,15 +12032,8 @@
           console.log('ℹ️ Supabase not available or no case_id - only saved to sessionStorage');
         }
         
-        // Save helper version for backup
-        if (typeof window.saveHelperVersion === 'function') {
-          await window.saveHelperVersion('Post-Invoice Assignment', {
-            trigger_event: 'invoice_assignment_completed',
-            centers_count: helper.damage_centers.length,
-            notes: 'Helper saved after invoice assignment - invoice data applied'
-          });
-          console.log('✅ Version saved to helper_versions for backup');
-        }
+        // Note: Version creation is handled by the normal auto-save system
+        // No need to create additional versions here to avoid duplicates
         
         console.log(`✅ SESSION 88: Saved ${helper.centers.length} updated centers`);
         

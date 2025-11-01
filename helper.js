@@ -6054,14 +6054,29 @@ window.processComprehensiveInvoiceJSON = function(invoiceFile, comprehensiveJSON
  * @param {object} metadata - Additional metadata
  * @returns {Promise<object>} Saved version data
  */
+// Global lock to prevent concurrent saves
+window._saveHelperVersionLock = false;
+
 window.saveHelperVersion = async function(versionLabel, metadata = {}) {
   if (!window.helper) {
     console.warn('⚠️ SESSION 88: No helper data to save version');
     return false;
   }
   
+  // Check if another save operation is in progress
+  if (window._saveHelperVersionLock) {
+    console.warn(`⚠️ SESSION 88: Save already in progress, skipping save for: ${versionLabel}`);
+    return false;
+  }
+  
+  // Lock to prevent concurrent saves
+  window._saveHelperVersionLock = true;
+  
+  // Generate unique operation ID to track this save operation
+  const operationId = `save_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  
   try {
-    console.log(`💾 SESSION 88: Saving helper version: ${versionLabel}`);
+    console.log(`💾 SESSION 88: [${operationId}] Saving helper version: ${versionLabel}`);
     
     // Get current helper data and plate
     const helperData = JSON.parse(JSON.stringify(window.helper));
@@ -6069,6 +6084,7 @@ window.saveHelperVersion = async function(versionLabel, metadata = {}) {
     
     if (!plate) {
       console.warn('⚠️ SESSION 88: No plate found in helper data');
+      window._saveHelperVersionLock = false; // Release lock
       return false;
     }
     
@@ -6102,14 +6118,17 @@ window.saveHelperVersion = async function(versionLabel, metadata = {}) {
         });
         
         if (result.success) {
-          console.log(`✅ SESSION 88: Version saved via supabaseHelperService (${versionLabel})`);
+          console.log(`✅ SESSION 88: [${operationId}] Version saved via supabaseHelperService (${versionLabel})`);
+          window._saveHelperVersionLock = false; // Release lock
           return true;
         } else {
-          console.error('❌ SESSION 88: supabaseHelperService save failed:', result.error);
+          console.error(`❌ SESSION 88: [${operationId}] supabaseHelperService save failed, trying fallback:`, result.error);
         }
       } catch (error) {
-        console.error('❌ SESSION 88: Error using supabaseHelperService:', error);
+        console.error(`❌ SESSION 88: [${operationId}] Error using supabaseHelperService, trying fallback:`, error);
       }
+    } else {
+      console.log(`ℹ️ SESSION 88: [${operationId}] supabaseHelperService not available, using direct Supabase fallback`);
     }
     
     // Fallback to direct Supabase save following existing case_helper pattern
@@ -6198,21 +6217,25 @@ window.saveHelperVersion = async function(versionLabel, metadata = {}) {
           });
         
         if (error) {
-          console.error('❌ SESSION 88: Failed to save to case_helper:', error);
+          console.error(`❌ SESSION 88: [${operationId}] Failed to save to case_helper:`, error);
+          window._saveHelperVersionLock = false; // Release lock
           return false;
         }
         
-        console.log(`✅ SESSION 88: Version ${version} saved to case_helper (${versionLabel})`);
+        console.log(`✅ SESSION 88: [${operationId}] Version ${version} saved to case_helper (${versionLabel})`);
+        window._saveHelperVersionLock = false; // Release lock
         return true;
       } else {
         console.warn('⚠️ SESSION 88: No case_id found, skipping Supabase save');
       }
     }
     
+    window._saveHelperVersionLock = false; // Release lock
     return false;
     
   } catch (error) {
     console.error('❌ SESSION 88: Error saving helper version:', error);
+    window._saveHelperVersionLock = false; // Release lock
     return false;
   }
 };
