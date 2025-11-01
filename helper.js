@@ -6056,6 +6056,7 @@ window.processComprehensiveInvoiceJSON = function(invoiceFile, comprehensiveJSON
  */
 // Global lock to prevent concurrent saves
 window._saveHelperVersionLock = false;
+window._lastSaveTime = 0;
 
 window.saveHelperVersion = async function(versionLabel, metadata = {}) {
   if (!window.helper) {
@@ -6063,17 +6064,33 @@ window.saveHelperVersion = async function(versionLabel, metadata = {}) {
     return false;
   }
   
+  // Generate unique operation ID to track this save operation
+  const operationId = `save_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  
   // Check if another save operation is in progress
   if (window._saveHelperVersionLock) {
     console.warn(`⚠️ SESSION 88: Save already in progress, skipping save for: ${versionLabel}`);
+    console.warn(`⚠️ SESSION 88: Lock details:`, {
+      lockState: window._saveHelperVersionLock,
+      lockTime: window._saveHelperVersionLockTime,
+      timeSinceLock: Date.now() - (window._saveHelperVersionLockTime || 0)
+    });
+    return false;
+  }
+  
+  // Check if a save happened very recently (debouncing)
+  const timeSinceLastSave = Date.now() - window._lastSaveTime;
+  const DEBOUNCE_PERIOD = 5000; // 5 seconds
+  
+  if (timeSinceLastSave < DEBOUNCE_PERIOD) {
+    console.warn(`⚠️ SESSION 88: [${operationId}] Save debounced, last save was ${Math.round(timeSinceLastSave/1000)}s ago for: ${versionLabel}`);
     return false;
   }
   
   // Lock to prevent concurrent saves
   window._saveHelperVersionLock = true;
-  
-  // Generate unique operation ID to track this save operation
-  const operationId = `save_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  window._saveHelperVersionLockTime = Date.now();
+  console.log(`🔒 SESSION 88: [${operationId}] Lock acquired for: ${versionLabel}`);
   
   try {
     console.log(`💾 SESSION 88: [${operationId}] Saving helper version: ${versionLabel}`);
@@ -6119,6 +6136,8 @@ window.saveHelperVersion = async function(versionLabel, metadata = {}) {
         
         if (result.success) {
           console.log(`✅ SESSION 88: [${operationId}] Version saved via supabaseHelperService (${versionLabel})`);
+          console.log(`🔓 SESSION 88: [${operationId}] Lock released (supabaseHelperService success)`);
+          window._lastSaveTime = Date.now(); // Update last save time
           window._saveHelperVersionLock = false; // Release lock
           return true;
         } else {
@@ -6223,6 +6242,8 @@ window.saveHelperVersion = async function(versionLabel, metadata = {}) {
         }
         
         console.log(`✅ SESSION 88: [${operationId}] Version ${version} saved to case_helper (${versionLabel})`);
+        console.log(`🔓 SESSION 88: [${operationId}] Lock released (case_helper success)`);
+        window._lastSaveTime = Date.now(); // Update last save time
         window._saveHelperVersionLock = false; // Release lock
         return true;
       } else {
@@ -6266,6 +6287,15 @@ window.startAutoSaveTimer = function() {
   const THREE_HOURS = 3 * 60 * 60 * 1000;
   
   window.autoSaveTimer = setInterval(async () => {
+    // Check if a manual save happened recently (within 30 seconds)
+    const timeSinceLastManualSave = Date.now() - (window._saveHelperVersionLockTime || 0);
+    const COOLDOWN_PERIOD = 30 * 1000; // 30 seconds
+    
+    if (timeSinceLastManualSave < COOLDOWN_PERIOD) {
+      console.log(`🕐 SESSION 88: Skipping auto-save, manual save happened ${Math.round(timeSinceLastManualSave/1000)}s ago`);
+      return;
+    }
+    
     if (window.hasHelperChanged()) {
       console.log('🕐 SESSION 88: 3-hour auto-save triggered...');
       
