@@ -35,7 +35,7 @@ class DamageCenterMapper {
 
   /**
    * Get dropdown items based on field type
-   * For PARTS: Combines 3 sources (invoice + selected + bank)
+   * For PARTS: Combines 4 sources (invoice lines + selected_parts + global catalog + parts.js bank)
    * For WORKS/REPAIRS: Shows invoice items only
    * 
    * @param {string} fieldType - 'part', 'work', or 'repair'
@@ -48,7 +48,7 @@ class DamageCenterMapper {
       console.log(`📋 Loading dropdown items for ${fieldType}...`);
 
       if (fieldType === 'part') {
-        // PARTS: Combine 3 sources
+        // PARTS: Combine 4 sources
         return await this.getCombinedPartsDropdown(caseId, invoiceId);
       } else {
         // WORKS/REPAIRS: Invoice items only
@@ -61,60 +61,98 @@ class DamageCenterMapper {
   }
 
   /**
-   * Get combined parts dropdown (3 sources)
-   * Source 1: Invoice parts (if invoiceId provided)
-   * Source 2: Selected parts (from parts_required)
-   * Source 3: General parts bank (from parts_catalog if exists)
+   * Get combined parts dropdown (4 sources)
+   * Source 1: 🧾 Invoice lines (from invoice_lines table)
+   * Source 2: 📋 Selected parts (from selected_parts Supabase table)
+   * Source 3: 🏦 Global catalog (global parts catalog)
+   * Source 4: 📄 Parts.js bank (local parts bank from parts.js)
    */
   async getCombinedPartsDropdown(caseId, invoiceId = null) {
     try {
       const allParts = [];
 
-      // SOURCE 1: Invoice parts
-      if (invoiceId) {
-        const invoiceParts = await this.invoiceService.getInvoicePartsForDropdown(invoiceId);
-        invoiceParts.forEach(part => {
-          allParts.push({
-            id: part.id,
-            source: 'invoice',
-            sourceLabel: '📄 חשבונית',
-            name: part.description,
-            description: part.description,
-            quantity: part.quantity,
-            price: part.unit_price,
-            total: part.line_total,
-            category: part.item_category,
-            confidence: part.category_confidence,
-            invoice_line_id: part.id,
-            invoice_id: invoiceId
+      // SOURCE 1: 🧾 Invoice lines (from invoice_lines table)
+      if (invoiceId && window.supabase) {
+        try {
+          const { data: invoiceLines, error } = await window.supabase
+            .from('invoice_lines')
+            .select('*')
+            .eq('invoice_id', invoiceId);
+            
+          if (!error && invoiceLines) {
+            invoiceLines.forEach(line => {
+              allParts.push({
+                id: line.id,
+                source: 'invoice_lines',
+                sourceLabel: '🧾 חשבונית',
+                name: line.description || line.item_description,
+                description: line.description,
+                quantity: line.quantity,
+                price: line.unit_price,
+                total: line.line_total,
+                category: line.item_category,
+                invoice_line_id: line.id,
+                invoice_id: invoiceId
+              });
+            });
+          }
+        } catch (error) {
+          console.warn('Error loading invoice lines:', error);
+        }
+      }
+
+      // SOURCE 2: 📋 Selected parts (from selected_parts Supabase table)
+      if (caseId && window.supabase) {
+        try {
+          const { data: selectedParts, error } = await window.supabase
+            .from('selected_parts')
+            .select('*')
+            .eq('case_id', caseId);
+            
+          if (!error && selectedParts) {
+            selectedParts.forEach(part => {
+              allParts.push({
+                id: part.id,
+                source: 'selected_parts',
+                sourceLabel: '📋 נבחר',
+                name: part.part_name || part.name,
+                description: part.description,
+                price: part.price || 0,
+                manufacturer: part.manufacturer,
+                part_number: part.part_number,
+                selected: true
+              });
+            });
+          }
+        } catch (error) {
+          console.warn('Error loading selected parts:', error);
+        }
+      }
+
+      // SOURCE 3: 🏦 Global catalog (global parts catalog)
+      // Note: This would come from a global_parts_catalog table if it exists
+      // For now, we'll leave this empty - can be added when global catalog is implemented
+      // const globalParts = await this.loadGlobalCatalog();
+      // allParts.push(...globalParts);
+
+      // SOURCE 4: 📄 Parts.js bank (local parts bank from parts.js)
+      if (window.PARTS_BANK) {
+        Object.keys(window.PARTS_BANK).forEach(category => {
+          window.PARTS_BANK[category].forEach(partName => {
+            allParts.push({
+              id: `parts_bank_${category}_${partName}`,
+              source: 'parts_bank',
+              sourceLabel: '📄 בנק חלקים',
+              name: partName,
+              description: partName,
+              category: category,
+              price: 0, // Parts bank doesn't have prices
+              manufacturer: null,
+              part_number: null
+            });
           });
         });
       }
-
-      // SOURCE 2: Selected parts (from parts search)
-      // Note: This requires integration with parts_required table
-      // For now, we'll load from helper if available
-      if (window.helper && window.helper.parts_required) {
-        window.helper.parts_required.forEach(part => {
-          allParts.push({
-            id: part.id || `selected_${Date.now()}_${Math.random()}`,
-            source: 'selected',
-            sourceLabel: '✓ נבחר',
-            name: part.name || part.part_name,
-            description: part.description,
-            price: part.price || 0,
-            manufacturer: part.manufacturer,
-            part_number: part.part_number,
-            selected: true
-          });
-        });
-      }
-
-      // SOURCE 3: General parts bank
-      // Note: This would come from a parts_catalog table if it exists
-      // For now, we'll leave this empty - can be added later
-      // const bankParts = await this.loadPartsBank();
-      // allParts.push(...bankParts);
 
       console.log(`✅ Loaded ${allParts.length} parts from ${invoiceId ? 2 : 1} sources`);
       return allParts;

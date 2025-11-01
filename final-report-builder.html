@@ -11588,7 +11588,8 @@
         // Phase 2: Archive parts_search.required_parts before invoice import
         await archivePartsSearchData();
         
-        // Phase 3: Convert invoice mappings to helper format (no calculations)
+        // Phase 3: Convert invoice mappings to helper format (Private reports only)
+        // For other report types, invoice data will be available in dropdowns
         await convertInvoiceMappingsToHelperFormat(checkedInvoices);
         
         // Phase 4: Save updated helper.centers back to Supabase and sessionStorage
@@ -11605,7 +11606,16 @@
           loadDataFromHelper();
         }
         
-        alert('הקצאת חשבוניות הושלמה בהצלחה!');
+        // Different messages based on report type
+        const helper = window.helper || {};
+        const currentReportType = helper.final_report?.type || helper.final_report?.dropdown_type || 
+                                document.querySelector('input[name="final-report-type"]:checked')?.value;
+        
+        if (currentReportType === 'חוות דעת פרטית') {
+          alert('הקצאת חשבוניות הושלמה בהצלחה! נתוני החשבוניות נוספו למרכזי הנזק.');
+        } else {
+          alert('הקצאת חשבוניות הושלמה בהצלחה! נתוני החשבוניות זמינים כעת ברשימות הנפתחות לוספה ידנית.');
+        }
         
       } catch (error) {
         console.error('❌ SESSION 88: Error accepting invoice assignment:', error);
@@ -11825,6 +11835,20 @@
         const caseId = helper.case_info?.supabase_case_id;
         console.log('🔍 Case ID:', caseId);
         
+        // Check current report type
+        const currentReportType = helper.final_report?.type || helper.final_report?.dropdown_type || 
+                                document.querySelector('input[name="final-report-type"]:checked')?.value;
+        console.log('🔍 Current report type:', currentReportType);
+        
+        // Only populate damage centers for Private reports
+        if (currentReportType !== 'חוות דעת פרטית') {
+          console.log('ℹ️ Report type is not Private - invoice data will be available in dropdowns only');
+          console.log('ℹ️ Keeping existing wizard data in damage centers');
+          return; // Exit early for non-private reports
+        }
+        
+        console.log('✅ Private report detected - proceeding to populate damage centers with invoice data');
+        
         if (!caseId) {
           console.error('❌ No case_id found in helper');
           throw new Error('No case_id found in helper');
@@ -11855,7 +11879,7 @@
             `)
             .eq('invoice_id', invoice.id)
             .eq('case_id', caseId)
-            .eq('mapping_status', 'active');  // Only get active mappings
+            .eq('mapping_status', 'pending');  // Only get pending mappings
           
           console.log(`📋 Query result - mappings:`, mappings, 'error:', error);
           
@@ -22988,6 +23012,13 @@
   <script src="password-prefill.js"></script>
   <script src="services/damage-center-mapper.js"></script>
   <script src="components/invoice-parts-dropdown.js"></script>
+  <script src="parts.js" type="module"></script>
+  <script type="module">
+    // Make PARTS_BANK available globally for dropdown system
+    import { PARTS_BANK } from './parts.js';
+    window.PARTS_BANK = PARTS_BANK;
+    console.log('✅ PARTS_BANK loaded for dropdowns:', Object.keys(PARTS_BANK).length, 'categories');
+  </script>
   <script src="final_report.js" type="module"></script>
 
   <!-- SESSION 74: Invoice Mapping Integration -->
