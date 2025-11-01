@@ -4006,7 +4006,8 @@
               <label style="font-size: 12px; color: #666; margin-bottom: 2px; display: block; font-weight: 600;">שם החלק:</label>
               <input type="text" value="${partName}" placeholder="שם החלק" class="part-name" 
                      style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px;"
-                     onkeyup="showPartSuggestions(this, ${centerIndex}, ${partIndex})" 
+                     onkeyup="handlePartInput(this, ${centerIndex}, ${partIndex})" 
+                     onclick="handlePartClick(this, ${centerIndex}, ${partIndex})"
                      oninput="autoSaveDamageCenterChanges()" />
               <div class="part-suggestions" style="position: absolute; top: 100%; left: 0; right: 0; background: white; border: 1px solid #ddd; border-top: none; border-radius: 0 0 4px 4px; display: none; z-index: 1000; max-height: 200px; overflow-y: auto;"></div>
             </div>
@@ -4083,7 +4084,7 @@
         <div class="work-row" data-center="${centerIndex}" data-work="${workIndex}" style="display: grid; grid-template-columns: 2fr 2fr 1fr auto; gap: 8px; margin-bottom: 8px; padding: 8px; background: #f9f9f9; border-radius: 4px;">
           <div>
             <label style="font-size: 12px; color: #666; margin-bottom: 2px; display: block;">סוג עבודה:</label>
-            <select class="work-type" style="width: 100%; padding: 6px; border: 1px solid #ddd; border-radius: 4px; font-size: 13px;" onchange="handleWorkTypeChange(this, ${centerIndex}, ${workIndex})">
+            <select class="work-type" style="width: 100%; padding: 6px; border: 1px solid #ddd; border-radius: 4px; font-size: 13px;" onchange="handleWorkTypeChange(this, ${centerIndex}, ${workIndex})" onclick="handleWorkClick(this, ${centerIndex}, ${workIndex})">
               ${workTypes.map(type => `<option value="${type}" ${type === workType ? 'selected' : ''}>${type}</option>`).join('')}
             </select>
             <input type="text" class="work-type-other" placeholder="הכנס סוג עבודה אחר" style="width: 100%; padding: 6px; border: 1px solid #ddd; border-radius: 4px; font-size: 13px; margin-top: 4px; display: ${workType === 'אחר' ? 'block' : 'none'};" />
@@ -4112,7 +4113,7 @@
         <div class="repair-row" data-center="${centerIndex}" data-repair="${repairIndex}" style="display: grid; grid-template-columns: 1.5fr 2fr 0.8fr 1fr auto; gap: 8px; margin-bottom: 8px; padding: 8px; background: #f9f9f9; border-radius: 4px;">
           <div>
             <label style="font-size: 12px; color: #666; margin-bottom: 2px; display: block;">שם התיקון:</label>
-            <input type="text" value="${repairName}" placeholder="שם התיקון" class="repair-name" style="width: 100%; padding: 6px; border: 1px solid #ddd; border-radius: 4px; font-size: 13px;" />
+            <input type="text" value="${repairName}" placeholder="שם התיקון" class="repair-name" style="width: 100%; padding: 6px; border: 1px solid #ddd; border-radius: 4px; font-size: 13px;" onclick="handleRepairClick(this, ${centerIndex}, ${repairIndex})" />
           </div>
           <div>
             <label style="font-size: 12px; color: #666; margin-bottom: 2px; display: block;">תיאור התיקון:</label>
@@ -13083,6 +13084,555 @@
     } // End of initializeApp function
 
     // PARTS SEARCH FUNCTIONALITY
+    // SESSION 89: Dynamic Part Input Handler
+    // Checks if invoice data is available, shows invoice dropdowns or falls back to search
+    function handlePartInput(input, centerIndex, partIndex) {
+      // Check if invoice assignments are available for this case
+      if (hasInvoiceAssignments()) {
+        // Show invoice-based dropdown suggestions
+        showInvoicePartSuggestions(input, centerIndex, partIndex);
+      } else {
+        // Fallback to original search system
+        showPartSuggestions(input, centerIndex, partIndex);
+      }
+    }
+
+    // SESSION 89: Dynamic Part Click Handler
+    // On click, show available options (invoice data if available, search if not)
+    function handlePartClick(input, centerIndex, partIndex) {
+      // Check if invoice assignments are available for this case
+      if (hasInvoiceAssignments()) {
+        // Show all available invoice parts immediately
+        showAllInvoiceParts(input, centerIndex, partIndex);
+      } else {
+        // Focus for search input
+        input.focus();
+      }
+    }
+
+    // SESSION 89: Check if invoice assignments are available
+    function hasInvoiceAssignments() {
+      try {
+        const helper = window.helper;
+        const caseId = helper?.case_info?.supabase_case_id;
+        
+        // Check if we have invoice assignments in helper
+        const assignments = helper?.final_report?.invoice_assignments;
+        if (assignments && assignments.length > 0) {
+          console.log('📋 Found invoice assignments in helper:', assignments.length);
+          return true;
+        }
+        
+        // Check if we have mapped data from the assignment process
+        const mappedData = helper?.centers;
+        if (mappedData && Array.isArray(mappedData)) {
+          const hasMappedParts = mappedData.some(center => 
+            center.parts && center.parts.some(part => part.external_ref || part.invoice_source)
+          );
+          if (hasMappedParts) {
+            console.log('📋 Found mapped invoice parts in centers');
+            return true;
+          }
+        }
+        
+        console.log('📋 No invoice assignments found, using search fallback');
+        return false;
+      } catch (error) {
+        console.error('❌ Error checking invoice assignments:', error);
+        return false;
+      }
+    }
+
+    // SESSION 89: Show invoice-based part suggestions
+    async function showInvoicePartSuggestions(input, centerIndex, partIndex) {
+      try {
+        const query = input.value.toLowerCase().trim();
+        const suggestionsDiv = input.nextElementSibling;
+        
+        if (query.length < 1) {
+          suggestionsDiv.style.display = 'none';
+          return;
+        }
+
+        console.log('📋 Showing invoice part suggestions for query:', query);
+        
+        // Get invoice parts using the damage center mapper
+        const caseId = window.helper?.case_info?.supabase_case_id;
+        const invoiceId = null; // Will load all assigned invoices
+        
+        if (window.damageCenterMapper) {
+          const invoiceParts = await window.damageCenterMapper.getDropdownItems('part', caseId, invoiceId);
+          
+          // Filter parts based on query
+          const filteredParts = invoiceParts.filter(part => 
+            part.name.toLowerCase().includes(query) || 
+            part.description?.toLowerCase().includes(query)
+          );
+          
+          if (filteredParts.length > 0) {
+            displayPartSuggestions(suggestionsDiv, filteredParts, input, centerIndex, partIndex);
+          } else {
+            // No invoice matches, fallback to search
+            showPartSuggestions(input, centerIndex, partIndex);
+          }
+        } else {
+          // Mapper not available, fallback to search
+          showPartSuggestions(input, centerIndex, partIndex);
+        }
+      } catch (error) {
+        console.error('❌ Error showing invoice part suggestions:', error);
+        // Fallback to original search
+        showPartSuggestions(input, centerIndex, partIndex);
+      }
+    }
+
+    // SESSION 89: Show all available invoice parts (on click)
+    async function showAllInvoiceParts(input, centerIndex, partIndex) {
+      try {
+        const suggestionsDiv = input.nextElementSibling;
+        console.log('📋 Showing all available invoice parts');
+        
+        // Get all invoice parts
+        const caseId = window.helper?.case_info?.supabase_case_id;
+        const invoiceId = null; // Will load all assigned invoices
+        
+        if (window.damageCenterMapper) {
+          const invoiceParts = await window.damageCenterMapper.getDropdownItems('part', caseId, invoiceId);
+          
+          if (invoiceParts.length > 0) {
+            displayPartSuggestions(suggestionsDiv, invoiceParts, input, centerIndex, partIndex);
+          } else {
+            // No invoice parts available, show message
+            suggestionsDiv.innerHTML = '<div style="padding: 8px; color: #666; text-align: center;">אין חלפים זמינים מחשבוניות</div>';
+            suggestionsDiv.style.display = 'block';
+          }
+        }
+      } catch (error) {
+        console.error('❌ Error showing all invoice parts:', error);
+      }
+    }
+
+    // SESSION 89: Display part suggestions in dropdown format
+    function displayPartSuggestions(suggestionsDiv, parts, input, centerIndex, partIndex) {
+      const suggestionsHTML = parts.map(part => `
+        <div class="suggestion-item" 
+             style="padding: 8px; cursor: pointer; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center;"
+             onmouseover="this.style.background='#f0f0f0'" 
+             onmouseout="this.style.background='white'"
+             onclick="selectInvoicePart(this, '${part.name}', '${part.price || 0}', '${part.source || ''}', ${centerIndex}, ${partIndex})">
+          <div>
+            <div style="font-weight: 500; color: #333;">${part.name}</div>
+            ${part.description ? `<div style="font-size: 12px; color: #666;">${part.description}</div>` : ''}
+          </div>
+          <div style="text-align: left;">
+            <div style="font-weight: 500; color: #2563eb;">₪${parseFloat(part.price || 0).toLocaleString()}</div>
+            <div style="font-size: 11px; color: #666; background: #f3f4f6; padding: 2px 6px; border-radius: 10px;">${part.source || 'חשבונית'}</div>
+          </div>
+        </div>
+      `).join('');
+      
+      suggestionsDiv.innerHTML = suggestionsHTML;
+      suggestionsDiv.style.display = 'block';
+    }
+
+    // SESSION 89: Select invoice part and populate fields
+    function selectInvoicePart(element, partName, partPrice, source, centerIndex, partIndex) {
+      try {
+        // Find the part row
+        const partRow = document.querySelector(`.part-row[data-center="${centerIndex}"][data-part="${partIndex}"]`);
+        if (!partRow) return;
+        
+        // Populate fields
+        const nameInput = partRow.querySelector('.part-name');
+        const priceInput = partRow.querySelector('.part-price-per-unit');
+        
+        if (nameInput) nameInput.value = partName;
+        if (priceInput) priceInput.value = partPrice;
+        
+        // Hide suggestions
+        const suggestionsDiv = element.closest('.part-suggestions');
+        if (suggestionsDiv) suggestionsDiv.style.display = 'none';
+        
+        // Auto-save changes
+        if (typeof autoSaveDamageCenterChanges === 'function') {
+          autoSaveDamageCenterChanges();
+        }
+        
+        console.log(`✅ Selected invoice part: ${partName} (₪${partPrice}) from ${source}`);
+        
+        // Show user feedback
+        showPartSelectionFeedback(partRow, source);
+        
+      } catch (error) {
+        console.error('❌ Error selecting invoice part:', error);
+      }
+    }
+
+    // SESSION 89: Show visual feedback that part was selected from invoice
+    function showPartSelectionFeedback(partRow, source) {
+      try {
+        const nameInput = partRow.querySelector('.part-name');
+        if (!nameInput) return;
+        
+        // Add visual indicator
+        const originalStyle = nameInput.style.border;
+        nameInput.style.border = '2px solid #10b981';
+        nameInput.style.background = '#f0fdf4';
+        
+        // Create source indicator
+        let indicator = partRow.querySelector('.invoice-source-indicator');
+        if (!indicator) {
+          indicator = document.createElement('div');
+          indicator.className = 'invoice-source-indicator';
+          indicator.style.cssText = `
+            position: absolute;
+            top: -8px;
+            right: 8px;
+            background: #10b981;
+            color: white;
+            font-size: 10px;
+            padding: 2px 6px;
+            border-radius: 8px;
+            z-index: 100;
+          `;
+          const inputContainer = nameInput.parentElement;
+          if (inputContainer.style.position !== 'relative') {
+            inputContainer.style.position = 'relative';
+          }
+          inputContainer.appendChild(indicator);
+        }
+        indicator.textContent = source || 'חשבונית';
+        
+        // Reset border after 3 seconds
+        setTimeout(() => {
+          nameInput.style.border = originalStyle;
+          nameInput.style.background = '';
+        }, 3000);
+        
+      } catch (error) {
+        console.error('❌ Error showing part selection feedback:', error);
+      }
+    }
+
+    // SESSION 89: WORKS ENHANCEMENT FUNCTIONS
+    
+    // Handle work dropdown click to show invoice works
+    async function handleWorkClick(select, centerIndex, workIndex) {
+      try {
+        if (hasInvoiceAssignments()) {
+          await addInvoiceWorksToDropdown(select, centerIndex, workIndex);
+        }
+      } catch (error) {
+        console.error('❌ Error handling work click:', error);
+      }
+    }
+
+    // Add invoice works to the work dropdown
+    async function addInvoiceWorksToDropdown(select, centerIndex, workIndex) {
+      try {
+        console.log('📋 Adding invoice works to dropdown');
+        
+        // Get invoice works using the damage center mapper
+        const caseId = window.helper?.case_info?.supabase_case_id;
+        
+        if (window.damageCenterMapper) {
+          const invoiceWorks = await window.damageCenterMapper.getDropdownItems('work', caseId, null);
+          
+          if (invoiceWorks.length > 0) {
+            // Remove existing invoice options (cleanup)
+            const existingInvoiceOptions = select.querySelectorAll('.invoice-work-option');
+            existingInvoiceOptions.forEach(option => option.remove());
+            
+            // Add separator if not already exists
+            let separator = select.querySelector('.invoice-separator');
+            if (!separator) {
+              separator = document.createElement('option');
+              separator.className = 'invoice-separator';
+              separator.disabled = true;
+              separator.textContent = '--- עבודות מחשבוניות ---';
+              separator.style.fontWeight = 'bold';
+              separator.style.color = '#2563eb';
+              select.appendChild(separator);
+            }
+            
+            // Add invoice works as options
+            invoiceWorks.forEach(work => {
+              const option = document.createElement('option');
+              option.className = 'invoice-work-option';
+              option.value = work.category || work.name;
+              option.textContent = `${work.name} (₪${parseFloat(work.cost || 0).toLocaleString()})`;
+              option.setAttribute('data-invoice-cost', work.cost || 0);
+              option.setAttribute('data-invoice-source', work.source || 'חשבונית');
+              option.style.color = '#2563eb';
+              option.style.fontWeight = '500';
+              select.appendChild(option);
+            });
+            
+            console.log(`✅ Added ${invoiceWorks.length} invoice works to dropdown`);
+          }
+        }
+      } catch (error) {
+        console.error('❌ Error adding invoice works to dropdown:', error);
+      }
+    }
+
+    // Enhanced work type change handler
+    function handleWorkTypeChange(select, centerIndex, workIndex) {
+      try {
+        const selectedOption = select.options[select.selectedIndex];
+        const workRow = select.closest('.work-row');
+        if (!workRow) return;
+        
+        // Handle "Other" work type
+        const otherInput = workRow.querySelector('.work-type-other');
+        if (otherInput) {
+          otherInput.style.display = select.value === 'אחר' ? 'block' : 'none';
+        }
+        
+        // If this is an invoice work option, populate cost
+        if (selectedOption.classList.contains('invoice-work-option')) {
+          const cost = selectedOption.getAttribute('data-invoice-cost');
+          const source = selectedOption.getAttribute('data-invoice-source');
+          
+          // Populate cost field
+          const costInput = workRow.querySelector('.work-cost');
+          if (costInput && cost) {
+            costInput.value = cost;
+          }
+          
+          console.log(`✅ Selected invoice work: ${select.value} (₪${cost}) from ${source}`);
+          
+          // Show visual feedback
+          showWorkSelectionFeedback(workRow, source);
+        }
+        
+        // Auto-save changes
+        if (typeof autoSaveDamageCenterChanges === 'function') {
+          autoSaveDamageCenterChanges();
+        }
+        
+      } catch (error) {
+        console.error('❌ Error handling work type change:', error);
+      }
+    }
+
+    // Show visual feedback for work selection
+    function showWorkSelectionFeedback(workRow, source) {
+      try {
+        const select = workRow.querySelector('.work-type');
+        if (!select) return;
+        
+        // Add visual indicator
+        const originalStyle = select.style.border;
+        select.style.border = '2px solid #10b981';
+        select.style.background = '#f0fdf4';
+        
+        // Create source indicator
+        let indicator = workRow.querySelector('.invoice-work-indicator');
+        if (!indicator) {
+          indicator = document.createElement('div');
+          indicator.className = 'invoice-work-indicator';
+          indicator.style.cssText = `
+            position: absolute;
+            top: -8px;
+            right: 8px;
+            background: #10b981;
+            color: white;
+            font-size: 10px;
+            padding: 2px 6px;
+            border-radius: 8px;
+            z-index: 100;
+          `;
+          const container = select.parentElement;
+          if (container.style.position !== 'relative') {
+            container.style.position = 'relative';
+          }
+          container.appendChild(indicator);
+        }
+        indicator.textContent = source || 'חשבונית';
+        
+        // Reset border after 3 seconds
+        setTimeout(() => {
+          select.style.border = originalStyle;
+          select.style.background = '';
+        }, 3000);
+        
+      } catch (error) {
+        console.error('❌ Error showing work selection feedback:', error);
+      }
+    }
+
+    // SESSION 89: REPAIRS ENHANCEMENT FUNCTIONS
+    
+    // Handle repair input click to show invoice repairs
+    async function handleRepairClick(input, centerIndex, repairIndex) {
+      try {
+        if (hasInvoiceAssignments()) {
+          await showInvoiceRepairSuggestions(input, centerIndex, repairIndex);
+        }
+      } catch (error) {
+        console.error('❌ Error handling repair click:', error);
+      }
+    }
+
+    // Show invoice repair suggestions
+    async function showInvoiceRepairSuggestions(input, centerIndex, repairIndex) {
+      try {
+        console.log('📋 Showing invoice repair suggestions');
+        
+        // Get invoice repairs using the damage center mapper
+        const caseId = window.helper?.case_info?.supabase_case_id;
+        
+        if (window.damageCenterMapper) {
+          const invoiceRepairs = await window.damageCenterMapper.getDropdownItems('repair', caseId, null);
+          
+          if (invoiceRepairs.length > 0) {
+            // Create suggestions dropdown
+            let suggestionsDiv = input.nextElementSibling;
+            if (!suggestionsDiv || !suggestionsDiv.classList.contains('repair-suggestions')) {
+              // Create suggestions container
+              suggestionsDiv = document.createElement('div');
+              suggestionsDiv.className = 'repair-suggestions';
+              suggestionsDiv.style.cssText = `
+                position: absolute;
+                top: 100%;
+                left: 0;
+                right: 0;
+                background: white;
+                border: 1px solid #ddd;
+                border-top: none;
+                border-radius: 0 0 4px 4px;
+                z-index: 1000;
+                max-height: 200px;
+                overflow-y: auto;
+                box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+              `;
+              
+              // Make parent container relative if needed
+              const parent = input.parentElement;
+              if (parent.style.position !== 'relative') {
+                parent.style.position = 'relative';
+              }
+              parent.appendChild(suggestionsDiv);
+            }
+            
+            // Display repair suggestions
+            displayRepairSuggestions(suggestionsDiv, invoiceRepairs, input, centerIndex, repairIndex);
+          }
+        }
+      } catch (error) {
+        console.error('❌ Error showing invoice repair suggestions:', error);
+      }
+    }
+
+    // Display repair suggestions in dropdown format
+    function displayRepairSuggestions(suggestionsDiv, repairs, input, centerIndex, repairIndex) {
+      const suggestionsHTML = repairs.map(repair => `
+        <div class="suggestion-item" 
+             style="padding: 8px; cursor: pointer; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center;"
+             onmouseover="this.style.background='#f0f0f0'" 
+             onmouseout="this.style.background='white'"
+             onclick="selectInvoiceRepair(this, '${repair.name}', '${repair.description || ''}', '${repair.cost || 0}', '${repair.hours || 0}', '${repair.source || ''}', ${centerIndex}, ${repairIndex})">
+          <div>
+            <div style="font-weight: 500; color: #333;">${repair.name}</div>
+            ${repair.description ? `<div style="font-size: 12px; color: #666;">${repair.description}</div>` : ''}
+          </div>
+          <div style="text-align: left;">
+            <div style="font-weight: 500; color: #2563eb;">₪${parseFloat(repair.cost || 0).toLocaleString()}</div>
+            ${repair.hours ? `<div style="font-size: 11px; color: #666;">${repair.hours} שעות</div>` : ''}
+            <div style="font-size: 11px; color: #666; background: #f3f4f6; padding: 2px 6px; border-radius: 10px;">${repair.source || 'חשבונית'}</div>
+          </div>
+        </div>
+      `).join('');
+      
+      suggestionsDiv.innerHTML = suggestionsHTML;
+      suggestionsDiv.style.display = 'block';
+    }
+
+    // Select invoice repair and populate fields
+    function selectInvoiceRepair(element, repairName, repairDescription, repairCost, repairHours, source, centerIndex, repairIndex) {
+      try {
+        // Find the repair row
+        const repairRow = document.querySelector(`.repair-row[data-center="${centerIndex}"][data-repair="${repairIndex}"]`);
+        if (!repairRow) return;
+        
+        // Populate fields
+        const nameInput = repairRow.querySelector('.repair-name');
+        const textArea = repairRow.querySelector('.repair-text');
+        const hoursInput = repairRow.querySelector('.repair-hours');
+        const costInput = repairRow.querySelector('.repair-cost');
+        
+        if (nameInput) nameInput.value = repairName;
+        if (textArea) textArea.value = repairDescription;
+        if (hoursInput) hoursInput.value = repairHours;
+        if (costInput) costInput.value = repairCost;
+        
+        // Hide suggestions
+        const suggestionsDiv = element.closest('.repair-suggestions');
+        if (suggestionsDiv) suggestionsDiv.style.display = 'none';
+        
+        // Auto-save changes
+        if (typeof autoSaveDamageCenterChanges === 'function') {
+          autoSaveDamageCenterChanges();
+        }
+        
+        console.log(`✅ Selected invoice repair: ${repairName} (₪${repairCost}, ${repairHours}h) from ${source}`);
+        
+        // Show user feedback
+        showRepairSelectionFeedback(repairRow, source);
+        
+      } catch (error) {
+        console.error('❌ Error selecting invoice repair:', error);
+      }
+    }
+
+    // Show visual feedback for repair selection
+    function showRepairSelectionFeedback(repairRow, source) {
+      try {
+        const nameInput = repairRow.querySelector('.repair-name');
+        if (!nameInput) return;
+        
+        // Add visual indicator
+        const originalStyle = nameInput.style.border;
+        nameInput.style.border = '2px solid #10b981';
+        nameInput.style.background = '#f0fdf4';
+        
+        // Create source indicator
+        let indicator = repairRow.querySelector('.invoice-repair-indicator');
+        if (!indicator) {
+          indicator = document.createElement('div');
+          indicator.className = 'invoice-repair-indicator';
+          indicator.style.cssText = `
+            position: absolute;
+            top: -8px;
+            right: 8px;
+            background: #10b981;
+            color: white;
+            font-size: 10px;
+            padding: 2px 6px;
+            border-radius: 8px;
+            z-index: 100;
+          `;
+          const container = nameInput.parentElement;
+          if (container.style.position !== 'relative') {
+            container.style.position = 'relative';
+          }
+          container.appendChild(indicator);
+        }
+        indicator.textContent = source || 'חשבונית';
+        
+        // Reset border after 3 seconds
+        setTimeout(() => {
+          nameInput.style.border = originalStyle;
+          nameInput.style.background = '';
+        }, 3000);
+        
+      } catch (error) {
+        console.error('❌ Error showing repair selection feedback:', error);
+      }
+    }
+
+    // Original search function (preserved for fallback)
     function showPartSuggestions(input, centerIndex, partIndex) {
       const query = input.value.toLowerCase().trim();
       const suggestionsDiv = input.nextElementSibling;
