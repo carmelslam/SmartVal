@@ -11870,6 +11870,8 @@
         if (currentReportType !== 'חוות דעת פרטית') {
           console.log('ℹ️ Report type is not Private - invoice data will be available in dropdowns only');
           console.log('ℹ️ Keeping existing wizard data in damage centers');
+          // Load invoice data into global scope for dropdown access
+          await prepareInvoiceDataForDropdowns(selectedInvoices, caseId);
           return; // Exit early for non-private reports
         }
         
@@ -12000,6 +12002,106 @@
       } catch (error) {
         console.error('❌ SESSION 88: Error applying invoice mappings:', error);
         throw error;
+      }
+    }
+
+    /**
+     * Prepare invoice data for dropdown access (non-private reports)
+     * Similar to loadPartsFromSupabase but for invoice data
+     */
+    async function prepareInvoiceDataForDropdowns(selectedInvoices, caseId) {
+      try {
+        console.log('🔄 SESSION 90: Preparing invoice data for dropdown access...');
+        console.log('📋 Selected invoices:', selectedInvoices);
+        console.log('🔍 Case ID:', caseId);
+        
+        if (!window.supabase) {
+          console.error('❌ Supabase not available');
+          return;
+        }
+        
+        if (!caseId) {
+          console.error('❌ No case_id provided');
+          return;
+        }
+        
+        // Initialize global invoice data structure
+        window.invoiceDataForDropdowns = {
+          invoices: selectedInvoices,
+          mappings: [],
+          invoice_lines: [],
+          prepared_at: new Date().toISOString()
+        };
+        
+        // Load all mappings for this case with pending status
+        for (const invoice of selectedInvoices) {
+          console.log(`📋 Loading mappings for invoice ${invoice.invoice_number}...`);
+          
+          const { data: mappings, error } = await window.supabase
+            .from('invoice_damage_center_mappings')
+            .select(`
+              *,
+              invoice_line:invoice_lines!inner(*)
+            `)
+            .eq('invoice_id', invoice.id)
+            .eq('case_id', caseId)
+            .eq('mapping_status', 'pending');
+          
+          if (error) {
+            console.error(`❌ Error loading mappings for invoice ${invoice.id}:`, error);
+            continue;
+          }
+          
+          if (mappings && mappings.length > 0) {
+            console.log(`✅ Loaded ${mappings.length} mappings for invoice ${invoice.invoice_number}`);
+            window.invoiceDataForDropdowns.mappings.push(...mappings);
+            
+            // Extract unique invoice lines
+            const invoiceLines = mappings.map(m => m.invoice_line).filter(Boolean);
+            window.invoiceDataForDropdowns.invoice_lines.push(...invoiceLines);
+          } else {
+            console.log(`ℹ️ No pending mappings found for invoice ${invoice.invoice_number}`);
+          }
+        }
+        
+        // Store data in helper structure as well for easy access
+        const helper = window.helper || {};
+        if (!helper.invoices) {
+          helper.invoices = [];
+        }
+        
+        // Update helper with invoice line items for dropdown access
+        selectedInvoices.forEach(invoice => {
+          const existingInvoice = helper.invoices.find(inv => inv.id === invoice.id);
+          if (existingInvoice) {
+            // Update existing
+            const invoiceLines = window.invoiceDataForDropdowns.mappings
+              .filter(m => m.invoice_id === invoice.id)
+              .map(m => m.invoice_line);
+            existingInvoice.line_items = invoiceLines;
+          } else {
+            // Add new
+            const invoiceLines = window.invoiceDataForDropdowns.mappings
+              .filter(m => m.invoice_id === invoice.id)
+              .map(m => m.invoice_line);
+            helper.invoices.push({
+              ...invoice,
+              line_items: invoiceLines
+            });
+          }
+        });
+        
+        // Update helper
+        window.helper = helper;
+        sessionStorage.setItem('helper', JSON.stringify(helper));
+        
+        console.log(`✅ SESSION 90: Invoice data prepared for dropdowns:`);
+        console.log(`  📊 Total mappings: ${window.invoiceDataForDropdowns.mappings.length}`);
+        console.log(`  📋 Total invoice lines: ${window.invoiceDataForDropdowns.invoice_lines.length}`);
+        console.log(`  🧾 Invoices in helper: ${helper.invoices.length}`);
+        
+      } catch (error) {
+        console.error('❌ SESSION 90: Error preparing invoice data for dropdowns:', error);
       }
     }
 
@@ -13330,6 +13432,9 @@
         
         // LAYER 1: 🧾 Invoice lines (from current case invoices)
         console.log('📋 שכבה 1: בדיקת שורות חשבונית...');
+        let invoiceCount = 0;
+        
+        // Try helper.invoices first (populated by prepareInvoiceDataForDropdowns)
         if (helper?.invoices && Array.isArray(helper.invoices)) {
           helper.invoices.forEach((invoice, idx) => {
             if (invoice.line_items && Array.isArray(invoice.line_items)) {
@@ -13343,11 +13448,32 @@
                     layer: 1,
                     original: line
                   });
+                  invoiceCount++;
                 }
               });
             }
           });
         }
+        
+        // Fallback: Try global window.invoiceDataForDropdowns (for non-private reports)
+        if (invoiceCount === 0 && window.invoiceDataForDropdowns?.invoice_lines) {
+          console.log('🔄 SESSION 90: Using fallback invoice data from global scope...');
+          window.invoiceDataForDropdowns.invoice_lines.forEach((line, idx) => {
+            if (line.description && (!query || line.description.toLowerCase().includes(query.toLowerCase()))) {
+              allParts.push({
+                name: line.description,
+                description: line.details || line.notes || '',
+                price: line.amount || line.total || line.unit_price || 0,
+                source: `🧾 חשבונית גלובלית ${idx + 1}`,
+                layer: 1,
+                original: line
+              });
+              invoiceCount++;
+            }
+          });
+        }
+        
+        console.log(`✅ SESSION 90: Layer 1 loaded ${invoiceCount} invoice parts`);
         
         // LAYER 2: 📋 Selected parts (from Supabase selected_parts table via helper)
         console.log('📋 שכבה 2: בדיקת חלקים נבחרים...');
