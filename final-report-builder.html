@@ -11304,13 +11304,28 @@
               .from('invoices')
               .select('*')
               .eq('case_id', caseId)
-              // SESSION 91 TESTING ONLY - Allow ACCEPTED invoices to be re-accepted
-              .eq('status', 'ASSIGNED');  // Reverted - .in() not supported in this Supabase version
-              // For testing, manually update invoice status back to ASSIGNED in the database
+              // SESSION 91 TESTING MODE - Allow ACCEPTED invoices to be re-accepted
+              .eq('status', 'ASSIGNED');  // Normal mode - only ASSIGNED invoices
+              
+            // TESTING MODE: Also check for ACCEPTED invoices
+            const testMode = true; // SET TO FALSE FOR PRODUCTION
+            if (testMode && (!allInvoices || allInvoices.length === 0)) {
+              console.log('🧪 SESSION 91 TEST MODE: Checking for ACCEPTED invoices...');
+              const acceptedResult = await window.supabase
+                .from('invoices')
+                .select('*')
+                .eq('case_id', caseId)
+                .eq('status', 'ACCEPTED');
+              
+              if (acceptedResult.data && acceptedResult.data.length > 0) {
+                console.log('🧪 TEST MODE: Found', acceptedResult.data.length, 'ACCEPTED invoices');
+                allInvoices = acceptedResult.data;
+              }
+            }
             
             console.log('📤 SESSION 88: Raw Supabase response:', result);
             const { data, error } = result;
-            allInvoices = data;
+            allInvoices = data || [];
             
             if (error) {
               console.error('❌ SESSION 88: Error querying invoices directly:', error);
@@ -25378,6 +25393,36 @@
       return {
         success: true,
         message: 'Archive cleared - system in no-invoice state'
+      };
+    };
+
+    // SESSION 91 GLOBAL: Clear centers completely
+    window.clearCenters = function() {
+      console.log('🧹 SESSION 91: Clearing helper.centers');
+      const helper = window.helper || {};
+      
+      console.log('📋 Before clearing:');
+      console.log('  - centers length:', helper.centers?.length || 0);
+      console.log('  - centers_archive length:', helper.centers_archive?.length || 0);
+      
+      // Clear centers array
+      helper.centers = [];
+      
+      // Save changes
+      sessionStorage.setItem('helper', JSON.stringify(helper));
+      window.helper = helper;
+      
+      console.log('✅ Centers cleared');
+      console.log('ℹ️ You can now create new damage centers in the wizard');
+      
+      // Refresh UI
+      if (typeof loadDamageCentersFromHelper === 'function') {
+        loadDamageCentersFromHelper(helper);
+      }
+      
+      return {
+        success: true,
+        message: 'Centers cleared - ready for wizard'
       };
     };
 
