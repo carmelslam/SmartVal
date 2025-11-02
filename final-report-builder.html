@@ -11304,7 +11304,9 @@
               .from('invoices')
               .select('*')
               .eq('case_id', caseId)
-              .eq('status', 'ASSIGNED');  // Only show invoices that are assigned but not yet accepted
+              // SESSION 91 TESTING ONLY - Allow ACCEPTED invoices to be re-accepted
+              // .eq('status', 'ASSIGNED');  // Only show invoices that are assigned but not yet accepted
+              .in('status', ['ASSIGNED', 'ACCEPTED']);  // TESTING ONLY - revert after implementation works
             
             console.log('📤 SESSION 88: Raw Supabase response:', result);
             const { data, error } = result;
@@ -11381,9 +11383,13 @@
         const invoicesWithPendingAssignments = [];
         
         for (const invoice of plateInvoices) {
-          // Look for invoices with status 'ASSIGNED' (ready to be accepted/processed)
-          if (invoice.status !== 'ASSIGNED') {
-            console.log(`⏭️ Skipping invoice ${invoice.invoice_number} with status '${invoice.status}' (need 'ASSIGNED')`);
+          // SESSION 91 TESTING ONLY - Allow ACCEPTED invoices to be re-accepted
+          // if (invoice.status !== 'ASSIGNED') {
+          //   console.log(`⏭️ Skipping invoice ${invoice.invoice_number} with status '${invoice.status}' (need 'ASSIGNED')`);
+          //   continue;
+          // }
+          if (invoice.status !== 'ASSIGNED' && invoice.status !== 'ACCEPTED') {
+            console.log(`⏭️ Skipping invoice ${invoice.invoice_number} with status '${invoice.status}'`);
             continue;
           }
 
@@ -11635,40 +11641,39 @@
         // Phase 2: Archive parts_search.required_parts before invoice import
         await archivePartsSearchData();
         
-        // Phase 2.5: Create centers archive for non-private reports
+        // TASK 1: Create centers archive for ALL report types (SESSION 91 FIX)
         const helper = window.helper || {};
         const currentReportType = helper.final_report?.type || helper.final_report?.dropdown_type || 
                                 document.querySelector('input[name="final-report-type"]:checked')?.value;
 
-        console.log('🔍 Current report type for archive decision:', currentReportType);
+        console.log('🔍 Current report type:', currentReportType);
 
-        if (currentReportType !== 'חוות דעת פרטית') {
-          console.log('📦 Creating centers archive for non-private report...');
+        // Create archive for ALL report types - simplifying the logic
+        console.log('📦 SESSION 91: Creating centers archive for ALL report types...');
+        
+        if (!helper.centers_archive && helper.centers) {
+          // Create deep copy of current centers BEFORE any modifications
+          helper.centers_archive = JSON.parse(JSON.stringify(helper.centers));
           
-          if (!helper.centers_archive && helper.centers) {
-            // Create deep copy of current centers
-            helper.centers_archive = JSON.parse(JSON.stringify(helper.centers));
-            
-            // Add metadata
-            helper.centers_archive_meta = {
-              created_at: new Date().toISOString(),
-              report_type: currentReportType,
-              original_centers_count: helper.centers.length,
-              purpose: 'preserve_wizard_data_for_non_private_reports'
-            };
-            
-            // Save to sessionStorage
-            sessionStorage.setItem('helper', JSON.stringify(helper));
-            
-            console.log(`✅ Created centers_archive with ${helper.centers.length} centers for non-private report`);
-            console.log('📋 Archive metadata:', helper.centers_archive_meta);
-          } else if (helper.centers_archive) {
-            console.log('ℹ️ Centers archive already exists, skipping creation');
-          } else {
-            console.warn('⚠️ No helper.centers found to archive');
-          }
+          // Add metadata
+          helper.centers_archive_meta = {
+            created_at: new Date().toISOString(),
+            report_type: currentReportType,
+            original_centers_count: helper.centers.length,
+            purpose: 'preserve_wizard_data_before_invoice_processing'
+          };
+          
+          // Save to BOTH sessionStorage AND window.helper
+          sessionStorage.setItem('helper', JSON.stringify(helper));
+          window.helper = helper; // Ensure window.helper also has the archive
+          
+          console.log(`✅ Created centers_archive with ${helper.centers.length} centers`);
+          console.log('📋 Archive metadata:', helper.centers_archive_meta);
+          console.log('📋 Archive saved to both sessionStorage and window.helper');
+        } else if (helper.centers_archive) {
+          console.log('ℹ️ Centers archive already exists, skipping creation');
         } else {
-          console.log('ℹ️ Private report - no archive needed, will populate centers directly');
+          console.warn('⚠️ No helper.centers found to archive');
         }
         
         // Phase 3: Convert invoice mappings to helper format (Private reports only)
@@ -12027,29 +12032,64 @@
                       helper.case_id;
         console.log('🔍 Case ID:', caseId);
         
-        // Check current report type
+        // TASK 2 & 3: Check report type and handle accordingly (SESSION 91 FIX)
         const currentReportType = helper.final_report?.type || helper.final_report?.dropdown_type || 
                                 document.querySelector('input[name="final-report-type"]:checked')?.value;
         console.log('🔍 Current report type:', currentReportType);
         
-        // Only populate damage centers for Private reports
-        if (currentReportType !== 'חוות דעת פרטית') {
-          console.log('ℹ️ Report type is not Private - invoice data will be available in dropdowns only');
-          console.log('ℹ️ Keeping existing wizard data in damage centers');
+        // For ALL report types, ensure centers_archive exists
+        if (!helper.centers_archive) {
+          console.error('❌ SESSION 91: centers_archive not found! This should have been created earlier');
+          // Try to create it now as fallback
+          if (helper.centers) {
+            helper.centers_archive = JSON.parse(JSON.stringify(helper.centers));
+            console.log('⚠️ Created centers_archive as fallback');
+          }
+        }
+        
+        // TASK 3: For Private reports - CLEAR existing damage center data
+        if (currentReportType === 'חוות דעת פרטית') {
+          console.log('🧹 SESSION 91: Private report - CLEARING damage center data before populating from invoice');
           
-          // ADD ARCHIVE STATUS LOGGING:
-          console.log('📋 Archive status:');
-          console.log('  - centers_archive exists:', !!helper.centers_archive);
-          console.log('  - centers_archive count:', helper.centers_archive?.length || 0);
-          console.log('  - Archive will be used for this report type');
+          // Clear parts, works, and repairs from ALL centers
+          if (helper.centers && Array.isArray(helper.centers)) {
+            helper.centers.forEach((center, idx) => {
+              console.log(`🧹 Clearing center ${idx + 1}: ${center.Id || center.Location}`);
+              
+              // Clear parts
+              if (center.Parts && center.Parts.parts_required) {
+                const partsBefore = center.Parts.parts_required.length;
+                center.Parts.parts_required = [];
+                console.log(`  - Cleared ${partsBefore} parts`);
+              }
+              
+              // Clear works
+              if (center.Works && center.Works.works) {
+                const worksBefore = center.Works.works.length;
+                center.Works.works = [];
+                console.log(`  - Cleared ${worksBefore} works`);
+              }
+              
+              // Clear repairs
+              if (center.Repairs && center.Repairs.repairs) {
+                const repairsBefore = center.Repairs.repairs.length;
+                center.Repairs.repairs = [];
+                console.log(`  - Cleared ${repairsBefore} repairs`);
+              }
+            });
+          }
+          
+          console.log('✅ Private report - damage centers cleared, ready for invoice data');
+        } else {
+          console.log('ℹ️ Report type is not Private - will load data to dropdowns only');
+          console.log('ℹ️ Centers will display from centers_archive');
           
           // Load invoice data into global scope for dropdown access
           await prepareInvoiceDataForDropdowns(selectedInvoices, caseId);
           return; // Exit early for non-private reports
         }
         
-        console.log('✅ Private report detected - proceeding to populate damage centers with invoice data');
-        console.log('🔍 DEBUG: helper.centers BEFORE processing:', helper.centers);
+        console.log('🔍 DEBUG: helper.centers AFTER clearing:', helper.centers);
         
         if (!caseId) {
           console.error('❌ No case_id found in helper');
@@ -12135,9 +12175,9 @@
           mappings.forEach((mapping, index) => {
             console.log(`🔄 Processing mapping ${index + 1}/${mappings.length}:`, mapping);
             
-            const centerCode = mapping.damage_center_id;
+            const centerCode = mapping.damage_center_code || mapping.damage_center_id;
             const center = helper.centers?.find(c => 
-              c.Id === centerCode || c.code === centerCode
+              c.Id === centerCode || c.code === centerCode || c.damage_center_code === centerCode
             );
             
             console.log(`🔍 Looking for center '${centerCode}', found:`, center);
@@ -12438,21 +12478,26 @@
     function convertMappingToPart(mapping, invoice) {
       const helper = window.helper || {};
       
+      // SESSION 91 FIX: Use the actual mapping fields
+      console.log('🔍 DEBUG: Converting mapping to part:', mapping);
+      
       return {
         row_uuid: window.generateUUID ? window.generateUUID() : 'part_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9),
         case_id: helper.case_info?.supabase_case_id || mapping.case_id,
         plate: helper.case_info?.plate || '',
-        damage_center_code: mapping.damage_center_id,
-        part_name: mapping.mapped_data?.description || mapping.invoice_line?.description || '',
-        description: mapping.mapped_data?.description || mapping.invoice_line?.description || '',
+        damage_center_code: mapping.damage_center_code || mapping.damage_center_id,
+        // Use line_item_description directly from mapping
+        part_name: mapping.line_item_description || mapping.mapped_data?.description || mapping.invoice_line?.description || '',
+        description: mapping.line_item_description || mapping.mapped_data?.description || mapping.invoice_line?.description || '',
         pcode: mapping.mapped_data?.part_code || mapping.invoice_line?.metadata?.part_code || '',
         oem: mapping.mapped_data?.oem || mapping.invoice_line?.metadata?.oem || '',
         supplier_name: mapping.mapped_data?.supplier_name || invoice?.supplier_name || '',
-        price_per_unit: mapping.mapped_data?.unit_price || mapping.invoice_line?.unit_price || 0,
+        // Use line_item_amount directly from mapping
+        price_per_unit: mapping.line_item_amount || mapping.mapped_data?.unit_price || mapping.invoice_line?.unit_price || 0,
         reduction_percentage: mapping.user_modifications?.reduction_percentage || 0,
         wear_percentage: mapping.user_modifications?.wear_percentage || 0,
-        updated_price: mapping.mapped_data?.updated_price || mapping.mapped_data?.unit_price || mapping.invoice_line?.unit_price || 0,
-        total_cost: mapping.mapped_data?.line_total || mapping.invoice_line?.line_total || 0,
+        updated_price: mapping.line_item_amount || mapping.mapped_data?.updated_price || mapping.mapped_data?.unit_price || mapping.invoice_line?.unit_price || 0,
+        total_cost: mapping.line_item_amount || mapping.mapped_data?.line_total || mapping.invoice_line?.line_total || 0,
         quantity: mapping.mapped_data?.quantity || mapping.invoice_line?.quantity || 1,
         source: 'invoice',
         _invoice_line_id: mapping.invoice_line_id,
@@ -12473,9 +12518,12 @@
      * Convert mapping to work format (follows UI structure exactly)
      */
     function convertMappingToWork(mapping, invoice) {
+      // SESSION 91 FIX: Use the actual mapping fields
+      console.log('🔍 DEBUG: Converting mapping to work:', mapping);
+      
       return {
-        category: mapping.mapped_data?.description || mapping.invoice_line?.description || '',
-        cost: mapping.mapped_data?.line_total || mapping.invoice_line?.line_total || 0,
+        category: mapping.line_item_description || mapping.mapped_data?.description || mapping.invoice_line?.description || '',
+        cost: mapping.line_item_amount || mapping.mapped_data?.line_total || mapping.invoice_line?.line_total || 0,
         comments: mapping.user_modifications?.notes || '',
         added_at: new Date().toISOString(),
         source: 'invoice',
@@ -12488,9 +12536,12 @@
      * Convert mapping to repair format (follows UI structure exactly)
      */
     function convertMappingToRepair(mapping, invoice) {
+      // SESSION 91 FIX: Use the actual mapping fields
+      console.log('🔍 DEBUG: Converting mapping to repair:', mapping);
+      
       return {
-        name: mapping.mapped_data?.description || mapping.invoice_line?.description || '',
-        cost: mapping.mapped_data?.line_total || mapping.invoice_line?.line_total || 0,
+        name: mapping.line_item_description || mapping.mapped_data?.description || mapping.invoice_line?.description || '',
+        cost: mapping.line_item_amount || mapping.mapped_data?.line_total || mapping.invoice_line?.line_total || 0,
         description: mapping.user_modifications?.notes || '',
         added_at: new Date().toISOString(),
         source: 'invoice',
