@@ -3053,10 +3053,40 @@ class InvoiceProcessor {
             const parsed = parseFloat(strValue);
             return isNaN(parsed) ? null : parsed;
           };
-          
+
+          // Helper function to convert date strings to ISO format for database
+          const parseInvoiceDate = (dateStr) => {
+            if (!dateStr) return null;
+
+            try {
+              // Try parsing DD/MM/YY or DD/MM/YYYY format (common in OCR)
+              const parts = dateStr.split(/[\/\-\.]/);
+              if (parts.length === 3) {
+                let day = parseInt(parts[0]);
+                let month = parseInt(parts[1]);
+                let year = parseInt(parts[2]);
+
+                // Handle 2-digit year
+                if (year < 100) {
+                  year += (year < 50 ? 2000 : 1900);
+                }
+
+                // Create ISO format: YYYY-MM-DD
+                const isoDate = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                return isoDate;
+              }
+
+              // If already in valid format, return as-is
+              return dateStr;
+            } catch (e) {
+              console.warn('⚠️ Could not parse invoice date:', dateStr, e);
+              return null;
+            }
+          };
+
           // SESSION 79 FIX: Use OCR data for invoice header, not form fields
           const ocrResult = this.lastOCRResult || {};
-          
+
           // SESSION 79: Prepare invoice data - match actual schema
           // invoice_type must be: 'PARTS', 'LABOR', 'TOWING', 'OTHER'
           const invoiceData = {
@@ -3064,7 +3094,7 @@ class InvoiceProcessor {
             invoice_number: ocrResult['מס. חשבונית'] || ocrResult.invoice_number || `INV-${Date.now()}`,
             supplier_name: ocrResult['שם מוסך'] || document.getElementById('garage_name').value || 'לא צוין',
             supplier_tax_id: ocrResult['עוסק מורשה'] || null,
-            invoice_date: ocrResult['תאריך'] || ocrResult.date || null,  // Invoice date from OCR
+            invoice_date: parseInvoiceDate(ocrResult['תאריך'] || ocrResult.date),  // Convert to ISO format
             invoice_type: 'OTHER', // Default to OTHER (mixed invoice)
             total_amount: parsePrice(ocrResult['עלות כוללת']) || resultData.total,
             total_before_tax: parsePrice(ocrResult["עלות כוללת ללא מע'מ"]),
