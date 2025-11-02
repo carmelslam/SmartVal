@@ -13231,6 +13231,49 @@
       };
     };
 
+    // SESSION 91: Create a REAL test invoice in database
+    window.createRealTestInvoice = async function() {
+      console.log('🧪 SESSION 91: Creating REAL test invoice in database');
+      
+      const helper = window.helper || {};
+      const caseId = helper.case_info?.supabase_case_id || helper.meta?.case_id;
+      
+      if (!caseId || !window.supabase) {
+        console.error('❌ Missing caseId or supabase');
+        return { error: 'Missing requirements' };
+      }
+      
+      // Create a real invoice in the database
+      const testInvoice = {
+        case_id: caseId,
+        invoice_number: 'TEST-91-' + Date.now(),
+        status: 'ASSIGNED',
+        invoice_date: new Date().toISOString(),
+        total_amount: 5000,
+        created_at: new Date().toISOString()
+      };
+      
+      const { data, error } = await window.supabase
+        .from('invoices')
+        .insert(testInvoice)
+        .select()
+        .single();
+      
+      if (error) {
+        console.error('❌ Error creating invoice:', error);
+        return { error };
+      }
+      
+      console.log('✅ Real test invoice created:', data);
+      
+      // Now refresh the page or call manualInvoiceCheck
+      return {
+        success: true,
+        invoice: data,
+        message: 'Invoice created! Refresh page or call window.manualInvoiceCheck()'
+      };
+    };
+
     // SESSION 91: Create test mappings with pending status
     window.createTestMappings = async function() {
       console.log('🧪 SESSION 91: Creating test mappings with PENDING status');
@@ -13456,6 +13499,44 @@
       }
     };
     
+    // SESSION 91: Clear test invoices from helper
+    window.clearTestInvoices = function() {
+      console.log('🧹 SESSION 91: Clearing test invoices from helper');
+      
+      const helper = window.helper || {};
+      
+      if (helper.invoices && Array.isArray(helper.invoices)) {
+        const beforeCount = helper.invoices.length;
+        
+        // Remove any test invoices
+        helper.invoices = helper.invoices.filter(inv => {
+          const isTest = inv.invoice_number?.includes('TEST') || 
+                        inv.invoice_number?.includes('MANUAL') ||
+                        inv.id?.includes('test');
+          if (isTest) {
+            console.log('🗑️ Removing test invoice:', inv.invoice_number);
+          }
+          return !isTest;
+        });
+        
+        const afterCount = helper.invoices.length;
+        
+        // Save cleaned helper
+        sessionStorage.setItem('helper', JSON.stringify(helper));
+        window.helper = helper;
+        
+        console.log(`✅ Cleaned ${beforeCount - afterCount} test invoices`);
+        console.log(`📋 Remaining real invoices: ${afterCount}`);
+        
+        return {
+          removed: beforeCount - afterCount,
+          remaining: afterCount
+        };
+      }
+      
+      return { removed: 0, remaining: 0 };
+    };
+
     // SESSION 91: Test Layer 1 dropdown by adding invoice data
     window.testLayer1Dropdown = function() {
       console.log('🧪 SESSION 91: Testing Layer 1 dropdown with manual invoice data');
@@ -13684,17 +13765,16 @@
           console.log('🔍 SESSION 88: typeof checkForAvailableInvoices:', typeof checkForAvailableInvoices);
           console.log('🔍 SESSION 88: checkForAvailableInvoices function exists:', typeof checkForAvailableInvoices === 'function');
           
-          // DISABLED IN SESSION 91 - preventing auto-calls to checkForAvailableInvoices
-          console.log('🚫 SESSION 91: Auto invoice check DISABLED - use manual triggers only');
-          /*if (!sessionStorage.getItem('invoiceAssignmentDismissed')) {
-            console.log('🔍 SESSION 88: Checking for invoice assignments...');
+          // SESSION 91: Re-enabled but will check for REAL invoices only
+          if (!sessionStorage.getItem('invoiceAssignmentDismissed')) {
+            console.log('🔍 SESSION 91: Checking for REAL invoice assignments (no test data)...');
             console.log('  helper.final_report?.invoice_assignments:', window.helper?.final_report?.invoice_assignments);
-            console.log('🚀 SESSION 88: About to call checkForAvailableInvoices()...');
+            console.log('🚀 SESSION 91: About to call checkForAvailableInvoices()...');
             checkForAvailableInvoices();
-            console.log('✅ SESSION 88: checkForAvailableInvoices() call completed');
+            console.log('✅ SESSION 91: checkForAvailableInvoices() call completed');
           } else {
-            console.log('ℹ️ SESSION 88: Invoice assignment banner dismissed by user');
-          }*/
+            console.log('ℹ️ SESSION 91: Invoice assignment banner dismissed by user');
+          }
         }, 200);
         
         // DO NOT initialize admin hub communication here - wait for helper.js to load first

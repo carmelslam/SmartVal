@@ -611,21 +611,30 @@ The implementation added debug logging and fixed syntax issues, but the CORE pro
 
 ---
 
-### **Session 91 Update: Disabled Auto-Triggers**
+### **Session 91 FINAL FIX: Banner Re-enabled**
 
-To prevent flooding helper with test invoices, I've disabled:
-1. ✅ `window.persistentInvoiceChecker()` - no longer auto-starts
-2. ✅ All `setTimeout` calls that trigger `checkForAvailableInvoices` 
-3. ✅ Auto-check in `initializeApp()` function
-4. ✅ DOMContentLoaded auto-trigger
+**Current Status:**
+- ✅ Invoice check RE-ENABLED in initializeApp() 
+- ✅ Will show banner for REAL invoices with status='ASSIGNED'
+- ✅ NO test data flooding
 
-**Manual Triggers Only:**
-- Use `window.manualInvoiceCheck()` to manually check for invoices
-- Use `window.testInvoiceBanner()` to test the banner
+**How to Test:**
+1. **Clean any test data**: Run `window.clearTestInvoices()`
+2. **Create real test invoice**: Run `window.createRealTestInvoice()`
+3. **Refresh page** - banner should appear
+4. **Create mappings**: Run `window.createTestMappings()` 
+5. **Click Accept** - should populate damage centers
+
+**Utility Functions:**
+- `window.clearTestInvoices()` - Remove test invoices from helper
+- `window.createRealTestInvoice()` - Create ASSIGNED invoice in DB
+- `window.createTestMappings()` - Create pending mappings
+- `window.testUIRefresh()` - Test if UI updates
+- `window.validateRealInvoiceData()` - Check database state
 
 ---
 
 *Session 91 Implementation Plan*  
-*Status: ✅ COMPLETED (auto-triggers disabled)*  
+*Status: ✅ COMPLETED (banner re-enabled, test data cleared)*  
 *Implementation Date: 2025-11-02*  
 *Based on: Deep code analysis of sessions 86-90*
