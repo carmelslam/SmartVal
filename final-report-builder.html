@@ -25335,6 +25335,42 @@
       showInvoiceMappingModal('center_1', 'work', 0, 'Test Work');
     };
 
+    // SESSION 91 GLOBAL: Clear centers archive
+    window.clearCentersArchive = function() {
+      console.log('🧹 SESSION 91: Manually clearing centers_archive');
+      const helper = window.helper || {};
+      
+      if (!helper.centers_archive) {
+        console.log('ℹ️ No archive exists to clear');
+        return { message: 'No archive exists' };
+      }
+      
+      console.log('📋 Before clearing:');
+      console.log('  - Archive had', helper.centers_archive.length, 'centers');
+      console.log('  - Archive metadata:', helper.centers_archive_meta);
+      
+      // Delete archive and its metadata
+      delete helper.centers_archive;
+      delete helper.centers_archive_meta;
+      
+      // Save changes
+      sessionStorage.setItem('helper', JSON.stringify(helper));
+      window.helper = helper;
+      
+      console.log('✅ Archive cleared successfully');
+      console.log('ℹ️ System is now in no-invoice state');
+      
+      // Refresh UI to reflect changes
+      if (typeof loadDamageCentersFromHelper === 'function') {
+        loadDamageCentersFromHelper(helper);
+      }
+      
+      return {
+        success: true,
+        message: 'Archive cleared - system in no-invoice state'
+      };
+    };
+
     console.log('✅ Invoice mapping integration loaded');
   </script>
 </body>
