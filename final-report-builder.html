@@ -12240,14 +12240,30 @@
         sessionStorage.setItem('helper', JSON.stringify(helper));
         window.helper = helper;
         
-        // Try to refresh the damage centers display
-        if (typeof loadDataFromHelper === 'function') {
-          console.log('🔄 Refreshing damage centers display...');
-          loadDataFromHelper();
-        } else if (typeof refreshDamageCenters === 'function') {
-          refreshDamageCenters();
+        console.log('🔍 SESSION 91: Final centers state before UI refresh:');
+        console.log('  - Total centers:', helper.centers.length);
+        helper.centers.forEach((center, idx) => {
+          console.log(`  - Center ${idx}: Parts=${center.Parts?.parts_required?.length || 0}, Works=${center.Works?.works?.length || 0}, Repairs=${center.Repairs?.repairs?.length || 0}`);
+        });
+        
+        // SESSION 91 FIX: Force UI refresh for private reports
+        if (currentReportType === 'חוות דעת פרטית') {
+          console.log('🔄 SESSION 91: Private report - forcing damage centers refresh with invoice data');
+          
+          // Method 1: Direct call to loadDamageCentersFromHelper
+          if (typeof loadDamageCentersFromHelper === 'function') {
+            console.log('🔄 Calling loadDamageCentersFromHelper directly...');
+            loadDamageCentersFromHelper(helper);
+          }
+          
+          // Method 2: Try loadDataFromHelper
+          if (typeof loadDataFromHelper === 'function') {
+            console.log('🔄 Calling loadDataFromHelper...');
+            loadDataFromHelper();
+          }
         } else {
-          console.log('ℹ️ No refresh function found - page may need manual refresh');
+          // For non-private reports, just ensure the data is saved
+          console.log('ℹ️ Non-private report - data saved for dropdown access');
         }
         
         console.log('✅ SESSION 88: Invoice mappings applied to damage centers');
@@ -13496,6 +13512,145 @@
         success: true,
         partAdded: testPart,
         centerPartsCount: helper.centers[0].Parts.parts_required.length
+      };
+    };
+
+    // SESSION 91 FIX: Debug centers data
+    window.debugCentersData = function() {
+      console.log('🔍 SESSION 91: Debugging centers data');
+      const helper = window.helper || {};
+      
+      console.log('📋 Helper structure:');
+      console.log('  - centers exists:', !!helper.centers);
+      console.log('  - centers length:', helper.centers?.length || 0);
+      console.log('  - centers_archive exists:', !!helper.centers_archive);
+      console.log('  - centers_archive length:', helper.centers_archive?.length || 0);
+      
+      if (helper.centers && helper.centers.length > 0) {
+        console.log('📋 Centers content:');
+        helper.centers.forEach((center, idx) => {
+          console.log(`  Center ${idx}:`, {
+            id: center.Id || center.Location,
+            parts: center.Parts?.parts_required?.length || 0,
+            works: center.Works?.works?.length || 0,
+            repairs: center.Repairs?.repairs?.length || 0
+          });
+        });
+      }
+      
+      if (helper.centers_archive && helper.centers_archive.length > 0) {
+        console.log('📋 Archive content:');
+        helper.centers_archive.forEach((center, idx) => {
+          console.log(`  Archive Center ${idx}:`, {
+            id: center.Id || center.Location,
+            parts: center.Parts?.parts_required?.length || 0,
+            works: center.Works?.works?.length || 0,
+            repairs: center.Repairs?.repairs?.length || 0
+          });
+        });
+      }
+      
+      // Test what the UI would load
+      const currentReportType = helper.final_report?.type || helper.final_report?.dropdown_type || 
+                              document.querySelector('input[name="final-report-type"]:checked')?.value;
+      console.log('📋 Current report type:', currentReportType);
+      console.log('📋 UI would load from:', 
+        (helper.centers_archive && currentReportType !== 'חוות דעת פרטית') ? 'centers_archive' : 'centers'
+      );
+      
+      return {
+        reportType: currentReportType,
+        centersCount: helper.centers?.length || 0,
+        archiveCount: helper.centers_archive?.length || 0,
+        centersData: helper.centers?.map(c => ({
+          parts: c.Parts?.parts_required?.length || 0,
+          works: c.Works?.works?.length || 0,
+          repairs: c.Repairs?.repairs?.length || 0
+        }))
+      };
+    };
+
+    // SESSION 91 EMERGENCY: Restore centers from archive
+    window.restoreCentersFromArchive = function() {
+      console.log('🚨 SESSION 91: Emergency restore - copying centers_archive back to centers');
+      const helper = window.helper || {};
+      
+      if (!helper.centers_archive || helper.centers_archive.length === 0) {
+        console.error('❌ No centers_archive found to restore from!');
+        return { error: 'No archive exists' };
+      }
+      
+      console.log('📋 Before restore:');
+      console.log('  - centers length:', helper.centers?.length || 0);
+      console.log('  - archive length:', helper.centers_archive.length);
+      
+      // Deep copy archive back to centers
+      helper.centers = JSON.parse(JSON.stringify(helper.centers_archive));
+      
+      // Save to both sessionStorage and window.helper
+      sessionStorage.setItem('helper', JSON.stringify(helper));
+      window.helper = helper;
+      
+      console.log('✅ Restored centers from archive');
+      console.log('📋 After restore:');
+      console.log('  - centers length:', helper.centers.length);
+      
+      // Refresh UI
+      if (typeof loadDamageCentersFromHelper === 'function') {
+        console.log('🔄 Refreshing UI...');
+        loadDamageCentersFromHelper(helper);
+      }
+      
+      return {
+        success: true,
+        centersRestored: helper.centers.length,
+        message: 'Centers restored from archive'
+      };
+    };
+
+    // SESSION 91 EMERGENCY: Force populate centers (failsafe)
+    window.forcePopulateCenters = function() {
+      console.log('🚨 SESSION 91: Force populate centers');
+      const helper = window.helper || {};
+      
+      // Priority order to find data
+      let sourceData = null;
+      let source = '';
+      
+      if (helper.centers_archive && helper.centers_archive.length > 0) {
+        sourceData = helper.centers_archive;
+        source = 'centers_archive';
+      } else if (helper.expertise?.damage_blocks && helper.expertise.damage_blocks.length > 0) {
+        sourceData = helper.expertise.damage_blocks;
+        source = 'expertise.damage_blocks';
+      } else {
+        console.error('❌ No source data found!');
+        return { error: 'No data source available' };
+      }
+      
+      console.log(`📋 Populating centers from ${source} (${sourceData.length} items)`);
+      
+      // Deep copy to centers
+      helper.centers = JSON.parse(JSON.stringify(sourceData));
+      
+      // Save everywhere
+      sessionStorage.setItem('helper', JSON.stringify(helper));
+      window.helper = helper;
+      
+      // Force UI refresh
+      if (typeof loadDamageCentersFromHelper === 'function') {
+        loadDamageCentersFromHelper(helper);
+      }
+      if (typeof loadDataFromHelper === 'function') {
+        loadDataFromHelper();
+      }
+      
+      console.log('✅ Centers populated and UI refreshed');
+      
+      return {
+        success: true,
+        source: source,
+        centersCount: helper.centers.length
       };
     };
 
@@ -17706,24 +17861,25 @@
           // Called with helper object (from refresh system) - extract and normalize damage centers
           const helper = damageBlocksOrHelper || {};
           
-          // SESSION 91 FIX: Check for centers_archive FIRST (for non-private reports after invoice accept)
-          // Check if we should use archive (non-private reports with accepted invoice)
+          // SESSION 91 FIX: Priority order for loading damage centers
           const currentReportType = helper.final_report?.type || helper.final_report?.dropdown_type || 
                                   document.querySelector('input[name="final-report-type"]:checked')?.value;
-          const hasAcceptedInvoice = helper.centers_archive && helper.centers_archive_meta;
+          const hasArchive = helper.centers_archive && helper.centers_archive.length > 0;
           
-          if (hasAcceptedInvoice && currentReportType !== 'חוות דעת פרטית' && helper.centers_archive.length > 0) {
-            console.log('📦 SESSION 91: Non-private report with invoice - Loading from centers_archive');
-            console.log('📋 Report type:', currentReportType);
-            console.log('📋 Archive created at:', helper.centers_archive_meta?.created_at);
+          // For non-private reports: use archive if it exists (invoice was accepted before)
+          // Archive persists even if invoice is deleted later
+          if (hasArchive && currentReportType !== 'חוות דעת פרטית') {
+            console.log('📦 SESSION 91: Non-private report - Loading from centers_archive (wizard data preserved)');
+            console.log('📋 Archive has', helper.centers_archive.length, 'centers');
             damageBlocks = helper.centers_archive.map((center, index) => adaptCenterToBlock(center, index));
           } else if (helper.centers && helper.centers.length > 0) {
+            console.log('📋 Loading from centers - count:', helper.centers.length);
             damageBlocks = helper.centers.map((center, index) => adaptCenterToBlock(center, index));
-          } else if (!hasAcceptedInvoice && helper.expertise?.damage_blocks && helper.expertise.damage_blocks.length > 0) {
-            // Only fallback to expertise in no-invoice scenario
-            console.log('📋 No invoice scenario - falling back to expertise damage_blocks');
+          } else if (helper.expertise?.damage_blocks && helper.expertise.damage_blocks.length > 0) {
+            console.log('📋 No centers found - falling back to expertise');
             damageBlocks = helper.expertise.damage_blocks.map((center, index) => adaptCenterToBlock(center, index));
           } else {
+            console.log('⚠️ No damage centers data found');
             damageBlocks = [];
           }
         }
