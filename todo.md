@@ -181,21 +181,37 @@ if (filteredInvoices && filteredInvoices.length > 0) {
 - [ ] Button should work and navigate to invoice_assignment.html
 - [ ] No need for page refresh
 
+**Fix 3: Invoice Date Display**
+- **File:** `/home/user/SmartVal/invoice upload.html`
+- **Location:** Lines 1527-1570 (populateInvoiceDropdown function)
+- **Change:** Replaced simple created_at date with multi-source date extraction
+- **Before:** Always used `invoice.created_at` (upload date)
+- **After:** Checks multiple sources in priority order:
+  1. `invoice.invoice_date` field (primary)
+  2. `invoice.ocr_structured_data['תאריך']` (OCR data)
+  3. `helper.invoices` array (legacy data)
+  4. `invoice.created_at` (fallback only)
+- **Impact:** Dropdown now shows actual invoice date from OCR/database instead of upload date
+- **Source:** Logic copied from final-report-builder.html (lines 11452-11494) where it works correctly
+
 ### Implementation Summary:
 
-✅ **Both fixes are minimal and surgical**
+✅ **All three fixes are minimal and surgical**
 - Fix 1: Added 2 lines (1 comment + 1 alert)
-- Fix 2: Removed inline style attribute
+- Fix 2: Removed inline style attribute + commented out setTimeout
+- Fix 3: Enhanced date extraction logic (matching existing pattern from final-report-builder.html)
 
 ✅ **No breaking changes**
 - All existing logic preserved
 - No database queries changed
 - No function signatures changed
+- Fallback to upload date still exists
 
 ✅ **Scope compliance**
 - Only touched the specific issues reported
 - No changes to other functionality
 - Simple, focused changes
+- Reused existing working logic from final-report-builder.html
 
 ---
 
