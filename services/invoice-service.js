@@ -99,7 +99,7 @@ class InvoiceService {
         invoice_type: invoiceData.invoice_type || 'PARTS',
         supplier_name: invoiceData.supplier_name,
         supplier_tax_id: invoiceData.supplier_tax_id || null,
-        status: invoiceData.status || 'PENDING',  // Changed from DRAFT to PENDING - ready for assignment
+        status: invoiceData.status || 'PENDING',  // Ready for assignment (after DB constraint update)
         total_before_tax: invoiceData.total_before_tax || null,
         tax_amount: invoiceData.tax_amount || invoiceData.vat_amount || null,
         total_amount: invoiceData.total_amount

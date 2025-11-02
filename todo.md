@@ -1469,3 +1469,206 @@ The main issue appears to be that work/repair input fields may not be properly c
 
 ---
 
+# Database Constraint Investigation: invoices_status_check
+
+**Date:** 2025-11-02
+**Priority:** 🔴 CRITICAL - Database Constraint Violation
+**Status:** Investigation Complete - Constraint Identified
+
+---
+
+## 📋 EXECUTIVE SUMMARY
+
+**Problem:** Error "new row for relation 'invoices' violates check constraint 'invoices_status_check'" occurs when trying to update invoice status to 'PENDING' or 'ASSIGNED'.
+
+**Root Cause:** The current database CHECK constraint on the invoices table only allows these status values: `('DRAFT', 'SENT', 'PAID', 'CANCELLED')` but the application code is trying to use `'PENDING'` and `'ASSIGNED'` statuses.
+
+**Location:** Constraint defined in `/supabase/sql/Unassigned_SQL/20250926_initial_schema.sql` at line 132.
+
+---
+
+## 🔍 INVESTIGATION FINDINGS
+
+### Current Database Constraint (AS-IS)
+```sql
+-- From 20250926_initial_schema.sql line 132
+CREATE TABLE IF NOT EXISTS public.invoices (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  case_id UUID REFERENCES public.cases(id) ON DELETE CASCADE,
+  plate TEXT NOT NULL,
+  invoice_number TEXT UNIQUE,
+  invoice_type TEXT CHECK (invoice_type IN ('PARTS', 'LABOR', 'TOWING', 'OTHER')),
+  supplier_name TEXT,
+  supplier_tax_id TEXT,
+  issue_date DATE,
+  due_date DATE,
+  status TEXT DEFAULT 'DRAFT' CHECK (status IN ('DRAFT', 'SENT', 'PAID', 'CANCELLED')), ❌
+  total_before_tax NUMERIC(10,2),
+  tax_amount NUMERIC(10,2),
+  total_amount NUMERIC(10,2),
+  metadata JSONB,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+```
+
+### Application Code Usage (ACTUAL NEED)
+
+**1. Invoice Upload Module (`invoice upload.html`):**
+```javascript
+// Line 3059 & 3894
+status: 'PENDING'  // Changed from DRAFT to PENDING - ready for assignment
+```
+
+**2. Invoice Assignment Module (`invoice_assignment.html`):**
+```javascript
+// Line 947 & 966 - Searching for PENDING invoices
+.eq('status', 'PENDING');  // Only load invoices ready for assignment
+
+// Line 1437 - Updating to ASSIGNED
+.update({ status: 'ASSIGNED' })
+```
+
+**3. Final Report Builder (`final-report-builder.html`):**
+```javascript
+// Trying to update invoice status from PENDING to ASSIGNED
+// This is what's causing the constraint violation error
+```
+
+### Error Locations Found
+
+**Session 88 Error Log:**
+- Multiple occurrences of the constraint violation error
+- All attempts to update invoice status to 'PENDING' or 'ASSIGNED' are failing
+- Error code: 23514 (CHECK constraint violation)
+
+---
+
+## 🛠️ SOLUTION REQUIRED
+
+### Database Schema Update Needed
+
+**Current constraint:**
+```sql
+CHECK (status IN ('DRAFT', 'SENT', 'PAID', 'CANCELLED'))
+```
+
+**Required constraint:**
+```sql
+CHECK (status IN ('DRAFT', 'PENDING', 'ASSIGNED', 'SENT', 'PAID', 'CANCELLED'))
+```
+
+### Implementation Plan
+
+**Option 1: Update Existing Constraint (Recommended)**
+```sql
+-- Remove old constraint
+ALTER TABLE public.invoices DROP CONSTRAINT invoices_status_check;
+
+-- Add new constraint with additional statuses
+ALTER TABLE public.invoices ADD CONSTRAINT invoices_status_check 
+CHECK (status IN ('DRAFT', 'PENDING', 'ASSIGNED', 'SENT', 'PAID', 'CANCELLED'));
+```
+
+**Option 2: Use Existing Allowed Values**
+- Change application code to use 'DRAFT' instead of 'PENDING'
+- Change application code to use 'SENT' instead of 'ASSIGNED'
+- **Not recommended** - loses semantic meaning
+
+### Status Value Meanings
+
+| Status | When Used | Purpose |
+|--------|-----------|---------|
+| `DRAFT` | Initial creation | Invoice created but not ready |
+| `PENDING` | Ready for assignment | Invoice uploaded and ready to be assigned to damage centers |
+| `ASSIGNED` | After assignment | Invoice lines have been mapped to damage centers |
+| `SENT` | After submission | Invoice sent to external systems |
+| `PAID` | Payment received | Invoice has been paid |
+| `CANCELLED` | Cancelled | Invoice is cancelled |
+
+---
+
+## 📝 CONSTRAINT UPDATE SCRIPT
+
+**File to create:** `/supabase/sql/Phase_Fix/01_update_invoice_status_constraint.sql`
+
+```sql
+-- =====================================================
+-- Fix: Update Invoice Status Constraint
+-- Date: 2025-11-02
+-- Issue: invoices_status_check constraint missing PENDING and ASSIGNED
+-- =====================================================
+
+-- Remove existing constraint
+ALTER TABLE public.invoices DROP CONSTRAINT IF EXISTS invoices_status_check;
+
+-- Add updated constraint with all required status values
+ALTER TABLE public.invoices ADD CONSTRAINT invoices_status_check 
+CHECK (status IN ('DRAFT', 'PENDING', 'ASSIGNED', 'SENT', 'PAID', 'CANCELLED'));
+
+-- Verify constraint
+SELECT conname, pg_get_constraintdef(oid) 
+FROM pg_constraint 
+WHERE conrelid = 'public.invoices'::regclass 
+AND conname = 'invoices_status_check';
+
+-- Comments for documentation
+COMMENT ON CONSTRAINT invoices_status_check ON public.invoices IS 
+'Allowed invoice statuses: DRAFT (initial), PENDING (ready for assignment), ASSIGNED (mapped to damage centers), SENT (submitted), PAID (payment received), CANCELLED (cancelled)';
+```
+
+---
+
+## 🧪 TESTING CHECKLIST
+
+After applying the fix:
+
+- [ ] **Verify constraint update:**
+  ```sql
+  SELECT conname, pg_get_constraintdef(oid) 
+  FROM pg_constraint 
+  WHERE conrelid = 'public.invoices'::regclass 
+  AND conname = 'invoices_status_check';
+  ```
+
+- [ ] **Test PENDING status:**
+  ```sql
+  UPDATE invoices SET status = 'PENDING' WHERE id = 'test-invoice-id';
+  ```
+
+- [ ] **Test ASSIGNED status:**
+  ```sql
+  UPDATE invoices SET status = 'ASSIGNED' WHERE id = 'test-invoice-id';
+  ```
+
+- [ ] **Test invoice upload** - Should create invoices with status 'PENDING'
+- [ ] **Test invoice assignment** - Should update status from 'PENDING' to 'ASSIGNED'
+- [ ] **Verify old statuses still work** - DRAFT, SENT, PAID, CANCELLED
+
+---
+
+## ⚠️ IMPORTANT NOTES
+
+**What this fixes:**
+- ✅ Invoice upload setting status to 'PENDING'
+- ✅ Invoice assignment updating status to 'ASSIGNED'
+- ✅ All current invoice workflow functionality
+
+**What stays the same:**
+- ✅ All existing invoice records (no data changes)
+- ✅ All other constraints and table structure
+- ✅ Application logic (no code changes needed)
+
+**Risk level:** LOW
+- Non-destructive change (only expanding allowed values)
+- No existing data affected
+- Backward compatible with all current statuses
+
+---
+
+**Status:** ✅ CONSTRAINT IDENTIFIED - Ready for Database Update
+**Next Action:** Apply the SQL constraint update script to Supabase
+**Files Affected:** Database schema only (no application code changes needed)
+
+---
+
