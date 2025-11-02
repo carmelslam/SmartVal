@@ -11329,6 +11329,18 @@
           
           if (!allInvoices || allInvoices.length === 0) {
             console.log('ℹ️ SESSION 88: No invoices found in database for this case');
+            
+            // SESSION 91 FIX: Clear archive when NO invoices exist
+            const helper = window.helper || {};
+            if (helper.centers_archive) {
+              console.log('🧹 SESSION 91: No invoices in system - clearing centers_archive');
+              delete helper.centers_archive;
+              delete helper.centers_archive_meta;
+              sessionStorage.setItem('helper', JSON.stringify(helper));
+              window.helper = helper;
+              console.log('✅ Archive cleared - system back to no-invoice state');
+            }
+            
             hideInvoiceAssignmentBanner();
             return;
           }
@@ -13605,6 +13617,42 @@
         success: true,
         centersRestored: helper.centers.length,
         message: 'Centers restored from archive'
+      };
+    };
+
+    // SESSION 91: Clear centers archive manually
+    window.clearCentersArchive = function() {
+      console.log('🧹 SESSION 91: Manually clearing centers_archive');
+      const helper = window.helper || {};
+      
+      if (!helper.centers_archive) {
+        console.log('ℹ️ No archive exists to clear');
+        return { message: 'No archive exists' };
+      }
+      
+      console.log('📋 Before clearing:');
+      console.log('  - Archive had', helper.centers_archive.length, 'centers');
+      console.log('  - Archive metadata:', helper.centers_archive_meta);
+      
+      // Delete archive and its metadata
+      delete helper.centers_archive;
+      delete helper.centers_archive_meta;
+      
+      // Save changes
+      sessionStorage.setItem('helper', JSON.stringify(helper));
+      window.helper = helper;
+      
+      console.log('✅ Archive cleared successfully');
+      console.log('ℹ️ System is now in no-invoice state');
+      
+      // Refresh UI to reflect changes
+      if (typeof loadDamageCentersFromHelper === 'function') {
+        loadDamageCentersFromHelper(helper);
+      }
+      
+      return {
+        success: true,
+        message: 'Archive cleared - system in no-invoice state'
       };
     };
 
