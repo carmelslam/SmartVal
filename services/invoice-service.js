@@ -90,8 +90,8 @@ class InvoiceService {
       }
 
       // SESSION 79: Insert invoice record - MATCH ACTUAL SCHEMA
-      // Actual columns: id, case_id, plate, invoice_number, invoice_type, supplier_name, 
-      //                 supplier_tax_id, status, total_before_tax, tax_amount, total_amount
+      // Actual columns: id, case_id, plate, invoice_number, invoice_type, supplier_name,
+      //                 supplier_tax_id, invoice_date, status, total_before_tax, tax_amount, total_amount
       const invoiceInsert = {
         case_id: caseId,
         plate: invoiceData.plate,
@@ -99,6 +99,7 @@ class InvoiceService {
         invoice_type: invoiceData.invoice_type || 'PARTS',
         supplier_name: invoiceData.supplier_name,
         supplier_tax_id: invoiceData.supplier_tax_id || null,
+        invoice_date: invoiceData.invoice_date || null,  // Invoice date from OCR or manual input
         status: invoiceData.status || 'PENDING',  // Ready for assignment (after DB constraint update)
         total_before_tax: invoiceData.total_before_tax || null,
         tax_amount: invoiceData.tax_amount || invoiceData.vat_amount || null,
