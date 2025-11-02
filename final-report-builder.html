@@ -11630,6 +11630,42 @@
         // Phase 2: Archive parts_search.required_parts before invoice import
         await archivePartsSearchData();
         
+        // Phase 2.5: Create centers archive for non-private reports
+        const helper = window.helper || {};
+        const currentReportType = helper.final_report?.type || helper.final_report?.dropdown_type || 
+                                document.querySelector('input[name="final-report-type"]:checked')?.value;
+
+        console.log('🔍 Current report type for archive decision:', currentReportType);
+
+        if (currentReportType !== 'חוות דעת פרטית') {
+          console.log('📦 Creating centers archive for non-private report...');
+          
+          if (!helper.centers_archive && helper.centers) {
+            // Create deep copy of current centers
+            helper.centers_archive = JSON.parse(JSON.stringify(helper.centers));
+            
+            // Add metadata
+            helper.centers_archive_meta = {
+              created_at: new Date().toISOString(),
+              report_type: currentReportType,
+              original_centers_count: helper.centers.length,
+              purpose: 'preserve_wizard_data_for_non_private_reports'
+            };
+            
+            // Save to sessionStorage
+            sessionStorage.setItem('helper', JSON.stringify(helper));
+            
+            console.log(`✅ Created centers_archive with ${helper.centers.length} centers for non-private report`);
+            console.log('📋 Archive metadata:', helper.centers_archive_meta);
+          } else if (helper.centers_archive) {
+            console.log('ℹ️ Centers archive already exists, skipping creation');
+          } else {
+            console.warn('⚠️ No helper.centers found to archive');
+          }
+        } else {
+          console.log('ℹ️ Private report - no archive needed, will populate centers directly');
+        }
+        
         // Phase 3: Convert invoice mappings to helper format (Private reports only)
         // For other report types, invoice data will be available in dropdowns
         await convertInvoiceMappingsToHelperFormat(checkedInvoices);
@@ -11660,6 +11696,10 @@
         // Method 2: Explicitly refresh damage centers section
         if (typeof loadDamageCentersFromHelper === 'function') {
           console.log('🔄 Explicitly refreshing damage centers...');
+          console.log('🔍 DEBUG: helper.centers before refresh:', window.helper?.centers?.length);
+          // Force reload of localStorage helper first
+          const refreshedHelper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+          window.helper = refreshedHelper;
           loadDamageCentersFromHelper(window.helper);
           console.log('✅ Damage centers refreshed');
         }
@@ -11992,6 +12032,13 @@
         if (currentReportType !== 'חוות דעת פרטית') {
           console.log('ℹ️ Report type is not Private - invoice data will be available in dropdowns only');
           console.log('ℹ️ Keeping existing wizard data in damage centers');
+          
+          // ADD ARCHIVE STATUS LOGGING:
+          console.log('📋 Archive status:');
+          console.log('  - centers_archive exists:', !!helper.centers_archive);
+          console.log('  - centers_archive count:', helper.centers_archive?.length || 0);
+          console.log('  - Archive will be used for this report type');
+          
           // Load invoice data into global scope for dropdown access
           await prepareInvoiceDataForDropdowns(selectedInvoices, caseId);
           return; // Exit early for non-private reports
@@ -12033,6 +12080,29 @@
             .eq('mapping_status', 'pending');  // Only get pending mappings
           
           console.log(`📋 Query result - mappings:`, mappings, 'error:', error);
+
+          // ADD ENHANCED DEBUG BLOCK:
+          if (!mappings || mappings.length === 0) {
+            console.warn(`⚠️ No PENDING mappings found for invoice ${invoice.invoice_number}`);
+            
+            // Debug: Check what mappings exist for this case/invoice without status filter
+            console.log(`🔍 DEBUG: Checking ALL mappings for invoice ${invoice.id}...`);
+            const { data: allMappings } = await window.supabase
+              .from('invoice_damage_center_mappings')
+              .select('*')
+              .eq('invoice_id', invoice.id)
+              .eq('case_id', caseId);
+            console.log(`🔍 DEBUG: All mappings found:`, allMappings);
+            
+            // Debug: Check mappings for this case with any status
+            const { data: caseMappings } = await window.supabase
+              .from('invoice_damage_center_mappings')
+              .select('*')
+              .eq('case_id', caseId);
+            console.log(`🔍 DEBUG: All mappings for case ${caseId}:`, caseMappings);
+            
+            continue;
+          }
           
           if (error) {
             console.error('❌ Error fetching mappings:', error);
@@ -12078,15 +12148,21 @@
             console.log(`🔧 Converting ${mapping.field_type} mapping to UI format for center ${centerCode}`);
             
             switch (mapping.field_type) {
-              case 'parts':
+              case 'part':
                 const partItem = convertMappingToPart(mapping, invoice);
                 if (!center.Parts) center.Parts = { parts_required: [] };
                 if (!center.Parts.parts_required) center.Parts.parts_required = [];
+                
+                // ADD ENHANCED DEBUG:
+                console.log(`🔍 DEBUG: BEFORE adding part - center ${centerCode} has ${center.Parts.parts_required.length} parts`);
                 center.Parts.parts_required.push(partItem);
+                console.log(`🔍 DEBUG: AFTER adding part - center ${centerCode} has ${center.Parts.parts_required.length} parts`);
+                console.log(`🔍 DEBUG: Added part:`, partItem);
+                
                 console.log(`✅ Added part to center. Total parts now: ${center.Parts.parts_required.length}`);
                 break;
                 
-              case 'works':
+              case 'work':
                 const workItem = convertMappingToWork(mapping, invoice);
                 if (!center.Works) center.Works = { works: [] };
                 if (!center.Works.works) center.Works.works = [];
@@ -12094,7 +12170,7 @@
                 console.log(`✅ Added work to center. Total works now: ${center.Works.works.length}`);
                 break;
                 
-              case 'repairs':
+              case 'repair':
                 const repairItem = convertMappingToRepair(mapping, invoice);
                 if (!center.Repairs) center.Repairs = { repairs: [] };
                 if (!center.Repairs.repairs) center.Repairs.repairs = [];
@@ -13008,19 +13084,6 @@
       console.log('  - Plate data:', window.helper?.meta?.plate || window.helper?.car_details?.plate || 'none');
       console.log('  - Test invoice data added');
       
-      // Add test invoice data immediately
-      if (window.helper) {
-        if (!window.helper.invoices) window.helper.invoices = [];
-        window.helper.invoices.push({
-          id: 'manual-test-invoice',
-          invoice_number: 'MANUAL-TEST',
-          line_items: [
-            { description: 'בלם קדמי ימין', unit_price: 150, line_total: 150 },
-            { description: 'מגן קדמי', unit_price: 800, line_total: 800 }
-          ]
-        });
-        console.log('✅ Test invoice data added to helper.invoices');
-      }
       
       // Test hasInvoiceAssignments
       const hasAssignments = hasInvoiceAssignments();
@@ -13087,6 +13150,143 @@
         categories: window.PARTS_BANK?.length || 0,
         layerItems: getCombinedDropdownData('').filter(p => p.layer === 4).length
       };
+    };
+
+    // SESSION 91: Real data validation (no test data)
+    window.validateRealInvoiceData = async function() {
+      console.log('🧪 SESSION 91: REAL INVOICE DATA VALIDATION');
+      console.log('📋 This function tests with REAL database data only');
+      
+      const helper = window.helper || {};
+      const caseId = helper.case_info?.supabase_case_id || helper.meta?.case_id;
+      
+      if (!caseId) {
+        console.error('❌ No case_id found');
+        return { error: 'No case_id found' };
+      }
+      
+      if (!window.supabase) {
+        console.error('❌ Supabase not available');
+        return { error: 'Supabase not available' };
+      }
+      
+      console.log('🔍 Checking real database data...');
+      
+      // 1. Check invoices table
+      const { data: invoices, error: invError } = await window.supabase
+        .from('invoices')
+        .select('*')
+        .eq('case_id', caseId);
+      
+      console.log('📋 Real invoices in database:', invoices?.length || 0);
+      if (invoices?.length > 0) {
+        console.log('📋 Invoice statuses:', invoices.map(i => ({ id: i.id, status: i.status })));
+      }
+      
+      // 2. Check mappings table
+      const { data: mappings, error: mapError } = await window.supabase
+        .from('invoice_damage_center_mappings')
+        .select('*')
+        .eq('case_id', caseId);
+      
+      console.log('📋 Real mappings in database:', mappings?.length || 0);
+      if (mappings?.length > 0) {
+        const statusBreakdown = {};
+        mappings.forEach(m => {
+          statusBreakdown[m.mapping_status] = (statusBreakdown[m.mapping_status] || 0) + 1;
+        });
+        console.log('📋 Mapping status breakdown:', statusBreakdown);
+      }
+      
+      // 3. Test Layer 1 dropdown with real data ONLY
+      console.log('🔍 Testing Layer 1 dropdown with real data...');
+      
+      // Temporarily clear any test data
+      const originalInvoices = helper.invoices;
+      delete helper.invoices;
+      delete window.invoiceDataForDropdowns;
+      
+      const dropdownData = getCombinedDropdownData('');
+      const layer1Items = dropdownData.filter(p => p.layer === 1);
+      
+      console.log('📋 Layer 1 items with real data only:', layer1Items.length);
+      if (layer1Items.length > 0) {
+        console.log('✅ Sample Layer 1 items:', layer1Items.slice(0, 3));
+      }
+      
+      // Restore original state
+      if (originalInvoices) helper.invoices = originalInvoices;
+      
+      return {
+        caseId,
+        realInvoices: invoices?.length || 0,
+        realMappings: mappings?.length || 0,
+        pendingMappings: mappings?.filter(m => m.mapping_status === 'pending').length || 0,
+        layer1ItemsReal: layer1Items.length,
+        success: true
+      };
+    };
+
+    // SESSION 91: Step-by-step flow tester
+    window.testAcceptFlowStep = async function(step) {
+      console.log(`🧪 SESSION 91: Testing step ${step} of accept flow`);
+      
+      const helper = window.helper || {};
+      
+      switch(step) {
+        case 1:
+          console.log('STEP 1: Check selected invoices');
+          const selected = getSelectedInvoices();
+          console.log('Selected invoices:', selected);
+          return { step: 1, selectedInvoices: selected.length, success: true };
+          
+        case 2:
+          console.log('STEP 2: Test query for mappings');
+          const caseId = helper.case_info?.supabase_case_id;
+          if (!caseId || !window.supabase) {
+            return { step: 2, error: 'Missing case_id or supabase' };
+          }
+          
+          const { data: mappings } = await window.supabase
+            .from('invoice_damage_center_mappings')
+            .select('*')
+            .eq('case_id', caseId)
+            .eq('mapping_status', 'pending');
+          
+          console.log('Pending mappings found:', mappings?.length || 0);
+          return { step: 2, pendingMappings: mappings?.length || 0, success: true };
+          
+        case 3:
+          console.log('STEP 3: Test helper.centers modification');
+          const beforeCount = helper.centers?.reduce((sum, c) => sum + (c.Parts?.parts_required?.length || 0), 0) || 0;
+          console.log('Parts before:', beforeCount);
+          
+          // Simulate adding a part
+          if (helper.centers && helper.centers[0]) {
+            if (!helper.centers[0].Parts) helper.centers[0].Parts = { parts_required: [] };
+            helper.centers[0].Parts.parts_required.push({
+              part_name: 'TEST PART',
+              source: 'test',
+              row_uuid: 'test_' + Date.now()
+            });
+          }
+          
+          const afterCount = helper.centers?.reduce((sum, c) => sum + (c.Parts?.parts_required?.length || 0), 0) || 0;
+          console.log('Parts after:', afterCount);
+          
+          return { step: 3, partsBefore: beforeCount, partsAfter: afterCount, success: afterCount > beforeCount };
+          
+        case 4:
+          console.log('STEP 4: Test UI refresh');
+          if (typeof loadDamageCentersFromHelper === 'function') {
+            loadDamageCentersFromHelper(helper);
+            return { step: 4, refreshCalled: true, success: true };
+          }
+          return { step: 4, error: 'loadDamageCentersFromHelper not available' };
+          
+        default:
+          return { error: 'Invalid step number' };
+      }
     };
     
     // Start the persistent checker immediately
@@ -13752,25 +13952,52 @@
         // LAYER 1: 🧾 Invoice lines (from current case invoices)
         console.log('📋 שכבה 1: בדיקת שורות חשבונית...');
         let invoiceCount = 0;
+
+        // ADD ENHANCED DEBUG BLOCK:
+        console.log('🔍 DEBUG: helper structure for invoices:');
+        console.log('  - helper.invoices exists:', !!helper?.invoices);
+        console.log('  - helper.invoices type:', typeof helper?.invoices);
+        console.log('  - helper.invoices length:', helper?.invoices?.length || 0);
+        if (helper?.invoices?.length > 0) {
+          console.log('  - Sample invoice structure:', helper.invoices[0]);
+          console.log('  - Sample line_items:', helper.invoices[0]?.line_items);
+        }
         
         // Try helper.invoices first (populated by prepareInvoiceDataForDropdowns)
         if (helper?.invoices && Array.isArray(helper.invoices)) {
           helper.invoices.forEach((invoice, idx) => {
+            console.log(`🔍 Processing invoice ${idx}:`, invoice);
+            
+            // Handle different invoice structures
+            let lineItems = [];
             if (invoice.line_items && Array.isArray(invoice.line_items)) {
-              invoice.line_items.forEach(line => {
-                if (line.description && (!query || line.description.toLowerCase().includes(query.toLowerCase()))) {
-                  allParts.push({
-                    name: line.description,
-                    description: line.details || line.notes || '',
-                    price: line.amount || line.total || line.unit_price || 0,
-                    source: `🧾 חשבונית ${invoice.invoice_number || idx + 1}`,
-                    layer: 1,
-                    original: line
-                  });
-                  invoiceCount++;
-                }
-              });
+              lineItems = invoice.line_items;
+            } else if (invoice.lines && Array.isArray(invoice.lines)) {
+              lineItems = invoice.lines;
+            } else if (invoice.items && Array.isArray(invoice.items)) {
+              lineItems = invoice.items;
             }
+            
+            console.log(`🔍 Found ${lineItems.length} line items in invoice ${idx}`);
+            
+            lineItems.forEach((line, lineIdx) => {
+              console.log(`🔍 Processing line ${lineIdx}:`, line);
+              const description = line.description || line.name || line.item_name || line.part_name;
+              
+              if (description && (!query || description.toLowerCase().includes(query.toLowerCase()))) {
+                const partData = {
+                  name: description,
+                  description: line.details || line.notes || line.comments || '',
+                  price: line.amount || line.total || line.unit_price || line.price || 0,
+                  source: `🧾 חשבונית ${invoice.invoice_number || `${idx + 1}`}`,
+                  layer: 1,
+                  original: line
+                };
+                allParts.push(partData);
+                invoiceCount++;
+                console.log(`✅ Added invoice part to Layer 1:`, partData);
+              }
+            });
           });
         }
         
