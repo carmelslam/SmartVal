@@ -12084,6 +12084,17 @@
           console.log('ℹ️ Report type is not Private - will load data to dropdowns only');
           console.log('ℹ️ Centers will display from centers_archive');
           
+          // SESSION 91 FIX: For non-private reports, we need to ensure the UI uses the archive
+          // The archive preserves the wizard data while invoice data goes to dropdowns only
+          if (helper.centers_archive) {
+            console.log('📦 SESSION 91: Non-private report - UI will read from centers_archive');
+            console.log('📋 Archive has', helper.centers_archive.length, 'centers preserved from wizard');
+            
+            // Save helper to ensure centers_archive is available for UI
+            sessionStorage.setItem('helper', JSON.stringify(helper));
+            window.helper = helper;
+          }
+          
           // Load invoice data into global scope for dropdown access
           await prepareInvoiceDataForDropdowns(selectedInvoices, caseId);
           return; // Exit early for non-private reports
@@ -13485,6 +13496,43 @@
         success: true,
         partAdded: testPart,
         centerPartsCount: helper.centers[0].Parts.parts_required.length
+      };
+    };
+
+    // SESSION 91 FIX: Test archive usage
+    window.testArchiveUsage = function() {
+      console.log('🧪 SESSION 91: Testing centers_archive usage');
+      const helper = window.helper || {};
+      
+      const currentReportType = helper.final_report?.type || helper.final_report?.dropdown_type || 
+                              document.querySelector('input[name="final-report-type"]:checked')?.value;
+      
+      console.log('📋 Current report type:', currentReportType);
+      console.log('📋 centers exists:', !!helper.centers, 'length:', helper.centers?.length || 0);
+      console.log('📋 centers_archive exists:', !!helper.centers_archive, 'length:', helper.centers_archive?.length || 0);
+      console.log('📋 Archive metadata:', helper.centers_archive_meta);
+      
+      // Test what loadDamageCentersFromHelper would use
+      const hasAcceptedInvoice = helper.centers_archive && helper.centers_archive_meta;
+      const wouldUseArchive = hasAcceptedInvoice && currentReportType !== 'חוות דעת פרטית' && helper.centers_archive.length > 0;
+      
+      console.log('📋 Has accepted invoice:', hasAcceptedInvoice);
+      console.log('📋 Would use archive:', wouldUseArchive);
+      
+      if (wouldUseArchive) {
+        console.log('✅ Non-private report will correctly use centers_archive');
+      } else if (currentReportType === 'חוות דעת פרטית') {
+        console.log('✅ Private report will use centers (with invoice data)');
+      } else {
+        console.log('ℹ️ No invoice accepted yet - will use centers');
+      }
+      
+      return {
+        reportType: currentReportType,
+        hasArchive: !!helper.centers_archive,
+        archiveLength: helper.centers_archive?.length || 0,
+        centersLength: helper.centers?.length || 0,
+        wouldUseArchive: wouldUseArchive
       };
     };
 
@@ -17657,9 +17705,23 @@
         } else {
           // Called with helper object (from refresh system) - extract and normalize damage centers
           const helper = damageBlocksOrHelper || {};
-          if (helper.centers && helper.centers.length > 0) {
+          
+          // SESSION 91 FIX: Check for centers_archive FIRST (for non-private reports after invoice accept)
+          // Check if we should use archive (non-private reports with accepted invoice)
+          const currentReportType = helper.final_report?.type || helper.final_report?.dropdown_type || 
+                                  document.querySelector('input[name="final-report-type"]:checked')?.value;
+          const hasAcceptedInvoice = helper.centers_archive && helper.centers_archive_meta;
+          
+          if (hasAcceptedInvoice && currentReportType !== 'חוות דעת פרטית' && helper.centers_archive.length > 0) {
+            console.log('📦 SESSION 91: Non-private report with invoice - Loading from centers_archive');
+            console.log('📋 Report type:', currentReportType);
+            console.log('📋 Archive created at:', helper.centers_archive_meta?.created_at);
+            damageBlocks = helper.centers_archive.map((center, index) => adaptCenterToBlock(center, index));
+          } else if (helper.centers && helper.centers.length > 0) {
             damageBlocks = helper.centers.map((center, index) => adaptCenterToBlock(center, index));
-          } else if (helper.expertise?.damage_blocks && helper.expertise.damage_blocks.length > 0) {
+          } else if (!hasAcceptedInvoice && helper.expertise?.damage_blocks && helper.expertise.damage_blocks.length > 0) {
+            // Only fallback to expertise in no-invoice scenario
+            console.log('📋 No invoice scenario - falling back to expertise damage_blocks');
             damageBlocks = helper.expertise.damage_blocks.map((center, index) => adaptCenterToBlock(center, index));
           } else {
             damageBlocks = [];
