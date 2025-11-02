@@ -11328,17 +11328,27 @@
           }
           
           if (!allInvoices || allInvoices.length === 0) {
-            console.log('ℹ️ SESSION 88: No invoices found in database for this case');
+            console.log('ℹ️ SESSION 88: No ASSIGNED invoices found for this case');
             
-            // SESSION 91 FIX: Clear archive when NO invoices exist
-            const helper = window.helper || {};
-            if (helper.centers_archive) {
-              console.log('🧹 SESSION 91: No invoices in system - clearing centers_archive');
-              delete helper.centers_archive;
-              delete helper.centers_archive_meta;
-              sessionStorage.setItem('helper', JSON.stringify(helper));
-              window.helper = helper;
-              console.log('✅ Archive cleared - system back to no-invoice state');
+            // SESSION 91 FIX: Only clear archive if NO invoices exist at all (any status)
+            // Check for ANY invoices including ACCEPTED ones
+            const { data: anyInvoices } = await window.supabase
+              .from('invoices')
+              .select('id')
+              .eq('case_id', caseId);
+            
+            if (!anyInvoices || anyInvoices.length === 0) {
+              console.log('🧹 SESSION 91: No invoices AT ALL in system - clearing centers_archive');
+              const helper = window.helper || {};
+              if (helper.centers_archive) {
+                delete helper.centers_archive;
+                delete helper.centers_archive_meta;
+                sessionStorage.setItem('helper', JSON.stringify(helper));
+                window.helper = helper;
+                console.log('✅ Archive cleared - system back to no-invoice state');
+              }
+            } else {
+              console.log('ℹ️ SESSION 91: Archive preserved - found', anyInvoices.length, 'invoices in system');
             }
             
             hideInvoiceAssignmentBanner();
