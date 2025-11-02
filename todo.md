@@ -194,24 +194,46 @@ if (filteredInvoices && filteredInvoices.length > 0) {
 - **Impact:** Dropdown now shows actual invoice date from OCR/database instead of upload date
 - **Source:** Logic copied from final-report-builder.html (lines 11452-11494) where it works correctly
 
+**Fix 4: Populate invoice_date Field in Database**
+- **Files:**
+  1. `/home/user/SmartVal/services/invoice-service.js`
+  2. `/home/user/SmartVal/invoice upload.html`
+- **Changes:**
+  1. **invoice-service.js (Line 102):** Added `invoice_date: invoiceData.invoice_date || null` to invoiceInsert
+  2. **invoice upload.html - Manual Invoice (Line 3937):** Added `invoice_date: invoiceData['תאריך'] || null`
+  3. **invoice upload.html - OCR Invoice (Line 3102):** Added `invoice_date: ocrResult['תאריך'] || ocrResult.date || null`
+- **Impact:**
+  - Invoice date now properly saved to `invoices.invoice_date` field in database
+  - Date extracted from OCR data (field 'תאריך') or manual input
+  - Eliminates need to always fallback to `created_at` or extract from ocr_structured_data
+  - Invoice dates now queryable directly from database column
+
 ### Implementation Summary:
 
-✅ **All three fixes are minimal and surgical**
+✅ **All four fixes are minimal and surgical**
 - Fix 1: Added 2 lines (1 comment + 1 alert)
 - Fix 2: Removed inline style attribute + commented out setTimeout
 - Fix 3: Enhanced date extraction logic (matching existing pattern from final-report-builder.html)
+- Fix 4: Added invoice_date field to 3 database insert locations
 
 ✅ **No breaking changes**
 - All existing logic preserved
-- No database queries changed
+- Database schema unchanged (invoice_date column already exists)
 - No function signatures changed
-- Fallback to upload date still exists
+- Fallback to created_at still exists in display logic
+- All date extraction sources still checked
 
 ✅ **Scope compliance**
 - Only touched the specific issues reported
 - No changes to other functionality
 - Simple, focused changes
 - Reused existing working logic from final-report-builder.html
+
+### Where Invoice Date Comes From:
+1. **Manual Invoices:** `document.getElementById('manual-date').value` → saved as `invoiceData['תאריך']`
+2. **OCR Invoices:** OCR result field `'תאריך'` from webhook response
+3. **Database:** Now saved to `invoices.invoice_date` column
+4. **Display Logic:** Uses priority: `invoice.invoice_date` → `ocr_structured_data['תאריך']` → `helper.invoices` → `created_at` (fallback)
 
 ---
 

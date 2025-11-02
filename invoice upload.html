@@ -1524,51 +1524,10 @@ class InvoiceProcessor {
     invoices.forEach(invoice => {
       const option = document.createElement('option');
 
-      // Extract invoice date (same logic as final-report-builder.html)
-      let invoiceDate = null;
-
-      // Primary source: invoice.invoice_date field (if exists in database)
-      if (invoice.invoice_date) {
-        invoiceDate = invoice.invoice_date;
-      }
-
-      // Secondary source: OCR structured data with Hebrew field name
-      if (!invoiceDate && invoice.ocr_structured_data && invoice.ocr_structured_data['תאריך']) {
-        invoiceDate = invoice.ocr_structured_data['תאריך'];
-      }
-
-      // Tertiary source: helper.invoices array (legacy data)
-      if (!invoiceDate) {
-        const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
-        const helperInvoice = helper.invoices?.find(inv =>
-          inv.id === invoice.id ||
-          (inv.invoice_number && inv.invoice_number === invoice.invoice_number)
-        );
-        if (helperInvoice) {
-          invoiceDate = helperInvoice['תאריך'] || helperInvoice.date || helperInvoice.invoice_date;
-        }
-      }
-
-      // Format date for display
-      let displayDate;
-      if (invoiceDate) {
-        try {
-          // Handle various date formats
-          const dateObj = new Date(invoiceDate);
-          if (!isNaN(dateObj.getTime())) {
-            displayDate = dateObj.toLocaleDateString('he-IL');
-          } else {
-            // If parsing fails, use string as-is (might be Hebrew date)
-            displayDate = invoiceDate.toString();
-          }
-        } catch (e) {
-          displayDate = invoiceDate.toString();
-        }
-      } else {
-        // Final fallback: upload date
-        displayDate = new Date(invoice.created_at).toLocaleDateString('he-IL');
-      }
-
+      // Use invoice_date from database if available, otherwise fallback to created_at
+      const displayDate = invoice.invoice_date
+        ? new Date(invoice.invoice_date).toLocaleDateString('he-IL')
+        : new Date(invoice.created_at).toLocaleDateString('he-IL');
       const supplierName = invoice.supplier_name || 'לא צוין';
       option.text = `${supplierName} - ${displayDate}`;
       option.value = invoice.id;
@@ -3099,6 +3058,7 @@ class InvoiceProcessor {
             invoice_number: ocrResult['מס. חשבונית'] || ocrResult.invoice_number || `INV-${Date.now()}`,
             supplier_name: ocrResult['שם מוסך'] || document.getElementById('garage_name').value || 'לא צוין',
             supplier_tax_id: ocrResult['עוסק מורשה'] || null,
+            invoice_date: ocrResult['תאריך'] || ocrResult.date || null,  // Invoice date from OCR
             invoice_type: 'OTHER', // Default to OTHER (mixed invoice)
             total_amount: parsePrice(ocrResult['עלות כוללת']) || resultData.total,
             total_before_tax: parsePrice(ocrResult["עלות כוללת ללא מע'מ"]),
@@ -3934,6 +3894,7 @@ class InvoiceProcessor {
           invoice_number: invoiceData['מס. חשבונית'],
           supplier_name: invoiceData['שם מוסך'],
           supplier_tax_id: invoiceData['ח.פ.'] || null,
+          invoice_date: invoiceData['תאריך'] || null,  // Invoice date from manual input
           invoice_type: 'OTHER', // Mixed invoice with parts, works, repairs
           total_amount: grandTotal,
           total_before_tax: subtotal,
