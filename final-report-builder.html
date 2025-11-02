@@ -11257,28 +11257,9 @@
         console.log('  helper.final_report?.invoice_assignments:', helper.final_report?.invoice_assignments?.length || 'none');
         console.log('  window.invoiceDataForDropdowns:', window.invoiceDataForDropdowns?.invoice_lines?.length || 'none');
         
-        // TEST: Add test invoice data to see if 4-layer dropdown works
-        console.log('🧪 SESSION 90: Testing 4-layer dropdown with test data...');
-        if (!helper.invoices) helper.invoices = [];
-        helper.invoices.push({
-          id: 'test-invoice-1',
-          invoice_number: 'TEST-001',
-          line_items: [
-            { description: 'בלם קדמי ימין', unit_price: 150, line_total: 150 },
-            { description: 'מגן קדמי', unit_price: 800, line_total: 800 },
-            { description: 'פנס אחורי שמאל', unit_price: 300, line_total: 300 }
-          ]
-        });
-        
-        // Also test global fallback
-        window.invoiceDataForDropdowns = {
-          invoice_lines: [
-            { description: 'דלת קדמית ימין', unit_price: 1200, line_total: 1200 },
-            { description: 'כנף קדמית שמאל', unit_price: 600, line_total: 600 }
-          ]
-        };
-        
-        console.log('✅ SESSION 90: Test invoice data added for 4-layer dropdown testing');
+        // SESSION 90: Note - Removed automatic test data injection
+        // Test data can be added manually via manualInvoiceCheck() function
+        console.log('ℹ️ SESSION 90: Ready for invoice detection (no automatic test data)');
         
         if (!caseId && !plateNumber) {
           console.log('❌ SESSION 90: No case_id or plate found - cannot check invoices');
@@ -13067,6 +13048,47 @@
       return { hasAssignments, dropdownData: breakdown, success: true };
     };
     
+    // SESSION 90: Debug PARTS_BANK specifically
+    window.debugPartsBank = function() {
+      console.log('🔧 SESSION 90: PARTS_BANK Debug');
+      console.log('📋 window.PARTS_BANK exists:', !!window.PARTS_BANK);
+      console.log('📋 window.PARTS_BANK type:', typeof window.PARTS_BANK);
+      console.log('📋 window.PARTS_BANK length:', window.PARTS_BANK?.length || 0);
+      
+      if (window.PARTS_BANK && Array.isArray(window.PARTS_BANK)) {
+        console.log('✅ PARTS_BANK structure:');
+        window.PARTS_BANK.forEach((category, idx) => {
+          console.log(`  Category ${idx}: "${category?.name}" (${category?.parts?.length || 0} parts)`);
+          if (category?.parts && idx < 3) { // Show first 3 categories details
+            category.parts.slice(0, 3).forEach((part, pidx) => {
+              console.log(`    Part ${pidx}: "${part?.name}"`);
+            });
+          }
+        });
+        
+        // Test the 4-layer system specifically for parts bank
+        const allParts = getCombinedDropdownData('');
+        const bankParts = allParts.filter(p => p.layer === 4);
+        console.log(`🔍 Parts Bank in 4-layer system: ${bankParts.length} items`);
+        
+        if (bankParts.length > 0) {
+          console.log('✅ Sample bank parts from 4-layer system:');
+          bankParts.slice(0, 5).forEach(part => {
+            console.log(`  - ${part.name} (${part.source})`);
+          });
+        }
+      } else {
+        console.log('❌ PARTS_BANK not loaded or invalid');
+        console.log('🔧 Try running: loadPartsBank() or check parts.js loading');
+      }
+      
+      return {
+        available: !!window.PARTS_BANK,
+        categories: window.PARTS_BANK?.length || 0,
+        layerItems: getCombinedDropdownData('').filter(p => p.layer === 4).length
+      };
+    };
+    
     // Start the persistent checker immediately
     console.log('🔁 Starting persistent invoice checker...');
     window.persistentInvoiceChecker();
@@ -13826,8 +13848,14 @@
         
         // LAYER 4: 📄 Parts.js bank (from PARTS_BANK)
         console.log('📋 שכבה 4: בדיקת בנק חלקים...');
+        console.log('🔍 window.PARTS_BANK available:', !!window.PARTS_BANK);
+        console.log('🔍 window.PARTS_BANK type:', typeof window.PARTS_BANK);
+        console.log('🔍 window.PARTS_BANK length:', window.PARTS_BANK?.length || 0);
+        
         if (window.PARTS_BANK && Array.isArray(window.PARTS_BANK)) {
-          window.PARTS_BANK.forEach(category => {
+          console.log('✅ PARTS_BANK is valid array, processing categories...');
+          window.PARTS_BANK.forEach((category, idx) => {
+            console.log(`🔍 Category ${idx}:`, category?.name, 'parts:', category?.parts?.length || 0);
             if (category.parts && Array.isArray(category.parts)) {
               category.parts.forEach(part => {
                 if (part.name && (!query || part.name.toLowerCase().includes(query.toLowerCase()))) {
@@ -13843,6 +13871,9 @@
               });
             }
           });
+          console.log(`✅ Processed ${window.PARTS_BANK.length} categories from PARTS_BANK`);
+        } else {
+          console.log('❌ PARTS_BANK not available or invalid');
         }
         
         console.log(`✅ SESSION 89: נמצאו ${allParts.length} חלקים ב-4 שכבות:`, {
