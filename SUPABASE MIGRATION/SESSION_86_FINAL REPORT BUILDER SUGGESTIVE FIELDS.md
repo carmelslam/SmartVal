@@ -1360,7 +1360,7 @@ Add to `styles.css`:
 
 ## **TESTING CHECKLIST**
 
-### **Phase 1: Assignment UI**
+### **Phase 1: Assignment UI** PAHSE ONE - INDEPENDENT 
 - [ ] Page loads without errors
 - [ ] Invoice lines displayed correctly
 - [ ] Damage center dropdowns populated
@@ -1372,12 +1372,11 @@ Add to `styles.css`:
 - [ ] Unassign button removes from helper.final_report
 - [ ] Save and Continue navigates to final report
 
-### **Phase 2: Final Report Builder**
+### **Phase 2: Final Report Builder** PAHSE TWO - INDEPENDENT 
 - [ ] Loads helper.final_report from sessionStorage
 - [ ] Shows pending assignments banner
 - [ ] Banner displays correct count and summary
-- [ ] Apply button adds items to helper.damage_centers
-- [ ] Apply button recalculates metas correctly
+- [ ] Apply button adds items to helper.centers
 - [ ] Apply button saves to Supabase cases table
 - [ ] Apply button marks mappings as 'applied'
 - [ ] Damage centers display invoice items
@@ -1396,19 +1395,19 @@ Add to `styles.css`:
 
 ## **CRITICAL SAFETY NOTES**
 
-**THE DAMGE CENTERS SECTIONin the FINAL REPORT BUILDER ALREADY WRITE DIRECTLY ON CENTERS - KEEP AS IS . YOU NEED TOO ADD A LOCATION IN HELPER.FINAL_REPORT AS EXPLAINED ABOVE - BUT DONT BREAK HOW THE DAMAGE CENTERS CURRENTLY WRITE**
+**THE DAMGE CENTERS SECTION in the FINAL REPORT BUILDER ALREADY WRITE DIRECTLY ON CENTERS - KEEP AS IS . YOU NEED TOO ADD A LOCATION IN HELPER.FINAL_REPORT AS EXPLAINED ABOVE - BUT DONT BREAK HOW THE DAMAGE CENTERS CURRENTLY WRITE**
 ⚠️ **DO NOT:**
-- Modify existing helper.damage_centers structure
+- Modify existing helper.centers structure
+- Modify existing UI structure
 - Auto-apply assignments without user confirmation
 - Delete wizard-created items
 - Change any existing wizard or invoice module behavior
-- Modify Supabase table schemas
+- Modify Supabase table schemas - unless we discover that change is needed 
 
 ✅ **DO:**
 - Always ADD items to arrays, never replace
-- Always recalculate metas after changes
 - Always mark source as "invoice" for invoice items
-- Always save helper.damage_centers to Supabase after updates
+- Always save helper version to Supabase after updates
 - Always validate user input
 - Always handle errors gracefully
 
