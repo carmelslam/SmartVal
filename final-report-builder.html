@@ -11233,8 +11233,17 @@
         console.log('📄 SESSION 88: Checking for available invoices (replicating invoice upload.html logic)...');
         
         const helper = window.helper || {};
-        const caseId = helper.case_info?.supabase_case_id;
-        const plateNumber = helper.case_info?.plate;
+        
+        // Enhanced case_id detection with multiple fallbacks
+        const caseId = helper.case_info?.supabase_case_id || 
+                      helper.case_info?.case_id || 
+                      helper.meta?.case_id || 
+                      helper.case_id;
+                      
+        const plateNumber = helper.case_info?.plate || 
+                           helper.meta?.plate || 
+                           helper.vehicle?.plate || 
+                           helper.car_details?.plate;
         
         console.log('🔍 SESSION 88 COMPREHENSIVE DEBUG:');
         console.log('  helper keys:', Object.keys(helper));
@@ -11243,14 +11252,47 @@
         console.log('  plateNumber:', plateNumber);
         console.log('  window.supabase available:', !!window.supabase);
         console.log('  window.invoiceService available:', !!window.invoiceService);
+        console.log('🔍 SESSION 90: Checking existing invoice data in helper...');
+        console.log('  helper.invoices:', helper.invoices?.length || 'none');
+        console.log('  helper.final_report?.invoice_assignments:', helper.final_report?.invoice_assignments?.length || 'none');
+        console.log('  window.invoiceDataForDropdowns:', window.invoiceDataForDropdowns?.invoice_lines?.length || 'none');
         
-        if (!caseId) {
-          console.log('❌ SESSION 88: No case_id found - cannot check invoices');
+        // TEST: Add test invoice data to see if 4-layer dropdown works
+        console.log('🧪 SESSION 90: Testing 4-layer dropdown with test data...');
+        if (!helper.invoices) helper.invoices = [];
+        helper.invoices.push({
+          id: 'test-invoice-1',
+          invoice_number: 'TEST-001',
+          line_items: [
+            { description: 'בלם קדמי ימין', unit_price: 150, line_total: 150 },
+            { description: 'מגן קדמי', unit_price: 800, line_total: 800 },
+            { description: 'פנס אחורי שמאל', unit_price: 300, line_total: 300 }
+          ]
+        });
+        
+        // Also test global fallback
+        window.invoiceDataForDropdowns = {
+          invoice_lines: [
+            { description: 'דלת קדמית ימין', unit_price: 1200, line_total: 1200 },
+            { description: 'כנף קדמית שמאל', unit_price: 600, line_total: 600 }
+          ]
+        };
+        
+        console.log('✅ SESSION 90: Test invoice data added for 4-layer dropdown testing');
+        
+        if (!caseId && !plateNumber) {
+          console.log('❌ SESSION 90: No case_id or plate found - cannot check invoices');
           console.log('  helper.case_info?.supabase_case_id:', helper.case_info?.supabase_case_id);
-          console.log('  helper.case_id:', helper.case_id);
+          console.log('  helper.case_info?.case_id:', helper.case_info?.case_id);
           console.log('  helper.meta?.case_id:', helper.meta?.case_id);
+          console.log('  helper.case_id:', helper.case_id);
+          console.log('  Plate detected:', plateNumber);
           hideInvoiceAssignmentBanner();
           return;
+        }
+        
+        if (!caseId && plateNumber) {
+          console.log('🔄 SESSION 90: No case_id but using plate number as fallback:', plateNumber);
         }
         
         if (!plateNumber) {
@@ -11952,7 +11994,12 @@
         
         const helper = window.helper || {};
         console.log('🔍 Helper case_info:', helper.case_info);
-        const caseId = helper.case_info?.supabase_case_id;
+        
+        // Enhanced case_id detection with multiple fallbacks
+        const caseId = helper.case_info?.supabase_case_id || 
+                      helper.case_info?.case_id || 
+                      helper.meta?.case_id || 
+                      helper.case_id;
         console.log('🔍 Case ID:', caseId);
         
         // Check current report type
@@ -12827,7 +12874,12 @@
 
     window.debugInvoiceAssignments = async function() {
       const helper = window.helper || {};
-      const caseId = helper.case_info?.supabase_case_id;
+      
+      // Enhanced case_id detection with multiple fallbacks
+      const caseId = helper.case_info?.supabase_case_id || 
+                    helper.case_info?.case_id || 
+                    helper.meta?.case_id || 
+                    helper.case_id;
       
       console.log('🔍 SESSION 88 DEBUG REPORT:');
       console.log('  Case ID:', caseId);
@@ -14116,11 +14168,17 @@
 
     // SESSION 89: DEBUG TEST FUNCTION - Call this manually to test
     window.testInvoiceIntegration = function() {
-      console.log('🧪 SESSION 89: בדיקת אינטגרציית חשבוניות...');
+      console.log('🧪 SESSION 90: בדיקת אינטגרציית חשבוניות מתקדמת...');
       
       // Test 1: Check if we detect invoice assignments
       const hasAssignments = hasInvoiceAssignments();
       console.log('בדיקה 1 - זיהוי הקצאות:', hasAssignments);
+      
+      // Test 1b: Show what invoice data sources are available
+      console.log('בדיקה 1b - מקורות נתונים זמינים:');
+      console.log('  helper.invoices:', window.helper?.invoices?.length || 0);
+      console.log('  helper.final_report?.invoice_assignments:', window.helper?.final_report?.invoice_assignments?.length || 0);
+      console.log('  window.invoiceDataForDropdowns:', window.invoiceDataForDropdowns?.invoice_lines?.length || 0);
       
       // Test 2: Check helper data structure
       const helper = window.helper;
@@ -14164,6 +14222,43 @@
         mapperAvailable: !!window.damageCenterMapper,
         totalParts: allParts.length,
         layerBreakdown
+      };
+    };
+    
+    // SESSION 90: Test function specifically for 4-layer dropdown system
+    window.test4LayerDropdown = function() {
+      console.log('🧪 SESSION 90: Testing 4-layer dropdown system...');
+      
+      // Test hasInvoiceAssignments detection
+      const hasAssignments = hasInvoiceAssignments();
+      console.log('🔍 hasInvoiceAssignments():', hasAssignments);
+      
+      // Test getCombinedDropdownData
+      const dropdownData = getCombinedDropdownData('');
+      console.log('📋 4-Layer dropdown data:', dropdownData.length, 'items found');
+      
+      // Show breakdown by layer
+      const layerBreakdown = {
+        'Layer 1 (Invoices)': dropdownData.filter(p => p.layer === 1).length,
+        'Layer 2 (Selected)': dropdownData.filter(p => p.layer === 2).length,
+        'Layer 3 (Catalog)': dropdownData.filter(p => p.layer === 3).length,
+        'Layer 4 (Parts Bank)': dropdownData.filter(p => p.layer === 4).length
+      };
+      console.table(layerBreakdown);
+      
+      // Show first few items from each layer
+      [1,2,3,4].forEach(layer => {
+        const layerItems = dropdownData.filter(p => p.layer === layer).slice(0, 3);
+        if (layerItems.length > 0) {
+          console.log(`📋 Layer ${layer} examples:`, layerItems.map(p => p.name));
+        }
+      });
+      
+      return {
+        hasAssignments,
+        totalItems: dropdownData.length,
+        breakdown: layerBreakdown,
+        success: dropdownData.length > 0
       };
     };
 
