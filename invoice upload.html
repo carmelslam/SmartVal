@@ -1518,19 +1518,63 @@ class InvoiceProcessor {
 
   populateInvoiceDropdown(invoices) {
     const dropdown = document.getElementById('existingInvoicesDropdown');
-    
+
     dropdown.innerHTML = '<option value="">-- בחר חשבונית --</option>';
-    
+
     invoices.forEach(invoice => {
       const option = document.createElement('option');
-      
-      const displayDate = new Date(invoice.created_at).toLocaleDateString('he-IL');
+
+      // Extract invoice date (same logic as final-report-builder.html)
+      let invoiceDate = null;
+
+      // Primary source: invoice.invoice_date field (if exists in database)
+      if (invoice.invoice_date) {
+        invoiceDate = invoice.invoice_date;
+      }
+
+      // Secondary source: OCR structured data with Hebrew field name
+      if (!invoiceDate && invoice.ocr_structured_data && invoice.ocr_structured_data['תאריך']) {
+        invoiceDate = invoice.ocr_structured_data['תאריך'];
+      }
+
+      // Tertiary source: helper.invoices array (legacy data)
+      if (!invoiceDate) {
+        const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+        const helperInvoice = helper.invoices?.find(inv =>
+          inv.id === invoice.id ||
+          (inv.invoice_number && inv.invoice_number === invoice.invoice_number)
+        );
+        if (helperInvoice) {
+          invoiceDate = helperInvoice['תאריך'] || helperInvoice.date || helperInvoice.invoice_date;
+        }
+      }
+
+      // Format date for display
+      let displayDate;
+      if (invoiceDate) {
+        try {
+          // Handle various date formats
+          const dateObj = new Date(invoiceDate);
+          if (!isNaN(dateObj.getTime())) {
+            displayDate = dateObj.toLocaleDateString('he-IL');
+          } else {
+            // If parsing fails, use string as-is (might be Hebrew date)
+            displayDate = invoiceDate.toString();
+          }
+        } catch (e) {
+          displayDate = invoiceDate.toString();
+        }
+      } else {
+        // Final fallback: upload date
+        displayDate = new Date(invoice.created_at).toLocaleDateString('he-IL');
+      }
+
       const supplierName = invoice.supplier_name || 'לא צוין';
       option.text = `${supplierName} - ${displayDate}`;
       option.value = invoice.id;
-      
+
       option.dataset.invoiceData = JSON.stringify(invoice);
-      
+
       dropdown.appendChild(option);
     });
   }
