@@ -13396,41 +13396,44 @@
         const helper = window.helper;
         const caseId = helper?.case_info?.supabase_case_id;
         
-        console.log('🔍 SESSION 89: Checking for invoice assignments...');
+        console.log('🔍 SESSION 90: Enhanced invoice data detection...');
         console.log('  - Case ID:', caseId);
         console.log('  - Helper centers:', helper?.centers?.length || 0);
         
-        // Check if we have invoice assignments in helper
-        const assignments = helper?.final_report?.invoice_assignments;
-        if (assignments && assignments.length > 0) {
-          console.log('📋 Found invoice assignments in helper:', assignments.length);
+        // PRIMARY CHECK: Direct invoice data in helper (most reliable after accept)
+        if (helper?.invoices && Array.isArray(helper.invoices) && helper.invoices.length > 0) {
+          console.log('📋 ✅ Found helper.invoices:', helper.invoices.length);
           return true;
         }
         
-        // Check if we have mapped data from the assignment process
+        // SECONDARY CHECK: Global invoice data for dropdowns  
+        if (window.invoiceDataForDropdowns?.invoice_lines && window.invoiceDataForDropdowns.invoice_lines.length > 0) {
+          console.log('📋 ✅ Found global invoiceDataForDropdowns:', window.invoiceDataForDropdowns.invoice_lines.length);
+          return true;
+        }
+        
+        // LEGACY CHECK: Original assignments in helper (may be cleared after accept)
+        const assignments = helper?.final_report?.invoice_assignments;
+        if (assignments && assignments.length > 0) {
+          console.log('📋 ✅ Found invoice assignments in helper:', assignments.length);
+          return true;
+        }
+        
+        // FALLBACK CHECK: Parts with invoice source markers
         const mappedData = helper?.centers;
         if (mappedData && Array.isArray(mappedData)) {
           const hasMappedParts = mappedData.some(center => 
-            center.parts && center.parts.some(part => part.external_ref || part.invoice_source)
+            center.Parts?.parts_required?.some(part => part.source === 'invoice') ||
+            center.Works?.works?.some(work => work.source === 'invoice') ||
+            center.Repairs?.repairs?.some(repair => repair.source === 'invoice')
           );
           if (hasMappedParts) {
-            console.log('📋 Found mapped invoice parts in centers');
+            console.log('📋 ✅ Found mapped invoice data in centers');
             return true;
           }
         }
         
-        // Additional check: Look for recent successful assignment in console
-        const recentLogs = console.history || [];
-        const hasRecentAssignment = recentLogs.some(log => 
-          log && log.includes && log.includes('הקצאת חשבוניות הושלמה בהצלחה')
-        );
-        
-        if (hasRecentAssignment) {
-          console.log('📋 Found recent successful assignment in logs');
-          return true;
-        }
-        
-        console.log('📋 No invoice assignments found, using search fallback');
+        console.log('📋 ❌ No invoice data found - using search fallback');
         return false;
       } catch (error) {
         console.error('❌ Error checking invoice assignments:', error);
