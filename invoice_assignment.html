@@ -668,10 +668,15 @@
           </div>
 
           <div style="display: flex; flex-direction: column; gap: 10px;">
-            <button id="save-and-continue-btn" class="primary-btn" disabled>
-              שמור שיוכים והמשך לדוח סופי
+            <!-- Split into Save and Redirect buttons -->
+            <button id="save-assignments-btn" class="primary-btn" disabled>
+              💾 שמור שיוכים
             </button>
-            
+
+            <button id="continue-to-report-btn" class="secondary-btn">
+              ➡️ המשך לדוח סופי
+            </button>
+
             <div style="display: flex; gap: 10px;">
               <button id="back-to-invoices-btn" class="secondary-btn" style="flex: 1;">
                 🔙 חזור לחשבוניות
@@ -1316,7 +1321,7 @@
       }
 
       // Enable/disable save button
-      const saveBtn = document.getElementById('save-and-continue-btn');
+      const saveBtn = document.getElementById('save-assignments-btn');
       saveBtn.disabled = totalAssignments === 0;
       
       // Store stats globally
@@ -1337,9 +1342,12 @@
         btn.addEventListener('click', handleUnassignClick);
       });
 
-      // Save and continue button
-      document.getElementById('save-and-continue-btn').addEventListener('click', saveAndContinue);
-      
+      // Save button (no redirect)
+      document.getElementById('save-assignments-btn').addEventListener('click', saveAssignments);
+
+      // Continue to report button (redirect only)
+      document.getElementById('continue-to-report-btn').addEventListener('click', continueToReport);
+
       // Navigation buttons
       document.getElementById('back-to-invoices-btn')?.addEventListener('click', () => {
         window.location.href = 'invoice upload.html';
@@ -1581,9 +1589,9 @@
     }
 
     /**
-     * SESSION 86: Save assignments and continue to final report
+     * Save assignments (without redirect)
      */
-    function saveAndContinue() {
+    function saveAssignments() {
       // Update helper.final_report
       if (window.helper && window.helper.final_report) {
         window.helper.final_report.total_assignments = assignmentStats.totalAssignments;
@@ -1597,7 +1605,14 @@
       sessionStorage.setItem('helper_final_report', JSON.stringify(window.helper.final_report));
       sessionStorage.setItem('currentCase', JSON.stringify(currentCase));
 
-      // Navigate to final report builder
+      // Show success message
+      showSuccess('שיוכים נשמרו בהצלחה');
+    }
+
+    /**
+     * Continue to final report builder (redirect only)
+     */
+    function continueToReport() {
       window.location.href = 'final-report-builder.html';
     }
 
