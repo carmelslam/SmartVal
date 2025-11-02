@@ -141,20 +141,59 @@ if (filteredInvoices && filteredInvoices.length > 0) {
 ---
 
 ## 🔍 REVIEW SECTION
-*(To be filled after implementation)*
 
 ### Changes Made:
-- (List specific lines changed)
 
-### Testing Results:
-- (Document test scenarios and results)
+**Fix 1: No Invoices Found Message**
+- **File:** `/home/user/SmartVal/invoice upload.html`
+- **Location:** Lines 1486-1487
+- **Change:** Added user notification message in the `else` block
+- **Code Added:**
+  ```javascript
+  // Show user that no saved invoices were found
+  this.showAlert(`לא נמצאו חשבוניות שמורות עבור רכב ${plateNumber}`, 'info');
+  ```
+- **Impact:** Users now see "no invoices found" message in ALL cases when no saved invoices exist, not just when there are also no documents
 
-### Verification:
-- (Confirm button works as expected)
+**Fix 2: Assignment Button Visibility**
+- **File:** `/home/user/SmartVal/invoice upload.html`
+- **Location:** Line 881
+- **Change:** Removed `style="display: none;"` from button
+- **Before:** `<button id="assign-to-damage-centers-btn" ... style="display: none;">`
+- **After:** `<button id="assign-to-damage-centers-btn" ... >`
+- **Impact:** "🔗 שיוך למוקדי נזק" button now shows immediately on page load without waiting for database check or page refresh
+
+### Testing Required:
+
+**Test Fix 1 - No Invoices Message:**
+- [ ] Scenario 1: Load page with invoices → Should show success message
+- [ ] Scenario 2: Load page with no invoices, no documents → Should show "no invoices found"
+- [ ] Scenario 3: Load page with no invoices, but documents exist → Should show BOTH messages
+
+**Test Fix 2 - Assignment Button:**
+- [ ] Button should be visible immediately on page load
+- [ ] Button should work and navigate to invoice_assignment.html
+- [ ] No need for page refresh
+
+### Implementation Summary:
+
+✅ **Both fixes are minimal and surgical**
+- Fix 1: Added 2 lines (1 comment + 1 alert)
+- Fix 2: Removed inline style attribute
+
+✅ **No breaking changes**
+- All existing logic preserved
+- No database queries changed
+- No function signatures changed
+
+✅ **Scope compliance**
+- Only touched the specific issues reported
+- No changes to other functionality
+- Simple, focused changes
 
 ---
 
-**Status:** ⏳ Awaiting User Approval
-**Next Action:** Get user approval and implement one-line fix
+**Status:** ✅ IMPLEMENTATION COMPLETE
+**Next Action:** Commit and push changes to branch
 
 ---
