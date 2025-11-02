@@ -11623,15 +11623,40 @@
         // Phase 6: Hide banner and refresh view
         hideInvoiceAssignmentBanner();
         
-        // Reload the page or refresh damage centers display
+        // Force refresh the damage centers display with updated invoice data
         console.log('🔍 DEBUG: helper.centers AFTER all processing:', window.helper?.centers);
-        console.log('🔍 DEBUG: About to call loadDataFromHelper...');
+        console.log('🔍 DEBUG: About to refresh UI with updated damage centers...');
+        
+        // Method 1: Call loadDataFromHelper to refresh entire UI
         if (typeof loadDataFromHelper === 'function') {
+          console.log('🔄 Calling loadDataFromHelper...');
           loadDataFromHelper();
-          console.log('🔍 DEBUG: loadDataFromHelper completed');
-        } else {
-          console.warn('❌ loadDataFromHelper function not available');
+          console.log('✅ loadDataFromHelper completed');
         }
+        
+        // Method 2: Explicitly refresh damage centers section
+        if (typeof loadDamageCentersFromHelper === 'function') {
+          console.log('🔄 Explicitly refreshing damage centers...');
+          loadDamageCentersFromHelper(window.helper);
+          console.log('✅ Damage centers refreshed');
+        }
+        
+        // Method 3: Force a UI refresh by triggering change events
+        setTimeout(() => {
+          console.log('🔄 Triggering final UI refresh...');
+          // Trigger any change listeners that might refresh the display
+          const helper = window.helper || {};
+          window.helper = helper;
+          sessionStorage.setItem('helper', JSON.stringify(helper));
+          
+          // Dispatch custom event to notify other components
+          window.dispatchEvent(new CustomEvent('invoiceAccepted', { 
+            detail: { 
+              helper: helper,
+              updatedCenters: helper.centers 
+            } 
+          }));
+        }, 500);
         
         // Different messages based on report type
         const helper = window.helper || {};
@@ -11683,34 +11708,93 @@
       
       // Check if archive already exists for this case
       if (helper.parts_search?.has_archived) {
-        console.log('ℹ️ SESSION 88: Archive already exists - skipping duplicate archive');
+        console.log('ℹ️ SESSION 90: Archive already exists - skipping duplicate archive');
         return;
       }
       
       if (!helper.centers || helper.centers.length === 0) {
-        console.log('ℹ️ SESSION 88: No centers to archive');
+        console.log('ℹ️ SESSION 90: No centers to archive');
         return;
       }
       
-      // Save ENTIRE helper using the existing version saving system
-      if (typeof window.saveHelperVersion === 'function') {
-        await window.saveHelperVersion('Pre-Invoice Assignment Archive', {
-          trigger_event: 'before_invoice_import',
-          is_pre_invoice_wizard: true,  // Special flag for querying original wizard data
-          centers_count: helper.centers.length,
-          notes: 'Complete helper archived before invoice assignment - wizard data preserved'
+      try {
+        // Create a clean snapshot of damage centers before invoice data is applied
+        const centersSnapshot = JSON.parse(JSON.stringify(helper.centers));
+        
+        // Clean up any existing invoice data from the snapshot (keep only wizard data)
+        centersSnapshot.forEach(center => {
+          // Remove any existing InvoiceAssignments (legacy)
+          if (center.InvoiceAssignments) {
+            delete center.InvoiceAssignments;
+            console.log(`🧹 Removed legacy InvoiceAssignments from center ${center.Id}`);
+          }
+          
+          // Remove any parts/works/repairs that have source: 'invoice'
+          if (center.Parts?.parts_required) {
+            const originalCount = center.Parts.parts_required.length;
+            center.Parts.parts_required = center.Parts.parts_required.filter(part => 
+              part.source !== 'invoice'
+            );
+            if (originalCount !== center.Parts.parts_required.length) {
+              console.log(`🧹 Cleaned ${originalCount - center.Parts.parts_required.length} invoice parts from center ${center.Id}`);
+            }
+          }
+          if (center.Works?.works) {
+            const originalCount = center.Works.works.length;
+            center.Works.works = center.Works.works.filter(work => 
+              work.source !== 'invoice'
+            );
+            if (originalCount !== center.Works.works.length) {
+              console.log(`🧹 Cleaned ${originalCount - center.Works.works.length} invoice works from center ${center.Id}`);
+            }
+          }
+          if (center.Repairs?.repairs) {
+            const originalCount = center.Repairs.repairs.length;
+            center.Repairs.repairs = center.Repairs.repairs.filter(repair => 
+              repair.source !== 'invoice'
+            );
+            if (originalCount !== center.Repairs.repairs.length) {
+              console.log(`🧹 Cleaned ${originalCount - center.Repairs.repairs.length} invoice repairs from center ${center.Id}`);
+            }
+          }
         });
         
-        // Mark as archived to prevent duplicate archives
-        if (!helper.parts_search) helper.parts_search = {};
-        helper.parts_search.has_archived = true;
+        // Create archive data with clean snapshot
+        const archiveData = {
+          ...helper,
+          centers: centersSnapshot,
+          archive_metadata: {
+            type: 'pre_invoice_snapshot',
+            purpose: 'legal_work_trail',
+            centers_count: centersSnapshot.length,
+            created_before: 'invoice_acceptance',
+            wizard_data_only: true,
+            timestamp: new Date().toISOString()
+          }
+        };
         
-        // Update lastSavedHelper to prevent auto-save from triggering after archive
-        window.lastSavedHelper = JSON.parse(JSON.stringify(helper));
+        // Save clean snapshot using the existing version saving system
+        if (typeof window.saveHelperVersion === 'function') {
+          await window.saveHelperVersion('Pre-Invoice Centers Snapshot (Clean)', {
+            trigger_event: 'before_invoice_acceptance',
+            is_pre_invoice_wizard: true,
+            centers_count: centersSnapshot.length,
+            notes: 'Clean snapshot of damage centers before invoice data application - wizard data only for legal work trail'
+          }, archiveData);
+          
+          // Mark as archived to prevent duplicate archives
+          if (!helper.parts_search) helper.parts_search = {};
+          helper.parts_search.has_archived = true;
+          
+          console.log('✅ SESSION 90: Clean centers snapshot archived for legal work trail');
+          console.log(`📋 Archived ${centersSnapshot.length} centers with wizard data only`);
+        } else {
+          console.warn('⚠️ SESSION 90: saveHelperVersion not available, skipping archive');
+        }
         
-        console.log('✅ SESSION 88: Entire helper archived to helper_versions with pre-invoice flag');
-      } else {
-        console.warn('⚠️ SESSION 88: saveHelperVersion not available, skipping archive');
+      } catch (error) {
+        console.error('❌ SESSION 90: Error creating centers snapshot:', error);
+        // Don't throw - this shouldn't block the invoice assignment process
       }
     }
 
