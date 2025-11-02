@@ -1524,10 +1524,16 @@ class InvoiceProcessor {
     invoices.forEach(invoice => {
       const option = document.createElement('option');
 
-      // Use invoice_date from database if available, otherwise fallback to created_at
-      const displayDate = invoice.invoice_date
-        ? new Date(invoice.invoice_date).toLocaleDateString('he-IL')
-        : new Date(invoice.created_at).toLocaleDateString('he-IL');
+      // Get invoice date: first from invoice_date field, then from OCR data
+      let displayDate;
+      if (invoice.invoice_date) {
+        displayDate = new Date(invoice.invoice_date).toLocaleDateString('he-IL');
+      } else if (invoice.ocr_structured_data && invoice.ocr_structured_data['תאריך']) {
+        displayDate = new Date(invoice.ocr_structured_data['תאריך']).toLocaleDateString('he-IL');
+      } else {
+        displayDate = new Date(invoice.created_at).toLocaleDateString('he-IL');
+      }
+
       const supplierName = invoice.supplier_name || 'לא צוין';
       option.text = `${supplierName} - ${displayDate}`;
       option.value = invoice.id;
