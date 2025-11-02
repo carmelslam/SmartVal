@@ -208,7 +208,26 @@ You tried to:
 3. Convert and map data (already exists in correct format)
 
 ### What You Should Do:
-**Just read helper.final_report.invoice_assignments and write to helper.centers**
+The core understanding you need to have is that the final report builder DOES NOT ASSIGN ITEMS TO DAMAGE CENTERS .
+The job to assign items from the invoices to damage centers is done in the page invoice assignment html.
+The assigned items then saved to helper final_report.invoice_assignments and to the table invoice_damage_center_mappings in supabase .
+The job of the final report builder is to detect whether  an invoice has been assigned - the banner shows the INVOICES - NOT ITEMS  waiting to be ACCEPTED OR REJECTED NOT ASSIGNED .
+When the user accepts the invoice - he doesn’t  assign it its already assigned he just imports it to the damage section ui structure .
+This is the 2 PHASES PROCESS other sessions failed to understand .
+So the flow is simple :
+when an invoice assignment is detected - query in supabase table - the banner showing available assignments will show and prompt tetheh user to accept or to reject  - we a distinction between private report type and other final reports types  
+in the private final report :
+once accepted - the function should query the table invoice_damage_center_mappings and import the items from there to the relevant damage centers in the sections categorized : damage center number , category : works , repairs and parts 
+the function is replacing the final report data center sections when private type is selected and that its - from here the system know to do what is needed: writs on helper.cenetrs and calculate locally .
+the fields will also have teh suggestive 4 layers dropdown that shows suggestions of items based on typing from 4 sources : invoices items table, selected parts table, catalog items  table and parts.js part bank .
+selecting an item needs to populatete fields in the same ui structure and fields - we dont add fields or change teh ui , 
+on other types 
+on invoice acceptance - teh ui doesnt autofill like in the private type- the fields stay with their original wizard data , teh part name field will have the 4 layer  dropdown as in teh private type - all the behavior from here is the same .
+ Important :
+1. we never map the helper.final_report.invoice_assignments to import data into the damage centers section - the data is imported from supabase invoice_damage_center_mappings for the auto population and from the invoice_lines for the dropdown
+2. The detection if an invoice that was assigned exists or not doesn’t  rely on helper.final_report.invoice_assignments but on supbase and the status looking for is pending or assigned - not paid - currently the incase table in suppose - register PAID by mistake we need to change that 
+3. The banner should recognize invoices that were assigned - pending - and suggest them to the user for that case id and plate if an invoice was assigned - suggested and accepted the status in the banner needs to change to accepted or processed and the banner needs to detect the status and when showing the invoice in the list label it as accepted and block from re accept it 
+4. On page load the status of invoices in the banner need to be reserved - for now each load bring the invoice back again - there is a poor  categorization scheme in the implantation .
 
 The data is ALREADY in the correct format in invoice_assignments. The UI just needs to:
 1. Display it with input fields
