@@ -939,11 +939,12 @@
         console.log('🔍 SESSION 86: Loading invoices for case:', caseId);
         console.log('🔍 SESSION 86: Current case plate:', currentCase.plate);
         
-        // First try to get invoices by case_id
+        // First try to get invoices by case_id - only PENDING status (ready for assignment)
         const { data: invoices, error: invError } = await window.supabase
           .from('invoices')
-          .select('id, invoice_number, supplier_name, plate, total_amount, case_id')
-          .eq('case_id', caseId);
+          .select('id, invoice_number, supplier_name, plate, total_amount, case_id, status')
+          .eq('case_id', caseId)
+          .eq('status', 'PENDING');  // Only load invoices ready for assignment
 
         console.log('📄 SESSION 86: Invoices by case_id:', invoices?.length || 0, invoices);
 
@@ -960,8 +961,9 @@
           
           const { data: invoicesByPlate, error: plateError } = await window.supabase
             .from('invoices')
-            .select('id, invoice_number, supplier_name, plate, total_amount, case_id')
-            .eq('plate', currentCase.plate);
+            .select('id, invoice_number, supplier_name, plate, total_amount, case_id, status')
+            .eq('plate', currentCase.plate)
+            .eq('status', 'PENDING');  // Only load invoices ready for assignment
             
           console.log('📄 SESSION 86: Invoices by plate:', invoicesByPlate?.length || 0, invoicesByPlate);
           
@@ -1427,6 +1429,24 @@
         console.log('💾 Database mapping result:', { mapping, error });
 
         if (error) throw error;
+
+        // Update invoice status from PENDING to ASSIGNED (first assignment for this invoice)
+        try {
+          const { error: invoiceUpdateError } = await window.supabase
+            .from('invoices')
+            .update({ status: 'ASSIGNED' })
+            .eq('id', invoiceLine.invoice_id)
+            .eq('status', 'PENDING');  // Only update if still PENDING
+          
+          if (invoiceUpdateError) {
+            console.warn('⚠️ Could not update invoice status (may already be ASSIGNED):', invoiceUpdateError);
+          } else {
+            console.log('✅ Updated invoice status from PENDING to ASSIGNED');
+          }
+        } catch (statusError) {
+          console.warn('⚠️ Invoice status update failed:', statusError);
+          // Don't throw - assignment was successful
+        }
 
         // Update local state
         existingAssignments.set(lineId, dcId);

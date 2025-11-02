@@ -11275,7 +11275,8 @@
             const result = await window.supabase
               .from('invoices')
               .select('*')
-              .eq('case_id', caseId);
+              .eq('case_id', caseId)
+              .eq('status', 'ASSIGNED');  // Only show invoices that are assigned but not yet accepted
             
             console.log('📤 SESSION 88: Raw Supabase response:', result);
             const { data, error } = result;
@@ -11352,13 +11353,19 @@
         const invoicesWithPendingAssignments = [];
         
         for (const invoice of plateInvoices) {
+          // Look for invoices with status 'ASSIGNED' (ready to be accepted/processed)
+          if (invoice.status !== 'ASSIGNED') {
+            console.log(`⏭️ Skipping invoice ${invoice.invoice_number} with status '${invoice.status}' (need 'ASSIGNED')`);
+            continue;
+          }
+
           // Query invoice_damage_center_mappings table for this invoice
           const { data: mappings, error: mappingError } = await window.supabase
             .from('invoice_damage_center_mappings')
             .select('id, mapping_status, field_type, damage_center_id')
             .eq('invoice_id', invoice.id)
             .eq('case_id', caseId)
-            .eq('mapping_status', 'active'); // Only active mappings
+            .eq('mapping_status', 'pending'); // Look for pending mappings (assigned but not yet applied)
           
           if (mappingError) {
             console.error(`❌ SESSION 88: Error querying mappings for invoice ${invoice.id}:`, mappingError);
@@ -11609,6 +11616,9 @@
         
         // Phase 5: Update mapping status to 'applied' for tracking
         await updateMappingStatus(checkedInvoices, 'applied');
+        
+        // Phase 5b: Update invoice status from ASSIGNED to ACCEPTED (completing the status flow)
+        await updateInvoiceStatusToAccepted(checkedInvoices);
         
         // Phase 6: Hide banner and refresh view
         hideInvoiceAssignmentBanner();
@@ -12199,6 +12209,38 @@
     }
 
     /**
+     * Update invoice status from ASSIGNED to ACCEPTED (completing the status flow)
+     */
+    async function updateInvoiceStatusToAccepted(invoices) {
+      if (!window.supabase) {
+        console.warn('⚠️ SESSION 90: Supabase not available for invoice status update');
+        return;
+      }
+      
+      const invoiceIds = invoices.map(i => i.id);
+      
+      // Update invoice status for each invoice
+      for (const invoiceId of invoiceIds) {
+        const { error } = await window.supabase
+          .from('invoices')
+          .update({ 
+            status: 'ACCEPTED',  // Changed from ASSIGNED to ACCEPTED
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', invoiceId)
+          .eq('status', 'ASSIGNED');  // Only update if currently ASSIGNED
+        
+        if (error) {
+          console.error(`❌ Error updating invoice status for invoice ${invoiceId}:`, error);
+        } else {
+          console.log(`✅ Updated invoice status to 'ACCEPTED' for invoice ${invoiceId}`);
+        }
+      }
+      
+      console.log(`✅ SESSION 90: Updated invoice status for ${invoiceIds.length} invoices from 'ASSIGNED' to 'ACCEPTED'`);
+    }
+
+    /**
      * Convert mapping to part format (follows UI structure exactly)
      */
     function convertMappingToPart(mapping, invoice) {
@@ -12275,8 +12317,8 @@
         const helper = window.helper || {};
         const differentials = [];
         
-        // Get wizard data from helper.damage_centers for comparison
-        const wizardCenters = helper.damage_centers || [];
+        // Get wizard data from helper.centers for comparison
+        const wizardCenters = helper.centers || [];
         
         for (const invoice of invoices) {
           console.log(`📄 Processing invoice ${invoice.invoice_number}...`);
