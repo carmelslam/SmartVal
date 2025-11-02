@@ -586,9 +586,32 @@ window.testAcceptFlowStep = async function(step) {
 2. Test accept flow with `window.testAcceptFlowStep(1)` through `window.testAcceptFlowStep(4)`
 3. Verify all 3 success criteria without test data pollution
 
+### **NEW Session 91 Testing Functions:**
+
+1. **`window.createTestMappings()`** - Creates PENDING mappings in database for testing
+   - Creates 2 test mappings (part & work) with pending status
+   - Updates invoice status to ASSIGNED
+   - Run this FIRST to have data to test with
+
+2. **`window.testUIRefresh()`** - Tests if UI refresh actually works
+   - Manually adds a test part to helper.centers
+   - Attempts all refresh methods
+   - Checks if the test part appears in UI
+
+3. **`window.testLayer1Dropdown()`** - Tests Layer 1 dropdown functionality
+   - Adds test invoice with line items to helper
+   - Tests getCombinedDropdownData() function
+   - Verifies Layer 1 items are found
+
+### **Critical Findings:**
+The implementation added debug logging and fixed syntax issues, but the CORE problems remain:
+1. **No pending mappings in database** - Need to run `createTestMappings()` first
+2. **UI refresh might not work** - Test with `testUIRefresh()`
+3. **Layer 1 dropdown empty** - Test with `testLayer1Dropdown()`
+
 ---
 
 *Session 91 Implementation Plan*  
-*Status: ✅ COMPLETED*  
+*Status: ✅ COMPLETED (but core issues persist)*  
 *Implementation Date: 2025-11-02*  
 *Based on: Deep code analysis of sessions 86-90*

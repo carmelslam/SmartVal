@@ -13231,6 +13231,169 @@
       };
     };
 
+    // SESSION 91: Create test mappings with pending status
+    window.createTestMappings = async function() {
+      console.log('🧪 SESSION 91: Creating test mappings with PENDING status');
+      
+      const helper = window.helper || {};
+      const caseId = helper.case_info?.supabase_case_id || helper.meta?.case_id;
+      
+      if (!caseId || !window.supabase) {
+        console.error('❌ Missing caseId or supabase');
+        return { error: 'Missing requirements' };
+      }
+      
+      // First, get an invoice for this case (or create one)
+      const { data: invoices } = await window.supabase
+        .from('invoices')
+        .select('*')
+        .eq('case_id', caseId)
+        .limit(1);
+      
+      let invoiceId;
+      if (invoices && invoices.length > 0) {
+        invoiceId = invoices[0].id;
+        console.log('✅ Using existing invoice:', invoiceId);
+      } else {
+        console.error('❌ No invoices found for this case');
+        return { error: 'No invoices found' };
+      }
+      
+      // Get damage centers from helper
+      const centers = helper.centers || [];
+      if (centers.length === 0) {
+        console.error('❌ No damage centers found in helper');
+        return { error: 'No damage centers' };
+      }
+      
+      // Create test mappings
+      const testMappings = [
+        {
+          case_id: caseId,
+          invoice_id: invoiceId,
+          damage_center_code: centers[0]?.Id || 'CENTER1',
+          field_type: 'part',
+          line_item_description: 'פגוש קדמי - מחשבונית',
+          line_item_amount: 1500,
+          mapping_status: 'pending',
+          created_at: new Date().toISOString()
+        },
+        {
+          case_id: caseId,
+          invoice_id: invoiceId,
+          damage_center_code: centers[0]?.Id || 'CENTER1',
+          field_type: 'work',
+          line_item_description: 'עבודת צבע - מחשבונית',
+          line_item_amount: 800,
+          mapping_status: 'pending',
+          created_at: new Date().toISOString()
+        }
+      ];
+      
+      console.log('📋 Creating test mappings:', testMappings);
+      
+      const { data, error } = await window.supabase
+        .from('invoice_damage_center_mappings')
+        .insert(testMappings)
+        .select();
+      
+      if (error) {
+        console.error('❌ Error creating mappings:', error);
+        return { error };
+      }
+      
+      console.log('✅ Test mappings created:', data);
+      
+      // Also update invoice status to ASSIGNED
+      await window.supabase
+        .from('invoices')
+        .update({ status: 'ASSIGNED' })
+        .eq('id', invoiceId);
+      
+      return {
+        success: true,
+        mappingsCreated: data.length,
+        invoiceId,
+        caseId,
+        message: 'Test mappings created! Now try clicking Accept Invoice Assignment'
+      };
+    };
+
+    // SESSION 91: Test UI refresh with manual data
+    window.testUIRefresh = function() {
+      console.log('🧪 SESSION 91: Testing UI refresh with manual data injection');
+      
+      const helper = window.helper || {};
+      
+      if (!helper.centers || helper.centers.length === 0) {
+        console.error('❌ No damage centers found');
+        return { error: 'No damage centers' };
+      }
+      
+      // Manually add a test part to first center
+      const testPart = {
+        part_name: '🧪 TEST PART FROM SESSION 91',
+        part_description: 'This part should appear in UI if refresh works',
+        price: 999,
+        quantity: 1,
+        total: 999,
+        source: 'manual_test',
+        row_uuid: 'test_' + Date.now()
+      };
+      
+      // Ensure Parts structure exists
+      if (!helper.centers[0].Parts) {
+        helper.centers[0].Parts = { parts_required: [] };
+      }
+      if (!helper.centers[0].Parts.parts_required) {
+        helper.centers[0].Parts.parts_required = [];
+      }
+      
+      console.log('📋 BEFORE: Center has', helper.centers[0].Parts.parts_required.length, 'parts');
+      helper.centers[0].Parts.parts_required.push(testPart);
+      console.log('📋 AFTER: Center has', helper.centers[0].Parts.parts_required.length, 'parts');
+      
+      // Save to sessionStorage
+      sessionStorage.setItem('helper', JSON.stringify(helper));
+      window.helper = helper;
+      
+      // Now try all refresh methods
+      console.log('🔄 Attempting UI refresh...');
+      
+      // Method 1
+      if (typeof loadDataFromHelper === 'function') {
+        console.log('Calling loadDataFromHelper()');
+        loadDataFromHelper();
+      }
+      
+      // Method 2
+      if (typeof loadDamageCentersFromHelper === 'function') {
+        console.log('Calling loadDamageCentersFromHelper()');
+        loadDamageCentersFromHelper(helper);
+      }
+      
+      // Method 3 - Direct manipulation
+      const damageCentersContent = document.getElementById('damageCentersContent');
+      if (damageCentersContent) {
+        console.log('Found damageCentersContent element, checking for part:', testPart.part_name);
+        setTimeout(() => {
+          const content = damageCentersContent.innerHTML;
+          if (content.includes('TEST PART FROM SESSION 91')) {
+            console.log('✅ SUCCESS: Test part appears in UI!');
+          } else {
+            console.log('❌ FAIL: Test part NOT found in UI');
+            console.log('UI content length:', content.length);
+          }
+        }, 1000);
+      }
+      
+      return {
+        success: true,
+        partAdded: testPart,
+        centerPartsCount: helper.centers[0].Parts.parts_required.length
+      };
+    };
+
     // SESSION 91: Step-by-step flow tester
     window.testAcceptFlowStep = async function(step) {
       console.log(`🧪 SESSION 91: Testing step ${step} of accept flow`);
@@ -13293,6 +13456,62 @@
       }
     };
     
+    // SESSION 91: Test Layer 1 dropdown by adding invoice data
+    window.testLayer1Dropdown = function() {
+      console.log('🧪 SESSION 91: Testing Layer 1 dropdown with manual invoice data');
+      
+      const helper = window.helper || {};
+      
+      // Add test invoice data to helper
+      if (!helper.invoices) {
+        helper.invoices = [];
+      }
+      
+      const testInvoice = {
+        id: 'test-invoice-91',
+        invoice_number: 'TEST-91',
+        status: 'ASSIGNED',
+        line_items: [
+          { description: 'פגוש קדמי - מבדיקת SESSION 91', unit_price: 1200, line_total: 1200 },
+          { description: 'דלת ימין - מבדיקת SESSION 91', unit_price: 800, line_total: 800 },
+          { description: 'פנס ראשי שמאל - מבדיקת SESSION 91', unit_price: 450, line_total: 450 }
+        ]
+      };
+      
+      helper.invoices.push(testInvoice);
+      
+      // Save to sessionStorage and window
+      sessionStorage.setItem('helper', JSON.stringify(helper));
+      window.helper = helper;
+      
+      console.log('📋 Added test invoice with', testInvoice.line_items.length, 'items');
+      
+      // Test the dropdown data
+      const dropdownData = getCombinedDropdownData('');
+      const layer1Items = dropdownData.filter(p => p.layer === 1);
+      
+      console.log('📊 Layer 1 items found:', layer1Items.length);
+      if (layer1Items.length > 0) {
+        console.log('✅ SUCCESS: Layer 1 items:', layer1Items);
+      } else {
+        console.log('❌ FAIL: No Layer 1 items found');
+        console.log('All dropdown data:', dropdownData);
+      }
+      
+      // Also set the global variable that some functions might use
+      if (!window.invoiceDataForDropdowns) {
+        window.invoiceDataForDropdowns = {};
+      }
+      window.invoiceDataForDropdowns.invoice_lines = testInvoice.line_items;
+      
+      return {
+        success: layer1Items.length > 0,
+        invoiceAdded: testInvoice,
+        layer1Items: layer1Items.length,
+        allItems: dropdownData.length
+      };
+    };
+
     // Start the persistent checker immediately
     console.log('🔁 Starting persistent invoice checker...');
     window.persistentInvoiceChecker();
