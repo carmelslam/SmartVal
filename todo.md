@@ -157,11 +157,17 @@ if (filteredInvoices && filteredInvoices.length > 0) {
 
 **Fix 2: Assignment Button Visibility**
 - **File:** `/home/user/SmartVal/invoice upload.html`
-- **Location:** Line 881
-- **Change:** Removed `style="display: none;"` from button
-- **Before:** `<button id="assign-to-damage-centers-btn" ... style="display: none;">`
-- **After:** `<button id="assign-to-damage-centers-btn" ... >`
-- **Impact:** "🔗 שיוך למוקדי נזק" button now shows immediately on page load without waiting for database check or page refresh
+- **Location:** Line 881 and Line 4228
+- **Changes:**
+  1. Removed `style="display: none;"` from button (Line 881)
+  2. Disabled setTimeout that was hiding button after 2 seconds (Line 4228)
+- **Before:**
+  - `<button id="assign-to-damage-centers-btn" ... style="display: none;">`
+  - `setTimeout(checkAndShowAssignmentButton, 2000);`
+- **After:**
+  - `<button id="assign-to-damage-centers-btn" ... >`
+  - `// setTimeout(checkAndShowAssignmentButton, 2000);` (commented out)
+- **Impact:** "🔗 שיוך למוקדי נזק" button now permanently visible - won't hide after 2 seconds
 
 ### Testing Required:
 
