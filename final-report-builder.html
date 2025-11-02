@@ -12978,29 +12978,93 @@
         }
       })();
       
-      const hasValidHelper = (helperFromWindow && helperFromWindow.case_info) || 
-                            (helperFromSession && helperFromSession.case_info);
+      // SESSION 90: Enhanced validation - check for essential data, not just case_info
+      const activeHelper = helperFromWindow || helperFromSession;
+      const hasSupabase = !!window.supabase;
+      const hasValidHelper = activeHelper && Object.keys(activeHelper).length > 5;
+      const hasPlateData = activeHelper?.meta?.plate || activeHelper?.car_details?.plate || activeHelper?.vehicle?.plate;
+      const hasCaseData = activeHelper?.case_info || activeHelper?.meta?.case_id || hasPlateData;
       
-      if (typeof checkForAvailableInvoices === 'function' && hasValidHelper) {
+      if (typeof checkForAvailableInvoices === 'function' && hasSupabase && hasValidHelper && hasCaseData) {
         console.log('✅ PERSISTENT CHECK: All requirements met, calling checkForAvailableInvoices...');
-        console.log('  - Using helper from:', helperFromWindow?.case_info ? 'window' : 'sessionStorage');
+        console.log('  - Using helper from:', helperFromWindow ? 'window' : 'sessionStorage');
+        console.log('  - Helper keys:', Object.keys(activeHelper).length);
+        console.log('  - Plate data:', !!hasPlateData);
+        console.log('  - Supabase:', hasSupabase);
+        
+        // Ensure window.helper is set
+        if (!window.helper && helperFromSession && Object.keys(helperFromSession).length > 0) {
+          window.helper = helperFromSession;
+          console.log('🔄 Set window.helper from sessionStorage');
+        }
+        
         checkForAvailableInvoices().catch(e => console.error('🔁 Persistent error:', e));
         return true; // Success
       } else {
         console.log('❌ PERSISTENT CHECK: Requirements not met yet');
         console.log('  - Function available:', typeof checkForAvailableInvoices === 'function');
-        console.log('  - Helper (window) available:', !!helperFromWindow);
-        console.log('  - Helper (window).case_info available:', !!helperFromWindow?.case_info);
-        console.log('  - Helper (session) available:', !!helperFromSession && Object.keys(helperFromSession).length > 0);
-        console.log('  - Helper (session).case_info available:', !!helperFromSession?.case_info);
+        console.log('  - Supabase available:', hasSupabase);
+        console.log('  - Helper valid:', hasValidHelper, `(${Object.keys(activeHelper || {}).length} keys)`);
+        console.log('  - Plate data:', !!hasPlateData);
+        console.log('  - Case data:', !!hasCaseData);
         
         if (invoiceCheckAttempts < 10) {
           setTimeout(window.persistentInvoiceChecker, 1000);
         } else {
           console.error('🔁 PERSISTENT CHECK: Gave up after 10 attempts');
+          console.log('🔧 Manual check available: manualInvoiceCheck()');
         }
         return false; // Not ready yet
       }
+    };
+    
+    // SESSION 90: Manual invoice check for debugging
+    window.manualInvoiceCheck = function() {
+      console.log('🧪 SESSION 90: MANUAL INVOICE CHECK');
+      console.log('📋 Current state:');
+      console.log('  - window.supabase:', !!window.supabase);
+      console.log('  - window.helper keys:', window.helper ? Object.keys(window.helper).length : 0);
+      console.log('  - Plate data:', window.helper?.meta?.plate || window.helper?.car_details?.plate || 'none');
+      console.log('  - Test invoice data added');
+      
+      // Add test invoice data immediately
+      if (window.helper) {
+        if (!window.helper.invoices) window.helper.invoices = [];
+        window.helper.invoices.push({
+          id: 'manual-test-invoice',
+          invoice_number: 'MANUAL-TEST',
+          line_items: [
+            { description: 'בלם קדמי ימין', unit_price: 150, line_total: 150 },
+            { description: 'מגן קדמי', unit_price: 800, line_total: 800 }
+          ]
+        });
+        console.log('✅ Test invoice data added to helper.invoices');
+      }
+      
+      // Test hasInvoiceAssignments
+      const hasAssignments = hasInvoiceAssignments();
+      console.log('🔍 hasInvoiceAssignments():', hasAssignments);
+      
+      // Test 4-layer dropdown
+      const dropdownData = getCombinedDropdownData('');
+      console.log('📋 4-layer dropdown total items:', dropdownData.length);
+      
+      // Show breakdown
+      const breakdown = {
+        'Layer 1 (Invoices)': dropdownData.filter(p => p.layer === 1).length,
+        'Layer 2 (Selected)': dropdownData.filter(p => p.layer === 2).length,
+        'Layer 3 (Catalog)': dropdownData.filter(p => p.layer === 3).length,
+        'Layer 4 (Parts Bank)': dropdownData.filter(p => p.layer === 4).length
+      };
+      console.table(breakdown);
+      
+      // Run the invoice check
+      if (typeof checkForAvailableInvoices === 'function') {
+        console.log('🚀 Running checkForAvailableInvoices...');
+        checkForAvailableInvoices();
+      }
+      
+      return { hasAssignments, dropdownData: breakdown, success: true };
     };
     
     // Start the persistent checker immediately
