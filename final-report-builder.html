@@ -13596,10 +13596,11 @@
                               document.querySelector('input[name="final-report-type"]:checked')?.value;
       const isPrivateReport = currentReportType === 'חוות דעת פרטית';
       
-      // For private reports, hide wizard option and force invoice mode
+      // For private reports, show only invoice option (labeled as "חשבונית")
       if (isPrivateReport) {
-        wizardOption.style.display = 'none';
-        invoiceOption.style.flex = '1';
+        invoiceOption.style.display = 'none'; // invoiceOption now has "אשף" label, so hide it
+        wizardOption.style.flex = '1'; // wizardOption now has "חשבונית" label, so show it
+        wizardOption.style.cursor = 'default'; // Disable clicking
         slider.style.display = 'none';
         toggleContainer.classList.add('private-report-mode');
         
@@ -13609,26 +13610,26 @@
           loadInvoiceData();
         }
         
-        invoiceOption.classList.add('active');
-        console.log('🔒 Private report mode - showing only invoice toggle');
+        wizardOption.classList.add('active'); // wizardOption shows "חשבונית" label
+        invoiceOption.classList.remove('active');
+        console.log('🔒 Private report mode - showing only חשבונית (invoice) toggle');
       } else {
-        // For other reports, show both options
-        wizardOption.style.display = 'flex';
-        invoiceOption.style.flex = '1';
-        slider.style.display = 'block';
-        toggleContainer.classList.remove('private-report-mode');
+        // For other reports, show only wizard option (labeled as "אשף")
+        wizardOption.style.display = 'none'; // wizardOption now has "חשבונית" label, so hide it
+        invoiceOption.style.flex = '1'; // invoiceOption now has "אשף" label, so show it
+        invoiceOption.style.cursor = 'default'; // Disable clicking
+        slider.style.display = 'none';
+        toggleContainer.classList.add('private-report-mode'); // Use same styling
         
-        if (currentMode === 'wizard') {
-          wizardOption.classList.add('active');
-          invoiceOption.classList.remove('active');
-          slider.classList.add('wizard-active');
-          slider.classList.remove('invoice-active');
-        } else {
-          wizardOption.classList.remove('active');
-          invoiceOption.classList.add('active');
-          slider.classList.remove('wizard-active');
-          slider.classList.add('invoice-active');
+        // Force wizard mode for other reports
+        if (currentMode !== 'wizard') {
+          currentMode = 'wizard';
+          loadWizardData();
         }
+        
+        invoiceOption.classList.add('active'); // invoiceOption shows "אשף" label
+        wizardOption.classList.remove('active');
+        console.log('🔒 Other report mode - showing only אשף (wizard) toggle');
       }
     }
     
