@@ -12315,6 +12315,11 @@
             console.log('🔄 Calling loadDataFromHelper...');
             loadDataFromHelper();
           }
+          
+          // SESSION 92 FIX: Also prepare invoice data for dropdowns (private reports need it too)
+          console.log('📋 SESSION 92: Preparing invoice data for dropdowns (private report)...');
+          await prepareInvoiceDataForDropdowns(selectedInvoices, caseId);
+          
         } else {
           // For non-private reports, just ensure the data is saved
           console.log('ℹ️ Non-private report - data saved for dropdown access');
@@ -12590,7 +12595,7 @@
         make: helper.vehicle?.make || '',
         model: helper.vehicle?.model || '',
         year: helper.vehicle?.year || '',
-        מחיר: mapping.mapped_data?.updated_price || mapping.mapped_data?.unit_price || mapping.invoice_line?.unit_price || 0,
+        מחיר: fieldData.unit_price || mapping.mapped_data?.updated_price || mapping.mapped_data?.unit_price || mapping.invoice_line?.unit_price || 0,
         מיקום: 'ישראל',
         הערות: mapping.user_modifications?.notes || '',
         זמינות: 'זמין',
@@ -12608,9 +12613,9 @@
       const fieldData = mapping.original_field_data || {};
       
       return {
-        category: fieldData.description || '',  // Category should show description
+        category: '',  // Category is a dropdown - leave empty for manual selection
         cost: fieldData.line_total || fieldData.unit_price || 0,
-        comments: '',  // הערות can be empty or add notes
+        comments: fieldData.description || '',  // הערות shows the description from invoice
         added_at: new Date().toISOString(),
         source: 'invoice',
         _invoice_line_id: mapping.invoice_line_id,
