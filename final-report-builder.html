@@ -1398,10 +1398,10 @@
           <h3 style="margin: 0; color: #333; font-size: 18px; font-weight: 600;">מרכזי נזק</h3>
           <div id="dataToggleContainer" style="display: none;">
             <div class="sliding-toggle">
-              <div class="toggle-option" id="wizardOption" onclick="switchToWizard()">
+              <div class="toggle-option" id="wizardOption" onclick="switchToInvoice()">
                 <span>חשבונית</span>
               </div>
-              <div class="toggle-option" id="invoiceOption" onclick="switchToInvoice()">
+              <div class="toggle-option" id="invoiceOption" onclick="switchToWizard()">
                 <span>אשף</span>
               </div>
               <div class="toggle-slider" id="toggleSlider"></div>
@@ -13628,10 +13628,11 @@
         wizardOption.classList.add('active'); // wizardOption shows "חשבונית" label
         currentMode = 'invoice';
         
-        // Hide other option without affecting layout
-        invoiceOption.style.opacity = '0.3';
-        invoiceOption.style.cursor = 'not-allowed';
-        wizardOption.style.cursor = 'default';
+        // Make inactive option less prominent but still clickable for testing
+        invoiceOption.style.opacity = '0.5';
+        wizardOption.style.opacity = '1';
+        wizardOption.style.cursor = 'pointer';
+        invoiceOption.style.cursor = 'pointer';
         
         console.log('🔒 Private report mode - חשבונית active');
       } else {
@@ -13640,10 +13641,11 @@
         invoiceOption.classList.add('active'); // invoiceOption shows "אשף" label
         currentMode = 'wizard';
         
-        // Hide other option without affecting layout
-        wizardOption.style.opacity = '0.3';
-        wizardOption.style.cursor = 'not-allowed';
-        invoiceOption.style.cursor = 'default';
+        // Make inactive option less prominent but still clickable for testing
+        wizardOption.style.opacity = '0.5';
+        invoiceOption.style.opacity = '1';
+        wizardOption.style.cursor = 'pointer';
+        invoiceOption.style.cursor = 'pointer';
         
         console.log('🔒 Other report mode - אשף active');
       }
@@ -13736,6 +13738,44 @@
         console.log(`✅ INVOICE: Displayed ${dataToLoad.length} centers from ${dataSource}`);
       }
     }
+
+    // Test function to verify clicks work correctly
+    window.testToggleClicks = function() {
+      console.log('🧪 TESTING TOGGLE CLICKS');
+      
+      const wizardOption = document.getElementById('wizardOption');
+      const invoiceOption = document.getElementById('invoiceOption');
+      
+      console.log('📊 Current Labels:');
+      console.log('  - wizardOption label:', wizardOption?.textContent);
+      console.log('  - invoiceOption label:', invoiceOption?.textContent);
+      
+      console.log('🖱️ Testing clicks...');
+      
+      // Test clicking "חשבונית" (should call switchToInvoice)
+      if (wizardOption) {
+        console.log('Clicking "חשבונית" (wizardOption)...');
+        wizardOption.click();
+        setTimeout(() => {
+          console.log('  Current mode after click:', currentMode);
+          console.log('  Expected: invoice');
+        }, 500);
+      }
+      
+      setTimeout(() => {
+        // Test clicking "אשף" (should call switchToWizard)
+        if (invoiceOption) {
+          console.log('Clicking "אשף" (invoiceOption)...');
+          invoiceOption.click();
+          setTimeout(() => {
+            console.log('  Current mode after click:', currentMode);
+            console.log('  Expected: wizard');
+          }, 500);
+        }
+      }, 2000);
+      
+      return 'Test started - check console for results';
+    };
 
     // Test function to verify toggle stability after fixes
     window.testToggleStability = function() {
@@ -18423,15 +18463,36 @@
     // REPOSITION DAMAGE CENTERS SAVE BUTTON TO APPEAR BEFORE SUMMARY
     function repositionDamageCentersSaveButton() {
       try {
+        // Look in both locations - damageCentersSummary (old) and damageCentersContent (new)
+        let saveButton = null;
+        let subtotal = null;
+        
+        // Try old location first
         const damageCentersSection = document.getElementById('damageCentersSummary');
-        const saveButton = damageCentersSection?.querySelector('.section-save-button');
-        const subtotal = damageCentersSection?.querySelector('#damageCentersSubtotal');
+        if (damageCentersSection) {
+          saveButton = damageCentersSection.querySelector('.section-save-button');
+          subtotal = damageCentersSection.querySelector('#damageCentersSubtotal');
+        }
+        
+        // Try new location if not found
+        if (!saveButton) {
+          const damageCentersContent = document.getElementById('damageCentersContent');
+          if (damageCentersContent) {
+            saveButton = damageCentersContent.querySelector('.section-save-button');
+            subtotal = damageCentersContent.querySelector('#damageCentersSubtotal') || 
+                      document.querySelector('#damageCentersSubtotal'); // Look globally
+          }
+        }
         
         if (saveButton && subtotal) {
           const buttonContainer = saveButton.parentElement;
           // Move button container to before the subtotal
           subtotal.parentNode.insertBefore(buttonContainer, subtotal);
           console.log('✅ Repositioned damage centers save button before summary');
+        } else {
+          console.log('ℹ️ Save button or subtotal not found for repositioning');
+          console.log('  - Save button found:', !!saveButton);
+          console.log('  - Subtotal found:', !!subtotal);
         }
       } catch (error) {
         console.error('Error repositioning damage centers save button:', error);
