@@ -16958,8 +16958,22 @@
         console.log('helper.centers:', helper.centers);
         console.log('helper.damage_centers:', helper.damage_centers);
         
-        // Load damage centers from helper - PRIORITIZE helper.centers (has parts_required data)
-        if (helper.centers && helper.centers.length > 0) {
+        // Load damage centers from helper - CHECK REPORT TYPE FIRST
+        // SESSION 93 FIX: Use archive for non-private reports on page load
+        const currentReportType = helper.final_report?.type || helper.final_report?.dropdown_type || 
+                                document.querySelector('input[name="final-report-type"]:checked')?.value;
+        const hasArchive = helper.centers_archive && helper.centers_archive.length > 0;
+        const shouldUseArchive = hasArchive && currentReportType !== 'חוות דעת פרטית';
+        
+        console.log('🔍 Page load - Report type:', currentReportType);
+        console.log('🔍 Has archive:', hasArchive);
+        console.log('🔍 Should use archive:', shouldUseArchive);
+        
+        if (shouldUseArchive) {
+          console.log('🔄 Loading from helper.centers_archive (Non-private report - using preserved wizard data)');
+          const normalizedBlocks = helper.centers_archive.map((center, index) => adaptCenterToBlock(center, index));
+          loadDamageCentersFromHelper(normalizedBlocks);
+        } else if (helper.centers && helper.centers.length > 0) {
           console.log('🔄 Loading from helper.centers (PRIMARY SOURCE - has parts_required data)');
           const normalizedBlocks = helper.centers.map((center, index) => adaptCenterToBlock(center, index));
           loadDamageCentersFromHelper(normalizedBlocks);
