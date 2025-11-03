@@ -1027,25 +1027,95 @@
       width: 80vw !important;
     }
     
-    /* SESSION 93: Toggle switch styles */
-    .toggle-switch input:checked + .slider {
-      background-color: #4CAF50;
+    /* Sliding Toggle Container */
+    .sliding-toggle {
+      position: relative;
+      display: flex;
+      background: rgba(255, 255, 255, 0.25);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      border-radius: 25px;
+      padding: 4px;
+      box-shadow: 0 8px 32px rgba(31, 38, 135, 0.2);
+      transition: all 0.3s ease;
+      width: 200px;
     }
     
-    .toggle-switch input:checked + .slider .slider-inner {
-      transform: translateX(30px);
+    .sliding-toggle:hover {
+      box-shadow: 0 12px 40px rgba(31, 38, 135, 0.3);
+    }
+    
+    /* Toggle Options */
+    .toggle-option {
+      position: relative;
+      z-index: 2;
+      padding: 12px 20px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      border-radius: 20px;
+      flex: 1;
+      text-align: center;
+      user-select: none;
+    }
+    
+    .toggle-option span {
+      font-size: 14px;
+      font-weight: 500;
+      color: #666;
+      transition: all 0.3s ease;
+      text-shadow: 0 1px 2px rgba(255, 255, 255, 0.5);
+    }
+    
+    .toggle-option.active span {
+      color: #fff;
+      font-weight: 600;
+      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+    }
+    
+    .toggle-option:hover:not(.active) span {
+      color: #333;
+    }
+    
+    /* Sliding Background */
+    .toggle-slider {
+      position: absolute;
+      top: 4px;
+      left: 4px;
+      width: calc(50% - 4px);
+      height: calc(100% - 8px);
+      background: linear-gradient(145deg, #4CAF50, #45a049);
+      border-radius: 20px;
+      transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+      box-shadow: 0 4px 12px rgba(76, 175, 80, 0.4);
+      z-index: 1;
+    }
+    
+    /* Slider positions */
+    .toggle-slider.wizard-active {
+      transform: translateX(0);
+    }
+    
+    .toggle-slider.invoice-active {
+      transform: translateX(100%);
     }
     
     /* Invoice data mode styling */
     .invoice-data-mode {
-      background-color: #e8f5e9 !important;
-      border: 2px solid #4CAF50;
+      background: linear-gradient(135deg, rgba(76, 175, 80, 0.1), rgba(255, 255, 255, 0.8)) !important;
+      backdrop-filter: blur(8px) !important;
+      -webkit-backdrop-filter: blur(8px) !important;
+      border: 2px solid #4CAF50 !important;
+      box-shadow: 0 4px 16px rgba(76, 175, 80, 0.2) !important;
     }
     
     /* Archive data mode styling */
     .archive-data-mode {
-      background-color: #fff3cd !important;
-      border: 2px solid #ffc107;
+      background: linear-gradient(135deg, rgba(255, 149, 0, 0.1), rgba(255, 255, 255, 0.8)) !important;
+      backdrop-filter: blur(8px) !important;
+      -webkit-backdrop-filter: blur(8px) !important;
+      border: 2px solid #ff9500 !important;
+      box-shadow: 0 4px 16px rgba(255, 149, 0, 0.2) !important;
     }
   </style>
 </head>
@@ -1288,16 +1358,19 @@
           </div>
         </div>
         
-        <!-- Glassy Data Source Toggle -->
+        <!-- Sliding Toggle between Invoice and Wizard -->
         <div style="display: flex; justify-content: space-between; align-items: center; margin: 15px 0 10px 0;">
           <h3 style="margin: 0; color: #333; font-size: 18px; font-weight: 600;">מרכזי נזק</h3>
           <div id="dataToggleContainer" style="display: none;">
-            <span id="leftLabel" class="inactive">נוכחי</span>
-            <label class="glassy-toggle">
-              <input type="checkbox" id="dataSourceToggle" onchange="toggleDataSource()">
-              <span class="glassy-slider"></span>
-            </label>
-            <span id="rightLabel" class="inactive">אחר</span>
+            <div class="sliding-toggle">
+              <div class="toggle-option" id="wizardOption" onclick="switchToWizard()">
+                <span>אשף</span>
+              </div>
+              <div class="toggle-option" id="invoiceOption" onclick="switchToInvoice()">
+                <span>חשבונית</span>
+              </div>
+              <div class="toggle-slider" id="toggleSlider"></div>
+            </div>
           </div>
         </div>
         
@@ -13472,8 +13545,105 @@
       };
     };
 
-    // SESSION 91: Create test mappings with pending status
-    // SESSION 93: Toggle between wizard/invoice data
+    // SESSION 94: Sliding toggle between wizard/invoice data
+    let currentMode = 'wizard'; // Default to wizard mode
+    
+    window.switchToWizard = function() {
+      if (currentMode === 'wizard') return;
+      
+      currentMode = 'wizard';
+      updateToggleUI();
+      loadWizardData();
+    };
+    
+    window.switchToInvoice = function() {
+      if (currentMode === 'invoice') return;
+      
+      currentMode = 'invoice';
+      updateToggleUI();
+      loadInvoiceData();
+    };
+    
+    function updateToggleUI() {
+      const wizardOption = document.getElementById('wizardOption');
+      const invoiceOption = document.getElementById('invoiceOption');
+      const slider = document.getElementById('toggleSlider');
+      
+      if (!wizardOption || !invoiceOption || !slider) return;
+      
+      if (currentMode === 'wizard') {
+        wizardOption.classList.add('active');
+        invoiceOption.classList.remove('active');
+        slider.classList.add('wizard-active');
+        slider.classList.remove('invoice-active');
+      } else {
+        wizardOption.classList.remove('active');
+        invoiceOption.classList.add('active');
+        slider.classList.remove('wizard-active');
+        slider.classList.add('invoice-active');
+      }
+    }
+    
+    function loadWizardData() {
+      const helper = window.helper || JSON.parse(sessionStorage.getItem('helper') || '{}');
+      const contentDiv = document.getElementById('damageCentersContent');
+      
+      console.log('🔄 Loading wizard data');
+      
+      let dataToLoad;
+      const currentReportType = helper.final_report?.type || helper.final_report?.dropdown_type || 
+                              document.querySelector('input[name="final-report-type"]:checked')?.value;
+      const isPrivateReport = currentReportType === 'חוות דעת פרטית';
+      
+      if (!isPrivateReport && helper.centers_archive) {
+        dataToLoad = helper.centers_archive;
+        contentDiv.classList.add('archive-data-mode');
+        contentDiv.classList.remove('invoice-data-mode');
+      } else {
+        dataToLoad = helper.centers;
+        contentDiv.classList.remove('invoice-data-mode', 'archive-data-mode');
+      }
+      
+      if (dataToLoad && dataToLoad.length > 0) {
+        const normalizedBlocks = dataToLoad.map((center, index) => adaptCenterToBlock(center, index));
+        loadDamageCentersFromHelper(normalizedBlocks);
+        console.log(`✅ Loaded ${dataToLoad.length} wizard centers`);
+      }
+    }
+    
+    function loadInvoiceData() {
+      const helper = window.helper || JSON.parse(sessionStorage.getItem('helper') || '{}');
+      const contentDiv = document.getElementById('damageCentersContent');
+      
+      console.log('🔄 Loading invoice data');
+      
+      let dataToLoad;
+      const currentReportType = helper.final_report?.type || helper.final_report?.dropdown_type || 
+                              document.querySelector('input[name="final-report-type"]:checked')?.value;
+      const isPrivateReport = currentReportType === 'חוות דעת פרטית';
+      
+      if (isPrivateReport && helper.centers_after_invoice) {
+        dataToLoad = helper.centers_after_invoice;
+        // Auto-save invoice data to centers
+        helper.centers = JSON.parse(JSON.stringify(dataToLoad));
+        window.helper = helper;
+        sessionStorage.setItem('helper', JSON.stringify(helper));
+        console.log('💾 Auto-saved invoice data to centers');
+      } else {
+        dataToLoad = helper.centers;
+      }
+      
+      contentDiv.classList.add('invoice-data-mode');
+      contentDiv.classList.remove('archive-data-mode');
+      
+      if (dataToLoad && dataToLoad.length > 0) {
+        const normalizedBlocks = dataToLoad.map((center, index) => adaptCenterToBlock(center, index));
+        loadDamageCentersFromHelper(normalizedBlocks);
+        console.log(`✅ Loaded ${dataToLoad.length} invoice centers`);
+      }
+    }
+
+    // Legacy function kept for compatibility
     window.toggleDataSource = function() {
       const helper = window.helper || JSON.parse(sessionStorage.getItem('helper') || '{}');
       const currentReportType = helper.final_report?.type || helper.final_report?.dropdown_type || 
@@ -13539,18 +13709,15 @@
       if (!toggleContainer) return;
       
       // Show toggle only if alternative data exists
-      if (isPrivateReport && helper.centers_after_invoice) {
+      if ((isPrivateReport && helper.centers_after_invoice) || (!isPrivateReport && helper.centers_archive)) {
         toggleContainer.style.display = 'flex';
-        // Update labels
-        toggleContainer.querySelector('span:first-child').textContent = 'נוכחי';
-        toggleContainer.querySelector('span:last-child').textContent = 'חשבונית';
-      } else if (!isPrivateReport && helper.centers_archive) {
-        toggleContainer.style.display = 'flex';
-        // Update labels
-        toggleContainer.querySelector('span:first-child').textContent = 'נוכחי';
-        toggleContainer.querySelector('span:last-child').textContent = 'אשף';
+        // Initialize to wizard mode
+        currentMode = 'wizard';
+        updateToggleUI();
+        console.log('✅ Toggle shown for available alternative data');
       } else {
         toggleContainer.style.display = 'none';
+        console.log('ℹ️ Toggle hidden - no alternative data available');
       }
     };
     
