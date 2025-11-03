@@ -1035,11 +1035,11 @@
       backdrop-filter: blur(12px);
       -webkit-backdrop-filter: blur(12px);
       border: 1px solid rgba(255, 255, 255, 0.3);
-      border-radius: 25px;
-      padding: 4px;
+      border-radius: 20px;
+      padding: 3px;
       box-shadow: 0 8px 32px rgba(31, 38, 135, 0.2);
       transition: all 0.3s ease;
-      width: 200px;
+      width: 140px;
     }
     
     .sliding-toggle:hover {
@@ -1050,17 +1050,17 @@
     .toggle-option {
       position: relative;
       z-index: 2;
-      padding: 12px 20px;
+      padding: 8px 12px;
       cursor: pointer;
       transition: all 0.3s ease;
-      border-radius: 20px;
+      border-radius: 17px;
       flex: 1;
       text-align: center;
       user-select: none;
     }
     
     .toggle-option span {
-      font-size: 14px;
+      font-size: 12px;
       font-weight: 500;
       color: #666;
       transition: all 0.3s ease;
@@ -1080,12 +1080,12 @@
     /* Sliding Background */
     .toggle-slider {
       position: absolute;
-      top: 4px;
-      left: 4px;
-      width: calc(50% - 4px);
-      height: calc(100% - 8px);
+      top: 3px;
+      left: 3px;
+      width: calc(50% - 3px);
+      height: calc(100% - 6px);
       background: linear-gradient(145deg, #4CAF50, #45a049);
-      border-radius: 20px;
+      border-radius: 17px;
       transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
       box-shadow: 0 4px 12px rgba(76, 175, 80, 0.4);
       z-index: 1;
@@ -1098,6 +1098,21 @@
     
     .toggle-slider.invoice-active {
       transform: translateX(100%);
+    }
+    
+    /* Private Report Mode - Invoice Only */
+    .sliding-toggle.private-report-mode {
+      width: 90px;
+      justify-content: center;
+    }
+    
+    .sliding-toggle.private-report-mode .toggle-option {
+      width: 84px;
+      justify-content: center;
+      background: linear-gradient(145deg, #2196F3, #1976D2);
+      color: white;
+      font-weight: 600;
+      box-shadow: 0 4px 12px rgba(33, 150, 243, 0.4);
     }
     
     /* Invoice data mode styling */
@@ -13568,19 +13583,49 @@
       const wizardOption = document.getElementById('wizardOption');
       const invoiceOption = document.getElementById('invoiceOption');
       const slider = document.getElementById('toggleSlider');
+      const toggleContainer = document.querySelector('.sliding-toggle');
       
-      if (!wizardOption || !invoiceOption || !slider) return;
+      if (!wizardOption || !invoiceOption || !slider || !toggleContainer) return;
       
-      if (currentMode === 'wizard') {
-        wizardOption.classList.add('active');
-        invoiceOption.classList.remove('active');
-        slider.classList.add('wizard-active');
-        slider.classList.remove('invoice-active');
-      } else {
-        wizardOption.classList.remove('active');
+      // Check if this is a private report
+      const helper = window.helper || JSON.parse(sessionStorage.getItem('helper') || '{}');
+      const currentReportType = helper.final_report?.type || helper.final_report?.dropdown_type || 
+                              document.querySelector('input[name="final-report-type"]:checked')?.value;
+      const isPrivateReport = currentReportType === 'חוות דעת פרטית';
+      
+      // For private reports, hide wizard option and force invoice mode
+      if (isPrivateReport) {
+        wizardOption.style.display = 'none';
+        invoiceOption.style.flex = '1';
+        slider.style.display = 'none';
+        toggleContainer.classList.add('private-report-mode');
+        
+        // Force invoice mode for private reports
+        if (currentMode !== 'invoice') {
+          currentMode = 'invoice';
+          loadInvoiceData();
+        }
+        
         invoiceOption.classList.add('active');
-        slider.classList.remove('wizard-active');
-        slider.classList.add('invoice-active');
+        console.log('🔒 Private report mode - showing only invoice toggle');
+      } else {
+        // For other reports, show both options
+        wizardOption.style.display = 'flex';
+        invoiceOption.style.flex = '1';
+        slider.style.display = 'block';
+        toggleContainer.classList.remove('private-report-mode');
+        
+        if (currentMode === 'wizard') {
+          wizardOption.classList.add('active');
+          invoiceOption.classList.remove('active');
+          slider.classList.add('wizard-active');
+          slider.classList.remove('invoice-active');
+        } else {
+          wizardOption.classList.remove('active');
+          invoiceOption.classList.add('active');
+          slider.classList.remove('wizard-active');
+          slider.classList.add('invoice-active');
+        }
       }
     }
     
@@ -13588,23 +13633,31 @@
       const helper = window.helper || JSON.parse(sessionStorage.getItem('helper') || '{}');
       const contentDiv = document.getElementById('damageCentersContent');
       
-      console.log('🔄 Loading wizard data');
+      console.log('🔄 Loading wizard data (original wizard data from archive)');
       
       let dataToLoad;
-      const currentReportType = helper.final_report?.type || helper.final_report?.dropdown_type || 
-                              document.querySelector('input[name="final-report-type"]:checked')?.value;
-      const isPrivateReport = currentReportType === 'חוות דעת פרטית';
       
-      if (!isPrivateReport && helper.centers_archive) {
+      // For wizard mode, always load from archive if available, otherwise from centers
+      if (helper.centers_archive) {
         dataToLoad = helper.centers_archive;
         contentDiv.classList.add('archive-data-mode');
         contentDiv.classList.remove('invoice-data-mode');
+        console.log('📦 Loading wizard data from centers_archive');
       } else {
         dataToLoad = helper.centers;
         contentDiv.classList.remove('invoice-data-mode', 'archive-data-mode');
+        console.log('📦 Loading wizard data from centers (no archive available)');
       }
       
       if (dataToLoad && dataToLoad.length > 0) {
+        // Auto-save wizard data to centers when switching to wizard mode
+        if (helper.centers_archive && dataToLoad === helper.centers_archive) {
+          helper.centers = JSON.parse(JSON.stringify(dataToLoad));
+          window.helper = helper;
+          sessionStorage.setItem('helper', JSON.stringify(helper));
+          console.log('💾 Auto-saved wizard data to centers');
+        }
+        
         const normalizedBlocks = dataToLoad.map((center, index) => adaptCenterToBlock(center, index));
         loadDamageCentersFromHelper(normalizedBlocks);
         console.log(`✅ Loaded ${dataToLoad.length} wizard centers`);
@@ -13615,22 +13668,28 @@
       const helper = window.helper || JSON.parse(sessionStorage.getItem('helper') || '{}');
       const contentDiv = document.getElementById('damageCentersContent');
       
-      console.log('🔄 Loading invoice data');
+      console.log('🔄 Loading invoice data (invoice-populated data)');
       
       let dataToLoad;
       const currentReportType = helper.final_report?.type || helper.final_report?.dropdown_type || 
                               document.querySelector('input[name="final-report-type"]:checked')?.value;
       const isPrivateReport = currentReportType === 'חוות דעת פרטית';
       
+      // For invoice mode, load current centers (which should have invoice data) or centers_after_invoice
       if (isPrivateReport && helper.centers_after_invoice) {
         dataToLoad = helper.centers_after_invoice;
-        // Auto-save invoice data to centers
+        console.log('📦 Loading invoice data from centers_after_invoice (private report)');
+      } else {
+        dataToLoad = helper.centers;
+        console.log('📦 Loading invoice data from centers');
+      }
+      
+      // Auto-save invoice data to centers when switching to invoice mode
+      if (dataToLoad) {
         helper.centers = JSON.parse(JSON.stringify(dataToLoad));
         window.helper = helper;
         sessionStorage.setItem('helper', JSON.stringify(helper));
         console.log('💾 Auto-saved invoice data to centers');
-      } else {
-        dataToLoad = helper.centers;
       }
       
       contentDiv.classList.add('invoice-data-mode');
@@ -18501,6 +18560,10 @@
           radio.addEventListener('change', function() {
             updateReportType();
             loadLegalText().catch(console.error);
+            // Update toggle visibility based on report type
+            if (typeof updateToggleUI === 'function') {
+              updateToggleUI();
+            }
           });
         });
         
