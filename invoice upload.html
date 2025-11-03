@@ -3403,10 +3403,11 @@ class InvoiceProcessor {
         console.log(`📋 Invoices after duplicate check: ${helper.invoices.length}`);
       }
       
-      // SESSION 80: Add invoice with unique entry ID and metadata
+      // SESSION 92: Add invoice with consistent ID field
       const invoiceData = {
         invoice_entry_id: generateUUID(),
-        supabase_invoice_id: this.currentInvoiceId || null,
+        invoice_id: this.currentInvoiceId || null,  // Use consistent field name
+        supabase_invoice_id: this.currentInvoiceId || null,  // Keep for backward compatibility
         entry_timestamp: new Date().toISOString(),
         source: 'ocr_webhook',
         ...result,
@@ -3522,38 +3523,42 @@ class InvoiceProcessor {
           // SESSION 84: Task 3 - Use ONLY invoice ID for precise deletion
           // Previous logic used invoice number too, which could delete multiple invoices
           helper.invoices = helper.invoices.filter(inv => {
-            const invId = inv.invoice_id || inv.supabase_invoice_id;
-            // Only compare by unique ID, not invoice number (numbers can repeat!)
-            return invId !== this.currentInvoiceId;
+            // SESSION 92: Fix - check multiple ID fields to handle different invoice formats
+            const invId = inv.invoice_id || inv.supabase_invoice_id || inv.id;
+            const shouldRemove = invId === this.currentInvoiceId;
+            
+            if (shouldRemove) {
+              console.log('🗑️ Removing invoice from helper:', inv);
+            }
+            
+            return !shouldRemove;
           });
           
           helper.meta = helper.meta || {};
           helper.meta.total_invoices = helper.invoices.length;
           
+          console.log(`✅ Removed from helper (${beforeCount} → ${helper.invoices.length})`);
+          
+          // SESSION 91: If no invoices left, restore centers from archive
+          if (helper.invoices.length === 0 && helper.centers_archive && helper.centers_archive.length > 0) {
+            console.log('📦 SESSION 91: No invoices left - restoring centers from archive');
+            helper.centers = JSON.parse(JSON.stringify(helper.centers_archive));
+            
+            // Clear the archive since we're back to no-invoice state
+            delete helper.centers_archive;
+            delete helper.centers_archive_meta;
+            
+            console.log('✅ Centers restored from archive - back to wizard data');
+          }
+          
+          // Save the updated helper with all changes
           sessionStorage.setItem('helper', JSON.stringify(helper));
           
           if (typeof window.updateHelper === 'function') {
             window.updateHelper('invoices', helper.invoices, 'invoice-delete');
             window.updateHelper('meta', helper.meta, 'invoice-delete');
           }
-          
-          console.log(`✅ Removed from helper (${beforeCount} → ${helper.invoices.length})`);
         }
-        
-        // SESSION 91: If no invoices left, restore centers from archive
-        if (helper.invoices.length === 0 && helper.centers_archive && helper.centers_archive.length > 0) {
-          console.log('📦 SESSION 91: No invoices left - restoring centers from archive');
-          helper.centers = JSON.parse(JSON.stringify(helper.centers_archive));
-          
-          // Clear the archive since we're back to no-invoice state
-          delete helper.centers_archive;
-          delete helper.centers_archive_meta;
-          
-          console.log('✅ Centers restored from archive - back to wizard data');
-        }
-        
-        // Save the updated helper with restored centers
-        sessionStorage.setItem('helper', JSON.stringify(helper));
         
       } catch (e) {
         console.warn('Could not remove from helper:', e);
@@ -3914,8 +3919,10 @@ class InvoiceProcessor {
       console.log(`🔍 Manual invoice duplicate check: ${invoiceNumber} / ${plate} / ${garageName}`);
     }
     
-    // Add unique metadata
+    // SESSION 92: Add unique metadata with consistent ID
     invoiceData.invoice_entry_id = generateUUID();
+    invoiceData.invoice_id = this.currentInvoiceId || null;  // Add consistent ID
+    invoiceData.supabase_invoice_id = this.currentInvoiceId || null;  // Backward compatibility
     invoiceData.entry_timestamp = new Date().toISOString();
     invoiceData.invoice_number = invoiceNumber;
     invoiceData.plate = plate;
@@ -4082,14 +4089,17 @@ class InvoiceProcessor {
             }
           }
 
-          // SESSION 80: Update helper with שרת ID
+          // SESSION 92: Update helper with consistent ID fields
+          invoiceData.invoice_id = this.currentInvoiceId;
           invoiceData.supabase_invoice_id = this.currentInvoiceId;
           const helperUpdated = JSON.parse(sessionStorage.getItem('helper') || '{}');
           const invoiceIndex = helperUpdated.invoices.findIndex(inv => inv.invoice_entry_id === invoiceData.invoice_entry_id);
           if (invoiceIndex >= 0) {
+            helperUpdated.invoices[invoiceIndex].invoice_id = this.currentInvoiceId;
             helperUpdated.invoices[invoiceIndex].supabase_invoice_id = this.currentInvoiceId;
             helperUpdated.invoices[invoiceIndex].document_id = document?.id;
             sessionStorage.setItem('helper', JSON.stringify(helperUpdated));
+            console.log('✅ Updated manual invoice in helper with IDs');
           }
 
           // SESSION 87: Success message
