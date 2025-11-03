@@ -25396,6 +25396,90 @@
       };
     };
 
+    // SESSION 91 GLOBAL: Debug invoice dropdown data
+    window.debugInvoiceDropdown = function() {
+      console.log('🔍 SESSION 91: Debugging invoice dropdown data');
+      const helper = window.helper || {};
+      
+      console.log('📋 Helper invoices:', helper.invoices);
+      console.log('📋 Window invoiceDataForDropdowns:', window.invoiceDataForDropdowns);
+      
+      // Test getCombinedDropdownData
+      if (typeof getCombinedDropdownData === 'function') {
+        const dropdownData = getCombinedDropdownData('');
+        const layer1Items = dropdownData.filter(item => item.layer === 1);
+        console.log('📋 Layer 1 items found:', layer1Items.length);
+        console.log('📋 Sample Layer 1 items:', layer1Items.slice(0, 3));
+      }
+      
+      return {
+        helperInvoices: helper.invoices?.length || 0,
+        invoiceDataForDropdowns: !!window.invoiceDataForDropdowns,
+        mappingsCount: window.invoiceDataForDropdowns?.mappings?.length || 0,
+        layer1ItemsCount: dropdownData?.filter(item => item.layer === 1).length || 0
+      };
+    };
+    
+    // SESSION 91 GLOBAL: Manually load invoice lines
+    window.loadInvoiceLines = async function(invoiceId) {
+      console.log('📋 SESSION 91: Manually loading invoice lines for invoice:', invoiceId);
+      
+      if (!window.supabase) {
+        console.error('❌ Supabase not available');
+        return;
+      }
+      
+      const { data: lines, error } = await window.supabase
+        .from('invoice_lines')
+        .select('*')
+        .eq('invoice_id', invoiceId);
+        
+      if (error) {
+        console.error('❌ Error loading invoice lines:', error);
+        return;
+      }
+      
+      console.log('✅ Found', lines?.length || 0, 'invoice lines');
+      console.log('📋 Invoice lines:', lines);
+      
+      // Add to helper.invoices
+      const helper = window.helper || {};
+      if (!helper.invoices) helper.invoices = [];
+      
+      const invoice = helper.invoices.find(inv => inv.id === invoiceId);
+      if (invoice) {
+        invoice.line_items = lines;
+        console.log('✅ Added lines to existing invoice in helper');
+      } else {
+        // Fetch the invoice details
+        const { data: invoiceData } = await window.supabase
+          .from('invoices')
+          .select('*')
+          .eq('id', invoiceId)
+          .single();
+          
+        if (invoiceData) {
+          helper.invoices.push({
+            ...invoiceData,
+            line_items: lines
+          });
+          console.log('✅ Added new invoice with lines to helper');
+        }
+      }
+      
+      // Save helper
+      sessionStorage.setItem('helper', JSON.stringify(helper));
+      window.helper = helper;
+      
+      console.log('📋 Updated helper.invoices:', helper.invoices);
+      
+      return {
+        invoiceId: invoiceId,
+        linesCount: lines?.length || 0,
+        lines: lines
+      };
+    };
+
     // SESSION 91 GLOBAL: Clear centers completely
     window.clearCenters = function() {
       console.log('🧹 SESSION 91: Clearing helper.centers');
