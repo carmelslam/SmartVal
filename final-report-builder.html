@@ -1026,6 +1026,27 @@
       max-width: 750px !important;
       width: 80vw !important;
     }
+    
+    /* SESSION 93: Toggle switch styles */
+    .toggle-switch input:checked + .slider {
+      background-color: #4CAF50;
+    }
+    
+    .toggle-switch input:checked + .slider .slider-inner {
+      transform: translateX(30px);
+    }
+    
+    /* Invoice data mode styling */
+    .invoice-data-mode {
+      background-color: #e8f5e9 !important;
+      border: 2px solid #4CAF50;
+    }
+    
+    /* Archive data mode styling */
+    .archive-data-mode {
+      background-color: #fff3cd !important;
+      border: 2px solid #ffc107;
+    }
   </style>
 </head>
 <body>
@@ -1267,7 +1288,42 @@
           </div>
         </div>
         
-        <div style="background: #f8f9fa; border-radius: 6px; padding: 15px; min-height: 50px;" id="damageCentersContent">
+        <!-- SESSION 93: Toggle between wizard/invoice data -->
+        <div style="display: flex; justify-content: space-between; align-items: center; margin: 15px 0 10px 0;">
+          <h3 style="margin: 0; color: #333; font-size: 18px; font-weight: 600;">מרכזי נזק</h3>
+          <div style="display: flex; align-items: center; gap: 10px;" id="dataToggleContainer">
+            <span style="font-size: 14px; color: #666;">אשף</span>
+            <label class="toggle-switch" style="position: relative; display: inline-block; width: 60px; height: 30px;">
+              <input type="checkbox" id="dataSourceToggle" onchange="toggleDataSource()" style="opacity: 0; width: 0; height: 0;">
+              <span class="slider" style="
+                position: absolute;
+                cursor: pointer;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                background-color: #ccc;
+                transition: .4s;
+                border-radius: 30px;
+              ">
+                <span class="slider-inner" style="
+                  position: absolute;
+                  content: '';
+                  height: 22px;
+                  width: 22px;
+                  left: 4px;
+                  bottom: 4px;
+                  background-color: white;
+                  transition: .4s;
+                  border-radius: 50%;
+                "></span>
+              </span>
+            </label>
+            <span style="font-size: 14px; color: #666;">חשבונית</span>
+          </div>
+        </div>
+        
+        <div style="background: #f8f9fa; border-radius: 6px; padding: 15px; min-height: 50px; transition: background-color 0.3s;" id="damageCentersContent">
           <div style="color: #666; text-align: center;">טוען נתוני מוקדי נזק...</div>
         </div>
         <button type="button" class="btn add" onclick="addNewDamageCenter()" style="margin-top: 10px;">הוסף מוקד נזק חדש</button>
@@ -12320,6 +12376,24 @@
           console.log('📋 SESSION 92: Preparing invoice data for dropdowns (private report)...');
           await prepareInvoiceDataForDropdowns(selectedInvoices, caseId);
           
+          // SESSION 93: Create centers_after_invoice snapshot for private reports
+          console.log('📸 SESSION 93: Creating centers_after_invoice snapshot...');
+          if (helper.centers && helper.centers.length > 0) {
+            helper.centers_after_invoice = JSON.parse(JSON.stringify(helper.centers));
+            helper.centers_after_invoice_meta = {
+              created_at: new Date().toISOString(),
+              report_type: currentReportType,
+              centers_count: helper.centers.length,
+              purpose: 'preserve_invoice_populated_data_for_private_reports'
+            };
+            
+            // Save to sessionStorage and window
+            sessionStorage.setItem('helper', JSON.stringify(helper));
+            window.helper = helper;
+            
+            console.log(`✅ Created centers_after_invoice with ${helper.centers.length} centers (invoice data)`);
+          }
+          
         } else {
           // For non-private reports, just ensure the data is saved
           console.log('ℹ️ Non-private report - data saved for dropdown access');
@@ -13421,6 +13495,87 @@
     };
 
     // SESSION 91: Create test mappings with pending status
+    // SESSION 93: Toggle between wizard/invoice data
+    window.toggleDataSource = function() {
+      const helper = window.helper || JSON.parse(sessionStorage.getItem('helper') || '{}');
+      const currentReportType = helper.final_report?.type || helper.final_report?.dropdown_type || 
+                              document.querySelector('input[name="final-report-type"]:checked')?.value;
+      const isPrivateReport = currentReportType === 'חוות דעת פרטית';
+      const toggle = document.getElementById('dataSourceToggle');
+      const contentDiv = document.getElementById('damageCentersContent');
+      
+      console.log('🔄 Toggling data source...');
+      console.log('  Report type:', currentReportType);
+      console.log('  Is private:', isPrivateReport);
+      console.log('  Toggle checked:', toggle.checked);
+      
+      let dataToLoad;
+      
+      if (isPrivateReport) {
+        // Private report: toggle between centers and centers_after_invoice
+        if (toggle.checked && helper.centers_after_invoice) {
+          console.log('📄 Loading invoice data from centers_after_invoice');
+          dataToLoad = helper.centers_after_invoice;
+          contentDiv.classList.add('invoice-data-mode');
+          contentDiv.classList.remove('archive-data-mode');
+        } else {
+          console.log('🎯 Loading current centers data');
+          dataToLoad = helper.centers;
+          contentDiv.classList.remove('invoice-data-mode', 'archive-data-mode');
+        }
+      } else {
+        // Other reports: toggle between centers and centers_archive
+        if (toggle.checked && helper.centers_archive) {
+          console.log('📦 Loading wizard data from centers_archive');
+          dataToLoad = helper.centers_archive;
+          contentDiv.classList.add('archive-data-mode');
+          contentDiv.classList.remove('invoice-data-mode');
+        } else {
+          console.log('🎯 Loading current centers data');
+          dataToLoad = helper.centers;
+          contentDiv.classList.remove('invoice-data-mode', 'archive-data-mode');
+        }
+      }
+      
+      // Load the data
+      if (dataToLoad && dataToLoad.length > 0) {
+        const normalizedBlocks = dataToLoad.map((center, index) => adaptCenterToBlock(center, index));
+        loadDamageCentersFromHelper(normalizedBlocks);
+        console.log(`✅ Loaded ${dataToLoad.length} damage centers`);
+      } else {
+        console.warn('⚠️ No data to load');
+      }
+      
+      // Update toggle visibility based on available data
+      updateToggleVisibility();
+    };
+    
+    // Update toggle visibility based on report type and available data
+    window.updateToggleVisibility = function() {
+      const helper = window.helper || JSON.parse(sessionStorage.getItem('helper') || '{}');
+      const currentReportType = helper.final_report?.type || helper.final_report?.dropdown_type || 
+                              document.querySelector('input[name="final-report-type"]:checked')?.value;
+      const isPrivateReport = currentReportType === 'חוות דעת פרטית';
+      const toggleContainer = document.getElementById('dataToggleContainer');
+      
+      if (!toggleContainer) return;
+      
+      // Show toggle only if alternative data exists
+      if (isPrivateReport && helper.centers_after_invoice) {
+        toggleContainer.style.display = 'flex';
+        // Update labels
+        toggleContainer.querySelector('span:first-child').textContent = 'נוכחי';
+        toggleContainer.querySelector('span:last-child').textContent = 'חשבונית';
+      } else if (!isPrivateReport && helper.centers_archive) {
+        toggleContainer.style.display = 'flex';
+        // Update labels
+        toggleContainer.querySelector('span:first-child').textContent = 'נוכחי';
+        toggleContainer.querySelector('span:last-child').textContent = 'אשף';
+      } else {
+        toggleContainer.style.display = 'none';
+      }
+    };
+    
     window.createTestMappings = async function() {
       console.log('🧪 SESSION 91: Creating test mappings with PENDING status');
       
@@ -16987,6 +17142,11 @@
           loadDamageCentersFromHelper(normalizedBlocks);
         } else {
           console.log('❌ No damage center data found in any location');
+        }
+        
+        // SESSION 93: Update toggle visibility after loading damage centers
+        if (typeof updateToggleVisibility === 'function') {
+          updateToggleVisibility();
         }
         
         console.log('✅ Helper data loaded successfully');
