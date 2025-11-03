@@ -1062,19 +1062,20 @@
     .toggle-option span {
       font-size: 12px;
       font-weight: 500;
-      color: #666;
+      color: #333;
       transition: all 0.3s ease;
-      text-shadow: 0 1px 2px rgba(255, 255, 255, 0.5);
+      text-shadow: 0 1px 2px rgba(255, 255, 255, 0.8);
     }
     
     .toggle-option.active span {
       color: #fff;
       font-weight: 600;
-      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
     }
     
     .toggle-option:hover:not(.active) span {
-      color: #333;
+      color: #000;
+      font-weight: 600;
     }
     
     /* Sliding Background */
@@ -1110,9 +1111,13 @@
       width: 84px;
       justify-content: center;
       background: linear-gradient(145deg, #2196F3, #1976D2);
-      color: white;
-      font-weight: 600;
       box-shadow: 0 4px 12px rgba(33, 150, 243, 0.4);
+    }
+    
+    .sliding-toggle.private-report-mode .toggle-option span {
+      color: white !important;
+      font-weight: 600 !important;
+      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3) !important;
     }
     
     /* Invoice data mode styling */
@@ -13564,16 +13569,14 @@
     let currentMode = 'wizard'; // Default to wizard mode
     
     window.switchToWizard = function() {
-      if (currentMode === 'wizard') return;
-      
+      console.log('🔄 Switching to wizard mode');
       currentMode = 'wizard';
       updateToggleUI();
       loadWizardData();
     };
     
     window.switchToInvoice = function() {
-      if (currentMode === 'invoice') return;
-      
+      console.log('🔄 Switching to invoice mode');
       currentMode = 'invoice';
       updateToggleUI();
       loadInvoiceData();
@@ -13633,21 +13636,27 @@
       const helper = window.helper || JSON.parse(sessionStorage.getItem('helper') || '{}');
       const contentDiv = document.getElementById('damageCentersContent');
       
-      console.log('🔄 Loading wizard data (original wizard data from archive)');
+      console.log('🧙‍♂️ WIZARD MODE: Loading original wizard data');
       
       let dataToLoad;
+      let dataSource;
       
-      // For wizard mode, always load from archive if available, otherwise from centers
+      // For wizard mode, always load from archive if available (original wizard data)
       if (helper.centers_archive) {
         dataToLoad = helper.centers_archive;
+        dataSource = 'centers_archive';
         contentDiv.classList.add('archive-data-mode');
         contentDiv.classList.remove('invoice-data-mode');
-        console.log('📦 Loading wizard data from centers_archive');
+        console.log('📦 WIZARD: Loading from centers_archive (original wizard data)');
       } else {
         dataToLoad = helper.centers;
+        dataSource = 'centers';
         contentDiv.classList.remove('invoice-data-mode', 'archive-data-mode');
-        console.log('📦 Loading wizard data from centers (no archive available)');
+        console.log('📦 WIZARD: Loading from centers (no archive available)');
       }
+      
+      console.log('🔍 WIZARD DATA SOURCE:', dataSource);
+      console.log('🔍 WIZARD DATA LENGTH:', dataToLoad?.length || 0);
       
       if (dataToLoad && dataToLoad.length > 0) {
         // Auto-save wizard data to centers when switching to wizard mode
@@ -13660,7 +13669,7 @@
         
         const normalizedBlocks = dataToLoad.map((center, index) => adaptCenterToBlock(center, index));
         loadDamageCentersFromHelper(normalizedBlocks);
-        console.log(`✅ Loaded ${dataToLoad.length} wizard centers`);
+        console.log(`✅ WIZARD: Displayed ${dataToLoad.length} centers from ${dataSource}`);
       }
     }
     
@@ -13668,21 +13677,27 @@
       const helper = window.helper || JSON.parse(sessionStorage.getItem('helper') || '{}');
       const contentDiv = document.getElementById('damageCentersContent');
       
-      console.log('🔄 Loading invoice data (invoice-populated data)');
+      console.log('🧾 INVOICE MODE: Loading invoice-populated data');
       
       let dataToLoad;
+      let dataSource;
       const currentReportType = helper.final_report?.type || helper.final_report?.dropdown_type || 
                               document.querySelector('input[name="final-report-type"]:checked')?.value;
       const isPrivateReport = currentReportType === 'חוות דעת פרטית';
       
-      // For invoice mode, load current centers (which should have invoice data) or centers_after_invoice
+      // For invoice mode, prioritize invoice-populated data
       if (isPrivateReport && helper.centers_after_invoice) {
         dataToLoad = helper.centers_after_invoice;
-        console.log('📦 Loading invoice data from centers_after_invoice (private report)');
+        dataSource = 'centers_after_invoice';
+        console.log('📦 INVOICE: Loading from centers_after_invoice (private report with invoice data)');
       } else {
         dataToLoad = helper.centers;
-        console.log('📦 Loading invoice data from centers');
+        dataSource = 'centers';
+        console.log('📦 INVOICE: Loading from centers (current centers data)');
       }
+      
+      console.log('🔍 INVOICE DATA SOURCE:', dataSource);
+      console.log('🔍 INVOICE DATA LENGTH:', dataToLoad?.length || 0);
       
       // Auto-save invoice data to centers when switching to invoice mode
       if (dataToLoad) {
@@ -13698,9 +13713,35 @@
       if (dataToLoad && dataToLoad.length > 0) {
         const normalizedBlocks = dataToLoad.map((center, index) => adaptCenterToBlock(center, index));
         loadDamageCentersFromHelper(normalizedBlocks);
-        console.log(`✅ Loaded ${dataToLoad.length} invoice centers`);
+        console.log(`✅ INVOICE: Displayed ${dataToLoad.length} centers from ${dataSource}`);
       }
     }
+
+    // Debug function to test toggle functionality
+    window.debugToggleState = function() {
+      const helper = window.helper || JSON.parse(sessionStorage.getItem('helper') || '{}');
+      console.log('🔍 TOGGLE DEBUG STATE:');
+      console.log('  - Current mode:', currentMode);
+      console.log('  - centers exists:', !!helper.centers);
+      console.log('  - centers_archive exists:', !!helper.centers_archive);
+      console.log('  - centers_after_invoice exists:', !!helper.centers_after_invoice);
+      console.log('  - centers length:', helper.centers?.length || 0);
+      console.log('  - archive length:', helper.centers_archive?.length || 0);
+      console.log('  - after_invoice length:', helper.centers_after_invoice?.length || 0);
+      
+      const currentReportType = helper.final_report?.type || helper.final_report?.dropdown_type || 
+                              document.querySelector('input[name="final-report-type"]:checked')?.value;
+      console.log('  - Report type:', currentReportType);
+      console.log('  - Is private:', currentReportType === 'חוות דעת פרטית');
+      
+      // Test manual switches
+      console.log('🧪 Testing manual switch to wizard...');
+      switchToWizard();
+      setTimeout(() => {
+        console.log('🧪 Testing manual switch to invoice...');
+        switchToInvoice();
+      }, 2000);
+    };
 
     // Legacy function kept for compatibility
     window.toggleDataSource = function() {
