@@ -12545,27 +12545,28 @@
     function convertMappingToPart(mapping, invoice) {
       const helper = window.helper || {};
       
-      // SESSION 91 FIX: Use the actual mapping fields
+      // SESSION 91 FIX: Use data from original_field_data JSON
       console.log('🔍 DEBUG: Converting mapping to part:', mapping);
+      const fieldData = mapping.original_field_data || {};
       
       return {
         row_uuid: window.generateUUID ? window.generateUUID() : 'part_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9),
         case_id: helper.case_info?.supabase_case_id || mapping.case_id,
-        plate: helper.case_info?.plate || '',
-        damage_center_code: mapping.damage_center_code || mapping.damage_center_id,
-        // Use line_item_description directly from mapping
-        part_name: mapping.line_item_description || mapping.mapped_data?.description || mapping.invoice_line?.description || '',
-        description: mapping.line_item_description || mapping.mapped_data?.description || mapping.invoice_line?.description || '',
-        pcode: mapping.mapped_data?.part_code || mapping.invoice_line?.metadata?.part_code || '',
-        oem: mapping.mapped_data?.oem || mapping.invoice_line?.metadata?.oem || '',
-        supplier_name: mapping.mapped_data?.supplier_name || invoice?.supplier_name || '',
-        // Use line_item_amount directly from mapping
-        price_per_unit: mapping.line_item_amount || mapping.mapped_data?.unit_price || mapping.invoice_line?.unit_price || 0,
+        plate: helper.case_info?.plate || fieldData.plate || '',
+        damage_center_code: mapping.damage_center_id || mapping.damage_center_code,
+        // Get data from original_field_data
+        part_name: fieldData.description || '',
+        description: fieldData.description || '',
+        pcode: fieldData.catalog_code || '',
+        oem: mapping.mapped_data?.oem || '',
+        supplier_name: fieldData.supplier_name || invoice?.supplier_name || '',
+        // Price data from original_field_data
+        price_per_unit: fieldData.unit_price || 0,
         reduction_percentage: mapping.user_modifications?.reduction_percentage || 0,
         wear_percentage: mapping.user_modifications?.wear_percentage || 0,
-        updated_price: mapping.line_item_amount || mapping.mapped_data?.updated_price || mapping.mapped_data?.unit_price || mapping.invoice_line?.unit_price || 0,
-        total_cost: mapping.line_item_amount || mapping.mapped_data?.line_total || mapping.invoice_line?.line_total || 0,
-        quantity: mapping.mapped_data?.quantity || mapping.invoice_line?.quantity || 1,
+        updated_price: fieldData.unit_price || 0,
+        total_cost: fieldData.line_total || 0,
+        quantity: fieldData.quantity || 1,
         source: 'invoice',
         _invoice_line_id: mapping.invoice_line_id,
         _invoice_id: mapping.invoice_id,
@@ -12585,13 +12586,14 @@
      * Convert mapping to work format (follows UI structure exactly)
      */
     function convertMappingToWork(mapping, invoice) {
-      // SESSION 91 FIX: Use the actual mapping fields
+      // SESSION 91 FIX: Use data from original_field_data JSON
       console.log('🔍 DEBUG: Converting mapping to work:', mapping);
+      const fieldData = mapping.original_field_data || {};
       
       return {
-        category: mapping.line_item_description || mapping.mapped_data?.description || mapping.invoice_line?.description || '',
-        cost: mapping.line_item_amount || mapping.mapped_data?.line_total || mapping.invoice_line?.line_total || 0,
-        comments: mapping.user_modifications?.notes || '',
+        category: fieldData.description || '',
+        cost: fieldData.line_total || fieldData.unit_price || 0,
+        comments: fieldData.catalog_code || '',
         added_at: new Date().toISOString(),
         source: 'invoice',
         _invoice_line_id: mapping.invoice_line_id,
@@ -12603,13 +12605,14 @@
      * Convert mapping to repair format (follows UI structure exactly)
      */
     function convertMappingToRepair(mapping, invoice) {
-      // SESSION 91 FIX: Use the actual mapping fields
+      // SESSION 91 FIX: Use data from original_field_data JSON
       console.log('🔍 DEBUG: Converting mapping to repair:', mapping);
+      const fieldData = mapping.original_field_data || {};
       
       return {
-        name: mapping.line_item_description || mapping.mapped_data?.description || mapping.invoice_line?.description || '',
-        cost: mapping.line_item_amount || mapping.mapped_data?.line_total || mapping.invoice_line?.line_total || 0,
-        description: mapping.user_modifications?.notes || '',
+        name: fieldData.description || '',
+        cost: fieldData.line_total || fieldData.unit_price || 0,
+        description: fieldData.catalog_code || '',
         added_at: new Date().toISOString(),
         source: 'invoice',
         _invoice_line_id: mapping.invoice_line_id,
