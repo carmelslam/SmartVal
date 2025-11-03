@@ -13839,6 +13839,138 @@
       }, 2000);
     };
 
+    // SESSION 93: Test save button visibility fix
+    window.testSaveButtonFix = function() {
+      console.log('🧪 SESSION 93: Testing Save Button Fix');
+      
+      // 1. Force call addSectionButtons to create buttons
+      console.log('📋 Step 1: Calling addSectionButtons...');
+      if (typeof addSectionButtons === 'function') {
+        addSectionButtons();
+        console.log('✅ addSectionButtons called');
+      } else {
+        console.log('❌ addSectionButtons function not found');
+      }
+      
+      // 2. Check if save button was created
+      console.log('📋 Step 2: Checking for save button...');
+      const damageCentersSummary = document.getElementById('damageCentersSummary');
+      const damageCentersContent = document.getElementById('damageCentersContent');
+      
+      let saveButton = null;
+      if (damageCentersSummary) {
+        saveButton = damageCentersSummary.querySelector('.section-save-button');
+        console.log('🔍 Save button in damageCentersSummary:', !!saveButton);
+      }
+      
+      if (!saveButton && damageCentersContent) {
+        saveButton = damageCentersContent.querySelector('.section-save-button');
+        console.log('🔍 Save button in damageCentersContent:', !!saveButton);
+      }
+      
+      // 3. Test repositioning function
+      console.log('📋 Step 3: Testing repositioning...');
+      if (typeof repositionDamageCentersSaveButton === 'function') {
+        repositionDamageCentersSaveButton();
+        console.log('✅ repositionDamageCentersSaveButton called');
+      } else {
+        console.log('❌ repositionDamageCentersSaveButton function not found');
+      }
+      
+      // 4. Final check
+      console.log('📋 Step 4: Final button visibility check...');
+      if (saveButton) {
+        const isVisible = saveButton.offsetParent !== null;
+        const computedStyle = window.getComputedStyle(saveButton);
+        console.log('✅ Save button found and visible:', isVisible);
+        console.log('🔍 Button display:', computedStyle.display);
+        console.log('🔍 Button visibility:', computedStyle.visibility);
+        console.log('🔍 Button position:', saveButton.getBoundingClientRect());
+      } else {
+        console.log('❌ Save button not found after fix attempt');
+      }
+      
+      return {
+        buttonExists: !!saveButton,
+        buttonVisible: saveButton ? saveButton.offsetParent !== null : false,
+        damageCentersSummaryExists: !!damageCentersSummary,
+        damageCentersContentExists: !!damageCentersContent
+      };
+    };
+
+    // SESSION 93: Test save button persistence during toggle operations
+    window.testSaveButtonPersistence = function() {
+      console.log('🧪 SESSION 93: Testing Save Button Persistence During Toggle Operations');
+      
+      return new Promise((resolve) => {
+        // Initial setup
+        console.log('📋 Step 1: Initial save button setup...');
+        const initialResult = window.testSaveButtonFix();
+        
+        if (!initialResult.buttonExists) {
+          console.log('❌ Save button not found initially, test cannot proceed');
+          resolve({ success: false, reason: 'No initial button' });
+          return;
+        }
+        
+        console.log('✅ Initial save button found');
+        
+        // Test 1: Switch to wizard and back
+        console.log('📋 Step 2: Testing wizard switch...');
+        switchToWizard();
+        
+        setTimeout(() => {
+          let saveButton = document.querySelector('#damageCentersSummary .section-save-button') || 
+                          document.querySelector('#damageCentersContent .section-save-button');
+          const wizardTest = !!saveButton && saveButton.offsetParent !== null;
+          console.log('🔍 Save button visible after wizard switch:', wizardTest);
+          
+          // Test 2: Switch to invoice and back
+          console.log('📋 Step 3: Testing invoice switch...');
+          switchToInvoice();
+          
+          setTimeout(() => {
+            saveButton = document.querySelector('#damageCentersSummary .section-save-button') || 
+                        document.querySelector('#damageCentersContent .section-save-button');
+            const invoiceTest = !!saveButton && saveButton.offsetParent !== null;
+            console.log('🔍 Save button visible after invoice switch:', invoiceTest);
+            
+            // Test 3: Multiple rapid switches
+            console.log('📋 Step 4: Testing rapid switches...');
+            switchToWizard();
+            setTimeout(() => switchToInvoice(), 100);
+            setTimeout(() => switchToWizard(), 200);
+            setTimeout(() => switchToInvoice(), 300);
+            
+            setTimeout(() => {
+              saveButton = document.querySelector('#damageCentersSummary .section-save-button') || 
+                          document.querySelector('#damageCentersContent .section-save-button');
+              const rapidTest = !!saveButton && saveButton.offsetParent !== null;
+              console.log('🔍 Save button visible after rapid switches:', rapidTest);
+              
+              const finalResult = {
+                success: wizardTest && invoiceTest && rapidTest,
+                initialButton: initialResult.buttonExists,
+                wizardSwitch: wizardTest,
+                invoiceSwitch: invoiceTest,
+                rapidSwitches: rapidTest,
+                finalButtonVisible: rapidTest
+              };
+              
+              if (finalResult.success) {
+                console.log('✅ SESSION 93: Save button persistence test PASSED');
+              } else {
+                console.log('❌ SESSION 93: Save button persistence test FAILED');
+                console.log('📋 Test results:', finalResult);
+              }
+              
+              resolve(finalResult);
+            }, 1000);
+          }, 500);
+        }, 500);
+      });
+    };
+
     // Legacy function kept for compatibility
     window.toggleDataSource = function() {
       const helper = window.helper || JSON.parse(sessionStorage.getItem('helper') || '{}');
@@ -18463,24 +18595,32 @@
     // REPOSITION DAMAGE CENTERS SAVE BUTTON TO APPEAR BEFORE SUMMARY
     function repositionDamageCentersSaveButton() {
       try {
+        console.log('🔍 SESSION 93: Searching for damage centers save button...');
+        
         // Look in both locations - damageCentersSummary (old) and damageCentersContent (new)
         let saveButton = null;
         let subtotal = null;
         
-        // Try old location first
+        // Try damageCentersSummary first (now the correct location after fix)
         const damageCentersSection = document.getElementById('damageCentersSummary');
+        console.log('🔍 damageCentersSummary exists:', !!damageCentersSection);
         if (damageCentersSection) {
           saveButton = damageCentersSection.querySelector('.section-save-button');
           subtotal = damageCentersSection.querySelector('#damageCentersSubtotal');
+          console.log('🔍 Save button in damageCentersSummary:', !!saveButton);
+          console.log('🔍 Subtotal in damageCentersSummary:', !!subtotal);
         }
         
-        // Try new location if not found
+        // Try damageCentersContent if not found (fallback)
         if (!saveButton) {
           const damageCentersContent = document.getElementById('damageCentersContent');
+          console.log('🔍 damageCentersContent exists:', !!damageCentersContent);
           if (damageCentersContent) {
             saveButton = damageCentersContent.querySelector('.section-save-button');
             subtotal = damageCentersContent.querySelector('#damageCentersSubtotal') || 
                       document.querySelector('#damageCentersSubtotal'); // Look globally
+            console.log('🔍 Save button in damageCentersContent:', !!saveButton);
+            console.log('🔍 Subtotal found globally:', !!subtotal);
           }
         }
         
@@ -18488,14 +18628,23 @@
           const buttonContainer = saveButton.parentElement;
           // Move button container to before the subtotal
           subtotal.parentNode.insertBefore(buttonContainer, subtotal);
-          console.log('✅ Repositioned damage centers save button before summary');
+          console.log('✅ SESSION 93: Repositioned damage centers save button before summary');
         } else {
-          console.log('ℹ️ Save button or subtotal not found for repositioning');
+          console.log('❌ SESSION 93: Save button or subtotal not found for repositioning');
           console.log('  - Save button found:', !!saveButton);
           console.log('  - Subtotal found:', !!subtotal);
+          
+          // Additional debug: list all buttons in both sections
+          if (damageCentersSection) {
+            const allButtons = damageCentersSection.querySelectorAll('button');
+            console.log('🔍 All buttons in damageCentersSummary:', allButtons.length);
+            allButtons.forEach((btn, i) => {
+              console.log(`  Button ${i}: class="${btn.className}", text="${btn.textContent?.trim()?.substring(0, 20)}"`);
+            });
+          }
         }
       } catch (error) {
-        console.error('Error repositioning damage centers save button:', error);
+        console.error('❌ Error repositioning damage centers save button:', error);
       }
     }
     
@@ -19546,7 +19695,7 @@
       const sections = [
         { id: 'vehicle-data', selector: '#vehicleData', name: 'נתוני הרכב', collapsible: true },
         { id: 'contact-data', selector: '#contactData', name: 'פרטי קשר', collapsible: true },
-        { id: 'damage-centers', selector: '#damageCentersContent', name: 'מרכזי נזק', collapsible: true },
+        { id: 'damage-centers', selector: '#damageCentersSummary', name: 'מרכזי נזק', collapsible: true },
         { id: 'gross-calculation', selector: '#grossCalc', name: 'חישוב אחוז נזק ברוטו', collapsible: true },
         { id: 'gross-result', selector: '#grossPercentageResult', name: 'תוצאת חישוב ברוטו', collapsible: true },
         { id: 'full-market-value', selector: '#fullMarketValue', name: 'חישוב ערך השוק המלא', collapsible: true },
