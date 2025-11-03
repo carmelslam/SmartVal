@@ -12339,34 +12339,37 @@
           prepared_at: new Date().toISOString()
         };
         
-        // Load all mappings for this case with pending status
+        // SESSION 91 FIX: Load invoice lines directly for dropdown access
         for (const invoice of selectedInvoices) {
-          console.log(`📋 Loading mappings for invoice ${invoice.invoice_number}...`);
+          console.log(`📋 Loading invoice lines for invoice ${invoice.invoice_number}...`);
           
-          const { data: mappings, error } = await window.supabase
+          // Load ALL invoice lines for dropdown (not just mapped ones)
+          const { data: invoiceLines, error: linesError } = await window.supabase
+            .from('invoice_lines')
+            .select('*')
+            .eq('invoice_id', invoice.id);
+          
+          if (linesError) {
+            console.error(`❌ Error loading invoice lines:`, linesError);
+            continue;
+          }
+          
+          if (invoiceLines && invoiceLines.length > 0) {
+            console.log(`✅ Loaded ${invoiceLines.length} invoice lines for invoice ${invoice.invoice_number}`);
+            window.invoiceDataForDropdowns.invoice_lines.push(...invoiceLines);
+          }
+          
+          // Also load mappings for reference (but not for dropdown data)
+          const { data: mappings, error: mappingsError } = await window.supabase
             .from('invoice_damage_center_mappings')
-            .select(`
-              *,
-              invoice_line:invoice_lines!inner(*)
-            `)
+            .select('*')
             .eq('invoice_id', invoice.id)
             .eq('case_id', caseId)
             .eq('mapping_status', 'pending');
           
-          if (error) {
-            console.error(`❌ Error loading mappings for invoice ${invoice.id}:`, error);
-            continue;
-          }
-          
           if (mappings && mappings.length > 0) {
-            console.log(`✅ Loaded ${mappings.length} mappings for invoice ${invoice.invoice_number}`);
+            console.log(`📋 Found ${mappings.length} pending mappings`);
             window.invoiceDataForDropdowns.mappings.push(...mappings);
-            
-            // Extract unique invoice lines
-            const invoiceLines = mappings.map(m => m.invoice_line).filter(Boolean);
-            window.invoiceDataForDropdowns.invoice_lines.push(...invoiceLines);
-          } else {
-            console.log(`ℹ️ No pending mappings found for invoice ${invoice.invoice_number}`);
           }
         }
         
@@ -12376,24 +12379,24 @@
           helper.invoices = [];
         }
         
-        // Update helper with invoice line items for dropdown access
+        // SESSION 91 FIX: Update helper with actual invoice lines
         selectedInvoices.forEach(invoice => {
           const existingInvoice = helper.invoices.find(inv => inv.id === invoice.id);
+          // Get the invoice lines we loaded
+          const invoiceLines = window.invoiceDataForDropdowns.invoice_lines
+            .filter(line => line.invoice_id === invoice.id);
+          
           if (existingInvoice) {
             // Update existing
-            const invoiceLines = window.invoiceDataForDropdowns.mappings
-              .filter(m => m.invoice_id === invoice.id)
-              .map(m => m.invoice_line);
             existingInvoice.line_items = invoiceLines;
+            console.log(`📋 Updated existing invoice with ${invoiceLines.length} lines`);
           } else {
             // Add new
-            const invoiceLines = window.invoiceDataForDropdowns.mappings
-              .filter(m => m.invoice_id === invoice.id)
-              .map(m => m.invoice_line);
             helper.invoices.push({
               ...invoice,
               line_items: invoiceLines
             });
+            console.log(`📋 Added new invoice with ${invoiceLines.length} lines`);
           }
         });
         
@@ -14618,16 +14621,20 @@
             
             lineItems.forEach((line, lineIdx) => {
               console.log(`🔍 Processing line ${lineIdx}:`, line);
-              const description = line.description || line.name || line.item_name || line.part_name;
+              // SESSION 91 FIX: Use correct fields from invoice_lines table
+              const description = line.description || line.metadata?.name || '';
+              const unitPrice = line.unit_price || line.line_total || 0;
+              const code = line.metadata?.code || '';
               
               if (description && (!query || description.toLowerCase().includes(query.toLowerCase()))) {
                 const partData = {
                   name: description,
-                  description: line.details || line.notes || line.comments || '',
-                  price: line.amount || line.total || line.unit_price || line.price || 0,
-                  source: `🧾 חשבונית ${invoice.invoice_number || `${idx + 1}`}`,
+                  description: `${code ? 'קוד: ' + code + ' - ' : ''}${line.metadata?.unit || 'יחידה'}`,
+                  price: unitPrice,
+                  source: `🧾 חשבונית ${invoice.invoice_number || invoice.number || `${idx + 1}`}`,
                   layer: 1,
-                  original: line
+                  original: line,
+                  metadata: line.metadata
                 };
                 allParts.push(partData);
                 invoiceCount++;
@@ -25405,18 +25412,25 @@
       console.log('📋 Window invoiceDataForDropdowns:', window.invoiceDataForDropdowns);
       
       // Test getCombinedDropdownData
+      let layer1ItemsCount = 0;
       if (typeof getCombinedDropdownData === 'function') {
-        const dropdownData = getCombinedDropdownData('');
-        const layer1Items = dropdownData.filter(item => item.layer === 1);
-        console.log('📋 Layer 1 items found:', layer1Items.length);
-        console.log('📋 Sample Layer 1 items:', layer1Items.slice(0, 3));
+        try {
+          const dropdownData = getCombinedDropdownData('');
+          const layer1Items = dropdownData.filter(item => item.layer === 1);
+          layer1ItemsCount = layer1Items.length;
+          console.log('📋 Layer 1 items found:', layer1Items.length);
+          console.log('📋 Sample Layer 1 items:', layer1Items.slice(0, 3));
+        } catch (err) {
+          console.error('❌ Error getting dropdown data:', err);
+        }
       }
       
       return {
         helperInvoices: helper.invoices?.length || 0,
         invoiceDataForDropdowns: !!window.invoiceDataForDropdowns,
         mappingsCount: window.invoiceDataForDropdowns?.mappings?.length || 0,
-        layer1ItemsCount: dropdownData?.filter(item => item.layer === 1).length || 0
+        invoiceLinesCount: window.invoiceDataForDropdowns?.invoice_lines?.length || 0,
+        layer1ItemsCount: layer1ItemsCount
       };
     };
     
