@@ -3539,6 +3539,22 @@ class InvoiceProcessor {
           
           console.log(`✅ Removed from helper (${beforeCount} → ${helper.invoices.length})`);
         }
+        
+        // SESSION 91: If no invoices left, restore centers from archive
+        if (helper.invoices.length === 0 && helper.centers_archive && helper.centers_archive.length > 0) {
+          console.log('📦 SESSION 91: No invoices left - restoring centers from archive');
+          helper.centers = JSON.parse(JSON.stringify(helper.centers_archive));
+          
+          // Clear the archive since we're back to no-invoice state
+          delete helper.centers_archive;
+          delete helper.centers_archive_meta;
+          
+          console.log('✅ Centers restored from archive - back to wizard data');
+        }
+        
+        // Save the updated helper with restored centers
+        sessionStorage.setItem('helper', JSON.stringify(helper));
+        
       } catch (e) {
         console.warn('Could not remove from helper:', e);
       }
