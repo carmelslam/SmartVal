@@ -12591,9 +12591,9 @@
       const fieldData = mapping.original_field_data || {};
       
       return {
-        category: fieldData.description || '',
+        category: fieldData.catalog_code || '',  // Category shows the code
         cost: fieldData.line_total || fieldData.unit_price || 0,
-        comments: fieldData.catalog_code || '',
+        comments: fieldData.description || '',  // הערות shows the description
         added_at: new Date().toISOString(),
         source: 'invoice',
         _invoice_line_id: mapping.invoice_line_id,
@@ -12610,9 +12610,10 @@
       const fieldData = mapping.original_field_data || {};
       
       return {
-        name: fieldData.description || '',
+        name: fieldData.description || '',  // שם התיקון shows description
         cost: fieldData.line_total || fieldData.unit_price || 0,
-        description: fieldData.catalog_code || '',
+        description: '',  // Leave empty or add notes if needed
+        hours: fieldData.quantity || 1,  // שעות shows quantity
         added_at: new Date().toISOString(),
         source: 'invoice',
         _invoice_line_id: mapping.invoice_line_id,
@@ -14650,17 +14651,25 @@
         // Fallback: Try global window.invoiceDataForDropdowns (for non-private reports)
         if (invoiceCount === 0 && window.invoiceDataForDropdowns?.invoice_lines) {
           console.log('🔄 SESSION 90: Using fallback invoice data from global scope...');
+          console.log('📋 Found', window.invoiceDataForDropdowns.invoice_lines.length, 'invoice lines in fallback');
+          
           window.invoiceDataForDropdowns.invoice_lines.forEach((line, idx) => {
-            if (line.description && (!query || line.description.toLowerCase().includes(query.toLowerCase()))) {
+            // SESSION 91 FIX: Use correct fields and include metadata
+            const description = line.description || line.metadata?.name || '';
+            const code = line.metadata?.code || '';
+            
+            if (description && (!query || description.toLowerCase().includes(query.toLowerCase()))) {
               allParts.push({
-                name: line.description,
-                description: line.details || line.notes || '',
-                price: line.amount || line.total || line.unit_price || 0,
-                source: `🧾 חשבונית גלובלית ${idx + 1}`,
+                name: description,
+                description: `${code ? 'קוד: ' + code + ' - ' : ''}${line.metadata?.unit || 'יחידה'}`,
+                price: line.unit_price || line.line_total || 0,
+                source: `🧾 חשבונית`,
                 layer: 1,
-                original: line
+                original: line,
+                metadata: line.metadata
               });
               invoiceCount++;
+              console.log(`✅ Added fallback invoice item: ${description}`);
             }
           });
         }
@@ -25426,6 +25435,11 @@
         } catch (err) {
           console.error('❌ Error getting dropdown data:', err);
         }
+      }
+      
+      // Check invoice lines structure
+      if (window.invoiceDataForDropdowns?.invoice_lines?.length > 0) {
+        console.log('📋 Sample invoice line structure:', window.invoiceDataForDropdowns.invoice_lines[0]);
       }
       
       return {
