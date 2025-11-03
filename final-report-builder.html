@@ -11353,14 +11353,31 @@
               .eq('case_id', caseId);
             
             if (!anyInvoices || anyInvoices.length === 0) {
-              console.log('🧹 SESSION 91: No invoices AT ALL in system - clearing centers_archive');
+              console.log('🧹 SESSION 91: No invoices AT ALL in system');
               const helper = window.helper || {};
-              if (helper.centers_archive) {
+              
+              // If we have an archive, restore centers from it
+              if (helper.centers_archive && helper.centers_archive.length > 0) {
+                console.log('📦 SESSION 91: Restoring centers from archive (no invoices)');
+                helper.centers = JSON.parse(JSON.stringify(helper.centers_archive));
+                
+                // Clear the archive since we're back to no-invoice state
                 delete helper.centers_archive;
                 delete helper.centers_archive_meta;
+                
                 sessionStorage.setItem('helper', JSON.stringify(helper));
                 window.helper = helper;
-                console.log('✅ Archive cleared - system back to no-invoice state');
+                
+                console.log('✅ Centers restored from archive - system back to wizard data');
+                
+                // Refresh UI to show restored data
+                if (typeof loadDamageCentersFromHelper === 'function') {
+                  setTimeout(() => {
+                    loadDamageCentersFromHelper(helper);
+                  }, 100);
+                }
+              } else {
+                console.log('ℹ️ No archive to restore from');
               }
             } else {
               console.log('ℹ️ SESSION 91: Archive preserved - found', anyInvoices.length, 'invoices in system');
