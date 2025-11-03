@@ -1103,18 +1103,33 @@
     
     /* Private Report Mode - Invoice Only */
     .sliding-toggle.private-report-mode {
-      width: 90px;
+      width: 140px; /* Keep original width to not break layout */
       justify-content: center;
     }
     
-    .sliding-toggle.private-report-mode .toggle-option {
-      width: 84px;
-      justify-content: center;
+    .sliding-toggle.private-report-mode .toggle-option.active {
       background: linear-gradient(145deg, #2196F3, #1976D2);
       box-shadow: 0 4px 12px rgba(33, 150, 243, 0.4);
     }
     
-    .sliding-toggle.private-report-mode .toggle-option span {
+    .sliding-toggle.private-report-mode .toggle-option.active span {
+      color: white !important;
+      font-weight: 600 !important;
+      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3) !important;
+    }
+    
+    /* Other Report Mode - Wizard Only */
+    .sliding-toggle.other-report-mode {
+      width: 140px; /* Keep original width to not break layout */
+      justify-content: center;
+    }
+    
+    .sliding-toggle.other-report-mode .toggle-option.active {
+      background: linear-gradient(145deg, #4CAF50, #45a049);
+      box-shadow: 0 4px 12px rgba(76, 175, 80, 0.4);
+    }
+    
+    .sliding-toggle.other-report-mode .toggle-option.active span {
       color: white !important;
       font-weight: 600 !important;
       text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3) !important;
@@ -13596,41 +13611,45 @@
                               document.querySelector('input[name="final-report-type"]:checked')?.value;
       const isPrivateReport = currentReportType === 'חוות דעת פרטית';
       
-      // For private reports, show only invoice option (labeled as "חשבונית")
+      // Reset all elements to visible first (prevent disappearing)
+      wizardOption.style.display = 'flex';
+      invoiceOption.style.display = 'flex';
+      wizardOption.style.flex = '1';
+      invoiceOption.style.flex = '1';
+      
+      // Remove all classes first
+      toggleContainer.classList.remove('private-report-mode', 'other-report-mode');
+      wizardOption.classList.remove('active');
+      invoiceOption.classList.remove('active');
+      
       if (isPrivateReport) {
-        invoiceOption.style.display = 'none'; // invoiceOption now has "אשף" label, so hide it
-        wizardOption.style.flex = '1'; // wizardOption now has "חשבונית" label, so show it
-        wizardOption.style.cursor = 'default'; // Disable clicking
-        slider.style.display = 'none';
+        // Private reports: Style as single-option showing "חשבונית"
         toggleContainer.classList.add('private-report-mode');
-        
-        // Force invoice mode for private reports
-        if (currentMode !== 'invoice') {
-          currentMode = 'invoice';
-          loadInvoiceData();
-        }
-        
         wizardOption.classList.add('active'); // wizardOption shows "חשבונית" label
-        invoiceOption.classList.remove('active');
-        console.log('🔒 Private report mode - showing only חשבונית (invoice) toggle');
+        currentMode = 'invoice';
+        
+        // Hide other option without affecting layout
+        invoiceOption.style.opacity = '0.3';
+        invoiceOption.style.cursor = 'not-allowed';
+        wizardOption.style.cursor = 'default';
+        
+        console.log('🔒 Private report mode - חשבונית active');
       } else {
-        // For other reports, show only wizard option (labeled as "אשף")
-        wizardOption.style.display = 'none'; // wizardOption now has "חשבונית" label, so hide it
-        invoiceOption.style.flex = '1'; // invoiceOption now has "אשף" label, so show it
-        invoiceOption.style.cursor = 'default'; // Disable clicking
-        slider.style.display = 'none';
-        toggleContainer.classList.add('private-report-mode'); // Use same styling
-        
-        // Force wizard mode for other reports
-        if (currentMode !== 'wizard') {
-          currentMode = 'wizard';
-          loadWizardData();
-        }
-        
+        // Other reports: Style as single-option showing "אשף"
+        toggleContainer.classList.add('other-report-mode');
         invoiceOption.classList.add('active'); // invoiceOption shows "אשף" label
-        wizardOption.classList.remove('active');
-        console.log('🔒 Other report mode - showing only אשף (wizard) toggle');
+        currentMode = 'wizard';
+        
+        // Hide other option without affecting layout
+        wizardOption.style.opacity = '0.3';
+        wizardOption.style.cursor = 'not-allowed';
+        invoiceOption.style.cursor = 'default';
+        
+        console.log('🔒 Other report mode - אשף active');
       }
+      
+      // Hide slider for both cases (single-option indicators)
+      slider.style.display = 'none';
     }
     
     function loadWizardData() {
@@ -13717,6 +13736,42 @@
         console.log(`✅ INVOICE: Displayed ${dataToLoad.length} centers from ${dataSource}`);
       }
     }
+
+    // Test function to verify toggle stability after fixes
+    window.testToggleStability = function() {
+      console.log('🧪 TESTING TOGGLE STABILITY');
+      
+      const wizardOption = document.getElementById('wizardOption');
+      const invoiceOption = document.getElementById('invoiceOption');
+      const toggleContainer = document.getElementById('dataToggleContainer');
+      const saveButton = document.querySelector('#damageCentersContent .section-save-button');
+      
+      console.log('📊 Element Status:');
+      console.log('  - wizardOption visible:', wizardOption ? wizardOption.style.display !== 'none' : 'not found');
+      console.log('  - invoiceOption visible:', invoiceOption ? invoiceOption.style.display !== 'none' : 'not found');
+      console.log('  - toggleContainer visible:', toggleContainer ? toggleContainer.style.display !== 'none' : 'not found');
+      console.log('  - save button visible:', !!saveButton);
+      
+      // Test report type switching
+      console.log('🔄 Testing report type switching...');
+      const reportTypeInputs = document.querySelectorAll('input[name="final-report-type"]');
+      reportTypeInputs.forEach((input, index) => {
+        setTimeout(() => {
+          input.click();
+          console.log(`✅ Clicked report type ${index + 1}: ${input.value}`);
+          
+          setTimeout(() => {
+            const wizardVisible = wizardOption ? wizardOption.style.display !== 'none' : false;
+            const invoiceVisible = invoiceOption ? invoiceOption.style.display !== 'none' : false;
+            const saveStillThere = !!document.querySelector('#damageCentersContent .section-save-button');
+            
+            console.log(`  After switch: wizard=${wizardVisible}, invoice=${invoiceVisible}, save=${saveStillThere}`);
+          }, 500);
+        }, index * 2000);
+      });
+      
+      return 'Test started - check console for results';
+    };
 
     // Debug function to test toggle functionality
     window.debugToggleState = function() {
@@ -18602,9 +18657,31 @@
           radio.addEventListener('change', function() {
             updateReportType();
             loadLegalText().catch(console.error);
+            
             // Update toggle visibility based on report type
             if (typeof updateToggleUI === 'function') {
               updateToggleUI();
+              
+              // Load appropriate data based on report type (moved from updateToggleUI to prevent loops)
+              const helper = window.helper || JSON.parse(sessionStorage.getItem('helper') || '{}');
+              const reportType = helper.final_report?.type || helper.final_report?.dropdown_type || 
+                               document.querySelector('input[name="final-report-type"]:checked')?.value;
+              const isPrivate = reportType === 'חוות דעת פרטית';
+              
+              setTimeout(() => {
+                if (isPrivate && typeof loadInvoiceData === 'function') {
+                  loadInvoiceData();
+                } else if (!isPrivate && typeof loadWizardData === 'function') {
+                  loadWizardData();
+                }
+                
+                // Ensure save button positioning is maintained after data loading
+                setTimeout(() => {
+                  if (typeof repositionDamageCentersSaveButton === 'function') {
+                    repositionDamageCentersSaveButton();
+                  }
+                }, 200);
+              }, 100); // Small delay to prevent conflicts
             }
           });
         });
