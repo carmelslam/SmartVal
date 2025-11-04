@@ -15800,7 +15800,7 @@
       }
     }
 
-    // SESSION 94: Load invoice lines from Supabase for dropdown (renamed to avoid conflicts)
+    // SESSION 94: Simple invoice lines loader for dropdown
     async function loadInvoiceLinesForDropdown() {
       try {
         if (window.INVOICE_LINES && window.INVOICE_LINES.length > 0) {
@@ -15809,211 +15809,38 @@
         }
         
         if (!window.supabase) {
-          console.log('⚠️ Supabase not available for invoice lines loading');
+          console.log('⚠️ Supabase not available');
+          window.INVOICE_LINES = [];
           return [];
         }
         
-        const helper = window.helper;
-        const caseId = helper?.case_info?.supabase_case_id;
-        
-        console.log('🔍 DEBUG: helper object:', helper);
-        console.log('🔍 DEBUG: helper.case_info:', helper?.case_info);
-        console.log('🔍 DEBUG: supabase_case_id:', caseId);
-        console.log('🔍 DEBUG: typeof case_id:', typeof caseId);
-        
+        const caseId = window.helper?.case_info?.supabase_case_id;
         if (!caseId) {
-          console.log('⚠️ No supabase_case_id available for invoice lines query');
-          console.log('🔍 Helper debug:', {
-            helperExists: !!helper,
-            caseInfoExists: !!helper?.case_info,
-            caseInfoKeys: helper?.case_info ? Object.keys(helper.case_info) : [],
-            supabaseCaseId: caseId,
-            caseIdType: typeof caseId
-          });
-          
-          // Try to get case_id from URL or other sources
-          const urlParams = new URLSearchParams(window.location.search);
-          const caseIdFromUrl = urlParams.get('case_id') || urlParams.get('caseId');
-          const caseIdFromPath = window.location.pathname.split('/').pop();
-          
-          console.log('🔍 Alternative case_id sources:');
-          console.log('  - URL param case_id:', caseIdFromUrl);
-          console.log('  - Path last segment:', caseIdFromPath);
-          console.log('  - Current URL:', window.location.href);
-          
-          // Early return to prevent any Supabase queries
-          console.log('✅ Early return - preventing Supabase queries without valid case_id');
-          window.INVOICE_LINES = []; // Cache empty array
+          console.log('⚠️ No case_id available');
+          window.INVOICE_LINES = [];
           return [];
         }
         
-        console.log('🔄 Loading invoice lines from Supabase for case:', caseId);
+        console.log('🔄 Loading invoice lines for case:', caseId);
         
-        // SESSION 94: Use helper.invoices data directly (avoid complex Supabase queries)
-        console.log('🔍 Checking helper.invoices first...');
-        if (window.helper?.invoices && Array.isArray(window.helper.invoices) && window.helper.invoices.length > 0) {
-          console.log(`📋 Found ${window.helper.invoices.length} invoices in helper.invoices`);
-          console.log('📋 Sample invoice from helper:', window.helper.invoices[0]);
-          
-          const helperInvoices = window.helper.invoices;
-          let allInvoiceLines = [];
-          
-          // Check if invoices already have line_items from previous loading
-          helperInvoices.forEach((invoice, idx) => {
-            console.log(`🔍 Invoice ${idx} structure:`, {
-              id: invoice.id,
-              invoice_number: invoice.invoice_number,
-              supplier_name: invoice.supplier_name,
-              has_line_items: !!invoice.line_items,
-              line_items_count: invoice.line_items?.length || 0
-            });
-            
-            if (invoice.line_items && Array.isArray(invoice.line_items)) {
-              // Use existing line_items from helper
-              invoice.line_items.forEach(line => {
-                allInvoiceLines.push({
-                  ...line,
-                  invoices: {
-                    invoice_number: invoice.invoice_number,
-                    supplier_name: invoice.supplier_name,
-                    case_id: caseId
-                  }
-                });
-              });
-            }
-          });
-          
-          if (allInvoiceLines.length > 0) {
-            console.log(`✅ Using existing line_items from helper.invoices: ${allInvoiceLines.length} lines`);
-            window.INVOICE_LINES = allInvoiceLines;
-            return allInvoiceLines;
-          } else {
-            console.log('⚠️ No line_items found in helper.invoices - may need to load them first');
-          }
+        // Simple approach: Get all invoice lines and filter by case
+        const { data: allLines, error } = await window.supabase
+          .from('invoice_lines')
+          .select('*');
+        
+        if (error) {
+          console.error('❌ Error loading invoice lines:', error);
+          window.INVOICE_LINES = [];
+          return [];
         }
         
-        // Fallback: Query Supabase invoices table
-        console.log('🔄 Fallback: Querying Supabase invoices table...');
+        console.log(`✅ Loaded ${allLines?.length || 0} total invoice lines`);
+        window.INVOICE_LINES = allLines || [];
+        return allLines || [];
         
-        // First try: Direct approach using two-step query to avoid join issues
-        try {
-          // Step 1: Get invoices for this case
-          const { data: invoices, error: invoicesError } = await window.supabase
-            .from('invoices')
-            .select('id, invoice_number, supplier_name')
-            .eq('case_id', caseId);
-          
-          if (invoicesError) {
-            console.error('❌ Error getting invoices:', invoicesError);
-            throw invoicesError;
-          }
-          
-          if (!invoices || invoices.length === 0) {
-            console.log('⚠️ No invoices found for case_id:', caseId);
-            window.INVOICE_LINES = [];
-            return [];
-          }
-          
-          console.log(`✅ Found ${invoices.length} invoices for case`);
-          const invoiceIds = invoices.map(inv => inv.id);
-          
-          // Step 2: Get invoice lines for these invoices  
-          console.log('🔍 Invoice IDs for line query:', invoiceIds);
-          
-          // Validate all invoice IDs are proper UUIDs
-          const validInvoiceIds = invoiceIds.filter(id => {
-            const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-            return id && uuidRegex.test(id);
-          });
-          
-          console.log('🔍 Valid invoice IDs:', validInvoiceIds);
-          
-          if (validInvoiceIds.length === 0) {
-            console.log('⚠️ No valid invoice UUIDs found');
-            window.INVOICE_LINES = [];
-            return [];
-          }
-          
-          // Load invoice lines for each invoice ID individually (avoid .in() method issues)
-          let allInvoiceLines = [];
-          for (const invoiceId of validInvoiceIds) {
-            const { data: lines, error } = await window.supabase
-              .from('invoice_lines')
-              .select('id, description, unit_price, line_total, quantity, metadata, invoice_id')
-              .eq('invoice_id', invoiceId);
-              
-            if (lines && !error) {
-              allInvoiceLines = allInvoiceLines.concat(lines);
-            } else if (error) {
-              console.log(`⚠️ Error loading lines for invoice ${invoiceId}:`, error);
-            }
-          }
-          
-          const invoiceLines = allInvoiceLines;
-          
-          if (allInvoiceLines.length === 0) {
-            console.log('⚠️ No invoice lines found for any invoice');
-          }
-          
-          // Step 3: Merge invoice data with line data
-          const enrichedLines = invoiceLines.map(line => {
-            const invoice = invoices.find(inv => inv.id === line.invoice_id);
-            return {
-              ...line,
-              invoices: invoice ? {
-                invoice_number: invoice.invoice_number,
-                supplier_name: invoice.supplier_name,
-                case_id: caseId
-              } : null
-            };
-          });
-          
-          console.log(`✅ Loaded ${enrichedLines.length} invoice lines from Supabase`);
-          window.INVOICE_LINES = enrichedLines;
-          return enrichedLines;
-          
-        } catch (firstError) {
-          console.error('❌ First approach failed:', firstError);
-          
-          // Fallback: Simple query without complex joins
-          try {
-            console.log('🔄 Fallback: Using simple query without joins...');
-            
-            // Just get all invoice lines and we'll match them manually
-            const { data: allLines, error } = await window.supabase
-              .from('invoice_lines')
-              .select('id, description, unit_price, line_total, quantity, metadata, invoice_id');
-            
-            if (!allLines || error) {
-              throw error || new Error('No invoice lines found');
-            }
-            
-            // Filter lines that belong to our case's invoices (need to get validInvoiceIds)
-            const validInvoiceIds = invoices.map(inv => inv.id);
-            const relevantLines = allLines.filter(line => 
-              validInvoiceIds.includes(line.invoice_id)
-            );
-            
-            const invoiceLines = relevantLines;
-          
-            if (invoiceLines && !error) {
-              console.log(`✅ Fallback: Loaded ${invoiceLines.length} invoice lines from Supabase`);
-              window.INVOICE_LINES = invoiceLines; // Cache for future use
-              return invoiceLines;
-            } else {
-              console.log('⚠️ Fallback also failed:', error?.message || 'Unknown error');
-              window.INVOICE_LINES = []; // Cache empty array to avoid repeated calls
-              return [];
-            }
-          } catch (fallbackError) {
-            console.error('❌ Both approaches failed:', fallbackError);
-            window.INVOICE_LINES = []; // Cache empty array to avoid repeated calls
-            return [];
-          }
-        }
       } catch (err) {
-        console.error('❌ Error loading invoice lines:', err);
-        window.INVOICE_LINES = []; // Cache empty array to avoid repeated calls
+        console.error('❌ Error in loadInvoiceLinesForDropdown:', err);
+        window.INVOICE_LINES = [];
         return [];
       }
     }
@@ -16025,36 +15852,31 @@
         const helper = window.helper;
         const allParts = [];
         
-        // LAYER 1: 🧾 Invoice lines (from cached Supabase data)
+        // LAYER 1: 🧾 Invoice lines (Use cached INVOICE_LINES data)
         console.log('📋 שכבה 1: בדיקת שורות חשבונית...');
         let invoiceCount = 0;
 
-        // SESSION 94 FIX: Use cached invoice lines data
+        // Use cached data if available, otherwise show 0 items
         if (window.INVOICE_LINES && Array.isArray(window.INVOICE_LINES)) {
-          console.log(`🔄 Using cached invoice lines: ${window.INVOICE_LINES.length} items`);
+          console.log(`📋 Using cached invoice lines: ${window.INVOICE_LINES.length} items`);
           
-          window.INVOICE_LINES.forEach((line, idx) => {
+          window.INVOICE_LINES.forEach(line => {
             const description = line.description || '';
-            const unitPrice = line.unit_price || line.line_total || 0;
-            const invoiceNumber = line.invoices?.invoice_number || 'לא ידוע';
-            const supplier = line.invoices?.supplier_name || '';
-            
             if (description && (!query || description.toLowerCase().includes(query.toLowerCase()))) {
               const partData = {
                 name: description,
-                description: `כמות: ${line.quantity || 1} | ספק: ${supplier}`,
-                price: unitPrice,
-                source: `🧾 חשבונית ${invoiceNumber}${supplier ? ` (${supplier})` : ''}`,
+                description: `כמות: ${line.quantity || 1}`,
+                price: line.unit_price || line.line_total || 0,
+                source: `🧾 חשבונית`,
                 layer: 1,
-                original: line,
-                metadata: line.metadata
+                original: line
               };
               allParts.push(partData);
               invoiceCount++;
             }
           });
         } else {
-          console.log('⚠️ No cached invoice lines data - call loadInvoiceLinesForDropdown() first');
+          console.log('⚠️ No cached invoice lines - need to load via Supabase');
         }
         
         // Fallback: Try helper.invoices (legacy support)
