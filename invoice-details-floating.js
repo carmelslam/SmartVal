@@ -1184,57 +1184,27 @@
       }
 
       console.log('🔍 Using case ID for invoice loading:', caseId);
-      
-      // DEBUG: Log helper structure to understand available data
-      console.log('🔍 DEBUGGING: Helper object structure:', {
-        hasHelper: !!helper,
-        helperKeys: Object.keys(helper || {}),
-        cases: helper.cases,
-        meta: helper.meta,
-        invoice: helper.invoice,
-        invoices: helper.invoices,
-        documents: helper.documents,
-        damage_assessment: helper.damage_assessment ? {
-          hasInvoices: !!helper.damage_assessment.invoices,
-          invoicesCount: helper.damage_assessment.invoices?.length || 0
-        } : null,
-        final_report: helper.final_report ? {
-          hasInvoiceAssignments: !!helper.final_report.invoice_assignments,
-          assignmentsCount: helper.final_report.invoice_assignments?.length || 0
-        } : null
-      });
 
-      // SESSION 74: Load invoices from Supabase if available
-      let supabaseInvoices = [];
+      // Load invoices from database using the proper service pattern
+      let invoices = [];
       if (window.invoiceService && caseId) {
         try {
-          const result = await window.invoiceService.getInvoicesByCase(caseId);
-          if (result.success && result.invoices) {
-            supabaseInvoices = result.invoices;
-            console.log(`✅ SESSION 74: Loaded ${supabaseInvoices.length} invoices from Supabase`);
-          }
-        } catch (supabaseError) {
-          console.warn('⚠️ SESSION 74: Could not load from Supabase:', supabaseError);
+          console.log('🔍 Querying invoices for case:', caseId);
+          invoices = await window.invoiceService.getInvoicesByCase(caseId);
+          console.log(`✅ Loaded ${invoices.length} invoices from database`);
+        } catch (error) {
+          console.error('❌ Error loading invoices from database:', error);
+          displayNoDataMessage(`שגיאה בטעינת חשבוניות: ${error.message}`);
+          return;
         }
-      }
-
-      // Get invoice data from helper - enhanced detection (from Session 90)
-      const invoiceData = helper.invoice || helper.invoices?.[0] || {};
-      let documentsInvoices = helper.documents?.invoices || helper.invoices || [];
-      
-      // Also check for invoice data in damage assessment and final report
-      if (helper.damage_assessment?.invoices) {
-        documentsInvoices = documentsInvoices.concat(helper.damage_assessment.invoices);
-        console.log('📋 Added invoices from damage_assessment');
-      }
-      
-      if (helper.final_report?.invoice_assignments) {
-        documentsInvoices = documentsInvoices.concat(helper.final_report.invoice_assignments);
-        console.log('📋 Added invoice assignments from final_report');
+      } else {
+        console.error('❌ Invoice service not available or no case ID');
+        displayNoDataMessage("שירות החשבוניות לא זמין או מזהה תיק חסר");
+        return;
       }
       
       // Display invoice data
-      displayInvoiceData(invoiceData, documentsInvoices, supabaseInvoices);
+      displayInvoiceData(invoices);
 
     } catch (error) {
       console.error("Error loading invoice data:", error);
@@ -1242,112 +1212,158 @@
     }
   }
 
-  function displayInvoiceData(invoiceData, documentsInvoices, supabaseInvoices = []) {
+  function displayInvoiceData(invoices = []) {
     const contentDiv = document.getElementById('invoiceContent');
     
-    // DEBUG: Log all the data we're checking
-    console.log('🔍 DEBUGGING: Checking invoice data:', {
-      invoiceData: invoiceData,
-      documentsInvoices: documentsInvoices,
-      supabaseInvoices: supabaseInvoices,
-      invoiceDataType: typeof invoiceData,
-      invoiceDataKeys: invoiceData ? Object.keys(invoiceData) : [],
-      invoiceDataValues: invoiceData ? Object.values(invoiceData) : [],
-      documentsInvoicesLength: documentsInvoices?.length || 0,
-      supabaseInvoicesLength: supabaseInvoices?.length || 0
-    });
-    
-    // Check if we have any invoice data
-    const hasMainInvoice = invoiceData && Object.values(invoiceData).some(value => 
-      value && value.toString().trim() !== ''
-    );
-    const hasDocumentInvoices = documentsInvoices && documentsInvoices.length > 0;
-    const hasSupabaseInvoices = supabaseInvoices && supabaseInvoices.length > 0;
-
-    console.log('🔍 DEBUGGING: Data availability check:', {
-      hasMainInvoice,
-      hasDocumentInvoices,
-      hasSupabaseInvoices
+    console.log('🔍 Displaying invoice data:', {
+      invoiceCount: invoices.length,
+      invoices: invoices
     });
 
-    if (!hasMainInvoice && !hasDocumentInvoices && !hasSupabaseInvoices) {
-      console.log('❌ No invoice data found - attempting to show basic vehicle info or fallback');
-      
-      // Try to show at least basic vehicle information if available
-      const helper = window.helper || JSON.parse(sessionStorage.getItem('helper') || '{}');
-      if (helper.meta || helper.vehicle) {
-        console.log('✅ Found basic vehicle info, showing fallback display');
-        const content = generateBasicVehicleInfoSection(helper);
-        contentDiv.innerHTML = content;
-        return;
-      }
-      
-      displayNoDataMessage("לא נמצאו נתוני חשבוניות במערכת");
+    if (!invoices || invoices.length === 0) {
+      displayNoDataMessage("לא נמצאו חשבוניות עבור תיק זה");
       return;
     }
 
     let content = '';
 
-    // SESSION 74: Display Supabase invoices first (most detailed)
-    if (hasSupabaseInvoices) {
-      content += generateSupabaseInvoicesSection(supabaseInvoices);
-    }
-
-    // Display main invoice data if exists
-    if (hasMainInvoice) {
-      content += generateMainInvoiceSection(invoiceData);
-    }
-
-    // Display document invoices if exist
-    if (hasDocumentInvoices) {
-      content += generateDocumentInvoicesSection(documentsInvoices);
-    }
+    // Display all invoices from database
+    content += generateDatabaseInvoicesSection(invoices);
 
     contentDiv.innerHTML = content;
   }
 
-  function generateBasicVehicleInfoSection(helper) {
+  // Generate database invoices section
+  function generateDatabaseInvoicesSection(invoices) {
+    if (!invoices || invoices.length === 0) {
+      return `
+        <div class="invoice-section">
+          <h4>📋 חשבוניות</h4>
+          <div class="no-data-message">
+            <div class="no-data-icon">📋</div>
+            לא נמצאו חשבוניות עבור תיק זה
+          </div>
+        </div>
+      `;
+    }
+
     const formatValue = (value) => {
       return value && value.toString().trim() ? value : "-";
     };
 
-    const vehicleInfo = helper.vehicle || {};
-    const metaInfo = helper.meta || {};
-    
-    return `
+    const formatPrice = (value) => {
+      const num = parseFloat(value) || 0;
+      return num > 0 ? `₪${num.toLocaleString('he-IL')}` : "₪0";
+    };
+
+    const formatDate = (dateStr) => {
+      if (!dateStr) return '-';
+      try {
+        const date = new Date(dateStr);
+        return date.toLocaleDateString('he-IL');
+      } catch {
+        return '-';
+      }
+    };
+
+    let content = `
       <div class="invoice-section">
-        <h4>🚗 מידע בסיסי על הרכב</h4>
-        
-        <div class="invoice-field">
-          <div class="label">מספר רכב:</div>
-          <div class="value">${formatValue(metaInfo.plate || vehicleInfo.plate)}</div>
-        </div>
-        <div class="invoice-field">
-          <div class="label">יצרן:</div>
-          <div class="value">${formatValue(vehicleInfo.manufacturer || metaInfo.manufacturer)}</div>
-        </div>
-        <div class="invoice-field">
-          <div class="label">דגם:</div>
-          <div class="value">${formatValue(vehicleInfo.model || metaInfo.model)}</div>
-        </div>
-        <div class="invoice-field">
-          <div class="label">שנת ייצור:</div>
-          <div class="value">${formatValue(vehicleInfo.year || metaInfo.year)}</div>
-        </div>
-      </div>
-      
-      <div class="invoice-section">
-        <h4>ℹ️ מצב נתוני חשבוניות</h4>
-        <div style="text-align: center; padding: 20px; background: #fef3c7; border-radius: 8px;">
-          <div style="font-size: 24px; margin-bottom: 10px;">📋</div>
-          <div style="font-weight: 600; margin-bottom: 8px;">לא נמצאו נתוני חשבוניות</div>
-          <div style="font-size: 14px; color: #92400e;">
-            המערכת לא מצאה נתוני חשבוניות עבור רכב זה.<br>
-            ייתכן שהחשבוניות טרם הועלו או שהן נמצאות במקום אחר במערכת.
-          </div>
-        </div>
-      </div>
+        <h4>📋 חשבוניות (${invoices.length})</h4>
     `;
+
+    invoices.forEach((invoice) => {
+      content += `
+        <div class="invoice-section" style="margin-bottom: 20px; border: 1px solid #fbbf24;">
+          <h4 style="background: #fbbf24; color: white; margin: -15px -15px 15px -15px; padding: 10px;">
+            ${formatValue(invoice.invoice_number)} - ${formatValue(invoice.supplier_name)}
+          </h4>
+          
+          <div class="invoice-field">
+            <div class="label">מספר חשבונית:</div>
+            <div class="value">${formatValue(invoice.invoice_number)}</div>
+          </div>
+          <div class="invoice-field">
+            <div class="label">ספק:</div>
+            <div class="value">${formatValue(invoice.supplier_name)}</div>
+          </div>
+          <div class="invoice-field">
+            <div class="label">תאריך הנפקה:</div>
+            <div class="value">${formatDate(invoice.issue_date || invoice.invoice_date)}</div>
+          </div>
+          <div class="invoice-field">
+            <div class="label">סוג חשבונית:</div>
+            <div class="value">${formatValue(invoice.invoice_type)}</div>
+          </div>
+          <div class="invoice-field">
+            <div class="label">סטטוס:</div>
+            <div class="value">${formatValue(invoice.status)}</div>
+          </div>
+          <div class="invoice-field">
+            <div class="label">סכום לפני מע״מ:</div>
+            <div class="value price">${formatPrice(invoice.total_before_tax)}</div>
+          </div>
+          <div class="invoice-field">
+            <div class="label">מע״מ:</div>
+            <div class="value price">${formatPrice(invoice.tax_amount)}</div>
+          </div>
+          <div class="invoice-field">
+            <div class="label">סכום כולל:</div>
+            <div class="value price" style="font-size: 16px; font-weight: bold;">${formatPrice(invoice.total_amount)}</div>
+          </div>
+      `;
+
+      // Display invoice lines if available
+      if (invoice.lines && invoice.lines.length > 0) {
+        content += `
+          <div style="margin-top: 20px;">
+            <h5 style="color: #92400e; margin-bottom: 10px;">פריטי חשבונית:</h5>
+            <table class="invoice-items-table">
+              <thead>
+                <tr>
+                  <th>תיאור</th>
+                  <th>כמות</th>
+                  <th>מחיר יחידה</th>
+                  <th>סה"כ</th>
+                </tr>
+              </thead>
+              <tbody>
+        `;
+        
+        invoice.lines.forEach(line => {
+          content += `
+            <tr>
+              <td>${formatValue(line.description)}</td>
+              <td>${formatValue(line.quantity)}</td>
+              <td>${formatPrice(line.unit_price)}</td>
+              <td>${formatPrice(line.line_total)}</td>
+            </tr>
+          `;
+        });
+        
+        content += `
+              </tbody>
+            </table>
+          </div>
+        `;
+      }
+
+      // Add view document button if available
+      if (invoice.documents && invoice.documents.length > 0) {
+        content += `
+          <div style="margin-top: 15px;">
+            <button onclick="viewInvoiceDocument('${invoice.documents[0].id}')" 
+                    class="invoice-btn refresh">
+              📄 צפה בחשבונית המקורית
+            </button>
+          </div>
+        `;
+      }
+
+      content += `</div>`;
+    });
+
+    content += `</div>`;
+    return content;
   }
 
   function generateMainInvoiceSection(invoice) {
