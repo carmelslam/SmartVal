@@ -12498,7 +12498,7 @@
      */
     async function prepareInvoiceDataForDropdowns(selectedInvoices, caseId) {
       try {
-        console.log('🔄 SESSION 90: Preparing invoice data for dropdown access...');
+        console.log('🔄 SESSION 94: Preparing invoice data for dropdown access...');
         console.log('📋 Selected invoices:', selectedInvoices);
         console.log('🔍 Case ID:', caseId);
         
@@ -12512,6 +12512,20 @@
           return;
         }
         
+        if (!selectedInvoices || !Array.isArray(selectedInvoices) || selectedInvoices.length === 0) {
+          console.log('⚠️ No valid selectedInvoices provided - skipping invoice lines loading');
+          console.log('🔍 selectedInvoices value:', selectedInvoices);
+          
+          // Initialize empty structure to prevent errors elsewhere
+          window.invoiceDataForDropdowns = {
+            invoices: [],
+            mappings: [],
+            invoice_lines: [],
+            prepared_at: new Date().toISOString()
+          };
+          return;
+        }
+        
         // Initialize global invoice data structure
         window.invoiceDataForDropdowns = {
           invoices: selectedInvoices,
@@ -12520,22 +12534,58 @@
           prepared_at: new Date().toISOString()
         };
         
-        // SESSION 91 FIX: Load invoice lines directly for dropdown access
+        // SESSION 94 FIX: Load invoice lines with proper UUID validation
+        console.log('🔍 DEBUGGING selectedInvoices structure:');
+        selectedInvoices.forEach((invoice, idx) => {
+          console.log(`Invoice ${idx}:`, {
+            invoice_number: invoice.invoice_number,
+            id: invoice.id,
+            uuid: invoice.uuid,
+            invoice_uuid: invoice.invoice_uuid,
+            case_id: invoice.case_id,
+            plate: invoice.plate,
+            allKeys: Object.keys(invoice)
+          });
+        });
+        
         for (const invoice of selectedInvoices) {
-          console.log(`📋 Loading invoice lines for invoice ${invoice.invoice_number}...`);
+          console.log(`📋 Processing invoice ${invoice.invoice_number}...`);
           
-          // SESSION 94 FIX: Check if invoice.id exists before querying
-          if (!invoice?.id) {
-            console.log(`⚠️ Skipping invoice ${invoice.invoice_number} - no ID found`);
-            console.log('🔍 Invoice object:', invoice);
+          // SESSION 94 FIX: Try multiple UUID field possibilities
+          const invoiceUuid = invoice.id || invoice.uuid || invoice.invoice_uuid;
+          const invoicePlate = invoice.plate;
+          const invoiceCaseId = invoice.case_id;
+          
+          console.log('🔍 Invoice UUID identification:', {
+            invoice_number: invoice.invoice_number,
+            id: invoice.id,
+            uuid: invoice.uuid, 
+            invoice_uuid: invoice.invoice_uuid,
+            selected_uuid: invoiceUuid,
+            plate: invoicePlate,
+            case_id: invoiceCaseId
+          });
+          
+          if (!invoiceUuid) {
+            console.log(`⚠️ Skipping invoice ${invoice.invoice_number} - no valid UUID found`);
+            console.log('🔍 Full invoice object:', invoice);
             continue;
           }
+          
+          // Validate UUID format
+          const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+          if (!uuidRegex.test(invoiceUuid)) {
+            console.log(`⚠️ Skipping invoice ${invoice.invoice_number} - invalid UUID format:`, invoiceUuid);
+            continue;
+          }
+          
+          console.log(`✅ Loading invoice lines for invoice ${invoice.invoice_number} with UUID: ${invoiceUuid}`);
           
           // Load ALL invoice lines for dropdown (not just mapped ones)
           const { data: invoiceLines, error: linesError } = await window.supabase
             .from('invoice_lines')
             .select('*')
-            .eq('invoice_id', invoice.id);
+            .eq('invoice_id', invoiceUuid);
           
           if (linesError) {
             console.error(`❌ Error loading invoice lines:`, linesError);
@@ -15652,6 +15702,34 @@
       }
     };
     
+    // SESSION 94: Invoice UUID debugging helper
+    window.debugInvoiceQueries = function() {
+      console.log('🔍 Invoice Queries Debug:');
+      
+      // Check current invoice data structures
+      console.log('📊 Current Invoice Data Structures:');
+      console.log('  - window.INVOICE_LINES:', !!window.INVOICE_LINES, window.INVOICE_LINES?.length || 0);
+      console.log('  - window.invoiceDataForDropdowns:', !!window.invoiceDataForDropdowns);
+      if (window.invoiceDataForDropdowns) {
+        console.log('  - invoiceDataForDropdowns.invoices:', window.invoiceDataForDropdowns.invoices?.length || 0);
+        console.log('  - invoiceDataForDropdowns.invoice_lines:', window.invoiceDataForDropdowns.invoice_lines?.length || 0);
+      }
+      
+      // Check helper invoices
+      console.log('📋 Helper Invoice Data:');
+      console.log('  - helper.invoices:', !!window.helper?.invoices, window.helper?.invoices?.length || 0);
+      if (window.helper?.invoices?.length > 0) {
+        console.log('  - Sample helper invoice:', window.helper.invoices[0]);
+      }
+      
+      return {
+        cachedInvoiceLines: window.INVOICE_LINES?.length || 0,
+        dropdownInvoices: window.invoiceDataForDropdowns?.invoices?.length || 0,
+        dropdownLines: window.invoiceDataForDropdowns?.invoice_lines?.length || 0,
+        helperInvoices: window.helper?.invoices?.length || 0
+      };
+    };
+
     // Debug helper function
     window.debugCaseId = function() {
       console.log('🔍 Case ID Debug Information:');
@@ -15793,11 +15871,27 @@
           console.log(`✅ Found ${invoices.length} invoices for case`);
           const invoiceIds = invoices.map(inv => inv.id);
           
-          // Step 2: Get invoice lines for these invoices
+          // Step 2: Get invoice lines for these invoices  
+          console.log('🔍 Invoice IDs for line query:', invoiceIds);
+          
+          // Validate all invoice IDs are proper UUIDs
+          const validInvoiceIds = invoiceIds.filter(id => {
+            const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+            return id && uuidRegex.test(id);
+          });
+          
+          console.log('🔍 Valid invoice IDs:', validInvoiceIds);
+          
+          if (validInvoiceIds.length === 0) {
+            console.log('⚠️ No valid invoice UUIDs found');
+            window.INVOICE_LINES = [];
+            return [];
+          }
+          
           const { data: invoiceLines, error } = await window.supabase
             .from('invoice_lines')
             .select('id, description, unit_price, line_total, quantity, metadata, invoice_id')
-            .in('invoice_id', invoiceIds);
+            .in('invoice_id', validInvoiceIds);
           
           if (error) {
             console.error('❌ Error getting invoice lines:', error);
