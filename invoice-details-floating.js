@@ -319,100 +319,66 @@
     }
   };
 
-  // Get current case ID from helper or derive from plate (like parts floating screen)
+  // Get current case ID - EXACT COPY of parts floating screen approach
   async function getCurrentCaseId() {
-    // First try to get case ID directly from helper (preferred)
-    if (window.helper?.case_info?.supabase_case_id && isValidUUID(window.helper.case_info.supabase_case_id)) {
-      console.log('✅ Found case ID from helper.case_info.supabase_case_id:', window.helper.case_info.supabase_case_id);
-      return window.helper.case_info.supabase_case_id;
-    }
-    
-    // Fallback: try other helper sources
-    const otherSources = [
-      { name: 'helper.cases.id', value: window.helper?.cases?.id },
-      { name: 'helper.meta.case_id', value: window.helper?.meta?.case_id },
-      { name: 'sessionStorage.currentCaseId', value: sessionStorage.getItem('currentCaseId') },
-      { name: 'helper.damage_assessment.case_id', value: window.helper?.damage_assessment?.case_id }
-    ];
-    
-    for (const source of otherSources) {
-      if (source.value && isValidUUID(source.value)) {
-        console.log(`✅ Found case ID from ${source.name}:`, source.value);
-        return source.value;
-      }
-    }
-    
-    // If no direct case ID, try to derive from plate (like parts floating screen)
+    // Get plate number (same as parts floating screen)
     const plate = window.helper?.meta?.plate || window.helper?.vehicle?.plate;
-    if (plate && window.supabase) {
-      console.log('🔍 No direct case ID found, trying to derive from plate:', plate);
-      
-      try {
-        // Same logic as parts floating screen
-        const normalizedPlate = plate.replace(/[\s-]/g, '');
-        console.log('🔍 Querying cases table with normalized plate:', normalizedPlate);
-        
-        const { data: casesData, error: caseError } = await window.supabase
-          .from('cases')
-          .select('id, filing_case_id, plate, created_at')
-          .eq('plate', normalizedPlate)
-          .order('created_at', { ascending: false });
-        
-        if (caseError) {
-          console.error('❌ Error querying cases:', caseError);
-          return null;
-        }
-        
-        console.log('📋 Cases query result:', casesData);
-        
-        if (casesData && casesData.length > 0) {
-          const caseId = casesData[0].id;
-          console.log('✅ Derived case ID from plate:', caseId);
-          
-          // Store it in helper for future use
-          if (window.helper && !window.helper.case_info) {
-            window.helper.case_info = {};
-          }
-          if (window.helper?.case_info) {
-            window.helper.case_info.supabase_case_id = caseId;
-          }
-          
-          return caseId;
-        } else {
-          console.log('❌ No cases found for plate:', normalizedPlate);
-          
-          // Try to find any cases to see what plates exist
-          const { data: allCases, error: allError } = await window.supabase
-            .from('cases')
-            .select('plate')
-            .limit(10);
-          
-          if (!allError && allCases) {
-            console.log('📋 Available plates in database:', allCases.map(c => c.plate));
-          }
-        }
-      } catch (error) {
-        console.error('❌ Error deriving case ID from plate:', error);
-      }
+    
+    if (!plate) {
+      console.log('❌ No plate found in helper');
+      return null;
     }
     
-    console.warn('⚠️ No valid case ID found. Available sources:', {
-      'helper available': !!window.helper,
-      'helper.case_info.supabase_case_id': window.helper?.case_info?.supabase_case_id,
-      'helper.meta.plate': window.helper?.meta?.plate,
-      'helper.vehicle.plate': window.helper?.vehicle?.plate,
-      'other sources': otherSources.reduce((acc, s) => ({ ...acc, [s.name]: s.value }), {})
-    });
-    
-    return null;
+    if (!window.supabase) {
+      console.log('❌ Supabase not available');
+      return null;
+    }
+
+    try {
+      // EXACT COPY from parts floating screen: Get case_id from cases table
+      const normalizedPlate = plate.replace(/[\s-]/g, '');
+      console.log('🔍 Invoice floating: Normalized plate:', plate, '→', normalizedPlate);
+      
+      const { data: casesData, error: caseError } = await window.supabase
+        .from('cases')
+        .select('id, filing_case_id, status')
+        .eq('plate', normalizedPlate)
+        .order('created_at', { ascending: false });
+      
+      if (caseError) {
+        console.error('❌ Invoice floating: Failed to query cases:', caseError);
+        return null;
+      }
+      
+      if (!casesData || casesData.length === 0) {
+        console.log('❌ Invoice floating: No cases found for plate:', normalizedPlate);
+        return null;
+      }
+      
+      // Smart case selection: prioritize OPEN/IN_PROGRESS cases over most recent
+      const activeCase = casesData?.find(c => c.status === 'OPEN' || c.status === 'IN_PROGRESS') || casesData?.[0];
+      
+      if (!activeCase) {
+        console.error('❌ Invoice floating: No valid case found for plate:', normalizedPlate);
+        return null;
+      }
+      
+      const caseUuid = activeCase.id;
+      console.log('✅ Invoice floating: Found case UUID:', caseUuid, 'status:', activeCase.status);
+      
+      if (casesData.length > 1) {
+        console.log(`📋 Invoice floating: Found ${casesData.length} cases for plate, using:`, 
+                   activeCase.status === 'OPEN' || activeCase.status === 'IN_PROGRESS' ? 'active case' : 'most recent case');
+      }
+      
+      return caseUuid;
+      
+    } catch (error) {
+      console.error('❌ Invoice floating: Error getting case ID:', error);
+      return null;
+    }
   }
 
-  // Helper function to validate UUID format
-  function isValidUUID(str) {
-    if (!str) return false;
-    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-    return uuidRegex.test(str);
-  }
 
   // Load invoice documents from invoice_documents table
   async function loadInvoiceDocuments() {
