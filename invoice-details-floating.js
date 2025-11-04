@@ -369,12 +369,36 @@
 
   // Load mappings data for Tab 2
   async function loadMappingsData() {
-    const caseId = window.helper?.cases?.id;
+    const helper = window.helper || JSON.parse(sessionStorage.getItem('helper') || '{}');
+    
+    // Enhanced case ID detection with multiple fallback sources (from Session 90)
+    let caseId = null;
+    
+    // Try multiple sources for case ID
+    if (helper.cases?.id) {
+      caseId = helper.cases.id;
+      console.log('✅ Found case ID from helper.cases.id:', caseId);
+    } else if (helper.meta?.case_id) {
+      caseId = helper.meta.case_id;
+      console.log('✅ Found case ID from helper.meta.case_id:', caseId);
+    } else if (sessionStorage.getItem('currentCaseId')) {
+      caseId = sessionStorage.getItem('currentCaseId');
+      console.log('✅ Found case ID from sessionStorage:', caseId);
+    } else if (helper.damage_assessment?.case_id) {
+      caseId = helper.damage_assessment.case_id;
+      console.log('✅ Found case ID from helper.damage_assessment.case_id:', caseId);
+    } else if (helper.meta?.plate) {
+      // Fallback: try to use plate as identifier
+      caseId = helper.meta.plate;
+      console.log('✅ Using plate as case identifier:', caseId);
+    }
+    
     if (!caseId) {
       document.getElementById('mappingsContent').innerHTML = `
         <div class="invoice-section">
           <h4>❌ שגיאה</h4>
           <p>לא נמצא מזהה תיק לטעינת ההקצאות</p>
+          <p>נבדקו מקורות: helper.cases.id, helper.meta.case_id, sessionStorage, helper.damage_assessment.case_id, helper.meta.plate</p>
         </div>
       `;
       return;
@@ -1137,26 +1161,58 @@
         }
       }
 
+      // Enhanced case ID detection with multiple fallback sources (from Session 90)
+      let caseId = null;
+      
+      // Try multiple sources for case ID
+      if (helper.cases?.id) {
+        caseId = helper.cases.id;
+        console.log('✅ Found case ID from helper.cases.id:', caseId);
+      } else if (helper.meta?.case_id) {
+        caseId = helper.meta.case_id;
+        console.log('✅ Found case ID from helper.meta.case_id:', caseId);
+      } else if (sessionStorage.getItem('currentCaseId')) {
+        caseId = sessionStorage.getItem('currentCaseId');
+        console.log('✅ Found case ID from sessionStorage:', caseId);
+      } else if (helper.damage_assessment?.case_id) {
+        caseId = helper.damage_assessment.case_id;
+        console.log('✅ Found case ID from helper.damage_assessment.case_id:', caseId);
+      } else if (helper.meta?.plate) {
+        // Fallback: try to use plate as identifier
+        caseId = helper.meta.plate;
+        console.log('✅ Using plate as case identifier:', caseId);
+      }
+
+      console.log('🔍 Using case ID for invoice loading:', caseId);
+
       // SESSION 74: Load invoices from Supabase if available
       let supabaseInvoices = [];
-      if (window.invoiceService) {
+      if (window.invoiceService && caseId) {
         try {
-          const caseId = sessionStorage.getItem('currentCaseId');
-          if (caseId) {
-            const result = await window.invoiceService.getInvoicesByCase(caseId);
-            if (result.success && result.invoices) {
-              supabaseInvoices = result.invoices;
-              console.log(`✅ SESSION 74: Loaded ${supabaseInvoices.length} invoices from Supabase`);
-            }
+          const result = await window.invoiceService.getInvoicesByCase(caseId);
+          if (result.success && result.invoices) {
+            supabaseInvoices = result.invoices;
+            console.log(`✅ SESSION 74: Loaded ${supabaseInvoices.length} invoices from Supabase`);
           }
         } catch (supabaseError) {
           console.warn('⚠️ SESSION 74: Could not load from Supabase:', supabaseError);
         }
       }
 
-      // Get invoice data from helper
-      const invoiceData = helper.invoice || {};
-      const documentsInvoices = helper.documents?.invoices || [];
+      // Get invoice data from helper - enhanced detection (from Session 90)
+      const invoiceData = helper.invoice || helper.invoices?.[0] || {};
+      let documentsInvoices = helper.documents?.invoices || helper.invoices || [];
+      
+      // Also check for invoice data in damage assessment and final report
+      if (helper.damage_assessment?.invoices) {
+        documentsInvoices = documentsInvoices.concat(helper.damage_assessment.invoices);
+        console.log('📋 Added invoices from damage_assessment');
+      }
+      
+      if (helper.final_report?.invoice_assignments) {
+        documentsInvoices = documentsInvoices.concat(helper.final_report.invoice_assignments);
+        console.log('📋 Added invoice assignments from final_report');
+      }
       
       // Display invoice data
       displayInvoiceData(invoiceData, documentsInvoices, supabaseInvoices);
@@ -1735,11 +1791,7 @@
 
       // Show loading state
       let button = buttonElement;
-      if (!button && window.event) {
-        button = window.event.target;
-      }
       
-      const originalText = button?.textContent || '';
       if (button) {
         button.textContent = '⏳ טוען...';
         button.disabled = true;
