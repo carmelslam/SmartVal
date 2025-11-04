@@ -319,26 +319,84 @@
     }
   };
 
-  // Get current case ID from multiple sources
-  function getCurrentCaseId() {
-    // Try multiple sources for case ID (from Session 90 approach)
-    let caseId = null;
-    
-    if (window.helper?.cases?.id) {
-      caseId = window.helper.cases.id;
-    } else if (window.helper?.meta?.case_id) {
-      caseId = window.helper.meta.case_id;
-    } else if (sessionStorage.getItem('currentCaseId')) {
-      caseId = sessionStorage.getItem('currentCaseId');
-    } else if (window.helper?.damage_assessment?.case_id) {
-      caseId = window.helper.damage_assessment.case_id;
-    } else if (window.helper?.meta?.plate) {
-      // Fallback: try to use plate as identifier
-      caseId = window.helper.meta.plate;
+  // Get current case ID from helper or derive from plate (like parts floating screen)
+  async function getCurrentCaseId() {
+    // First try to get case ID directly from helper (preferred)
+    if (window.helper?.case_info?.supabase_case_id && isValidUUID(window.helper.case_info.supabase_case_id)) {
+      console.log('✅ Found case ID from helper.case_info.supabase_case_id:', window.helper.case_info.supabase_case_id);
+      return window.helper.case_info.supabase_case_id;
     }
     
-    console.log('🔍 Found case ID:', caseId);
-    return caseId;
+    // Fallback: try other helper sources
+    const otherSources = [
+      { name: 'helper.cases.id', value: window.helper?.cases?.id },
+      { name: 'helper.meta.case_id', value: window.helper?.meta?.case_id },
+      { name: 'sessionStorage.currentCaseId', value: sessionStorage.getItem('currentCaseId') },
+      { name: 'helper.damage_assessment.case_id', value: window.helper?.damage_assessment?.case_id }
+    ];
+    
+    for (const source of otherSources) {
+      if (source.value && isValidUUID(source.value)) {
+        console.log(`✅ Found case ID from ${source.name}:`, source.value);
+        return source.value;
+      }
+    }
+    
+    // If no direct case ID, try to derive from plate (like parts floating screen)
+    const plate = window.helper?.meta?.plate || window.helper?.vehicle?.plate;
+    if (plate && window.supabase) {
+      console.log('🔍 No direct case ID found, trying to derive from plate:', plate);
+      
+      try {
+        // Same logic as parts floating screen
+        const normalizedPlate = plate.replace(/[\s-]/g, '');
+        
+        const { data: casesData, error: caseError } = await window.supabase
+          .from('cases')
+          .select('id, filing_case_id')
+          .eq('plate', normalizedPlate)
+          .order('created_at', { ascending: false });
+        
+        if (caseError) {
+          console.error('❌ Error querying cases:', caseError);
+          return null;
+        }
+        
+        if (casesData && casesData.length > 0) {
+          const caseId = casesData[0].id;
+          console.log('✅ Derived case ID from plate:', caseId);
+          
+          // Store it in helper for future use
+          if (window.helper && !window.helper.case_info) {
+            window.helper.case_info = {};
+          }
+          if (window.helper?.case_info) {
+            window.helper.case_info.supabase_case_id = caseId;
+          }
+          
+          return caseId;
+        }
+      } catch (error) {
+        console.error('❌ Error deriving case ID from plate:', error);
+      }
+    }
+    
+    console.warn('⚠️ No valid case ID found. Available sources:', {
+      'helper available': !!window.helper,
+      'helper.case_info.supabase_case_id': window.helper?.case_info?.supabase_case_id,
+      'helper.meta.plate': window.helper?.meta?.plate,
+      'helper.vehicle.plate': window.helper?.vehicle?.plate,
+      'other sources': otherSources.reduce((acc, s) => ({ ...acc, [s.name]: s.value }), {})
+    });
+    
+    return null;
+  }
+
+  // Helper function to validate UUID format
+  function isValidUUID(str) {
+    if (!str) return false;
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    return uuidRegex.test(str);
   }
 
   // Load invoice documents from invoice_documents table
@@ -346,14 +404,23 @@
     const contentDiv = document.getElementById('documentsContent');
     
     try {
-      currentCaseId = getCurrentCaseId();
+      currentCaseId = await getCurrentCaseId();
       
       if (!currentCaseId) {
+        const hasHelper = !!window.helper;
+        const hasPlate = !!(window.helper?.meta?.plate || window.helper?.vehicle?.plate);
+        
         contentDiv.innerHTML = `
           <div class="no-data-message">
             <div class="no-data-icon">❌</div>
             <div style="font-weight: bold; margin-bottom: 8px;">לא נמצא מזהה תיק</div>
             <div style="font-size: 14px;">לא ניתן לטעון מסמכי חשבונית ללא מזהה תיק</div>
+            <div style="font-size: 12px; margin-top: 10px; padding: 10px; background: #f3f4f6; border-radius: 6px;">
+              <strong>מצב מערכת:</strong><br>
+              Helper זמין: ${hasHelper ? '✅' : '❌'}<br>
+              מספר רישוי: ${hasPlate ? '✅' : '❌'}<br>
+              ${!hasHelper ? 'טען תיק תחילה' : !hasPlate ? 'מספר רישוי חסר' : 'לא נמצא תיק במאגר'}
+            </div>
           </div>
         `;
         return;
@@ -568,14 +635,23 @@
     const contentDiv = document.getElementById('mappingsContent');
     
     try {
-      currentCaseId = getCurrentCaseId();
+      currentCaseId = await getCurrentCaseId();
       
       if (!currentCaseId) {
+        const hasHelper = !!window.helper;
+        const hasPlate = !!(window.helper?.meta?.plate || window.helper?.vehicle?.plate);
+        
         contentDiv.innerHTML = `
           <div class="no-data-message">
             <div class="no-data-icon">❌</div>
             <div style="font-weight: bold; margin-bottom: 8px;">לא נמצא מזהה תיק</div>
             <div style="font-size: 14px;">לא ניתן לטעון הקצאות ללא מזהה תיק</div>
+            <div style="font-size: 12px; margin-top: 10px; padding: 10px; background: #f3f4f6; border-radius: 6px;">
+              <strong>מצב מערכת:</strong><br>
+              Helper זמין: ${hasHelper ? '✅' : '❌'}<br>
+              מספר רישוי: ${hasPlate ? '✅' : '❌'}<br>
+              ${!hasHelper ? 'טען תיק תחילה' : !hasPlate ? 'מספר רישוי חסר' : 'לא נמצא תיק במאגר'}
+            </div>
           </div>
         `;
         return;
