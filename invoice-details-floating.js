@@ -319,16 +319,40 @@
     }
   };
 
-  // Get current case ID - EXACT COPY of parts floating screen approach
+  // Get current case ID using correct helper identifiers
   async function getCurrentCaseId() {
-    // Get plate number (same as parts floating screen)
-    const plate = window.helper?.meta?.plate || window.helper?.vehicle?.plate;
+    console.log('🔍 Invoice floating: Checking helper structure...');
     
-    if (!plate) {
-      console.log('❌ No plate found in helper');
-      return null;
+    // First priority: Use direct case UUID if available
+    const directCaseId = window.helper?.case_info?.supabase_case_id;
+    if (directCaseId) {
+      console.log('✅ Invoice floating: Found direct case UUID:', directCaseId);
+      return directCaseId;
     }
     
+    // Second priority: Check current_invoice for case_uuid
+    const invoiceCaseId = window.helper?.current_invoice?.case_uuid;
+    if (invoiceCaseId) {
+      console.log('✅ Invoice floating: Found case UUID from current_invoice:', invoiceCaseId);
+      return invoiceCaseId;
+    }
+    
+    // Third priority: Get case ID by plate lookup
+    const plate = window.helper?.case_info?.plate;
+    if (plate) {
+      console.log('🔍 Invoice floating: Found plate, looking up case:', plate);
+      return getCurrentCaseIdByPlate(plate);
+    }
+    
+    console.log('❌ Invoice floating: No case ID or plate found in helper');
+    console.log('🔍 DEBUG: helper.case_info:', window.helper?.case_info);
+    console.log('🔍 DEBUG: helper.current_invoice:', window.helper?.current_invoice);
+    
+    return null;
+  }
+
+  // Helper function to get case ID by plate
+  async function getCurrentCaseIdByPlate(plate) {
     if (!window.supabase) {
       console.log('❌ Supabase not available');
       return null;
