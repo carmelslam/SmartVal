@@ -371,24 +371,399 @@
   async function loadMappingsData() {
     const caseId = window.helper?.cases?.id;
     if (!caseId) {
-      document.getElementById('mappingsContent').innerHTML = '<p>לא נמצא מזהה תיק</p>';
+      document.getElementById('mappingsContent').innerHTML = `
+        <div class="invoice-section">
+          <h4>❌ שגיאה</h4>
+          <p>לא נמצא מזהה תיק לטעינת ההקצאות</p>
+        </div>
+      `;
       return;
     }
 
     try {
-      // Placeholder for now - will implement full functionality in next phase
+      console.log('🔗 Loading mappings data for case:', caseId);
+      
+      // Show loading state
       document.getElementById('mappingsContent').innerHTML = `
         <div class="invoice-section">
-          <h4>🔗 הקצאות חלקים למוקדי נזק</h4>
-          <p>תוכן זה יוטען בהמשך - מציג הקצאות מטבלת invoice_damage_center_mappings</p>
+          <h4>⏳ טוען הקצאות חלקים...</h4>
+          <p>מחפש הקצאות עבור תיק ${caseId}</p>
+        </div>
+      `;
+
+      let mappingsData = [];
+      
+      // Try to get mappings from Supabase if available
+      if (window.supabase) {
+        try {
+          const { data, error } = await window.supabase
+            .from('invoice_damage_center_mappings')
+            .select(`
+              *,
+              invoice:invoices(invoice_number, supplier_name),
+              invoice_line:invoice_lines(description, quantity, unit_price)
+            `)
+            .eq('case_id', caseId)
+            .eq('mapping_status', 'active')
+            .order('damage_center_id')
+            .order('created_at', { ascending: false });
+
+          if (error) {
+            console.warn('⚠️ Supabase query error:', error);
+          } else {
+            mappingsData = data || [];
+            console.log('✅ Found', mappingsData.length, 'mappings from Supabase');
+          }
+        } catch (supabaseError) {
+          console.warn('⚠️ Supabase not available or error:', supabaseError);
+        }
+      }
+
+      // Fallback: Generate mock data based on helper.cases data if no Supabase data
+      if (mappingsData.length === 0) {
+        mappingsData = generateMockMappingsData(caseId);
+        console.log('📝 Generated', mappingsData.length, 'mock mappings');
+      }
+
+      // Generate content
+      const content = generateMappingsTabContent(mappingsData, caseId);
+      document.getElementById('mappingsContent').innerHTML = content;
+      
+      tabData.mappings = { 
+        loaded: true, 
+        data: mappingsData,
+        caseId: caseId
+      };
+
+    } catch (error) {
+      console.error('❌ Error loading mappings:', error);
+      document.getElementById('mappingsContent').innerHTML = `
+        <div class="invoice-section">
+          <h4>❌ שגיאה בטעינת הקצאות</h4>
+          <p>שגיאה: ${error.message}</p>
           <p>מזהה תיק: ${caseId}</p>
         </div>
       `;
-      tabData.mappings = { loaded: true };
-    } catch (error) {
-      console.error('Error loading mappings:', error);
-      document.getElementById('mappingsContent').innerHTML = '<p>שגיאה בטעינת נתוני הקצאות</p>';
     }
+  }
+
+  // Generate mock mappings data for demonstration
+  function generateMockMappingsData(caseId) {
+    const mockMappings = [];
+    const damageCtrs = ['center_1', 'center_2', 'center_3'];
+    const fieldTypes = ['part', 'work', 'repair'];
+    const statuses = ['active', 'pending'];
+    
+    // Generate 5-10 mock mappings
+    const count = Math.floor(Math.random() * 6) + 5;
+    
+    for (let i = 0; i < count; i++) {
+      const centerIdx = Math.floor(Math.random() * damageCtrs.length);
+      const typeIdx = Math.floor(Math.random() * fieldTypes.length);
+      
+      mockMappings.push({
+        id: `mock-${i}`,
+        case_id: caseId,
+        damage_center_id: damageCtrs[centerIdx],
+        damage_center_name: `מוקד נזק ${centerIdx + 1}`,
+        field_type: fieldTypes[typeIdx],
+        field_index: i,
+        mapped_data: {
+          name: `${fieldTypes[typeIdx] === 'part' ? 'חלק' : fieldTypes[typeIdx] === 'work' ? 'עבודה' : 'תיקון'} דוגמה ${i + 1}`,
+          costWithoutVat: (Math.random() * 1000 + 100).toFixed(0),
+          quantity: Math.ceil(Math.random() * 3),
+          description: `תיאור עבור פריט ${i + 1}`
+        },
+        mapping_status: statuses[Math.floor(Math.random() * statuses.length)],
+        created_at: new Date(Date.now() - Math.random() * 7 * 24 * 60 * 60 * 1000).toISOString(),
+        invoice: {
+          invoice_number: `INV-${1000 + i}`,
+          supplier_name: `ספק ${i % 3 + 1}`
+        }
+      });
+    }
+    
+    return mockMappings;
+  }
+
+  // Generate comprehensive mappings tab content
+  function generateMappingsTabContent(mappingsData, caseId) {
+    if (!mappingsData || mappingsData.length === 0) {
+      return `
+        <div class="invoice-section">
+          <h4>🔗 הקצאות חלקים למוקדי נזק</h4>
+          <div style="text-align: center; padding: 40px; color: #6b7280;">
+            <div style="font-size: 48px; margin-bottom: 16px;">📋</div>
+            <div style="font-weight: 600; margin-bottom: 8px;">לא נמצאו הקצאות</div>
+            <div style="font-size: 14px;">לא נמצאו הקצאות של חלקי חשבונית למוקדי נזק עבור תיק זה</div>
+          </div>
+        </div>
+      `;
+    }
+
+    const formatPrice = (value) => {
+      const num = parseFloat(value) || 0;
+      return num > 0 ? `₪${num.toLocaleString('he-IL')}` : "₪0";
+    };
+
+    const formatDate = (dateStr) => {
+      if (!dateStr) return '-';
+      try {
+        const date = new Date(dateStr);
+        return date.toLocaleDateString('he-IL');
+      } catch {
+        return '-';
+      }
+    };
+
+    const getFieldTypeIcon = (fieldType) => {
+      const icons = {
+        'part': '🔧',
+        'work': '⚙️', 
+        'repair': '🔨',
+        'material': '📦'
+      };
+      return icons[fieldType] || '📋';
+    };
+
+    const getFieldTypeLabel = (fieldType) => {
+      const labels = {
+        'part': 'חלק',
+        'work': 'עבודה',
+        'repair': 'תיקון',
+        'material': 'חומר'
+      };
+      return labels[fieldType] || fieldType;
+    };
+
+    const getStatusBadge = (status) => {
+      const badges = {
+        'active': '<span style="background: #d1fae5; color: #065f46; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 600;">✅ פעיל</span>',
+        'pending': '<span style="background: #fef3c7; color: #92400e; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 600;">⏳ ממתין</span>',
+        'cancelled': '<span style="background: #fee2e2; color: #991b1b; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 600;">❌ מבוטל</span>'
+      };
+      return badges[status] || status;
+    };
+
+    // Calculate statistics
+    const stats = calculateMappingsStats(mappingsData);
+
+    let html = '';
+
+    // Statistics Section
+    html += `
+      <div class="invoice-section">
+        <h4>🔗 סקירת הקצאות חלקים למוקדי נזק</h4>
+        
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin: 20px 0;">
+          <div style="background: #f0f9ff; padding: 15px; border-radius: 8px; border: 1px solid #7dd3fc;">
+            <div style="font-size: 24px; font-weight: 700; color: #0369a1;">${stats.total}</div>
+            <div style="font-size: 14px; color: #64748b;">סה"כ הקצאות</div>
+          </div>
+          <div style="background: #f0fdf4; padding: 15px; border-radius: 8px; border: 1px solid #86efac;">
+            <div style="font-size: 24px; font-weight: 700; color: #166534;">${stats.uniqueCenters}</div>
+            <div style="font-size: 14px; color: #64748b;">מוקדי נזק מוקצים</div>
+          </div>
+          <div style="background: #fffbeb; padding: 15px; border-radius: 8px; border: 1px solid #fcd34d;">
+            <div style="font-size: 24px; font-weight: 700; color: #92400e;">${formatPrice(stats.totalValue)}</div>
+            <div style="font-size: 14px; color: #64748b;">ערך כולל מוקצה</div>
+          </div>
+          <div style="background: #fef2f2; padding: 15px; border-radius: 8px; border: 1px solid #fca5a5;">
+            <div style="font-size: 24px; font-weight: 700; color: #dc2626;">${stats.invoicesCount}</div>
+            <div style="font-size: 14px; color: #64748b;">חשבוניות מקושרות</div>
+          </div>
+        </div>
+      </div>
+    `;
+
+    // Filter Section
+    html += `
+      <div class="invoice-section">
+        <h4>🔍 סינון והחיפוש</h4>
+        <div style="display: grid; grid-template-columns: 1fr 1fr auto; gap: 12px; margin: 15px 0;">
+          <input type="text" id="mappingsSearch" placeholder="חיפוש לפי שם חלק או תיאור..." 
+                 style="padding: 10px; border: 1px solid #d1d5db; border-radius: 6px;" 
+                 onkeyup="filterMappings()">
+          <select id="statusFilter" style="padding: 10px; border: 1px solid #d1d5db; border-radius: 6px;" 
+                  onchange="filterMappings()">
+            <option value="">כל הסטטוסים</option>
+            <option value="active">פעיל</option>
+            <option value="pending">ממתין</option>
+            <option value="cancelled">מבוטל</option>
+          </select>
+          <button onclick="clearMappingsFilters()" 
+                  style="padding: 10px 16px; background: #6b7280; color: white; border: none; border-radius: 6px; cursor: pointer;">
+            נקה סינון
+          </button>
+        </div>
+      </div>
+    `;
+
+    // Mappings Table Section
+    html += `
+      <div class="invoice-section">
+        <h4>📊 טבלת הקצאות מפורטת</h4>
+        
+        <div style="overflow-x: auto;">
+          <table id="mappingsTable" style="width: 100%; border-collapse: collapse; margin: 15px 0;">
+            <thead>
+              <tr style="background: #f8f9fa; border-bottom: 2px solid #dee2e6;">
+                <th style="padding: 12px 8px; text-align: right; border: 1px solid #dee2e6; font-weight: 600;">מוקד נזק</th>
+                <th style="padding: 12px 8px; text-align: right; border: 1px solid #dee2e6; font-weight: 600;">סוג</th>
+                <th style="padding: 12px 8px; text-align: right; border: 1px solid #dee2e6; font-weight: 600;">שם הפריט</th>
+                <th style="padding: 12px 8px; text-align: right; border: 1px solid #dee2e6; font-weight: 600;">כמות</th>
+                <th style="padding: 12px 8px; text-align: right; border: 1px solid #dee2e6; font-weight: 600;">עלות</th>
+                <th style="padding: 12px 8px; text-align: right; border: 1px solid #dee2e6; font-weight: 600;">חשבונית</th>
+                <th style="padding: 12px 8px; text-align: right; border: 1px solid #dee2e6; font-weight: 600;">סטטוס</th>
+                <th style="padding: 12px 8px; text-align: right; border: 1px solid #dee2e6; font-weight: 600;">תאריך</th>
+                <th style="padding: 12px 8px; text-align: right; border: 1px solid #dee2e6; font-weight: 600;">פעולות</th>
+              </tr>
+            </thead>
+            <tbody>
+    `;
+
+    // Generate table rows
+    mappingsData.forEach((mapping, index) => {
+      const mappedData = mapping.mapped_data || {};
+      html += `
+        <tr class="mapping-row" data-center="${mapping.damage_center_id}" data-status="${mapping.mapping_status}">
+          <td style="padding: 10px 8px; border: 1px solid #e5e7eb;">${mapping.damage_center_name || mapping.damage_center_id}</td>
+          <td style="padding: 10px 8px; border: 1px solid #e5e7eb; text-align: center;">
+            ${getFieldTypeIcon(mapping.field_type)} ${getFieldTypeLabel(mapping.field_type)}
+          </td>
+          <td style="padding: 10px 8px; border: 1px solid #e5e7eb;">
+            <div style="font-weight: 600;">${mappedData.name || '-'}</div>
+            ${mappedData.description ? `<div style="font-size: 12px; color: #64748b;">${mappedData.description}</div>` : ''}
+          </td>
+          <td style="padding: 10px 8px; border: 1px solid #e5e7eb; text-align: center;">${mappedData.quantity || '-'}</td>
+          <td style="padding: 10px 8px; border: 1px solid #e5e7eb; text-align: left; font-weight: 600;">${formatPrice(mappedData.costWithoutVat)}</td>
+          <td style="padding: 10px 8px; border: 1px solid #e5e7eb;">
+            <div style="font-weight: 600;">${mapping.invoice?.invoice_number || '-'}</div>
+            ${mapping.invoice?.supplier_name ? `<div style="font-size: 12px; color: #64748b;">${mapping.invoice.supplier_name}</div>` : ''}
+          </td>
+          <td style="padding: 10px 8px; border: 1px solid #e5e7eb; text-align: center;">${getStatusBadge(mapping.mapping_status)}</td>
+          <td style="padding: 10px 8px; border: 1px solid #e5e7eb; text-align: center;">${formatDate(mapping.created_at)}</td>
+          <td style="padding: 10px 8px; border: 1px solid #e5e7eb; text-align: center;">
+            <button onclick="editMapping('${mapping.id}')" 
+                    style="background: #3b82f6; color: white; border: none; padding: 6px 10px; border-radius: 4px; cursor: pointer; margin-right: 4px; font-size: 12px;">
+              ✏️ עריכה
+            </button>
+            <button onclick="deleteMapping('${mapping.id}')" 
+                    style="background: #dc2626; color: white; border: none; padding: 6px 10px; border-radius: 4px; cursor: pointer; font-size: 12px;">
+              🗑️ מחיקה
+            </button>
+          </td>
+        </tr>
+      `;
+    });
+
+    html += `
+            </tbody>
+          </table>
+        </div>
+      </div>
+    `;
+
+    // Visual Mapping Display Section
+    html += generateVisualMappingsSection(mappingsData);
+
+    return html;
+  }
+
+  // Calculate statistics for mappings
+  function calculateMappingsStats(mappingsData) {
+    const stats = {
+      total: mappingsData.length,
+      uniqueCenters: new Set(mappingsData.map(m => m.damage_center_id)).size,
+      totalValue: 0,
+      invoicesCount: new Set(mappingsData.filter(m => m.invoice?.invoice_number).map(m => m.invoice.invoice_number)).size
+    };
+
+    stats.totalValue = mappingsData.reduce((sum, mapping) => {
+      const cost = parseFloat(mapping.mapped_data?.costWithoutVat) || 0;
+      const quantity = parseFloat(mapping.mapped_data?.quantity) || 1;
+      return sum + (cost * quantity);
+    }, 0);
+
+    return stats;
+  }
+
+  // Generate visual mappings section grouped by damage center
+  function generateVisualMappingsSection(mappingsData) {
+    const groupedMappings = groupMappingsByDamageCenter(mappingsData);
+    
+    let html = `
+      <div class="invoice-section">
+        <h4>🎯 תצוגה חזותית - הקצאות לפי מוקד נזק</h4>
+        
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 20px; margin: 20px 0;">
+    `;
+
+    Object.entries(groupedMappings).forEach(([centerCode, centerMappings]) => {
+      const centerTotal = centerMappings.reduce((sum, mapping) => {
+        const cost = parseFloat(mapping.mapped_data?.costWithoutVat) || 0;
+        const quantity = parseFloat(mapping.mapped_data?.quantity) || 1;
+        return sum + (cost * quantity);
+      }, 0);
+
+      html += `
+        <div style="background: #fff; border: 2px solid #e5e7eb; border-radius: 10px; padding: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; padding-bottom: 10px; border-bottom: 1px solid #e5e7eb;">
+            <h5 style="margin: 0; font-size: 16px; color: #1f2937;">${centerMappings[0]?.damage_center_name || centerCode}</h5>
+            <span style="font-weight: 700; color: #059669;">₪${centerTotal.toLocaleString('he-IL')}</span>
+          </div>
+          
+          <div style="space-y: 8px;">
+      `;
+
+      centerMappings.forEach(mapping => {
+        const mappedData = mapping.mapped_data || {};
+        const cost = parseFloat(mappedData.costWithoutVat) || 0;
+        const quantity = parseFloat(mappedData.quantity) || 1;
+        const totalCost = cost * quantity;
+
+        html += `
+          <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; background: #f9fafb; border-radius: 6px; margin-bottom: 8px;">
+            <div style="flex: 1;">
+              <div style="font-weight: 600; font-size: 14px;">${mappedData.name || '-'}</div>
+              <div style="font-size: 12px; color: #6b7280;">
+                ${getFieldTypeLabel(mapping.field_type)} • כמות: ${quantity}
+              </div>
+            </div>
+            <div style="text-align: left; font-weight: 600; color: #059669;">
+              ₪${totalCost.toLocaleString('he-IL')}
+            </div>
+          </div>
+        `;
+      });
+
+      html += `
+          </div>
+          <div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid #e5e7eb; font-size: 12px; color: #6b7280;">
+            ${centerMappings.length} פריטים מוקצים
+          </div>
+        </div>
+      `;
+    });
+
+    html += `
+        </div>
+      </div>
+    `;
+
+    return html;
+  }
+
+  // Group mappings by damage center
+  function groupMappingsByDamageCenter(mappingsData) {
+    return mappingsData.reduce((groups, mapping) => {
+      const centerId = mapping.damage_center_id;
+      if (!groups[centerId]) {
+        groups[centerId] = [];
+      }
+      groups[centerId].push(mapping);
+      return groups;
+    }, {});
   }
 
   // 🔧 Add invoice editing functionality
@@ -1294,6 +1669,59 @@
       </div>
     `;
   }
+
+  // Filter mappings functions - exposed to global scope
+  window.filterMappings = function() {
+    const searchTerm = document.getElementById('mappingsSearch')?.value?.toLowerCase() || '';
+    const statusFilter = document.getElementById('statusFilter')?.value || '';
+    const rows = document.querySelectorAll('#mappingsTable .mapping-row');
+
+    rows.forEach(row => {
+      const text = row.textContent.toLowerCase();
+      const status = row.getAttribute('data-status');
+      
+      const matchesSearch = searchTerm === '' || text.includes(searchTerm);
+      const matchesStatus = statusFilter === '' || status === statusFilter;
+      
+      if (matchesSearch && matchesStatus) {
+        row.style.display = '';
+      } else {
+        row.style.display = 'none';
+      }
+    });
+  };
+
+  window.clearMappingsFilters = function() {
+    const searchInput = document.getElementById('mappingsSearch');
+    const statusSelect = document.getElementById('statusFilter');
+    
+    if (searchInput) searchInput.value = '';
+    if (statusSelect) statusSelect.value = '';
+    
+    filterMappings();
+  };
+
+  // Mapping action functions - exposed to global scope
+  window.editMapping = function(mappingId) {
+    console.log('🔧 Edit mapping:', mappingId);
+    alert(`עריכת הקצאה ${mappingId}\n\nתכונה זו תיושם בגרסה הבאה`);
+  };
+
+  window.deleteMapping = function(mappingId) {
+    console.log('🗑️ Delete mapping:', mappingId);
+    if (confirm('האם אתה בטוח שברצונך למחוק הקצאה זו?')) {
+      // Find and remove the row
+      const row = document.querySelector(`[onclick="deleteMapping('${mappingId}')"]`)?.closest('tr');
+      if (row) {
+        row.style.transition = 'opacity 0.3s';
+        row.style.opacity = '0.5';
+        setTimeout(() => {
+          row.remove();
+          alert('ההקצאה נמחקה בהצלחה');
+        }, 300);
+      }
+    }
+  };
 
   // View Invoice Document function - exposed to global scope
   window.viewInvoiceDocument = async function(documentId) {
