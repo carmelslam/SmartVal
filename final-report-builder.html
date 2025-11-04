@@ -15849,51 +15849,46 @@
         
         console.log('🔄 Loading invoice lines from Supabase for case:', caseId);
         
-        // SESSION 94 DEBUG: Check if we should use helper.invoices instead
+        // SESSION 94: Use helper.invoices data directly (avoid complex Supabase queries)
         console.log('🔍 Checking helper.invoices first...');
         if (window.helper?.invoices && Array.isArray(window.helper.invoices) && window.helper.invoices.length > 0) {
           console.log(`📋 Found ${window.helper.invoices.length} invoices in helper.invoices`);
           console.log('📋 Sample invoice from helper:', window.helper.invoices[0]);
-          console.log('📋 Invoice ID from helper:', window.helper.invoices[0]?.id);
           
-          // Use helper.invoices instead of querying Supabase invoices table
           const helperInvoices = window.helper.invoices;
-          const invoiceIds = helperInvoices.map(inv => inv.id).filter(id => {
-            const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-            return id && uuidRegex.test(id);
-          });
+          let allInvoiceLines = [];
           
-          console.log('🔍 Valid invoice IDs from helper:', invoiceIds);
-          
-          if (invoiceIds.length > 0) {
-            console.log('✅ Using helper.invoices data for invoice line queries');
+          // Check if invoices already have line_items from previous loading
+          helperInvoices.forEach((invoice, idx) => {
+            console.log(`🔍 Invoice ${idx} structure:`, {
+              id: invoice.id,
+              invoice_number: invoice.invoice_number,
+              supplier_name: invoice.supplier_name,
+              has_line_items: !!invoice.line_items,
+              line_items_count: invoice.line_items?.length || 0
+            });
             
-            // Query invoice_lines directly with the IDs from helper
-            const { data: invoiceLines, error } = await window.supabase
-              .from('invoice_lines')
-              .select('id, description, unit_price, line_total, quantity, metadata, invoice_id')
-              .in('invoice_id', invoiceIds);
-            
-            if (invoiceLines && !error) {
-              // Merge with helper invoice data
-              const enrichedLines = invoiceLines.map(line => {
-                const invoice = helperInvoices.find(inv => inv.id === line.invoice_id);
-                return {
+            if (invoice.line_items && Array.isArray(invoice.line_items)) {
+              // Use existing line_items from helper
+              invoice.line_items.forEach(line => {
+                allInvoiceLines.push({
                   ...line,
-                  invoices: invoice ? {
+                  invoices: {
                     invoice_number: invoice.invoice_number,
                     supplier_name: invoice.supplier_name,
                     case_id: caseId
-                  } : null
-                };
+                  }
+                });
               });
-              
-              console.log(`✅ Loaded ${enrichedLines.length} invoice lines using helper.invoices`);
-              window.INVOICE_LINES = enrichedLines;
-              return enrichedLines;
-            } else {
-              console.log('⚠️ Error querying invoice_lines with helper invoice IDs:', error);
             }
+          });
+          
+          if (allInvoiceLines.length > 0) {
+            console.log(`✅ Using existing line_items from helper.invoices: ${allInvoiceLines.length} lines`);
+            window.INVOICE_LINES = allInvoiceLines;
+            return allInvoiceLines;
+          } else {
+            console.log('⚠️ No line_items found in helper.invoices - may need to load them first');
           }
         }
         
