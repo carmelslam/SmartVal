@@ -23595,10 +23595,21 @@
         container.appendChild(newRow);
         console.log('✅ Added new differential row');
         
-        // SESSION 95: Populate invoice lines dropdown for the new row
+        // SESSION 95: Load invoice lines and populate dropdown for the new row
         const invoiceLineDropdown = newRow.querySelector('.diff-invoice-line');
         if (invoiceLineDropdown) {
-          populateInvoiceLineDropdown(invoiceLineDropdown);
+          // If invoice lines aren't loaded yet, load them first
+          if (!window.INVOICE_LINES || window.INVOICE_LINES.length === 0) {
+            loadInvoiceLinesForDropdown().then(() => {
+              populateInvoiceLineDropdown(invoiceLineDropdown);
+            }).catch(error => {
+              console.error('❌ Error loading invoice lines for new row:', error);
+              // Still populate with empty data to maintain UI consistency
+              populateInvoiceLineDropdown(invoiceLineDropdown);
+            });
+          } else {
+            populateInvoiceLineDropdown(invoiceLineDropdown);
+          }
         }
         
         updateDifferentialsSummary();
@@ -24143,6 +24154,16 @@
           
           // CRITICAL FIX: Reattach event listeners to loaded rows
           setTimeout(reattachDifferentialEventListeners, 200);
+          
+          // SESSION 95: Load invoice lines and populate dropdowns for loaded rows
+          setTimeout(async () => {
+            try {
+              await loadInvoiceLinesForDropdown();
+              populateAllDifferentialRowsWithInvoiceLines();
+            } catch (error) {
+              console.error('❌ Error loading invoice lines for differential rows:', error);
+            }
+          }, 300);
         }
         
         // Update all subtotals
