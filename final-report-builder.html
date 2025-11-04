@@ -11794,7 +11794,6 @@
      */
     window.acceptInvoiceAssignment = async function acceptInvoiceAssignment() {
       try {
-        alert('🚀 BANNER CLICKED - FUNCTION IS RUNNING!'); // Temporary visual test
         console.log('🚀 SESSION 88: Processing invoice assignment acceptance...');
         console.log('🔍 DEBUG: Function called successfully');
         console.log('📋 Getting selected invoices...');
@@ -14064,6 +14063,92 @@
               });
             }, 200);
           }, 200);
+        }, 100);
+      });
+    };
+
+    // SESSION 93: Test save button positioning before הנחות והפרשים
+    window.testSaveButtonPositioning = function() {
+      console.log('🧪 SESSION 93: Testing Save Button Positioning Before הנחות והפרשים');
+      
+      return new Promise((resolve) => {
+        // Step 1: Ensure buttons are created
+        console.log('📋 Step 1: Creating save buttons...');
+        if (typeof addSectionButtons === 'function') {
+          addSectionButtons();
+        }
+        
+        setTimeout(() => {
+          // Step 2: Find the save button
+          let saveButton = document.querySelector('#damageCentersSummary .section-save-button') || 
+                          document.querySelector('#damageCentersContent .section-save-button');
+          
+          // Step 3: Find הנחות והפרשים section
+          const differentialsSection = document.getElementById('differentialsSection');
+          
+          console.log('🔍 Save button exists:', !!saveButton);
+          console.log('🔍 הנחות והפרשים section exists:', !!differentialsSection);
+          
+          if (!saveButton || !differentialsSection) {
+            resolve({
+              success: false,
+              saveButtonExists: !!saveButton,
+              differentialsSectionExists: !!differentialsSection,
+              reason: 'Missing required elements'
+            });
+            return;
+          }
+          
+          // Step 4: Test positioning
+          console.log('📋 Step 2: Testing positioning...');
+          repositionDamageCentersSaveButton();
+          
+          setTimeout(() => {
+            // Step 5: Verify positioning
+            saveButton = document.querySelector('#damageCentersSummary .section-save-button') || 
+                        document.querySelector('#damageCentersContent .section-save-button');
+            
+            if (!saveButton) {
+              resolve({
+                success: false,
+                reason: 'Save button disappeared after repositioning'
+              });
+              return;
+            }
+            
+            // Check if button is positioned before הנחות והפרשים
+            const buttonContainer = saveButton.parentElement;
+            const buttonPosition = Array.from(buttonContainer.parentNode.children).indexOf(buttonContainer);
+            const differentialsPosition = Array.from(differentialsSection.parentNode.children).indexOf(differentialsSection);
+            
+            const isPositionedCorrectly = buttonPosition < differentialsPosition;
+            
+            console.log('🔍 Button position index:', buttonPosition);
+            console.log('🔍 הנחות והפרשים position index:', differentialsPosition);
+            console.log('🔍 Button positioned before הנחות והפרשים:', isPositionedCorrectly);
+            
+            // Step 6: Check visibility
+            const isVisible = saveButton.offsetParent !== null;
+            console.log('🔍 Button is visible:', isVisible);
+            
+            const success = isPositionedCorrectly && isVisible;
+            
+            if (success) {
+              console.log('✅ SESSION 93: Save button positioning test PASSED');
+            } else {
+              console.log('❌ SESSION 93: Save button positioning test FAILED');
+            }
+            
+            resolve({
+              success,
+              saveButtonExists: true,
+              differentialsSectionExists: true,
+              isPositionedCorrectly,
+              isVisible,
+              buttonPosition,
+              differentialsPosition
+            });
+          }, 100);
         }, 100);
       });
     };
@@ -18689,23 +18774,21 @@
       }
     }
     
-    // REPOSITION DAMAGE CENTERS SAVE BUTTON TO APPEAR BEFORE SUMMARY
+    // REPOSITION DAMAGE CENTERS SAVE BUTTON TO APPEAR BEFORE הנחות והפרשים
     function repositionDamageCentersSaveButton() {
       try {
         console.log('🔍 SESSION 93: Searching for damage centers save button...');
         
         // Look in both locations - damageCentersSummary (old) and damageCentersContent (new)
         let saveButton = null;
-        let subtotal = null;
+        let differentialsSection = null;
         
         // Try damageCentersSummary first (now the correct location after fix)
         const damageCentersSection = document.getElementById('damageCentersSummary');
         console.log('🔍 damageCentersSummary exists:', !!damageCentersSection);
         if (damageCentersSection) {
           saveButton = damageCentersSection.querySelector('.section-save-button');
-          subtotal = damageCentersSection.querySelector('#damageCentersSubtotal');
           console.log('🔍 Save button in damageCentersSummary:', !!saveButton);
-          console.log('🔍 Subtotal in damageCentersSummary:', !!subtotal);
         }
         
         // Try damageCentersContent if not found (fallback)
@@ -18714,22 +18797,23 @@
           console.log('🔍 damageCentersContent exists:', !!damageCentersContent);
           if (damageCentersContent) {
             saveButton = damageCentersContent.querySelector('.section-save-button');
-            subtotal = damageCentersContent.querySelector('#damageCentersSubtotal') || 
-                      document.querySelector('#damageCentersSubtotal'); // Look globally
             console.log('🔍 Save button in damageCentersContent:', !!saveButton);
-            console.log('🔍 Subtotal found globally:', !!subtotal);
           }
         }
         
-        if (saveButton && subtotal) {
+        // Look for הנחות והפרשים section globally
+        differentialsSection = document.getElementById('differentialsSection');
+        console.log('🔍 הנחות והפרשים section found:', !!differentialsSection);
+        
+        if (saveButton && differentialsSection) {
           const buttonContainer = saveButton.parentElement;
-          // Move button container to before the subtotal
-          subtotal.parentNode.insertBefore(buttonContainer, subtotal);
-          console.log('✅ SESSION 93: Repositioned damage centers save button before summary');
+          // Move button container to before הנחות והפרשים section
+          differentialsSection.parentNode.insertBefore(buttonContainer, differentialsSection);
+          console.log('✅ SESSION 93: Repositioned damage centers save button before הנחות והפרשים');
         } else {
-          console.log('❌ SESSION 93: Save button or subtotal not found for repositioning');
+          console.log('❌ SESSION 93: Save button or הנחות והפרשים section not found for repositioning');
           console.log('  - Save button found:', !!saveButton);
-          console.log('  - Subtotal found:', !!subtotal);
+          console.log('  - הנחות והפרשים section found:', !!differentialsSection);
           
           // Additional debug: list all buttons in both sections
           if (damageCentersSection) {
