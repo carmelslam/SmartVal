@@ -1185,8 +1185,35 @@
 
       console.log('🔍 Using case ID for invoice loading:', caseId);
 
+      // DEBUG: Check what's available in global scope
+      console.log('🔍 DEBUG: Available services:', {
+        invoiceService: !!window.invoiceService,
+        supabase: !!window.supabase,
+        supabaseClient: !!window.supabaseClient,
+        caseId: caseId,
+        globalKeys: Object.keys(window).filter(k => k.includes('invoice') || k.includes('supabase'))
+      });
+
       // Load invoices from database using the proper service pattern
       let invoices = [];
+      
+      // Try to initialize invoice service if it doesn't exist
+      if (!window.invoiceService) {
+        console.log('🔄 Attempting to create invoice service...');
+        try {
+          // Try to create the service dynamically
+          if (typeof InvoiceService !== 'undefined') {
+            window.invoiceService = new InvoiceService();
+            await window.invoiceService.initialize();
+            console.log('✅ Invoice service created and initialized');
+          } else {
+            console.warn('⚠️ InvoiceService class not found - ensure services/invoice-service.js is loaded');
+          }
+        } catch (serviceError) {
+          console.warn('⚠️ Could not create invoice service:', serviceError);
+        }
+      }
+      
       if (window.invoiceService && caseId) {
         try {
           console.log('🔍 Querying invoices for case:', caseId);
@@ -1197,9 +1224,14 @@
           displayNoDataMessage(`שגיאה בטעינת חשבוניות: ${error.message}`);
           return;
         }
+      } else if (!caseId) {
+        console.error('❌ No case ID found');
+        displayNoDataMessage("לא נמצא מזהה תיק - לא ניתן לטעון חשבוניות");
+        return;
       } else {
-        console.error('❌ Invoice service not available or no case ID');
-        displayNoDataMessage("שירות החשבוניות לא זמין או מזהה תיק חסר");
+        console.error('❌ Invoice service not available');
+        console.log('🔍 Available globals:', Object.keys(window).filter(k => k.toLowerCase().includes('service')));
+        displayNoDataMessage("שירות החשבוניות לא זמין - ודא שהשירות נטען כראוי");
         return;
       }
       
