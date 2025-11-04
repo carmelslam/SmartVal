@@ -1005,3 +1005,206 @@ If any critical issues are discovered:
 5. **Progress Saving**: Cloud-based progress synchronization
 
 This implementation plan provides a comprehensive, step-by-step approach to splitting the final report builder into a 3-stage wizard while maintaining 100% functionality and dramatically improving maintainability and user experience.
+
+---
+
+## 📋 **MODIFICATIONS DONE AFTER THE 3-STAGES PLAN**
+
+**Date**: November 4, 2025  
+**Session**: 95 - Invoice Differentials Standalone Implementation  
+**Status**: ✅ COMPLETED
+
+### **🎯 OVERVIEW**
+
+After completing the 3-stage wizard planning phase, critical modifications were made to the final report builder to improve semantic separation and functionality. The main achievement was extracting invoice differentials functionality from the general discounts/wear section and creating a standalone, dedicated section for invoice-specific differentials.
+
+### **🔄 MAJOR STRUCTURAL CHANGES**
+
+#### **1. Section Relocation & Semantic Separation**
+**Problem Solved**: The original design mixed different types of differentials in one section, causing confusion between:
+- **Discounts/Wear** (הנחות ובלאי) - Applied to parts from damage assessment
+- **Invoice Differentials** (הפרשי חשבוניות) - Differences between invoice data and damage assessment
+
+**Solution**: Created a clear separation with two independent sections:
+
+##### **Original Structure**:
+```
+הנחות והפרשים (Single section containing):
+├── הנחת רכיב (Parts Reductions)
+├── בלאי רכיב (Parts Wear) 
+├── הפרשי קטגוריה (Category Differentials)
+└── הפרשי חשבוניות (Invoice Differentials) ← Mixed with others
+```
+
+##### **New Structure**:
+```
+הנחות ובלאי (Renamed & focused section):
+├── הנחת רכיב (Parts Reductions)
+├── בלאי רכיב (Parts Wear)
+└── הנחות קטגוריה (Category Discounts)
+
+הפרשי חשבוניות (Standalone section):
+├── Invoice Selection Dropdown
+├── Invoice Lines Integration
+├── Manual Differential Rows
+└── Invoice Differentials Totals
+```
+
+#### **2. Dynamic Container Logic Enhancement**
+**Enhancement**: Modified the damage centers summary container to properly separate discount calculations from invoice differentials.
+
+**Before**: Mixed all differentials in one orange "הפרשים" box
+**After**: Separate calculation logic:
+- **Orange "הנחות" box**: Only shows parts reductions + parts wear + category discounts
+- **Blue "הפרשי חשבוניות" box**: Shows only invoice-specific differentials
+- **Black totals container**: Remains in original location, shows grand totals
+
+### **📍 EXACT IMPLEMENTATION DETAILS**
+
+#### **File Modified**: `final-report-builder.html`
+
+#### **Key Changes Made**:
+
+1. **Section Relocation** (Lines 1425-1468):
+   - Moved "הפרשי חשבוניות" section from inside "הנחות והפרשים" 
+   - Positioned as standalone section before "ערך הרכב לנזק גולמי"
+   - Added checkbox toggle: "האם קיימים הפרשים?"
+
+2. **Label Updates** (Multiple lines in הנחות ובלאי section):
+   - "הנחות והפרשים" → "הנחות ובלאי"
+   - "האם קיימים הנחות והפרשים?" → "האם קיימים הנחות ובלאי?"
+   - "הפרשי קטגוריה" → "הנחות קטגוריה"
+   - "הוסף הפרש קטגוריה" → "הוסף הנחת קטגוריה"
+   - "סה"כ הפרשי רכיבים" → "סה"כ הנחות ובלאי רכיבים"
+   - "סה"כ כללי הפרשים" → "סה"כ כללי הנחות ובלאי"
+   - "שמור הפרשים" → "שמור הנחות ובלאי"
+
+3. **Math Logic Separation** (Lines 18563-18579):
+   ```javascript
+   // NEW: Calculate only discounts/wear (exclude invoice differentials)
+   const partsReductionsTotal = helper.final_report.differential.parts_reductions?.total || 0;
+   const partsWearTotal = helper.final_report.differential.parts_wear?.total || 0;
+   const categoryDifferentialsTotal = /* category discounts only */;
+   const discountsAndWearTotal = partsReductionsTotal + partsWearTotal + categoryDifferentialsTotal;
+   ```
+
+4. **Dynamic Container Updates** (Lines 19166-19185):
+   - Container title: "אחרי הפרשים" → "אחרי הנחות ובלאי"
+   - Orange box label: "הפרשים" → "הנחות"
+   - Math excludes invoice differentials from discount calculations
+
+5. **Save Functionality** (Lines 24000-24027):
+   - Added `saveInvoiceDifferentials()` function
+   - Styled identical to other section save buttons
+   - Provides visual feedback (loading → success → restore)
+
+6. **Error Handling** (Lines 16712-16716, 16851-16862):
+   - Added comprehensive Supabase availability checks
+   - Prevents `window.supabase.from(...).upsert is not a function` errors
+   - Graceful degradation when Supabase unavailable
+
+### **🎯 FUNCTIONAL IMPROVEMENTS**
+
+#### **Invoice Integration Logic**
+**Files Referenced**: `invoice upload.html` patterns
+**Implementation**: Reused existing Session 93 invoice loading infrastructure
+
+**Key Functions Added/Modified**:
+- `toggleInvoiceDifferentialsSection()` - Checkbox toggle handler
+- `saveInvoiceDifferentials()` - Dedicated save function
+- Enhanced `loadInvoicesForDifferentialsDropdown()` - Invoice selection
+- Modified `handlePartSelection()` - Auto-fill from invoice lines
+- Updated math calculations to separate discounts from invoice differentials
+
+#### **User Experience Enhancements**
+1. **Clear Visual Separation**: Different colored containers for different differential types
+2. **Semantic Clarity**: Terminology now matches business logic (discounts vs. differentials)
+3. **Independent Operation**: Each section can be enabled/disabled independently
+4. **Preserved Session 93 Logic**: All existing 4-layer dropdown functionality maintained
+
+### **🔧 TECHNICAL ARCHITECTURE**
+
+#### **Container Structure**:
+```html
+<!-- Standalone Invoice Differentials Section -->
+<div class="form-section">
+  <h3>הפרשי חשבוניות</h3>
+  <label>
+    <span style="background:#ff4444;">🔴</span>
+    האם קיימים הפרשים?
+    <input type="checkbox" id="hasInvoiceDifferentials" onchange="toggleInvoiceDifferentialsSection()">
+  </label>
+  
+  <div id="invoiceDifferentialsMainContainer" style="display:none;">
+    <!-- Invoice Selection Dropdown -->
+    <!-- Differential Rows -->
+    <!-- Invoice Differentials Total (Blue) -->
+    <!-- Save Button -->
+  </div>
+</div>
+```
+
+#### **Data Flow Architecture**:
+```
+Invoice Selection → Invoice Lines Loading → Part Dropdown Population → 
+Manual Differential Entry → Auto-calculation → Save to Helper → 
+Display in Blue Total Container
+```
+
+### **💡 BUSINESS LOGIC RATIONALE**
+
+#### **Why This Separation Was Necessary**:
+1. **Different Data Sources**:
+   - **Discounts/Wear**: Calculated from damage assessment parts
+   - **Invoice Differentials**: Calculated from actual invoice vs. assessment differences
+
+2. **Different Use Cases**:
+   - **Discounts/Wear**: Applied during damage evaluation
+   - **Invoice Differentials**: Applied when comparing final invoices to assessments
+
+3. **Different Calculation Methods**:
+   - **Discounts/Wear**: Percentage-based or fixed amount reductions
+   - **Invoice Differentials**: Line-by-line comparison between invoice and assessment
+
+4. **Improved User Workflow**:
+   - Users can now handle discounts independently of invoice processing
+   - Invoice differentials only appear when actual invoices are available
+   - Clear semantic distinction prevents user confusion
+
+### **🎯 IMPACT ON SESSION 94 3-STAGE WIZARD**
+
+**Compatibility**: All changes are fully compatible with the planned 3-stage wizard implementation.
+
+**Stage Distribution** (Will be applied to wizard):
+- **Stage 1**: Basic info + damage centers (unchanged)
+- **Stage 2**: Damage calculations + הנחות ובלאי section + הפרשי חשבוניות section  
+- **Stage 3**: Depreciation + summary (unchanged)
+
+**Benefits for Wizard Implementation**:
+1. **Cleaner Stage 2**: Better organization of calculation-related sections
+2. **Independent Functionality**: Each section can be tested/validated separately
+3. **Improved Performance**: Separated logic reduces complexity per section
+4. **Better Error Isolation**: Issues in one section don't affect the other
+
+### **📊 QUANTIFIED IMPROVEMENTS**
+
+1. **Code Organization**: 
+   - Reduced functional coupling between discount and invoice differential logic
+   - Clear separation of concerns (discounts vs. actual invoice differences)
+
+2. **User Experience**:
+   - Eliminated terminology confusion ("הפרשים" vs. "הנחות")
+   - Independent section control (checkbox-based visibility)
+   - Semantic labeling matches business logic
+
+3. **Maintainability**:
+   - Separated save functions reduce debugging complexity
+   - Independent data paths easier to trace and modify
+   - Clear business logic boundaries
+
+4. **Error Reduction**:
+   - Comprehensive Supabase error handling added
+   - Graceful degradation when external services unavailable
+   - Better user feedback for save operations
+
+This implementation provides a solid foundation for the upcoming Session 94 wizard implementation while immediately improving the user experience and code maintainability of the current single-page system.
