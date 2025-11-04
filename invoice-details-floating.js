@@ -987,12 +987,24 @@
 
   // Main functions exposed to global scope
   window.toggleInvoiceDetails = function () {
+    console.log('🎬 toggleInvoiceDetails called');
     const modal = document.getElementById("invoiceDetailsModal");
+    console.log('🎬 Modal found:', !!modal);
+    
     if (modal.style.display === "none" || !modal.style.display) {
+      console.log('🎬 Opening modal...');
       modal.style.display = "block";
+      
+      // Check if content divs exist
+      const docsDiv = document.getElementById('documentsContent');
+      const mappingsDiv = document.getElementById('mappingsContent');
+      console.log('🎬 documentsContent div found:', !!docsDiv);
+      console.log('🎬 mappingsContent div found:', !!mappingsDiv);
+      
       loadInvoiceDocuments(); // Load initial tab
       makeDraggable(modal);
     } else {
+      console.log('🎬 Closing modal...');
       modal.style.display = "none";
     }
   };
