@@ -15939,14 +15939,25 @@
             return [];
           }
           
-          const { data: invoiceLines, error } = await window.supabase
-            .from('invoice_lines')
-            .select('id, description, unit_price, line_total, quantity, metadata, invoice_id')
-            .in('invoice_id', validInvoiceIds);
+          // Load invoice lines for each invoice ID individually (avoid .in() method issues)
+          let allInvoiceLines = [];
+          for (const invoiceId of validInvoiceIds) {
+            const { data: lines, error } = await window.supabase
+              .from('invoice_lines')
+              .select('id, description, unit_price, line_total, quantity, metadata, invoice_id')
+              .eq('invoice_id', invoiceId);
+              
+            if (lines && !error) {
+              allInvoiceLines = allInvoiceLines.concat(lines);
+            } else if (error) {
+              console.log(`⚠️ Error loading lines for invoice ${invoiceId}:`, error);
+            }
+          }
           
-          if (error) {
-            console.error('❌ Error getting invoice lines:', error);
-            throw error;
+          const invoiceLines = allInvoiceLines;
+          
+          if (allInvoiceLines.length === 0) {
+            console.log('⚠️ No invoice lines found for any invoice');
           }
           
           // Step 3: Merge invoice data with line data
@@ -15969,24 +15980,26 @@
         } catch (firstError) {
           console.error('❌ First approach failed:', firstError);
           
-          // Fallback: Try original join approach
+          // Fallback: Simple query without complex joins
           try {
-            const { data: invoiceLines, error } = await window.supabase
+            console.log('🔄 Fallback: Using simple query without joins...');
+            
+            // Just get all invoice lines and we'll match them manually
+            const { data: allLines, error } = await window.supabase
               .from('invoice_lines')
-              .select(`
-                id,
-                description,
-                unit_price,
-                line_total,
-                quantity,
-                metadata,
-                invoices!inner(
-                  invoice_number,
-                  supplier_name,
-                  case_id
-                )
-              `)
-              .eq('invoices.case_id', caseId);
+              .select('id, description, unit_price, line_total, quantity, metadata, invoice_id');
+            
+            if (!allLines || error) {
+              throw error || new Error('No invoice lines found');
+            }
+            
+            // Filter lines that belong to our case's invoices (need to get validInvoiceIds)
+            const validInvoiceIds = invoices.map(inv => inv.id);
+            const relevantLines = allLines.filter(line => 
+              validInvoiceIds.includes(line.invoice_id)
+            );
+            
+            const invoiceLines = relevantLines;
           
             if (invoiceLines && !error) {
               console.log(`✅ Fallback: Loaded ${invoiceLines.length} invoice lines from Supabase`);
