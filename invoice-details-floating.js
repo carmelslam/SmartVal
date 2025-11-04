@@ -464,6 +464,7 @@
       }
 
       console.log('✅ Loaded invoice documents:', invoiceDocuments);
+      console.log('📊 Invoice documents count:', invoiceDocuments?.length || 0);
       
       // Display the invoice documents
       displayInvoiceDocuments(invoiceDocuments || []);
@@ -482,9 +483,12 @@
 
   // Display invoice documents
   function displayInvoiceDocuments(documents) {
+    console.log('🎨 displayInvoiceDocuments called with:', documents);
     const contentDiv = document.getElementById('documentsContent');
+    console.log('🎨 Content div found:', !!contentDiv);
     
     if (!documents || documents.length === 0) {
+      console.log('📭 No documents to display');
       contentDiv.innerHTML = `
         <div class="no-data-message">
           <div class="no-data-icon">📋</div>
@@ -632,7 +636,9 @@
       content += `</div>`;
     });
 
+    console.log('🎨 Setting content HTML, length:', content.length);
     contentDiv.innerHTML = content;
+    console.log('✅ Display completed successfully');
   }
 
   // Load damage center mappings from invoice_damage_center_mappings table
