@@ -15849,6 +15849,57 @@
         
         console.log('🔄 Loading invoice lines from Supabase for case:', caseId);
         
+        // SESSION 94 DEBUG: Check if we should use helper.invoices instead
+        console.log('🔍 Checking helper.invoices first...');
+        if (window.helper?.invoices && Array.isArray(window.helper.invoices) && window.helper.invoices.length > 0) {
+          console.log(`📋 Found ${window.helper.invoices.length} invoices in helper.invoices`);
+          console.log('📋 Sample invoice from helper:', window.helper.invoices[0]);
+          console.log('📋 Invoice ID from helper:', window.helper.invoices[0]?.id);
+          
+          // Use helper.invoices instead of querying Supabase invoices table
+          const helperInvoices = window.helper.invoices;
+          const invoiceIds = helperInvoices.map(inv => inv.id).filter(id => {
+            const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+            return id && uuidRegex.test(id);
+          });
+          
+          console.log('🔍 Valid invoice IDs from helper:', invoiceIds);
+          
+          if (invoiceIds.length > 0) {
+            console.log('✅ Using helper.invoices data for invoice line queries');
+            
+            // Query invoice_lines directly with the IDs from helper
+            const { data: invoiceLines, error } = await window.supabase
+              .from('invoice_lines')
+              .select('id, description, unit_price, line_total, quantity, metadata, invoice_id')
+              .in('invoice_id', invoiceIds);
+            
+            if (invoiceLines && !error) {
+              // Merge with helper invoice data
+              const enrichedLines = invoiceLines.map(line => {
+                const invoice = helperInvoices.find(inv => inv.id === line.invoice_id);
+                return {
+                  ...line,
+                  invoices: invoice ? {
+                    invoice_number: invoice.invoice_number,
+                    supplier_name: invoice.supplier_name,
+                    case_id: caseId
+                  } : null
+                };
+              });
+              
+              console.log(`✅ Loaded ${enrichedLines.length} invoice lines using helper.invoices`);
+              window.INVOICE_LINES = enrichedLines;
+              return enrichedLines;
+            } else {
+              console.log('⚠️ Error querying invoice_lines with helper invoice IDs:', error);
+            }
+          }
+        }
+        
+        // Fallback: Query Supabase invoices table
+        console.log('🔄 Fallback: Querying Supabase invoices table...');
+        
         // First try: Direct approach using two-step query to avoid join issues
         try {
           // Step 1: Get invoices for this case
