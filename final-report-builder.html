@@ -16709,6 +16709,12 @@
     async function autoSaveDamageCenterChanges(partRow) {
       if (!partRow) return;
       
+      // SESSION 95: Early check for Supabase availability
+      if (!window.supabase || !window.supabase.from || typeof window.supabase.from !== 'function') {
+        console.warn('⚠️ SESSION 95: Supabase not available, skipping auto-save');
+        return;
+      }
+      
       try {
         const centerIndex = parseInt(partRow.dataset.center);
         const partIndex = parseInt(partRow.dataset.part);
@@ -16848,19 +16854,24 @@
           // ❌ SESSION 60 TASK 3: REMOVED - Don't update helper.row_uuid here (already done above if needed)
           // This code block was causing duplicate UUIDs by updating helper after Supabase save
           
-          // SESSION 95: Check if Supabase is available before using
-          if (!window.supabase) {
-            console.warn('⚠️ Supabase not available, skipping auto-save for part:', partName);
+          // SESSION 95: Check if Supabase is available and has required methods
+          if (!window.supabase || !window.supabase.from || typeof window.supabase.from !== 'function') {
+            console.warn('⚠️ Supabase not properly initialized, skipping auto-save for part:', partName);
+            return;
+          }
+          
+          // Additional check for upsert method
+          const supabaseTable = window.supabase.from('parts_required');
+          if (!supabaseTable || !supabaseTable.upsert || typeof supabaseTable.upsert !== 'function') {
+            console.warn('⚠️ Supabase upsert method not available, skipping auto-save for part:', partName);
             return;
           }
           
           // Use upsert with row_uuid as conflict key (as per Session 39 docs)
-          const { error } = await window.supabase
-            .from('parts_required')
-            .upsert(supabaseData, { 
-              onConflict: 'row_uuid',
-              ignoreDuplicates: false 
-            });
+          const { error } = await supabaseTable.upsert(supabaseData, { 
+            onConflict: 'row_uuid',
+            ignoreDuplicates: false 
+          });
           
           if (error) {
             console.error('❌ Supabase upsert error:', error);
