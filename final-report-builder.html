@@ -14853,12 +14853,13 @@
     async function initializeApp() {
       console.log('🚀 SCRIPT DEBUG: initializeApp called!');
       
-      // SESSION 94: Load catalog items for 4-layer dropdown
-      console.log('🔄 Loading catalog items for dropdown...');
+      // SESSION 94: Load catalog items and invoice lines for 4-layer dropdown
+      console.log('🔄 Loading catalog items and invoice lines for dropdown...');
       try {
         await loadCatalogItems();
+        await loadInvoiceLines();
       } catch (err) {
-        console.error('⚠️ Error loading catalog items:', err);
+        console.error('⚠️ Error loading dropdown data:', err);
       }
       
       // Initialize window.helper from sessionStorage FIRST
@@ -15564,6 +15565,13 @@
     window.test4LayerDropdown = function() {
       console.log('🧪 SESSION 94: Testing 4-layer dropdown system...');
       
+      // Check data sources first
+      console.log('🔍 Data Sources Check:');
+      console.log('  - INVOICE_LINES:', !!window.INVOICE_LINES, window.INVOICE_LINES?.length || 0);
+      console.log('  - PARTS_CATALOG:', !!window.PARTS_CATALOG, window.PARTS_CATALOG?.length || 0);
+      console.log('  - PARTS_BANK:', !!window.PARTS_BANK, typeof window.PARTS_BANK);
+      console.log('  - helper.case_id:', window.helper?.case_id);
+      
       // Test with empty query to get all items
       const allItems = getCombinedDropdownData('');
       
@@ -15585,17 +15593,56 @@
       [1,2,3,4].forEach(layer => {
         const layerItems = allItems.filter(p => p.layer === layer);
         if (layerItems.length > 0) {
-          console.log(`🔍 Layer ${layer} sample:`, layerItems.slice(0, 3));
+          console.log(`🔍 Layer ${layer} sample:`, layerItems.slice(0, 2));
+        } else {
+          console.log(`⚠️ Layer ${layer} has no items`);
         }
       });
       
-      return {
+      // Return comprehensive status
+      const result = {
         totalItems: allItems.length,
         breakdown: breakdown,
-        working: breakdown['Layer 1 (Invoice)'] > 0 || breakdown['Layer 3 (Catalog)'] > 0,
-        catalogLoaded: !!window.PARTS_CATALOG && window.PARTS_CATALOG.length > 0,
-        partsBank: !!window.PARTS_BANK
+        dataSources: {
+          invoiceLines: !!window.INVOICE_LINES && window.INVOICE_LINES.length > 0,
+          catalog: !!window.PARTS_CATALOG && window.PARTS_CATALOG.length > 0,
+          partsBank: !!window.PARTS_BANK,
+          caseId: !!window.helper?.case_id
+        },
+        layersWorking: {
+          layer1: breakdown['Layer 1 (Invoice)'] > 0,
+          layer2: breakdown['Layer 2 (Selected)'] > 0,
+          layer3: breakdown['Layer 3 (Catalog)'] > 0,
+          layer4: breakdown['Layer 4 (Parts Bank)'] > 0
+        },
+        allLayersWorking: breakdown['Layer 1 (Invoice)'] > 0 && 
+                         breakdown['Layer 3 (Catalog)'] > 0 &&
+                         breakdown['Layer 4 (Parts Bank)'] > 0
       };
+      
+      console.log('📋 Final Status:', result);
+      return result;
+    };
+    
+    // Helper function to reload data sources
+    window.reloadDropdownData = async function() {
+      console.log('🔄 Reloading dropdown data sources...');
+      
+      // Clear cached data
+      window.INVOICE_LINES = null;
+      window.PARTS_CATALOG = null;
+      
+      try {
+        await loadInvoiceLines();
+        await loadCatalogItems();
+        console.log('✅ Data reloaded successfully');
+        
+        // Test again
+        return window.test4LayerDropdown();
+      } catch (err) {
+        console.error('❌ Error reloading data:', err);
+        return false;
+      }
     };
 
     // SESSION 94: Load catalog items from Supabase and cache them
@@ -15633,6 +15680,60 @@
       }
     }
 
+    // SESSION 94: Load invoice lines from Supabase and cache them
+    async function loadInvoiceLines() {
+      try {
+        if (window.INVOICE_LINES && window.INVOICE_LINES.length > 0) {
+          console.log('✅ Invoice lines already cached:', window.INVOICE_LINES.length);
+          return window.INVOICE_LINES;
+        }
+        
+        if (!window.supabase) {
+          console.log('⚠️ Supabase not available for invoice lines loading');
+          return [];
+        }
+        
+        const helper = window.helper;
+        if (!helper?.case_id) {
+          console.log('⚠️ No case_id available for invoice lines query');
+          window.INVOICE_LINES = []; // Cache empty array
+          return [];
+        }
+        
+        console.log('🔄 Loading invoice lines from Supabase for case:', helper.case_id);
+        const { data: invoiceLines, error } = await window.supabase
+          .from('invoice_lines')
+          .select(`
+            id,
+            description,
+            unit_price,
+            line_total,
+            quantity,
+            metadata,
+            invoices!inner(
+              invoice_number,
+              supplier_name,
+              case_id
+            )
+          `)
+          .eq('invoices.case_id', helper.case_id);
+        
+        if (invoiceLines && !error) {
+          console.log(`✅ Loaded ${invoiceLines.length} invoice lines from Supabase`);
+          window.INVOICE_LINES = invoiceLines; // Cache for future use
+          return invoiceLines;
+        } else {
+          console.log('⚠️ No invoice lines loaded:', error?.message || 'Unknown error');
+          window.INVOICE_LINES = []; // Cache empty array to avoid repeated calls
+          return [];
+        }
+      } catch (err) {
+        console.error('❌ Error loading invoice lines:', err);
+        window.INVOICE_LINES = []; // Cache empty array to avoid repeated calls
+        return [];
+      }
+    }
+
     // SESSION 89: Get all 4-layer dropdown data (Invoice + Selected + Catalog + Bank)
     function getCombinedDropdownData(query = '') {
       try {
@@ -15640,85 +15741,68 @@
         const helper = window.helper;
         const allParts = [];
         
-        // LAYER 1: 🧾 Invoice lines (from current case invoices)
+        // LAYER 1: 🧾 Invoice lines (from cached Supabase data)
         console.log('📋 שכבה 1: בדיקת שורות חשבונית...');
         let invoiceCount = 0;
 
-        // ADD ENHANCED DEBUG BLOCK:
-        console.log('🔍 DEBUG: helper structure for invoices:');
-        console.log('  - helper.invoices exists:', !!helper?.invoices);
-        console.log('  - helper.invoices type:', typeof helper?.invoices);
-        console.log('  - helper.invoices length:', helper?.invoices?.length || 0);
-        if (helper?.invoices?.length > 0) {
-          console.log('  - Sample invoice structure:', helper.invoices[0]);
-          console.log('  - Sample line_items:', helper.invoices[0]?.line_items);
+        // SESSION 94 FIX: Use cached invoice lines data
+        if (window.INVOICE_LINES && Array.isArray(window.INVOICE_LINES)) {
+          console.log(`🔄 Using cached invoice lines: ${window.INVOICE_LINES.length} items`);
+          
+          window.INVOICE_LINES.forEach((line, idx) => {
+            const description = line.description || '';
+            const unitPrice = line.unit_price || line.line_total || 0;
+            const invoiceNumber = line.invoices?.invoice_number || 'לא ידוע';
+            const supplier = line.invoices?.supplier_name || '';
+            
+            if (description && (!query || description.toLowerCase().includes(query.toLowerCase()))) {
+              const partData = {
+                name: description,
+                description: `כמות: ${line.quantity || 1} | ספק: ${supplier}`,
+                price: unitPrice,
+                source: `🧾 חשבונית ${invoiceNumber}${supplier ? ` (${supplier})` : ''}`,
+                layer: 1,
+                original: line,
+                metadata: line.metadata
+              };
+              allParts.push(partData);
+              invoiceCount++;
+            }
+          });
+        } else {
+          console.log('⚠️ No cached invoice lines data - call loadInvoiceLines() first');
         }
         
-        // Try helper.invoices first (populated by prepareInvoiceDataForDropdowns)
-        if (helper?.invoices && Array.isArray(helper.invoices)) {
+        // Fallback: Try helper.invoices (legacy support)
+        if (invoiceCount === 0 && helper?.invoices && Array.isArray(helper.invoices)) {
+          console.log('🔄 Using fallback helper.invoices data...');
           helper.invoices.forEach((invoice, idx) => {
-            console.log(`🔍 Processing invoice ${idx}:`, invoice);
-            
             // Handle different invoice structures
             let lineItems = [];
             if (invoice.line_items && Array.isArray(invoice.line_items)) {
               lineItems = invoice.line_items;
             } else if (invoice.lines && Array.isArray(invoice.lines)) {
               lineItems = invoice.lines;
-            } else if (invoice.items && Array.isArray(invoice.items)) {
-              lineItems = invoice.items;
             }
             
-            console.log(`🔍 Found ${lineItems.length} line items in invoice ${idx}`);
-            
             lineItems.forEach((line, lineIdx) => {
-              console.log(`🔍 Processing line ${lineIdx}:`, line);
-              // SESSION 91 FIX: Use correct fields from invoice_lines table
               const description = line.description || line.metadata?.name || '';
               const unitPrice = line.unit_price || line.line_total || 0;
-              const code = line.metadata?.code || '';
               
               if (description && (!query || description.toLowerCase().includes(query.toLowerCase()))) {
                 const partData = {
                   name: description,
-                  description: `${code ? 'קוד: ' + code + ' - ' : ''}${line.metadata?.unit || 'יחידה'}`,
+                  description: `כמות: ${line.quantity || 1}`,
                   price: unitPrice,
-                  source: `🧾 חשבונית ${invoice.invoice_number || invoice.number || `${idx + 1}`}`,
+                  source: `🧾 חשבונית ${invoice.invoice_number || `${idx + 1}`}`,
                   layer: 1,
                   original: line,
                   metadata: line.metadata
                 };
                 allParts.push(partData);
                 invoiceCount++;
-                console.log(`✅ Added invoice part to Layer 1:`, partData);
               }
             });
-          });
-        }
-        
-        // Fallback: Try global window.invoiceDataForDropdowns (for non-private reports)
-        if (invoiceCount === 0 && window.invoiceDataForDropdowns?.invoice_lines) {
-          console.log('🔄 SESSION 90: Using fallback invoice data from global scope...');
-          console.log('📋 Found', window.invoiceDataForDropdowns.invoice_lines.length, 'invoice lines in fallback');
-          
-          window.invoiceDataForDropdowns.invoice_lines.forEach((line, idx) => {
-            // SESSION 91 FIX: Use correct fields and include metadata
-            const description = line.description || line.metadata?.name || '';
-            const code = line.metadata?.code || '';
-            
-            if (description && (!query || description.toLowerCase().includes(query.toLowerCase()))) {
-              allParts.push({
-                name: description,
-                description: `${code ? 'קוד: ' + code + ' - ' : ''}${line.metadata?.unit || 'יחידה'}`,
-                price: line.unit_price || line.line_total || 0,
-                source: `🧾 חשבונית`,
-                layer: 1,
-                original: line,
-                metadata: line.metadata
-              });
-              invoiceCount++;
-              console.log(`✅ Added fallback invoice item: ${description}`);
-            }
           });
         }
         
