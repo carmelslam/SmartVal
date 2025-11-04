@@ -18618,6 +18618,37 @@
           
           <div id="differentialsMainContainer" style="display:none; margin-top:15px;">
             
+            <!-- INVOICE SELECTION SECTION -->
+            <div id="invoiceSelectionSection" style="margin-bottom:20px; border:2px solid #2196f3; border-radius:6px; padding:15px; background:#e3f2fd;">
+              <h4 style="margin:0 0 10px 0; color:#1565c0; font-size:16px; font-weight:bold;">
+                <span style="background:#2196f3; color:white; padding:3px 8px; border-radius:3px; font-size:12px; margin-left:8px;">🧾</span>
+                חשבוניות זמינות
+              </h4>
+              
+              <div style="margin-bottom:15px;">
+                <button type="button" id="loadInvoicesForDifferentialsBtn" onclick="loadInvoicesForDifferentials()" 
+                        style="background:#2196f3; color:white; border:none; padding:10px 20px; border-radius:6px; cursor:pointer; font-size:14px; margin-bottom:10px;">
+                  <span id="invoiceLoadingSpinnerDiff" style="display:none;">⏳ טוען...</span>
+                  <span id="loadInvoicesBtnTextDiff">טען חשבוניות</span>
+                </button>
+              </div>
+              
+              <div id="invoiceDropdownContainerDiff" style="display:none;">
+                <label style="display:block; font-size:14px; color:#1565c0; margin-bottom:6px; font-weight:600;">בחר חשבונית:</label>
+                <select id="existingInvoicesDropdownDiff" onchange="handleInvoiceSelection(this)" 
+                        style="width:100%; padding:12px; border-radius:6px; border:1px solid #2196f3; font-size:14px; background:white;">
+                  <option value="">-- בחר חשבונית --</option>
+                </select>
+                <div style="font-size:12px; color:#666; margin-top:6px;">
+                  בחירת חשבונית תטען את פריטי החשבונית בכל שורות ההפרשים
+                </div>
+              </div>
+              
+              <div id="invoiceStatusMessageDiff" style="margin-top:10px; padding:8px; border-radius:4px; font-size:13px; display:none;">
+                <!-- Status messages will appear here -->
+              </div>
+            </div>
+            
             <!-- CATEGORY 1: PARTS REDUCTIONS (AUTO-IMPORTED - RED) -->
             <div id="partsReductionsSection" style="margin-bottom:15px; border:2px solid #dc3545; border-radius:6px; padding:10px; background:#fff5f5;">
               <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; cursor:pointer;" onclick="toggleCollapsibleSection('partsReductionsContent')">
@@ -23237,6 +23268,210 @@
     // Make function available globally
     window.populateFromInvoiceLine = populateFromInvoiceLine;
     
+    // SESSION 95: Invoice functionality for differentials
+    async function loadInvoicesForDifferentials() {
+      try {
+        console.log('🔄 Loading invoices for differentials section...');
+        
+        const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+        const caseId = helper.case_info?.supabase_case_id;
+        const plateNumber = helper.case_info?.plate;
+        
+        if (!caseId || !plateNumber) {
+          showInvoiceStatusMessage('לא נמצא מזהה תיק או מספר רכב', 'error');
+          return;
+        }
+        
+        const spinner = document.getElementById('invoiceLoadingSpinnerDiff');
+        const loadBtn = document.getElementById('loadInvoicesForDifferentialsBtn');
+        const btnText = document.getElementById('loadInvoicesBtnTextDiff');
+        
+        // Show loading state
+        spinner.style.display = 'inline';
+        btnText.style.display = 'none';
+        loadBtn.disabled = true;
+        
+        // Use the existing invoice service logic (copied from upload invoice page)
+        const { data: invoices, error } = await window.supabase
+          .from('invoices')
+          .select('*')
+          .eq('case_id', caseId)
+          .eq('plate', plateNumber)
+          .order('created_at', { ascending: false });
+        
+        if (error) {
+          console.error('❌ Error loading invoices:', error);
+          showInvoiceStatusMessage('שגיאה בטעינת חשבוניות מהשרת', 'error');
+          return;
+        }
+        
+        console.log(`📦 Found ${invoices?.length || 0} invoices for case ${caseId}, plate ${plateNumber}`);
+        
+        if (invoices && invoices.length > 0) {
+          populateInvoiceDropdownForDifferentials(invoices);
+          document.getElementById('invoiceDropdownContainerDiff').style.display = 'block';
+          showInvoiceStatusMessage(`נמצאו ${invoices.length} חשבוניות`, 'success');
+          
+          // Also load invoice lines for the dropdowns
+          await loadInvoiceLinesForDropdown();
+          populateAllDifferentialRowsWithInvoiceLines();
+        } else {
+          showInvoiceStatusMessage(`לא נמצאו חשבוניות עבור רכב ${plateNumber}`, 'info');
+        }
+        
+      } catch (error) {
+        console.error('❌ Error in loadInvoicesForDifferentials:', error);
+        showInvoiceStatusMessage('שגיאה בטעינת חשבוניות', 'error');
+      } finally {
+        // Hide loading state
+        const spinner = document.getElementById('invoiceLoadingSpinnerDiff');
+        const loadBtn = document.getElementById('loadInvoicesForDifferentialsBtn');
+        const btnText = document.getElementById('loadInvoicesBtnTextDiff');
+        
+        spinner.style.display = 'none';
+        btnText.style.display = 'inline';
+        loadBtn.disabled = false;
+      }
+    }
+    
+    function populateInvoiceDropdownForDifferentials(invoices) {
+      const dropdown = document.getElementById('existingInvoicesDropdownDiff');
+      dropdown.innerHTML = '<option value="">-- בחר חשבונית --</option>';
+      
+      invoices.forEach(invoice => {
+        const option = document.createElement('option');
+        
+        // Get invoice date: first from invoice_date field, then from OCR data
+        let displayDate;
+        if (invoice.invoice_date) {
+          displayDate = new Date(invoice.invoice_date).toLocaleDateString('he-IL');
+        } else if (invoice.ocr_structured_data && invoice.ocr_structured_data['תאריך']) {
+          displayDate = new Date(invoice.ocr_structured_data['תאריך']).toLocaleDateString('he-IL');
+        } else {
+          displayDate = new Date(invoice.created_at).toLocaleDateString('he-IL');
+        }
+        
+        const supplierName = invoice.supplier_name || 'לא צוין';
+        option.text = `${supplierName} - ${displayDate}`;
+        option.value = invoice.id;
+        option.dataset.invoiceData = JSON.stringify(invoice);
+        
+        dropdown.appendChild(option);
+      });
+    }
+    
+    function handleInvoiceSelection(selectElement) {
+      try {
+        const selectedValue = selectElement.value;
+        if (!selectedValue) return;
+        
+        const selectedOption = selectElement.options[selectElement.selectedIndex];
+        const invoiceData = JSON.parse(selectedOption.dataset.invoiceData);
+        
+        console.log('📋 Selected invoice for differentials:', invoiceData);
+        
+        // Reload invoice lines for this specific invoice
+        loadInvoiceLinesForInvoice(invoiceData.id);
+        
+        showInvoiceStatusMessage(`נבחרה חשבונית: ${invoiceData.supplier_name} - ${selectedOption.text.split(' - ')[1]}`, 'success');
+        
+      } catch (error) {
+        console.error('❌ Error handling invoice selection:', error);
+        showInvoiceStatusMessage('שגיאה בבחירת חשבונית', 'error');
+      }
+    }
+    
+    async function loadInvoiceLinesForInvoice(invoiceId) {
+      try {
+        console.log('🔄 Loading invoice lines for invoice:', invoiceId);
+        
+        const { data: lines, error } = await window.supabase
+          .from('invoice_lines')
+          .select('*')
+          .eq('invoice_id', invoiceId);
+        
+        if (error) {
+          console.error('❌ Error loading invoice lines:', error);
+          return;
+        }
+        
+        console.log(`📋 Loaded ${lines?.length || 0} lines for invoice ${invoiceId}`);
+        
+        // Update the global cache and refresh all differential row dropdowns
+        window.INVOICE_LINES = lines || [];
+        populateAllDifferentialRowsWithInvoiceLines();
+        
+      } catch (error) {
+        console.error('❌ Error in loadInvoiceLinesForInvoice:', error);
+      }
+    }
+    
+    function populateAllDifferentialRowsWithInvoiceLines() {
+      const differentialRows = document.querySelectorAll('#differentialsRows .differential-row');
+      
+      differentialRows.forEach(row => {
+        const dropdown = row.querySelector('.diff-invoice-line');
+        if (dropdown) {
+          populateInvoiceLineDropdown(dropdown);
+        }
+      });
+      
+      console.log(`✅ Updated ${differentialRows.length} differential row dropdowns with invoice lines`);
+    }
+    
+    function populateInvoiceLineDropdown(dropdown) {
+      dropdown.innerHTML = '<option value="">בחר פריט מחשבונית...</option>';
+      
+      if (window.INVOICE_LINES && window.INVOICE_LINES.length > 0) {
+        window.INVOICE_LINES.forEach((line, index) => {
+          const option = document.createElement('option');
+          const description = line.description || line.part_name || `פריט ${index + 1}`;
+          const supplier = line.supplier_name || 'ספק';
+          
+          option.text = `${description} - ${supplier}`;
+          option.value = index;
+          option.setAttribute('data-line', JSON.stringify(line));
+          
+          dropdown.appendChild(option);
+        });
+      }
+    }
+    
+    function showInvoiceStatusMessage(message, type) {
+      const messageDiv = document.getElementById('invoiceStatusMessageDiff');
+      messageDiv.style.display = 'block';
+      messageDiv.textContent = message;
+      
+      // Set colors based on type
+      switch (type) {
+        case 'success':
+          messageDiv.style.background = '#d4edda';
+          messageDiv.style.color = '#155724';
+          messageDiv.style.border = '1px solid #c3e6cb';
+          break;
+        case 'error':
+          messageDiv.style.background = '#f8d7da';
+          messageDiv.style.color = '#721c24';
+          messageDiv.style.border = '1px solid #f5c6cb';
+          break;
+        case 'info':
+          messageDiv.style.background = '#d1ecf1';
+          messageDiv.style.color = '#0c5460';
+          messageDiv.style.border = '1px solid #bee5eb';
+          break;
+      }
+      
+      // Auto-hide after 5 seconds
+      setTimeout(() => {
+        messageDiv.style.display = 'none';
+      }, 5000);
+    }
+    
+    // Make functions available globally
+    window.loadInvoicesForDifferentials = loadInvoicesForDifferentials;
+    window.handleInvoiceSelection = handleInvoiceSelection;
+    window.populateInvoiceLineDropdown = populateInvoiceLineDropdown;
+    
     // SESSION 47: UPDATE ALL DIFFERENTIALS SUBTOTALS
     function updateAllDifferentialsSubtotals() {
       const breakdown = calculatePartsDifferentialsBreakdown();
@@ -23305,6 +23540,17 @@
         renderPartsReductionsSection();
         renderPartsWearSection();
         updateAllDifferentialsSubtotals();
+        
+        // SESSION 95: Load invoice lines when differentials are enabled
+        setTimeout(async () => {
+          try {
+            console.log('🔄 Loading invoice lines for differentials...');
+            await loadInvoiceLinesForDropdown();
+            populateAllDifferentialRowsWithInvoiceLines();
+          } catch (error) {
+            console.error('❌ Error loading invoice lines for differentials:', error);
+          }
+        }, 100);
       } else {
         if (mainContainer) mainContainer.style.display = 'none';
         // Clear all differential rows when hiding
@@ -23348,6 +23594,13 @@
         const newRow = createDifferentialRow();
         container.appendChild(newRow);
         console.log('✅ Added new differential row');
+        
+        // SESSION 95: Populate invoice lines dropdown for the new row
+        const invoiceLineDropdown = newRow.querySelector('.diff-invoice-line');
+        if (invoiceLineDropdown) {
+          populateInvoiceLineDropdown(invoiceLineDropdown);
+        }
+        
         updateDifferentialsSummary();
         setTimeout(saveDifferentialsToHelper, 100);
         
