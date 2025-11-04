@@ -1185,54 +1185,33 @@
 
       console.log('🔍 Using case ID for invoice loading:', caseId);
 
-      // DEBUG: Check what's available in global scope
-      console.log('🔍 DEBUG: Available services:', {
-        invoiceService: !!window.invoiceService,
-        supabase: !!window.supabase,
-        supabaseClient: !!window.supabaseClient,
-        caseId: caseId,
-        globalKeys: Object.keys(window).filter(k => k.includes('invoice') || k.includes('supabase'))
-      });
-
-      // Load invoices from database using the proper service pattern
+      // Simple approach: Try to load from helper data that's already available
       let invoices = [];
       
-      // Try to initialize invoice service if it doesn't exist
-      if (!window.invoiceService) {
-        console.log('🔄 Attempting to create invoice service...');
-        try {
-          // Try to create the service dynamically
-          if (typeof InvoiceService !== 'undefined') {
-            window.invoiceService = new InvoiceService();
-            await window.invoiceService.initialize();
-            console.log('✅ Invoice service created and initialized');
-          } else {
-            console.warn('⚠️ InvoiceService class not found - ensure services/invoice-service.js is loaded');
-          }
-        } catch (serviceError) {
-          console.warn('⚠️ Could not create invoice service:', serviceError);
-        }
+      // Get invoice data from helper (what's already working)
+      const invoiceData = helper.invoice || {};
+      const documentsInvoices = helper.documents?.invoices || helper.invoices || [];
+      
+      // Also check other helper locations  
+      if (helper.damage_assessment?.invoices) {
+        documentsInvoices.push(...helper.damage_assessment.invoices);
       }
       
-      if (window.invoiceService && caseId) {
-        try {
-          console.log('🔍 Querying invoices for case:', caseId);
-          invoices = await window.invoiceService.getInvoicesByCase(caseId);
-          console.log(`✅ Loaded ${invoices.length} invoices from database`);
-        } catch (error) {
-          console.error('❌ Error loading invoices from database:', error);
-          displayNoDataMessage(`שגיאה בטעינת חשבוניות: ${error.message}`);
-          return;
-        }
-      } else if (!caseId) {
-        console.error('❌ No case ID found');
-        displayNoDataMessage("לא נמצא מזהה תיק - לא ניתן לטעון חשבוניות");
-        return;
-      } else {
-        console.error('❌ Invoice service not available');
-        console.log('🔍 Available globals:', Object.keys(window).filter(k => k.toLowerCase().includes('service')));
-        displayNoDataMessage("שירות החשבוניות לא זמין - ודא שהשירות נטען כראוי");
-        return;
+      if (helper.final_report?.invoice_assignments) {
+        documentsInvoices.push(...helper.final_report.invoice_assignments);
+      }
+
+      console.log('🔍 Found invoice data:', {
+        invoiceData: !!invoiceData && Object.keys(invoiceData).length > 0,
+        documentsInvoices: documentsInvoices.length,
+        caseId: caseId
+      });
+
+      // Convert to display format
+      if (documentsInvoices.length > 0) {
+        invoices = documentsInvoices;
+      } else if (invoiceData && Object.keys(invoiceData).length > 0) {
+        invoices = [invoiceData];
       }
       
       // Display invoice data
