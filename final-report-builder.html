@@ -15182,12 +15182,50 @@
     // SESSION 89: Dynamic Part Input Handler
     // Checks if invoice data is available, shows invoice dropdowns or falls back to search
     function handlePartInput(input, centerIndex, partIndex) {
-      // Check if invoice assignments are available for this case
-      if (hasInvoiceAssignments()) {
-        // Show invoice-based dropdown suggestions
+      // SESSION 94 CHANGE: Always use 4-layer system for consistent experience
+      console.log('🔍 SESSION 94: Using 4-layer dropdown system for part input');
+      
+      // Check if invoice assignments are available for enhanced suggestions
+      const hasInvoices = hasInvoiceAssignments();
+      console.log('📋 Invoice data available:', hasInvoices);
+      
+      if (hasInvoices) {
+        // Show enhanced invoice-based suggestions with all 4 layers
         showInvoicePartSuggestions(input, centerIndex, partIndex);
       } else {
-        // Fallback to original search system
+        // Show 4-layer suggestions without invoice priority
+        show4LayerPartSuggestions(input, centerIndex, partIndex);
+      }
+    }
+
+    // SESSION 94: New function for 4-layer suggestions without invoice priority
+    function show4LayerPartSuggestions(input, centerIndex, partIndex) {
+      try {
+        const query = input.value.toLowerCase().trim();
+        const suggestionsDiv = input.nextElementSibling;
+        
+        if (query.length < 1) {
+          suggestionsDiv.style.display = 'none';
+          return;
+        }
+
+        console.log('📋 SESSION 94: Showing 4-layer part suggestions for query:', query);
+        
+        // Get all parts using the 4-layer system
+        const allParts = getCombinedDropdownData(query);
+        
+        if (allParts.length > 0) {
+          displayPartSuggestions(suggestionsDiv, allParts, input, centerIndex, partIndex);
+          console.log(`✅ SESSION 94: Displayed ${allParts.length} parts from 4-layer system`);
+        } else {
+          // Even with no results, show a message rather than falling back
+          suggestionsDiv.innerHTML = '<div style="padding: 8px; color: #666; text-align: center;">לא נמצאו חלקים מתאימים</div>';
+          suggestionsDiv.style.display = 'block';
+          console.log('ℹ️ SESSION 94: No parts found in 4-layer system for query:', query);
+        }
+      } catch (error) {
+        console.error('❌ SESSION 94: Error showing 4-layer part suggestions:', error);
+        // Fallback to original search only in case of error
         showPartSuggestions(input, centerIndex, partIndex);
       }
     }
@@ -15195,13 +15233,39 @@
     // SESSION 89: Dynamic Part Click Handler
     // On click, show available options (invoice data if available, search if not)
     function handlePartClick(input, centerIndex, partIndex) {
-      // Check if invoice assignments are available for this case
-      if (hasInvoiceAssignments()) {
-        // Show all available invoice parts immediately
+      // SESSION 94 CHANGE: Always use 4-layer system
+      console.log('🔍 SESSION 94: Using 4-layer dropdown system for part click');
+      
+      const hasInvoices = hasInvoiceAssignments();
+      if (hasInvoices) {
+        // Show all available invoice parts immediately with all 4 layers
         showAllInvoiceParts(input, centerIndex, partIndex);
       } else {
-        // Focus for search input
-        input.focus();
+        // Show all available parts from 4-layer system
+        showAll4LayerParts(input, centerIndex, partIndex);
+      }
+    }
+
+    // SESSION 94: Show all available parts from 4-layer system (on click)
+    function showAll4LayerParts(input, centerIndex, partIndex) {
+      try {
+        const suggestionsDiv = input.nextElementSibling;
+        console.log('📋 SESSION 94: Showing all available parts from 4-layer system');
+        
+        // Get all parts from 4-layer system (no query filter)
+        const allParts = getCombinedDropdownData('');
+        
+        if (allParts.length > 0) {
+          displayPartSuggestions(suggestionsDiv, allParts, input, centerIndex, partIndex);
+          console.log(`✅ SESSION 94: Displayed ${allParts.length} parts from all 4 layers`);
+        } else {
+          // Show message if no parts available
+          suggestionsDiv.innerHTML = '<div style="padding: 8px; color: #666; text-align: center;">אין חלקים זמינים במערכת</div>';
+          suggestionsDiv.style.display = 'block';
+          console.log('ℹ️ SESSION 94: No parts available in 4-layer system');
+        }
+      } catch (error) {
+        console.error('❌ SESSION 94: Error showing all 4-layer parts:', error);
       }
     }
 
@@ -15211,44 +15275,82 @@
         const helper = window.helper;
         const caseId = helper?.case_info?.supabase_case_id;
         
-        console.log('🔍 SESSION 90: Enhanced invoice data detection...');
+        console.log('🔍 SESSION 94: Comprehensive invoice data detection...');
         console.log('  - Case ID:', caseId);
         console.log('  - Helper centers:', helper?.centers?.length || 0);
         
-        // PRIMARY CHECK: Direct invoice data in helper (most reliable after accept)
-        if (helper?.invoices && Array.isArray(helper.invoices) && helper.invoices.length > 0) {
-          console.log('📋 ✅ Found helper.invoices:', helper.invoices.length);
-          return true;
-        }
+        // SESSION 94 ENHANCEMENT: More comprehensive detection
+        const detectionChecks = [
+          // PRIMARY CHECK: Direct invoice data in helper
+          () => {
+            if (helper?.invoices && Array.isArray(helper.invoices) && helper.invoices.length > 0) {
+              console.log('📋 ✅ Found helper.invoices:', helper.invoices.length);
+              return true;
+            }
+            return false;
+          },
+          
+          // SECONDARY CHECK: Global invoice data for dropdowns  
+          () => {
+            if (window.invoiceDataForDropdowns?.invoice_lines && window.invoiceDataForDropdowns.invoice_lines.length > 0) {
+              console.log('📋 ✅ Found global invoiceDataForDropdowns:', window.invoiceDataForDropdowns.invoice_lines.length);
+              return true;
+            }
+            return false;
+          },
+          
+          // SESSION 94 NEW: Check centers_after_invoice (private reports)
+          () => {
+            if (helper?.centers_after_invoice && Array.isArray(helper.centers_after_invoice) && helper.centers_after_invoice.length > 0) {
+              console.log('📋 ✅ Found centers_after_invoice:', helper.centers_after_invoice.length);
+              return true;
+            }
+            return false;
+          },
+          
+          // LEGACY CHECK: Original assignments in helper
+          () => {
+            const assignments = helper?.final_report?.invoice_assignments;
+            if (assignments && assignments.length > 0) {
+              console.log('📋 ✅ Found invoice assignments in helper:', assignments.length);
+              return true;
+            }
+            return false;
+          },
+          
+          // ENHANCED CHECK: Parts with invoice source markers or external_ref
+          () => {
+            const mappedData = helper?.centers;
+            if (mappedData && Array.isArray(mappedData)) {
+              const hasMappedParts = mappedData.some(center => 
+                center.Parts?.parts_required?.some(part => part.source === 'invoice' || part.external_ref) ||
+                center.Works?.works?.some(work => work.source === 'invoice' || work.external_ref) ||
+                center.Repairs?.repairs?.some(repair => repair.source === 'invoice' || repair.external_ref) ||
+                center.parts?.some(part => part.external_ref || part.invoice_source)
+              );
+              if (hasMappedParts) {
+                console.log('📋 ✅ Found mapped invoice data in centers');
+                return true;
+              }
+            }
+            return false;
+          }
+        ];
         
-        // SECONDARY CHECK: Global invoice data for dropdowns  
-        if (window.invoiceDataForDropdowns?.invoice_lines && window.invoiceDataForDropdowns.invoice_lines.length > 0) {
-          console.log('📋 ✅ Found global invoiceDataForDropdowns:', window.invoiceDataForDropdowns.invoice_lines.length);
-          return true;
-        }
-        
-        // LEGACY CHECK: Original assignments in helper (may be cleared after accept)
-        const assignments = helper?.final_report?.invoice_assignments;
-        if (assignments && assignments.length > 0) {
-          console.log('📋 ✅ Found invoice assignments in helper:', assignments.length);
-          return true;
-        }
-        
-        // FALLBACK CHECK: Parts with invoice source markers
-        const mappedData = helper?.centers;
-        if (mappedData && Array.isArray(mappedData)) {
-          const hasMappedParts = mappedData.some(center => 
-            center.Parts?.parts_required?.some(part => part.source === 'invoice') ||
-            center.Works?.works?.some(work => work.source === 'invoice') ||
-            center.Repairs?.repairs?.some(repair => repair.source === 'invoice')
-          );
-          if (hasMappedParts) {
-            console.log('📋 ✅ Found mapped invoice data in centers');
-            return true;
+        // Run all checks and return true if any pass
+        for (let i = 0; i < detectionChecks.length; i++) {
+          try {
+            if (detectionChecks[i]()) {
+              console.log(`📋 ✅ SESSION 94: Invoice data detected via check ${i + 1}`);
+              return true;
+            }
+          } catch (checkError) {
+            console.warn(`⚠️ Detection check ${i + 1} failed:`, checkError);
           }
         }
         
-        console.log('📋 ❌ No invoice data found - using search fallback');
+        console.log('📋 ❌ SESSION 94: No invoice data found - but will still use 4-layer system');
+        // SESSION 94 CHANGE: Return false but don't fallback - always use 4-layer system
         return false;
       } catch (error) {
         console.error('❌ Error checking invoice assignments:', error);
@@ -15566,30 +15668,65 @@
         console.log('📋 שכבה 4: בדיקת בנק חלקים...');
         console.log('🔍 window.PARTS_BANK available:', !!window.PARTS_BANK);
         console.log('🔍 window.PARTS_BANK type:', typeof window.PARTS_BANK);
-        console.log('🔍 window.PARTS_BANK length:', window.PARTS_BANK?.length || 0);
         
-        if (window.PARTS_BANK && Array.isArray(window.PARTS_BANK)) {
-          console.log('✅ PARTS_BANK is valid array, processing categories...');
-          window.PARTS_BANK.forEach((category, idx) => {
-            console.log(`🔍 Category ${idx}:`, category?.name, 'parts:', category?.parts?.length || 0);
-            if (category.parts && Array.isArray(category.parts)) {
-              category.parts.forEach(part => {
-                if (part.name && (!query || part.name.toLowerCase().includes(query.toLowerCase()))) {
-                  allParts.push({
-                    name: part.name,
-                    description: part.description || `מקטגוריה: ${category.name}`,
-                    price: part.price || 0,
-                    source: `📄 בנק חלקים (${category.name})`,
-                    layer: 4,
-                    original: part
-                  });
-                }
-              });
-            }
-          });
-          console.log(`✅ Processed ${window.PARTS_BANK.length} categories from PARTS_BANK`);
+        if (window.PARTS_BANK) {
+          let categoriesProcessed = 0;
+          let partsAdded = 0;
+          
+          // SESSION 94 FIX: Handle both object and array structures
+          if (Array.isArray(window.PARTS_BANK)) {
+            // Original expected format - array of category objects
+            console.log('✅ PARTS_BANK is array format, processing categories...');
+            window.PARTS_BANK.forEach((category, idx) => {
+              console.log(`🔍 Category ${idx}:`, category?.name, 'parts:', category?.parts?.length || 0);
+              if (category.parts && Array.isArray(category.parts)) {
+                categoriesProcessed++;
+                category.parts.forEach(part => {
+                  if (part.name && (!query || part.name.toLowerCase().includes(query.toLowerCase()))) {
+                    allParts.push({
+                      name: part.name,
+                      description: part.description || `מקטגוריה: ${category.name}`,
+                      price: part.price || 0,
+                      source: `📄 בנק חלקים (${category.name})`,
+                      layer: 4,
+                      original: part
+                    });
+                    partsAdded++;
+                  }
+                });
+              }
+            });
+          } else if (typeof window.PARTS_BANK === 'object') {
+            // SESSION 94 FIX: Actual format - object with category keys
+            console.log('✅ PARTS_BANK is object format, converting and processing...');
+            Object.keys(window.PARTS_BANK).forEach(categoryName => {
+              const parts = window.PARTS_BANK[categoryName];
+              console.log(`🔍 Category "${categoryName}":`, 'parts:', parts?.length || 0);
+              
+              if (Array.isArray(parts)) {
+                categoriesProcessed++;
+                parts.forEach(partName => {
+                  // Handle both string and object parts
+                  const name = typeof partName === 'string' ? partName : partName.name;
+                  if (name && (!query || name.toLowerCase().includes(query.toLowerCase()))) {
+                    allParts.push({
+                      name: name,
+                      description: `מקטגוריה: ${categoryName}`,
+                      price: typeof partName === 'object' ? partName.price || 0 : 0,
+                      source: `📄 בנק חלקים (${categoryName})`,
+                      layer: 4,
+                      original: partName
+                    });
+                    partsAdded++;
+                  }
+                });
+              }
+            });
+          }
+          
+          console.log(`✅ SESSION 94: Processed ${categoriesProcessed} categories, added ${partsAdded} parts from PARTS_BANK`);
         } else {
-          console.log('❌ PARTS_BANK not available or invalid');
+          console.log('❌ PARTS_BANK not available');
         }
         
         console.log(`✅ SESSION 89: נמצאו ${allParts.length} חלקים ב-4 שכבות:`, {
@@ -26473,6 +26610,74 @@
     };
 
     console.log('✅ Invoice mapping integration loaded');
+    
+    // ============================================================================
+    // SESSION 94: DEBUG 4-LAYER DROPDOWN SYSTEM
+    // ============================================================================
+    
+    window.debugDropdownSystem = function() {
+      console.log('🔍 SESSION 94: Enhanced 4-Layer Dropdown Debug:', {
+        'hasInvoiceAssignments': hasInvoiceAssignments(),
+        'helper.invoices': window.helper?.invoices?.length || 0,
+        'global invoices': window.invoiceDataForDropdowns?.invoice_lines?.length || 0,
+        'selected parts': window.helper?.parts_search?.selected_parts?.length || 0,
+        'damage centers parts': window.helper?.centers?.reduce((sum, c) => sum + (c.parts?.length || 0), 0) || 0,
+        'centers_after_invoice': window.helper?.centers_after_invoice?.length || 0,
+        'parts bank available': !!window.PARTS_BANK,
+        'parts bank type': typeof window.PARTS_BANK,
+        'parts bank keys/categories': window.PARTS_BANK ? Object.keys(window.PARTS_BANK).length : 0
+      });
+      
+      const testData = getCombinedDropdownData('');
+      console.log('📊 SESSION 94: 4-Layer Data:', testData.length, 'total items');
+      
+      const layerCounts = {
+        'Layer 1 (Invoice)': testData.filter(p => p.layer === 1).length,
+        'Layer 2 (Selected)': testData.filter(p => p.layer === 2).length,
+        'Layer 3 (Catalog)': testData.filter(p => p.layer === 3).length,
+        'Layer 4 (Bank)': testData.filter(p => p.layer === 4).length
+      };
+      
+      console.log('📊 SESSION 94: By Layer:', layerCounts);
+      
+      // Enhanced layer analysis
+      console.log('🔍 SESSION 94: Layer 1 (Invoice) sample:', testData.filter(p => p.layer === 1).slice(0, 3));
+      console.log('🔍 SESSION 94: Layer 2 (Selected) sample:', testData.filter(p => p.layer === 2).slice(0, 3));
+      console.log('🔍 SESSION 94: Layer 3 (Catalog) sample:', testData.filter(p => p.layer === 3).slice(0, 3));
+      console.log('🔍 SESSION 94: Layer 4 (Bank) sample:', testData.filter(p => p.layer === 4).slice(0, 3));
+      
+      // Test specific query
+      const queryTest = getCombinedDropdownData('טאסה');
+      console.log('🔍 SESSION 94: Query test "טאסה":', queryTest.length, 'results');
+      console.log('🔍 Query results by layer:', {
+        'Layer 1': queryTest.filter(p => p.layer === 1).length,
+        'Layer 2': queryTest.filter(p => p.layer === 2).length,
+        'Layer 3': queryTest.filter(p => p.layer === 3).length,
+        'Layer 4': queryTest.filter(p => p.layer === 4).length
+      });
+      
+      return {
+        success: true,
+        timestamp: new Date().toISOString(),
+        totalParts: testData.length,
+        byLayer: layerCounts,
+        hasInvoices: hasInvoiceAssignments(),
+        dataStructure: {
+          helper_invoices: !!window.helper?.invoices?.length,
+          global_invoices: !!window.invoiceDataForDropdowns?.invoice_lines?.length,
+          centers_after_invoice: !!window.helper?.centers_after_invoice?.length,
+          parts_bank: typeof window.PARTS_BANK,
+          parts_bank_categories: window.PARTS_BANK ? Object.keys(window.PARTS_BANK).length : 0
+        },
+        fixes_applied: [
+          'PARTS_BANK structure compatibility (object → array conversion)',
+          'Enhanced invoice detection (5 detection methods)',
+          'Forced 4-layer system usage (no fallback to legacy)',
+          'New functions: show4LayerPartSuggestions, showAll4LayerParts'
+        ]
+      };
+    };
+    
   </script>
 </body>
 </html>
