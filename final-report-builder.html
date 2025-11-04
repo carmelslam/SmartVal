@@ -15251,17 +15251,8 @@
       // SESSION 94 CHANGE: Always use 4-layer system for consistent experience
       console.log('🔍 SESSION 94: Using 4-layer dropdown system for part input');
       
-      // Check if invoice assignments are available for enhanced suggestions
-      const hasInvoices = hasInvoiceAssignments();
-      console.log('📋 Invoice data available:', hasInvoices);
-      
-      if (hasInvoices) {
-        // Show enhanced invoice-based suggestions with all 4 layers
-        showInvoicePartSuggestions(input, centerIndex, partIndex);
-      } else {
-        // Show 4-layer suggestions without invoice priority
-        show4LayerPartSuggestions(input, centerIndex, partIndex);
-      }
+      // Always use 4-layer suggestions for consistency
+      show4LayerPartSuggestions(input, centerIndex, partIndex);
     }
 
     // SESSION 94: New function for 4-layer suggestions without invoice priority
@@ -15302,14 +15293,8 @@
       // SESSION 94 CHANGE: Always use 4-layer system
       console.log('🔍 SESSION 94: Using 4-layer dropdown system for part click');
       
-      const hasInvoices = hasInvoiceAssignments();
-      if (hasInvoices) {
-        // Show all available invoice parts immediately with all 4 layers
-        showAllInvoiceParts(input, centerIndex, partIndex);
-      } else {
-        // Show all available parts from 4-layer system
-        showAll4LayerParts(input, centerIndex, partIndex);
-      }
+      // Always show all available parts from 4-layer system
+      showAll4LayerParts(input, centerIndex, partIndex);
     }
 
     // SESSION 94: Show all available parts from 4-layer system (on click)
@@ -23296,7 +23281,7 @@
       if (grandTotalVATEl) grandTotalVATEl.textContent = `₪${grandTotalVAT.toLocaleString()}`;
       if (grandTotalWithVATEl) grandTotalWithVATEl.textContent = `₪${grandTotalWithVAT.toLocaleString()}`;
       
-      console.log('📊 SESSION 47: Updated subtotals - Component: ₪', totalComponentWear, ', Invoice: ₪', totalInvoiceDiff, ', Grand (no VAT): ₪', grandTotalWithoutVAT, ', VAT: ₪', grandTotalVAT, ', Grand (with VAT): ₪', grandTotalWithVAT);
+      console.log('📊 SESSION 47: Updated subtotals - Component: ₪', totalComponentDifferentials, ', Invoice: ₪', totalInvoiceDiff, ', Grand (no VAT): ₪', grandTotalWithoutVAT, ', VAT: ₪', grandTotalVAT, ', Grand (with VAT): ₪', grandTotalWithVAT);
     }
     
     function toggleDifferentialsTable() {
@@ -26009,6 +25994,50 @@
     
     // Make it available immediately
     console.log('🚀 Quick test available: quickVatTest()');
+    
+    // SESSION 94: Simple function to reload dropdown data and test
+    window.reloadAndTestDropdown = async function() {
+      console.log('🔄 SESSION 94: Reloading dropdown data...');
+      
+      // Clear cached data
+      window.INVOICE_LINES = null;
+      window.PARTS_CATALOG = null;
+      
+      try {
+        await loadCatalogItems();
+        await loadInvoiceLinesForDropdown();
+        console.log('✅ Data reloaded successfully');
+        
+        // Test the dropdown
+        const allParts = getCombinedDropdownData('');
+        const layerBreakdown = {
+          1: allParts.filter(p => p.layer === 1).length,
+          2: allParts.filter(p => p.layer === 2).length,  
+          3: allParts.filter(p => p.layer === 3).length,
+          4: allParts.filter(p => p.layer === 4).length
+        };
+        
+        console.log('📊 SESSION 94: Dropdown test results:');
+        console.log('  Total parts:', allParts.length);
+        console.log('  Layer 1 (Invoice Lines):', layerBreakdown[1]);
+        console.log('  Layer 2 (Selected Parts):', layerBreakdown[2]);
+        console.log('  Layer 3 (Catalog Items):', layerBreakdown[3]);
+        console.log('  Layer 4 (Parts Bank):', layerBreakdown[4]);
+        
+        return {
+          success: allParts.length > 0,
+          totalParts: allParts.length,
+          layerBreakdown,
+          invoicesWorking: layerBreakdown[1] > 0,
+          catalogWorking: layerBreakdown[3] > 0
+        };
+      } catch (err) {
+        console.error('❌ Error reloading data:', err);
+        return { success: false, error: err.message };
+      }
+    };
+    
+    console.log('🧪 SESSION 94: Test functions available: reloadAndTestDropdown()');
     
     
     // PICTURE-IN-PICTURE OVERLAY FUNCTION
