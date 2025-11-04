@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="he">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test 4-Layer Dropdown - Session 94</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; direction: rtl; }
+        .section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 8px; }
+        .test-btn { padding: 10px 20px; margin: 5px; background: #007cba; color: white; border: none; border-radius: 4px; cursor: pointer; }
+        .result { background: #f9f9f9; padding: 10px; margin: 10px 0; border-left: 4px solid #007cba; }
+        .error { border-left-color: #dc3545; background: #f8d7da; }
+        .success { border-left-color: #28a745; background: #d4edda; }
+        .warning { border-left-color: #ffc107; background: #fff3cd; }
+        #console { background: #2d3748; color: #e2e8f0; padding: 15px; font-family: monospace; white-space: pre-wrap; max-height: 400px; overflow-y: auto; border-radius: 4px; }
+        .layer-1 { border-left: 4px solid #2196F3; }
+        .layer-2 { border-left: 4px solid #4CAF50; }
+        .layer-3 { border-left: 4px solid #FF9800; }
+        .layer-4 { border-left: 4px solid #9C27B0; }
+        .dropdown-item { padding: 8px; margin: 2px 0; background: #f9f9f9; border-radius: 4px; }
+    </style>
+</head>
+<body>
+    <h1>🧪 Test 4-Layer Dropdown - Session 94</h1>
+    
+    <div class="section">
+        <h2>📊 Status Check</h2>
+        <button class="test-btn" onclick="checkStatus()">Check Data Sources</button>
+        <button class="test-btn" onclick="loadData()">Load All Data</button>
+        <button class="test-btn" onclick="testDropdown()">Test 4-Layer Dropdown</button>
+        <button class="test-btn" onclick="clearConsole()">Clear Console</button>
+        <div id="statusResult" class="result" style="display: none;"></div>
+    </div>
+    
+    <div class="section">
+        <h2>🔍 Dropdown Test Results</h2>
+        <div id="dropdownResults"></div>
+    </div>
+    
+    <div class="section">
+        <h2>📝 Console Output</h2>
+        <div id="console"></div>
+    </div>
+
+    <script>
+        // Mock Supabase for testing
+        window.supabase = {
+            from: (table) => ({
+                select: (fields) => ({
+                    limit: (n) => ({
+                        then: async (callback) => {
+                            log(`🔄 Mock Supabase query: ${table}.select(${fields}).limit(${n})`);
+                            
+                            if (table === 'catalog_items') {
+                                const mockCatalog = [
+                                    { cat_num_desc: 'בולמי קדמיים', pcode: 'SHOCK-001', supplier_name: 'חלקי רכב בע"מ', price: 450, make: 'טויוטה', model: 'קורולה' },
+                                    { cat_num_desc: 'מסנן אוויר', pcode: 'AF-001', supplier_name: 'בלמים פרו', price: 65, make: 'הונדה', model: 'סיוויק' }
+                                ];
+                                return callback({ data: mockCatalog, error: null });
+                            } else if (table === 'invoice_lines') {
+                                const mockLines = [
+                                    { id: '1', description: 'פנס אחורי ימין', quantity: 1, unit_price: 320, line_total: 320 },
+                                    { id: '2', description: 'מראה צד שמאל', quantity: 1, unit_price: 180, line_total: 180 }
+                                ];
+                                return callback({ data: mockLines, error: null });
+                            }
+                            
+                            return callback({ data: [], error: null });
+                        }
+                    })
+                })
+            })
+        };
+        
+        // Mock helper data
+        window.helper = {
+            case_info: {
+                supabase_case_id: 'test-case-123'
+            },
+            parts_search: {
+                selected_parts: [
+                    { name: 'דלת קדמית ימין', description: 'דלת מקורית', price: 1200 },
+                    { name: 'רפידות בלמים', description: 'רפידות קדמיות', price: 250 }
+                ]
+            }
+        };
+        
+        // Mock parts bank
+        window.PARTS_BANK = {
+            'מנוע': ['ראש צילינדר', 'בוכנה', 'גל ארכובה'],
+            'בלמים': ['דיסק בלמים', 'קליפר', 'נוזל בלמים'],
+            'תאורה': ['פנס ראשי', 'פנס אחורי', 'נורת איתות']
+        };
+        
+        function log(message) {
+            const console = document.getElementById('console');
+            const timestamp = new Date().toLocaleTimeString();
+            console.textContent += `[${timestamp}] ${message}\n`;
+            console.scrollTop = console.scrollHeight;
+            window.console.log(message);
+        }
+        
+        function clearConsole() {
+            document.getElementById('console').textContent = '';
+            document.getElementById('dropdownResults').innerHTML = '';
+            document.getElementById('statusResult').style.display = 'none';
+        }
+        
+        function checkStatus() {
+            log('🔍 Checking data sources status...');
+            
+            const status = {
+                supabase: !!window.supabase,
+                helper: !!window.helper,
+                case_id: window.helper?.case_info?.supabase_case_id,
+                invoice_lines: !!window.INVOICE_LINES,
+                parts_catalog: !!window.PARTS_CATALOG,
+                parts_bank: !!window.PARTS_BANK,
+                selected_parts: window.helper?.parts_search?.selected_parts?.length || 0
+            };
+            
+            log(`📊 Status: ${JSON.stringify(status, null, 2)}`);
+            
+            const statusDiv = document.getElementById('statusResult');
+            statusDiv.innerHTML = `
+                <h3>Status Summary:</h3>
+                <ul>
+                    <li>Supabase: ${status.supabase ? '✅' : '❌'}</li>
+                    <li>Helper: ${status.helper ? '✅' : '❌'}</li>
+                    <li>Case ID: ${status.case_id || '❌'}</li>
+                    <li>Invoice Lines: ${status.invoice_lines ? '✅' : '❌'} (${window.INVOICE_LINES?.length || 0})</li>
+                    <li>Parts Catalog: ${status.parts_catalog ? '✅' : '❌'} (${window.PARTS_CATALOG?.length || 0})</li>
+                    <li>Parts Bank: ${status.parts_bank ? '✅' : '❌'}</li>
+                    <li>Selected Parts: ${status.selected_parts > 0 ? '✅' : '❌'} (${status.selected_parts})</li>
+                </ul>
+            `;
+            statusDiv.style.display = 'block';
+        }
+        
+        async function loadData() {
+            log('🔄 Loading catalog items and invoice lines...');
+            
+            try {
+                await loadCatalogItems();
+                await loadInvoiceLinesForDropdown();
+                log('✅ All data loaded successfully');
+                checkStatus();
+            } catch (err) {
+                log(`❌ Error loading data: ${err.message}`);
+            }
+        }
+        
+        async function loadCatalogItems() {
+            try {
+                if (window.PARTS_CATALOG && window.PARTS_CATALOG.length > 0) {
+                    log('✅ Catalog items already cached: ' + window.PARTS_CATALOG.length);
+                    return window.PARTS_CATALOG;
+                }
+                
+                if (!window.supabase) {
+                    log('⚠️ Supabase not available for catalog loading');
+                    return [];
+                }
+                
+                log('🔄 Loading catalog items from Supabase...');
+                const { data: catalogData, error } = await window.supabase
+                    .from('catalog_items')
+                    .select('cat_num_desc, pcode, supplier_name, price, make, model')
+                    .limit(1000);
+                
+                if (catalogData && !error) {
+                    log(`✅ Loaded ${catalogData.length} catalog items from Supabase`);
+                    window.PARTS_CATALOG = catalogData;
+                    return catalogData;
+                } else {
+                    log('⚠️ No catalog data loaded: ' + (error?.message || 'Unknown error'));
+                    window.PARTS_CATALOG = [];
+                    return [];
+                }
+            } catch (err) {
+                log('❌ Error loading catalog items: ' + err.message);
+                window.PARTS_CATALOG = [];
+                return [];
+            }
+        }
+        
+        async function loadInvoiceLinesForDropdown() {
+            try {
+                if (window.INVOICE_LINES && window.INVOICE_LINES.length > 0) {
+                    log('✅ Invoice lines already cached: ' + window.INVOICE_LINES.length);
+                    return window.INVOICE_LINES;
+                }
+                
+                if (!window.supabase) {
+                    log('⚠️ Supabase not available');
+                    window.INVOICE_LINES = [];
+                    return [];
+                }
+                
+                const caseId = window.helper?.case_info?.supabase_case_id;
+                if (!caseId) {
+                    log('⚠️ No case_id available');
+                    window.INVOICE_LINES = [];
+                    return [];
+                }
+                
+                log('🔄 Loading invoice lines for case: ' + caseId);
+                
+                const { data: allLines, error } = await window.supabase
+                    .from('invoice_lines')
+                    .select('*');
+                
+                if (error) {
+                    log('❌ Error loading invoice lines: ' + error.message);
+                    window.INVOICE_LINES = [];
+                    return [];
+                }
+                
+                log(`✅ Loaded ${allLines?.length || 0} total invoice lines`);
+                window.INVOICE_LINES = allLines || [];
+                return allLines || [];
+                
+            } catch (err) {
+                log('❌ Error in loadInvoiceLinesForDropdown: ' + err.message);
+                window.INVOICE_LINES = [];
+                return [];
+            }
+        }
+        
+        function getCombinedDropdownData(query = '') {
+            try {
+                log('🔍 Building 4-layer dropdown data...');
+                const helper = window.helper;
+                const allParts = [];
+                
+                // LAYER 1: 🧾 Invoice lines
+                log('📋 Layer 1: Invoice lines...');
+                let invoiceCount = 0;
+                if (window.INVOICE_LINES && Array.isArray(window.INVOICE_LINES)) {
+                    log(`📋 Using cached invoice lines: ${window.INVOICE_LINES.length} items`);
+                    
+                    window.INVOICE_LINES.forEach(line => {
+                        const description = line.description || '';
+                        if (description && (!query || description.toLowerCase().includes(query.toLowerCase()))) {
+                            const partData = {
+                                name: description,
+                                description: `כמות: ${line.quantity || 1}`,
+                                price: line.unit_price || line.line_total || 0,
+                                source: `🧾 חשבונית`,
+                                layer: 1,
+                                original: line
+                            };
+                            allParts.push(partData);
+                            invoiceCount++;
+                        }
+                    });
+                } else {
+                    log('⚠️ No invoice lines data available');
+                }
+                
+                // LAYER 2: 📋 Selected parts
+                log('📋 Layer 2: Selected parts...');
+                let selectedCount = 0;
+                if (helper?.parts_search?.selected_parts && Array.isArray(helper.parts_search.selected_parts)) {
+                    helper.parts_search.selected_parts.forEach(part => {
+                        if (part.name && (!query || part.name.toLowerCase().includes(query.toLowerCase()))) {
+                            allParts.push({
+                                name: part.name,
+                                description: part.description || '',
+                                price: part.price || part.cost || 0,
+                                source: '📋 חלקים נבחרים',
+                                layer: 2,
+                                original: part
+                            });
+                            selectedCount++;
+                        }
+                    });
+                }
+                
+                // LAYER 3: 🏦 Catalog items
+                log('📋 Layer 3: Catalog items...');
+                let catalogCount = 0;
+                if (window.PARTS_CATALOG && Array.isArray(window.PARTS_CATALOG)) {
+                    window.PARTS_CATALOG.forEach(item => {
+                        const description = item.cat_num_desc || '';
+                        if (description && (!query || description.toLowerCase().includes(query.toLowerCase()))) {
+                            allParts.push({
+                                name: description,
+                                description: `קוד: ${item.pcode} | ספק: ${item.supplier_name} | יצרן: ${item.make}`,
+                                price: item.price || 0,
+                                source: `🏦 קטלוג גלובלי (${item.supplier_name})`,
+                                layer: 3,
+                                original: item
+                            });
+                            catalogCount++;
+                        }
+                    });
+                }
+                
+                // LAYER 4: 📄 Parts bank
+                log('📋 Layer 4: Parts bank...');
+                let bankCount = 0;
+                if (window.PARTS_BANK && typeof window.PARTS_BANK === 'object') {
+                    Object.keys(window.PARTS_BANK).forEach(categoryName => {
+                        const parts = window.PARTS_BANK[categoryName];
+                        if (Array.isArray(parts)) {
+                            parts.forEach(partName => {
+                                const name = typeof partName === 'string' ? partName : partName.name;
+                                if (name && (!query || name.toLowerCase().includes(query.toLowerCase()))) {
+                                    allParts.push({
+                                        name: name,
+                                        description: `מקטגוריה: ${categoryName}`,
+                                        price: 0,
+                                        source: `📄 בנק חלקים (${categoryName})`,
+                                        layer: 4,
+                                        original: partName
+                                    });
+                                    bankCount++;
+                                }
+                            });
+                        }
+                    });
+                }
+                
+                log(`✅ Found ${allParts.length} total parts across 4 layers`);
+                log(`Layer breakdown: L1=${invoiceCount}, L2=${selectedCount}, L3=${catalogCount}, L4=${bankCount}`);
+                
+                return allParts;
+            } catch (err) {
+                log(`❌ Error in getCombinedDropdownData: ${err.message}`);
+                return [];
+            }
+        }
+        
+        function testDropdown() {
+            log('🧪 Testing 4-layer dropdown generation...');
+            
+            const allParts = getCombinedDropdownData('');
+            
+            // Display in preview
+            const preview = document.getElementById('dropdownResults');
+            preview.innerHTML = '<h3>🔍 4-Layer Dropdown Results:</h3>';
+            
+            if (allParts.length === 0) {
+                preview.innerHTML += '<div class="result error">❌ No parts found in any layer!</div>';
+                return;
+            }
+            
+            // Group by layer
+            const layers = {1: [], 2: [], 3: [], 4: []};
+            allParts.forEach(part => {
+                if (layers[part.layer]) {
+                    layers[part.layer].push(part);
+                }
+            });
+            
+            // Display by layer
+            Object.keys(layers).forEach(layerNum => {
+                const layerParts = layers[layerNum];
+                if (layerParts.length > 0) {
+                    const layerDiv = document.createElement('div');
+                    layerDiv.className = `result layer-${layerNum}`;
+                    layerDiv.innerHTML = `
+                        <h4>Layer ${layerNum}: ${layerParts.length} items</h4>
+                        ${layerParts.slice(0, 3).map(part => `
+                            <div class="dropdown-item">
+                                <strong>${part.name}</strong><br>
+                                <small>${part.description}</small><br>
+                                <small style="color: #666;">${part.source} - ₪${part.price}</small>
+                            </div>
+                        `).join('')}
+                        ${layerParts.length > 3 ? `<div><small>... and ${layerParts.length - 3} more items</small></div>` : ''}
+                    `;
+                    preview.appendChild(layerDiv);
+                }
+            });
+            
+            log(`✅ Dropdown test completed with ${allParts.length} total items`);
+        }
+        
+        // Auto-initialize
+        window.onload = function() {
+            log('🧪 4-Layer Dropdown Test Page Loaded');
+            checkStatus();
+        };
+    </script>
+</body>
+</html>
