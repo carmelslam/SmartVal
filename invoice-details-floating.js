@@ -1185,34 +1185,76 @@
 
       console.log('🔍 Using case ID for invoice loading:', caseId);
 
-      // Simple approach: Try to load from helper data that's already available
+      // PRIMARY APPROACH: Query database directly like parts floating screen
       let invoices = [];
       
-      // Get invoice data from helper (what's already working)
-      const invoiceData = helper.invoice || {};
-      const documentsInvoices = helper.documents?.invoices || helper.invoices || [];
-      
-      // Also check other helper locations  
-      if (helper.damage_assessment?.invoices) {
-        documentsInvoices.push(...helper.damage_assessment.invoices);
-      }
-      
-      if (helper.final_report?.invoice_assignments) {
-        documentsInvoices.push(...helper.final_report.invoice_assignments);
+      if (!caseId) {
+        console.warn('⚠️ No case ID found, cannot load invoices from database');
+        displayNoDataMessage("לא נמצא מזהה תיק - לא ניתן לטעון חשבוניות");
+        return;
       }
 
-      console.log('🔍 Found invoice data:', {
-        invoiceData: !!invoiceData && Object.keys(invoiceData).length > 0,
-        documentsInvoices: documentsInvoices.length,
-        caseId: caseId
+      // Try to use invoice service for database queries
+      if (window.invoiceService) {
+        console.log('📊 Using invoice service to query database...');
+        
+        try {
+          // Initialize service if needed
+          await window.invoiceService.initialize();
+          
+          // Load invoices from database
+          invoices = await window.invoiceService.getInvoicesByCase(caseId);
+          
+          console.log('✅ Loaded invoices from database:', invoices.length);
+          
+        } catch (serviceError) {
+          console.error('❌ Invoice service error:', serviceError);
+          
+          // Fallback to helper data if service fails
+          console.log('🔄 Falling back to helper data...');
+          const invoiceData = helper.invoice || {};
+          const documentsInvoices = helper.documents?.invoices || helper.invoices || [];
+          
+          if (helper.damage_assessment?.invoices) {
+            documentsInvoices.push(...helper.damage_assessment.invoices);
+          }
+          if (helper.final_report?.invoice_assignments) {
+            documentsInvoices.push(...helper.final_report.invoice_assignments);
+          }
+
+          if (documentsInvoices.length > 0) {
+            invoices = documentsInvoices;
+          } else if (invoiceData && Object.keys(invoiceData).length > 0) {
+            invoices = [invoiceData];
+          }
+        }
+        
+      } else {
+        console.warn('⚠️ Invoice service not available, using helper data only');
+        
+        // Use helper data as fallback
+        const invoiceData = helper.invoice || {};
+        const documentsInvoices = helper.documents?.invoices || helper.invoices || [];
+        
+        if (helper.damage_assessment?.invoices) {
+          documentsInvoices.push(...helper.damage_assessment.invoices);
+        }
+        if (helper.final_report?.invoice_assignments) {
+          documentsInvoices.push(...helper.final_report.invoice_assignments);
+        }
+
+        if (documentsInvoices.length > 0) {
+          invoices = documentsInvoices;
+        } else if (invoiceData && Object.keys(invoiceData).length > 0) {
+          invoices = [invoiceData];
+        }
+      }
+
+      console.log('🔍 Final invoice data:', {
+        invoiceCount: invoices.length,
+        caseId: caseId,
+        source: window.invoiceService ? 'database+fallback' : 'helper_only'
       });
-
-      // Convert to display format
-      if (documentsInvoices.length > 0) {
-        invoices = documentsInvoices;
-      } else if (invoiceData && Object.keys(invoiceData).length > 0) {
-        invoices = [invoiceData];
-      }
       
       // Display invoice data
       displayInvoiceData(invoices);
