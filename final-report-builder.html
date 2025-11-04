@@ -14853,6 +14853,14 @@
     async function initializeApp() {
       console.log('🚀 SCRIPT DEBUG: initializeApp called!');
       
+      // SESSION 94: Load catalog items for 4-layer dropdown
+      console.log('🔄 Loading catalog items for dropdown...');
+      try {
+        await loadCatalogItems();
+      } catch (err) {
+        console.error('⚠️ Error loading catalog items:', err);
+      }
+      
       // Initialize window.helper from sessionStorage FIRST
       window.helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
       console.log('🚀 Initialized window.helper from sessionStorage:', window.helper);
@@ -15466,24 +15474,55 @@
         display: block;
       `;
       
-      const suggestionsHTML = parts.map(part => `
+      const suggestionsHTML = parts.map(part => {
+        // SESSION 94: Add layer indicators with emojis
+        let layerIcon = '';
+        let layerColor = '#666';
+        
+        switch (part.layer) {
+          case 1:
+            layerIcon = '🧾';
+            layerColor = '#2196F3'; // Blue for invoices
+            break;
+          case 2:
+            layerIcon = '📋';
+            layerColor = '#4CAF50'; // Green for selected parts
+            break;
+          case 3:
+            layerIcon = '🏦';
+            layerColor = '#FF9800'; // Orange for catalog
+            break;
+          case 4:
+            layerIcon = '📄';
+            layerColor = '#9C27B0'; // Purple for parts bank
+            break;
+          default:
+            layerIcon = '❓';
+            layerColor = '#666';
+        }
+        
+        return `
         <div class="suggestion-item" 
-             style="padding: 8px 12px; cursor: pointer; font-size: 13px;"
+             style="padding: 8px 12px; cursor: pointer; font-size: 13px; border-right: 4px solid ${layerColor};"
              onmouseover="this.style.background='#f0f0f0'" 
              onmouseout="this.style.background='white'"
              onclick="selectInvoicePart(this, '${part.name}', '${part.price || 0}', '${part.source || ''}', ${centerIndex}, ${partIndex})">
           <div style="display: flex; justify-content: space-between; align-items: center;">
             <div style="flex: 1;">
-              <div style="font-weight: 500; color: #333; font-size: 13px;">${part.name}</div>
+              <div style="font-weight: 500; color: #333; font-size: 13px;">
+                <span style="margin-left: 8px; font-size: 16px;">${layerIcon}</span>
+                ${part.name}
+              </div>
               ${part.description ? `<div style="font-size: 11px; color: #666; margin-top: 2px;">${part.description}</div>` : ''}
+              <div style="font-size: 10px; color: ${layerColor}; margin-top: 2px; font-weight: 500;">${part.source}</div>
             </div>
             <div style="text-align: left; margin-left: 10px;">
               <div style="font-weight: 500; color: #2563eb; font-size: 12px;">₪${parseFloat(part.price || 0).toLocaleString()}</div>
-              <div style="font-size: 10px; color: #666; background: #f3f4f6; padding: 1px 4px; border-radius: 6px; margin-top: 2px;">${part.source || 'חשבונית'}</div>
             </div>
           </div>
         </div>
-      `).join('');
+        `;
+      }).join('');
       
       suggestionsDiv.innerHTML = suggestionsHTML;
     }
@@ -15518,6 +15557,79 @@
         
       } catch (error) {
         console.error('❌ Error selecting invoice part:', error);
+      }
+    }
+
+    // SESSION 94: Test 4-layer dropdown system
+    window.test4LayerDropdown = function() {
+      console.log('🧪 SESSION 94: Testing 4-layer dropdown system...');
+      
+      // Test with empty query to get all items
+      const allItems = getCombinedDropdownData('');
+      
+      const breakdown = {
+        'Layer 1 (Invoice)': allItems.filter(p => p.layer === 1).length,
+        'Layer 2 (Selected)': allItems.filter(p => p.layer === 2).length,
+        'Layer 3 (Catalog)': allItems.filter(p => p.layer === 3).length,
+        'Layer 4 (Parts Bank)': allItems.filter(p => p.layer === 4).length
+      };
+      
+      console.log('📊 4-Layer Breakdown:', breakdown);
+      console.log('📊 Total Items:', allItems.length);
+      
+      // Test with query
+      const queryResults = getCombinedDropdownData('טאסה');
+      console.log('🔍 Query "טאסה" results:', queryResults.length);
+      
+      // Show samples from each layer
+      [1,2,3,4].forEach(layer => {
+        const layerItems = allItems.filter(p => p.layer === layer);
+        if (layerItems.length > 0) {
+          console.log(`🔍 Layer ${layer} sample:`, layerItems.slice(0, 3));
+        }
+      });
+      
+      return {
+        totalItems: allItems.length,
+        breakdown: breakdown,
+        working: breakdown['Layer 1 (Invoice)'] > 0 || breakdown['Layer 3 (Catalog)'] > 0,
+        catalogLoaded: !!window.PARTS_CATALOG && window.PARTS_CATALOG.length > 0,
+        partsBank: !!window.PARTS_BANK
+      };
+    };
+
+    // SESSION 94: Load catalog items from Supabase and cache them
+    async function loadCatalogItems() {
+      try {
+        if (window.PARTS_CATALOG && window.PARTS_CATALOG.length > 0) {
+          console.log('✅ Catalog items already cached:', window.PARTS_CATALOG.length);
+          return window.PARTS_CATALOG;
+        }
+        
+        if (!window.supabase) {
+          console.log('⚠️ Supabase not available for catalog loading');
+          return [];
+        }
+        
+        console.log('🔄 Loading catalog items from Supabase...');
+        const { data: catalogData, error } = await window.supabase
+          .from('catalog_items')
+          .select('cat_num_desc, pcode, supplier_name, price, make, model')
+          .limit(1000); // Limit for performance
+        
+        if (catalogData && !error) {
+          console.log(`✅ Loaded ${catalogData.length} catalog items from Supabase`);
+          window.PARTS_CATALOG = catalogData; // Cache for future use
+          return catalogData;
+        } else {
+          console.log('⚠️ No catalog data loaded:', error?.message || 'Unknown error');
+          window.PARTS_CATALOG = []; // Cache empty array to avoid repeated calls
+          return [];
+        }
+      } catch (err) {
+        console.error('❌ Error loading catalog items:', err);
+        window.PARTS_CATALOG = []; // Cache empty array to avoid repeated calls
+        return [];
       }
     }
 
@@ -15649,20 +15761,41 @@
           });
         }
         
-        // LAYER 3: 🏦 Global catalog (placeholder - when available)
-        console.log('📋 שכבה 3: קטלוג גלובלי (מקום שמור)...');
-        // This will be implemented when global catalog is available
-        // For now, add a sample entry to show the concept
-        if (!query || 'קטלוג גלובלי'.includes(query.toLowerCase())) {
-          allParts.push({
-            name: 'חלק מקטלוג גלובלי',
-            description: 'דוגמה לחלק מהקטלוג הגלובלי',
-            price: 0,
-            source: '🏦 קטלוג גלובלי',
-            layer: 3,
-            original: { placeholder: true }
+        // LAYER 3: 🏦 Global catalog (from catalog_items table)
+        console.log('📋 שכבה 3: קטלוג גלובלי - בדיקת נתונים...');
+        
+        // Use cached catalog data if available
+        let catalogItems = window.PARTS_CATALOG || [];
+        let catalogCount = 0;
+        
+        if (catalogItems.length > 0) {
+          console.log(`🔄 Using cached catalog data: ${catalogItems.length} items`);
+          
+          // Add catalog items to dropdown
+          catalogItems.forEach(item => {
+            const description = item.cat_num_desc || '';
+            const partCode = item.pcode || '';
+            const supplier = item.supplier_name || '';
+            const make = item.make || '';
+            const model = item.model || '';
+            
+            if (description && (!query || description.toLowerCase().includes(query.toLowerCase()))) {
+              allParts.push({
+                name: description,
+                description: `קוד: ${partCode} | ספק: ${supplier} | יצרן: ${make}${model ? ` ${model}` : ''}`,
+                price: item.price || 0,
+                source: `🏦 קטלוג גלובלי (${supplier})`,
+                layer: 3,
+                original: item
+              });
+              catalogCount++;
+            }
           });
+        } else {
+          console.log('⚠️ No catalog data cached - call loadCatalogItems() first');
         }
+        
+        console.log(`✅ Layer 3 loaded ${catalogCount} catalog items`);
         
         // LAYER 4: 📄 Parts.js bank (from PARTS_BANK)
         console.log('📋 שכבה 4: בדיקת בנק חלקים...');
