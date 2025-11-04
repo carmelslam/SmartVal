@@ -22917,22 +22917,14 @@
       console.log('🔍 SESSION 47: Creating differential row with data:', data);
 
       div.innerHTML = `
-        <!-- SESSION 88: Invoice Lines Dropdown -->
-        <div style="margin-bottom: 15px; padding: 10px; background: #e3f2fd; border-radius: 6px; border: 1px solid #2196f3;">
-          <label style="display: block; font-size: 12px; color: #1565c0; margin-bottom: 4px; font-weight: 600;">חשבונית - בחר פריט</label>
-          <select class="diff-invoice-line" onchange="populateFromInvoiceLine(this)" style="width:100%; padding:10px; border-radius:6px; border:1px solid #2196f3; font-size:14px; background: white;">
-            <option value="">בחר פריט מחשבונית...</option>
-          </select>
-          <div style="font-size: 11px; color: #666; margin-top: 4px;">
-            בחירת פריט תמלא אוטומטית את כל השדות בשורה
-          </div>
-        </div>
-        
         <!-- Row 1: Details (3 fields) - Responsive -->
         <div class="diff-details-row" style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 15px;">
           <div>
             <label style="display: block; font-size: 12px; color: #64748b; margin-bottom: 4px;">חלק</label>
-            <input type="text" class="diff-part" placeholder="הזן חלק" value="${data.part || ''}" style="width:100%; padding:10px; border-radius:6px; border:1px solid #cbd5e1; font-size:14px;">
+            <select class="diff-part-dropdown" onchange="handlePartSelection(this)" style="width:100%; padding:10px; border-radius:6px; border:1px solid #cbd5e1; font-size:14px; background: white;">
+              <option value="">בחר פריט מהחשבונית הנבחרת...</option>
+            </select>
+            <input type="hidden" class="diff-part" value="${data.part || ''}">
           </div>
           <div>
             <label style="display: block; font-size: 12px; color: #64748b; margin-bottom: 4px;">מהות ההפרש</label>
@@ -23253,9 +23245,9 @@
     // Make function available globally
     window.populateFromInvoiceLine = populateFromInvoiceLine;
     
-    // SESSION 95: Simple invoice lines population for differentials
-    function populateInvoiceLineDropdown(dropdown) {
-      dropdown.innerHTML = '<option value="">בחר פריט מחשבונית...</option>';
+    // SESSION 95: Invoice lines population for differentials part dropdown
+    function populatePartDropdown(dropdown) {
+      dropdown.innerHTML = '<option value="">בחר פריט מהחשבונית הנבחרת...</option>';
       
       if (window.INVOICE_LINES && window.INVOICE_LINES.length > 0) {
         window.INVOICE_LINES.forEach((line, index) => {
@@ -23275,13 +23267,54 @@
       const differentialRows = document.querySelectorAll('#differentialsRows .differential-row');
       
       differentialRows.forEach(row => {
-        const dropdown = row.querySelector('.diff-invoice-line');
+        const dropdown = row.querySelector('.diff-part-dropdown');
         if (dropdown) {
-          populateInvoiceLineDropdown(dropdown);
+          populatePartDropdown(dropdown);
         }
       });
       
-      console.log(`✅ Updated ${differentialRows.length} differential row dropdowns with invoice lines`);
+      console.log(`✅ Updated ${differentialRows.length} differential row part dropdowns with invoice lines`);
+    }
+    
+    function handlePartSelection(selectElement) {
+      try {
+        const selectedIndex = selectElement.value;
+        if (!selectedIndex) return;
+
+        const selectedOption = selectElement.options[selectElement.selectedIndex];
+        const lineData = JSON.parse(selectedOption.getAttribute('data-line'));
+        
+        console.log('📝 Selected invoice line for part:', lineData);
+
+        const row = selectElement.closest('.differential-row');
+        if (!row) return;
+
+        // Update hidden part field and other fields
+        const hiddenPartField = row.querySelector('.diff-part');
+        const reasonField = row.querySelector('.diff-reason');
+        const amountField = row.querySelector('.diff-amount');
+
+        if (hiddenPartField) {
+          hiddenPartField.value = lineData.description || lineData.part_name || '';
+        }
+
+        if (reasonField) {
+          reasonField.value = `חשבונית - ${lineData.supplier_name || 'ספק'}`;
+        }
+
+        if (amountField) {
+          amountField.value = lineData.line_total || lineData.total_cost || 0;
+        }
+
+        // Update calculations
+        updateDifferentialsSummary();
+        setTimeout(saveDifferentialsToHelper, 100);
+
+        console.log('✅ Row populated from selected invoice line');
+
+      } catch (error) {
+        console.error('❌ Error handling part selection:', error);
+      }
     }
     
     // SESSION 95: Invoice selection for differentials  
@@ -23380,7 +23413,8 @@
     }
     
     // Make functions available globally
-    window.populateInvoiceLineDropdown = populateInvoiceLineDropdown;
+    window.populatePartDropdown = populatePartDropdown;
+    window.handlePartSelection = handlePartSelection;
     window.loadInvoicesForDifferentialsDropdown = loadInvoicesForDifferentialsDropdown;
     window.handleInvoiceSelectionForDifferentials = handleInvoiceSelectionForDifferentials;
     
@@ -23508,21 +23542,10 @@
         container.appendChild(newRow);
         console.log('✅ Added new differential row');
         
-        // SESSION 95: Load invoice lines and populate dropdown for the new row
-        const invoiceLineDropdown = newRow.querySelector('.diff-invoice-line');
-        if (invoiceLineDropdown) {
-          // If invoice lines aren't loaded yet, load them first
-          if (!window.INVOICE_LINES || window.INVOICE_LINES.length === 0) {
-            loadInvoiceLinesForDropdown().then(() => {
-              populateInvoiceLineDropdown(invoiceLineDropdown);
-            }).catch(error => {
-              console.error('❌ Error loading invoice lines for new row:', error);
-              // Still populate with empty data to maintain UI consistency
-              populateInvoiceLineDropdown(invoiceLineDropdown);
-            });
-          } else {
-            populateInvoiceLineDropdown(invoiceLineDropdown);
-          }
+        // SESSION 95: Populate part dropdown for the new row
+        const partDropdown = newRow.querySelector('.diff-part-dropdown');
+        if (partDropdown) {
+          populatePartDropdown(partDropdown);
         }
         
         updateDifferentialsSummary();
