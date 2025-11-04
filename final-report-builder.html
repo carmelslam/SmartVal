@@ -12524,6 +12524,13 @@
         for (const invoice of selectedInvoices) {
           console.log(`📋 Loading invoice lines for invoice ${invoice.invoice_number}...`);
           
+          // SESSION 94 FIX: Check if invoice.id exists before querying
+          if (!invoice?.id) {
+            console.log(`⚠️ Skipping invoice ${invoice.invoice_number} - no ID found`);
+            console.log('🔍 Invoice object:', invoice);
+            continue;
+          }
+          
           // Load ALL invoice lines for dropdown (not just mapped ones)
           const { data: invoiceLines, error: linesError } = await window.supabase
             .from('invoice_lines')
@@ -15570,7 +15577,7 @@
       console.log('  - INVOICE_LINES:', !!window.INVOICE_LINES, window.INVOICE_LINES?.length || 0);
       console.log('  - PARTS_CATALOG:', !!window.PARTS_CATALOG, window.PARTS_CATALOG?.length || 0);
       console.log('  - PARTS_BANK:', !!window.PARTS_BANK, typeof window.PARTS_BANK);
-      console.log('  - helper.case_id:', window.helper?.case_id);
+      console.log('  - helper.case_info.supabase_case_id:', window.helper?.case_info?.supabase_case_id);
       
       // Test with empty query to get all items
       const allItems = getCombinedDropdownData('');
@@ -15607,7 +15614,7 @@
           invoiceLines: !!window.INVOICE_LINES && window.INVOICE_LINES.length > 0,
           catalog: !!window.PARTS_CATALOG && window.PARTS_CATALOG.length > 0,
           partsBank: !!window.PARTS_BANK,
-          caseId: !!window.helper?.case_id
+          caseId: !!window.helper?.case_info?.supabase_case_id
         },
         layersWorking: {
           layer1: breakdown['Layer 1 (Invoice)'] > 0,
@@ -15649,9 +15656,10 @@
     window.debugCaseId = function() {
       console.log('🔍 Case ID Debug Information:');
       console.log('  - window.helper:', window.helper);
-      console.log('  - helper.case_id:', window.helper?.case_id);
-      console.log('  - typeof helper.case_id:', typeof window.helper?.case_id);
-      console.log('  - sessionStorage helper:', JSON.parse(sessionStorage.getItem('helper') || '{}')?.case_id);
+      console.log('  - helper.case_info:', window.helper?.case_info);
+      console.log('  - helper.case_info.supabase_case_id:', window.helper?.case_info?.supabase_case_id);
+      console.log('  - typeof supabase_case_id:', typeof window.helper?.case_info?.supabase_case_id);
+      console.log('  - sessionStorage helper case_info:', JSON.parse(sessionStorage.getItem('helper') || '{}')?.case_info);
       
       // Check URL sources
       const urlParams = new URLSearchParams(window.location.search);
@@ -15659,19 +15667,23 @@
       console.log('  - URL case_id param:', caseIdFromUrl);
       console.log('  - Current URL:', window.location.href);
       
+      const currentCaseId = window.helper?.case_info?.supabase_case_id;
+      
       // Check if we can set case_id manually for testing
-      if (caseIdFromUrl && !window.helper?.case_id) {
-        console.log('🔧 Setting case_id from URL to helper');
+      if (caseIdFromUrl && !currentCaseId) {
+        console.log('🔧 Setting case_id from URL to helper.case_info.supabase_case_id');
         if (!window.helper) window.helper = {};
-        window.helper.case_id = caseIdFromUrl;
+        if (!window.helper.case_info) window.helper.case_info = {};
+        window.helper.case_info.supabase_case_id = caseIdFromUrl;
         sessionStorage.setItem('helper', JSON.stringify(window.helper));
       }
       
       return {
         helperExists: !!window.helper,
-        caseId: window.helper?.case_id,
+        caseInfoExists: !!window.helper?.case_info,
+        supabaseCaseId: currentCaseId,
         urlCaseId: caseIdFromUrl,
-        canLoadInvoices: !!(window.helper?.case_id && window.supabase)
+        canLoadInvoices: !!(currentCaseId && window.supabase)
       };
     };
 
@@ -15724,12 +15736,22 @@
         }
         
         const helper = window.helper;
-        console.log('🔍 DEBUG: helper object:', helper);
-        console.log('🔍 DEBUG: helper.case_id:', helper?.case_id);
-        console.log('🔍 DEBUG: typeof case_id:', typeof helper?.case_id);
+        const caseId = helper?.case_info?.supabase_case_id;
         
-        if (!helper?.case_id) {
-          console.log('⚠️ No case_id available for invoice lines query - trying alternative approaches');
+        console.log('🔍 DEBUG: helper object:', helper);
+        console.log('🔍 DEBUG: helper.case_info:', helper?.case_info);
+        console.log('🔍 DEBUG: supabase_case_id:', caseId);
+        console.log('🔍 DEBUG: typeof case_id:', typeof caseId);
+        
+        if (!caseId) {
+          console.log('⚠️ No supabase_case_id available for invoice lines query');
+          console.log('🔍 Helper debug:', {
+            helperExists: !!helper,
+            caseInfoExists: !!helper?.case_info,
+            caseInfoKeys: helper?.case_info ? Object.keys(helper.case_info) : [],
+            supabaseCaseId: caseId,
+            caseIdType: typeof caseId
+          });
           
           // Try to get case_id from URL or other sources
           const urlParams = new URLSearchParams(window.location.search);
@@ -15739,12 +15761,15 @@
           console.log('🔍 Alternative case_id sources:');
           console.log('  - URL param case_id:', caseIdFromUrl);
           console.log('  - Path last segment:', caseIdFromPath);
+          console.log('  - Current URL:', window.location.href);
           
+          // Early return to prevent any Supabase queries
+          console.log('✅ Early return - preventing Supabase queries without valid case_id');
           window.INVOICE_LINES = []; // Cache empty array
           return [];
         }
         
-        console.log('🔄 Loading invoice lines from Supabase for case:', helper.case_id);
+        console.log('🔄 Loading invoice lines from Supabase for case:', caseId);
         
         // First try: Direct approach using two-step query to avoid join issues
         try {
@@ -15752,7 +15777,7 @@
           const { data: invoices, error: invoicesError } = await window.supabase
             .from('invoices')
             .select('id, invoice_number, supplier_name')
-            .eq('case_id', helper.case_id);
+            .eq('case_id', caseId);
           
           if (invoicesError) {
             console.error('❌ Error getting invoices:', invoicesError);
@@ -15760,7 +15785,7 @@
           }
           
           if (!invoices || invoices.length === 0) {
-            console.log('⚠️ No invoices found for case_id:', helper.case_id);
+            console.log('⚠️ No invoices found for case_id:', caseId);
             window.INVOICE_LINES = [];
             return [];
           }
@@ -15787,7 +15812,7 @@
               invoices: invoice ? {
                 invoice_number: invoice.invoice_number,
                 supplier_name: invoice.supplier_name,
-                case_id: helper.case_id
+                case_id: caseId
               } : null
             };
           });
@@ -15816,7 +15841,7 @@
                   case_id
                 )
               `)
-              .eq('invoices.case_id', helper.case_id);
+              .eq('invoices.case_id', caseId);
           
             if (invoiceLines && !error) {
               console.log(`✅ Fallback: Loaded ${invoiceLines.length} invoice lines from Supabase`);
