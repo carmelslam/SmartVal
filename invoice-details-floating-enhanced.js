@@ -203,33 +203,193 @@
       padding-top: 10px;
       margin-top: 15px;
     }
+    
+    /* Tab System Styles */
+    .invoice-tabs {
+      display: flex;
+      border-bottom: 2px solid #e5e7eb;
+      margin-bottom: 20px;
+      gap: 2px;
+    }
+    
+    .tab-btn {
+      background: #f8f9fa;
+      border: 1px solid #dee2e6;
+      border-bottom: none;
+      padding: 12px 24px;
+      cursor: pointer;
+      transition: all 0.3s;
+      font-weight: 600;
+      border-radius: 8px 8px 0 0;
+      font-size: 14px;
+    }
+    
+    .tab-btn.active {
+      background: #fbbf24;
+      color: white;
+      border-color: #f59e0b;
+    }
+    
+    .tab-btn:hover:not(.active) {
+      background: #f3f4f6;
+    }
+    
+    .tab-content {
+      min-height: 400px;
+    }
+    
+    .tab-section {
+      display: none;
+      animation: fadeIn 0.3s ease-in;
+    }
+    
+    .tab-section.active {
+      display: block;
+    }
+    
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+    
+    /* Mobile responsive tabs */
+    @media (max-width: 768px) {
+      .invoice-tabs {
+        flex-direction: column;
+      }
+      
+      .tab-btn {
+        border-radius: 0;
+        border-bottom: 1px solid #dee2e6;
+      }
+    }
   `;
   document.head.appendChild(style);
 
   const modal = document.createElement("div");
   modal.id = "invoiceDetailsModal";
   modal.innerHTML = `
-    <div class="invoice-modal-title">פרטי חשבוניות</div>
-    <div class="edit-mode-controls" style="text-align: center; margin-bottom: 15px;">
-      <button id="toggle-invoice-edit-mode" class="edit-toggle-btn" style="background: #f59e0b; color: white; border: none; padding: 8px 15px; border-radius: 5px; cursor: pointer;">
-        ✏️ עריכת חשבוניות
+    <div class="invoice-modal-title">📋 פרטי חשבונית</div>
+    
+    <!-- Tab Navigation -->
+    <div class="invoice-tabs">
+      <button class="tab-btn active" onclick="setInvoiceTab('details')">
+        📄 פרטי חשבונית
       </button>
-      <button id="save-invoice-changes" class="save-btn" style="background: #10b981; color: white; border: none; padding: 8px 15px; border-radius: 5px; cursor: pointer; margin-right: 10px; display: none;">
-        💾 שמור
-      </button>
-      <button id="cancel-invoice-edit" class="cancel-btn" style="background: #6b7280; color: white; border: none; padding: 8px 15px; border-radius: 5px; cursor: pointer; margin-right: 10px; display: none;">
-        ❌ ביטול
+      <button class="tab-btn" onclick="setInvoiceTab('mappings')">
+        🔗 הקצאות חלקים
       </button>
     </div>
-    <div id="invoiceContent">
-      <!-- Content will be loaded dynamically -->
+    
+    <!-- Tab Content -->
+    <div class="tab-content">
+      <div id="detailsTab" class="tab-section active">
+        <div class="edit-mode-controls" style="text-align: center; margin-bottom: 15px;">
+          <button id="toggle-invoice-edit-mode" class="edit-toggle-btn" style="background: #f59e0b; color: white; border: none; padding: 8px 15px; border-radius: 5px; cursor: pointer;">
+            ✏️ עריכת חשבוניות
+          </button>
+          <button id="save-invoice-changes" class="save-btn" style="background: #10b981; color: white; border: none; padding: 8px 15px; border-radius: 5px; cursor: pointer; margin-right: 10px; display: none;">
+            💾 שמור
+          </button>
+          <button id="cancel-invoice-edit" class="cancel-btn" style="background: #6b7280; color: white; border: none; padding: 8px 15px; border-radius: 5px; cursor: pointer; margin-right: 10px; display: none;">
+            ❌ ביטול
+          </button>
+        </div>
+        <div id="invoiceContent">
+          <!-- Tab 1 content will be loaded dynamically -->
+        </div>
+      </div>
+      
+      <div id="mappingsTab" class="tab-section">
+        <div id="mappingsContent">
+          <!-- Tab 2 content will be loaded dynamically -->
+        </div>
+      </div>
     </div>
+    
     <div class="invoice-buttons">
       <button class="invoice-btn close" onclick="toggleInvoiceDetails()">סגור</button>
       <button class="invoice-btn refresh" onclick="refreshInvoiceData()">רענן נתונים</button>
     </div>
   `;
   document.body.appendChild(modal);
+
+  // 🎯 Tab Management System
+  let currentTab = 'details';
+  const tabData = {
+    details: null,
+    mappings: null
+  };
+
+  // Tab switching function - exposed to global scope
+  window.setInvoiceTab = function(tabName) {
+    // Hide all tabs
+    document.querySelectorAll('.tab-section').forEach(section => {
+      section.classList.remove('active');
+    });
+    
+    // Remove active class from all buttons
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+      btn.classList.remove('active');
+    });
+    
+    // Show selected tab
+    const tabElement = document.getElementById(tabName + 'Tab');
+    if (tabElement) {
+      tabElement.classList.add('active');
+    }
+    
+    // Set active button
+    const activeButton = document.querySelector(`[onclick="setInvoiceTab('${tabName}')"]`);
+    if (activeButton) {
+      activeButton.classList.add('active');
+    }
+    
+    currentTab = tabName;
+    
+    // Load tab data if not already loaded
+    if (!tabData[tabName] && window.helper?.cases) {
+      loadTabData(tabName);
+    }
+  };
+
+  // Load tab-specific data
+  async function loadTabData(tabName) {
+    try {
+      if (tabName === 'details') {
+        // Tab 1 data already loaded by existing displayInvoiceData function
+        return;
+      } else if (tabName === 'mappings') {
+        await loadMappingsData();
+      }
+    } catch (error) {
+      console.error(`Error loading ${tabName} tab data:`, error);
+    }
+  }
+
+  // Load mappings data for Tab 2
+  async function loadMappingsData() {
+    const caseId = window.helper?.cases?.id;
+    if (!caseId) {
+      document.getElementById('mappingsContent').innerHTML = '<p>לא נמצא מזהה תיק</p>';
+      return;
+    }
+
+    try {
+      // Placeholder for now - will implement full functionality in next phase
+      document.getElementById('mappingsContent').innerHTML = `
+        <div class="invoice-section">
+          <h4>🔗 הקצאות חלקים למוקדי נזק</h4>
+          <p>תוכן זה יוטען בהמשך - מציג הקצאות מטבלת invoice_damage_center_mappings</p>
+          <p>מזהה תיק: ${caseId}</p>
+        </div>
+      `;
+      tabData.mappings = { loaded: true };
+    } catch (error) {
+      console.error('Error loading mappings:', error);
+      document.getElementById('mappingsContent').innerHTML = '<p>שגיאה בטעינת נתוני הקצאות</p>';
+    }
+  }
 
   // 🔧 Add invoice editing functionality
   let isInvoiceEditMode = false;
@@ -514,6 +674,11 @@
   window.refreshInvoiceData = function () {
     console.log('🔄 Invoice floating screen: refreshInvoiceData called');
     safeRefreshInvoiceData('manual'); // Manual calls are always allowed
+    
+    // Refresh current tab data
+    if (currentTab === 'mappings' && tabData.mappings) {
+      loadMappingsData();
+    }
   };
   
   // VERY SELECTIVE AUTO-REFRESH: Only for invoice-specific updates
