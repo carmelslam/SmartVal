@@ -247,9 +247,7 @@
   const modal = document.createElement("div");
   modal.id = "invoiceDetailsModal";
   modal.innerHTML = `
-    <div class="invoice-modal-title">📋 פרטי חשבונית
-      <button class="invoice-btn close" onclick="toggleInvoiceDetails()">✖</button>
-    </div>
+    <div class="invoice-modal-title">📋 פרטי חשבונית</div>
     
     <!-- Tab Navigation -->
     <div class="invoice-tabs">
