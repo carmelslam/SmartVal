@@ -13588,6 +13588,14 @@
       currentMode = 'wizard';
       updateToggleUI();
       loadWizardData();
+      
+      // SESSION 93: Re-add save buttons after data loading
+      setTimeout(() => {
+        if (typeof addSectionButtons === 'function') {
+          addSectionButtons();
+          console.log('✅ SESSION 93: Re-added save buttons after wizard switch');
+        }
+      }, 100);
     };
     
     window.switchToInvoice = function() {
@@ -13595,6 +13603,14 @@
       currentMode = 'invoice';
       updateToggleUI();
       loadInvoiceData();
+      
+      // SESSION 93: Re-add save buttons after data loading
+      setTimeout(() => {
+        if (typeof addSectionButtons === 'function') {
+          addSectionButtons();
+          console.log('✅ SESSION 93: Re-added save buttons after invoice switch');
+        }
+      }, 100);
     };
     
     function updateToggleUI() {
@@ -13924,6 +13940,7 @@
                           document.querySelector('#damageCentersContent .section-save-button');
           const wizardTest = !!saveButton && saveButton.offsetParent !== null;
           console.log('🔍 Save button visible after wizard switch:', wizardTest);
+          console.log('🔍 SESSION 93: Button should be re-added by timeout function');
           
           // Test 2: Switch to invoice and back
           console.log('📋 Step 3: Testing invoice switch...');
@@ -13968,6 +13985,86 @@
             }, 1000);
           }, 500);
         }, 500);
+      });
+    };
+
+    // SESSION 93: Complete save button fix test
+    window.testCompleteSaveButtonFix = function() {
+      console.log('🧪 SESSION 93: Testing Complete Save Button Fix');
+      
+      return new Promise((resolve) => {
+        let testResults = {
+          initialButtonExists: false,
+          buttonExistsAfterWizard: false,
+          buttonExistsAfterInvoice: false,
+          buttonVisibleAfterWizard: false,
+          buttonVisibleAfterInvoice: false,
+          positioningWorks: false
+        };
+        
+        // Step 1: Initial setup
+        console.log('📋 Step 1: Initial button creation...');
+        if (typeof addSectionButtons === 'function') {
+          addSectionButtons();
+        }
+        
+        setTimeout(() => {
+          let saveButton = document.querySelector('#damageCentersSummary .section-save-button') || 
+                          document.querySelector('#damageCentersContent .section-save-button');
+          testResults.initialButtonExists = !!saveButton;
+          console.log('🔍 Initial button exists:', testResults.initialButtonExists);
+          
+          // Step 2: Test wizard switch
+          console.log('📋 Step 2: Testing wizard switch...');
+          switchToWizard();
+          
+          setTimeout(() => {
+            saveButton = document.querySelector('#damageCentersSummary .section-save-button') || 
+                        document.querySelector('#damageCentersContent .section-save-button');
+            testResults.buttonExistsAfterWizard = !!saveButton;
+            testResults.buttonVisibleAfterWizard = saveButton ? saveButton.offsetParent !== null : false;
+            console.log('🔍 Button exists after wizard:', testResults.buttonExistsAfterWizard);
+            console.log('🔍 Button visible after wizard:', testResults.buttonVisibleAfterWizard);
+            
+            // Step 3: Test invoice switch
+            console.log('📋 Step 3: Testing invoice switch...');
+            switchToInvoice();
+            
+            setTimeout(() => {
+              saveButton = document.querySelector('#damageCentersSummary .section-save-button') || 
+                          document.querySelector('#damageCentersContent .section-save-button');
+              testResults.buttonExistsAfterInvoice = !!saveButton;
+              testResults.buttonVisibleAfterInvoice = saveButton ? saveButton.offsetParent !== null : false;
+              console.log('🔍 Button exists after invoice:', testResults.buttonExistsAfterInvoice);
+              console.log('🔍 Button visible after invoice:', testResults.buttonVisibleAfterInvoice);
+              
+              // Step 4: Test positioning
+              console.log('📋 Step 4: Testing positioning...');
+              if (typeof repositionDamageCentersSaveButton === 'function') {
+                repositionDamageCentersSaveButton();
+                testResults.positioningWorks = true;
+              }
+              
+              const allTestsPass = testResults.initialButtonExists && 
+                                 testResults.buttonExistsAfterWizard && 
+                                 testResults.buttonExistsAfterInvoice && 
+                                 testResults.buttonVisibleAfterWizard && 
+                                 testResults.buttonVisibleAfterInvoice;
+              
+              if (allTestsPass) {
+                console.log('✅ SESSION 93: Complete save button fix test PASSED');
+              } else {
+                console.log('❌ SESSION 93: Complete save button fix test FAILED');
+                console.log('📋 Detailed results:', testResults);
+              }
+              
+              resolve({
+                success: allTestsPass,
+                ...testResults
+              });
+            }, 200);
+          }, 200);
+        }, 100);
       });
     };
 
@@ -18726,8 +18823,14 @@
         const caseReductionHTML = createCaseReductionSection();
         document.getElementById('caseReductionPlaceholder').insertAdjacentHTML('afterend', caseReductionHTML);
         
-        // Reposition save button after subtotal is added
-        setTimeout(repositionDamageCentersSaveButton, 100);
+        // SESSION 93: Re-add save buttons after content is rebuilt, then reposition
+        setTimeout(() => {
+          if (typeof addSectionButtons === 'function') {
+            addSectionButtons();
+            console.log('✅ SESSION 93: Re-added save buttons after loadDamageCentersFromHelper');
+          }
+          repositionDamageCentersSaveButton();
+        }, 100);
         
         // Add event listeners
         setTimeout(() => {
