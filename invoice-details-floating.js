@@ -1184,6 +1184,25 @@
       }
 
       console.log('🔍 Using case ID for invoice loading:', caseId);
+      
+      // DEBUG: Log helper structure to understand available data
+      console.log('🔍 DEBUGGING: Helper object structure:', {
+        hasHelper: !!helper,
+        helperKeys: Object.keys(helper || {}),
+        cases: helper.cases,
+        meta: helper.meta,
+        invoice: helper.invoice,
+        invoices: helper.invoices,
+        documents: helper.documents,
+        damage_assessment: helper.damage_assessment ? {
+          hasInvoices: !!helper.damage_assessment.invoices,
+          invoicesCount: helper.damage_assessment.invoices?.length || 0
+        } : null,
+        final_report: helper.final_report ? {
+          hasInvoiceAssignments: !!helper.final_report.invoice_assignments,
+          assignmentsCount: helper.final_report.invoice_assignments?.length || 0
+        } : null
+      });
 
       // SESSION 74: Load invoices from Supabase if available
       let supabaseInvoices = [];
@@ -1226,6 +1245,18 @@
   function displayInvoiceData(invoiceData, documentsInvoices, supabaseInvoices = []) {
     const contentDiv = document.getElementById('invoiceContent');
     
+    // DEBUG: Log all the data we're checking
+    console.log('🔍 DEBUGGING: Checking invoice data:', {
+      invoiceData: invoiceData,
+      documentsInvoices: documentsInvoices,
+      supabaseInvoices: supabaseInvoices,
+      invoiceDataType: typeof invoiceData,
+      invoiceDataKeys: invoiceData ? Object.keys(invoiceData) : [],
+      invoiceDataValues: invoiceData ? Object.values(invoiceData) : [],
+      documentsInvoicesLength: documentsInvoices?.length || 0,
+      supabaseInvoicesLength: supabaseInvoices?.length || 0
+    });
+    
     // Check if we have any invoice data
     const hasMainInvoice = invoiceData && Object.values(invoiceData).some(value => 
       value && value.toString().trim() !== ''
@@ -1233,7 +1264,24 @@
     const hasDocumentInvoices = documentsInvoices && documentsInvoices.length > 0;
     const hasSupabaseInvoices = supabaseInvoices && supabaseInvoices.length > 0;
 
+    console.log('🔍 DEBUGGING: Data availability check:', {
+      hasMainInvoice,
+      hasDocumentInvoices,
+      hasSupabaseInvoices
+    });
+
     if (!hasMainInvoice && !hasDocumentInvoices && !hasSupabaseInvoices) {
+      console.log('❌ No invoice data found - attempting to show basic vehicle info or fallback');
+      
+      // Try to show at least basic vehicle information if available
+      const helper = window.helper || JSON.parse(sessionStorage.getItem('helper') || '{}');
+      if (helper.meta || helper.vehicle) {
+        console.log('✅ Found basic vehicle info, showing fallback display');
+        const content = generateBasicVehicleInfoSection(helper);
+        contentDiv.innerHTML = content;
+        return;
+      }
+      
       displayNoDataMessage("לא נמצאו נתוני חשבוניות במערכת");
       return;
     }
@@ -1256,6 +1304,50 @@
     }
 
     contentDiv.innerHTML = content;
+  }
+
+  function generateBasicVehicleInfoSection(helper) {
+    const formatValue = (value) => {
+      return value && value.toString().trim() ? value : "-";
+    };
+
+    const vehicleInfo = helper.vehicle || {};
+    const metaInfo = helper.meta || {};
+    
+    return `
+      <div class="invoice-section">
+        <h4>🚗 מידע בסיסי על הרכב</h4>
+        
+        <div class="invoice-field">
+          <div class="label">מספר רכב:</div>
+          <div class="value">${formatValue(metaInfo.plate || vehicleInfo.plate)}</div>
+        </div>
+        <div class="invoice-field">
+          <div class="label">יצרן:</div>
+          <div class="value">${formatValue(vehicleInfo.manufacturer || metaInfo.manufacturer)}</div>
+        </div>
+        <div class="invoice-field">
+          <div class="label">דגם:</div>
+          <div class="value">${formatValue(vehicleInfo.model || metaInfo.model)}</div>
+        </div>
+        <div class="invoice-field">
+          <div class="label">שנת ייצור:</div>
+          <div class="value">${formatValue(vehicleInfo.year || metaInfo.year)}</div>
+        </div>
+      </div>
+      
+      <div class="invoice-section">
+        <h4>ℹ️ מצב נתוני חשבוניות</h4>
+        <div style="text-align: center; padding: 20px; background: #fef3c7; border-radius: 8px;">
+          <div style="font-size: 24px; margin-bottom: 10px;">📋</div>
+          <div style="font-weight: 600; margin-bottom: 8px;">לא נמצאו נתוני חשבוניות</div>
+          <div style="font-size: 14px; color: #92400e;">
+            המערכת לא מצאה נתוני חשבוניות עבור רכב זה.<br>
+            ייתכן שהחשבוניות טרם הועלו או שהן נמצאות במקום אחר במערכת.
+          </div>
+        </div>
+      </div>
+    `;
   }
 
   function generateMainInvoiceSection(invoice) {
