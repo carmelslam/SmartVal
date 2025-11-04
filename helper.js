@@ -6011,7 +6011,9 @@ window.processComprehensiveInvoiceJSON = function(invoiceFile, comprehensiveJSON
   };
   
   // Add to original simple structure (maintains compatibility)
-  window.helper.invoices.push(simpleInvoice);
+  // TEMPORARILY DISABLED - was creating phantom invoices
+  // window.helper.invoices.push(simpleInvoice);
+  console.log('🚫 DISABLED: Prevented phantom invoice creation:', simpleInvoice.plate);
   
   // Update processing metadata
   const metadata = window.helper.financials.invoice_processing.metadata;
