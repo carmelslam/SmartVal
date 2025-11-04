@@ -1001,9 +1001,16 @@
       // Check if content divs exist
       const docsDiv = document.getElementById('documentsContent');
       const mappingsDiv = document.getElementById('mappingsContent');
+      const docsTab = document.getElementById('documentsTab');
+      const mappingsTab = document.getElementById('mappingsTab');
       console.log('🎬 documentsContent div found:', !!docsDiv);
       console.log('🎬 mappingsContent div found:', !!mappingsDiv);
+      console.log('🎬 documentsTab found:', !!docsTab);
+      console.log('🎬 mappingsTab found:', !!mappingsTab);
       
+      // Set initial tab state
+      currentTab = 'documents';
+      console.log('🎬 Loading initial documents tab...');
       loadInvoiceDocuments(); // Load initial tab
       makeDraggable(modal);
     } else {
@@ -1030,14 +1037,14 @@
     currentTab = tabName;
     
     // Update tab buttons
-    document.querySelectorAll('.invoice-tab-btn').forEach(btn => btn.classList.remove('active'));
-    document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+    document.querySelectorAll('#invoiceDetailsModal .tab-btn').forEach(btn => btn.classList.remove('active'));
+    document.querySelectorAll('#invoiceDetailsModal .tab-section').forEach(section => section.classList.remove('active'));
     
     // Activate selected tab
     if (event && event.target) {
       event.target.classList.add('active');
     }
-    document.getElementById(tabName + 'Content').classList.add('active');
+    document.getElementById(tabName + 'Tab').classList.add('active');
     
     // Load content for selected tab
     if (tabName === 'documents') {
