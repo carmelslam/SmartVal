@@ -18687,6 +18687,16 @@
                 <span id="invoiceDifferentialsToggle" style="font-size:18px; color:#212529;">▼</span>
               </div>
               <div id="invoiceDifferentialsContent" style="display:none;">
+                
+                <!-- Invoice Selection for Differentials -->
+                <div style="margin-bottom: 15px; padding: 10px; background: #e3f2fd; border-radius: 6px; border: 1px solid #2196f3;">
+                  <label style="display: block; font-size: 12px; color: #1565c0; margin-bottom: 4px; font-weight: 600;">איזה חשבוניות זמינות</label>
+                  <select id="invoiceSelectionForDifferentials" onchange="handleInvoiceSelectionForDifferentials(this)" 
+                          style="width:100%; padding:10px; border-radius:6px; border:1px solid #2196f3; font-size:14px; background: white;">
+                    <option value="">בחירת פריט תמלא אוטומטית את כל השדות בשורה</option>
+                  </select>
+                </div>
+                
                 <div id="differentialsRows"></div>
                 <button class="btn add" type="button" onclick="addDifferentialRow()" style="font-size:12px; padding:6px 12px;">הוסף הפרש</button>
               </div>
@@ -23274,8 +23284,105 @@
       console.log(`✅ Updated ${differentialRows.length} differential row dropdowns with invoice lines`);
     }
     
+    // SESSION 95: Invoice selection for differentials  
+    async function loadInvoicesForDifferentialsDropdown() {
+      try {
+        const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+        const caseId = helper.case_info?.supabase_case_id;
+        const plateNumber = helper.case_info?.plate;
+        
+        if (!caseId || !plateNumber) {
+          console.log('⚠️ No case ID or plate number for loading invoices');
+          return;
+        }
+        
+        const { data: invoices, error } = await window.supabase
+          .from('invoices')
+          .select('*')
+          .eq('case_id', caseId)
+          .eq('plate', plateNumber)
+          .order('created_at', { ascending: false });
+        
+        if (error) {
+          console.error('❌ Error loading invoices:', error);
+          return;
+        }
+        
+        console.log(`📦 Found ${invoices?.length || 0} invoices for differentials`);
+        
+        // Populate the dropdown
+        const dropdown = document.getElementById('invoiceSelectionForDifferentials');
+        if (dropdown && invoices && invoices.length > 0) {
+          dropdown.innerHTML = '<option value="">בחירת פריט תמלא אוטומטית את כל השדות בשורה</option>';
+          
+          invoices.forEach(invoice => {
+            const option = document.createElement('option');
+            
+            // Get invoice date
+            let displayDate;
+            if (invoice.invoice_date) {
+              displayDate = new Date(invoice.invoice_date).toLocaleDateString('he-IL');
+            } else if (invoice.ocr_structured_data && invoice.ocr_structured_data['תאריך']) {
+              displayDate = new Date(invoice.ocr_structured_data['תאריך']).toLocaleDateString('he-IL');
+            } else {
+              displayDate = new Date(invoice.created_at).toLocaleDateString('he-IL');
+            }
+            
+            const supplierName = invoice.supplier_name || 'לא צוין';
+            option.text = `${supplierName} - ${displayDate}`;
+            option.value = invoice.id;
+            option.dataset.invoiceData = JSON.stringify(invoice);
+            
+            dropdown.appendChild(option);
+          });
+        }
+        
+      } catch (error) {
+        console.error('❌ Error in loadInvoicesForDifferentialsDropdown:', error);
+      }
+    }
+    
+    async function handleInvoiceSelectionForDifferentials(selectElement) {
+      try {
+        const selectedValue = selectElement.value;
+        if (!selectedValue) {
+          // Clear invoice lines when no invoice selected
+          window.INVOICE_LINES = [];
+          populateAllDifferentialRowsWithInvoiceLines();
+          return;
+        }
+        
+        const selectedOption = selectElement.options[selectElement.selectedIndex];
+        const invoiceData = JSON.parse(selectedOption.dataset.invoiceData);
+        
+        console.log('📋 Selected invoice for differentials:', invoiceData.supplier_name);
+        
+        // Load invoice lines for this specific invoice
+        const { data: lines, error } = await window.supabase
+          .from('invoice_lines')
+          .select('*')
+          .eq('invoice_id', invoiceData.id);
+        
+        if (error) {
+          console.error('❌ Error loading invoice lines:', error);
+          return;
+        }
+        
+        console.log(`📋 Loaded ${lines?.length || 0} lines for selected invoice`);
+        
+        // Update global cache and refresh all differential row dropdowns
+        window.INVOICE_LINES = lines || [];
+        populateAllDifferentialRowsWithInvoiceLines();
+        
+      } catch (error) {
+        console.error('❌ Error handling invoice selection:', error);
+      }
+    }
+    
     // Make functions available globally
     window.populateInvoiceLineDropdown = populateInvoiceLineDropdown;
+    window.loadInvoicesForDifferentialsDropdown = loadInvoicesForDifferentialsDropdown;
+    window.handleInvoiceSelectionForDifferentials = handleInvoiceSelectionForDifferentials;
     
     // SESSION 47: UPDATE ALL DIFFERENTIALS SUBTOTALS
     function updateAllDifferentialsSubtotals() {
@@ -23346,14 +23453,15 @@
         renderPartsWearSection();
         updateAllDifferentialsSubtotals();
         
-        // SESSION 95: Load invoice lines when differentials are enabled
+        // SESSION 95: Load invoices and invoice lines when differentials are enabled
         setTimeout(async () => {
           try {
-            console.log('🔄 Loading invoice lines for differentials...');
+            console.log('🔄 Loading invoices for differentials dropdown...');
+            await loadInvoicesForDifferentialsDropdown();
             await loadInvoiceLinesForDropdown();
             populateAllDifferentialRowsWithInvoiceLines();
           } catch (error) {
-            console.error('❌ Error loading invoice lines for differentials:', error);
+            console.error('❌ Error loading invoice data for differentials:', error);
           }
         }, 100);
       } else {
