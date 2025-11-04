@@ -1424,26 +1424,35 @@
 
     <!-- הפרשי חשבוניות SECTION (MOVED FROM DIFFERENTIALS) -->
     <div class="form-section">
-      <div id="invoiceDifferentialsSection" style="margin-bottom:15px; border:2px solid #6c757d; border-radius:6px; padding:10px; background:#f1f1f1;">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; cursor:pointer;" onclick="toggleCollapsibleSection('invoiceDifferentialsContent')">
-          <h4 style="margin:0; color:#212529; font-size:14px;">
-            הפרשי חשבוניות
-          </h4>
-          <span id="invoiceDifferentialsToggle" style="font-size:18px; color:#212529;">▼</span>
-        </div>
-        <div id="invoiceDifferentialsContent" style="display:none;">
-          
-          <!-- Invoice Selection for Differentials -->
-          <div style="margin-bottom: 15px; padding: 10px; background: #e3f2fd; border-radius: 6px; border: 1px solid #2196f3;">
-            <label style="display: block; font-size: 12px; color: #1565c0; margin-bottom: 4px; font-weight: 600;">איזה חשבוניות זמינות</label>
-            <select id="invoiceSelectionForDifferentials" onchange="handleInvoiceSelectionForDifferentials(this)" 
-                    style="width:100%; padding:10px; border-radius:6px; border:1px solid #2196f3; font-size:14px; background: white;">
-              <option value="">בחירת פריט תמלא אוטומטית את כל השדות בשורה</option>
-            </select>
+      <h3>הפרשי חשבוניות</h3>
+      <label style="margin-bottom:10px; display:flex; align-items:center; gap:6px;">
+        <span style="background:#ff4444; color:white; padding:2px 6px; border-radius:3px; font-size:11px;">🔴</span>
+        האם קיימים הפרשים?
+        <input type="checkbox" id="hasInvoiceDifferentials" style="width:auto; margin-right:6px;" onchange="toggleInvoiceDifferentialsSection();">
+      </label>
+      
+      <div id="invoiceDifferentialsMainContainer" style="display:none; margin-top:15px;">
+        <div id="invoiceDifferentialsSection" style="margin-bottom:15px; border:2px solid #6c757d; border-radius:6px; padding:10px; background:#f1f1f1;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; cursor:pointer;" onclick="toggleCollapsibleSection('invoiceDifferentialsContent')">
+            <h4 style="margin:0; color:#212529; font-size:14px;">
+              הפרשי חשבוניות
+            </h4>
+            <span id="invoiceDifferentialsToggle" style="font-size:18px; color:#212529;">▼</span>
           </div>
-          
-          <div id="differentialsRows"></div>
-          <button class="btn add" type="button" onclick="addDifferentialRow()" style="font-size:12px; padding:6px 12px;">הוסף הפרש</button>
+          <div id="invoiceDifferentialsContent" style="display:none;">
+            
+            <!-- Invoice Selection for Differentials -->
+            <div style="margin-bottom: 15px; padding: 10px; background: #e3f2fd; border-radius: 6px; border: 1px solid #2196f3;">
+              <label style="display: block; font-size: 12px; color: #1565c0; margin-bottom: 4px; font-weight: 600;">איזה חשבוניות זמינות</label>
+              <select id="invoiceSelectionForDifferentials" onchange="handleInvoiceSelectionForDifferentials(this)" 
+                      style="width:100%; padding:10px; border-radius:6px; border:1px solid #2196f3; font-size:14px; background: white;">
+                <option value="">בחירת פריט תמלא אוטומטית את כל השדות בשורה</option>
+              </select>
+            </div>
+            
+            <div id="differentialsRows"></div>
+            <button class="btn add" type="button" onclick="addDifferentialRow()" style="font-size:12px; padding:6px 12px;">הוסף הפרש</button>
+          </div>
         </div>
       </div>
     </div>
@@ -23527,6 +23536,36 @@
       
       // Refresh container layout after toggle
       setTimeout(refreshDamageCentersContainerLayout, 200);
+    }
+    
+    // SESSION 95: Toggle function for standalone invoice differentials section
+    function toggleInvoiceDifferentialsSection() {
+      console.log('🔄 SESSION 95: TOGGLE INVOICE DIFFERENTIALS SECTION CALLED');
+      const checkbox = document.getElementById('hasInvoiceDifferentials');
+      const mainContainer = document.getElementById('invoiceDifferentialsMainContainer');
+      
+      console.log('📋 Checkbox state:', checkbox?.checked);
+      
+      if (checkbox?.checked) {
+        if (mainContainer) mainContainer.style.display = 'block';
+        
+        // Load invoices and invoice lines when section is enabled
+        setTimeout(async () => {
+          try {
+            console.log('🔄 Loading invoices for standalone differentials section...');
+            await loadInvoicesForDifferentialsDropdown();
+          } catch (error) {
+            console.error('❌ Error loading invoices for standalone differentials:', error);
+          }
+        }, 100);
+      } else {
+        if (mainContainer) mainContainer.style.display = 'none';
+        // Clear all differential rows when hiding
+        const container = document.getElementById('differentialsRows');
+        if (container) {
+          container.innerHTML = '';
+        }
+      }
     }
     
     // Alias for toggleDifferentialsTable to match HTML onclick
