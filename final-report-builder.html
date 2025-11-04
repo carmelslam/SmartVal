@@ -18560,10 +18560,22 @@
         if (totalWithoutVatSubtotal) totalWithoutVatSubtotal.textContent = `₪${Math.round(finalTotalWithoutVat).toLocaleString()}`;
         if (totalWithVatSubtotal) totalWithVatSubtotal.textContent = `₪${Math.round(finalTotalWithVat).toLocaleString()}`;
         
-        // SESSION 48: Display total differentials from helper
-        if (totalDifferentialsDisplay && helper.final_report?.differential?.grand_total) {
-          const differentialsTotal = helper.final_report.differential.grand_total.without_vat || 0;
-          totalDifferentialsDisplay.textContent = `₪${Math.round(differentialsTotal).toLocaleString()}`;
+        // SESSION 95: Display only discounts/wear (exclude invoice differentials)
+        if (totalDifferentialsDisplay && helper.final_report?.differential?.has_differentials) {
+          // Calculate only parts reductions + parts wear + category differentials (exclude invoice differentials)
+          const partsReductionsTotal = helper.final_report.differential.parts_reductions?.total || 0;
+          const partsWearTotal = helper.final_report.differential.parts_wear?.total || 0;
+          
+          // Sum category differentials
+          let categoryDifferentialsTotal = 0;
+          const categoryDiffItems = helper.final_report.differential.category_differentials?.items || [];
+          categoryDiffItems.forEach(item => {
+            const reductionValue = parseFloat(String(item.category_value || '0').replace(/[₪,]/g, '')) || 0;
+            categoryDifferentialsTotal += reductionValue;
+          });
+          
+          const discountsAndWearTotal = partsReductionsTotal + partsWearTotal + categoryDifferentialsTotal;
+          totalDifferentialsDisplay.textContent = `₪${Math.round(discountsAndWearTotal).toLocaleString()}`;
         }
         
       } else {
@@ -19163,9 +19175,9 @@
                 </div>
               </div>
               
-              <!-- Right Container: אחרי הפרשים -->
+              <!-- Right Container: אחרי הנחות ובלאי -->
               <div style="background: #f8f9fa; border: 2px solid #dc3545; border-radius: 6px; padding: 12px;">
-                <h4 style="margin: 0 0 10px 0; color: #dc3545; text-align: center; font-size: 14px; font-weight: bold;">אחרי הפרשים</h4>
+                <h4 style="margin: 0 0 10px 0; color: #dc3545; text-align: center; font-size: 14px; font-weight: bold;">אחרי הנחות ובלאי</h4>
                 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); gap: 6px; margin-bottom: 6px;">
                   <div style="background: #17a2b8; color: white; padding: 6px; border-radius: 4px; text-align: center;">
                     <div style="font-size: 14px; font-weight: bold;" id="totalWorksSubtotal">₪0</div>
@@ -19182,7 +19194,7 @@
                   <!-- SESSION 48: Add differentials total field after repairs -->
                   <div style="background: #fd7e14; color: white; padding: 6px; border-radius: 4px; text-align: center;">
                     <div style="font-size: 14px; font-weight: bold;" id="totalDifferentialsDisplay">₪0</div>
-                    <div style="font-size: 9px; opacity: 0.9;">הפרשים</div>
+                    <div style="font-size: 9px; opacity: 0.9;">הנחות</div>
                   </div>
                 </div>
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px;">
