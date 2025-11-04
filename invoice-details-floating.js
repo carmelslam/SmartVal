@@ -989,8 +989,10 @@
   // Main functions exposed to global scope
   window.toggleInvoiceDetails = function () {
     console.log('🎬 toggleInvoiceDetails called');
+    console.log('🎬 Function called from:', new Error().stack.split('\n')[2]);
     const modal = document.getElementById("invoiceDetailsModal");
     console.log('🎬 Modal found:', !!modal);
+    console.log('🎬 Modal current display:', modal?.style?.display);
     
     if (modal.style.display === "none" || !modal.style.display) {
       console.log('🎬 Opening modal...');
@@ -1086,5 +1088,17 @@
 
   console.log('🎬 Invoice floating script loaded!');
   console.log('🎬 toggleInvoiceDetails available:', typeof window.toggleInvoiceDetails);
+  
+  // Test function for manual debugging
+  window.testInvoiceModal = function() {
+    console.log('🧪 Manual test: Opening invoice modal...');
+    const modal = document.getElementById("invoiceDetailsModal");
+    if (modal) {
+      modal.style.display = "block";
+      console.log('🧪 Modal display set to block');
+    } else {
+      console.log('🧪 Modal not found!');
+    }
+  };
 
 })();
