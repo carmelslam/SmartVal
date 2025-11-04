@@ -247,14 +247,16 @@
   const modal = document.createElement("div");
   modal.id = "invoiceDetailsModal";
   modal.innerHTML = `
-    <div class="invoice-modal-title">📋 פרטי חשבונית</div>
+    <div class="invoice-modal-title">📋 פרטי חשבונית
+      <button class="invoice-btn close" onclick="toggleInvoiceDetails()">✖</button>
+    </div>
     
     <!-- Tab Navigation -->
     <div class="invoice-tabs">
-      <button class="tab-btn active" onclick="setInvoiceTab('documents')">
+      <button class="tab-btn active" onclick="switchTab('documents', event)">
         📄 מסמכי חשבונית
       </button>
-      <button class="tab-btn" onclick="setInvoiceTab('mappings')">
+      <button class="tab-btn" onclick="switchTab('mappings', event)">
         🔗 הקצאות למוקדי נזק
       </button>
     </div>
@@ -280,6 +282,7 @@
     </div>
   `;
   document.body.appendChild(modal);
+  console.log('✅ Invoice modal added to DOM');
 
   // Global variables
   let currentTab = 'documents';
@@ -1076,44 +1079,7 @@
     });
   }
 
-  // Create modal on page load
-  function createInvoiceModal() {
-    console.log('🏗️ Creating invoice modal...');
-    
-    // Check if modal already exists
-    if (document.getElementById('invoiceDetailsModal')) {
-      console.log('✅ Invoice modal already exists');
-      return;
-    }
-    
-    const modalHtml = `
-      <div id="invoiceDetailsModal" class="invoice-modal" style="display: none;">
-        <div class="invoice-modal-header">
-          <h3 class="invoice-modal-title">📋 פרטי חשבוניות</h3>
-          <button class="invoice-btn close" onclick="toggleInvoiceDetails()">סגור</button>
-        </div>
-        
-        <div class="invoice-tabs">
-          <button class="invoice-tab-btn active" onclick="switchTab('documents', event)">מסמכי חשבונית</button>
-          <button class="invoice-tab-btn" onclick="switchTab('mappings', event)">התאמות מרכזי נזק</button>
-        </div>
-        
-        <div class="invoice-tab-content">
-          <div id="documentsContent" class="tab-content active"></div>
-          <div id="mappingsContent" class="tab-content"></div>
-        </div>
-      </div>
-    `;
-    
-    document.body.insertAdjacentHTML('beforeend', modalHtml);
-    console.log('✅ Invoice modal created');
-  }
-
-  // Initialize modal when DOM is ready
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', createInvoiceModal);
-  } else {
-    createInvoiceModal();
-  }
+  console.log('🎬 Invoice floating script loaded!');
+  console.log('🎬 toggleInvoiceDetails available:', typeof window.toggleInvoiceDetails);
 
 })();
