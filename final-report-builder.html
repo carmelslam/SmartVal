@@ -14853,6 +14853,10 @@
     async function initializeApp() {
       console.log('🚀 SCRIPT DEBUG: initializeApp called!');
       
+      // Initialize window.helper from sessionStorage FIRST
+      window.helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+      console.log('🚀 Initialized window.helper from sessionStorage:', window.helper);
+      
       // SESSION 94: Load catalog items and invoice lines for 4-layer dropdown
       console.log('🔄 Loading catalog items and invoice lines for dropdown...');
       try {
@@ -14861,10 +14865,6 @@
       } catch (err) {
         console.error('⚠️ Error loading dropdown data:', err);
       }
-      
-      // Initialize window.helper from sessionStorage FIRST
-      window.helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
-      console.log('🚀 Initialized window.helper from sessionStorage:', window.helper);
       
       await initializeDamageCenterIds();
       
@@ -15633,8 +15633,8 @@
       window.PARTS_CATALOG = null;
       
       try {
-        await loadInvoiceLines();
         await loadCatalogItems();
+        await loadInvoiceLines();
         console.log('✅ Data reloaded successfully');
         
         // Test again
@@ -15643,6 +15643,36 @@
         console.error('❌ Error reloading data:', err);
         return false;
       }
+    };
+    
+    // Debug helper function
+    window.debugCaseId = function() {
+      console.log('🔍 Case ID Debug Information:');
+      console.log('  - window.helper:', window.helper);
+      console.log('  - helper.case_id:', window.helper?.case_id);
+      console.log('  - typeof helper.case_id:', typeof window.helper?.case_id);
+      console.log('  - sessionStorage helper:', JSON.parse(sessionStorage.getItem('helper') || '{}')?.case_id);
+      
+      // Check URL sources
+      const urlParams = new URLSearchParams(window.location.search);
+      const caseIdFromUrl = urlParams.get('case_id') || urlParams.get('caseId');
+      console.log('  - URL case_id param:', caseIdFromUrl);
+      console.log('  - Current URL:', window.location.href);
+      
+      // Check if we can set case_id manually for testing
+      if (caseIdFromUrl && !window.helper?.case_id) {
+        console.log('🔧 Setting case_id from URL to helper');
+        if (!window.helper) window.helper = {};
+        window.helper.case_id = caseIdFromUrl;
+        sessionStorage.setItem('helper', JSON.stringify(window.helper));
+      }
+      
+      return {
+        helperExists: !!window.helper,
+        caseId: window.helper?.case_id,
+        urlCaseId: caseIdFromUrl,
+        canLoadInvoices: !!(window.helper?.case_id && window.supabase)
+      };
     };
 
     // SESSION 94: Load catalog items from Supabase and cache them
@@ -15694,38 +15724,114 @@
         }
         
         const helper = window.helper;
+        console.log('🔍 DEBUG: helper object:', helper);
+        console.log('🔍 DEBUG: helper.case_id:', helper?.case_id);
+        console.log('🔍 DEBUG: typeof case_id:', typeof helper?.case_id);
+        
         if (!helper?.case_id) {
-          console.log('⚠️ No case_id available for invoice lines query');
+          console.log('⚠️ No case_id available for invoice lines query - trying alternative approaches');
+          
+          // Try to get case_id from URL or other sources
+          const urlParams = new URLSearchParams(window.location.search);
+          const caseIdFromUrl = urlParams.get('case_id') || urlParams.get('caseId');
+          const caseIdFromPath = window.location.pathname.split('/').pop();
+          
+          console.log('🔍 Alternative case_id sources:');
+          console.log('  - URL param case_id:', caseIdFromUrl);
+          console.log('  - Path last segment:', caseIdFromPath);
+          
           window.INVOICE_LINES = []; // Cache empty array
           return [];
         }
         
         console.log('🔄 Loading invoice lines from Supabase for case:', helper.case_id);
-        const { data: invoiceLines, error } = await window.supabase
-          .from('invoice_lines')
-          .select(`
-            id,
-            description,
-            unit_price,
-            line_total,
-            quantity,
-            metadata,
-            invoices!inner(
-              invoice_number,
-              supplier_name,
-              case_id
-            )
-          `)
-          .eq('invoices.case_id', helper.case_id);
         
-        if (invoiceLines && !error) {
-          console.log(`✅ Loaded ${invoiceLines.length} invoice lines from Supabase`);
-          window.INVOICE_LINES = invoiceLines; // Cache for future use
-          return invoiceLines;
-        } else {
-          console.log('⚠️ No invoice lines loaded:', error?.message || 'Unknown error');
-          window.INVOICE_LINES = []; // Cache empty array to avoid repeated calls
-          return [];
+        // First try: Direct approach using two-step query to avoid join issues
+        try {
+          // Step 1: Get invoices for this case
+          const { data: invoices, error: invoicesError } = await window.supabase
+            .from('invoices')
+            .select('id, invoice_number, supplier_name')
+            .eq('case_id', helper.case_id);
+          
+          if (invoicesError) {
+            console.error('❌ Error getting invoices:', invoicesError);
+            throw invoicesError;
+          }
+          
+          if (!invoices || invoices.length === 0) {
+            console.log('⚠️ No invoices found for case_id:', helper.case_id);
+            window.INVOICE_LINES = [];
+            return [];
+          }
+          
+          console.log(`✅ Found ${invoices.length} invoices for case`);
+          const invoiceIds = invoices.map(inv => inv.id);
+          
+          // Step 2: Get invoice lines for these invoices
+          const { data: invoiceLines, error } = await window.supabase
+            .from('invoice_lines')
+            .select('id, description, unit_price, line_total, quantity, metadata, invoice_id')
+            .in('invoice_id', invoiceIds);
+          
+          if (error) {
+            console.error('❌ Error getting invoice lines:', error);
+            throw error;
+          }
+          
+          // Step 3: Merge invoice data with line data
+          const enrichedLines = invoiceLines.map(line => {
+            const invoice = invoices.find(inv => inv.id === line.invoice_id);
+            return {
+              ...line,
+              invoices: invoice ? {
+                invoice_number: invoice.invoice_number,
+                supplier_name: invoice.supplier_name,
+                case_id: helper.case_id
+              } : null
+            };
+          });
+          
+          console.log(`✅ Loaded ${enrichedLines.length} invoice lines from Supabase`);
+          window.INVOICE_LINES = enrichedLines;
+          return enrichedLines;
+          
+        } catch (firstError) {
+          console.error('❌ First approach failed:', firstError);
+          
+          // Fallback: Try original join approach
+          try {
+            const { data: invoiceLines, error } = await window.supabase
+              .from('invoice_lines')
+              .select(`
+                id,
+                description,
+                unit_price,
+                line_total,
+                quantity,
+                metadata,
+                invoices!inner(
+                  invoice_number,
+                  supplier_name,
+                  case_id
+                )
+              `)
+              .eq('invoices.case_id', helper.case_id);
+          
+            if (invoiceLines && !error) {
+              console.log(`✅ Fallback: Loaded ${invoiceLines.length} invoice lines from Supabase`);
+              window.INVOICE_LINES = invoiceLines; // Cache for future use
+              return invoiceLines;
+            } else {
+              console.log('⚠️ Fallback also failed:', error?.message || 'Unknown error');
+              window.INVOICE_LINES = []; // Cache empty array to avoid repeated calls
+              return [];
+            }
+          } catch (fallbackError) {
+            console.error('❌ Both approaches failed:', fallbackError);
+            window.INVOICE_LINES = []; // Cache empty array to avoid repeated calls
+            return [];
+          }
         }
       } catch (err) {
         console.error('❌ Error loading invoice lines:', err);
