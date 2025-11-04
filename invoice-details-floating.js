@@ -350,10 +350,11 @@
       try {
         // Same logic as parts floating screen
         const normalizedPlate = plate.replace(/[\s-]/g, '');
+        console.log('🔍 Querying cases table with normalized plate:', normalizedPlate);
         
         const { data: casesData, error: caseError } = await window.supabase
           .from('cases')
-          .select('id, filing_case_id')
+          .select('id, filing_case_id, plate, created_at')
           .eq('plate', normalizedPlate)
           .order('created_at', { ascending: false });
         
@@ -361,6 +362,8 @@
           console.error('❌ Error querying cases:', caseError);
           return null;
         }
+        
+        console.log('📋 Cases query result:', casesData);
         
         if (casesData && casesData.length > 0) {
           const caseId = casesData[0].id;
@@ -375,6 +378,18 @@
           }
           
           return caseId;
+        } else {
+          console.log('❌ No cases found for plate:', normalizedPlate);
+          
+          // Try to find any cases to see what plates exist
+          const { data: allCases, error: allError } = await window.supabase
+            .from('cases')
+            .select('plate')
+            .limit(10);
+          
+          if (!allError && allCases) {
+            console.log('📋 Available plates in database:', allCases.map(c => c.plate));
+          }
         }
       } catch (error) {
         console.error('❌ Error deriving case ID from plate:', error);
