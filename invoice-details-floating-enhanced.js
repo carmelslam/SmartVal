@@ -1133,61 +1133,138 @@
       return badges[status] || '';
     };
 
-    let html = `<div class="invoice-section" style="border: 2px solid #3498db;">
-      <h4 style="color: #2563eb;">💾 חשבוניות מ-Supabase (${invoices.length})</h4>`;
+    let html = '';
 
     invoices.forEach((invoice, index) => {
       const linesCount = invoice.lines ? invoice.lines.length : 0;
       const mappingsCount = invoice.mappings_count || 0;
 
+      // Enhanced Invoice Header Section
       html += `
-        <div style="background: #f0f9ff; border: 1px solid #bfdbfe; border-radius: 6px; padding: 12px; margin-bottom: 12px;">
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-            <div style="font-weight: 600; font-size: 15px; color: #1e40af;">
-              📄 חשבונית #${index + 1} - ${invoice.supplier_name || 'ספק לא ידוע'}
-            </div>
-            ${invoice.validation_status ? getValidationBadge(invoice.validation_status) : ''}
-          </div>
+        <div class="invoice-section">
+          <h4>📄 פרטי חשבונית #${index + 1}</h4>
           
           <div class="invoice-field">
             <div class="label">מספר חשבונית:</div>
             <div class="value">${invoice.invoice_number || '-'}</div>
           </div>
           <div class="invoice-field">
-            <div class="label">תאריך:</div>
+            <div class="label">ספק:</div>
+            <div class="value">${invoice.supplier_name || '-'}</div>
+          </div>
+          <div class="invoice-field">
+            <div class="label">תאריך חשבונית:</div>
             <div class="value">${formatDate(invoice.invoice_date)}</div>
           </div>
           <div class="invoice-field">
-            <div class="label">סכום כולל:</div>
-            <div class="value" style="font-weight: 700; color: #1e40af;">${formatPrice(invoice.total_amount)}</div>
+            <div class="label">סכום לפני מע"מ:</div>
+            <div class="value" id="invoice-${invoice.id}-before-tax">${formatPrice(invoice.total_before_tax)}</div>
           </div>
           <div class="invoice-field">
-            <div class="label">פריטים בחשבונית:</div>
-            <div class="value">${linesCount} פריטים</div>
+            <div class="label">מע"מ:</div>
+            <div class="value" id="invoice-${invoice.id}-tax">${formatPrice(invoice.tax_amount)}</div>
           </div>
-          ${invoice.ocr_confidence ? `
-            <div class="invoice-field">
-              <div class="label">דיוק OCR:</div>
-              <div class="value">${Math.round(invoice.ocr_confidence)}%</div>
-            </div>
-          ` : ''}
-          ${mappingsCount > 0 ? `
-            <div class="invoice-field">
-              <div class="label">מיפויים:</div>
-              <div class="value">${mappingsCount} מיפויים למרכזי נזקים</div>
-            </div>
-          ` : ''}
-          ${invoice.notes ? `
-            <div class="invoice-field">
-              <div class="label">הערות:</div>
-              <div class="value" style="font-size: 13px; color: #64748b;">${invoice.notes}</div>
+          <div class="invoice-field">
+            <div class="label">סכום כולל:</div>
+            <div class="value" id="invoice-${invoice.id}-total" style="font-weight: 700; color: #1e40af;">${formatPrice(invoice.total_amount)}</div>
+          </div>
+          <div class="invoice-field">
+            <div class="label">סטטוס:</div>
+            <div class="value">${invoice.status || 'ממתין'} ${invoice.validation_status ? getValidationBadge(invoice.validation_status) : ''}</div>
+          </div>
+          
+          <!-- View Invoice Document Button -->
+          ${invoice.documents && invoice.documents.length > 0 ? `
+            <div style="text-align: center; margin: 15px 0;">
+              <button onclick="viewInvoiceDocument('${invoice.documents[0].id}')" 
+                      style="background: #3b82f6; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-weight: 600;">
+                👁️ צפה בחשבונית המקורית
+              </button>
             </div>
           ` : ''}
         </div>
       `;
+
+      // Enhanced Invoice Lines Section  
+      if (invoice.lines && invoice.lines.length > 0) {
+        html += `
+          <div class="invoice-section">
+            <h4>📋 פירוט שורות החשבונית (${linesCount} פריטים)</h4>
+            
+            <div style="overflow-x: auto;">
+              <table style="width: 100%; border-collapse: collapse; margin: 15px 0;">
+                <thead>
+                  <tr style="background: #f8f9fa; border-bottom: 2px solid #dee2e6;">
+                    <th style="padding: 12px 8px; text-align: right; border: 1px solid #dee2e6; font-weight: 600;">שורה</th>
+                    <th style="padding: 12px 8px; text-align: right; border: 1px solid #dee2e6; font-weight: 600;">תיאור</th>
+                    <th style="padding: 12px 8px; text-align: right; border: 1px solid #dee2e6; font-weight: 600;">כמות</th>
+                    <th style="padding: 12px 8px; text-align: right; border: 1px solid #dee2e6; font-weight: 600;">מחיר יחידה</th>
+                    <th style="padding: 12px 8px; text-align: right; border: 1px solid #dee2e6; font-weight: 600;">סה"כ שורה</th>
+                    <th style="padding: 12px 8px; text-align: right; border: 1px solid #dee2e6; font-weight: 600;">קטגוריה</th>
+                  </tr>
+                </thead>
+                <tbody>
+        `;
+
+        invoice.lines.forEach(line => {
+          html += `
+            <tr style="border-bottom: 1px solid #e5e7eb;">
+              <td style="padding: 10px 8px; border: 1px solid #e5e7eb; text-align: center;">${line.line_number || '-'}</td>
+              <td style="padding: 10px 8px; border: 1px solid #e5e7eb;">${line.description || '-'}</td>
+              <td style="padding: 10px 8px; border: 1px solid #e5e7eb; text-align: center;">${line.quantity || '-'}</td>
+              <td style="padding: 10px 8px; border: 1px solid #e5e7eb; text-align: left;">${formatPrice(line.unit_price)}</td>
+              <td style="padding: 10px 8px; border: 1px solid #e5e7eb; text-align: left; font-weight: 600;">${formatPrice(line.line_total)}</td>
+              <td style="padding: 10px 8px; border: 1px solid #e5e7eb; text-align: center;">${line.metadata?.category ? getCategoryLabel(line.metadata.category) : '-'}</td>
+            </tr>
+          `;
+        });
+
+        // Calculate and display summary
+        const calculatedTotal = invoice.lines.reduce((sum, line) => sum + (parseFloat(line.line_total) || 0), 0);
+        
+        html += `
+                </tbody>
+                <tfoot>
+                  <tr style="background: #f8f9fa; border-top: 2px solid #dee2e6;">
+                    <td colspan="4" style="padding: 12px 8px; border: 1px solid #dee2e6; font-weight: 600; text-align: right;">סה"כ שורות:</td>
+                    <td style="padding: 12px 8px; border: 1px solid #dee2e6; font-weight: 700; text-align: left; color: #1e40af;">${formatPrice(calculatedTotal)}</td>
+                    <td style="padding: 12px 8px; border: 1px solid #dee2e6;"></td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+          </div>
+        `;
+      }
+
+      // Additional metadata section
+      if (invoice.ocr_confidence || mappingsCount > 0 || invoice.notes) {
+        html += `
+          <div class="invoice-section">
+            <h4>📊 מידע נוסף</h4>
+            ${invoice.ocr_confidence ? `
+              <div class="invoice-field">
+                <div class="label">דיוק OCR:</div>
+                <div class="value">${Math.round(invoice.ocr_confidence)}%</div>
+              </div>
+            ` : ''}
+            ${mappingsCount > 0 ? `
+              <div class="invoice-field">
+                <div class="label">מיפויים:</div>
+                <div class="value">${mappingsCount} הקצאות למוקדי נזק</div>
+              </div>
+            ` : ''}
+            ${invoice.notes ? `
+              <div class="invoice-field">
+                <div class="label">הערות:</div>
+                <div class="value" style="font-size: 13px; color: #64748b;">${invoice.notes}</div>
+              </div>
+            ` : ''}
+          </div>
+        `;
+      }
     });
 
-    html += `</div>`;
     return html;
   }
 
@@ -1217,5 +1294,52 @@
       </div>
     `;
   }
+
+  // View Invoice Document function - exposed to global scope
+  window.viewInvoiceDocument = async function(documentId) {
+    try {
+      console.log('📄 Viewing invoice document:', documentId);
+      
+      if (!window.invoiceService) {
+        alert('שירות החשבוניות לא זמין');
+        return;
+      }
+
+      // Show loading state
+      const button = event.target;
+      const originalText = button.textContent;
+      button.textContent = '⏳ טוען...';
+      button.disabled = true;
+
+      // Get signed URL for document
+      const documentUrl = await window.invoiceService.getInvoiceDocumentURL(documentId);
+      
+      if (!documentUrl) {
+        alert('לא נמצא קישור למסמך החשבונית');
+        return;
+      }
+
+      // Open in new window/tab  
+      const newWindow = window.open(documentUrl, '_blank', 'width=800,height=900,scrollbars=yes');
+      
+      if (!newWindow) {
+        // Fallback for popup blockers
+        const link = document.createElement('a');
+        link.href = documentUrl;
+        link.target = '_blank';
+        link.click();
+      }
+
+    } catch (error) {
+      console.error('❌ Error viewing invoice document:', error);
+      alert('שגיאה בפתיחת מסמך החשבונית: ' + error.message);
+    } finally {
+      // Restore button state
+      if (event?.target) {
+        event.target.textContent = originalText;
+        event.target.disabled = false;
+      }
+    }
+  };
 
 })();
