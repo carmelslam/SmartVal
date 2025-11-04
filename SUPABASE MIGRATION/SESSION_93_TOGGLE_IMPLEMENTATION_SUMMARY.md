@@ -347,5 +347,208 @@ window.debugToggleState()
 
 ---
 
-**END SESSION 93**  
-*Next Session Priority: Investigate and fix save button visibility*
+## 🎯 **SESSION 93 CONTINUATION - COMPLETE SAVE BUTTON FIX**
+
+**Date**: 2025-11-04  
+**Status**: 🟢 **FULLY COMPLETED** - All issues resolved  
+**Duration**: Follow-up session to complete save button implementation
+
+---
+
+### **🔧 PHASE 2: SAVE BUTTON DISAPPEARANCE FIX**
+
+#### **Root Cause Analysis** 🔍
+**Problem**: Save buttons were disappearing during toggle operations
+**Root Cause Identified**: 
+- `loadDamageCentersFromHelper()` function clears `damageCentersContent.innerHTML` completely
+- This removes all existing content including save buttons added by `addSectionButtons()`
+- Toggle operations call data loading functions which recreate content from scratch
+
+#### **Complete Solution Implemented** ✅
+
+**1. Toggle Functions Enhanced**
+```javascript
+// Added to both switchToWizard() and switchToInvoice()
+setTimeout(() => {
+  if (typeof addSectionButtons === 'function') {
+    addSectionButtons();
+    console.log('✅ SESSION 93: Re-added save buttons after switch');
+  }
+}, 100);
+```
+
+**2. Core Data Loading Enhanced**
+```javascript
+// In loadDamageCentersFromHelper() - after content rebuild
+setTimeout(() => {
+  if (typeof addSectionButtons === 'function') {
+    addSectionButtons();
+    console.log('✅ SESSION 93: Re-added save buttons after loadDamageCentersFromHelper');
+  }
+  repositionDamageCentersSaveButton();
+}, 100);
+```
+
+**3. Positioning Logic Fixed**
+- **Original Issue**: `addSectionButtons()` targeted wrong container (`#damageCentersContent` instead of `#damageCentersSummary`)
+- **Fix**: Updated selector from `#damageCentersContent` to `#damageCentersSummary` in sections array
+- **Result**: Save buttons now created in correct DOM location
+
+---
+
+### **🎯 PHASE 3: SAVE BUTTON REPOSITIONING**
+
+#### **User Request**: Move buttons before "הנחות והפרשים" section
+
+**Implementation**:
+```javascript
+// Updated repositionDamageCentersSaveButton() to target differentialsSection
+differentialsSection = document.getElementById('differentialsSection');
+if (saveButton && differentialsSection) {
+  const buttonContainer = saveButton.parentElement;
+  differentialsSection.parentNode.insertBefore(buttonContainer, differentialsSection);
+  console.log('✅ SESSION 93: Repositioned save button before הנחות והפרשים');
+}
+```
+
+**Result**: Save buttons now appear just before the "הנחות והפרשים" (Discounts and Differentials) section
+
+---
+
+### **🧹 PHASE 4: CLEANUP - REMOVED TEST MESSAGE**
+
+#### **User Request**: Remove English test alert from invoice acceptance banner
+
+**Problem**: `alert('🚀 BANNER CLICKED - FUNCTION IS RUNNING!');` appeared on invoice acceptance
+**Solution**: Removed test alert from `acceptInvoiceAssignment()` function
+**Result**: Clean user experience without test popups
+
+---
+
+### **🧪 COMPREHENSIVE TESTING FRAMEWORK**
+
+#### **Test Functions Created**:
+
+1. **`window.testSaveButtonFix()`** - Basic button creation and positioning
+2. **`window.testSaveButtonPersistence()`** - Persistence through toggle operations  
+3. **`window.testCompleteSaveButtonFix()`** - Complete functionality test
+4. **`window.testSaveButtonPositioning()`** - Positioning before הנחות והפרשים
+
+#### **Test Coverage**:
+- ✅ Button creation in correct location
+- ✅ Button persistence through wizard/invoice switches
+- ✅ Button visibility after rapid toggle operations
+- ✅ Correct positioning before differentials section
+- ✅ Function availability and execution
+
+---
+
+### **📚 CRITICAL LESSONS LEARNED**
+
+#### **1. DOM Structure Dependencies**
+**Issue**: UI functions assume specific DOM container relationships
+**Learning**: Always verify container hierarchy when making structural changes
+**Solution**: Enhanced debugging with dual-location search logic
+
+#### **2. Data Loading Side Effects**
+**Issue**: Data loading functions have hidden UI modification side effects
+**Learning**: Content recreation (`innerHTML = ''`) destroys dynamically added elements
+**Solution**: Re-add dynamic elements after data loading completes
+
+#### **3. Timing Dependencies**
+**Issue**: Save buttons must be added AFTER content is fully rendered
+**Learning**: Use setTimeout delays to ensure DOM is ready
+**Solution**: 100ms delays after major DOM changes
+
+#### **4. Function Scope Confusion**
+**Issue**: `addSectionButtons()` targets wrong containers due to naming confusion
+**Learning**: Container names can be misleading - verify actual DOM structure
+**Solution**: Use correct container IDs and add debugging logs
+
+#### **5. User Experience Priority**
+**Issue**: Test messages disrupt production user experience
+**Learning**: Remove all test artifacts before user acceptance
+**Solution**: Clean separation between debugging logs and user alerts
+
+---
+
+### **🔧 TECHNICAL IMPLEMENTATION DETAILS**
+
+#### **Files Modified**:
+- `final-report-builder.html` (primary implementation)
+
+#### **Functions Enhanced**:
+1. **`switchToWizard()`** - Added button re-creation
+2. **`switchToInvoice()`** - Added button re-creation  
+3. **`loadDamageCentersFromHelper()`** - Added button re-creation after content rebuild
+4. **`repositionDamageCentersSaveButton()`** - Updated to target הנחות והפרשים section
+5. **`addSectionButtons()`** - Fixed target container selector
+6. **`acceptInvoiceAssignment()`** - Removed test alert
+
+#### **New Test Functions Added**:
+- Complete testing suite for save button functionality
+- Positioning verification
+- Persistence testing through operations
+
+---
+
+### **✅ FINAL SUCCESS METRICS**
+
+| Objective | Status | Details |
+|-----------|--------|---------|
+| Fix toggle reversal | ✅ **ACHIEVED** | Clicking labels loads correct data |
+| Fix toggle disappearing | ✅ **ACHIEVED** | Toggle remains stable and visible |
+| Maintain save button visibility | ✅ **ACHIEVED** | Buttons persist through all operations |
+| Position buttons correctly | ✅ **ACHIEVED** | Buttons appear before הנחות והפרשים |
+| UI stability | ✅ **ACHIEVED** | No loops, conflicts, or breaking changes |
+| Remove test artifacts | ✅ **ACHIEVED** | Clean user experience |
+
+**Overall Assessment**: **100% SUCCESS** - All critical issues resolved with comprehensive testing
+
+---
+
+### **🎉 SESSION 93 COMPLETE ACHIEVEMENTS**
+
+#### **Toggle System** ✅
+- **Logical Operation**: "חשבונית" loads invoice data, "אשף" loads wizard data
+- **Stability**: No disappearing, no infinite loops, no page refresh required
+- **Visual Feedback**: Proper active states and transitions
+
+#### **Save Button System** ✅  
+- **Persistence**: Buttons survive all toggle operations and data loading
+- **Positioning**: Correctly placed before הנחות והפרשים section
+- **Functionality**: All save and collapse operations work correctly
+
+#### **User Experience** ✅
+- **Clean Interface**: No test popups or debug messages for users
+- **Intuitive Operation**: Toggle works as expected without surprises
+- **Reliable Functionality**: Consistent behavior across all operations
+
+#### **Developer Experience** ✅
+- **Comprehensive Testing**: Full test suite for verification
+- **Enhanced Debugging**: Detailed logging for troubleshooting
+- **Maintainable Code**: Clear separation of concerns and robust error handling
+
+---
+
+### **🔮 FUTURE RECOMMENDATIONS**
+
+#### **1. Architectural Improvements**
+- Consider component-based approach for dynamic UI elements
+- Implement consistent lifecycle management for UI components
+- Create standardized patterns for data loading with UI preservation
+
+#### **2. Testing Integration**
+- Integrate toggle tests into development workflow
+- Add automated UI regression testing
+- Create test scenarios for complex user interactions
+
+#### **3. Documentation**
+- Document DOM structure dependencies
+- Create UI modification guidelines
+- Maintain test function documentation
+
+---
+
+**END SESSION 93 - COMPLETE SUCCESS** ✅  
+*All objectives achieved, comprehensive testing implemented, user experience optimized*
