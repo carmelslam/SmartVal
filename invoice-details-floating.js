@@ -460,7 +460,7 @@
       <!-- Mappings Summary -->
       <div id="mappings-summary" style="display: none;">
         <div style="background: linear-gradient(135deg, #059669 0%, #047857 100%); padding: 20px; border-radius: 12px; margin-bottom: 20px; color: white; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
-          <h4 style="margin: 0 0 15px 0; font-size: 20px; border-bottom: 2px solid rgba(255,255,255,0.3); padding-bottom: 10px;">🔗 סיכום הקצאות נזק</h4>
+          <h4 style="margin: 0 0 15px 0; font-size: 20px; border-bottom: 2px solid rgba(255,255,255,0.3); padding-bottom: 10px;">הקצאת פריטים לפי מוקד נזק</h4>
           
           <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px;">
             <div style="background: rgba(255,255,255,0.15); padding: 12px; border-radius: 8px; text-align: center;">
@@ -1480,13 +1480,12 @@
 
         return `
           <tr style="border-bottom: 1px solid #e2e8f0;">
+            <td style="padding: 8px; text-align: center; font-size: 12px;">${lineData.catalog_code || lineData.item_code || '-'}</td>
             <td style="padding: 8px; text-align: right; font-size: 12px;">${lineData.description || '-'}</td>
-            <td style="padding: 8px; text-align: center; font-size: 12px;">${invoiceData.invoice_number || '-'}</td>
-            <td style="padding: 8px; text-align: center; font-size: 12px;">${lineData.quantity || 1}</td>
+            <td style="padding: 8px; text-align: center; font-size: 12px;">${lineData.source || lineData.part_source || 'Original'}</td>
             <td style="padding: 8px; text-align: center; font-size: 12px;">₪${(lineData.unit_price || 0).toLocaleString()}</td>
+            <td style="padding: 8px; text-align: center; font-size: 12px;">${lineData.quantity || 1}</td>
             <td style="padding: 8px; text-align: center; font-weight: bold; font-size: 12px;">₪${lineTotal.toLocaleString()}</td>
-            <td style="padding: 8px; text-align: center; font-size: 11px;">${mapping.validation_status || 'pending'}</td>
-            <td style="padding: 8px; text-align: center; font-size: 11px;">${mapping.mapping_confidence ? Math.round(mapping.mapping_confidence) + '%' : '-'}</td>
           </tr>
         `;
       }).join('');
@@ -1510,13 +1509,12 @@
             <table style="width: 100%; border-collapse: collapse; direction: rtl;">
               <thead style="background: #f8fafc;">
                 <tr>
+                  <th style="padding: 10px; text-align: center; border: 1px solid #e2e8f0; font-size: 12px;">קוד קטלוג</th>
                   <th style="padding: 10px; text-align: right; border: 1px solid #e2e8f0; font-size: 12px;">תיאור</th>
-                  <th style="padding: 10px; text-align: center; border: 1px solid #e2e8f0; font-size: 12px;">חשבונית</th>
-                  <th style="padding: 10px; text-align: center; border: 1px solid #e2e8f0; font-size: 12px;">כמות</th>
+                  <th style="padding: 10px; text-align: center; border: 1px solid #e2e8f0; font-size: 12px;">מקור</th>
                   <th style="padding: 10px; text-align: center; border: 1px solid #e2e8f0; font-size: 12px;">מחיר יחידה</th>
+                  <th style="padding: 10px; text-align: center; border: 1px solid #e2e8f0; font-size: 12px;">כמות</th>
                   <th style="padding: 10px; text-align: center; border: 1px solid #e2e8f0; font-size: 12px;">סה"כ</th>
-                  <th style="padding: 10px; text-align: center; border: 1px solid #e2e8f0; font-size: 12px;">סטטוס</th>
-                  <th style="padding: 10px; text-align: center; border: 1px solid #e2e8f0; font-size: 12px;">דיוק</th>
                 </tr>
               </thead>
               <tbody>
