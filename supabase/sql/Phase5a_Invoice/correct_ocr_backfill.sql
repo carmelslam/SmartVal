@@ -32,27 +32,27 @@ line_mapping AS (
 )
 UPDATE invoice_lines 
 SET 
-  source = CASE 
-    WHEN lm.part_data->>'מקור' = 'מקורי' THEN 'Original'
-    WHEN lm.part_data->>'מקור' = 'תחליפי' THEN 'Aftermarket'
-    WHEN lm.part_data->>'מקור' = 'משומש' THEN 'Used'
-    WHEN lm.part_data->>'מקור' = 'משופץ' THEN 'Refurbished'
-    WHEN lm.part_data->>'מקור' = 'OEM' THEN 'OEM'
-    WHEN lm.part_data->>'מקור' = 'חדש' THEN 'New'
-    WHEN lm.part_data->>'מקור' = 'יד שנייה' THEN 'Used'
-    ELSE lm.part_data->>'מקור'
-  END,
+  source = COALESCE(
+    lm.part_data->>'מקור',
+    lm.part_data->>'סוג חלק',
+    lm.part_data->>'מקור חלק',
+    'לא צוין'
+  ),
   catalog_code = COALESCE(
     lm.part_data->>'מק״ט חלק',
     lm.part_data->>'מקט חלק', 
     lm.part_data->>'מק"ט חלק',
-    lm.part_data->>'קוד חלק'
+    lm.part_data->>'קוד חלק',
+    lm.part_data->>'מספר חלק',
+    lm.part_data->>'קטלוג',
+    lm.part_data->>'מקט',
+    lm.part_data->>'קוד'
   ),
   item_category = CASE 
-    WHEN LOWER(lm.part_data->>'קטגוריה') LIKE '%עבודה%' THEN 'work'
-    WHEN LOWER(lm.part_data->>'קטגוריה') LIKE '%תיקון%' THEN 'repair'
-    WHEN LOWER(lm.part_data->>'קטגוריה') LIKE '%חומר%' THEN 'material'
-    ELSE 'part'
+    WHEN LOWER(lm.part_data->>'קטגוריה') LIKE '%עבודה%' THEN 'עבודה'
+    WHEN LOWER(lm.part_data->>'קטגוריה') LIKE '%תיקון%' THEN 'תיקון'
+    WHEN LOWER(lm.part_data->>'קטגוריה') LIKE '%חומר%' THEN 'חומר'
+    ELSE 'חלק'
   END
 FROM line_mapping lm
 WHERE invoice_lines.id = lm.line_id;
@@ -360,7 +360,23 @@ ON CONFLICT (name) DO UPDATE SET
   metadata = COALESCE(invoice_suppliers.metadata, '{}'::jsonb) || EXCLUDED.metadata,
   updated_at = now();
 
--- 6. Add indexes and constraints
+-- 6. Update constraints to allow Hebrew values and add indexes
+DO $$
+BEGIN
+    -- Drop existing constraint if it exists
+    IF EXISTS (
+        SELECT 1 FROM pg_constraint 
+        WHERE conname = 'invoice_lines_source_check'
+    ) THEN
+        ALTER TABLE public.invoice_lines DROP CONSTRAINT invoice_lines_source_check;
+    END IF;
+    
+    -- Add new constraint that allows any Hebrew text for source
+    ALTER TABLE public.invoice_lines 
+    ADD CONSTRAINT invoice_lines_source_check 
+    CHECK (source IS NULL OR source != '');
+END $$;
+
 CREATE INDEX IF NOT EXISTS idx_invoice_lines_source_catalog 
 ON public.invoice_lines (source, catalog_code) 
 WHERE source IS NOT NULL AND catalog_code IS NOT NULL;
