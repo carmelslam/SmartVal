@@ -3,6 +3,35 @@
 
 console.log('🧠 Loading enhanced helper system...');
 
+// 🚫 PHANTOM INVOICE PREVENTION - Disable invoice creation during page load
+window.isActualInvoiceProcessing = false;
+console.log('🚫 PHANTOM PREVENTION: Invoice processing disabled during page load');
+
+// 🚫 PHANTOM INVOICE PREVENTION - Check for excessive invoices on page load
+window.checkAndCleanPhantomInvoices = function() {
+  if (window.helper?.invoices?.length > 10) {
+    console.warn(`🚫 PHANTOM PREVENTION: Found ${window.helper.invoices.length} invoices, cleaning phantoms...`);
+    console.log('📊 Before cleanup - invoice count:', window.helper.invoices.length);
+    
+    // Keep only the first 5 most recent invoices
+    const validInvoices = window.helper.invoices.slice(0, 5);
+    window.helper.invoices = validInvoices;
+    
+    console.log('✅ After cleanup - invoice count:', window.helper.invoices.length);
+    console.log('🧹 Phantom invoices cleaned, saving to storage...');
+    
+    // Save cleaned data
+    if (typeof window.saveHelperToAllStorageLocations === 'function') {
+      window.saveHelperToAllStorageLocations();
+    }
+    
+    return true; // Cleanup performed
+  }
+  
+  console.log('✅ PHANTOM CHECK: Invoice count normal:', window.helper?.invoices?.length || 0);
+  return false; // No cleanup needed
+};
+
 // 🛠️ UNIVERSAL SOLUTION: Duplicate Key JSON Parser
 // Handles JSON objects with duplicate keys by preserving all values
 function parseJSONWithDuplicates(jsonString) {
@@ -2266,14 +2295,20 @@ window.processInvoiceOCR = function(invoiceFile, ocrResults) {
   currentInvoice.file_info.processing_status = 'completed';
   
   // Add to processed invoices array (complete capture)
-  window.helper.financials.invoices.processed_invoices.push({
-    ...currentInvoice,
-    processing_id: `inv_${Date.now()}`,
-    case_context: {
-      plate: window.getPlateNumber(),
-      case_id: window.helper.meta?.case_id
-    }
-  });
+  // 🚫 PHANTOM PREVENTION: Only push during actual invoice processing, not page load
+  if (window.isActualInvoiceProcessing !== false) {
+    window.helper.financials.invoices.processed_invoices.push({
+      ...currentInvoice,
+      processing_id: `inv_${Date.now()}`,
+      case_context: {
+        plate: window.getPlateNumber(),
+        case_id: window.helper.meta?.case_id
+      }
+    });
+    console.log('✅ Added to processed_invoices during actual processing');
+  } else {
+    console.log('🚫 PHANTOM PREVENTION: Blocked processed_invoices.push during page load');
+  }
   
   // Update statistics
   const stats = window.helper.financials.invoices.statistics;
@@ -5306,6 +5341,11 @@ if (document.readyState === 'loading') {
 
 console.log('✅ Helper system loaded and ready');
 
+// 🚫 PHANTOM INVOICE PREVENTION - Clean up any phantom invoices after helper loads
+if (typeof window.checkAndCleanPhantomInvoices === 'function') {
+  window.checkAndCleanPhantomInvoices();
+}
+
 // 🔧 PHASE 2 FIX: Universal webhook receiver with Hebrew data auto-detection
 window.universalWebhookReceiver = function(data, source = 'unknown') {
   console.log('🌐 Universal webhook receiver activated:', source);
@@ -5991,7 +6031,13 @@ window.processComprehensiveInvoiceJSON = function(invoiceFile, comprehensiveJSON
   };
   
   // Add to comprehensive data store
-  window.helper.financials.invoice_processing.comprehensive_data.push(comprehensiveJSON);
+  // 🚫 PHANTOM PREVENTION: Only push during actual invoice processing, not page load
+  if (window.isActualInvoiceProcessing !== false) {
+    window.helper.financials.invoice_processing.comprehensive_data.push(comprehensiveJSON);
+    console.log('✅ Added to comprehensive_data during actual processing');
+  } else {
+    console.log('🚫 PHANTOM PREVENTION: Blocked comprehensive_data.push during page load');
+  }
   
   // Create simplified version for existing system compatibility  
   const simpleInvoice = {
