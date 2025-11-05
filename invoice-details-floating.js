@@ -949,24 +949,56 @@
         return '-';
       }
     };
+    
+    // Hebrew status transformation
+    const getHebrewStatus = (status) => {
+      const statusMap = {
+        'DRAFT': 'טיוטה',
+        'PENDING': 'ממתין',
+        'ASSIGNED': 'הוקצה',
+        'ACCEPTED': 'אושר',
+        'SENT': 'נשלח',
+        'PAID': 'שולם',
+        'CANCELLED': 'בוטל'
+      };
+      return statusMap[status] || status || '-';
+    };
+    
+    // Get VAT rate from calculations or default to display percentage
+    const getVatDisplayText = () => {
+      if (window.calculations && window.calculations.vat_rate) {
+        const vatPercent = Math.round(window.calculations.vat_rate * 100);
+        return `מע"מ (${vatPercent}%)`;
+      }
+      return 'מע"מ';
+    };
 
-    // Calculate totals by category from lines
+    // Use existing invoice totals - DO NOT CALCULATE
+    const subtotal = parseFloat(invoice.total_before_tax || 0);
+    const vatAmount = parseFloat(invoice.tax_amount || 0);
+    const grandTotal = parseFloat(invoice.total_amount || 0);
+    
+    // Get category totals from invoice metadata if available, otherwise calculate from lines for display only
     let totalParts = 0, totalWorks = 0, totalRepairs = 0, totalOther = 0;
     
-    lines.forEach(line => {
-      const lineTotal = (line.quantity || 1) * (line.unit_price || 0);
-      const category = line.item_category || 'other';
-      
-      if (category === 'part') totalParts += lineTotal;
-      else if (category === 'work') totalWorks += lineTotal;
-      else if (category === 'repair') totalRepairs += lineTotal;
-      else totalOther += lineTotal;
-    });
-    
-    const subtotal = totalParts + totalWorks + totalRepairs + totalOther;
-    const vatRate = 0.17; // Standard VAT rate
-    const vatAmount = subtotal * vatRate;
-    const grandTotal = subtotal + vatAmount;
+    if (invoice.metadata && invoice.metadata.category_totals) {
+      // Use pre-calculated category totals from invoice
+      totalParts = parseFloat(invoice.metadata.category_totals.parts || 0);
+      totalWorks = parseFloat(invoice.metadata.category_totals.work || 0);
+      totalRepairs = parseFloat(invoice.metadata.category_totals.repair || 0);
+      totalOther = parseFloat(invoice.metadata.category_totals.other || 0);
+    } else {
+      // Fallback: sum from lines for display purposes only
+      lines.forEach(line => {
+        const lineTotal = parseFloat(line.line_total || 0);
+        const category = line.item_category || 'other';
+        
+        if (category === 'part') totalParts += lineTotal;
+        else if (category === 'work') totalWorks += lineTotal;
+        else if (category === 'repair') totalRepairs += lineTotal;
+        else totalOther += lineTotal;
+      });
+    }
 
     // Create invoice summary (copying structure from invoice upload.html)
     const summaryContainer = summaryElement;
@@ -994,7 +1026,7 @@
           </div>
           <div style="background: rgba(255,255,255,0.15); padding: 10px; border-radius: 8px;">
             <div style="font-size: 11px; opacity: 0.8;">סטטוס</div>
-            <div style="font-size: 13px; font-weight: bold; margin-top: 3px;">${formatValue(invoice.status)}</div>
+            <div style="font-size: 13px; font-weight: bold; margin-top: 3px;">${getHebrewStatus(invoice.status)}</div>
           </div>
         </div>
         
@@ -1028,7 +1060,7 @@
             <span style="font-size: 15px; font-weight: bold;">${formatPrice(subtotal)}</span>
           </div>
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-            <span style="font-size: 13px;">מע"מ (17%):</span>
+            <span style="font-size: 13px;">${getVatDisplayText()}:</span>
             <span style="font-size: 15px; font-weight: bold;">${formatPrice(vatAmount)}</span>
           </div>
           <div style="display: flex; justify-content: space-between; align-items: center; border-top: 2px solid rgba(255,255,255,0.3); padding-top: 8px;">
@@ -1172,52 +1204,72 @@
       }
 
       if (!window.supabase) {
-        alert('Supabase client לא זמין - לא ניתן לפתוח מסמך');
+        alert('שרת לא זמין - לא ניתן לפתוח מסמך');
         return;
       }
 
-      // If no storage path, try to get it from the database
-      if (!storagePath) {
-        const { data: docData, error: docError } = await window.supabase
-          .from('invoice_documents')
-          .select('storage_path, storage_bucket, filename')
-          .eq('id', docId)
-          .single();
+      // Always get fresh document data from database
+      console.log('📋 Getting document data from database...');
+      const { data: docData, error: docError } = await window.supabase
+        .from('invoice_documents')
+        .select('*')
+        .eq('id', docId)
+        .single();
 
-        if (docError) {
-          throw new Error(`Failed to get document info: ${docError.message}`);
+      if (docError) {
+        throw new Error(`שגיאה בטעינת נתוני מסמך: ${docError.message}`);
+      }
+
+      if (!docData) {
+        throw new Error('מסמך לא נמצא במאגר');
+      }
+
+      console.log('✅ Document data loaded:', docData);
+
+      const finalStoragePath = docData.storage_path;
+      const finalBucket = docData.storage_bucket || 'docs';
+      
+      if (!finalStoragePath) {
+        throw new Error('נתיב קובץ לא נמצא במאגר');
+      }
+
+      console.log('📁 Getting URL for path:', finalStoragePath, 'bucket:', finalBucket);
+
+      // Try to get a signed URL first (for private storage)
+      try {
+        const { data: signedData, error: signedError } = await window.supabase.storage
+          .from(finalBucket)
+          .createSignedUrl(finalStoragePath, 3600); // 1 hour expiry
+
+        if (!signedError && signedData?.signedUrl) {
+          console.log('✅ Got signed URL:', signedData.signedUrl);
+          const newWindow = window.open(signedData.signedUrl, '_blank');
+          
+          if (!newWindow) {
+            alert(`חסום חלון קופץ. אנא פתח ידנית:\n${signedData.signedUrl}`);
+          }
+          return;
         }
-
-        storagePath = docData?.storage_path;
-        storageBucket = docData?.storage_bucket || 'docs';
-        filename = docData?.filename || filename;
+      } catch (signedError) {
+        console.warn('⚠️ Signed URL failed, trying public URL:', signedError);
       }
 
-      if (!storagePath) {
-        alert('נתיב קובץ לא נמצא - לא ניתן לפתוח מסמך');
-        return;
-      }
-
-      console.log('📁 Getting public URL for:', storagePath, 'from bucket:', storageBucket);
-
-      // Get the public URL from Supabase storage
+      // Fallback to public URL
       const { data: urlData } = window.supabase.storage
-        .from(storageBucket || 'docs')
-        .getPublicUrl(storagePath);
+        .from(finalBucket)
+        .getPublicUrl(finalStoragePath);
 
       if (!urlData?.publicUrl) {
-        throw new Error('Failed to get public URL for document');
+        throw new Error('לא ניתן לקבל קישור למסמך');
       }
 
-      const publicUrl = urlData.publicUrl;
-      console.log('✅ Got public URL:', publicUrl);
+      console.log('✅ Got public URL:', urlData.publicUrl);
 
       // Open the document in a new window/tab
-      const newWindow = window.open(publicUrl, '_blank');
+      const newWindow = window.open(urlData.publicUrl, '_blank');
       
       if (!newWindow) {
-        // If popup was blocked, show the URL to the user
-        alert(`חסום חלון קופץ. אנא פתח ידנית:\n${publicUrl}`);
+        alert(`חסום חלון קופץ. אנא פתח ידנית:\n${urlData.publicUrl}`);
       } else {
         console.log('✅ Document opened successfully');
       }
@@ -1290,9 +1342,30 @@
 
       console.log('✅ Loaded mappings data:', mappingsData);
       console.log('📊 Mappings count:', mappingsData?.length || 0);
+      console.log('🔍 DEBUG: Current case ID:', currentCaseId);
+      console.log('🔍 DEBUG: Query parameters used:', {
+        case_id: currentCaseId,
+        mapping_status: 'active'
+      });
+      
+      // Debug: Let's also try without the mapping_status filter
+      const { data: allMappingsData, error: allError } = await window.supabase
+        .from('invoice_damage_center_mappings')
+        .select('*')
+        .eq('case_id', currentCaseId);
+      
+      console.log('🔍 DEBUG: All mappings (without status filter):', allMappingsData?.length || 0);
+      if (allMappingsData && allMappingsData.length > 0) {
+        console.log('🔍 DEBUG: Sample mapping:', allMappingsData[0]);
+        console.log('🔍 DEBUG: Available statuses:', [...new Set(allMappingsData.map(m => m.mapping_status))]);
+      }
       
       if (!mappingsData || mappingsData.length === 0) {
-        showMappingsNoDataState('לא נמצאו הקצאות נזק עבור תיק זה');
+        if (allMappingsData && allMappingsData.length > 0) {
+          showMappingsNoDataState(`נמצאו ${allMappingsData.length} הקצאות אך אף אחת לא במצב 'active'`);
+        } else {
+          showMappingsNoDataState('לא נמצאו הקצאות נזק עבור תיק זה');
+        }
         return;
       }
 
