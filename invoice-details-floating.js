@@ -421,7 +421,7 @@
           <table class="results-table" id="invoice-results-table" style="width: 100%; border-collapse: collapse; direction: rtl;">
             <thead>
               <tr style="background: #f1f5f9;">
-                <th style="width: 150px; padding: 8px; text-align: right; border: 1px solid #cbd5e1; font-size: 12px;">פריט</th>
+                <th style="width: 150px; padding: 8px; text-align: right; border: 1px solid #cbd5e1; font-size: 12px;">קוד קטלוג</th>
                 <th style="padding: 8px; text-align: right; border: 1px solid #cbd5e1; font-size: 12px;">תיאור</th>
                 <th style="width: 60px; padding: 8px; text-align: center; border: 1px solid #cbd5e1; font-size: 12px;">כמות</th>
                 <th style="width: 80px; padding: 8px; text-align: center; border: 1px solid #cbd5e1; font-size: 12px;">מחיר יחידה</th>
@@ -460,7 +460,7 @@
       <!-- Mappings Summary -->
       <div id="mappings-summary" style="display: none;">
         <div style="background: linear-gradient(135deg, #059669 0%, #047857 100%); padding: 20px; border-radius: 12px; margin-bottom: 20px; color: white; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
-          <h4 style="margin: 0 0 15px 0; font-size: 20px; border-bottom: 2px solid rgba(255,255,255,0.3); padding-bottom: 10px;">הקצאת פריטים לפי מוקד נזק</h4>
+          <h4 style="margin: 0 0 15px 0; font-size: 20px; border-bottom: 2px solid rgba(255,255,255,0.3); padding-bottom: 10px;">הקצאת חלקים לפי מוקד נזק</h4>
           
           <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px;">
             <div style="background: rgba(255,255,255,0.15); padding: 12px; border-radius: 8px; text-align: center;">
@@ -1155,7 +1155,7 @@
         const lineTotal = (item.quantity || 1) * (item.unit_price || 0);
         categoryHTML += `
           <tr style="background: #64748b; color: white;">
-            <td style="padding: 6px 8px; font-size: 11px;">${item.part_id || item.code || '-'}</td>
+            <td style="padding: 6px 8px; font-size: 11px;">${item.catalog_code || item.pcode || item.oem || '-'}</td>
             <td style="padding: 6px 8px; font-size: 11px;">${item.description || '-'}</td>
             <td style="padding: 6px 8px; text-align: center; font-size: 11px;">${item.quantity || 1}</td>
             <td style="padding: 6px 8px; text-align: center; font-size: 11px;">₪${(item.unit_price || 0).toLocaleString()}</td>
@@ -1329,7 +1329,10 @@
             description,
             quantity,
             unit_price,
-            line_total
+            line_total,
+            catalog_code,
+            source,
+            item_category
           )
         `)
         .eq('case_id', currentCaseId)
@@ -1363,11 +1366,14 @@
       
       if (!mappingsData || mappingsData.length === 0) {
         if (allMappingsData && allMappingsData.length > 0) {
-          showMappingsNoDataState(`נמצאו ${allMappingsData.length} הקצאות אך אף אחת לא במצב 'approved'`);
+          console.log('📝 No approved mappings found, but showing all mappings for debugging');
+          // Show all mappings even if not approved for better user experience
+          displayDamageCenterMappingsTable(allMappingsData);
+          return;
         } else {
           showMappingsNoDataState('לא נמצאו הקצאות נזק עבור תיק זה');
+          return;
         }
-        return;
       }
 
       // Display the mappings in proper table format
@@ -1481,10 +1487,10 @@
 
         return `
           <tr style="border-bottom: 1px solid #e2e8f0;">
-            <td style="padding: 8px; text-align: center; font-size: 12px;">${lineData.line_number || mapping.field_index || '-'}</td>
+            <td style="padding: 8px; text-align: center; font-size: 12px;">${lineData.catalog_code || lineData.pcode || lineData.oem || '-'}</td>
             <td style="padding: 8px; text-align: right; font-size: 12px;">${lineData.description || '-'}</td>
             <td style="padding: 8px; text-align: center; font-size: 12px;">${invoiceData.supplier_name || '-'}</td>
-            <td style="padding: 8px; text-align: center; font-size: 12px;">${lineData.metadata?.source || lineData.part_source || 'Original'}</td>
+            <td style="padding: 8px; text-align: center; font-size: 12px;">${lineData.source || 'מקורי'}</td>
             <td style="padding: 8px; text-align: center; font-size: 12px;">₪${(lineData.unit_price || 0).toLocaleString()}</td>
             <td style="padding: 8px; text-align: center; font-size: 12px;">${lineData.quantity || 1}</td>
             <td style="padding: 8px; text-align: center; font-weight: bold; font-size: 12px;">₪${lineTotal.toLocaleString()}</td>
