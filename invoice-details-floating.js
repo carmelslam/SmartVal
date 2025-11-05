@@ -1402,19 +1402,48 @@
       const zIndex = parseInt(getComputedStyle(el).zIndex);
       const position = getComputedStyle(el).position;
       
-      // Check for elements that might be invisible overlays
-      if (zIndex > 50000 && position === 'fixed') {
+      // Target elements with extremely high z-index (like the 9999999999 we saw)
+      if (zIndex > 999999) {
+        console.log('🧹 CLEANUP: Found extreme z-index element:', el.tagName, el.id, el.className, 'z-index:', zIndex);
+        el.style.zIndex = '1000'; // Reduce to reasonable level
+        el.style.display = 'none'; // Hide it completely
+        removed++;
+      }
+      
+      // Also check for elements that might be invisible overlays
+      else if (zIndex > 50000 && position === 'fixed') {
         const rect = el.getBoundingClientRect();
         // If it covers most of the screen but has no visible content
         if (rect.width > window.innerWidth * 0.8 && rect.height > window.innerHeight * 0.8) {
-          console.log('🧹 CLEANUP: Removing potential blocker:', el.tagName, el.id, el.className);
+          console.log('🧹 CLEANUP: Removing potential overlay blocker:', el.tagName, el.id, el.className);
           el.style.display = 'none';
           removed++;
         }
       }
     });
     
-    console.log(`🧹 CLEANUP: Removed ${removed} potential blockers`);
+    console.log(`🧹 CLEANUP: Processed ${removed} potential blockers`);
+  };
+  
+  // Ultra aggressive blocker removal
+  window.forceRemoveAllBlockers = function() {
+    console.log('💥 FORCE CLEANUP: Removing ALL high z-index elements...');
+    
+    const allElements = document.querySelectorAll('*');
+    let modified = 0;
+    
+    allElements.forEach(el => {
+      const zIndex = parseInt(getComputedStyle(el).zIndex);
+      
+      // Reset ANY element with z-index over 100000
+      if (zIndex > 100000) {
+        console.log('💥 FORCE: Resetting element:', el.tagName, el.id, 'from z-index:', zIndex);
+        el.style.zIndex = '1000';
+        modified++;
+      }
+    });
+    
+    console.log(`💥 FORCE CLEANUP: Modified ${modified} elements`);
   };
 
   // Add floating button to access invoice details from any page (like parts screen)
