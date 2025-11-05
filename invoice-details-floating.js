@@ -1584,6 +1584,11 @@
     if (damageContainer) {
       damageContainer.innerHTML = tablesHTML;
       console.log('🔍 DEBUG: HTML set to container');
+      console.log('🔍 DEBUG: Container element ID:', damageContainer.id);
+      console.log('🔍 DEBUG: Container element tag:', damageContainer.tagName);
+      console.log('🔍 DEBUG: Container parent element:', damageContainer.parentElement?.id);
+      console.log('🔍 DEBUG: Container style display:', damageContainer.style.display);
+      console.log('🔍 DEBUG: Container actual innerHTML first 500 chars:', damageContainer.innerHTML.substring(0, 500));
     } else {
       console.error('❌ damage-centers-container not found!');
     }
