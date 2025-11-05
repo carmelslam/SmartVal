@@ -1446,28 +1446,10 @@
     console.log(`💥 FORCE CLEANUP: Modified ${modified} elements`);
   };
 
-  // Add floating button to access invoice details from any page (like parts screen)
-  if (!document.getElementById("invoiceFloatBtn")) {
-    const floatBtn = document.createElement("button");
-    floatBtn.id = "invoiceFloatBtn";
-    floatBtn.innerHTML = "📋 פרטי חשבונית";
-    floatBtn.style.cssText = `
-      position: fixed;
-      top: 70px;
-      left: 20px;
-      background: #fbbf24;
-      color: #78350f;
-      border: none;
-      padding: 8px 12px;
-      border-radius: 6px;
-      cursor: pointer;
-      font-size: 12px;
-      font-weight: bold;
-      z-index: 9998;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
-    `;
-    floatBtn.onclick = toggleInvoiceDetails;
-    document.body.appendChild(floatBtn);
+  // Remove any existing floating invoice buttons
+  const existingInvoiceBtn = document.getElementById("invoiceFloatBtn");
+  if (existingInvoiceBtn) {
+    existingInvoiceBtn.remove();
   }
 
 })();
