@@ -2023,36 +2023,101 @@ class InvoiceProcessor {
     const partItems = parts.map(part => {
       // Try ALL possible quote variations: ', ", ״ (Hebrew Gershayim)
       const code = part['מק״ט חלק'] || part['מק\'ט חלק'] || part['מק"ט חלק'] || part.code || '';
-      console.log(`📦 handleOCRResults - Mapping part: code="${code}", name="${part['שם חלק']}"`, part);
+      
+      // Map Hebrew source values to standardized English
+      const mapPartSource = (hebrewSource) => {
+        if (!hebrewSource) return null;
+        const sourceMappings = {
+          'מקורי': 'Original',
+          'תחליפי': 'Aftermarket',
+          'משומש': 'Used',
+          'משופץ': 'Refurbished',
+          'OEM': 'OEM',
+          'חדש': 'New',
+          'יד שנייה': 'Used',
+          'מקורי לספק': 'Genuine'
+        };
+        return sourceMappings[hebrewSource.trim()] || hebrewSource;
+      };
+      
+      // Enhanced category detection using CategoryDetector
+      const categoryDetector = window.CategoryDetector ? new window.CategoryDetector() : null;
+      const itemForDetection = {
+        description: part['תיאור'] || part.description || '',
+        name: part['שם חלק'] || part.name || '',
+        code: code
+      };
+      
+      let categoryResult = { category: 'part', confidence: 85, confidence_level: 'high' };
+      if (categoryDetector) {
+        categoryResult = categoryDetector.detectCategory(itemForDetection);
+      }
+      
+      console.log(`📦 handleOCRResults - Mapping part: code="${code}", name="${part['שם חלק']}", source="${part['מקור']}", detected_category="${categoryResult.category}"`, part);
       return {
         code: code,
         name: part['שם חלק'] || part.name || part['תיאור'] || part.description,
         description: part['תיאור'] || part.description || '',
         quantity: parsePrice(part['כמות'] || part.quantity || 1),
         unit_price: parsePrice(part['מחיר יחידה'] || part.price || part.unit_price || part['עלות']),
-        category: 'PART'
+        source: mapPartSource(part['מקור']),
+        category: categoryResult.category.toUpperCase(),
+        category_confidence: categoryResult.confidence,
+        category_method: categoryResult.method
       };
     });
     
     // Convert works to items format
-    const workItems = works.map(work => ({
-      code: work['סוג העבודה'] || work['סוג'] || work.code || '',
-      name: work['תיאור עבודות'] || work.name || work.description,
-      description: work['תיאור עבודות'] || work.description || '',
-      quantity: 1,
-      unit_price: parsePrice(work['עלות עבודות'] || work.price || work.unit_price),
-      category: 'WORK'
-    }));
+    const workItems = works.map(work => {
+      const categoryDetector = window.CategoryDetector ? new window.CategoryDetector() : null;
+      const itemForDetection = {
+        description: work['תיאור עבודות'] || work.description || '',
+        name: work['סוג העבודה'] || work.name || '',
+        code: work['סוג העבודה'] || work.code || ''
+      };
+      
+      let categoryResult = { category: 'work', confidence: 85, confidence_level: 'high' };
+      if (categoryDetector) {
+        categoryResult = categoryDetector.detectCategory(itemForDetection);
+      }
+      
+      return {
+        code: work['סוג העבודה'] || work['סוג'] || work.code || '',
+        name: work['תיאור עבודות'] || work.name || work.description,
+        description: work['תיאור עבודות'] || work.description || '',
+        quantity: 1,
+        unit_price: parsePrice(work['עלות עבודות'] || work.price || work.unit_price),
+        category: categoryResult.category.toUpperCase(),
+        category_confidence: categoryResult.confidence,
+        category_method: categoryResult.method
+      };
+    });
     
     // Convert repairs to items format
-    const repairItems = repairs.map(repair => ({
-      code: repair['קוד'] || repair['סוג תיקון'] || repair.code || '',
-      name: repair['תיאור התיקון'] || repair.name || repair.description,
-      description: repair['תיאור התיקון'] || repair.description || '',
-      quantity: 1,
-      unit_price: parsePrice(repair['עלות תיקונים'] || repair.price || repair.unit_price),
-      category: 'REPAIR'
-    })).filter(item => item.unit_price > 0); // Filter out "אין מידע" entries
+    const repairItems = repairs.map(repair => {
+      const categoryDetector = window.CategoryDetector ? new window.CategoryDetector() : null;
+      const itemForDetection = {
+        description: repair['תיאור התיקון'] || repair.description || '',
+        name: repair['סוג תיקון'] || repair.name || '',
+        code: repair['קוד'] || repair.code || ''
+      };
+      
+      let categoryResult = { category: 'repair', confidence: 85, confidence_level: 'high' };
+      if (categoryDetector) {
+        categoryResult = categoryDetector.detectCategory(itemForDetection);
+      }
+      
+      return {
+        code: repair['קוד'] || repair['סוג תיקון'] || repair.code || '',
+        name: repair['תיאור התיקון'] || repair.name || repair.description,
+        description: repair['תיאור התיקון'] || repair.description || '',
+        quantity: 1,
+        unit_price: parsePrice(repair['עלות תיקונים'] || repair.price || repair.unit_price),
+        category: categoryResult.category.toUpperCase(),
+        category_confidence: categoryResult.confidence,
+        category_method: categoryResult.method
+      };
+    }).filter(item => item.unit_price > 0); // Filter out "אין מידע" entries
     
     // Combine all items
     this.ocrResults = [...partItems, ...workItems, ...repairItems];
@@ -3088,19 +3153,70 @@ class InvoiceProcessor {
           // SESSION 79 FIX: Use OCR data for invoice header, not form fields
           const ocrResult = this.lastOCRResult || {};
 
-          // SESSION 79: Prepare invoice data - match actual schema
+          // SESSION 79: Prepare invoice data - match actual schema with enhanced fields
           // invoice_type must be: 'PARTS', 'LABOR', 'TOWING', 'OTHER'
+          
+          // Determine invoice type based on content analysis
+          const determineInvoiceType = () => {
+            const hasparts = (ocrResult['חלקים'] && ocrResult['חלקים'].length > 0);
+            const hasWorks = (ocrResult['עבודות'] && ocrResult['עבודות'].length > 0);
+            const hasRepairs = (ocrResult['תיקונים'] && ocrResult['תיקונים'].length > 0);
+            
+            if (hasparts && !hasWorks && !hasRepairs) return 'PARTS';
+            if (!hasparts && hasWorks && !hasRepairs) return 'LABOR';
+            if (hasparts && hasWorks) return 'PARTS'; // Mixed invoices default to PARTS
+            return 'OTHER';
+          };
+
           const invoiceData = {
             plate: plate,
-            invoice_number: ocrResult['מס. חשבונית'] || ocrResult.invoice_number || `INV-${Date.now()}`,
-            supplier_name: ocrResult['שם מוסך'] || document.getElementById('garage_name').value || 'לא צוין',
-            supplier_tax_id: ocrResult['עוסק מורשה'] || null,
-            invoice_date: parseInvoiceDate(ocrResult['תאריך'] || ocrResult.date),  // Convert to ISO format
-            invoice_type: 'OTHER', // Default to OTHER (mixed invoice)
-            total_amount: parsePrice(ocrResult['עלות כוללת']) || resultData.total,
-            total_before_tax: parsePrice(ocrResult["עלות כוללת ללא מע'מ"]),
-            tax_amount: parsePrice(ocrResult["ערך מע'מ"]), // SESSION 79: Use single quote
-            status: 'PENDING'  // Changed from DRAFT to PENDING - ready for assignment
+            invoice_number: ocrResult['מס. חשבונית'] || ocrResult['מספר חשבונית'] || ocrResult.invoice_number || `INV-${Date.now()}`,
+            supplier_name: ocrResult['שם מוסך'] || ocrResult['ספק'] || document.getElementById('garage_name').value || 'לא צוין',
+            supplier_tax_id: ocrResult['עוסק מורשה'] || ocrResult['ח.פ מוסך'] || ocrResult['ח.פ.'] || null,
+            invoice_date: parseInvoiceDate(ocrResult['תאריך חשבונית'] || ocrResult['תאריך'] || ocrResult.date),
+            due_date: parseInvoiceDate(ocrResult['תאריך תשלום'] || ocrResult['תאריך פירעון']),
+            issue_date: parseInvoiceDate(ocrResult['תאריך הנפקה'] || ocrResult['תאריך חשבונית'] || ocrResult['תאריך']),
+            invoice_type: determineInvoiceType(),
+            total_amount: parsePrice(ocrResult['סה״כ כולל מע״מ'] || ocrResult['עלות כוללת'] || ocrResult['סה״כ']) || resultData.total,
+            total_before_tax: parsePrice(ocrResult['סה״כ לפני מע״מ'] || ocrResult["עלות כוללת ללא מע'מ"] || ocrResult['סה״כ לפני מעמ']),
+            tax_amount: parsePrice(ocrResult['מע״מ'] || ocrResult["ערך מע'מ"] || ocrResult['סכום מעמ']),
+            status: 'PENDING',  // Ready for assignment
+            // Enhanced metadata with all OCR fields
+            metadata: {
+              ocr_extraction_timestamp: new Date().toISOString(),
+              raw_ocr_data: ocrResult,
+              supplier_details: {
+                name: ocrResult['שם מוסך'] || ocrResult['ספק'],
+                address: ocrResult['כתובת מוסך'] || ocrResult['כתובת ספק'],
+                phone: ocrResult['טלפון מוסך'] || ocrResult['טלפון ספק'],
+                email: ocrResult['דוא״ל מוסך'] || ocrResult['אימייל ספק'],
+                business_number: ocrResult['מס׳ עסק'] || ocrResult['ח.פ מוסך']
+              },
+              vehicle_details: {
+                plate: ocrResult['מספר רכב'] || plate,
+                manufacturer: ocrResult['יצרן'] || ocrResult['מותג'],
+                model: ocrResult['דגם'],
+                year: ocrResult['שנת ייצור'] || ocrResult['שנה'],
+                owner: ocrResult['בעל הרכב'] || ocrResult['לקוח']
+              },
+              case_details: {
+                case_number: ocrResult['מספר תיק'] || ocrResult['מס׳ תיק'],
+                damage_area: ocrResult['מוקד נזק'] || ocrResult['אזור נזק'],
+                notes: ocrResult['הערות'] || ocrResult['הערה']
+              },
+              totals_breakdown: {
+                parts_total: parsePrice(ocrResult['סהכ חלקים']),
+                works_total: parsePrice(ocrResult['סהכ עבודות']),
+                repairs_total: parsePrice(ocrResult['סהכ תיקונים']),
+                discount_amount: parsePrice(ocrResult['הנחה']),
+                additional_charges: parsePrice(ocrResult['עלויות נוספות'])
+              },
+              processing_info: {
+                ocr_confidence: this.calculateOCRConfidence(ocrResult),
+                field_completeness: this.calculateFieldCompleteness(ocrResult),
+                category_distribution: this.getCategoryDistribution()
+              }
+            }
           };
           
           console.log('📋 Invoice data prepared:', invoiceData);
@@ -3108,7 +3224,7 @@ class InvoiceProcessor {
           // Prepare invoice lines
           const lines = this.ocrResults.map((item, index) => {
             const itemCode = item.code || null;
-            console.log(`💾 Saving line ${index + 1}: category="${item.category}", code="${itemCode}", name="${item.name}"`);
+            console.log(`💾 Saving line ${index + 1}: category="${item.category}", code="${itemCode}", name="${item.name}", source="${item.source}"`);
             return {
               line_number: index + 1,
               description: item.name || item.description || '',
@@ -3116,10 +3232,14 @@ class InvoiceProcessor {
               quantity: item.quantity || 1,
               unit_price: item.unit_price || 0,
               line_total: (item.quantity || 1) * (item.unit_price || 0),
+              source: item.source || null, // Part source from OCR מקור field (Original/Aftermarket/Used/etc.)
+              catalog_code: itemCode, // Catalog code from OCR מק"ט חלק field
+              item_category: item.category ? item.category.toLowerCase() : 'part',
               metadata: {
                 category: item.category || 'part',
-                code: itemCode, // Catalog code stored here for all types
-                name: item.name || item.description || ''
+                code: itemCode, // Backward compatibility - keep in metadata too
+                name: item.name || item.description || '',
+                original_ocr_source: item.source // Store original value if needed
               }
             };
           });
@@ -4130,6 +4250,55 @@ class InvoiceProcessor {
     } else {
       this.showAlert('✅ חשבונית ידנית נשמרה ל-helper', 'success');
     }
+  }
+
+  // Helper functions for enhanced invoice data processing
+  calculateOCRConfidence(ocrResult) {
+    // Calculate confidence based on key field completeness
+    const keyFields = ['מס. חשבונית', 'שם מוסך', 'מספר רכב', 'תאריך', 'חלקים'];
+    let foundFields = 0;
+    
+    keyFields.forEach(field => {
+      if (ocrResult[field] && String(ocrResult[field]).trim() !== '') {
+        foundFields++;
+      }
+    });
+    
+    return Math.round((foundFields / keyFields.length) * 100);
+  }
+  
+  calculateFieldCompleteness(ocrResult) {
+    // Calculate completeness across all OCR fields
+    const allFields = Object.keys(ocrResult);
+    const populatedFields = allFields.filter(field => 
+      ocrResult[field] && 
+      String(ocrResult[field]).trim() !== '' && 
+      ocrResult[field] !== 'אין מידע'
+    );
+    
+    return {
+      total_fields: allFields.length,
+      populated_fields: populatedFields.length,
+      completion_percentage: Math.round((populatedFields.length / allFields.length) * 100)
+    };
+  }
+  
+  getCategoryDistribution() {
+    // Get distribution of categories in current OCR results
+    const distribution = { part: 0, work: 0, repair: 0, other: 0 };
+    
+    if (this.ocrResults && this.ocrResults.length > 0) {
+      this.ocrResults.forEach(item => {
+        const category = (item.category || 'OTHER').toLowerCase();
+        if (distribution.hasOwnProperty(category)) {
+          distribution[category]++;
+        } else {
+          distribution.other++;
+        }
+      });
+    }
+    
+    return distribution;
   }
 }
 

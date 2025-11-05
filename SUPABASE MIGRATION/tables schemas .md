@@ -9,6 +9,8 @@ create table public.invoice_lines (
   unit_price numeric(10, 2) null,
   discount_percent numeric(5, 2) null default 0,
   line_total numeric(10, 2) null,
+  source text null,
+  catalog_code text null,
   metadata jsonb null,
   created_by uuid null,
   updated_by uuid null,
