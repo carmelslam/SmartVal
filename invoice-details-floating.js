@@ -1333,7 +1333,7 @@
           )
         `)
         .eq('case_id', currentCaseId)
-        .eq('validation_status', 'approved')
+        // .eq('validation_status', 'approved')  // Temporarily removed to get any data
         .order('created_at', { ascending: false });
 
       if (error) {
@@ -1498,7 +1498,7 @@
           <div style="background: #059669; color: white; padding: 15px; display: flex; justify-content: space-between; align-items: center; cursor: pointer;" 
                onclick="toggleDamageCenterTable('${centerId}')">
             <div style="font-weight: bold; font-size: 16px;">
-              מרכז נזק #${centerId}: ${group.center_name || 'לא מוגדר'}
+              ${group.center_name || 'מרכז נזק לא מוגדר'}
               <span style="font-size: 12px; opacity: 0.8; margin-right: 10px;">
                 (${mappingsForCenter.length} הקצאות)
               </span>
