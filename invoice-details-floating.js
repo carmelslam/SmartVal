@@ -1467,7 +1467,7 @@
     // Build tables for each damage center
     const damageContainer = document.getElementById('damage-centers-container');
     
-    const tablesHTML = Object.entries(groupedMappings).map(([centerId, group]) => {
+    const tablesHTML = Object.entries(groupedMappings).map(([centerId, group], index) => {
       const mappingsForCenter = group.mappings;
       const centerTotal = mappingsForCenter.reduce((sum, m) => {
         return sum + parseFloat(m.invoice_line?.line_total || 0);
@@ -1498,7 +1498,7 @@
           <div style="background: #059669; color: white; padding: 15px; display: flex; justify-content: space-between; align-items: center; cursor: pointer;" 
                onclick="toggleDamageCenterTable('${centerId}')">
             <div style="font-weight: bold; font-size: 16px;">
-              ${group.center_name || 'מרכז נזק לא מוגדר'}
+              מרכז נזק #${index + 1}: ${group.center_name || 'לא מוגדר'}
               <span style="font-size: 12px; opacity: 0.8; margin-right: 10px;">
                 (${mappingsForCenter.length} הקצאות)
               </span>
