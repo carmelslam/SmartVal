@@ -1463,9 +1463,12 @@
   // Display damage center mappings in proper table format
   function displayDamageCenterMappingsTable(mappings) {
     console.log('🎨 Displaying damage center mappings in table format:', mappings?.length || 0);
+    console.log('🔍 DEBUG: Sample mapping data:', mappings?.[0]);
     
     // Hide no-data section
-    document.getElementById('no-mappings-data').style.display = 'none';
+    const noDataEl = document.getElementById('no-mappings-data');
+    console.log('🔍 DEBUG: no-mappings-data element found:', !!noDataEl);
+    if (noDataEl) noDataEl.style.display = 'none';
     
     // Calculate statistics
     const totalMappings = mappings?.length || 0;
@@ -1476,9 +1479,19 @@
     }, 0) || 0;
     
     // Update statistics
-    document.getElementById('totalMappings').textContent = totalMappings;
-    document.getElementById('totalDamageCenters').textContent = uniqueDamageCenters;
-    document.getElementById('totalMappingValue').textContent = `₪${Math.round(totalValue).toLocaleString('he-IL')}`;
+    const totalMappingsEl = document.getElementById('totalMappings');
+    const totalDamageCentersEl = document.getElementById('totalDamageCenters');
+    const totalMappingValueEl = document.getElementById('totalMappingValue');
+    
+    console.log('🔍 DEBUG: Statistics elements found:', {
+      totalMappings: !!totalMappingsEl,
+      totalDamageCenters: !!totalDamageCentersEl,
+      totalMappingValue: !!totalMappingValueEl
+    });
+    
+    if (totalMappingsEl) totalMappingsEl.textContent = totalMappings;
+    if (totalDamageCentersEl) totalDamageCentersEl.textContent = uniqueDamageCenters;
+    if (totalMappingValueEl) totalMappingValueEl.textContent = `₪${Math.round(totalValue).toLocaleString('he-IL')}`;
     
     // Group mappings by damage center
     const groupedMappings = {};
@@ -1495,6 +1508,8 @@
 
     // Build tables for each damage center
     const damageContainer = document.getElementById('damage-centers-container');
+    console.log('🔍 DEBUG: damage-centers-container element found:', !!damageContainer);
+    console.log('🔍 DEBUG: Grouped mappings:', Object.keys(groupedMappings).length, 'centers');
     
     const tablesHTML = Object.entries(groupedMappings).map(([centerId, group], index) => {
       const mappingsForCenter = group.mappings;
@@ -1558,11 +1573,27 @@
       `;
     }).join('');
 
-    damageContainer.innerHTML = tablesHTML;
+    console.log('🔍 DEBUG: Generated HTML length:', tablesHTML.length);
+    console.log('🔍 DEBUG: First 200 chars of HTML:', tablesHTML.substring(0, 200));
+    
+    if (damageContainer) {
+      damageContainer.innerHTML = tablesHTML;
+      console.log('🔍 DEBUG: HTML set to container');
+    } else {
+      console.error('❌ damage-centers-container not found!');
+    }
     
     // Show sections
-    document.getElementById('mappings-summary').style.display = 'block';
-    document.getElementById('damage-centers-container').style.display = 'block';
+    const summaryEl = document.getElementById('mappings-summary');
+    const containerEl = document.getElementById('damage-centers-container');
+    
+    console.log('🔍 DEBUG: Showing sections:', {
+      summary: !!summaryEl,
+      container: !!containerEl
+    });
+    
+    if (summaryEl) summaryEl.style.display = 'block';
+    if (containerEl) containerEl.style.display = 'block';
     
     console.log('✅ Damage center mappings tables displayed');
   }
