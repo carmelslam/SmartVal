@@ -1591,9 +1591,20 @@
     }
     if (containerEl) {
       containerEl.style.display = 'block';
+      containerEl.style.visibility = 'visible';
+      containerEl.style.height = 'auto';
+      containerEl.style.overflow = 'visible';
       console.log('🔍 DEBUG: Container element display set to block');
       console.log('🔍 DEBUG: Container innerHTML length after setting:', containerEl.innerHTML.length);
       console.log('🔍 DEBUG: Container computed styles:', window.getComputedStyle(containerEl).display);
+      console.log('🔍 DEBUG: Container parent tab visibility:', containerEl.parentElement?.style.display);
+      
+      // Force refresh the parent tab content
+      const tabMappings = document.getElementById('tab-mappings');
+      if (tabMappings) {
+        tabMappings.style.display = 'block';
+        console.log('🔍 DEBUG: Tab-mappings display set to block');
+      }
     }
     
     console.log('✅ Damage center mappings tables displayed');
