@@ -1,6 +1,67 @@
 (function () {
   if (document.getElementById("invoiceDetailsModal")) return;
 
+  // 🔧 FIX: Add dynamic Supabase client loading (copied from working parts screen)
+  function loadSupabaseClient() {
+    return new Promise((resolve) => {
+      // Check if already loaded
+      if (window.supabase) {
+        console.log('✅ Invoice floating: Supabase client already available');
+        resolve(true);
+        return;
+      }
+      
+      // Check if script already exists
+      if (document.querySelector('script[src*="supabaseClient.js"]')) {
+        console.log('⏳ Invoice floating: Supabase client script loading...');
+        // Wait for it to load
+        const checkInterval = setInterval(() => {
+          if (window.supabase) {
+            clearInterval(checkInterval);
+            console.log('✅ Invoice floating: Supabase client loaded');
+            resolve(true);
+          }
+        }, 100);
+        
+        // Timeout after 5 seconds
+        setTimeout(() => {
+          clearInterval(checkInterval);
+          if (!window.supabase) {
+            console.warn('⚠️ Invoice floating: Supabase client timeout');
+            resolve(false);
+          }
+        }, 5000);
+        return;
+      }
+      
+      // Load the script dynamically
+      console.log('📥 Invoice floating: Loading Supabase client dynamically...');
+      const script = document.createElement('script');
+      script.src = './services/supabaseClient.js';
+      script.onload = () => {
+        console.log('✅ Invoice floating: Supabase client script loaded');
+        // Wait a bit for initialization
+        setTimeout(() => {
+          if (window.supabase) {
+            console.log('✅ Invoice floating: Supabase client initialized');
+            resolve(true);
+          } else {
+            console.warn('⚠️ Invoice floating: Supabase client script loaded but window.supabase not available');
+            resolve(false);
+          }
+        }, 100);
+      };
+      script.onerror = (error) => {
+        console.error('❌ Invoice floating: Failed to load Supabase client:', error);
+        resolve(false);
+      };
+      document.head.appendChild(script);
+    });
+  }
+  
+  // Initialize Supabase client on module load
+  loadSupabaseClient();
+
   const style = document.createElement("style");
   style.innerHTML = `
     #invoiceDetailsModal {
@@ -440,8 +501,14 @@
         </div>
       `;
 
+      // 🔧 FIX: Wait for Supabase to load if needed (like parts screen)
       if (!window.supabase) {
-        throw new Error('Supabase client לא זמין');
+        console.log('⏳ Invoice floating: Waiting for Supabase client for Tab 1...');
+        await loadSupabaseClient();
+      }
+
+      if (!window.supabase) {
+        throw new Error('Supabase client לא זמין - נכשל בטעינה');
       }
 
       // Query invoice_documents table directly
@@ -677,8 +744,14 @@
         </div>
       `;
 
+      // 🔧 FIX: Wait for Supabase to load if needed (like parts screen)  
       if (!window.supabase) {
-        throw new Error('Supabase client לא זמין');
+        console.log('⏳ Invoice floating: Waiting for Supabase client for Tab 2...');
+        await loadSupabaseClient();
+      }
+
+      if (!window.supabase) {
+        throw new Error('Supabase client לא זמין - נכשל בטעינה');
       }
 
       // Query invoice_damage_center_mappings table directly
