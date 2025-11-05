@@ -1139,6 +1139,29 @@
     // Build table rows by category
     let tableRowsHTML = '';
     
+    // Helper function to get catalog code display with invalid value filtering
+    const getCatalogCodeDisplay = (item) => {
+      const invalidValues = ['שם', 'תיאור', 'מחיר', 'כמות', 'סה"כ', 'קטגוריה', 'מקור', '-', ''];
+      
+      // Check catalog_code first
+      if (item.catalog_code && !invalidValues.includes(item.catalog_code.trim())) {
+        return item.catalog_code;
+      }
+      
+      // Check pcode
+      if (item.pcode && !invalidValues.includes(item.pcode.trim())) {
+        return item.pcode;
+      }
+      
+      // Check oem
+      if (item.oem && !invalidValues.includes(item.oem.trim())) {
+        return item.oem;
+      }
+      
+      // Fallback to dash
+      return '-';
+    };
+
     // Helper function to render category
     const renderCategory = (categoryKey, categoryName, icon, items) => {
       if (items.length === 0) return '';
@@ -1155,7 +1178,7 @@
         const lineTotal = (item.quantity || 1) * (item.unit_price || 0);
         categoryHTML += `
           <tr style="background: #64748b; color: white;">
-            <td style="padding: 6px 8px; font-size: 11px;">${item.catalog_code || item.pcode || item.oem || '-'}</td>
+            <td style="padding: 6px 8px; font-size: 11px;">${getCatalogCodeDisplay(item)}</td>
             <td style="padding: 6px 8px; font-size: 11px;">${item.description || '-'}</td>
             <td style="padding: 6px 8px; text-align: center; font-size: 11px;">${item.quantity || 1}</td>
             <td style="padding: 6px 8px; text-align: center; font-size: 11px;">₪${(item.unit_price || 0).toLocaleString()}</td>
@@ -1487,7 +1510,7 @@
 
         return `
           <tr style="border-bottom: 1px solid #e2e8f0;">
-            <td style="padding: 8px; text-align: center; font-size: 12px;">${lineData.catalog_code || lineData.pcode || lineData.oem || '-'}</td>
+            <td style="padding: 8px; text-align: center; font-size: 12px;">${getCatalogCodeDisplay(lineData)}</td>
             <td style="padding: 8px; text-align: right; font-size: 12px;">${lineData.description || '-'}</td>
             <td style="padding: 8px; text-align: center; font-size: 12px;">${invoiceData.supplier_name || '-'}</td>
             <td style="padding: 8px; text-align: center; font-size: 12px;">${lineData.source || 'מקורי'}</td>

@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Debug Catalog Code Issue</title>
+    <meta charset="UTF-8">
+    <style>
+        body { font-family: Arial, sans-serif; direction: rtl; padding: 20px; }
+        .test-section { background: white; margin: 20px 0; padding: 20px; border: 1px solid #ddd; }
+        table { border-collapse: collapse; width: 100%; margin: 10px 0; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: right; }
+        th { background: #f1f5f9; }
+        .debug-info { background: #e6f3ff; padding: 10px; margin: 10px 0; }
+    </style>
+</head>
+<body>
+    <h1>🔍 בדיקת בעיית הצגת קוד קטלוג</h1>
+    
+    <div class="test-section">
+        <h3>בדיקת נתוני דוגמה:</h3>
+        <div class="debug-info">
+            <p><strong>בעיה:</strong> במסך הצף מוצג "שם" במקום קוד קטלוג</p>
+            <p><strong>קוד תצוגה:</strong> ${item.catalog_code || item.pcode || item.oem || '-'}</p>
+        </div>
+        
+        <table id="test-table">
+            <thead>
+                <tr>
+                    <th>קוד קטלוג (catalog_code)</th>
+                    <th>pcode</th>
+                    <th>oem</th>
+                    <th>תיאור</th>
+                    <th>תוצאה מהקוד</th>
+                </tr>
+            </thead>
+            <tbody id="test-tbody">
+            </tbody>
+        </table>
+        
+        <button onclick="testDisplayLogic()">בדוק לוגיקת תצוגה</button>
+        <div id="results"></div>
+    </div>
+
+    <script>
+        // Test data scenarios
+        const testItems = [
+            { catalog_code: '12345-ABC', pcode: null, oem: null, description: 'חלק רגיל עם קוד קטלוג' },
+            { catalog_code: null, pcode: '67890-DEF', oem: null, description: 'חלק עם pcode' },
+            { catalog_code: null, pcode: null, oem: 'OEM-123', description: 'חלק עם OEM' },
+            { catalog_code: '', pcode: '', oem: '', description: 'חלק עם ערכים ריקים' },
+            { catalog_code: 'שם', pcode: null, oem: null, description: 'חלק עם "שם" בקוד קטלוג' },
+            { catalog_code: null, pcode: 'שם', oem: null, description: 'חלק עם "שם" ב-pcode' },
+            { description: 'חלק ללא שדות קוד' }
+        ];
+        
+        function testDisplayLogic() {
+            const tbody = document.getElementById('test-tbody');
+            const results = document.getElementById('results');
+            tbody.innerHTML = '';
+            
+            let report = '<h4>דוח בדיקה:</h4><ul>';
+            
+            testItems.forEach((item, index) => {
+                // Apply the same logic as in the floating screen
+                const displayValue = item.catalog_code || item.pcode || item.oem || '-';
+                
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${item.catalog_code || 'null'}</td>
+                    <td>${item.pcode || 'null'}</td>
+                    <td>${item.oem || 'null'}</td>
+                    <td>${item.description}</td>
+                    <td style="background: ${displayValue === 'שם' ? '#ffebee' : '#e8f5e8'}; font-weight: bold;">${displayValue}</td>
+                `;
+                tbody.appendChild(row);
+                
+                if (displayValue === 'שם') {
+                    report += `<li style="color: red;">🚨 פריט ${index + 1}: מציג "שם" - מקור: ${item.catalog_code ? 'catalog_code' : item.pcode ? 'pcode' : 'oem'}</li>`;
+                } else {
+                    report += `<li style="color: green;">✅ פריט ${index + 1}: מציג "${displayValue}" כצפוי</li>`;
+                }
+            });
+            
+            report += '</ul>';
+            results.innerHTML = report;
+            
+            // Check if the issue is with Hebrew text encoding
+            console.log('Debug - testing Hebrew text:');
+            console.log('שם === "שם":', 'שם' === 'שם');
+            console.log('typeof "שם":', typeof 'שם');
+            console.log('char codes:', 'שם'.split('').map(c => c.charCodeAt(0)));
+        }
+        
+        // Run test on page load
+        window.addEventListener('load', testDisplayLogic);
+    </script>
+</body>
+</html>

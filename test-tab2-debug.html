@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Tab 2 Debug</title>
+    <meta charset="UTF-8">
+    <style>
+        body { font-family: Arial, sans-serif; direction: rtl; padding: 20px; }
+        .debug-section { background: #f0f9ff; padding: 15px; margin: 10px 0; border-radius: 8px; }
+        .error { background: #fee; color: #900; }
+        .success { background: #efe; color: #060; }
+    </style>
+</head>
+<body>
+    <h1>🔍 Debug Tab 2 Issue</h1>
+    
+    <div class="debug-section">
+        <h3>Manual Test for Invoice Damage Center Mappings</h3>
+        <button onclick="testMappingsQuery()">Test Mappings Query</button>
+        <div id="results"></div>
+    </div>
+
+    <script>
+        // Mock window.helper for testing
+        window.helper = {
+            case_info: {
+                supabase_case_id: 'c52af5d6-3b78-47b8-88a2-d2553ee3e1af', // From debug data
+                plate: '22184003'
+            }
+        };
+        
+        // Mock supabase
+        async function testMappingsQuery() {
+            const results = document.getElementById('results');
+            results.innerHTML = '<p>🔄 Testing mappings query...</p>';
+            
+            try {
+                // Test with actual case ID from the debug data
+                const caseId = 'c52af5d6-3b78-47b8-88a2-d2553ee3e1af';
+                
+                results.innerHTML += `<p>📝 Using case ID: ${caseId}</p>`;
+                
+                // Mock the query results based on our debug data
+                const mockMappings = [
+                    {
+                        id: "0152165f-f0c7-44c3-89e5-79d9b5d36ea2",
+                        damage_center_id: "dc_1762118806715_2",
+                        damage_center_name: "2 - פגוש עקום, פנס ימני שבור",
+                        validation_status: "approved",
+                        mapping_status: "applied",
+                        invoice_line: {
+                            catalog_code: "1-004-8934878120C2",
+                            description: "תושבות לחיישני חנייה אחוריים",
+                            quantity: 1,
+                            unit_price: 1905,
+                            line_total: 1905
+                        },
+                        invoice: {
+                            supplier_name: "מוסך ש.מ קוסמטיקאר בע'מ"
+                        }
+                    }
+                ];
+                
+                results.innerHTML += `<div class="success">
+                    <h4>✅ Query Results:</h4>
+                    <p>Found ${mockMappings.length} mappings</p>
+                    <p>Sample mapping: ${mockMappings[0].damage_center_name}</p>
+                    <p>Catalog code: ${mockMappings[0].invoice_line.catalog_code}</p>
+                    <p>Status: ${mockMappings[0].validation_status}</p>
+                </div>`;
+                
+                // Test the display function logic
+                testDisplayFunction(mockMappings);
+                
+            } catch (error) {
+                results.innerHTML += `<div class="error">❌ Error: ${error.message}</div>`;
+            }
+        }
+        
+        function testDisplayFunction(mappings) {
+            const results = document.getElementById('results');
+            
+            results.innerHTML += '<h4>🎨 Testing Display Function Logic:</h4>';
+            
+            // Test grouping logic
+            const groupedMappings = {};
+            mappings.forEach(mapping => {
+                const centerId = mapping.damage_center_id || 'unknown';
+                if (!groupedMappings[centerId]) {
+                    groupedMappings[centerId] = {
+                        center_name: mapping.damage_center_name || centerId,
+                        mappings: []
+                    };
+                }
+                groupedMappings[centerId].mappings.push(mapping);
+            });
+            
+            results.innerHTML += `<div class="success">
+                <p>✅ Grouped mappings: ${Object.keys(groupedMappings).length} damage centers</p>
+                <p>Center names: ${Object.values(groupedMappings).map(g => g.center_name).join(', ')}</p>
+            </div>`;
+            
+            // Test HTML generation
+            const container = document.createElement('div');
+            container.innerHTML = `
+                <h5>Damage Center: ${groupedMappings[Object.keys(groupedMappings)[0]].center_name}</h5>
+                <table style="width: 100%; border-collapse: collapse;">
+                    <thead>
+                        <tr style="background: #f1f5f9;">
+                            <th style="padding: 8px; border: 1px solid #cbd5e1;">קוד קטלוג</th>
+                            <th style="padding: 8px; border: 1px solid #cbd5e1;">תיאור</th>
+                            <th style="padding: 8px; border: 1px solid #cbd5e1;">ספק</th>
+                            <th style="padding: 8px; border: 1px solid #cbd5e1;">מקור</th>
+                            <th style="padding: 8px; border: 1px solid #cbd5e1;">מחיר</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${groupedMappings[Object.keys(groupedMappings)[0]].mappings.map(mapping => {
+                            const lineData = mapping.invoice_line || {};
+                            const invoiceData = mapping.invoice || {};
+                            
+                            return `
+                                <tr>
+                                    <td style="padding: 8px; border: 1px solid #cbd5e1;">${lineData.catalog_code || '-'}</td>
+                                    <td style="padding: 8px; border: 1px solid #cbd5e1;">${lineData.description || '-'}</td>
+                                    <td style="padding: 8px; border: 1px solid #cbd5e1;">${invoiceData.supplier_name || '-'}</td>
+                                    <td style="padding: 8px; border: 1px solid #cbd5e1;">${lineData.source || 'מקורי'}</td>
+                                    <td style="padding: 8px; border: 1px solid #cbd5e1;">₪${(lineData.unit_price || 0).toLocaleString()}</td>
+                                </tr>
+                            `;
+                        }).join('')}
+                    </tbody>
+                </table>
+            `;
+            
+            results.appendChild(container);
+            results.innerHTML += '<div class="success">✅ HTML table generated successfully</div>';
+        }
+    </script>
+</body>
+</html>
