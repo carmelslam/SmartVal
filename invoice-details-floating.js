@@ -1038,6 +1038,7 @@
 
   // Main functions exposed to global scope
   let isToggling = false; // Prevent rapid double-clicks
+  let modalState = 'closed'; // Track modal state explicitly
   
   window.toggleInvoiceDetails = function () {
     if (isToggling) {
@@ -1046,19 +1047,22 @@
     }
     
     isToggling = true;
-    setTimeout(() => { isToggling = false; }, 300); // Reset after 300ms
+    setTimeout(() => { isToggling = false; }, 500); // Increased timeout
     
     console.log('🎬 toggleInvoiceDetails called');
     console.log('🎬 Function called from:', new Error().stack.split('\n')[2]);
+    console.log('🎬 Current modal state:', modalState);
+    
     const modal = document.getElementById("invoiceDetailsModal");
     console.log('🎬 Modal found:', !!modal);
     console.log('🎬 Modal current display:', modal?.style?.display);
     
-    if (modal.style.display === "none" || !modal.style.display) {
-      console.log('🎬 Opening modal...');
-      modal.style.display = "block";
+    // Force open regardless of current display state
+    if (modalState === 'closed') {
+      console.log('🎬 FORCE OPENING modal...');
+      modalState = 'open';
       
-      // Force modal to be visible with higher z-index
+      modal.style.display = "block";
       modal.style.zIndex = "10000";
       modal.style.position = "fixed";
       
@@ -1081,14 +1085,38 @@
       loadInvoiceDocuments(); // Load initial tab
       makeDraggable(modal);
       
-      console.log('🎬 Modal should now be visible with display:', modal.style.display);
+      console.log('🎬 Modal FORCE OPENED with display:', modal.style.display);
     } else {
       console.log('🎬 Closing modal...');
+      modalState = 'closed';
       modal.style.display = "none";
     }
   };
 
-  window.showInvoiceDetails = window.toggleInvoiceDetails;
+  // Dedicated OPEN-ONLY function to avoid toggle issues
+  window.showInvoiceDetails = function() {
+    console.log('🔥 showInvoiceDetails called - FORCE OPEN ONLY');
+    
+    const modal = document.getElementById("invoiceDetailsModal");
+    if (!modal) {
+      console.error('❌ Modal not found!');
+      return;
+    }
+    
+    // ALWAYS open, never close
+    console.log('🔥 FORCING modal open...');
+    modalState = 'open';
+    
+    modal.style.display = "block";
+    modal.style.zIndex = "10000";
+    modal.style.position = "fixed";
+    
+    currentTab = 'documents';
+    loadInvoiceDocuments();
+    makeDraggable(modal);
+    
+    console.log('🔥 Modal FORCED OPEN - display:', modal.style.display);
+  };
 
   window.refreshInvoiceData = function () {
     console.log('🔄 Refreshing invoice data...');
