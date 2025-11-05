@@ -44,7 +44,7 @@ SET
   END,
   catalog_code = COALESCE(
     lm.part_data->>'מק״ט חלק',
-    lm.part_data->>'מק\'ט חלק', 
+    lm.part_data->>'מקט חלק', 
     lm.part_data->>'מק"ט חלק',
     lm.part_data->>'קוד חלק'
   ),
@@ -57,20 +57,28 @@ SET
 FROM line_mapping lm
 WHERE invoice_lines.id = lm.line_id;
 
--- 3. Backfill invoices table from invoice_documents OCR data
+-- 3. Backfill invoices table from invoice_documents OCR data (including raw_webhook_data)
 UPDATE invoices 
 SET 
   supplier_tax_id = COALESCE(
     supplier_tax_id,
+    -- First try from ocr_structured_data
     (SELECT id.ocr_structured_data->>'ח.פ מוסך' 
      FROM invoice_documents id 
      WHERE id.invoice_id = invoices.id 
        AND id.ocr_structured_data IS NOT NULL 
      LIMIT 1),
-    (SELECT id.ocr_structured_data->>'עוסק מורשה' 
+    (SELECT id.ocr_structured_data->>'ח.פ.' 
      FROM invoice_documents id 
      WHERE id.invoice_id = invoices.id 
        AND id.ocr_structured_data IS NOT NULL 
+     LIMIT 1),
+    -- Then try from ocr_structured_data (webhook data is stored here)
+    (SELECT id.ocr_structured_data->>'ח.פ.'
+     FROM invoice_documents id 
+     WHERE id.invoice_id = invoices.id 
+       AND id.ocr_structured_data IS NOT NULL 
+       AND id.ocr_structured_data->>'ח.פ.' IS NOT NULL
      LIMIT 1)
   ),
   
@@ -85,11 +93,19 @@ SET
   
   total_before_tax = COALESCE(
     total_before_tax,
+    -- First try from ocr_structured_data
     (SELECT CAST(REPLACE(REPLACE(id.ocr_structured_data->>'סהכ לפני מע״מ', ',', ''), '₪', '') AS numeric)
      FROM invoice_documents id 
      WHERE id.invoice_id = invoices.id 
        AND id.ocr_structured_data IS NOT NULL 
        AND id.ocr_structured_data->>'סהכ לפני מע״מ' IS NOT NULL
+     LIMIT 1),
+    -- Then try from ocr_structured_data (webhook data is stored here)
+    (SELECT CAST(REPLACE(REPLACE(id.ocr_structured_data->>'עלות כוללת ללא מע״מ', ',', ''), '₪', '') AS numeric)
+     FROM invoice_documents id 
+     WHERE id.invoice_id = invoices.id 
+       AND id.ocr_structured_data IS NOT NULL
+       AND id.ocr_structured_data->>'עלות כוללת ללא מע״מ' IS NOT NULL
      LIMIT 1)
   ),
   
@@ -212,25 +228,137 @@ BEGIN
     RAISE NOTICE 'Updated user tracking fields with default user: %', default_user_id;
 END $$;
 
--- 5. Create missing suppliers from invoice data
-INSERT INTO invoice_suppliers (name, tax_id, total_invoices, total_amount, last_invoice_date, created_at, updated_at)
-SELECT DISTINCT 
-    i.supplier_name,
-    i.supplier_tax_id,
-    COUNT(*) OVER (PARTITION BY i.supplier_name),
-    SUM(i.total_amount) OVER (PARTITION BY i.supplier_name),
-    MAX(i.invoice_date) OVER (PARTITION BY i.supplier_name),
-    now(),
-    now()
-FROM invoices i
-WHERE i.supplier_name IS NOT NULL 
-  AND i.supplier_name NOT IN (SELECT name FROM invoice_suppliers WHERE name IS NOT NULL)
+-- 5. Create comprehensive supplier records with ALL available OCR data
+WITH supplier_ocr_data AS (
+  SELECT DISTINCT
+    i.supplier_name as name,
+    i.supplier_tax_id as tax_id,
+    
+    -- Extract from ocr_structured_data
+    COALESCE(
+      id.ocr_structured_data->>'כתובת מוסך',
+      id.ocr_structured_data->>'כתובת ספק',
+      id.ocr_structured_data->>'כתובת'
+    ) as address,
+    
+    COALESCE(
+      id.ocr_structured_data->>'טלפון מוסך',
+      id.ocr_structured_data->>'טלפון ספק', 
+      id.ocr_structured_data->>'טלפון',
+      id.ocr_structured_data->>'פלאפון'
+    ) as phone,
+    
+    COALESCE(
+      id.ocr_structured_data->>'דוא״ל מוסך',
+      id.ocr_structured_data->>'אימייל מוסך',
+      id.ocr_structured_data->>'דוא״ל ספק',
+      id.ocr_structured_data->>'אימייל'
+    ) as email,
+    
+    COALESCE(
+      id.ocr_structured_data->>'אתר מוסך',
+      id.ocr_structured_data->>'אתר אינטרנט'
+    ) as website,
+    
+    COALESCE(
+      id.ocr_structured_data->>'עיר מוסך',
+      id.ocr_structured_data->>'עיר'
+    ) as city,
+    
+    COALESCE(
+      id.ocr_structured_data->>'מיקוד',
+      id.ocr_structured_data->>'מיקוד מוסך'
+    ) as postal_code,
+    
+    COALESCE(
+      id.ocr_structured_data->>'מס׳ עסק',
+      id.ocr_structured_data->>'רישיון עסק'
+    ) as business_number,
+    
+    -- Additional OCR data from structured data
+    id.ocr_structured_data->>'כתובת מוסך' as webhook_address,
+    id.ocr_structured_data->>'טלפון מוסך' as webhook_phone,
+    id.ocr_structured_data->>'דוא״ל מוסך' as webhook_email,
+    
+    -- Statistics
+    COUNT(*) OVER (PARTITION BY i.supplier_name) as total_invoices,
+    SUM(i.total_amount) OVER (PARTITION BY i.supplier_name) as total_amount,
+    AVG(i.total_amount) OVER (PARTITION BY i.supplier_name) as average_amount,
+    MAX(i.invoice_date) OVER (PARTITION BY i.supplier_name) as last_invoice_date,
+    
+    -- Metadata with all OCR fields
+    jsonb_build_object(
+      'ocr_data_sources', jsonb_build_object(
+        'structured_data', id.ocr_structured_data,
+        'ocr_confidence', id.ocr_confidence,
+        'ocr_status', id.ocr_status
+      ),
+      'contact_variations', jsonb_build_object(
+        'phone_variants', ARRAY[
+          id.ocr_structured_data->>'טלפון מוסך',
+          id.ocr_structured_data->>'טלפון ספק',
+          id.ocr_structured_data->>'פלאפון'
+        ],
+        'email_variants', ARRAY[
+          id.ocr_structured_data->>'דוא״ל מוסך',
+          id.ocr_structured_data->>'אימייל מוסך',
+          id.ocr_structured_data->>'דוא״ל ספק'
+        ]
+      ),
+      'extraction_timestamp', now(),
+      'data_completeness', jsonb_build_object(
+        'has_address', (id.ocr_structured_data->>'כתובת מוסך' IS NOT NULL),
+        'has_phone', (id.ocr_structured_data->>'טלפון מוסך' IS NOT NULL),
+        'has_email', (id.ocr_structured_data->>'דוא״ל מוסך' IS NOT NULL),
+        'has_tax_id', (i.supplier_tax_id IS NOT NULL)
+      )
+    ) as metadata
+    
+  FROM invoices i
+  LEFT JOIN invoice_documents id ON id.invoice_id = i.id
+  WHERE i.supplier_name IS NOT NULL
+)
+INSERT INTO invoice_suppliers (
+  name, tax_id, business_number, address, city, postal_code, 
+  phone, email, website, total_invoices, total_amount, 
+  average_invoice_amount, last_invoice_date, metadata, 
+  created_at, updated_at
+)
+SELECT DISTINCT ON (name)
+  name,
+  tax_id,
+  business_number,
+  COALESCE(address, webhook_address) as address,
+  city,
+  postal_code,
+  COALESCE(phone, webhook_phone) as phone,
+  COALESCE(email, webhook_email) as email,
+  website,
+  total_invoices,
+  total_amount,
+  average_amount,
+  last_invoice_date,
+  metadata,
+  now(),
+  now()
+FROM supplier_ocr_data
+WHERE name IS NOT NULL 
+  AND name NOT IN (SELECT name FROM invoice_suppliers WHERE name IS NOT NULL)
 ON CONFLICT (name) DO UPDATE SET
-    tax_id = COALESCE(invoice_suppliers.tax_id, EXCLUDED.tax_id),
-    total_invoices = EXCLUDED.total_invoices,
-    total_amount = EXCLUDED.total_amount,
-    last_invoice_date = EXCLUDED.last_invoice_date,
-    updated_at = now();
+  tax_id = COALESCE(invoice_suppliers.tax_id, EXCLUDED.tax_id),
+  business_number = COALESCE(invoice_suppliers.business_number, EXCLUDED.business_number),
+  address = COALESCE(invoice_suppliers.address, EXCLUDED.address),
+  city = COALESCE(invoice_suppliers.city, EXCLUDED.city),
+  postal_code = COALESCE(invoice_suppliers.postal_code, EXCLUDED.postal_code),
+  phone = COALESCE(invoice_suppliers.phone, EXCLUDED.phone),
+  email = COALESCE(invoice_suppliers.email, EXCLUDED.email),
+  website = COALESCE(invoice_suppliers.website, EXCLUDED.website),
+  total_invoices = EXCLUDED.total_invoices,
+  total_amount = EXCLUDED.total_amount,
+  average_invoice_amount = EXCLUDED.average_invoice_amount,
+  last_invoice_date = EXCLUDED.last_invoice_date,
+  metadata = COALESCE(invoice_suppliers.metadata, '{}'::jsonb) || EXCLUDED.metadata,
+  updated_at = now();
 
 -- 6. Add indexes and constraints
 CREATE INDEX IF NOT EXISTS idx_invoice_lines_source_catalog 
