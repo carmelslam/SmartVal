@@ -1,14 +1,37 @@
 -- Correct OCR Data Backfill Script
 -- This pulls OCR data from invoice_documents.ocr_structured_data and populates ALL invoice tables
 
--- 1. First, let's add the missing columns
+-- 1. First, let's add the missing columns and update constraints
 ALTER TABLE public.invoice_lines 
 ADD COLUMN IF NOT EXISTS source text;
 
 ALTER TABLE public.invoice_lines 
 ADD COLUMN IF NOT EXISTS catalog_code text;
 
--- 2. Backfill invoice_lines from invoice_documents OCR data
+-- 2. Update constraints to allow Hebrew values
+DO $$
+BEGIN
+    -- Drop existing item_category constraint if it exists
+    IF EXISTS (
+        SELECT 1 FROM pg_constraint 
+        WHERE conname = 'invoice_lines_item_category_check'
+    ) THEN
+        ALTER TABLE public.invoice_lines DROP CONSTRAINT invoice_lines_item_category_check;
+    END IF;
+    
+    -- Add new constraint that allows Hebrew categories
+    ALTER TABLE public.invoice_lines 
+    ADD CONSTRAINT invoice_lines_item_category_check 
+    CHECK (
+      (item_category IS NULL) OR 
+      (item_category = ANY (ARRAY[
+        'part'::text, 'work'::text, 'repair'::text, 'material'::text,
+        'חלק'::text, 'עבודה'::text, 'תיקון'::text, 'חומר'::text
+      ]))
+    );
+END $$;
+
+-- 3. Backfill invoice_lines from invoice_documents OCR data
 WITH ocr_parts AS (
   SELECT 
     id.invoice_id,
@@ -57,7 +80,7 @@ SET
 FROM line_mapping lm
 WHERE invoice_lines.id = lm.line_id;
 
--- 3. Backfill invoices table from invoice_documents OCR data (including raw_webhook_data)
+-- 4. Backfill invoices table from invoice_documents OCR data (including raw_webhook_data)
 UPDATE invoices 
 SET 
   supplier_tax_id = COALESCE(
@@ -200,7 +223,7 @@ WHERE EXISTS (
     AND id.ocr_structured_data IS NOT NULL
 );
 
--- 4. Populate user tracking fields with a reasonable default
+-- 5. Populate user tracking fields with a reasonable default
 DO $$
 DECLARE
     default_user_id uuid;
@@ -228,7 +251,7 @@ BEGIN
     RAISE NOTICE 'Updated user tracking fields with default user: %', default_user_id;
 END $$;
 
--- 5. Create comprehensive supplier records with ALL available OCR data
+-- 6. Create comprehensive supplier records with ALL available OCR data
 WITH supplier_ocr_data AS (
   SELECT DISTINCT
     i.supplier_name as name,
@@ -360,7 +383,7 @@ ON CONFLICT (name) DO UPDATE SET
   metadata = COALESCE(invoice_suppliers.metadata, '{}'::jsonb) || EXCLUDED.metadata,
   updated_at = now();
 
--- 6. Update constraints to allow Hebrew values and add indexes
+-- 7. Update remaining constraints and add indexes
 DO $$
 BEGIN
     -- Drop existing constraint if it exists
@@ -385,7 +408,7 @@ CREATE INDEX IF NOT EXISTS idx_invoices_supplier_type
 ON public.invoices (supplier_name, invoice_type) 
 WHERE supplier_name IS NOT NULL;
 
--- 7. Report results
+-- 8. Report results
 DO $$
 DECLARE
     lines_updated integer;
