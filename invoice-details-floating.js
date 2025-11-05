@@ -396,16 +396,13 @@
       🔍 פרטי חשבוניות
     </div>
     
-    <!-- SESSION 49: Tab Navigation -->
+    <!-- Tab Navigation -->
     <div class="tabs-header">
       <button class="tab-btn active" data-tab="documents" onclick="switchInvoiceTab('documents')">
-        📋 מסמכי חשבונית
+        📄 פרטי חשבונית ושורות
       </button>
       <button class="tab-btn" data-tab="mappings" onclick="switchInvoiceTab('mappings')">
-        ✅ הקצאות נזק
-      </button>
-      <button class="tab-btn" data-tab="validations" onclick="switchInvoiceTab('validations')">
-        🔍 אימות חשבוניות
+        🔗 הקצאות למוקדי נזק
       </button>
     </div>
 
@@ -461,15 +458,6 @@
       </div>
     </div>
 
-    <!-- Tab 3 - Invoice Validations -->
-    <div class="tab-content" id="tab-validations" style="display: none;">
-      <div class="search-results-container" id="validationsContainer">
-        <div class="no-results">
-          <div class="no-results-icon">✅</div>
-          <div>אין אימות חשבוניות זמינות</div>
-        </div>
-      </div>
-    </div>
 
     <div class="results-buttons">
       <button class="results-btn close" onclick="toggleInvoiceDetails()">סגור</button>
@@ -545,9 +533,6 @@
       case 'mappings':
         loadDamageCenterMappings();
         break;
-      case 'validations':
-        loadInvoiceValidations();
-        break;
     }
     
     tabsLoaded[tabName] = true;
@@ -559,8 +544,7 @@
     
     // Show loading indicator
     const container = currentTab === 'documents' ? document.getElementById('documentsContainer') :
-                     currentTab === 'mappings' ? document.getElementById('mappingsContainer') :
-                     document.getElementById('validationsContainer');
+                     document.getElementById('mappingsContainer');
     
     if (container) {
       container.innerHTML = `
@@ -914,6 +898,17 @@
             🔧 ${items.length} פריטים בחשבונית
           </div>
           ` : ''}
+          ${doc.storage_path || doc.filename ? `
+          <div style="text-align: center; margin-top: 10px;">
+            <button onclick="viewInvoiceDocument('${doc.id}', '${doc.storage_path || ''}', '${doc.storage_bucket || 'docs'}', '${doc.filename || ''}')" 
+                    style="background: #0066cc; color: white; border: none; padding: 8px 16px; 
+                           border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 14px;"
+                    onmouseover="this.style.background='#0052a3'" 
+                    onmouseout="this.style.background='#0066cc'">
+              👁️ צפייה בחשבונית
+            </button>
+          </div>
+          ` : ''}
         </div>
       `;
     }).join('');
@@ -922,35 +917,299 @@
     console.log('✅ Display completed successfully');
   }
 
-  // TAB 2 - Load Damage Center Mappings (Simple implementation)
+  // View Invoice Document function
+  window.viewInvoiceDocument = async function(docId, storagePath, storageBucket, filename) {
+    console.log('👁️ Opening invoice document:', { docId, storagePath, storageBucket, filename });
+    
+    try {
+      if (!window.supabase) {
+        console.log('⏳ Waiting for Supabase client...');
+        await loadSupabaseClient();
+      }
+
+      if (!window.supabase) {
+        alert('Supabase client לא זמין - לא ניתן לפתוח מסמך');
+        return;
+      }
+
+      // If no storage path, try to get it from the database
+      if (!storagePath) {
+        const { data: docData, error: docError } = await window.supabase
+          .from('invoice_documents')
+          .select('storage_path, storage_bucket, filename')
+          .eq('id', docId)
+          .single();
+
+        if (docError) {
+          throw new Error(`Failed to get document info: ${docError.message}`);
+        }
+
+        storagePath = docData?.storage_path;
+        storageBucket = docData?.storage_bucket || 'docs';
+        filename = docData?.filename || filename;
+      }
+
+      if (!storagePath) {
+        alert('נתיב קובץ לא נמצא - לא ניתן לפתוח מסמך');
+        return;
+      }
+
+      console.log('📁 Getting public URL for:', storagePath, 'from bucket:', storageBucket);
+
+      // Get the public URL from Supabase storage
+      const { data: urlData } = window.supabase.storage
+        .from(storageBucket || 'docs')
+        .getPublicUrl(storagePath);
+
+      if (!urlData?.publicUrl) {
+        throw new Error('Failed to get public URL for document');
+      }
+
+      const publicUrl = urlData.publicUrl;
+      console.log('✅ Got public URL:', publicUrl);
+
+      // Open the document in a new window/tab
+      const newWindow = window.open(publicUrl, '_blank');
+      
+      if (!newWindow) {
+        // If popup was blocked, show the URL to the user
+        alert(`חסום חלון קופץ. אנא פתח ידנית:\n${publicUrl}`);
+      } else {
+        console.log('✅ Document opened successfully');
+      }
+
+    } catch (error) {
+      console.error('❌ Error opening invoice document:', error);
+      alert('שגיאה בפתיחת המסמך: ' + error.message);
+    }
+  };
+
+  // TAB 2 - Load Damage Center Mappings (Full implementation)
   async function loadDamageCenterMappings() {
     console.log('🔗 Loading damage center mappings...');
     const container = document.getElementById('mappingsContainer');
     
-    container.innerHTML = `
-      <div class="search-result-item">
-        <div class="result-header">
-          <div class="result-name">🔗 הקצאות חלקים למוקדי נזק</div>
-          <div class="result-price">פיתוח עתידי</div>
-        </div>
-        <div class="result-details">
-          <div class="result-detail">
-            <strong>מצב:</strong> תכונה זו תתווסף בעדכון עתידי
+    try {
+      // Get current case ID using the same method as Tab 1
+      const currentCaseId = await getCurrentCaseId();
+      
+      if (!currentCaseId) {
+        const hasHelper = !!window.helper;
+        const hasPlate = !!(window.helper?.meta?.plate || window.helper?.vehicle?.plate);
+        
+        container.innerHTML = `
+          <div class="no-results">
+            <div class="no-results-icon">❌</div>
+            <div style="font-weight: bold; margin-bottom: 8px;">לא נמצא מזהה תיק</div>
+            <div style="font-size: 14px;">לא ניתן לטעון הקצאות נזק ללא מזהה תיק</div>
+            <div style="font-size: 12px; margin-top: 10px; padding: 10px; background: #f3f4f6; border-radius: 6px;">
+              <strong>מצב מערכת:</strong><br>
+              Helper זמין: ${hasHelper ? '✅' : '❌'}<br>
+              מספר רישוי: ${hasPlate ? '✅' : '❌'}<br>
+              ${!hasHelper ? 'טען תיק תחילה' : !hasPlate ? 'מספר רישוי חסר' : 'לא נמצא תיק במאגר'}
+            </div>
           </div>
-          <div class="result-detail">
-            <strong>מטרה:</strong> הצגת הקצאות של פריטי חשבונית למוקדי נזק
+        `;
+        return;
+      }
+
+      // Show loading state
+      container.innerHTML = `
+        <div class="search-result-item">
+          <div class="result-header">
+            <div class="result-name">🔄 טוען הקצאות נזק...</div>
+          </div>
+          <div class="result-details">
+            <div class="result-detail">מחפש הקצאות עבור תיק: ${currentCaseId}</div>
           </div>
         </div>
-        <div class="result-description">
-          תכונה זו תציג את הקשר בין פריטים בחשבוניות למוקדי הנזק הרלוונטיים בתיק
+      `;
+
+      // Wait for Supabase to load if needed
+      if (!window.supabase) {
+        console.log('⏳ Waiting for Supabase client...');
+        await loadSupabaseClient();
+      }
+
+      if (!window.supabase) {
+        throw new Error('Supabase client לא זמין - נכשל בטעינה');
+      }
+
+      // Query invoice_damage_center_mappings table with related data
+      const { data: mappingsData, error } = await window.supabase
+        .from('invoice_damage_center_mappings')
+        .select(`
+          *,
+          invoice:invoices(
+            id,
+            invoice_number,
+            supplier_name,
+            total_amount
+          ),
+          invoice_line:invoice_lines(
+            id,
+            line_number,
+            description,
+            quantity,
+            unit_price,
+            line_total
+          )
+        `)
+        .eq('case_id', currentCaseId)
+        .eq('mapping_status', 'active')
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        throw new Error(`Supabase query error: ${error.message}`);
+      }
+
+      console.log('✅ Loaded mappings data:', mappingsData);
+      console.log('📊 Mappings count:', mappingsData?.length || 0);
+      
+      // Update statistics
+      const totalMappings = mappingsData?.length || 0;
+      const uniqueDamageCenters = [...new Set(mappingsData?.map(m => m.damage_center_id) || [])].length;
+      const totalValue = mappingsData?.reduce((sum, mapping) => {
+        const lineTotal = parseFloat(mapping.invoice_line?.line_total || 0);
+        return sum + lineTotal;
+      }, 0) || 0;
+      
+      document.getElementById('totalMappings').textContent = totalMappings;
+      document.getElementById('totalDamageCenters').textContent = uniqueDamageCenters;
+      document.getElementById('totalMappingValue').textContent = `₪${Math.round(totalValue).toLocaleString('he-IL')}`;
+      
+      // Display the mappings
+      displayDamageCenterMappings(mappingsData || []);
+
+    } catch (error) {
+      console.error('❌ Error loading damage center mappings:', error);
+      container.innerHTML = `
+        <div class="search-result-item">
+          <div class="result-header">
+            <div class="result-name">❌ שגיאה בטעינת הקצאות נזק</div>
+          </div>
+          <div class="result-details">
+            <div class="result-detail">שגיאה: ${error.message}</div>
+            <div class="result-detail">מזהה תיק: לא נמצא</div>
+          </div>
         </div>
-      </div>
-    `;
+      `;
+    }
+  }
+
+  // Display damage center mappings
+  function displayDamageCenterMappings(mappings) {
+    console.log('🎨 displayDamageCenterMappings called with:', mappings);
+    const container = document.getElementById('mappingsContainer');
     
-    // Update statistics
-    document.getElementById('totalMappings').textContent = '0';
-    document.getElementById('totalDamageCenters').textContent = '0';
-    document.getElementById('totalMappingValue').textContent = '₪0';
+    if (!mappings || mappings.length === 0) {
+      console.log('📭 No mappings to display');
+      container.innerHTML = `
+        <div class="no-results">
+          <div class="no-results-icon">🔗</div>
+          <div style="font-weight: bold; margin-bottom: 8px;">לא נמצאו הקצאות נזק</div>
+          <div style="font-size: 14px;">לא נמצאו הקצאות של פריטי חשבונית למוקדי נזק</div>
+        </div>
+      `;
+      return;
+    }
+
+    const formatValue = (value) => value && value.toString().trim() ? value : "-";
+    const formatPrice = (value) => {
+      const num = parseFloat(value) || 0;
+      return num > 0 ? `₪${num.toLocaleString('he-IL')}` : "₪0";
+    };
+    const formatDate = (dateStr) => {
+      if (!dateStr) return '-';
+      try {
+        const date = new Date(dateStr);
+        return date.toLocaleDateString('he-IL');
+      } catch {
+        return '-';
+      }
+    };
+
+    // Group mappings by damage center
+    const groupedMappings = {};
+    mappings.forEach(mapping => {
+      const centerId = mapping.damage_center_id || 'unknown';
+      if (!groupedMappings[centerId]) {
+        groupedMappings[centerId] = {
+          center_name: mapping.damage_center_name || centerId,
+          mappings: []
+        };
+      }
+      groupedMappings[centerId].mappings.push(mapping);
+    });
+
+    // Build the HTML for grouped display
+    const groupsHTML = Object.entries(groupedMappings).map(([centerId, group]) => {
+      const mappingsForCenter = group.mappings;
+      const centerTotal = mappingsForCenter.reduce((sum, m) => {
+        return sum + parseFloat(m.invoice_line?.line_total || 0);
+      }, 0);
+
+      const mappingsRowsHTML = mappingsForCenter.map((mapping, index) => {
+        const lineData = mapping.invoice_line || {};
+        const invoiceData = mapping.invoice || {};
+        const mappedData = mapping.mapped_data || {};
+        const originalData = mapping.original_field_data || {};
+
+        return `
+          <div class="search-result-item" style="margin-bottom: 10px;">
+            <div class="result-header">
+              <div class="result-name">📋 ${formatValue(lineData.description)}</div>
+              <div class="result-price">${formatPrice(lineData.line_total)}</div>
+            </div>
+            <div class="result-details">
+              <div class="result-detail">
+                <strong>חשבונית:</strong> ${formatValue(invoiceData.invoice_number)}
+              </div>
+              <div class="result-detail">
+                <strong>ספק:</strong> ${formatValue(invoiceData.supplier_name)}
+              </div>
+              <div class="result-detail">
+                <strong>שורה:</strong> ${formatValue(lineData.line_number)}
+              </div>
+              <div class="result-detail">
+                <strong>כמות:</strong> ${formatValue(lineData.quantity)}
+              </div>
+              <div class="result-detail">
+                <strong>מחיר יחידה:</strong> ${formatPrice(lineData.unit_price)}
+              </div>
+              <div class="result-detail">
+                <strong>סטטוס:</strong> ${formatValue(mapping.validation_status)}
+              </div>
+            </div>
+            ${Object.keys(mappedData).length > 0 ? `
+            <div class="result-description">
+              🎯 נתונים ממופים: ${Object.entries(mappedData).map(([k,v]) => `${k}: ${v}`).join(' • ')}
+            </div>
+            ` : ''}
+          </div>
+        `;
+      }).join('');
+
+      return `
+        <div class="damage-center-group">
+          <div class="damage-center-header" onclick="toggleDamageCenterGroup('${centerId}')">
+            <div>
+              🔧 ${group.center_name}
+              <span style="font-size: 12px; opacity: 0.8; margin-right: 10px;">
+                (${mappingsForCenter.length} הקצאות)
+              </span>
+            </div>
+            <div>${formatPrice(centerTotal)}</div>
+          </div>
+          <div id="group-${centerId}" style="padding: 15px;">
+            ${mappingsRowsHTML}
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    container.innerHTML = groupsHTML;
+    console.log('✅ Display completed successfully');
   }
 
   // TAB 3 - Load Invoice Validations (Simple implementation)
