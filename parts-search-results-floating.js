@@ -762,47 +762,7 @@
         });
       }
       
-      // SESSION 61: Also process helper.centers for parts not in Supabase
-      helperCenters.forEach((center, index) => {
-        const centerParts = center.Parts?.parts_required || center.Parts?.parts || [];
-        if (centerParts.length > 0) {
-          // ✅ SESSION 55 FIX: Use same ID as Supabase (center.Id should match damage_center_code)
-          const centerId = center.Id || center.id || center.code || `center_${index}`;
-          const centerNumber = center["Damage center Number"] || center.number || (index + 1);
-          const centerDesc = center.Description || center.description || center.Location || 'ללא תיאור';
-          
-          // Merge with existing or create new
-          if (!groupedParts[centerId]) {
-            groupedParts[centerId] = {
-              id: centerId,
-              number: centerNumber,
-              description: centerDesc,
-              parts: []
-            };
-          }
-          
-          // Add parts that aren't already there (avoid duplicates)
-          centerParts.forEach(part => {
-            const exists = groupedParts[centerId].parts.some(p => 
-              (p.pcode === part.pcode || p.oem === part.oem) && p.part_name === part.part_name
-            );
-            
-            if (!exists) {
-              groupedParts[centerId].parts.push(part);
-              totalParts++;
-              
-              // Calculate cost AFTER reductions (reduction % and wear %)
-              const pricePerUnit = parseFloat(part.price_per_unit || part.price || part.cost || part.expected_cost || 0);
-              const reduction = parseFloat(part.reduction_percentage || part.reduction || 0);
-              const wear = parseFloat(part.wear_percentage || part.wear || 0);
-              const qty = parseInt(part.quantity || part.qty || 1);
-              const priceAfterReduction = pricePerUnit * (1 - reduction / 100);
-              const updatedPrice = priceAfterReduction * (1 - wear / 100);
-              totalCostAfterReductions += (updatedPrice * qty);
-            }
-          });
-        }
-      });
+      // REMOVED: Secondary source from helper.centers - using only Supabase parts_required table
       
       // Update statistics
       const damageCentersCount = Object.keys(groupedParts).length;
