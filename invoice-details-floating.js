@@ -1,24 +1,24 @@
 (function () {
   if (document.getElementById("invoiceDetailsModal")) return;
 
-  // 🔧 FIX: Add dynamic Supabase client loading (copied from working parts screen)
+  // SESSION 50: Dynamically load Supabase client if not available
   function loadSupabaseClient() {
-    return new Promise((resolve) => {
+    return new Promise((resolve, reject) => {
       // Check if already loaded
       if (window.supabase) {
-        console.log('✅ Invoice floating: Supabase client already available');
+        console.log('✅ Supabase client already available');
         resolve(true);
         return;
       }
       
       // Check if script already exists
       if (document.querySelector('script[src*="supabaseClient.js"]')) {
-        console.log('⏳ Invoice floating: Supabase client script loading...');
+        console.log('⏳ Supabase client script loading...');
         // Wait for it to load
         const checkInterval = setInterval(() => {
           if (window.supabase) {
             clearInterval(checkInterval);
-            console.log('✅ Invoice floating: Supabase client loaded');
+            console.log('✅ Supabase client loaded');
             resolve(true);
           }
         }, 100);
@@ -27,7 +27,7 @@
         setTimeout(() => {
           clearInterval(checkInterval);
           if (!window.supabase) {
-            console.warn('⚠️ Invoice floating: Supabase client timeout');
+            console.warn('⚠️ Supabase client timeout');
             resolve(false);
           }
         }, 5000);
@@ -35,24 +35,24 @@
       }
       
       // Load the script dynamically
-      console.log('📥 Invoice floating: Loading Supabase client dynamically...');
+      console.log('📥 Loading Supabase client dynamically...');
       const script = document.createElement('script');
       script.src = './services/supabaseClient.js';
       script.onload = () => {
-        console.log('✅ Invoice floating: Supabase client script loaded');
+        console.log('✅ Supabase client script loaded');
         // Wait a bit for initialization
         setTimeout(() => {
           if (window.supabase) {
-            console.log('✅ Invoice floating: Supabase client initialized');
+            console.log('✅ Supabase client initialized');
             resolve(true);
           } else {
-            console.warn('⚠️ Invoice floating: Supabase client script loaded but window.supabase not available');
+            console.warn('⚠️ Supabase client script loaded but window.supabase not available');
             resolve(false);
           }
         }, 100);
       };
       script.onerror = (error) => {
-        console.error('❌ Invoice floating: Failed to load Supabase client:', error);
+        console.error('❌ Failed to load Supabase client:', error);
         resolve(false);
       };
       document.head.appendChild(script);
@@ -66,143 +66,162 @@
   style.innerHTML = `
     #invoiceDetailsModal {
       position: fixed;
-      top: 20px;
+      top: 50px;
       left: 50%;
       transform: translateX(-50%);
-      width: 95%;
-      max-width: 800px;
-      max-height: 90vh;
+      max-width: 95vw;
+      width: 90vw;
+      max-height: 85vh;
       background: white;
-      border: 1px solid #fbbf24;
-      padding: 20px;
+      border: 1px solid #0066cc;
+      padding: 15px;
       z-index: 9999;
-      box-shadow: 0 0 20px rgba(0,0,0,0.3);
+      box-shadow: 0 0 25px rgba(0,0,0,0.3);
       direction: rtl;
       font-family: sans-serif;
-      border-radius: 20px;
+      border-radius: 12px;
       display: none;
       overflow-y: auto;
-      cursor: move;
+      overflow-x: auto;
     }
     
     @media (max-width: 768px) {
       #invoiceDetailsModal {
         top: 10px;
-        width: 95%;
-        max-width: 95%;
-        padding: 15px;
-        margin: 10px;
-        left: 50%;
-        transform: translateX(-50%);
+        left: 5px;
+        right: 5px;
+        transform: none;
+        width: calc(100% - 10px);
+        max-width: none;
+        padding: 10px;
+        max-height: 90vh;
+      }
+      
+      .damage-center-parts-table {
+        font-size: 11px !important;
+      }
+      
+      .damage-center-parts-table th,
+      .damage-center-parts-table td {
+        padding: 6px 4px !important;
+      }
+      
+      .damage-center-header {
+        font-size: 13px !important;
+        padding: 10px !important;
+      }
+      
+      .tabs-header {
+        flex-wrap: wrap;
+      }
+      
+      .tab-btn {
+        font-size: 12px !important;
+        padding: 8px 12px !important;
       }
     }
-    
-    .invoice-modal-title {
-      font-size: 20px;
+    .results-modal-title {
+      font-size: 24px;
       font-weight: bold;
       margin-bottom: 20px;
-      color: #f59e0b;
+      color: #0066cc;
       text-align: center;
-      border-bottom: 2px solid #fbbf24;
+      border-bottom: 2px solid #0066cc;
       padding-bottom: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
     }
-    
-    .invoice-section {
-      background: #fefef2;
+    .results-summary {
+      background: #f0f8ff;
       border-radius: 8px;
       padding: 15px;
-      margin-bottom: 15px;
-      border: 1px solid #fef3c7;
+      margin-bottom: 20px;
+      border: 1px solid #0066cc;
     }
-    
-    .invoice-section h4 {
-      margin: 0 0 10px 0;
-      color: #92400e;
-      font-size: 16px;
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 15px;
+      margin-bottom: 10px;
+    }
+    .summary-item {
+      text-align: center;
+    }
+    .summary-label {
+      font-weight: bold;
+      color: #0066cc;
+      font-size: 14px;
+      margin-bottom: 5px;
+    }
+    .summary-value {
+      font-size: 18px;
+      color: #333;
       font-weight: bold;
     }
-    
-    .invoice-field {
+    .search-results-container {
+      max-height: 500px;
+      overflow-y: auto;
+      border: 1px solid #e9ecef;
+      border-radius: 8px;
+      margin-bottom: 20px;
+    }
+    .search-result-item {
+      padding: 15px;
+      border-bottom: 1px solid #e9ecef;
+      transition: background 0.2s;
+    }
+    .search-result-item:hover {
+      background: #f8f9fa;
+    }
+    .search-result-item:last-child {
+      border-bottom: none;
+    }
+    .result-header {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      padding: 6px 0;
-      border-bottom: 1px solid #fef3c7;
+      margin-bottom: 10px;
     }
-    
-    .invoice-field:last-child {
-      border-bottom: none;
-    }
-    
-    .invoice-field .label {
+    .result-name {
       font-weight: bold;
-      color: #78350f;
-      font-size: 14px;
-    }
-    
-    .invoice-field .value {
-      color: #451a03;
-      font-size: 15px;
-      font-weight: 600;
-    }
-    
-    .value.price {
-      color: #059669;
-      font-weight: bold;
-    }
-    
-    .value.empty {
-      color: #6b7280;
-      font-style: italic;
-    }
-    
-    .no-data-message {
-      text-align: center;
-      padding: 40px 20px;
-      color: #6b7280;
+      color: #0066cc;
       font-size: 16px;
-      background: #f9fafb;
-      border-radius: 12px;
-      border: 2px dashed #d1d5db;
     }
-    
-    .no-data-icon {
-      font-size: 48px;
-      margin-bottom: 16px;
-      opacity: 0.5;
-    }
-    
-    .invoice-items-table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-top: 10px;
-      font-size: 13px;
-    }
-    
-    .invoice-items-table th,
-    .invoice-items-table td {
-      padding: 8px;
-      text-align: right;
-      border: 1px solid #fef3c7;
-    }
-    
-    .invoice-items-table th {
-      background: #fbbf24;
-      color: white;
+    .result-price {
       font-weight: bold;
+      color: #28a745;
+      font-size: 16px;
     }
-    
-    .invoice-items-table td {
-      background: #fffbeb;
+    .result-details {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 10px;
+      margin-bottom: 8px;
     }
-    
-    .invoice-buttons {
+    .result-detail {
+      font-size: 14px;
+      color: #6c757d;
+    }
+    .result-detail strong {
+      color: #333;
+    }
+    .result-description {
+      font-size: 13px;
+      color: #666;
+      font-style: italic;
+      margin-top: 8px;
+      padding: 8px;
+      background: #f8f9fa;
+      border-radius: 4px;
+    }
+    .results-buttons {
       display: flex;
       gap: 10px;
       margin-top: 20px;
     }
-    
-    .invoice-btn {
+    .results-btn {
       flex: 1;
       padding: 12px;
       border: none;
@@ -210,244 +229,459 @@
       cursor: pointer;
       font-weight: bold;
       font-size: 14px;
+      transition: background 0.2s;
     }
-    
-    .invoice-btn.close {
-      background: #dc3545;
+    .results-btn.close {
+      background: #6c757d;
       color: white;
     }
-    
-    .invoice-btn.refresh {
-      background: #fbbf24;
-      color: #78350f;
+    .results-btn.close:hover {
+      background: #5a6268;
     }
-    
-    .invoice-btn.view-doc {
-      background: #3b82f6;
+    .results-btn.export {
+      background: #28a745;
       color: white;
     }
-    
-    /* Tab System Styles */
-    .invoice-tabs {
-      display: flex;
-      border-bottom: 2px solid #e5e7eb;
+    .results-btn.export:hover {
+      background: #218838;
+    }
+    .results-btn.refresh {
+      background: #0066cc;
+      color: white;
+    }
+    .results-btn.refresh:hover {
+      background: #0052a3;
+    }
+    .no-results {
+      text-align: center;
+      padding: 40px;
+      color: #6c757d;
+      font-size: 16px;
+    }
+    .no-results-icon {
+      font-size: 48px;
+      margin-bottom: 15px;
+      opacity: 0.5;
+    }
+    .recommended-section {
+      background: #fff3cd;
+      border: 1px solid #ffeaa7;
+      border-radius: 8px;
+      padding: 15px;
       margin-bottom: 20px;
-      gap: 2px;
     }
-    
-    .tab-btn {
-      background: #f8f9fa;
-      border: 1px solid #dee2e6;
-      border-bottom: none;
-      padding: 12px 24px;
-      cursor: pointer;
-      transition: all 0.3s;
-      font-weight: 600;
-      border-radius: 8px 8px 0 0;
+    .recommended-title {
+      font-weight: bold;
+      color: #856404;
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .recommended-text {
       font-size: 14px;
+      color: #856404;
     }
-    
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+      gap: 10px;
+      margin-top: 15px;
+    }
+    .stat-item {
+      background: white;
+      padding: 10px;
+      border-radius: 6px;
+      text-align: center;
+      border: 1px solid #0066cc;
+    }
+    .stat-value {
+      font-size: 18px;
+      font-weight: bold;
+      color: #0066cc;
+    }
+    .stat-label {
+      font-size: 12px;
+      color: #666;
+      margin-top: 3px;
+    }
+    /* SESSION 49: Tab Navigation Styles */
+    .tabs-header {
+      display: flex;
+      gap: 0;
+      margin-bottom: 20px;
+      border-bottom: 2px solid #e9ecef;
+    }
+    .tab-btn {
+      flex: 1;
+      padding: 12px 20px;
+      border: none;
+      background: #f8f9fa;
+      color: #6c757d;
+      font-weight: bold;
+      font-size: 14px;
+      cursor: pointer;
+      border-bottom: 3px solid transparent;
+      transition: all 0.3s;
+    }
+    .tab-btn:hover {
+      background: #e9ecef;
+    }
     .tab-btn.active {
-      background: #fbbf24;
-      color: white;
-      border-color: #f59e0b;
+      background: #fff;
+      color: #0066cc;
+      border-bottom-color: #0066cc;
     }
-    
-    .tab-btn:hover:not(.active) {
-      background: #f3f4f6;
-    }
-    
     .tab-content {
-      min-height: 400px;
-    }
-    
-    .tab-section {
       display: none;
-      animation: fadeIn 0.3s ease-in;
     }
-    
-    .tab-section.active {
+    .tab-content.active {
       display: block;
     }
-    
-    @keyframes fadeIn {
-      from { opacity: 0; }
-      to { opacity: 1; }
+    /* SESSION 49: Damage Center Group Styles */
+    .damage-center-group {
+      border: 2px solid #28a745;
+      border-radius: 8px;
+      margin-bottom: 15px;
+      overflow: hidden;
     }
-    
-    /* Loading Spinner */
-    .loading-spinner {
-      display: inline-block;
-      width: 20px;
-      height: 20px;
-      border: 3px solid #f3f3f3;
-      border-top: 3px solid #fbbf24;
-      border-radius: 50%;
-      animation: spin 1s linear infinite;
+    .damage-center-header {
+      background: #28a745;
+      color: white;
+      padding: 12px 15px;
+      font-weight: bold;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      cursor: pointer;
     }
-    
-    @keyframes spin {
-      0% { transform: rotate(0deg); }
-      100% { transform: rotate(360deg); }
+    .damage-center-header:hover {
+      background: #218838;
     }
-    
-    /* Mobile responsive tabs */
-    @media (max-width: 768px) {
-      .invoice-tabs {
-        flex-direction: column;
-      }
-      
-      .tab-btn {
-        border-radius: 0;
-        border-bottom: 1px solid #dee2e6;
-      }
+    .damage-center-parts-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    .damage-center-parts-table th {
+      background: #e8f5e9;
+      padding: 10px;
+      text-align: center;
+      font-size: 12px;
+      border-bottom: 2px solid #28a745;
+    }
+    .damage-center-parts-table td {
+      padding: 10px;
+      text-align: center;
+      font-size: 13px;
+      border-bottom: 1px solid #e9ecef;
+    }
+    .damage-center-parts-table tr:hover {
+      background: #f8f9fa;
+    }
+    .damage-center-subtotal {
+      background: #f0f9ff;
+      padding: 10px 15px;
+      font-weight: bold;
+      text-align: left;
+      border-top: 2px solid #28a745;
     }
   `;
   document.head.appendChild(style);
 
   const modal = document.createElement("div");
   modal.id = "invoiceDetailsModal";
+  // SESSION 49: Restructured to 3-tab interface
   modal.innerHTML = `
-    <div class="invoice-modal-title">📋 פרטי חשבונית</div>
-    
-    <!-- Tab Navigation -->
-    <div class="invoice-tabs">
-      <button class="tab-btn active" onclick="switchTab('documents', event)">
-        📄 מסמכי חשבונית
-      </button>
-      <button class="tab-btn" onclick="switchTab('mappings', event)">
-        🔗 הקצאות למוקדי נזק
-      </button>
+    <div class="results-modal-title">
+      🔍 פרטי חשבוניות
     </div>
     
-    <!-- Tab Content -->
-    <div class="tab-content">
-      <div id="documentsTab" class="tab-section active">
-        <div id="documentsContent">
-          <!-- Tab 1 content will be loaded dynamically -->
+    <!-- SESSION 49: Tab Navigation -->
+    <div class="tabs-header">
+      <button class="tab-btn active" data-tab="documents" onclick="switchInvoiceTab('documents')">
+        📋 מסמכי חשבונית
+      </button>
+      <button class="tab-btn" data-tab="mappings" onclick="switchInvoiceTab('mappings')">
+        ✅ הקצאות נזק
+      </button>
+      <button class="tab-btn" data-tab="validations" onclick="switchInvoiceTab('validations')">
+        🔍 אימות חשבוניות
+      </button>
+    </div>
+
+    <!-- Tab 1 - Invoice Documents -->
+    <div class="tab-content active" id="tab-documents">
+      <div class="results-summary" id="documentsSummary">
+        <div class="summary-grid">
+          <div class="summary-item">
+            <div class="summary-label">מסמכים</div>
+            <div class="summary-value" id="totalDocuments">0</div>
+          </div>
+          <div class="summary-item">
+            <div class="summary-label">חשבוניות</div>
+            <div class="summary-value" id="totalInvoices">0</div>
+          </div>
+          <div class="summary-item">
+            <div class="summary-label">סה"כ ערך</div>
+            <div class="summary-value" id="totalInvoiceValue">₪0</div>
+          </div>
         </div>
       </div>
-      
-      <div id="mappingsTab" class="tab-section">
-        <div id="mappingsContent">
-          <!-- Tab 2 content will be loaded dynamically -->
+      <div class="search-results-container" id="documentsContainer">
+        <div class="no-results">
+          <div class="no-results-icon">📄</div>
+          <div>אין מסמכי חשבונית</div>
         </div>
       </div>
     </div>
-    
-    <div class="invoice-buttons">
-      <button class="invoice-btn close" onclick="toggleInvoiceDetails()">סגור</button>
-      <button class="invoice-btn refresh" onclick="refreshInvoiceData()">רענן נתונים</button>
+
+    <!-- Tab 2 - Damage Center Mappings -->
+    <div class="tab-content" id="tab-mappings" style="display: none;">
+      <div class="results-summary" id="mappingsSummary">
+        <div class="summary-grid">
+          <div class="summary-item">
+            <div class="summary-label">סה"כ הקצאות</div>
+            <div class="summary-value" id="totalMappings">0</div>
+          </div>
+          <div class="summary-item">
+            <div class="summary-label">מוקדי נזק</div>
+            <div class="summary-value" id="totalDamageCenters">0</div>
+          </div>
+          <div class="summary-item">
+            <div class="summary-label">ערך כולל</div>
+            <div class="summary-value" id="totalMappingValue">₪0</div>
+          </div>
+        </div>
+      </div>
+      <div class="search-results-container" id="mappingsContainer">
+        <div class="no-results">
+          <div class="no-results-icon">🔗</div>
+          <div>אין הקצאות נזק</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab 3 - Invoice Validations -->
+    <div class="tab-content" id="tab-validations" style="display: none;">
+      <div class="search-results-container" id="validationsContainer">
+        <div class="no-results">
+          <div class="no-results-icon">✅</div>
+          <div>אין אימות חשבוניות זמינות</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="results-buttons">
+      <button class="results-btn close" onclick="toggleInvoiceDetails()">סגור</button>
+      <button class="results-btn refresh" onclick="refreshInvoiceData()">רענן נתונים</button>
     </div>
   `;
   document.body.appendChild(modal);
-  console.log('✅ Invoice modal added to DOM');
 
-  // Global variables
+  // SESSION 49: Tab state persistence
   let currentTab = 'documents';
-  let currentCaseId = null;
+  let tabsLoaded = {
+    documents: false,
+    mappings: false,
+    validations: false
+  };
 
-  // Remove duplicate setInvoiceTab function - using switchTab instead
+  // Global functions
+  window.toggleInvoiceDetails = function () {
+    const modal = document.getElementById("invoiceDetailsModal");
+    if (modal.style.display === "none" || !modal.style.display) {
+      modal.style.display = "block";
+      // SESSION 49: Load current tab if not already loaded
+      if (!tabsLoaded[currentTab]) {
+        loadTabData(currentTab);
+      }
+    } else {
+      modal.style.display = "none";
+    }
+  };
 
-  // Get current case ID using correct helper identifiers
-  async function getCurrentCaseId() {
-    console.log('🔍 Invoice floating: Checking helper structure...');
+  // SESSION 49: Tab switching function with persistence
+  window.switchInvoiceTab = function(tabName) {
+    console.log(`📑 SESSION 49: Switching to tab: ${tabName}`);
     
-    // First priority: Use direct case UUID if available
-    const directCaseId = window.helper?.case_info?.supabase_case_id;
-    if (directCaseId) {
-      console.log('✅ Invoice floating: Found direct case UUID:', directCaseId);
-      return directCaseId;
+    // Update tab buttons
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+      if (btn.dataset.tab === tabName) {
+        btn.classList.add('active');
+      } else {
+        btn.classList.remove('active');
+      }
+    });
+    
+    // Update tab content
+    document.querySelectorAll('.tab-content').forEach(content => {
+      content.style.display = 'none';
+      content.classList.remove('active');
+    });
+    
+    const activeTab = document.getElementById(`tab-${tabName}`);
+    if (activeTab) {
+      activeTab.style.display = 'block';
+      activeTab.classList.add('active');
     }
     
-    // Second priority: Check current_invoice for case_uuid
-    const invoiceCaseId = window.helper?.current_invoice?.case_uuid;
-    if (invoiceCaseId) {
-      console.log('✅ Invoice floating: Found case UUID from current_invoice:', invoiceCaseId);
-      return invoiceCaseId;
+    // Update current tab
+    currentTab = tabName;
+    
+    // Load data if not already loaded (tab persistence)
+    if (!tabsLoaded[tabName]) {
+      loadTabData(tabName);
+    }
+  };
+
+  // SESSION 49: Load data for specific tab
+  function loadTabData(tabName) {
+    console.log(`🔄 Invoice floating: Loading data for tab: ${tabName}`);
+    
+    switch(tabName) {
+      case 'documents':
+        loadInvoiceDocuments();
+        break;
+      case 'mappings':
+        loadDamageCenterMappings();
+        break;
+      case 'validations':
+        loadInvoiceValidations();
+        break;
     }
     
-    // Third priority: Get case ID by plate lookup
-    const plate = window.helper?.case_info?.plate;
-    if (plate) {
-      console.log('🔍 Invoice floating: Found plate, looking up case:', plate);
-      return getCurrentCaseIdByPlate(plate);
-    }
-    
-    console.log('❌ Invoice floating: No case ID or plate found in helper');
-    console.log('🔍 DEBUG: helper.case_info:', window.helper?.case_info);
-    console.log('🔍 DEBUG: helper.current_invoice:', window.helper?.current_invoice);
-    
-    return null;
+    tabsLoaded[tabName] = true;
   }
-
-  // Helper function to get case ID by plate
-  async function getCurrentCaseIdByPlate(plate) {
-    if (!window.supabase) {
-      console.log('❌ Supabase not available');
-      return null;
+  
+  // SESSION 50: Refresh current tab data
+  window.refreshInvoiceData = function() {
+    console.log('🔄 Invoice floating: Refreshing current tab:', currentTab);
+    
+    // Show loading indicator
+    const container = currentTab === 'documents' ? document.getElementById('documentsContainer') :
+                     currentTab === 'mappings' ? document.getElementById('mappingsContainer') :
+                     document.getElementById('validationsContainer');
+    
+    if (container) {
+      container.innerHTML = `
+        <div class="no-results">
+          <div class="no-results-icon">🔄</div>
+          <div>מרענן נתונים...</div>
+        </div>
+      `;
     }
+    
+    // Reload tab data
+    tabsLoaded[currentTab] = false;
+    setTimeout(() => {
+      loadTabData(currentTab);
+    }, 100);
+  };
 
+  // SESSION 50: Remove unused export function (kept for compatibility but does nothing)
+  window.exportPartsResults = function () {
     try {
-      // EXACT COPY from parts floating screen: Get case_id from cases table
-      const normalizedPlate = plate.replace(/[\s-]/g, '');
-      console.log('🔍 Invoice floating: Normalized plate:', plate, '→', normalizedPlate);
-      
-      const { data: casesData, error: caseError } = await window.supabase
-        .from('cases')
-        .select('id, filing_case_id, status')
-        .eq('plate', normalizedPlate)
-        .order('created_at', { ascending: false });
-      
-      if (caseError) {
-        console.error('❌ Invoice floating: Failed to query cases:', caseError);
-        return null;
+      const results = getPartsSearchResults();
+      if (!results || results.length === 0) {
+        alert('אין תוצאות לייצוא');
+        return;
       }
-      
-      if (!casesData || casesData.length === 0) {
-        console.log('❌ Invoice floating: No cases found for plate:', normalizedPlate);
-        return null;
-      }
-      
-      // Smart case selection: prioritize OPEN/IN_PROGRESS cases over most recent
-      const activeCase = casesData?.find(c => c.status === 'OPEN' || c.status === 'IN_PROGRESS') || casesData?.[0];
-      
-      if (!activeCase) {
-        console.error('❌ Invoice floating: No valid case found for plate:', normalizedPlate);
-        return null;
-      }
-      
-      const caseUuid = activeCase.id;
-      console.log('✅ Invoice floating: Found case UUID:', caseUuid, 'status:', activeCase.status);
-      
-      if (casesData.length > 1) {
-        console.log(`📋 Invoice floating: Found ${casesData.length} cases for plate, using:`, 
-                   activeCase.status === 'OPEN' || activeCase.status === 'IN_PROGRESS' ? 'active case' : 'most recent case');
-      }
-      
-      return caseUuid;
-      
+
+      // Create CSV content
+      const headers = ['שם החלק', 'מחיר', 'ספק', 'מיקום', 'מצב', 'קטגוריה', 'תיאור'];
+      const csvContent = [
+        headers.join(','),
+        ...results.map(result => [
+          `"${result.name || ''}"`,
+          result.price || '0',
+          `"${result.supplier || ''}"`,
+          `"${result.location || ''}"`,
+          `"${result.condition || ''}"`,
+          `"${result.category || ''}"`,
+          `"${result.description || ''}"`
+        ].join(','))
+      ].join('\n');
+
+      // Download CSV
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      const url = URL.createObjectURL(blob);
+      link.setAttribute('href', url);
+      link.setAttribute('download', `parts_search_results_${new Date().toISOString().slice(0,10)}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      alert('תוצאות החיפוש יוצאו בהצלחה');
     } catch (error) {
-      console.error('❌ Invoice floating: Error getting case ID:', error);
-      return null;
+      console.error('Export error:', error);
+      alert('שגיאה בייצוא התוצאות');
+    }
+  };
+
+  // Helper functions
+  function getPartsSearchResults() {
+    try {
+      // Try to get from helper.js first
+      if (typeof helper !== 'undefined' && helper.parts_search && helper.parts_search.results) {
+        return helper.parts_search.results;
+      }
+      
+      // Fallback to sessionStorage
+      const sessionHelper = sessionStorage.getItem('helper');
+      if (sessionHelper) {
+        const helperData = JSON.parse(sessionHelper);
+        if (helperData.parts_search && helperData.parts_search.results) {
+          return helperData.parts_search.results;
+        }
+      }
+      
+      return [];
+    } catch (error) {
+      console.error('Error getting parts search results:', error);
+      return [];
     }
   }
 
+  function getSummaryData() {
+    try {
+      // Try to get from helper.js first
+      if (typeof helper !== 'undefined' && helper.parts_search && helper.parts_search.summary) {
+        return helper.parts_search.summary;
+      }
+      
+      // Fallback to sessionStorage
+      const sessionHelper = sessionStorage.getItem('helper');
+      if (sessionHelper) {
+        const helperData = JSON.parse(sessionHelper);
+        if (helperData.parts_search && helperData.parts_search.summary) {
+          return helperData.parts_search.summary;
+        }
+      }
+      
+      return { total_results: '', recommended: '' };
+    } catch (error) {
+      console.error('Error getting summary data:', error);
+      return { total_results: '', recommended: '' };
+    }
+  }
 
-  // Load invoice documents from invoice_documents table
+  // TAB 1 - Load Invoice Documents (FROM WORKING ORIGINAL)
   async function loadInvoiceDocuments() {
-    const contentDiv = document.getElementById('documentsContent');
+    console.log('📄 Loading invoice documents...');
+    const container = document.getElementById('documentsContainer');
     
     try {
-      currentCaseId = await getCurrentCaseId();
+      // Get current case ID using the same method as the working original
+      const currentCaseId = await getCurrentCaseId();
       
       if (!currentCaseId) {
         const hasHelper = !!window.helper;
         const hasPlate = !!(window.helper?.meta?.plate || window.helper?.vehicle?.plate);
         
-        contentDiv.innerHTML = `
-          <div class="no-data-message">
-            <div class="no-data-icon">❌</div>
+        container.innerHTML = `
+          <div class="no-results">
+            <div class="no-results-icon">❌</div>
             <div style="font-weight: bold; margin-bottom: 8px;">לא נמצא מזהה תיק</div>
             <div style="font-size: 14px;">לא ניתן לטעון מסמכי חשבונית ללא מזהה תיק</div>
             <div style="font-size: 12px; margin-top: 10px; padding: 10px; background: #f3f4f6; border-radius: 6px;">
@@ -462,16 +696,20 @@
       }
 
       // Show loading state
-      contentDiv.innerHTML = `
-        <div class="invoice-section">
-          <h4><span class="loading-spinner"></span> טוען מסמכי חשבונית...</h4>
-          <p>מחפש חשבוניות עבור תיק: ${currentCaseId}</p>
+      container.innerHTML = `
+        <div class="search-result-item">
+          <div class="result-header">
+            <div class="result-name">🔄 טוען מסמכי חשבונית...</div>
+          </div>
+          <div class="result-details">
+            <div class="result-detail">מחפש חשבוניות עבור תיק: ${currentCaseId}</div>
+          </div>
         </div>
       `;
 
-      // 🔧 FIX: Wait for Supabase to load if needed (like parts screen)
+      // Wait for Supabase to load if needed
       if (!window.supabase) {
-        console.log('⏳ Invoice floating: Waiting for Supabase client for Tab 1...');
+        console.log('⏳ Waiting for Supabase client...');
         await loadSupabaseClient();
       }
 
@@ -501,37 +739,123 @@
 
       console.log('✅ Loaded invoice documents:', invoiceDocuments);
       console.log('📊 Invoice documents count:', invoiceDocuments?.length || 0);
-      console.log('🔍 DEBUG: Sample document data:', invoiceDocuments?.[0]);
-      console.log('🔍 DEBUG: About to call displayInvoiceDocuments...');
+      
+      // Update statistics
+      const totalDocs = invoiceDocuments?.length || 0;
+      const totalInvoices = invoiceDocuments?.filter(doc => doc.invoice).length || 0;
+      const totalValue = invoiceDocuments?.reduce((sum, doc) => {
+        return sum + parseFloat(doc.invoice?.total_amount || 0);
+      }, 0) || 0;
+      
+      document.getElementById('totalDocuments').textContent = totalDocs;
+      document.getElementById('totalInvoices').textContent = totalInvoices;
+      document.getElementById('totalInvoiceValue').textContent = `₪${Math.round(totalValue).toLocaleString('he-IL')}`;
       
       // Display the invoice documents
       displayInvoiceDocuments(invoiceDocuments || []);
-      
-      console.log('🔍 DEBUG: displayInvoiceDocuments call completed');
 
     } catch (error) {
       console.error('❌ Error loading invoice documents:', error);
-      contentDiv.innerHTML = `
-        <div class="invoice-section">
-          <h4>❌ שגיאה בטעינת מסמכי חשבונית</h4>
-          <p>שגיאה: ${error.message}</p>
-          <p>מזהה תיק: ${currentCaseId || 'לא נמצא'}</p>
+      container.innerHTML = `
+        <div class="search-result-item">
+          <div class="result-header">
+            <div class="result-name">❌ שגיאה בטעינת מסמכי חשבונית</div>
+          </div>
+          <div class="result-details">
+            <div class="result-detail">שגיאה: ${error.message}</div>
+            <div class="result-detail">מזהה תיק: לא נמצא</div>
+          </div>
         </div>
       `;
+    }
+  }
+
+  // Get current case ID using correct helper identifiers  
+  async function getCurrentCaseId() {
+    console.log('🔍 Checking helper structure...');
+    
+    // First priority: Use direct case UUID if available
+    const directCaseId = window.helper?.case_info?.supabase_case_id;
+    if (directCaseId) {
+      console.log('✅ Found direct case UUID:', directCaseId);
+      return directCaseId;
+    }
+    
+    // Second priority: Check current_invoice for case_uuid
+    const invoiceCaseId = window.helper?.current_invoice?.case_uuid;
+    if (invoiceCaseId) {
+      console.log('✅ Found case UUID from current_invoice:', invoiceCaseId);
+      return invoiceCaseId;
+    }
+    
+    // Third priority: Get case ID by plate lookup
+    const plate = window.helper?.case_info?.plate || window.helper?.meta?.plate || window.helper?.vehicle?.plate;
+    if (plate) {
+      console.log('🔍 Found plate, looking up case:', plate);
+      return getCurrentCaseIdByPlate(plate);
+    }
+    
+    console.log('❌ No case ID or plate found in helper');
+    return null;
+  }
+
+  // Helper function to get case ID by plate
+  async function getCurrentCaseIdByPlate(plate) {
+    if (!window.supabase) {
+      console.log('❌ Supabase not available');
+      return null;
+    }
+
+    try {
+      // Get case_id from cases table
+      const normalizedPlate = plate.replace(/[\s-]/g, '');
+      console.log('🔍 Normalized plate:', plate, '→', normalizedPlate);
+      
+      const { data: casesData, error: caseError } = await window.supabase
+        .from('cases')
+        .select('id, filing_case_id, status')
+        .eq('plate', normalizedPlate)
+        .order('created_at', { ascending: false });
+      
+      if (caseError) {
+        console.error('❌ Failed to query cases:', caseError);
+        return null;
+      }
+      
+      if (!casesData || casesData.length === 0) {
+        console.log('❌ No cases found for plate:', normalizedPlate);
+        return null;
+      }
+      
+      // Smart case selection: prioritize OPEN/IN_PROGRESS cases over most recent
+      const activeCase = casesData?.find(c => c.status === 'OPEN' || c.status === 'IN_PROGRESS') || casesData?.[0];
+      
+      if (!activeCase) {
+        console.error('❌ No valid case found for plate:', normalizedPlate);
+        return null;
+      }
+      
+      const caseUuid = activeCase.id;
+      console.log('✅ Found case UUID:', caseUuid, 'status:', activeCase.status);
+      
+      return caseUuid;
+      
+    } catch (error) {
+      console.error('❌ Error getting case ID:', error);
+      return null;
     }
   }
 
   // Display invoice documents
   function displayInvoiceDocuments(documents) {
     console.log('🎨 displayInvoiceDocuments called with:', documents);
-    const contentDiv = document.getElementById('documentsContent');
-    console.log('🎨 Content div found:', !!contentDiv);
+    const container = document.getElementById('documentsContainer');
     
     if (!documents || documents.length === 0) {
       console.log('📭 No documents to display');
-      contentDiv.innerHTML = `
-        <div class="no-data-message">
-          <div class="no-data-icon">📋</div>
+      container.innerHTML = `
+        <div class="no-results">
+          <div class="no-results-icon">📋</div>
           <div style="font-weight: bold; margin-bottom: 8px;">לא נמצאו מסמכי חשבונית</div>
           <div style="font-size: 14px;">לא נמצאו מסמכי חשבונית עבור תיק זה</div>
         </div>
@@ -554,897 +878,1170 @@
       }
     };
 
-    let content = `
-      <div class="invoice-section">
-        <h4>📄 מסמכי חשבונית (${documents.length})</h4>
-        <p>נמצאו ${documents.length} מסמכי חשבונית עבור תיק ${currentCaseId}</p>
-      </div>
-    `;
-
-    documents.forEach((doc, index) => {
-      // Parse OCR structured data if available
+    // Use the simple search-result-item format from parts floating screen
+    const documentsHTML = documents.map((doc, index) => {
       const ocrData = doc.ocr_structured_data || {};
       const invoiceDetails = ocrData.invoice_details || {};
       const items = ocrData.items || [];
 
-      content += `
-        <div class="invoice-section" style="margin-bottom: 20px; border: 2px solid #fbbf24;">
-          <h4 style="background: #fbbf24; color: white; margin: -15px -15px 15px -15px; padding: 10px;">
-            📄 מסמך #${index + 1} - ${formatValue(doc.filename)}
-          </h4>
-          
-          <!-- Document Information -->
-          <div class="invoice-field">
-            <div class="label">שם קובץ:</div>
-            <div class="value">${formatValue(doc.filename)}</div>
+      return `
+        <div class="search-result-item">
+          <div class="result-header">
+            <div class="result-name">📄 ${formatValue(doc.filename)}</div>
+            <div class="result-price">${formatDate(doc.created_at)}</div>
           </div>
-          <div class="invoice-field">
-            <div class="label">תאריך העלאה:</div>
-            <div class="value">${formatDate(doc.created_at)}</div>
+          <div class="result-details">
+            <div class="result-detail">
+              <strong>סטטוס OCR:</strong> ${formatValue(doc.ocr_status)}
+            </div>
+            <div class="result-detail">
+              <strong>דיוק:</strong> ${doc.ocr_confidence ? Math.round(doc.ocr_confidence) + '%' : '-'}
+            </div>
+            <div class="result-detail">
+              <strong>שפה:</strong> ${formatValue(doc.language_detected)}
+            </div>
+            <div class="result-detail">
+              <strong>גודל:</strong> ${doc.file_size ? (doc.file_size / 1024 / 1024).toFixed(1) + 'MB' : '-'}
+            </div>
           </div>
-          <div class="invoice-field">
-            <div class="label">סטטוס OCR:</div>
-            <div class="value">${formatValue(doc.ocr_status)}</div>
+          ${Object.keys(invoiceDetails).length > 0 ? `
+          <div class="result-description">
+            📋 פרטי חשבונית מ-OCR: ${Object.entries(invoiceDetails).filter(([k,v]) => v && v !== 'לא זוהה').map(([k,v]) => `${k}: ${v}`).join(' • ')}
           </div>
-          <div class="invoice-field">
-            <div class="label">דיוק OCR:</div>
-            <div class="value">${doc.ocr_confidence ? Math.round(doc.ocr_confidence) + '%' : '-'}</div>
+          ` : ''}
+          ${items && items.length > 0 ? `
+          <div class="result-description">
+            🔧 ${items.length} פריטים בחשבונית
           </div>
-          <div class="invoice-field">
-            <div class="label">שפה מזוהה:</div>
-            <div class="value">${formatValue(doc.language_detected)}</div>
-          </div>
-
-          <!-- View Document Button -->
-          <div style="text-align: center; margin: 15px 0;">
-            <button onclick="viewInvoiceDocument('${doc.id}', '${doc.storage_path}', '${doc.storage_bucket}')" 
-                    class="invoice-btn view-doc">
-              👁️ צפה במסמך המקורי
-            </button>
-          </div>
+          ` : ''}
+        </div>
       `;
+    }).join('');
 
-      // Display OCR invoice details if available
-      if (Object.keys(invoiceDetails).length > 0) {
-        content += `
-          <div style="margin-top: 20px; padding: 15px; background: #f0f9ff; border-radius: 8px; border: 1px solid #bfdbfe;">
-            <h5 style="color: #1e40af; margin-bottom: 10px;">📋 פרטי חשבונית מ-OCR:</h5>
-        `;
-
-        // Display all invoice details from OCR
-        Object.entries(invoiceDetails).forEach(([key, value]) => {
-          if (value && value !== 'לא זוהה' && value !== 'N/A') {
-            content += `
-              <div class="invoice-field">
-                <div class="label">${key}:</div>
-                <div class="value">${formatValue(value)}</div>
-              </div>
-            `;
-          }
-        });
-
-        content += `</div>`;
-      }
-
-      // Display OCR items if available
-      if (items && items.length > 0) {
-        content += `
-          <div style="margin-top: 20px;">
-            <h5 style="color: #92400e; margin-bottom: 10px;">🔧 פריטי החשבונית מ-OCR (${items.length}):</h5>
-            <table class="invoice-items-table">
-              <thead>
-                <tr>
-                  <th>תיאור</th>
-                  <th>כמות</th>
-                  <th>מחיר יחידה</th>
-                  <th>סה"כ</th>
-                  <th>קטגוריה</th>
-                </tr>
-              </thead>
-              <tbody>
-        `;
-        
-        items.forEach(item => {
-          content += `
-            <tr>
-              <td>${formatValue(item.description || item.name)}</td>
-              <td>${formatValue(item.quantity)}</td>
-              <td>${formatPrice(item.unit_price || item.price)}</td>
-              <td>${formatPrice(item.total_price || item.line_total)}</td>
-              <td>${formatValue(item.category || item.type)}</td>
-            </tr>
-          `;
-        });
-        
-        content += `
-              </tbody>
-            </table>
-          </div>
-        `;
-      }
-
-      // Display raw OCR text if available and no structured data
-      if (doc.ocr_raw_text && Object.keys(ocrData).length === 0) {
-        content += `
-          <div style="margin-top: 20px;">
-            <h5 style="color: #92400e; margin-bottom: 10px;">📄 טקסט OCR גולמי:</h5>
-            <div style="background: #f3f4f6; padding: 10px; border-radius: 6px; max-height: 200px; overflow-y: auto; font-size: 12px; white-space: pre-wrap;">${doc.ocr_raw_text}</div>
-          </div>
-        `;
-      }
-
-      content += `</div>`;
-    });
-
-    console.log('🎨 Setting content HTML, length:', content.length);
-    contentDiv.innerHTML = content;
+    container.innerHTML = documentsHTML;
     console.log('✅ Display completed successfully');
   }
 
-  // Load damage center mappings from invoice_damage_center_mappings table
+  // TAB 2 - Load Damage Center Mappings (Simple implementation)
   async function loadDamageCenterMappings() {
-    const contentDiv = document.getElementById('mappingsContent');
+    console.log('🔗 Loading damage center mappings...');
+    const container = document.getElementById('mappingsContainer');
     
-    try {
-      currentCaseId = await getCurrentCaseId();
-      
-      if (!currentCaseId) {
-        const hasHelper = !!window.helper;
-        const hasPlate = !!(window.helper?.meta?.plate || window.helper?.vehicle?.plate);
-        
-        contentDiv.innerHTML = `
-          <div class="no-data-message">
-            <div class="no-data-icon">❌</div>
-            <div style="font-weight: bold; margin-bottom: 8px;">לא נמצא מזהה תיק</div>
-            <div style="font-size: 14px;">לא ניתן לטעון הקצאות ללא מזהה תיק</div>
-            <div style="font-size: 12px; margin-top: 10px; padding: 10px; background: #f3f4f6; border-radius: 6px;">
-              <strong>מצב מערכת:</strong><br>
-              Helper זמין: ${hasHelper ? '✅' : '❌'}<br>
-              מספר רישוי: ${hasPlate ? '✅' : '❌'}<br>
-              ${!hasHelper ? 'טען תיק תחילה' : !hasPlate ? 'מספר רישוי חסר' : 'לא נמצא תיק במאגר'}
-            </div>
-          </div>
-        `;
-        return;
-      }
-
-      // Show loading state
-      contentDiv.innerHTML = `
-        <div class="invoice-section">
-          <h4><span class="loading-spinner"></span> טוען הקצאות למוקדי נזק...</h4>
-          <p>מחפש הקצאות עבור תיק: ${currentCaseId}</p>
+    container.innerHTML = `
+      <div class="search-result-item">
+        <div class="result-header">
+          <div class="result-name">🔗 הקצאות חלקים למוקדי נזק</div>
+          <div class="result-price">פיתוח עתידי</div>
         </div>
-      `;
-
-      // 🔧 FIX: Wait for Supabase to load if needed (like parts screen)  
-      if (!window.supabase) {
-        console.log('⏳ Invoice floating: Waiting for Supabase client for Tab 2...');
-        await loadSupabaseClient();
-      }
-
-      if (!window.supabase) {
-        throw new Error('Supabase client לא זמין - נכשל בטעינה');
-      }
-
-      // Query invoice_damage_center_mappings table directly
-      const { data: mappings, error } = await window.supabase
-        .from('invoice_damage_center_mappings')
-        .select(`
-          *,
-          invoice:invoices(
-            invoice_number,
-            supplier_name,
-            total_amount
-          ),
-          invoice_line:invoice_lines(
-            description,
-            quantity,
-            unit_price,
-            line_total
-          )
-        `)
-        .eq('case_id', currentCaseId)
-        .eq('mapping_status', 'active')
-        .order('damage_center_id')
-        .order('created_at', { ascending: false });
-
-      if (error) {
-        throw new Error(`Supabase query error: ${error.message}`);
-      }
-
-      console.log('✅ Loaded damage center mappings:', mappings);
-      console.log('📊 Mappings count:', mappings?.length || 0);
-      console.log('🔍 DEBUG: Sample mapping data:', mappings?.[0]);
-      console.log('🔍 DEBUG: About to call displayDamageCenterMappings...');
-      
-      // Display the mappings
-      displayDamageCenterMappings(mappings || []);
-      
-      console.log('🔍 DEBUG: displayDamageCenterMappings call completed');
-
-    } catch (error) {
-      console.error('❌ Error loading damage center mappings:', error);
-      contentDiv.innerHTML = `
-        <div class="invoice-section">
-          <h4>❌ שגיאה בטעינת הקצאות</h4>
-          <p>שגיאה: ${error.message}</p>
-          <p>מזהה תיק: ${currentCaseId || 'לא נמצא'}</p>
+        <div class="result-details">
+          <div class="result-detail">
+            <strong>מצב:</strong> תכונה זו תתווסף בעדכון עתידי
+          </div>
+          <div class="result-detail">
+            <strong>מטרה:</strong> הצגת הקצאות של פריטי חשבונית למוקדי נזק
+          </div>
         </div>
-      `;
-    }
-  }
-
-  // Display damage center mappings
-  function displayDamageCenterMappings(mappings) {
-    const contentDiv = document.getElementById('mappingsContent');
-    
-    if (!mappings || mappings.length === 0) {
-      contentDiv.innerHTML = `
-        <div class="no-data-message">
-          <div class="no-data-icon">🔗</div>
-          <div style="font-weight: bold; margin-bottom: 8px;">לא נמצאו הקצאות</div>
-          <div style="font-size: 14px;">לא נמצאו הקצאות של חלקי חשבונית למוקדי נזק עבור תיק זה</div>
-        </div>
-      `;
-      return;
-    }
-
-    const formatValue = (value) => value && value.toString().trim() ? value : "-";
-    const formatPrice = (value) => {
-      const num = parseFloat(value) || 0;
-      return num > 0 ? `₪${num.toLocaleString('he-IL')}` : "₪0";
-    };
-    const formatDate = (dateStr) => {
-      if (!dateStr) return '-';
-      try {
-        const date = new Date(dateStr);
-        return date.toLocaleDateString('he-IL');
-      } catch {
-        return '-';
-      }
-    };
-
-    const getFieldTypeIcon = (fieldType) => {
-      const icons = {
-        'part': '🔧',
-        'work': '⚙️', 
-        'repair': '🔨',
-        'material': '📦'
-      };
-      return icons[fieldType] || '📋';
-    };
-
-    const getFieldTypeLabel = (fieldType) => {
-      const labels = {
-        'part': 'חלק',
-        'work': 'עבודה',
-        'repair': 'תיקון',
-        'material': 'חומר'
-      };
-      return labels[fieldType] || fieldType;
-    };
-
-    const getStatusBadge = (status) => {
-      const badges = {
-        'active': '<span style="background: #d1fae5; color: #065f46; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 600;">✅ פעיל</span>',
-        'pending': '<span style="background: #fef3c7; color: #92400e; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 600;">⏳ ממתין</span>',
-        'cancelled': '<span style="background: #fee2e2; color: #991b1b; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 600;">❌ מבוטל</span>'
-      };
-      return badges[status] || status;
-    };
-
-    // Group mappings by damage center
-    const groupedMappings = mappings.reduce((groups, mapping) => {
-      const centerId = mapping.damage_center_id;
-      if (!groups[centerId]) {
-        groups[centerId] = [];
-      }
-      groups[centerId].push(mapping);
-      return groups;
-    }, {});
-
-    // Calculate statistics
-    const totalMappings = mappings.length;
-    const uniqueCenters = Object.keys(groupedMappings).length;
-    const totalValue = mappings.reduce((sum, mapping) => {
-      const mappedData = mapping.mapped_data || {};
-      const cost = parseFloat(mappedData.costWithoutVat) || 0;
-      const quantity = parseFloat(mappedData.quantity) || 1;
-      return sum + (cost * quantity);
-    }, 0);
-    const uniqueInvoices = new Set(mappings.filter(m => m.invoice?.invoice_number).map(m => m.invoice.invoice_number)).size;
-
-    let content = `
-      <div class="invoice-section">
-        <h4>🔗 הקצאות חלקים למוקדי נזק</h4>
-        <p>נמצאו ${totalMappings} הקצאות עבור תיק ${currentCaseId}</p>
-        
-        <!-- Statistics -->
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin: 20px 0;">
-          <div style="background: #f0f9ff; padding: 15px; border-radius: 8px; border: 1px solid #7dd3fc;">
-            <div style="font-size: 24px; font-weight: 700; color: #0369a1;">${totalMappings}</div>
-            <div style="font-size: 14px; color: #64748b;">סה"כ הקצאות</div>
-          </div>
-          <div style="background: #f0fdf4; padding: 15px; border-radius: 8px; border: 1px solid #86efac;">
-            <div style="font-size: 24px; font-weight: 700; color: #166534;">${uniqueCenters}</div>
-            <div style="font-size: 14px; color: #64748b;">מוקדי נזק</div>
-          </div>
-          <div style="background: #fffbeb; padding: 15px; border-radius: 8px; border: 1px solid #fcd34d;">
-            <div style="font-size: 24px; font-weight: 700; color: #92400e;">${formatPrice(totalValue)}</div>
-            <div style="font-size: 14px; color: #64748b;">ערך כולל</div>
-          </div>
-          <div style="background: #fef2f2; padding: 15px; border-radius: 8px; border: 1px solid #fca5a5;">
-            <div style="font-size: 24px; font-weight: 700; color: #dc2626;">${uniqueInvoices}</div>
-            <div style="font-size: 14px; color: #64748b;">חשבוניות</div>
-          </div>
+        <div class="result-description">
+          תכונה זו תציג את הקשר בין פריטים בחשבוניות למוקדי הנזק הרלוונטיים בתיק
         </div>
       </div>
+    `;
+    
+    // Update statistics
+    document.getElementById('totalMappings').textContent = '0';
+    document.getElementById('totalDamageCenters').textContent = '0';
+    document.getElementById('totalMappingValue').textContent = '₪0';
+  }
+
+  // TAB 3 - Load Invoice Validations (Simple implementation)
+  async function loadInvoiceValidations() {
+    console.log('✅ Loading invoice validations...');
+    const container = document.getElementById('validationsContainer');
+    
+    container.innerHTML = `
+      <div class="search-result-item">
+        <div class="result-header">
+          <div class="result-name">✅ אימות חשבוניות</div>
+          <div class="result-price">פיתוח עתידי</div>
+        </div>
+        <div class="result-details">
+          <div class="result-detail">
+            <strong>מצב:</strong> תכונה זו תתווסף בעדכון עתידי
+          </div>
+          <div class="result-detail">
+            <strong>מטרה:</strong> הצגת תוצאות אימות וולידציה של חשבוניות
+          </div>
+        </div>
+        <div class="result-description">
+          תכונה זו תציג מידע על סטטוס האימות, שגיאות, אזהרות ואישורים של חשבוניות
+        </div>
+      </div>
+    `;
+  }
+  
+  // SESSION 49: TAB 1 HELPER - Toggle damage center group collapse
+  window.toggleDamageCenterGroup = function(groupId) {
+    const groupContent = document.getElementById(`group-${groupId}`);
+    if (groupContent) {
+      groupContent.style.display = groupContent.style.display === 'none' ? 'block' : 'none';
+    }
+  };
+  
+  // SESSION 50: TAB 1 - Save individual field (inline editing)
+  window.savePartField = async function(centerId, partIndex, fieldName, newValue) {
+    console.log(`💾 SESSION 50: Saving field - Center: ${centerId}, Part: ${partIndex}, Field: ${fieldName}, Value: ${newValue}`);
+    
+    try {
+      const plate = window.helper?.meta?.plate || window.helper?.vehicle?.plate;
+      if (!plate) {
+        alert('לא נמצא מספר רישוי');
+        return;
+      }
       
-      <!-- Mappings Table -->
-      <div class="invoice-section">
-        <h4>📊 טבלת הקצאות מפורטת</h4>
+      const centerIndex = window.helper?.centers?.findIndex(c => (c.Id || c.id) === centerId);
+      if (centerIndex === -1) {
+        alert('מרכז נזק לא נמצא');
+        return;
+      }
+      
+      const center = window.helper.centers[centerIndex];
+      const parts = center.Parts?.parts_required || center.Parts?.parts || [];
+      
+      if (partIndex >= parts.length) {
+        alert('חלק לא נמצא');
+        return;
+      }
+      
+      const part = parts[partIndex];
+      
+      // Parse value based on field type
+      let parsedValue = newValue;
+      if (fieldName === 'quantity') {
+        parsedValue = parseInt(newValue) || 1;
+      } else if (fieldName === 'price' || fieldName === 'reduction_percentage' || fieldName === 'wear_percentage') {
+        parsedValue = parseFloat(newValue) || 0;
+      } else {
+        parsedValue = newValue.trim();
+      }
+      
+      // Update Supabase if available
+      if (window.supabase) {
+        const updateData = {};
+        updateData[fieldName] = parsedValue;
+        updateData.updated_by = (window.caseOwnershipService?.getCurrentUser() || {}).userId || null;
+        updateData.updated_at = new Date().toISOString();
         
-        <div style="overflow-x: auto;">
-          <table style="width: 100%; border-collapse: collapse; margin: 15px 0;">
-            <thead>
-              <tr style="background: #f8f9fa; border-bottom: 2px solid #dee2e6;">
-                <th style="padding: 12px 8px; text-align: right; border: 1px solid #dee2e6; font-weight: 600;">מוקד נזק</th>
-                <th style="padding: 12px 8px; text-align: right; border: 1px solid #dee2e6; font-weight: 600;">סוג שדה</th>
-                <th style="padding: 12px 8px; text-align: right; border: 1px solid #dee2e6; font-weight: 600;">נתונים מוקצים</th>
-                <th style="padding: 12px 8px; text-align: right; border: 1px solid #dee2e6; font-weight: 600;">חשבונית</th>
-                <th style="padding: 12px 8px; text-align: right; border: 1px solid #dee2e6; font-weight: 600;">סטטוס</th>
-                <th style="padding: 12px 8px; text-align: right; border: 1px solid #dee2e6; font-weight: 600;">תאריך</th>
+        const { error } = await window.supabase
+          .from('parts_required')
+          .update(updateData)
+          .eq('plate', plate.replace(/-/g, ''))
+          .eq('damage_center_id', centerId)
+          .eq('part_name', part.part_name || part.name);
+        
+        if (error) {
+          console.error('❌ SESSION 50: Supabase update error:', error);
+          throw error;
+        }
+      }
+      
+      // Update helper data
+      part[fieldName] = parsedValue;
+      
+      // Also update common field aliases
+      if (fieldName === 'catalog_code') {
+        part.pcode = parsedValue;
+        part.oem = parsedValue;
+      } else if (fieldName === 'part_name') {
+        part.name = parsedValue;
+      } else if (fieldName === 'quantity') {
+        part.qty = parsedValue;
+      } else if (fieldName === 'price') {
+        part.cost = parsedValue;
+        part.expected_cost = parsedValue;
+        part.price_per_unit = parsedValue;
+      }
+      
+      console.log('✅ SESSION 50: Field saved successfully');
+      
+      // Refresh to update calculations
+      tabsLoaded.required = false;
+      loadRequiredParts();
+      
+    } catch (error) {
+      console.error('❌ SESSION 50: Save error:', error);
+      alert('שגיאה בשמירה: ' + error.message);
+    }
+  };
+  
+  // SESSION 50: TAB 1 HELPER - Edit required part with inline form
+  window.editRequiredPart = async function(centerId, partIndex) {
+    console.log(`✏️ SESSION 50: Edit part - Center: ${centerId}, Part: ${partIndex}`);
+    
+    try {
+      const plate = window.helper?.meta?.plate || window.helper?.vehicle?.plate;
+      if (!plate) {
+        alert('לא נמצא מספר רישוי');
+        return;
+      }
+      
+      const centerIndex = window.helper?.centers?.findIndex(c => (c.Id || c.id) === centerId);
+      if (centerIndex === -1) {
+        alert('מרכז נזק לא נמצא');
+        return;
+      }
+      
+      const center = window.helper.centers[centerIndex];
+      const parts = center.Parts?.parts_required || center.Parts?.parts || [];
+      
+      if (partIndex >= parts.length) {
+        alert('חלק לא נמצא');
+        return;
+      }
+      
+      const part = parts[partIndex];
+      
+      // Create editable form modal
+      const editModal = document.createElement('div');
+      editModal.style.cssText = `
+        position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+        background: white; padding: 25px; border-radius: 12px; z-index: 20000;
+        box-shadow: 0 10px 40px rgba(0,0,0,0.3); min-width: 400px;
+      `;
+      
+      editModal.innerHTML = `
+        <h3 style="margin: 0 0 20px 0; color: #28a745; text-align: right;">✏️ עריכת חלק</h3>
+        <div style="display: flex; flex-direction: column; gap: 12px; direction: rtl;">
+          <div>
+            <label style="display: block; margin-bottom: 5px; font-weight: bold;">קוד קטלוגי:</label>
+            <input type="text" id="edit-code" value="${part.catalog_code || part.pcode || part.oem || ''}" 
+                   style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+          </div>
+          <div>
+            <label style="display: block; margin-bottom: 5px; font-weight: bold;">שם החלק:</label>
+            <input type="text" id="edit-name" value="${part.part_name || part.name || ''}" 
+                   style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+          </div>
+          <div style="display: flex; gap: 10px;">
+            <div style="flex: 1;">
+              <label style="display: block; margin-bottom: 5px; font-weight: bold;">כמות:</label>
+              <input type="number" id="edit-qty" value="${part.quantity || part.qty || 1}" min="1"
+                     style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+            </div>
+            <div style="flex: 1;">
+              <label style="display: block; margin-bottom: 5px; font-weight: bold;">מחיר יחידה:</label>
+              <input type="number" id="edit-price" value="${part.price_per_unit || part.price || part.cost || 0}" step="0.01"
+                     style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+            </div>
+          </div>
+          <div style="display: flex; gap: 10px;">
+            <div style="flex: 1;">
+              <label style="display: block; margin-bottom: 5px; font-weight: bold;">הנחה %:</label>
+              <input type="number" id="edit-reduction" value="${part.reduction_percentage || part.reduction || 0}" min="0" max="100"
+                     style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+            </div>
+            <div style="flex: 1;">
+              <label style="display: block; margin-bottom: 5px; font-weight: bold;">בלאי %:</label>
+              <input type="number" id="edit-wear" value="${part.wear_percentage || part.wear || 0}" min="0" max="100"
+                     style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+            </div>
+          </div>
+        </div>
+        <div style="display: flex; gap: 10px; margin-top: 20px;">
+          <button id="save-edit-btn" style="flex: 1; background: #28a745; color: white; border: none; padding: 10px; 
+                                            border-radius: 6px; cursor: pointer; font-weight: bold;">💾 שמור</button>
+          <button id="cancel-edit-btn" style="flex: 1; background: #6c757d; color: white; border: none; padding: 10px; 
+                                              border-radius: 6px; cursor: pointer; font-weight: bold;">✖ ביטול</button>
+        </div>
+      `;
+      
+      const backdrop = document.createElement('div');
+      backdrop.style.cssText = 'position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 19999;';
+      
+      document.body.appendChild(backdrop);
+      document.body.appendChild(editModal);
+      
+      // Close modal function
+      const closeModal = () => {
+        backdrop.remove();
+        editModal.remove();
+      };
+      
+      // Cancel button
+      document.getElementById('cancel-edit-btn').onclick = closeModal;
+      backdrop.onclick = closeModal;
+      
+      // Save button
+      document.getElementById('save-edit-btn').onclick = async () => {
+        try {
+          const newCatalogCode = document.getElementById('edit-code').value.trim();
+          const newPartName = document.getElementById('edit-name').value.trim();
+          const newQuantity = parseInt(document.getElementById('edit-qty').value) || 1;
+          const newPrice = parseFloat(document.getElementById('edit-price').value) || 0;
+          const newReduction = parseFloat(document.getElementById('edit-reduction').value) || 0;
+          const newWear = parseFloat(document.getElementById('edit-wear').value) || 0;
+        
+          // Calculate total_cost with reductions (like wizard does)
+          const priceAfterReduction = newPrice * (1 - newReduction / 100);
+          const updatedPrice = priceAfterReduction * (1 - newWear / 100);
+          const totalCost = updatedPrice * newQuantity;
+          
+          // Update Supabase if available (using correct column names from schema)
+          if (window.supabase) {
+            const supabaseData = {
+              pcode: newCatalogCode,
+              oem: newCatalogCode,
+              part_name: newPartName,
+              quantity: newQuantity,
+              price_per_unit: newPrice,
+              price: newPrice,
+              reduction_percentage: newReduction,
+              wear_percentage: newWear,
+              updated_price: updatedPrice,  // price after reductions
+              total_cost: totalCost  // final total cost
+            };
+            
+            const { error } = await window.supabase
+              .from('parts_required')
+              .update(supabaseData)
+              .eq('plate', plate.replace(/-/g, ''))
+              .eq('damage_center_code', centerId)
+              .eq('part_name', part.part_name || part.name);
+            
+            if (error) {
+              console.error('❌ SESSION 50: Supabase update error:', error);
+              throw error;
+            }
+          }
+          
+          // Update helper data with ALL calculated fields
+          parts[partIndex] = {
+            ...part,
+            catalog_code: newCatalogCode,
+            pcode: newCatalogCode,
+            oem: newCatalogCode,
+            part_name: newPartName,
+            name: newPartName,
+            quantity: newQuantity,
+            qty: newQuantity,
+            price: newPrice,
+            cost: newPrice,
+            expected_cost: newPrice,
+            price_per_unit: newPrice,
+            reduction_percentage: newReduction,
+            reduction: newReduction,
+            wear_percentage: newWear,
+            wear: newWear,
+            updated_price: updatedPrice,
+            total_cost: totalCost  // THIS IS KEY - updates helper total_cost
+          };
+          
+          console.log('✅ SESSION 50: Part edited successfully, total_cost:', totalCost);
+          
+          closeModal();
+          
+          // Trigger UI updates in final report if the function exists
+          if (typeof window.updatePartsRequiredUI === 'function') {
+            window.updatePartsRequiredUI();
+          }
+          if (typeof window.refreshFinalReportSections === 'function') {
+            window.refreshFinalReportSections();
+          }
+          if (typeof window.recalculateAllTotals === 'function') {
+            window.recalculateAllTotals();
+          }
+          
+          tabsLoaded.required = false;
+          loadRequiredParts();
+          
+        } catch (error) {
+          console.error('❌ SESSION 50: Edit error:', error);
+          alert('שגיאה בעריכת החלק: ' + error.message);
+        }
+      };
+      
+    } catch (error) {
+      console.error('❌ SESSION 50: Edit error:', error);
+      alert('שגיאה בעריכת החלק: ' + error.message);
+    }
+  };
+  
+  // SESSION 49: TAB 1 HELPER - Delete required part
+  window.deleteRequiredPart = async function(centerId, partIndex) {
+    console.log(`🗑️ SESSION 49: Delete part - Center: ${centerId}, Part: ${partIndex}`);
+    
+    if (!confirm('האם למחוק חלק זה?')) {
+      return;
+    }
+    
+    try {
+      // Get plate
+      const plate = window.helper?.meta?.plate || window.helper?.vehicle?.plate;
+      if (!plate) {
+        alert('לא נמצא מספר רישוי');
+        return;
+      }
+      
+      // Find center in helper
+      const centerIndex = window.helper?.centers?.findIndex(c => 
+        (c.Id || c.id) === centerId
+      );
+      
+      if (centerIndex !== -1 && window.helper.centers[centerIndex]) {
+        const center = window.helper.centers[centerIndex];
+        const parts = center.Parts?.parts_required || center.Parts?.parts || [];
+        
+        if (partIndex < parts.length) {
+          const partToDelete = parts[partIndex];
+          
+          // Delete from Supabase first (if available)
+          if (window.supabase) {
+            const { error } = await window.supabase
+              .from('parts_required')
+              .delete()
+              .eq('plate', plate.replace(/-/g, ''))
+              .eq('damage_center_id', centerId)
+              .eq('part_name', partToDelete.part_name || partToDelete.name);
+            
+            if (error) {
+              console.error('❌ SESSION 49: Supabase delete error:', error);
+              throw error;
+            }
+          } else {
+            console.warn('⚠️ SESSION 50: Supabase not available, deleting from helper only');
+          }
+          
+          // Delete from helper
+          parts.splice(partIndex, 1);
+          
+          // Update sessionStorage
+          sessionStorage.setItem('helper', JSON.stringify(window.helper));
+          
+          // Reload tab
+          tabsLoaded.required = false;
+          loadRequiredParts();
+          
+          console.log('✅ SESSION 50: Part deleted successfully');
+        }
+      }
+    } catch (error) {
+      console.error('❌ SESSION 49: Delete error:', error);
+      alert('שגיאה במחיקת החלק: ' + error.message);
+    }
+  };
+  
+  // SESSION 50: TAB 2 - Load Selected Parts (EXACT COPY from PiP getSelectedParts)
+  async function loadSelectedParts() {
+    console.log('✅ SESSION 50: Loading selected parts (using PiP logic)...');
+    const container = document.getElementById('selectedPartsContainer');
+    
+    try {
+      const plate = window.helper?.meta?.plate || window.helper?.vehicle?.plate;
+      if (!plate) {
+        container.innerHTML = '<div class="no-results">לא נמצא מספר רישוי</div>';
+        return;
+      }
+      
+      // Wait for Supabase to load if not available yet
+      if (!window.supabase) {
+        container.innerHTML = `
+          <div class="no-results">
+            <div class="no-results-icon">🔄</div>
+            <div>טוען חיבור Supabase...</div>
+          </div>
+        `;
+        console.log('⏳ SESSION 50: Waiting for Supabase client...');
+        await loadSupabaseClient();
+      }
+      
+      if (!window.supabase) {
+        container.innerHTML = '<div class="no-results">⚠️ Supabase לא זמין</div>';
+        return;
+      }
+      
+      // SESSION 84: Use OR query to match both plate formats (with and without dashes)
+      const plateNoDashes = plate.replace(/-/g, '');
+      const plateWithDashes = plate.includes('-') ? plate : 
+                              plate.replace(/(\d{3})(\d{2})(\d{3})/, '$1-$2-$3');
+      
+      console.log('🔍 SESSION 84: Querying Supabase for plate (both formats):', plateNoDashes, 'OR', plateWithDashes);
+      
+      const { data, error } = await window.supabase
+        .from('selected_parts')
+        .select('*')
+        .or(`plate.eq.${plateNoDashes},plate.eq.${plateWithDashes}`)
+        .order('selected_at', { ascending: false });
+      
+      if (error) {
+        console.error('❌ SESSION 50: Supabase error:', error);
+        throw error;
+      }
+      
+      const selectedParts = data || [];
+      console.log(`📊 SESSION 50: Found ${selectedParts.length} selected parts for plate "${plate}"`);
+      
+      // Debug: If no results, check what plates exist
+      if (selectedParts.length === 0) {
+        try {
+          const { data: allPlates } = await window.supabase
+            .from('selected_parts')
+            .select('plate')
+            .limit(20);
+          const uniquePlates = [...new Set(allPlates?.map(p => p.plate) || [])];
+          console.log('🔍 SESSION 50: Available plates in selected_parts:', uniquePlates);
+          console.log('💡 Your query plate:', plate);
+        } catch (e) {
+          console.warn('Could not fetch debug plates:', e);
+        }
+      }
+      
+      if (!selectedParts || selectedParts.length === 0) {
+        container.innerHTML = `
+          <div class="no-results">
+            <div class="no-results-icon">📭</div>
+            <div>לא נמצאו הקצאות נזק</div>
+          </div>
+        `;
+        document.getElementById('totalSelectedParts').textContent = '0';
+        document.getElementById('avgSelectedPrice').textContent = '₪0';
+        document.getElementById('totalSelectedCost').textContent = '₪0';
+        return;
+      }
+      
+      // Calculate statistics (from PiP reference)
+      const totalParts = selectedParts.length;
+      const subtotal = selectedParts.reduce((sum, part) => {
+        const price = parseFloat(part.price || part.cost || part.expected_cost || 0);
+        const qty = parseInt(part.quantity || part.qty || 1);
+        return sum + (price * qty);
+      }, 0);
+      const avgPrice = totalParts > 0 ? subtotal / totalParts : 0;
+      
+      document.getElementById('totalSelectedParts').textContent = totalParts;
+      document.getElementById('avgSelectedPrice').textContent = `₪${Math.round(avgPrice).toLocaleString('he-IL')}`;
+      document.getElementById('totalSelectedCost').textContent = `₪${Math.round(subtotal).toLocaleString('he-IL')}`;
+      
+      // Build table rows (exact format from PiP - lines 4727-4784)
+      const tableRows = selectedParts.map((part, index) => {
+        const price = parseFloat(part.price || part.cost || part.expected_cost || 0);
+        const qty = parseInt(part.quantity || part.qty || 1);
+        const calculatedPrice = price * qty;
+        
+        return `
+        <tr style="background: ${index % 2 === 0 ? '#f9fafb' : 'white'}; border-bottom: 1px solid #e5e7eb;">
+          <td style="padding: 10px; text-align: center; width: 40px;">
+            <input type="checkbox" class="part-checkbox" data-part-id="${part.id}" data-part-index="${index}" 
+                   style="width: 14px; height: 14px; cursor: pointer;">
+          </td>
+          <td style="padding: 8px; text-align: center; font-size: 11px; color: #6b7280;">
+            ${index + 1}
+          </td>
+          <td style="padding: 8px; text-align: center; font-size: 11px; color: #6b7280;">
+            ${part.pcode || part.oem || 'N/A'}
+          </td>
+          <td style="padding: 8px 10px; text-align: right; font-size: 11px; color: #1f2937;">
+            ${part.part_family || part.group || 'N/A'} - ${part.part_name || part.name || 'N/A'}
+          </td>
+          <td style="padding: 8px; text-align: center; font-size: 11px; color: #4b5563;">
+            ${part.source || 'N/A'}
+          </td>
+          <td style="padding: 8px; text-align: center; font-size: 11px; color: #059669; font-weight: 600;">
+            ${price ? '₪' + price.toLocaleString('he-IL', {minimumFractionDigits: 2}) : '-'}
+          </td>
+          <td style="padding: 8px; text-align: center; font-size: 11px; color: #1f2937;">
+            ${qty}
+          </td>
+          <td style="padding: 8px; text-align: center; font-size: 11px; color: #059669; font-weight: 700;">
+            ${calculatedPrice ? '₪' + calculatedPrice.toLocaleString('he-IL', {minimumFractionDigits: 2}) : '-'}
+          </td>
+          <td style="padding: 8px; text-align: center; font-size: 11px; color: #4b5563;">
+            ${part.supplier || part.supplier_name || '-'}
+          </td>
+          <td style="padding: 8px; text-align: center; font-size: 11px; color: #6b7280;">
+            ${part.selected_at ? new Date(part.selected_at).toLocaleDateString('he-IL', { 
+              year: '2-digit', month: '2-digit', day: '2-digit'
+            }) : 'N/A'}
+          </td>
+          <td style="padding: 8px; text-align: center; white-space: nowrap;">
+            <button onclick="editSelectedPartTab2(${index})" 
+                    style="background: #f59e0b; color: white; border: none; padding: 4px 8px; 
+                           border-radius: 4px; cursor: pointer; font-size: 11px; font-weight: 600; margin-left: 3px;"
+                    onmouseover="this.style.background='#d97706'" 
+                    onmouseout="this.style.background='#f59e0b'">
+              ✏️
+            </button>
+            <button onclick="deleteSelectedPartTab2('${part.id}', '${part.plate}')" 
+                    style="background: #ef4444; color: white; border: none; padding: 4px 8px; 
+                           border-radius: 4px; cursor: pointer; font-size: 11px; font-weight: 600;"
+                    onmouseover="this.style.background='#dc2626'" 
+                    onmouseout="this.style.background='#ef4444'">
+              🗑️
+            </button>
+          </td>
+        </tr>
+      `}).join('');
+      
+      // Build full table with PiP styling (lines 4837-4860)
+      container.innerHTML = `
+        <div style="max-height: 500px; overflow-y: auto; overflow-x: auto;">
+          <table style="width: 100%; border-collapse: collapse; border: 1px solid #e5e7eb; direction: rtl;">
+            <thead style="background: #10b981; color: white; position: sticky; top: 0; z-index: 1;">
+              <tr>
+                <th style="padding: 8px; text-align: center; border: 1px solid #059669; width: 35px; font-size: 11px;">
+                  <input type="checkbox" id="selectAllParts" 
+                         style="width: 12px; height: 12px; cursor: pointer;"
+                         onchange="window.toggleSelectAllTab2(this.checked)">
+                </th>
+                <th style="padding: 8px; text-align: center; border: 1px solid #059669; width: 40px; font-size: 11px;">#</th>
+                <th style="padding: 8px; text-align: center; border: 1px solid #059669; width: 100px; font-size: 11px;">קוד</th>
+                <th style="padding: 8px 10px; text-align: right; border: 1px solid #059669; min-width: 200px; font-size: 11px;">שם החלק</th>
+                <th style="padding: 8px; text-align: center; border: 1px solid #059669; width: 80px; font-size: 11px;">מקור</th>
+                <th style="padding: 8px; text-align: center; border: 1px solid #059669; width: 80px; font-size: 11px;">מחיר</th>
+                <th style="padding: 8px; text-align: center; border: 1px solid #059669; width: 50px; font-size: 11px;">כמות</th>
+                <th style="padding: 8px; text-align: center; border: 1px solid #059669; width: 90px; font-size: 11px;">סכום</th>
+                <th style="padding: 8px; text-align: center; border: 1px solid #059669; width: 120px; font-size: 11px;">ספק</th>
+                <th style="padding: 8px; text-align: center; border: 1px solid #059669; width: 110px; font-size: 11px;">תאריך</th>
+                <th style="padding: 8px; text-align: center; border: 1px solid #059669; width: 140px; font-size: 11px;">פעולות</th>
               </tr>
             </thead>
             <tbody>
-    `;
-
-    // Generate table rows
-    mappings.forEach((mapping) => {
-      const mappedData = mapping.mapped_data || {};
-      content += `
-        <tr>
-          <td style="padding: 10px 8px; border: 1px solid #e5e7eb;">${formatValue(mapping.damage_center_name || mapping.damage_center_id)}</td>
-          <td style="padding: 10px 8px; border: 1px solid #e5e7eb; text-align: center;">
-            ${getFieldTypeIcon(mapping.field_type)} ${getFieldTypeLabel(mapping.field_type)}
-          </td>
-          <td style="padding: 10px 8px; border: 1px solid #e5e7eb;">
-            ${mappedData.name ? `<div style="font-weight: 600;">${mappedData.name}</div>` : ''}
-            ${mappedData.description ? `<div style="font-size: 12px; color: #64748b;">${mappedData.description}</div>` : ''}
-            ${mappedData.quantity ? `<div style="font-size: 12px;">כמות: ${mappedData.quantity}</div>` : ''}
-            ${mappedData.costWithoutVat ? `<div style="font-weight: 600; color: #059669;">${formatPrice(mappedData.costWithoutVat)}</div>` : ''}
-          </td>
-          <td style="padding: 10px 8px; border: 1px solid #e5e7eb;">
-            ${mapping.invoice?.invoice_number ? `<div style="font-weight: 600;">${mapping.invoice.invoice_number}</div>` : ''}
-            ${mapping.invoice?.supplier_name ? `<div style="font-size: 12px; color: #64748b;">${mapping.invoice.supplier_name}</div>` : ''}
-          </td>
-          <td style="padding: 10px 8px; border: 1px solid #e5e7eb; text-align: center;">${getStatusBadge(mapping.mapping_status)}</td>
-          <td style="padding: 10px 8px; border: 1px solid #e5e7eb; text-align: center;">${formatDate(mapping.created_at)}</td>
-        </tr>
-      `;
-    });
-
-    content += `
+              ${tableRows}
             </tbody>
           </table>
         </div>
-      </div>
-    `;
-
-    // Visual grouping by damage center
-    content += `
-      <div class="invoice-section">
-        <h4>🎯 הקצאות לפי מוקד נזק</h4>
         
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 20px; margin: 20px 0;">
-    `;
-
-    Object.entries(groupedMappings).forEach(([centerCode, centerMappings]) => {
-      const centerTotal = centerMappings.reduce((sum, mapping) => {
-        const mappedData = mapping.mapped_data || {};
-        const cost = parseFloat(mappedData.costWithoutVat) || 0;
-        const quantity = parseFloat(mappedData.quantity) || 1;
-        return sum + (cost * quantity);
-      }, 0);
-
-      content += `
-        <div style="background: #fff; border: 2px solid #e5e7eb; border-radius: 10px; padding: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; padding-bottom: 10px; border-bottom: 1px solid #e5e7eb;">
-            <h5 style="margin: 0; font-size: 16px; color: #1f2937;">${centerMappings[0]?.damage_center_name || centerCode}</h5>
-            <span style="font-weight: 700; color: #059669;">${formatPrice(centerTotal)}</span>
-          </div>
-          
-          <div>
-      `;
-
-      centerMappings.forEach(mapping => {
-        const mappedData = mapping.mapped_data || {};
-        const cost = parseFloat(mappedData.costWithoutVat) || 0;
-        const quantity = parseFloat(mappedData.quantity) || 1;
-        const totalCost = cost * quantity;
-
-        content += `
-          <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; background: #f9fafb; border-radius: 6px; margin-bottom: 8px;">
-            <div style="flex: 1;">
-              <div style="font-weight: 600; font-size: 14px;">${getFieldTypeIcon(mapping.field_type)} ${mappedData.name || formatValue(mapping.field_type)}</div>
-              <div style="font-size: 12px; color: #6b7280;">
-                ${getFieldTypeLabel(mapping.field_type)} • כמות: ${quantity}
+        <!-- Subtotal Section (lines 4863-4878) -->
+        <div style="background: #f0fdf4; padding: 15px; margin-top: 10px; border: 2px solid #10b981; border-radius: 8px; text-align: right; direction: rtl;">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div style="font-size: 16px; font-weight: 600; color: #1f2937;">
+              סה"כ עלות משוערת:
+            </div>
+            <div style="text-align: left;">
+              <div style="font-size: 18px; font-weight: 700; color: #059669;">
+                ₪${subtotal.toLocaleString('he-IL', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </div>
+              <div style="font-size: 12px; color: #6b7280; margin-top: 5px;">
+                ${totalParts} חלקים • המחירים הינם משוערים בלבד
               </div>
             </div>
-            <div style="text-align: left; font-weight: 600; color: #059669;">
-              ${formatPrice(totalCost)}
-            </div>
-          </div>
-        `;
-      });
-
-      content += `
-          </div>
-          <div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid #e5e7eb; font-size: 12px; color: #6b7280;">
-            ${centerMappings.length} פריטים מוקצים
           </div>
         </div>
       `;
-    });
-
-    content += `
+    } catch (error) {
+      console.error('❌ SESSION 50: Error loading selected parts:', error);
+      container.innerHTML = `<div class="no-results">שגיאה: ${error.message}</div>`;
+    }
+  }
+  
+  // SESSION 50: Tab 2 Helper Functions
+  window.editSelectedPartTab2 = async function(partIndex) {
+    alert('עריכת חלק נבחר - תתווסף בהמשך');
+  };
+  
+  window.deleteSelectedPartTab2 = async function(partId, plate) {
+    if (!confirm('האם למחוק חלק נבחר זה?')) return;
+    
+    try {
+      if (!window.supabase) {
+        alert('Supabase לא זמין - לא ניתן למחוק');
+        return;
+      }
+      
+      const { error } = await window.supabase
+        .from('selected_parts')
+        .delete()
+        .eq('id', partId);
+      
+      if (error) throw error;
+      
+      // Reload Tab 2
+      tabsLoaded.selected = false;
+      loadSelectedParts();
+    } catch (error) {
+      alert('שגיאה במחיקה: ' + error.message);
+    }
+  };
+  
+  window.toggleSelectAllTab2 = function(checked) {
+    document.querySelectorAll('.part-checkbox').forEach(cb => cb.checked = checked);
+  };
+  
+  // SESSION 50: TAB 3 - EXACT COPY from showAllSearchResults (parts search.html:4979-5125)
+  async function loadSearchResults() {
+    console.log('📊 SESSION 50: Loading search results (using PiP logic)...');
+    const container = document.getElementById('searchResultsContainer');
+    
+    try {
+      const plate = window.helper?.meta?.plate || window.helper?.vehicle?.plate;
+      if (!plate) {
+        container.innerHTML = '<div class="no-results">❌ לא נמצא מספר רישוי</div>';
+        return;
+      }
+      
+      // Wait for Supabase
+      if (!window.supabase) {
+        console.log('⏳ SESSION 50: Waiting for Supabase client for Tab 3...');
+        await loadSupabaseClient();
+      }
+      
+      if (!window.supabase) {
+        container.innerHTML = '<div class="no-results">⚠️ Supabase לא זמין</div>';
+        return;
+      }
+      
+      // EXACT COPY from showAllSearchResults - Normalize plate (remove dashes)
+      const normalizedPlate = plate.replace(/-/g, '');
+      console.log('📋 SESSION 50: Normalized plate:', plate, '→', normalizedPlate);
+      
+      // Step 1: Get case_id from cases table (EXACT COPY from PiP)
+      const { data: casesData, error: caseError } = await window.supabase
+        .from('cases')
+        .select('id, filing_case_id')
+        .eq('plate', normalizedPlate)
+        .order('created_at', { ascending: false });
+      
+      if (caseError) {
+        console.error('❌ SESSION 50: Failed to query cases:', caseError);
+        throw new Error(`Failed to query cases: ${caseError.message}`);
+      }
+      
+      const activeCase = casesData?.find(c => c.status === 'OPEN' || c.status === 'IN_PROGRESS') || casesData?.[0];
+      
+      if (!activeCase) {
+        console.error('❌ SESSION 50: No case found for plate:', plate);
+        container.innerHTML = `
+          <div class="no-results">
+            <div class="no-results-icon">📦</div>
+            <div>לא נמצא תיק עבור רכב זה</div>
+          </div>
+        `;
+        return;
+      }
+      
+      const caseUuid = activeCase.id;
+      console.log('✅ SESSION 50: Found case UUID:', caseUuid);
+      
+      // Step 2: Get ALL sessions for this case (EXACT COPY from PiP)
+      const { data: allSessions, error: sessionsError } = await window.supabase
+        .from('parts_search_sessions')
+        .select('id, plate, created_at')
+        .eq('case_id', caseUuid);
+      
+      console.log(`📋 SESSION 50: Found ${allSessions?.length || 0} total sessions for case`);
+      
+      // Filter sessions by plate (normalize both sides for comparison)
+      const sessions = allSessions?.filter(session => {
+        const sessionPlate = session.plate?.replace(/-/g, '') || '';
+        const queryPlate = normalizedPlate;
+        return sessionPlate === queryPlate;
+      }) || [];
+      
+      console.log(`✅ SESSION 50: Filtered to ${sessions.length} sessions matching plate`);
+      
+      if (sessionsError) {
+        console.error('❌ SESSION 50: Error loading sessions:', sessionsError);
+        throw new Error('שגיאה בטעינת היסטוריית חיפושים: ' + sessionsError.message);
+      }
+      
+      if (!sessions || sessions.length === 0) {
+        console.log('⚠️ SESSION 50: No search sessions found');
+        container.innerHTML = `
+          <div class="no-results">
+            <div class="no-results-icon">📦</div>
+            <div>לא נמצאו חיפושים עבור רכב זה</div>
+          </div>
+        `;
+        return;
+      }
+      
+      // Step 3: Get results for all sessions using OR filter (EXACT COPY from PiP)
+      const sessionIds = sessions.map(s => s.id);
+      console.log('📋 SESSION 50: Querying results for session IDs:', sessionIds);
+      
+      let query = window.supabase
+        .from('parts_search_results')
+        .select('*');
+      
+      // Use or() filter with multiple session_id matches
+      if (sessionIds.length > 0) {
+        const orFilters = sessionIds.map(id => `session_id.eq.${id}`).join(',');
+        query = query.or(orFilters);
+      }
+      
+      const { data: searchResults, error: resultsError } = await query.order('created_at', { ascending: false });
+      
+      if (resultsError) {
+        console.error('❌ SESSION 50: Error loading search results:', resultsError);
+        throw new Error('שגיאה בטעינת אימות חשבוניות: ' + resultsError.message);
+      }
+      
+      console.log(`✅ SESSION 50: Loaded ${searchResults?.length || 0} search result records`);
+      
+      // Flatten all results from all searches (EXACT COPY from PiP lines 5078-5103)
+      let allResults = [];
+      let totalSearches = 0;
+      
+      if (searchResults && searchResults.length > 0) {
+        searchResults.forEach(record => {
+          totalSearches++;
+          console.log(`📦 SESSION 50: Processing record ${totalSearches}`);
+          
+          // The results are stored in the 'results' JSONB field
+          const results = record.results || [];
+          console.log(`  └─ Results array length: ${results.length}`);
+          
+          // Add metadata to each result
+          if (Array.isArray(results)) {
+            results.forEach(result => {
+              allResults.push({
+                ...result,
+                search_date: record.created_at,
+                search_session_id: record.session_id,
+                data_source: record.search_query?.data_source || record.data_source || 'catalog'
+              });
+            });
+          }
+        });
+      }
+      
+      console.log(`📊 SESSION 50: Total searches: ${totalSearches}, Total results: ${allResults.length}`);
+      
+      displaySearchResults(allResults, container);
+      
+    } catch (error) {
+      console.error('❌ SESSION 50: Error in loadSearchResults:', error);
+      container.innerHTML = `<div class="no-results">שגיאה: ${error.message}</div>`;
+    }
+  }
+  
+  // SESSION 50: Display search results in Tab 3 (based on PiP createSearchResultsModal - lines 5128-5320)
+  function displaySearchResults(results, container) {
+    if (!results || results.length === 0) {
+      container.innerHTML = `
+        <div class="no-results">
+          <div class="no-results-icon">📦</div>
+          <div>לא נמצאו אימות חשבוניות</div>
+        </div>
+      `;
+      return;
+    }
+    
+    // Build table rows (exact format from PiP lines 5161-5184)
+    const tableRows = results.map((result, index) => {
+      const price = parseFloat(result.price || result.cost || 0);
+      const formattedPrice = price ? `₪${price.toLocaleString('he-IL')}` : 'לא זמין';
+      const searchDate = result.search_date ? new Date(result.search_date).toLocaleDateString('he-IL', {
+        year: '2-digit', month: '2-digit', day: '2-digit'
+      }) : 'לא זמין';
+      const dataSource = result.data_source === 'catalog' ? 'קטלוגי' : 
+                        result.data_source === 'web' ? 'אינטרנט' : 
+                        result.data_source === 'ocr' ? 'OCR' : result.data_source || 'לא זמין';
+      
+      return `
+        <tr style="background: ${index % 2 === 0 ? '#f9fafb' : 'white'}; border-bottom: 1px solid #e5e7eb;">
+          <td style="padding: 10px; text-align: center; font-size: 11px; color: #6b7280;">${searchDate}</td>
+          <td style="padding: 10px; text-align: center; font-size: 11px;">
+            <span style="background: #dbeafe; color: #1e40af; padding: 4px 8px; border-radius: 6px; font-weight: 600; font-size: 10px;">
+              ${dataSource}
+            </span>
+          </td>
+          <td style="padding: 10px; text-align: center; font-size: 11px; font-weight: 600; color: #1f2937;">${result.supplier_name || result.supplier || 'לא זמין'}</td>
+          <td style="padding: 10px; text-align: center; font-size: 11px; font-family: monospace; color: #1e40af;">${result.pcode || result.oem || 'לא זמין'}</td>
+          <td style="padding: 10px; text-align: right; font-size: 11px; color: #1f2937;">${result.cat_num_desc || result.part_name || result.description || 'לא זמין'}</td>
+          <td style="padding: 10px; text-align: center; font-size: 11px; color: #6b7280;">${result.part_family || result.group || 'לא מוגדר'}</td>
+          <td style="padding: 10px; text-align: center; font-size: 11px; font-weight: 600; color: #059669;">${formattedPrice}</td>
+        </tr>
+      `;
+    }).join('');
+    
+    // Build full table (blue theme like PiP)
+    container.innerHTML = `
+      <div style="max-height: 500px; overflow-y: auto; overflow-x: auto;">
+        <table style="width: 100%; border-collapse: collapse; border: 1px solid #e5e7eb; direction: rtl;">
+          <thead style="background: #3b82f6; color: white; position: sticky; top: 0; z-index: 1;">
+            <tr>
+              <th style="padding: 10px; text-align: center; border: 1px solid #2563eb; width: 90px; font-size: 11px;">תאריך חיפוש</th>
+              <th style="padding: 10px; text-align: center; border: 1px solid #2563eb; width: 100px; font-size: 11px;">מקור נתונים</th>
+              <th style="padding: 10px; text-align: center; border: 1px solid #2563eb; width: 120px; font-size: 11px;">ספק</th>
+              <th style="padding: 10px; text-align: center; border: 1px solid #2563eb; width: 110px; font-size: 11px;">מק"ט</th>
+              <th style="padding: 10px; text-align: right; border: 1px solid #2563eb; min-width: 200px; font-size: 11px;">תיאור</th>
+              <th style="padding: 10px; text-align: center; border: 1px solid #2563eb; width: 120px; font-size: 11px;">משפחת חלק</th>
+              <th style="padding: 10px; text-align: center; border: 1px solid #2563eb; width: 100px; font-size: 11px;">מחיר</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${tableRows}
+          </tbody>
+        </table>
+      </div>
+      
+      <!-- Summary section -->
+      <div style="background: #eff6ff; padding: 12px 15px; margin-top: 10px; border: 2px solid #3b82f6; border-radius: 8px; display: flex; justify-content: space-between; align-items: center;">
+        <div style="font-size: 14px; font-weight: 600; color: #1e40af;">
+          📊 סה"כ תוצאות: <span style="color: #2563eb; font-size: 16px;">${results.length}</span>
         </div>
       </div>
     `;
-
-    contentDiv.innerHTML = content;
   }
-
-  // View invoice document function - exposed to global scope
-  window.viewInvoiceDocument = function(documentId, storagePath, storageBucket) {
-    try {
-      console.log('📄 Viewing invoice document:', { documentId, storagePath, storageBucket });
-      
-      if (!window.supabase) {
-        alert('שירות השרת לא זמין');
-        return;
-      }
-
-      if (!storagePath || !storageBucket) {
-        alert('נתוני המסמך לא שלמים');
-        return;
-      }
-
-      // Get signed URL from Supabase storage
-      const { data } = window.supabase.storage
-        .from(storageBucket)
-        .getPublicUrl(storagePath);
-
-      if (data && data.publicUrl) {
-        // Open in new window/tab  
-        const newWindow = window.open(data.publicUrl, '_blank', 'width=800,height=900,scrollbars=yes');
-        
-        if (!newWindow) {
-          // Fallback for popup blockers
-          const link = document.createElement('a');
-          link.href = data.publicUrl;
-          link.target = '_blank';
-          link.click();
-        }
-      } else {
-        alert('לא ניתן לקבל קישור למסמך');
-      }
-
-    } catch (error) {
-      console.error('❌ Error viewing invoice document:', error);
-      alert('שגיאה בפתיחת מסמך החשבונית: ' + error.message);
-    }
-  };
-
-  // Main functions exposed to global scope
-  let isToggling = false; // Prevent rapid double-clicks
-  let modalState = 'closed'; // Track modal state explicitly
   
-  window.toggleInvoiceDetails = function () {
-    if (isToggling) {
-      console.log('🎬 toggleInvoiceDetails blocked - already toggling');
+  // SESSION 50: Fallback to helper data if Supabase unavailable
+  function loadSearchResultsFromHelper() {
+    const results = getPartsSearchResults();
+    const summary = getSummaryData();
+    const container = document.getElementById('searchResultsContainer');
+    
+    console.log('📦 Loading parts search results:', { results, summary });
+
+    if (!results || results.length === 0) {
+      container.innerHTML = `
+        <div class="no-results">
+          <div class="no-results-icon">📦</div>
+          <div>אין אימות חשבוניות זמינות</div>
+          <div style="font-size: 14px; margin-top: 10px; color: #999;">
+            בצע חיפוש חלקים כדי לראות תוצאות כאן
+          </div>
+        </div>
+      `;
+      
+      // SESSION 50: Tab 3 has NO statistics elements (user requested removal)
       return;
     }
-    
-    isToggling = true;
-    setTimeout(() => { isToggling = false; }, 500); // Increased timeout
-    
-    console.log('🎬 toggleInvoiceDetails called');
-    console.log('🎬 Function called from:', new Error().stack.split('\n')[2]);
-    console.log('🎬 Current modal state:', modalState);
-    
-    const modal = document.getElementById("invoiceDetailsModal");
-    console.log('🎬 Modal found:', !!modal);
-    console.log('🎬 Modal current display:', modal?.style?.display);
-    
-    // Force open regardless of current display state
-    if (modalState === 'closed') {
-      console.log('🎬 FORCE OPENING modal...');
-      modalState = 'open';
-      
-      modal.style.display = "block";
-      modal.style.zIndex = "10000";
-      modal.style.position = "fixed";
-      
-      // Check if content divs exist
-      const docsDiv = document.getElementById('documentsContent');
-      const mappingsDiv = document.getElementById('mappingsContent');
-      const docsTab = document.getElementById('documentsTab');
-      const mappingsTab = document.getElementById('mappingsTab');
-      console.log('🎬 documentsContent div found:', !!docsDiv);
-      console.log('🎬 mappingsContent div found:', !!mappingsDiv);
-      console.log('🎬 documentsTab found:', !!docsTab);
-      console.log('🎬 mappingsTab found:', !!mappingsTab);
-      
-      // Set initial tab state
-      currentTab = 'documents';
-      console.log('🎬 Loading initial documents tab...');
-      console.log('🎬 Current case ID before loading:', currentCaseId);
-      console.log('🎬 Helper case info:', window.helper?.case_info);
-      
-      loadInvoiceDocuments(); // Load initial tab
-      makeDraggable(modal);
-      
-      console.log('🎬 Modal FORCE OPENED with display:', modal.style.display);
-    } else {
-      console.log('🎬 Closing modal...');
-      modalState = 'closed';
-      modal.style.display = "none";
-    }
-  };
 
-  // Dedicated OPEN-ONLY function to avoid toggle issues
-  window.showInvoiceDetails = function() {
-    console.log('🔥 showInvoiceDetails called - FORCE OPEN ONLY');
-    
-    const modal = document.getElementById("invoiceDetailsModal");
-    if (!modal) {
-      console.error('❌ Modal not found!');
-      return;
-    }
-    
-    // ALWAYS open, never close
-    console.log('🔥 FORCING modal open...');
-    modalState = 'open';
-    
-    modal.style.display = "block";
-    modal.style.zIndex = "10000";
-    modal.style.position = "fixed";
-    
-    currentTab = 'documents';
-    loadInvoiceDocuments();
-    makeDraggable(modal);
-    
-    console.log('🔥 Modal FORCED OPEN - display:', modal.style.display);
-  };
+    // SESSION 50: Tab 3 - NO statistics or recommendations (per user request)
 
-  window.refreshInvoiceData = function () {
-    console.log('🔄 Refreshing invoice data...');
-    if (currentTab === 'documents') {
-      loadInvoiceDocuments();
-    } else if (currentTab === 'mappings') {
-      loadDamageCenterMappings();
-    }
-  };
+    // Generate additional stats
+    const suppliers = [...new Set(results.map(r => r.supplier).filter(Boolean))];
+    const conditions = [...new Set(results.map(r => r.condition).filter(Boolean))];
+    const categories = [...new Set(results.map(r => r.category).filter(Boolean))];
 
-  // Expose switchTab function
-  window.switchTab = function(tabName, event) {
-    console.log('🔄 Switching to tab:', tabName);
-    console.log('🔄 Modal visible:', document.getElementById("invoiceDetailsModal")?.style?.display !== "none");
-    
-    currentTab = tabName;
-    
-    // Update tab buttons
-    document.querySelectorAll('#invoiceDetailsModal .tab-btn').forEach(btn => btn.classList.remove('active'));
-    document.querySelectorAll('#invoiceDetailsModal .tab-section').forEach(section => {
-      section.classList.remove('active');
-      console.log('🔄 Removed active from section:', section.id);
-    });
-    
-    // Activate selected tab
-    if (event && event.target) {
-      event.target.classList.add('active');
-      console.log('🔄 Activated button:', event.target.textContent.trim());
-    }
-    
-    const targetTab = document.getElementById(tabName + 'Tab');
-    if (targetTab) {
-      targetTab.classList.add('active');
-      console.log('🔄 Activated tab section:', targetTab.id);
-    } else {
-      console.error('❌ Tab section not found:', tabName + 'Tab');
-    }
-    
-    // Load content for selected tab
-    if (tabName === 'documents') {
-      loadInvoiceDocuments();
-    } else if (tabName === 'mappings') {
-      loadDamageCenterMappings();
-    }
-  };
-
-  // Make modal draggable
-  function makeDraggable(modal) {
-    let isDragging = false;
-    let dragOffset = { x: 0, y: 0 };
-
-    modal.addEventListener('mousedown', function(e) {
-      if (e.target === modal || e.target.classList.contains('invoice-modal-title')) {
-        isDragging = true;
-        dragOffset.x = e.clientX - modal.offsetLeft;
-        dragOffset.y = e.clientY - modal.offsetTop;
-        modal.style.cursor = 'grabbing';
-      }
-    });
-
-    document.addEventListener('mousemove', function(e) {
-      if (isDragging) {
-        const newLeft = Math.max(0, Math.min(window.innerWidth - modal.offsetWidth, e.clientX - dragOffset.x));
-        const newTop = Math.max(0, Math.min(window.innerHeight - modal.offsetHeight, e.clientY - dragOffset.y));
-        
-        modal.style.left = newLeft + 'px';
-        modal.style.top = newTop + 'px';
-      }
-    });
-
-    document.addEventListener('mouseup', function() {
-      if (isDragging) {
-        isDragging = false;
-        modal.style.cursor = 'move';
-      }
-    });
-  }
-
-  console.log('🎬 Invoice floating script loaded!');
-  console.log('🎬 toggleInvoiceDetails available:', typeof window.toggleInvoiceDetails);
-  
-  // Test function for manual debugging
-  window.testInvoiceModal = function() {
-    console.log('🧪 Manual test: Opening invoice modal...');
-    const modal = document.getElementById("invoiceDetailsModal");
-    if (modal) {
-      modal.style.display = "block";
-      console.log('🧪 Modal display set to block');
-      console.log('🧪 Modal position:', modal.style.position || 'CSS default');
-      console.log('🧪 Modal z-index:', modal.style.zIndex || 'CSS default');
-      console.log('🧪 Modal visibility:', getComputedStyle(modal).visibility);
-      console.log('🧪 Modal opacity:', getComputedStyle(modal).opacity);
-      console.log('🧪 Modal bounding rect:', modal.getBoundingClientRect());
-    } else {
-      console.log('🧪 Modal not found!');
-    }
-  };
-
-  // Debug function to check content divs
-  window.debugInvoiceContent = function() {
-    const modal = document.getElementById("invoiceDetailsModal");
-    const documentsContent = document.getElementById("documentsContent");
-    const documentsTab = document.getElementById("documentsTab");
-    
-    console.log('🔍 DEBUG: Modal found:', !!modal);
-    console.log('🔍 DEBUG: Modal display:', modal?.style?.display);
-    console.log('🔍 DEBUG: Modal state variable:', modalState);
-    console.log('🔍 DEBUG: documentsContent found:', !!documentsContent);
-    console.log('🔍 DEBUG: documentsContent innerHTML length:', documentsContent?.innerHTML?.length || 0);
-    console.log('🔍 DEBUG: documentsTab found:', !!documentsTab);
-    console.log('🔍 DEBUG: documentsTab active class:', documentsTab?.classList?.contains('active'));
-    console.log('🔍 DEBUG: documentsTab display style:', getComputedStyle(documentsTab || {}).display);
-    
-    if (documentsContent) {
-      console.log('🔍 DEBUG: documentsContent computed styles:');
-      const styles = getComputedStyle(documentsContent);
-      console.log('  - display:', styles.display);
-      console.log('  - visibility:', styles.visibility);
-      console.log('  - opacity:', styles.opacity);
-      console.log('  - height:', styles.height);
-      console.log('  - overflow:', styles.overflow);
-    }
-    
-    // Check if there might be CSS conflicts
-    if (modal) {
-      console.log('🔍 DEBUG: Modal computed styles:');
-      const modalStyles = getComputedStyle(modal);
-      console.log('  - computed display:', modalStyles.display);
-      console.log('  - computed visibility:', modalStyles.visibility);
-      console.log('  - computed z-index:', modalStyles.zIndex);
-      console.log('  - computed position:', modalStyles.position);
-    }
-  };
-
-  // Force display function for testing
-  window.forceShowInvoiceContent = function() {
-    const modal = document.getElementById("invoiceDetailsModal");
-    const documentsTab = document.getElementById("documentsTab");
-    const documentsContent = document.getElementById("documentsContent");
-    
-    console.log('🔧 FORCE: Starting force display...');
-    
-    if (modal) {
-      modal.style.display = "block";
-      modal.style.zIndex = "10000";
-      modal.style.position = "fixed";
-      modal.style.visibility = "visible";
-      modal.style.opacity = "1";
-      console.log('🔧 FORCE: Modal display forced to block');
-    }
-    
-    if (documentsTab) {
-      documentsTab.style.display = "block";
-      documentsTab.classList.add("active");
-      console.log('🔧 FORCE: documentsTab display forced to block');
-    }
-    
-    if (documentsContent) {
-      documentsContent.style.display = "block";
-      documentsContent.style.visibility = "visible";
-      documentsContent.style.opacity = "1";
-      console.log('🔧 FORCE: documentsContent styles forced');
-      console.log('🔧 FORCE: Content HTML length:', documentsContent.innerHTML.length);
-    }
-    
-    // Reset our state variable
-    modalState = 'open';
-    console.log('🔧 FORCE: State variable set to open');
-  };
-
-  // Simple open function that ignores state
-  window.justOpenInvoiceModal = function() {
-    console.log('🚀 JUST OPEN: Bypassing all logic, forcing modal open...');
-    const modal = document.getElementById("invoiceDetailsModal");
-    if (modal) {
-      // Force very specific positioning to ensure visibility
-      modal.style.display = "block";
-      modal.style.position = "fixed";
-      modal.style.top = "50px";
-      modal.style.left = "50px";
-      modal.style.width = "800px";
-      modal.style.height = "600px";
-      modal.style.zIndex = "99999";
-      modal.style.backgroundColor = "white";
-      modal.style.border = "5px solid red";
-      modal.style.visibility = "visible";
-      modal.style.opacity = "1";
-      
-      modalState = 'open';
-      loadInvoiceDocuments();
-      console.log('🚀 JUST OPEN: Modal forced open with red border at 50,50');
-      
-      // Log the modal's position
-      const rect = modal.getBoundingClientRect();
-      console.log('🚀 JUST OPEN: Modal position:', rect);
-    }
-  };
-  
-  // Ultra simple test - just show a basic div
-  window.testBasicModal = function() {
-    // Remove any existing test modal
-    const existing = document.getElementById('testModal');
-    if (existing) existing.remove();
-    
-    const testDiv = document.createElement('div');
-    testDiv.id = 'testModal';
-    testDiv.style.cssText = `
-      position: fixed !important;
-      top: 100px !important;
-      left: 100px !important;
-      width: 400px !important;
-      height: 300px !important;
-      background: red !important;
-      border: 5px solid black !important;
-      z-index: 999999 !important;
-      display: block !important;
-      visibility: visible !important;
-      opacity: 1 !important;
+    document.getElementById('statsGrid').innerHTML = `
+      <div class="stat-item">
+        <div class="stat-value">${suppliers.length}</div>
+        <div class="stat-label">ספקים</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-value">${conditions.length}</div>
+        <div class="stat-label">מצבי חלקים</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-value">${categories.length}</div>
+        <div class="stat-label">קטגוריות</div>
+      </div>
     `;
-    testDiv.innerHTML = '<h1 style="color: white; text-align: center; margin-top: 100px;">TEST MODAL</h1>';
-    document.body.appendChild(testDiv);
+
+    // Display results
+    container.innerHTML = results.map((result, index) => `
+      <div class="search-result-item unselected-part" data-part-index="${index}">
+        <div class="result-header">
+          <div class="result-name">${result.name || 'חלק ללא שם'}</div>
+          <div class="result-price">₪${parseFloat(result.price || 0).toLocaleString('he-IL')}</div>
+        </div>
+        <div class="result-selection">
+          <input type="checkbox" id="part-${index}" onchange="togglePartSelection(${index})">
+          <label for="part-${index}">בחר חלק זה</label>
+        </div>
+        <div class="result-details">
+          <div class="result-detail">
+            <strong>ספק:</strong> ${result.supplier || 'לא צוין'}
+          </div>
+          <div class="result-detail">
+            <strong>מיקום:</strong> ${result.location || 'לא צוין'}
+          </div>
+          <div class="result-detail">
+            <strong>מצב:</strong> ${result.condition || 'לא צוין'}
+          </div>
+          <div class="result-detail">
+            <strong>קטגוריה:</strong> ${result.category || 'לא צוינה'}
+          </div>
+          ${result.part_number ? `
+          <div class="result-detail">
+            <strong>מק"ט:</strong> ${result.part_number}
+          </div>
+          ` : ''}
+          ${result.compatibility ? `
+          <div class="result-detail">
+            <strong>תאימות:</strong> ${result.compatibility}
+          </div>
+          ` : ''}
+        </div>
+        ${result.description ? `
+        <div class="result-description">
+          ${result.description}
+        </div>
+        ` : ''}
+      </div>
+    `).join('');
+
+    console.log('✅ Parts search results loaded successfully');
+  }
+  
+  // Parts selection functionality - INTEGRATION WITH HELPER.PARTS_SEARCH
+  let selectedParts = new Set();
+  let allParts = [];
+  
+  function updateSelectionSummary() {
+    const selectedCount = selectedParts.size;
+    const unselectedCount = allParts.length - selectedCount;
     
-    console.log('🧪 TEST: Basic red modal added with !important');
-    console.log('🧪 TEST: Modal in DOM:', !!document.getElementById('testModal'));
-    console.log('🧪 TEST: Body children count:', document.body.children.length);
+    const selectedCountEl = document.getElementById('selectedCount');
+    const unselectedCountEl = document.getElementById('unselectedCount');
+    const summaryEl = document.getElementById('selectionSummary');
     
-    // Check for potential blocking elements
-    const allElements = document.querySelectorAll('*');
-    let highZIndex = [];
-    allElements.forEach(el => {
-      const zIndex = parseInt(getComputedStyle(el).zIndex);
-      if (zIndex > 999990) {
-        highZIndex.push({element: el.tagName + (el.id ? '#' + el.id : ''), zIndex: zIndex});
+    if (selectedCountEl) selectedCountEl.textContent = selectedCount;
+    if (unselectedCountEl) unselectedCountEl.textContent = unselectedCount;
+    
+    if (summaryEl && allParts.length > 0) {
+      summaryEl.style.display = 'block';
+    } else if (summaryEl) {
+      summaryEl.style.display = 'none';
+    }
+  }
+  
+  // Make togglePartSelection globally available
+  window.togglePartSelection = function(partIndex) {
+    if (selectedParts.has(partIndex)) {
+      selectedParts.delete(partIndex);
+    } else {
+      selectedParts.add(partIndex);
+    }
+    
+    // Update UI
+    const partElement = document.querySelector(`[data-part-index="${partIndex}"]`);
+    if (partElement) {
+      if (selectedParts.has(partIndex)) {
+        partElement.classList.add('selected-part');
+        partElement.classList.remove('unselected-part');
+      } else {
+        partElement.classList.remove('selected-part');
+        partElement.classList.add('unselected-part');
       }
-    });
-    console.log('🧪 TEST: Elements with very high z-index:', highZIndex);
+    }
+    
+    updateSelectionSummary();
   };
   
-  // Check for page elements that might be blocking
-  window.checkPageBlockers = function() {
-    console.log('🔍 BLOCKER CHECK: Looking for elements that might block modals...');
+  // Global functions for parts selection
+  window.toggleSelectAllParts = function() {
+    const selectAllBtn = document.querySelector('.results-btn.select-all');
+    if (!selectAllBtn) return;
     
-    // Check for elements with very high z-index
-    const allElements = document.querySelectorAll('*');
-    let suspiciousElements = [];
-    
-    allElements.forEach(el => {
-      const styles = getComputedStyle(el);
-      const zIndex = parseInt(styles.zIndex);
-      const position = styles.position;
+    if (selectedParts.size === allParts.length) {
+      // Unselect all
+      selectedParts.clear();
+      selectAllBtn.textContent = 'בחר הכל';
       
-      if (zIndex > 9999 || position === 'fixed' && el.id !== 'testModal') {
-        suspiciousElements.push({
-          tag: el.tagName,
-          id: el.id,
-          classes: el.className,
-          zIndex: zIndex,
-          position: position,
-          display: styles.display
-        });
-      }
-    });
+      // Update UI
+      document.querySelectorAll('.search-result-item').forEach(item => {
+        item.classList.remove('selected-part');
+        item.classList.add('unselected-part');
+        const checkbox = item.querySelector('input[type="checkbox"]');
+        if (checkbox) checkbox.checked = false;
+      });
+    } else {
+      // Select all
+      selectedParts.clear();
+      allParts.forEach((_, index) => selectedParts.add(index));
+      selectAllBtn.textContent = 'בטל הכל';
+      
+      // Update UI
+      document.querySelectorAll('.search-result-item').forEach(item => {
+        item.classList.add('selected-part');
+        item.classList.remove('unselected-part');
+        const checkbox = item.querySelector('input[type="checkbox"]');
+        if (checkbox) checkbox.checked = true;
+      });
+    }
     
-    console.log('🔍 BLOCKER CHECK: Suspicious elements:', suspiciousElements);
-    console.log('🔍 BLOCKER CHECK: Document overflow:', getComputedStyle(document.documentElement).overflow);
-    console.log('🔍 BLOCKER CHECK: Body overflow:', getComputedStyle(document.body).overflow);
-    
-    // Log the first few suspicious elements in detail
-    suspiciousElements.slice(0, 5).forEach((el, i) => {
-      console.log(`🔍 BLOCKER ${i+1}:`, el);
-    });
+    updateSelectionSummary();
   };
   
-  // Function to remove potential blocking overlays
-  window.removeModalBlockers = function() {
-    console.log('🧹 CLEANUP: Removing potential modal blockers...');
+  window.savePartsSelection = function() {
+    if (!window.helper) {
+      console.error('❌ Helper not available for saving parts selection');
+      alert('שגיאה: לא ניתן לשמור את הבחירה');
+      return;
+    }
     
-    // Find elements with very high z-index that might be blocking
-    const allElements = document.querySelectorAll('*');
-    let removed = 0;
+    // Get current search results
+    const results = getPartsSearchResults();
+    if (!results || results.length === 0) {
+      alert('אין אימות חשבוניות לשמירה');
+      return;
+    }
     
-    allElements.forEach(el => {
-      const zIndex = parseInt(getComputedStyle(el).zIndex);
-      const position = getComputedStyle(el).position;
+    // Prepare selected and unselected parts arrays
+    const selectedPartsArray = [];
+    const unselectedPartsArray = [];
+    
+    results.forEach((part, index) => {
+      const partData = {
+        ...part,
+        selection_date: new Date().toISOString(),
+        search_session: window.helper.parts_search?.summary?.last_search || new Date().toISOString()
+      };
       
-      // Target elements with extremely high z-index (like the 9999999999 we saw)
-      if (zIndex > 999999) {
-        console.log('🧹 CLEANUP: Found extreme z-index element:', el.tagName, el.id, el.className, 'z-index:', zIndex);
-        el.style.zIndex = '1000'; // Reduce to reasonable level
-        el.style.display = 'none'; // Hide it completely
-        removed++;
+      if (selectedParts.has(index)) {
+        selectedPartsArray.push(partData);
+      } else {
+        unselectedPartsArray.push(partData);
       }
-      
-      // Also check for elements that might be invisible overlays
-      else if (zIndex > 50000 && position === 'fixed') {
-        const rect = el.getBoundingClientRect();
-        // If it covers most of the screen but has no visible content
-        if (rect.width > window.innerWidth * 0.8 && rect.height > window.innerHeight * 0.8) {
-          console.log('🧹 CLEANUP: Removing potential overlay blocker:', el.tagName, el.id, el.className);
-          el.style.display = 'none';
-          removed++;
+    });
+    
+    // Initialize helper.parts_search if needed
+    if (!window.helper.parts_search) {
+      window.helper.parts_search = {
+        search_history: [],
+        all_results: [],
+        results: [],
+        summary: {
+          total_searches: 0,
+          total_results: 0,
+          selected_count: 0,
+          last_search: ''
         }
-      }
-    });
+      };
+    }
     
-    console.log(`🧹 CLEANUP: Processed ${removed} potential blockers`);
+    // Store the selection according to helper structure
+    window.helper.parts_search.selected_parts = selectedPartsArray;
+    window.helper.parts_search.unselected_parts = unselectedPartsArray;
+    window.helper.parts_search.summary.selected_count = selectedPartsArray.length;
+    window.helper.parts_search.last_selection_date = new Date().toISOString();
+    
+    // Also store all results for reference
+    window.helper.parts_search.all_results = results;
+    
+    // Save to storage
+    try {
+      const helperString = JSON.stringify(window.helper);
+      sessionStorage.setItem('helper', helperString);
+      localStorage.setItem('helper_data', helperString);
+      
+      console.log('✅ Parts selection saved to helper:');
+      console.log('Selected parts:', selectedPartsArray.length);
+      console.log('Unselected parts:', unselectedPartsArray.length);
+      
+      // Trigger helper update event
+      document.dispatchEvent(new CustomEvent('helperUpdate', {
+        detail: 'parts_selection_updated'
+      }));
+      
+      alert(`נשמר בהצלחה!\nנבחרו: ${selectedPartsArray.length} חלקים\nלא נבחרו: ${unselectedPartsArray.length} חלקים`);
+      
+    } catch (error) {
+      console.error('❌ Error saving parts selection:', error);
+      alert('שגיאה בשמירת הבחירה');
+    }
   };
   
-  // Ultra aggressive blocker removal
-  window.forceRemoveAllBlockers = function() {
-    console.log('💥 FORCE CLEANUP: Removing ALL high z-index elements...');
+  // SESSION 49: Initialize allParts when Tab 3 results are loaded
+  const originalLoadSearchResults = loadSearchResults;
+  loadSearchResults = function() {
+    originalLoadSearchResults();
     
-    const allElements = document.querySelectorAll('*');
-    let modified = 0;
-    
-    allElements.forEach(el => {
-      const zIndex = parseInt(getComputedStyle(el).zIndex);
-      
-      // Reset ANY element with z-index over 100000
-      if (zIndex > 100000) {
-        console.log('💥 FORCE: Resetting element:', el.tagName, el.id, 'from z-index:', zIndex);
-        el.style.zIndex = '1000';
-        modified++;
-      }
-    });
-    
-    console.log(`💥 FORCE CLEANUP: Modified ${modified} elements`);
+    // Update allParts array for selection functionality (Tab 3)
+    allParts = getPartsSearchResults() || [];
+    selectedParts.clear();
+    updateSelectionSummary();
   };
-
-
+  
 })();
