@@ -1317,22 +1317,72 @@
   
   // Ultra simple test - just show a basic div
   window.testBasicModal = function() {
+    // Remove any existing test modal
+    const existing = document.getElementById('testModal');
+    if (existing) existing.remove();
+    
     const testDiv = document.createElement('div');
     testDiv.id = 'testModal';
     testDiv.style.cssText = `
-      position: fixed;
-      top: 100px;
-      left: 100px;
-      width: 400px;
-      height: 300px;
-      background: red;
-      border: 5px solid black;
-      z-index: 99999;
-      display: block;
+      position: fixed !important;
+      top: 100px !important;
+      left: 100px !important;
+      width: 400px !important;
+      height: 300px !important;
+      background: red !important;
+      border: 5px solid black !important;
+      z-index: 999999 !important;
+      display: block !important;
+      visibility: visible !important;
+      opacity: 1 !important;
     `;
     testDiv.innerHTML = '<h1 style="color: white; text-align: center; margin-top: 100px;">TEST MODAL</h1>';
     document.body.appendChild(testDiv);
-    console.log('🧪 TEST: Basic red modal added');
+    
+    console.log('🧪 TEST: Basic red modal added with !important');
+    console.log('🧪 TEST: Modal in DOM:', !!document.getElementById('testModal'));
+    console.log('🧪 TEST: Body children count:', document.body.children.length);
+    
+    // Check for potential blocking elements
+    const allElements = document.querySelectorAll('*');
+    let highZIndex = [];
+    allElements.forEach(el => {
+      const zIndex = parseInt(getComputedStyle(el).zIndex);
+      if (zIndex > 999990) {
+        highZIndex.push({element: el.tagName + (el.id ? '#' + el.id : ''), zIndex: zIndex});
+      }
+    });
+    console.log('🧪 TEST: Elements with very high z-index:', highZIndex);
+  };
+  
+  // Check for page elements that might be blocking
+  window.checkPageBlockers = function() {
+    console.log('🔍 BLOCKER CHECK: Looking for elements that might block modals...');
+    
+    // Check for elements with very high z-index
+    const allElements = document.querySelectorAll('*');
+    let suspiciousElements = [];
+    
+    allElements.forEach(el => {
+      const styles = getComputedStyle(el);
+      const zIndex = parseInt(styles.zIndex);
+      const position = styles.position;
+      
+      if (zIndex > 9999 || position === 'fixed' && el.id !== 'testModal') {
+        suspiciousElements.push({
+          tag: el.tagName,
+          id: el.id,
+          classes: el.className,
+          zIndex: zIndex,
+          position: position,
+          display: styles.display
+        });
+      }
+    });
+    
+    console.log('🔍 BLOCKER CHECK: Suspicious elements:', suspiciousElements);
+    console.log('🔍 BLOCKER CHECK: Document overflow:', getComputedStyle(document.documentElement).overflow);
+    console.log('🔍 BLOCKER CHECK: Body overflow:', getComputedStyle(document.body).overflow);
   };
 
   // Add floating button to access invoice details from any page (like parts screen)
