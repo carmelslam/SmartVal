@@ -1338,10 +1338,14 @@
       // Query invoice_damage_center_mappings table - simple query first
       console.log('🔍 DEBUG: About to query mappings with case_id:', currentCaseId);
       
+      // Get case_id directly from helper
+      const caseId = window.helper?.case_info?.supabase_case_id;
+      console.log('🔍 DEBUG: Using case_id from helper:', caseId);
+      
       const { data: mappingsData, error } = await window.supabase
         .from('invoice_damage_center_mappings')
         .select('*')
-        .eq('case_id', currentCaseId)
+        .eq('case_id', caseId)
         .order('created_at', { ascending: false });
         
       console.log('🔍 DEBUG: Simple mappings query completed. Error:', error);
