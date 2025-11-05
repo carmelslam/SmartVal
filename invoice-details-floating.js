@@ -1223,6 +1223,7 @@
     
     console.log('🔍 DEBUG: Modal found:', !!modal);
     console.log('🔍 DEBUG: Modal display:', modal?.style?.display);
+    console.log('🔍 DEBUG: Modal state variable:', modalState);
     console.log('🔍 DEBUG: documentsContent found:', !!documentsContent);
     console.log('🔍 DEBUG: documentsContent innerHTML length:', documentsContent?.innerHTML?.length || 0);
     console.log('🔍 DEBUG: documentsTab found:', !!documentsTab);
@@ -1238,6 +1239,16 @@
       console.log('  - height:', styles.height);
       console.log('  - overflow:', styles.overflow);
     }
+    
+    // Check if there might be CSS conflicts
+    if (modal) {
+      console.log('🔍 DEBUG: Modal computed styles:');
+      const modalStyles = getComputedStyle(modal);
+      console.log('  - computed display:', modalStyles.display);
+      console.log('  - computed visibility:', modalStyles.visibility);
+      console.log('  - computed z-index:', modalStyles.zIndex);
+      console.log('  - computed position:', modalStyles.position);
+    }
   };
 
   // Force display function for testing
@@ -1246,9 +1257,14 @@
     const documentsTab = document.getElementById("documentsTab");
     const documentsContent = document.getElementById("documentsContent");
     
+    console.log('🔧 FORCE: Starting force display...');
+    
     if (modal) {
       modal.style.display = "block";
       modal.style.zIndex = "10000";
+      modal.style.position = "fixed";
+      modal.style.visibility = "visible";
+      modal.style.opacity = "1";
       console.log('🔧 FORCE: Modal display forced to block');
     }
     
@@ -1264,6 +1280,24 @@
       documentsContent.style.opacity = "1";
       console.log('🔧 FORCE: documentsContent styles forced');
       console.log('🔧 FORCE: Content HTML length:', documentsContent.innerHTML.length);
+    }
+    
+    // Reset our state variable
+    modalState = 'open';
+    console.log('🔧 FORCE: State variable set to open');
+  };
+
+  // Simple open function that ignores state
+  window.justOpenInvoiceModal = function() {
+    console.log('🚀 JUST OPEN: Bypassing all logic, forcing modal open...');
+    const modal = document.getElementById("invoiceDetailsModal");
+    if (modal) {
+      modal.style.display = "block";
+      modal.style.zIndex = "10000";
+      modal.style.position = "fixed";
+      modalState = 'open';
+      loadInvoiceDocuments();
+      console.log('🚀 JUST OPEN: Modal forced open, loading data...');
     }
   };
 
