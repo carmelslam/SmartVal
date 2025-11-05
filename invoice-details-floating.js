@@ -406,55 +406,88 @@
       </button>
     </div>
 
-    <!-- Tab 1 - Invoice Documents -->
+    <!-- Tab 1 - Invoice Documents (OCR Style) -->
     <div class="tab-content active" id="tab-documents">
-      <div class="results-summary" id="documentsSummary">
-        <div class="summary-grid">
-          <div class="summary-item">
-            <div class="summary-label">מסמכים</div>
-            <div class="summary-value" id="totalDocuments">0</div>
-          </div>
-          <div class="summary-item">
-            <div class="summary-label">חשבוניות</div>
-            <div class="summary-value" id="totalInvoices">0</div>
-          </div>
-          <div class="summary-item">
-            <div class="summary-label">סה"כ ערך</div>
-            <div class="summary-value" id="totalInvoiceValue">₪0</div>
-          </div>
+      <!-- Invoice Summary Header -->
+      <div id="invoice-summary" style="display: none;">
+        <!-- Will be populated by displayInvoiceOCRStyle -->
+      </div>
+      
+      <!-- Invoice Lines Table -->
+      <div id="invoice-lines-container" style="display: none;">
+        <div style="background: white; padding: 15px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+          <h4 style="margin: 0 0 15px 0; font-size: 16px; color: #1e293b; border-bottom: 2px solid #e2e8f0; padding-bottom: 8px;">📋 פירוט שורות חשבונית</h4>
+          
+          <table class="results-table" id="invoice-results-table" style="width: 100%; border-collapse: collapse; direction: rtl;">
+            <thead>
+              <tr style="background: #f1f5f9;">
+                <th style="width: 150px; padding: 8px; text-align: right; border: 1px solid #cbd5e1; font-size: 12px;">פריט</th>
+                <th style="padding: 8px; text-align: right; border: 1px solid #cbd5e1; font-size: 12px;">תיאור</th>
+                <th style="width: 60px; padding: 8px; text-align: center; border: 1px solid #cbd5e1; font-size: 12px;">כמות</th>
+                <th style="width: 80px; padding: 8px; text-align: center; border: 1px solid #cbd5e1; font-size: 12px;">מחיר יחידה</th>
+                <th style="width: 85px; padding: 8px; text-align: center; border: 1px solid #cbd5e1; font-size: 12px;">סה"כ</th>
+                <th style="width: 70px; padding: 8px; text-align: center; border: 1px solid #cbd5e1; font-size: 12px;">קטגוריה</th>
+              </tr>
+            </thead>
+            <tbody id="invoice-lines-body">
+              <!-- Lines will be populated here -->
+            </tbody>
+          </table>
         </div>
       </div>
-      <div class="search-results-container" id="documentsContainer">
-        <div class="no-results">
-          <div class="no-results-icon">📄</div>
-          <div>אין מסמכי חשבונית</div>
-        </div>
+      
+      <!-- View Invoice Button -->
+      <div id="view-invoice-section" style="display: none; text-align: center; margin-top: 20px;">
+        <button id="view-invoice-btn" onclick="viewCurrentInvoiceDocument()" 
+                style="background: #0066cc; color: white; border: none; padding: 12px 24px; 
+                       border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 16px;
+                       box-shadow: 0 2px 4px rgba(0,0,0,0.1);"
+                onmouseover="this.style.background='#0052a3'" 
+                onmouseout="this.style.background='#0066cc'">
+          👁️ צפייה בחשבונית המקורית
+        </button>
+      </div>
+      
+      <!-- No Data State -->
+      <div class="no-results" id="no-invoice-data">
+        <div class="no-results-icon">📄</div>
+        <div>אין נתוני חשבונית</div>
       </div>
     </div>
 
     <!-- Tab 2 - Damage Center Mappings -->
     <div class="tab-content" id="tab-mappings" style="display: none;">
-      <div class="results-summary" id="mappingsSummary">
-        <div class="summary-grid">
-          <div class="summary-item">
-            <div class="summary-label">סה"כ הקצאות</div>
-            <div class="summary-value" id="totalMappings">0</div>
-          </div>
-          <div class="summary-item">
-            <div class="summary-label">מוקדי נזק</div>
-            <div class="summary-value" id="totalDamageCenters">0</div>
-          </div>
-          <div class="summary-item">
-            <div class="summary-label">ערך כולל</div>
-            <div class="summary-value" id="totalMappingValue">₪0</div>
+      <!-- Mappings Summary -->
+      <div id="mappings-summary" style="display: none;">
+        <div style="background: linear-gradient(135deg, #059669 0%, #047857 100%); padding: 20px; border-radius: 12px; margin-bottom: 20px; color: white; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+          <h4 style="margin: 0 0 15px 0; font-size: 20px; border-bottom: 2px solid rgba(255,255,255,0.3); padding-bottom: 10px;">🔗 סיכום הקצאות נזק</h4>
+          
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px;">
+            <div style="background: rgba(255,255,255,0.15); padding: 12px; border-radius: 8px; text-align: center;">
+              <div style="font-size: 11px; opacity: 0.8;">סה"כ הקצאות</div>
+              <div id="totalMappings" style="font-size: 18px; font-weight: bold; margin-top: 5px;">0</div>
+            </div>
+            <div style="background: rgba(255,255,255,0.15); padding: 12px; border-radius: 8px; text-align: center;">
+              <div style="font-size: 11px; opacity: 0.8;">מוקדי נזק</div>
+              <div id="totalDamageCenters" style="font-size: 18px; font-weight: bold; margin-top: 5px;">0</div>
+            </div>
+            <div style="background: rgba(255,255,255,0.15); padding: 12px; border-radius: 8px; text-align: center;">
+              <div style="font-size: 11px; opacity: 0.8;">ערך כולל</div>
+              <div id="totalMappingValue" style="font-size: 18px; font-weight: bold; margin-top: 5px;">₪0</div>
+            </div>
           </div>
         </div>
       </div>
-      <div class="search-results-container" id="mappingsContainer">
-        <div class="no-results">
-          <div class="no-results-icon">🔗</div>
-          <div>אין הקצאות נזק</div>
-        </div>
+      
+      <!-- Damage Centers Container -->
+      <div id="damage-centers-container" style="display: none;">
+        <!-- Will be populated with damage center tables -->
+      </div>
+      
+      <!-- No Data State -->
+      <div class="no-results" id="no-mappings-data">
+        <div class="no-results-icon">🔗</div>
+        <div>אין הקצאות נזק</div>
       </div>
     </div>
 
@@ -650,46 +683,21 @@
     }
   }
 
-  // TAB 1 - Load Invoice Documents (FROM WORKING ORIGINAL)
+  // TAB 1 - Load Invoice Data (Complete OCR-style implementation)
   async function loadInvoiceDocuments() {
-    console.log('📄 Loading invoice documents...');
-    const container = document.getElementById('documentsContainer');
+    console.log('📄 Loading invoice data for OCR-style display...');
     
     try {
-      // Get current case ID using the same method as the working original
+      // Get current case ID
       const currentCaseId = await getCurrentCaseId();
       
       if (!currentCaseId) {
-        const hasHelper = !!window.helper;
-        const hasPlate = !!(window.helper?.meta?.plate || window.helper?.vehicle?.plate);
-        
-        container.innerHTML = `
-          <div class="no-results">
-            <div class="no-results-icon">❌</div>
-            <div style="font-weight: bold; margin-bottom: 8px;">לא נמצא מזהה תיק</div>
-            <div style="font-size: 14px;">לא ניתן לטעון מסמכי חשבונית ללא מזהה תיק</div>
-            <div style="font-size: 12px; margin-top: 10px; padding: 10px; background: #f3f4f6; border-radius: 6px;">
-              <strong>מצב מערכת:</strong><br>
-              Helper זמין: ${hasHelper ? '✅' : '❌'}<br>
-              מספר רישוי: ${hasPlate ? '✅' : '❌'}<br>
-              ${!hasHelper ? 'טען תיק תחילה' : !hasPlate ? 'מספר רישוי חסר' : 'לא נמצא תיק במאגר'}
-            </div>
-          </div>
-        `;
+        showNoDataState('לא נמצא מזהה תיק - לא ניתן לטעון נתוני חשבונית');
         return;
       }
 
       // Show loading state
-      container.innerHTML = `
-        <div class="search-result-item">
-          <div class="result-header">
-            <div class="result-name">🔄 טוען מסמכי חשבונית...</div>
-          </div>
-          <div class="result-details">
-            <div class="result-detail">מחפש חשבוניות עבור תיק: ${currentCaseId}</div>
-          </div>
-        </div>
-      `;
+      showLoadingState('טוען נתוני חשבונית...');
 
       // Wait for Supabase to load if needed
       if (!window.supabase) {
@@ -701,57 +709,95 @@
         throw new Error('Supabase client לא זמין - נכשל בטעינה');
       }
 
-      // Query invoice_documents table directly
-      const { data: invoiceDocuments, error } = await window.supabase
-        .from('invoice_documents')
-        .select(`
-          *,
-          invoice:invoices(
-            id,
-            invoice_number,
-            supplier_name,
-            total_amount,
-            status
-          )
-        `)
+      // Step 1: Get invoices for this case
+      const { data: invoicesData, error: invoicesError } = await window.supabase
+        .from('invoices')
+        .select('*')
         .eq('case_id', currentCaseId)
         .order('created_at', { ascending: false });
 
-      if (error) {
-        throw new Error(`Supabase query error: ${error.message}`);
+      if (invoicesError) {
+        throw new Error(`Failed to load invoices: ${invoicesError.message}`);
       }
 
-      console.log('✅ Loaded invoice documents:', invoiceDocuments);
-      console.log('📊 Invoice documents count:', invoiceDocuments?.length || 0);
+      if (!invoicesData || invoicesData.length === 0) {
+        showNoDataState('לא נמצאו חשבוניות עבור תיק זה');
+        return;
+      }
+
+      // For now, take the most recent invoice
+      const mainInvoice = invoicesData[0];
+      console.log('✅ Found main invoice:', mainInvoice);
+
+      // Step 2: Get invoice lines for this invoice
+      const { data: linesData, error: linesError } = await window.supabase
+        .from('invoice_lines')
+        .select('*')
+        .eq('invoice_id', mainInvoice.id)
+        .order('line_number', { ascending: true });
+
+      if (linesError) {
+        throw new Error(`Failed to load invoice lines: ${linesError.message}`);
+      }
+
+      // Step 3: Get invoice document (for viewing)
+      const { data: documentsData, error: documentsError } = await window.supabase
+        .from('invoice_documents')
+        .select('*')
+        .eq('invoice_id', mainInvoice.id)
+        .limit(1);
+
+      if (documentsError) {
+        console.warn('Could not load document data:', documentsError);
+      }
+
+      const mainDocument = documentsData?.[0];
       
-      // Update statistics
-      const totalDocs = invoiceDocuments?.length || 0;
-      const totalInvoices = invoiceDocuments?.filter(doc => doc.invoice).length || 0;
-      const totalValue = invoiceDocuments?.reduce((sum, doc) => {
-        return sum + parseFloat(doc.invoice?.total_amount || 0);
-      }, 0) || 0;
-      
-      document.getElementById('totalDocuments').textContent = totalDocs;
-      document.getElementById('totalInvoices').textContent = totalInvoices;
-      document.getElementById('totalInvoiceValue').textContent = `₪${Math.round(totalValue).toLocaleString('he-IL')}`;
-      
-      // Display the invoice documents
-      displayInvoiceDocuments(invoiceDocuments || []);
+      console.log('✅ Loaded invoice data:', {
+        invoice: mainInvoice,
+        lines: linesData?.length || 0,
+        document: !!mainDocument
+      });
+
+      // Display the data in OCR style
+      displayInvoiceOCRStyle(mainInvoice, linesData || [], mainDocument);
 
     } catch (error) {
-      console.error('❌ Error loading invoice documents:', error);
-      container.innerHTML = `
-        <div class="search-result-item">
-          <div class="result-header">
-            <div class="result-name">❌ שגיאה בטעינת מסמכי חשבונית</div>
-          </div>
-          <div class="result-details">
-            <div class="result-detail">שגיאה: ${error.message}</div>
-            <div class="result-detail">מזהה תיק: לא נמצא</div>
-          </div>
-        </div>
-      `;
+      console.error('❌ Error loading invoice data:', error);
+      showNoDataState(`שגיאה בטעינת נתוני חשבונית: ${error.message}`);
     }
+  }
+
+  // Show loading state
+  function showLoadingState(message) {
+    // Hide all sections
+    document.getElementById('invoice-summary').style.display = 'none';
+    document.getElementById('invoice-lines-container').style.display = 'none';
+    document.getElementById('view-invoice-section').style.display = 'none';
+    
+    // Show loading in no-data section
+    const noDataSection = document.getElementById('no-invoice-data');
+    noDataSection.innerHTML = `
+      <div class="no-results-icon">🔄</div>
+      <div>${message}</div>
+    `;
+    noDataSection.style.display = 'block';
+  }
+
+  // Show no data state
+  function showNoDataState(message) {
+    // Hide all sections
+    document.getElementById('invoice-summary').style.display = 'none';
+    document.getElementById('invoice-lines-container').style.display = 'none';
+    document.getElementById('view-invoice-section').style.display = 'none';
+    
+    // Show no data message
+    const noDataSection = document.getElementById('no-invoice-data');
+    noDataSection.innerHTML = `
+      <div class="no-results-icon">📄</div>
+      <div>${message}</div>
+    `;
+    noDataSection.style.display = 'block';
   }
 
   // Get current case ID using correct helper identifiers  
@@ -830,23 +876,14 @@
     }
   }
 
-  // Display invoice documents
-  function displayInvoiceDocuments(documents) {
-    console.log('🎨 displayInvoiceDocuments called with:', documents);
-    const container = document.getElementById('documentsContainer');
+  // Display invoice data in OCR style (copying from invoice upload.html)
+  function displayInvoiceOCRStyle(invoice, lines, document) {
+    console.log('🎨 Displaying invoice in OCR style:', { invoice, lines: lines?.length, document: !!document });
     
-    if (!documents || documents.length === 0) {
-      console.log('📭 No documents to display');
-      container.innerHTML = `
-        <div class="no-results">
-          <div class="no-results-icon">📋</div>
-          <div style="font-weight: bold; margin-bottom: 8px;">לא נמצאו מסמכי חשבונית</div>
-          <div style="font-size: 14px;">לא נמצאו מסמכי חשבונית עבור תיק זה</div>
-        </div>
-      `;
-      return;
-    }
-
+    // Hide no-data section
+    document.getElementById('no-invoice-data').style.display = 'none';
+    
+    // Format helper functions
     const formatValue = (value) => value && value.toString().trim() ? value : "-";
     const formatPrice = (value) => {
       const num = parseFloat(value) || 0;
@@ -862,60 +899,203 @@
       }
     };
 
-    // Use the simple search-result-item format from parts floating screen
-    const documentsHTML = documents.map((doc, index) => {
-      const ocrData = doc.ocr_structured_data || {};
-      const invoiceDetails = ocrData.invoice_details || {};
-      const items = ocrData.items || [];
+    // Calculate totals by category from lines
+    let totalParts = 0, totalWorks = 0, totalRepairs = 0, totalOther = 0;
+    
+    lines.forEach(line => {
+      const lineTotal = (line.quantity || 1) * (line.unit_price || 0);
+      const category = line.item_category || 'other';
+      
+      if (category === 'part') totalParts += lineTotal;
+      else if (category === 'work') totalWorks += lineTotal;
+      else if (category === 'repair') totalRepairs += lineTotal;
+      else totalOther += lineTotal;
+    });
+    
+    const subtotal = totalParts + totalWorks + totalRepairs + totalOther;
+    const vatRate = 0.17; // Standard VAT rate
+    const vatAmount = subtotal * vatRate;
+    const grandTotal = subtotal + vatAmount;
 
-      return `
-        <div class="search-result-item">
-          <div class="result-header">
-            <div class="result-name">📄 ${formatValue(doc.filename)}</div>
-            <div class="result-price">${formatDate(doc.created_at)}</div>
+    // Create invoice summary (copying structure from invoice upload.html)
+    const summaryContainer = document.getElementById('invoice-summary');
+    summaryContainer.innerHTML = `
+      <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 20px; border-radius: 12px; margin-bottom: 20px; color: white; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+        <h4 style="margin: 0 0 15px 0; font-size: 20px; border-bottom: 2px solid rgba(255,255,255,0.3); padding-bottom: 10px;">📋 סיכום חשבונית</h4>
+        
+        <!-- Invoice Header Info -->
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin-bottom: 15px;">
+          <div style="background: rgba(255,255,255,0.15); padding: 10px; border-radius: 8px;">
+            <div style="font-size: 11px; opacity: 0.8;">מספר חשבונית</div>
+            <div style="font-size: 14px; font-weight: bold; margin-top: 3px;">${formatValue(invoice.invoice_number)}</div>
           </div>
-          <div class="result-details">
-            <div class="result-detail">
-              <strong>סטטוס OCR:</strong> ${formatValue(doc.ocr_status)}
-            </div>
-            <div class="result-detail">
-              <strong>דיוק:</strong> ${doc.ocr_confidence ? Math.round(doc.ocr_confidence) + '%' : '-'}
-            </div>
-            <div class="result-detail">
-              <strong>שפה:</strong> ${formatValue(doc.language_detected)}
-            </div>
-            <div class="result-detail">
-              <strong>גודל:</strong> ${doc.file_size ? (doc.file_size / 1024 / 1024).toFixed(1) + 'MB' : '-'}
-            </div>
+          <div style="background: rgba(255,255,255,0.15); padding: 10px; border-radius: 8px;">
+            <div style="font-size: 11px; opacity: 0.8;">ספק</div>
+            <div style="font-size: 13px; font-weight: bold; margin-top: 3px;">${formatValue(invoice.supplier_name)}</div>
           </div>
-          ${Object.keys(invoiceDetails).length > 0 ? `
-          <div class="result-description">
-            📋 פרטי חשבונית מ-OCR: ${Object.entries(invoiceDetails).filter(([k,v]) => v && v !== 'לא זוהה').map(([k,v]) => `${k}: ${v}`).join(' • ')}
+          <div style="background: rgba(255,255,255,0.15); padding: 10px; border-radius: 8px;">
+            <div style="font-size: 11px; opacity: 0.8;">מספר רכב</div>
+            <div style="font-size: 14px; font-weight: bold; margin-top: 3px;">${formatValue(invoice.plate)}</div>
           </div>
-          ` : ''}
-          ${items && items.length > 0 ? `
-          <div class="result-description">
-            🔧 ${items.length} פריטים בחשבונית
+          <div style="background: rgba(255,255,255,0.15); padding: 10px; border-radius: 8px;">
+            <div style="font-size: 11px; opacity: 0.8;">תאריך</div>
+            <div style="font-size: 13px; font-weight: bold; margin-top: 3px;">${formatDate(invoice.issue_date || invoice.invoice_date)}</div>
           </div>
-          ` : ''}
-          ${doc.storage_path || doc.filename ? `
-          <div style="text-align: center; margin-top: 10px;">
-            <button onclick="viewInvoiceDocument('${doc.id}', '${doc.storage_path || ''}', '${doc.storage_bucket || 'docs'}', '${doc.filename || ''}')" 
-                    style="background: #0066cc; color: white; border: none; padding: 8px 16px; 
-                           border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 14px;"
-                    onmouseover="this.style.background='#0052a3'" 
-                    onmouseout="this.style.background='#0066cc'">
-              👁️ צפייה בחשבונית
-            </button>
+          <div style="background: rgba(255,255,255,0.15); padding: 10px; border-radius: 8px;">
+            <div style="font-size: 11px; opacity: 0.8;">סטטוס</div>
+            <div style="font-size: 13px; font-weight: bold; margin-top: 3px;">${formatValue(invoice.status)}</div>
           </div>
-          ` : ''}
         </div>
-      `;
-    }).join('');
+        
+        <!-- Cost Breakdown by Category -->
+        <div style="background: rgba(255,255,255,0.2); padding: 15px; border-radius: 8px; margin-bottom: 15px;">
+          <div style="font-size: 13px; margin-bottom: 10px; font-weight: bold;">פירוט עלויות:</div>
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 8px;">
+            <div style="background: rgba(255,255,255,0.1); padding: 8px; border-radius: 6px; text-align: center;">
+              <div style="font-size: 10px; opacity: 0.8;">🔧 חלקים</div>
+              <div style="font-size: 14px; font-weight: bold;">${formatPrice(totalParts)}</div>
+            </div>
+            <div style="background: rgba(255,255,255,0.1); padding: 8px; border-radius: 6px; text-align: center;">
+              <div style="font-size: 10px; opacity: 0.8;">👷 עבודות</div>
+              <div style="font-size: 14px; font-weight: bold;">${formatPrice(totalWorks)}</div>
+            </div>
+            <div style="background: rgba(255,255,255,0.1); padding: 8px; border-radius: 6px; text-align: center;">
+              <div style="font-size: 10px; opacity: 0.8;">🔨 תיקונים</div>
+              <div style="font-size: 14px; font-weight: bold;">${formatPrice(totalRepairs)}</div>
+            </div>
+            <div style="background: rgba(255,255,255,0.1); padding: 8px; border-radius: 6px; text-align: center;">
+              <div style="font-size: 10px; opacity: 0.8;">📋 אחר</div>
+              <div style="font-size: 14px; font-weight: bold;">${formatPrice(totalOther)}</div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Totals Section -->
+        <div style="background: rgba(255,255,255,0.25); padding: 12px; border-radius: 8px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+            <span style="font-size: 13px;">סה"כ לפני מע"מ:</span>
+            <span style="font-size: 15px; font-weight: bold;">${formatPrice(subtotal)}</span>
+          </div>
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+            <span style="font-size: 13px;">מע"מ (17%):</span>
+            <span style="font-size: 15px; font-weight: bold;">${formatPrice(vatAmount)}</span>
+          </div>
+          <div style="display: flex; justify-content: space-between; align-items: center; border-top: 2px solid rgba(255,255,255,0.3); padding-top: 8px;">
+            <span style="font-size: 16px; font-weight: bold;">סה"כ כולל מע"מ:</span>
+            <span style="font-size: 18px; font-weight: bold; color: #fbbf24;">${formatPrice(grandTotal)}</span>
+          </div>
+        </div>
+      </div>
+    `;
 
-    container.innerHTML = documentsHTML;
-    console.log('✅ Display completed successfully');
+    // Display lines table
+    displayInvoiceLines(lines);
+    
+    // Show/hide view invoice button
+    if (document) {
+      // Store document data for viewing
+      window._currentInvoiceDocument = document;
+      document.getElementById('view-invoice-section').style.display = 'block';
+    } else {
+      document.getElementById('view-invoice-section').style.display = 'none';
+    }
+    
+    // Show all sections
+    summaryContainer.style.display = 'block';
+    console.log('✅ Invoice OCR-style display completed');
   }
+
+  // Display invoice lines in table (copying structure from invoice upload.html)
+  function displayInvoiceLines(lines) {
+    console.log('📋 Displaying invoice lines:', lines?.length || 0);
+    
+    const tableBody = document.getElementById('invoice-lines-body');
+    
+    if (!lines || lines.length === 0) {
+      tableBody.innerHTML = `
+        <tr>
+          <td colspan="6" style="padding: 20px; text-align: center; color: #6b7280; font-style: italic;">
+            אין שורות חשבונית
+          </td>
+        </tr>
+      `;
+      document.getElementById('invoice-lines-container').style.display = 'block';
+      return;
+    }
+
+    // Group lines by category
+    const categorizedLines = {
+      part: [],
+      work: [],
+      repair: [],
+      other: []
+    };
+
+    lines.forEach(line => {
+      const category = line.item_category || 'other';
+      if (categorizedLines[category]) {
+        categorizedLines[category].push(line);
+      } else {
+        categorizedLines.other.push(line);
+      }
+    });
+
+    // Build table rows by category
+    let tableRowsHTML = '';
+    
+    // Helper function to render category
+    const renderCategory = (categoryKey, categoryName, icon, items) => {
+      if (items.length === 0) return '';
+      
+      let categoryHTML = `
+        <tr>
+          <td colspan="6" style="background: #334155; color: white; font-weight: bold; padding: 8px; text-align: right; font-size: 13px;">
+            ${icon} ${categoryName} (${items.length})
+          </td>
+        </tr>
+      `;
+
+      items.forEach(item => {
+        const lineTotal = (item.quantity || 1) * (item.unit_price || 0);
+        categoryHTML += `
+          <tr style="background: #64748b; color: white;">
+            <td style="padding: 6px 8px; font-size: 11px;">${item.part_id || item.code || '-'}</td>
+            <td style="padding: 6px 8px; font-size: 11px;">${item.description || '-'}</td>
+            <td style="padding: 6px 8px; text-align: center; font-size: 11px;">${item.quantity || 1}</td>
+            <td style="padding: 6px 8px; text-align: center; font-size: 11px;">₪${(item.unit_price || 0).toLocaleString()}</td>
+            <td style="padding: 6px 8px; text-align: center; font-weight: bold; font-size: 11px;">₪${lineTotal.toLocaleString()}</td>
+            <td style="padding: 6px 8px; text-align: center; font-size: 10px;">${categoryName}</td>
+          </tr>
+        `;
+      });
+
+      return categoryHTML;
+    };
+
+    // Render each category
+    tableRowsHTML += renderCategory('part', 'חלקים', '🔧', categorizedLines.part);
+    tableRowsHTML += renderCategory('work', 'עבודות', '👷', categorizedLines.work);
+    tableRowsHTML += renderCategory('repair', 'תיקונים', '🔨', categorizedLines.repair);
+    tableRowsHTML += renderCategory('other', 'אחר', '📋', categorizedLines.other);
+
+    tableBody.innerHTML = tableRowsHTML;
+    document.getElementById('invoice-lines-container').style.display = 'block';
+    
+    console.log('✅ Invoice lines table populated');
+  }
+
+  // View current invoice document
+  window.viewCurrentInvoiceDocument = async function() {
+    console.log('👁️ Opening current invoice document...');
+    
+    if (!window._currentInvoiceDocument) {
+      alert('לא נמצא מסמך חשבונית לצפייה');
+      return;
+    }
+
+    const doc = window._currentInvoiceDocument;
+    await viewInvoiceDocument(doc.id, doc.storage_path, doc.storage_bucket, doc.filename);
+  };
 
   // View Invoice Document function
   window.viewInvoiceDocument = async function(docId, storagePath, storageBucket, filename) {
@@ -984,46 +1164,21 @@
     }
   };
 
-  // TAB 2 - Load Damage Center Mappings (Full implementation)
+  // TAB 2 - Load Damage Center Mappings (Complete table implementation)
   async function loadDamageCenterMappings() {
     console.log('🔗 Loading damage center mappings...');
-    const container = document.getElementById('mappingsContainer');
     
     try {
-      // Get current case ID using the same method as Tab 1
+      // Get current case ID
       const currentCaseId = await getCurrentCaseId();
       
       if (!currentCaseId) {
-        const hasHelper = !!window.helper;
-        const hasPlate = !!(window.helper?.meta?.plate || window.helper?.vehicle?.plate);
-        
-        container.innerHTML = `
-          <div class="no-results">
-            <div class="no-results-icon">❌</div>
-            <div style="font-weight: bold; margin-bottom: 8px;">לא נמצא מזהה תיק</div>
-            <div style="font-size: 14px;">לא ניתן לטעון הקצאות נזק ללא מזהה תיק</div>
-            <div style="font-size: 12px; margin-top: 10px; padding: 10px; background: #f3f4f6; border-radius: 6px;">
-              <strong>מצב מערכת:</strong><br>
-              Helper זמין: ${hasHelper ? '✅' : '❌'}<br>
-              מספר רישוי: ${hasPlate ? '✅' : '❌'}<br>
-              ${!hasHelper ? 'טען תיק תחילה' : !hasPlate ? 'מספר רישוי חסר' : 'לא נמצא תיק במאגר'}
-            </div>
-          </div>
-        `;
+        showMappingsNoDataState('לא נמצא מזהה תיק - לא ניתן לטעון הקצאות נזק');
         return;
       }
 
       // Show loading state
-      container.innerHTML = `
-        <div class="search-result-item">
-          <div class="result-header">
-            <div class="result-name">🔄 טוען הקצאות נזק...</div>
-          </div>
-          <div class="result-details">
-            <div class="result-detail">מחפש הקצאות עבור תיק: ${currentCaseId}</div>
-          </div>
-        </div>
-      `;
+      showMappingsLoadingState('טוען הקצאות נזק...');
 
       // Wait for Supabase to load if needed
       if (!window.supabase) {
@@ -1066,69 +1221,70 @@
       console.log('✅ Loaded mappings data:', mappingsData);
       console.log('📊 Mappings count:', mappingsData?.length || 0);
       
-      // Update statistics
-      const totalMappings = mappingsData?.length || 0;
-      const uniqueDamageCenters = [...new Set(mappingsData?.map(m => m.damage_center_id) || [])].length;
-      const totalValue = mappingsData?.reduce((sum, mapping) => {
-        const lineTotal = parseFloat(mapping.invoice_line?.line_total || 0);
-        return sum + lineTotal;
-      }, 0) || 0;
-      
-      document.getElementById('totalMappings').textContent = totalMappings;
-      document.getElementById('totalDamageCenters').textContent = uniqueDamageCenters;
-      document.getElementById('totalMappingValue').textContent = `₪${Math.round(totalValue).toLocaleString('he-IL')}`;
-      
-      // Display the mappings
-      displayDamageCenterMappings(mappingsData || []);
+      if (!mappingsData || mappingsData.length === 0) {
+        showMappingsNoDataState('לא נמצאו הקצאות נזק עבור תיק זה');
+        return;
+      }
+
+      // Display the mappings in proper table format
+      displayDamageCenterMappingsTable(mappingsData);
 
     } catch (error) {
       console.error('❌ Error loading damage center mappings:', error);
-      container.innerHTML = `
-        <div class="search-result-item">
-          <div class="result-header">
-            <div class="result-name">❌ שגיאה בטעינת הקצאות נזק</div>
-          </div>
-          <div class="result-details">
-            <div class="result-detail">שגיאה: ${error.message}</div>
-            <div class="result-detail">מזהה תיק: לא נמצא</div>
-          </div>
-        </div>
-      `;
+      showMappingsNoDataState(`שגיאה בטעינת הקצאות נזק: ${error.message}`);
     }
   }
 
-  // Display damage center mappings
-  function displayDamageCenterMappings(mappings) {
-    console.log('🎨 displayDamageCenterMappings called with:', mappings);
-    const container = document.getElementById('mappingsContainer');
+  // Show loading state for mappings
+  function showMappingsLoadingState(message) {
+    // Hide all sections
+    document.getElementById('mappings-summary').style.display = 'none';
+    document.getElementById('damage-centers-container').style.display = 'none';
     
-    if (!mappings || mappings.length === 0) {
-      console.log('📭 No mappings to display');
-      container.innerHTML = `
-        <div class="no-results">
-          <div class="no-results-icon">🔗</div>
-          <div style="font-weight: bold; margin-bottom: 8px;">לא נמצאו הקצאות נזק</div>
-          <div style="font-size: 14px;">לא נמצאו הקצאות של פריטי חשבונית למוקדי נזק</div>
-        </div>
-      `;
-      return;
-    }
+    // Show loading in no-data section
+    const noDataSection = document.getElementById('no-mappings-data');
+    noDataSection.innerHTML = `
+      <div class="no-results-icon">🔄</div>
+      <div>${message}</div>
+    `;
+    noDataSection.style.display = 'block';
+  }
 
-    const formatValue = (value) => value && value.toString().trim() ? value : "-";
-    const formatPrice = (value) => {
-      const num = parseFloat(value) || 0;
-      return num > 0 ? `₪${num.toLocaleString('he-IL')}` : "₪0";
-    };
-    const formatDate = (dateStr) => {
-      if (!dateStr) return '-';
-      try {
-        const date = new Date(dateStr);
-        return date.toLocaleDateString('he-IL');
-      } catch {
-        return '-';
-      }
-    };
+  // Show no data state for mappings
+  function showMappingsNoDataState(message) {
+    // Hide all sections
+    document.getElementById('mappings-summary').style.display = 'none';
+    document.getElementById('damage-centers-container').style.display = 'none';
+    
+    // Show no data message
+    const noDataSection = document.getElementById('no-mappings-data');
+    noDataSection.innerHTML = `
+      <div class="no-results-icon">🔗</div>
+      <div>${message}</div>
+    `;
+    noDataSection.style.display = 'block';
+  }
 
+  // Display damage center mappings in proper table format
+  function displayDamageCenterMappingsTable(mappings) {
+    console.log('🎨 Displaying damage center mappings in table format:', mappings?.length || 0);
+    
+    // Hide no-data section
+    document.getElementById('no-mappings-data').style.display = 'none';
+    
+    // Calculate statistics
+    const totalMappings = mappings?.length || 0;
+    const uniqueDamageCenters = [...new Set(mappings?.map(m => m.damage_center_id) || [])].length;
+    const totalValue = mappings?.reduce((sum, mapping) => {
+      const lineTotal = parseFloat(mapping.invoice_line?.line_total || 0);
+      return sum + lineTotal;
+    }, 0) || 0;
+    
+    // Update statistics
+    document.getElementById('totalMappings').textContent = totalMappings;
+    document.getElementById('totalDamageCenters').textContent = uniqueDamageCenters;
+    document.getElementById('totalMappingValue').textContent = `₪${Math.round(totalValue).toLocaleString('he-IL')}`;
+    
     // Group mappings by damage center
     const groupedMappings = {};
     mappings.forEach(mapping => {
@@ -1142,75 +1298,87 @@
       groupedMappings[centerId].mappings.push(mapping);
     });
 
-    // Build the HTML for grouped display
-    const groupsHTML = Object.entries(groupedMappings).map(([centerId, group]) => {
+    // Build tables for each damage center
+    const damageContainer = document.getElementById('damage-centers-container');
+    
+    const tablesHTML = Object.entries(groupedMappings).map(([centerId, group]) => {
       const mappingsForCenter = group.mappings;
       const centerTotal = mappingsForCenter.reduce((sum, m) => {
         return sum + parseFloat(m.invoice_line?.line_total || 0);
       }, 0);
 
-      const mappingsRowsHTML = mappingsForCenter.map((mapping, index) => {
+      // Build table rows for this center
+      const tableRowsHTML = mappingsForCenter.map(mapping => {
         const lineData = mapping.invoice_line || {};
         const invoiceData = mapping.invoice || {};
-        const mappedData = mapping.mapped_data || {};
-        const originalData = mapping.original_field_data || {};
+        const lineTotal = parseFloat(lineData.line_total || 0);
 
         return `
-          <div class="search-result-item" style="margin-bottom: 10px;">
-            <div class="result-header">
-              <div class="result-name">📋 ${formatValue(lineData.description)}</div>
-              <div class="result-price">${formatPrice(lineData.line_total)}</div>
-            </div>
-            <div class="result-details">
-              <div class="result-detail">
-                <strong>חשבונית:</strong> ${formatValue(invoiceData.invoice_number)}
-              </div>
-              <div class="result-detail">
-                <strong>ספק:</strong> ${formatValue(invoiceData.supplier_name)}
-              </div>
-              <div class="result-detail">
-                <strong>שורה:</strong> ${formatValue(lineData.line_number)}
-              </div>
-              <div class="result-detail">
-                <strong>כמות:</strong> ${formatValue(lineData.quantity)}
-              </div>
-              <div class="result-detail">
-                <strong>מחיר יחידה:</strong> ${formatPrice(lineData.unit_price)}
-              </div>
-              <div class="result-detail">
-                <strong>סטטוס:</strong> ${formatValue(mapping.validation_status)}
-              </div>
-            </div>
-            ${Object.keys(mappedData).length > 0 ? `
-            <div class="result-description">
-              🎯 נתונים ממופים: ${Object.entries(mappedData).map(([k,v]) => `${k}: ${v}`).join(' • ')}
-            </div>
-            ` : ''}
-          </div>
+          <tr style="border-bottom: 1px solid #e2e8f0;">
+            <td style="padding: 8px; text-align: right; font-size: 12px;">${lineData.description || '-'}</td>
+            <td style="padding: 8px; text-align: center; font-size: 12px;">${invoiceData.invoice_number || '-'}</td>
+            <td style="padding: 8px; text-align: center; font-size: 12px;">${lineData.quantity || 1}</td>
+            <td style="padding: 8px; text-align: center; font-size: 12px;">₪${(lineData.unit_price || 0).toLocaleString()}</td>
+            <td style="padding: 8px; text-align: center; font-weight: bold; font-size: 12px;">₪${lineTotal.toLocaleString()}</td>
+            <td style="padding: 8px; text-align: center; font-size: 11px;">${mapping.validation_status || 'pending'}</td>
+            <td style="padding: 8px; text-align: center; font-size: 11px;">${mapping.mapping_confidence ? Math.round(mapping.mapping_confidence) + '%' : '-'}</td>
+          </tr>
         `;
       }).join('');
 
       return `
-        <div class="damage-center-group">
-          <div class="damage-center-header" onclick="toggleDamageCenterGroup('${centerId}')">
-            <div>
+        <div style="background: white; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); overflow: hidden;">
+          <!-- Damage Center Header -->
+          <div style="background: #059669; color: white; padding: 15px; display: flex; justify-content: space-between; align-items: center; cursor: pointer;" 
+               onclick="toggleDamageCenterTable('${centerId}')">
+            <div style="font-weight: bold; font-size: 16px;">
               🔧 ${group.center_name}
               <span style="font-size: 12px; opacity: 0.8; margin-right: 10px;">
                 (${mappingsForCenter.length} הקצאות)
               </span>
             </div>
-            <div>${formatPrice(centerTotal)}</div>
+            <div style="font-weight: bold; font-size: 16px;">₪${centerTotal.toLocaleString()}</div>
           </div>
-          <div id="group-${centerId}" style="padding: 15px;">
-            ${mappingsRowsHTML}
+          
+          <!-- Collapsible Table -->
+          <div id="table-${centerId}" style="display: block;">
+            <table style="width: 100%; border-collapse: collapse; direction: rtl;">
+              <thead style="background: #f8fafc;">
+                <tr>
+                  <th style="padding: 10px; text-align: right; border: 1px solid #e2e8f0; font-size: 12px;">תיאור</th>
+                  <th style="padding: 10px; text-align: center; border: 1px solid #e2e8f0; font-size: 12px;">חשבונית</th>
+                  <th style="padding: 10px; text-align: center; border: 1px solid #e2e8f0; font-size: 12px;">כמות</th>
+                  <th style="padding: 10px; text-align: center; border: 1px solid #e2e8f0; font-size: 12px;">מחיר יחידה</th>
+                  <th style="padding: 10px; text-align: center; border: 1px solid #e2e8f0; font-size: 12px;">סה"כ</th>
+                  <th style="padding: 10px; text-align: center; border: 1px solid #e2e8f0; font-size: 12px;">סטטוס</th>
+                  <th style="padding: 10px; text-align: center; border: 1px solid #e2e8f0; font-size: 12px;">דיוק</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${tableRowsHTML}
+              </tbody>
+            </table>
           </div>
         </div>
       `;
     }).join('');
 
-    container.innerHTML = groupsHTML;
-    console.log('✅ Display completed successfully');
+    damageContainer.innerHTML = tablesHTML;
+    
+    // Show sections
+    document.getElementById('mappings-summary').style.display = 'block';
+    document.getElementById('damage-centers-container').style.display = 'block';
+    
+    console.log('✅ Damage center mappings tables displayed');
   }
+
+  // Toggle damage center table visibility
+  window.toggleDamageCenterTable = function(centerId) {
+    const table = document.getElementById(`table-${centerId}`);
+    if (table) {
+      table.style.display = table.style.display === 'none' ? 'block' : 'none';
+    }
+  };
 
   // TAB 3 - Load Invoice Validations (Simple implementation)
   async function loadInvoiceValidations() {
