@@ -1335,36 +1335,16 @@
         throw new Error('Supabase client לא זמין - נכשל בטעינה');
       }
 
-      // Query invoice_damage_center_mappings table with related data
+      // Query invoice_damage_center_mappings table - simple query first
       console.log('🔍 DEBUG: About to query mappings with case_id:', currentCaseId);
       
       const { data: mappingsData, error } = await window.supabase
         .from('invoice_damage_center_mappings')
-        .select(`
-          *,
-          invoice:invoices(
-            id,
-            invoice_number,
-            supplier_name,
-            total_amount
-          ),
-          invoice_line:invoice_lines(
-            id,
-            line_number,
-            description,
-            quantity,
-            unit_price,
-            line_total,
-            catalog_code,
-            source,
-            item_category
-          )
-        `)
+        .select('*')
         .eq('case_id', currentCaseId)
-        // .eq('validation_status', 'approved')  // Temporarily removed to get any data
         .order('created_at', { ascending: false });
         
-      console.log('🔍 DEBUG: Mappings query completed. Error:', error);
+      console.log('🔍 DEBUG: Simple mappings query completed. Error:', error);
       console.log('🔍 DEBUG: Raw mappingsData:', mappingsData);
 
       if (error) {
@@ -1479,7 +1459,8 @@
     const totalMappings = mappings?.length || 0;
     const uniqueDamageCenters = [...new Set(mappings?.map(m => m.damage_center_id) || [])].length;
     const totalValue = mappings?.reduce((sum, mapping) => {
-      const lineTotal = parseFloat(mapping.invoice_line?.line_total || 0);
+      const lineData = mapping.invoice_line || mapping.original_field_data || {};
+      const lineTotal = parseFloat(lineData.line_total || 0);
       return sum + lineTotal;
     }, 0) || 0;
     
@@ -1519,18 +1500,20 @@
     const tablesHTML = Object.entries(groupedMappings).map(([centerId, group], index) => {
       const mappingsForCenter = group.mappings;
       const centerTotal = mappingsForCenter.reduce((sum, m) => {
-        return sum + parseFloat(m.invoice_line?.line_total || 0);
+        const lineData = m.invoice_line || m.original_field_data || {};
+        return sum + parseFloat(lineData.line_total || 0);
       }, 0);
 
       // Build table rows for this center
       const tableRowsHTML = mappingsForCenter.map(mapping => {
-        const lineData = mapping.invoice_line || {};
-        const invoiceData = mapping.invoice || {};
+        // Use original_field_data as fallback since JOINs aren't working
+        const lineData = mapping.invoice_line || mapping.original_field_data || {};
+        const invoiceData = mapping.invoice || { supplier_name: mapping.original_field_data?.supplier_name };
         const lineTotal = parseFloat(lineData.line_total || 0);
 
         return `
           <tr style="border-bottom: 1px solid #e2e8f0;">
-            <td style="padding: 8px; text-align: center; font-size: 12px;">${getCatalogCodeDisplay(lineData)}</td>
+            <td style="padding: 8px; text-align: center; font-size: 12px;">${lineData.catalog_code || '-'}</td>
             <td style="padding: 8px; text-align: right; font-size: 12px;">${lineData.description || '-'}</td>
             <td style="padding: 8px; text-align: center; font-size: 12px;">${invoiceData.supplier_name || '-'}</td>
             <td style="padding: 8px; text-align: center; font-size: 12px;">${lineData.source || 'מקורי'}</td>
