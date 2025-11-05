@@ -687,6 +687,12 @@
   async function loadInvoiceDocuments() {
     console.log('📄 Loading invoice data for OCR-style display...');
     
+    // Ensure the modal exists before proceeding
+    if (!document.getElementById('invoiceDetailsModal')) {
+      console.error('❌ Invoice modal not found - cannot load data');
+      return;
+    }
+    
     try {
       // Get current case ID
       const currentCaseId = await getCurrentCaseId();
@@ -770,34 +776,58 @@
 
   // Show loading state
   function showLoadingState(message) {
-    // Hide all sections
-    document.getElementById('invoice-summary').style.display = 'none';
-    document.getElementById('invoice-lines-container').style.display = 'none';
-    document.getElementById('view-invoice-section').style.display = 'none';
+    // Check if DOM is ready
+    if (!document || typeof document.getElementById !== 'function') {
+      console.error('❌ DOM not ready in showLoadingState');
+      return;
+    }
+    
+    // Hide all sections safely
+    const summaryEl = document.getElementById('invoice-summary');
+    const linesEl = document.getElementById('invoice-lines-container');
+    const viewEl = document.getElementById('view-invoice-section');
+    const noDataEl = document.getElementById('no-invoice-data');
+    
+    if (summaryEl) summaryEl.style.display = 'none';
+    if (linesEl) linesEl.style.display = 'none';
+    if (viewEl) viewEl.style.display = 'none';
     
     // Show loading in no-data section
-    const noDataSection = document.getElementById('no-invoice-data');
-    noDataSection.innerHTML = `
-      <div class="no-results-icon">🔄</div>
-      <div>${message}</div>
-    `;
-    noDataSection.style.display = 'block';
+    if (noDataEl) {
+      noDataEl.innerHTML = `
+        <div class="no-results-icon">🔄</div>
+        <div>${message}</div>
+      `;
+      noDataEl.style.display = 'block';
+    }
   }
 
   // Show no data state
   function showNoDataState(message) {
-    // Hide all sections
-    document.getElementById('invoice-summary').style.display = 'none';
-    document.getElementById('invoice-lines-container').style.display = 'none';
-    document.getElementById('view-invoice-section').style.display = 'none';
+    // Check if DOM is ready
+    if (!document || typeof document.getElementById !== 'function') {
+      console.error('❌ DOM not ready in showNoDataState');
+      return;
+    }
+    
+    // Hide all sections safely
+    const summaryEl = document.getElementById('invoice-summary');
+    const linesEl = document.getElementById('invoice-lines-container');
+    const viewEl = document.getElementById('view-invoice-section');
+    const noDataEl = document.getElementById('no-invoice-data');
+    
+    if (summaryEl) summaryEl.style.display = 'none';
+    if (linesEl) linesEl.style.display = 'none';
+    if (viewEl) viewEl.style.display = 'none';
     
     // Show no data message
-    const noDataSection = document.getElementById('no-invoice-data');
-    noDataSection.innerHTML = `
-      <div class="no-results-icon">📄</div>
-      <div>${message}</div>
-    `;
-    noDataSection.style.display = 'block';
+    if (noDataEl) {
+      noDataEl.innerHTML = `
+        <div class="no-results-icon">📄</div>
+        <div>${message}</div>
+      `;
+      noDataEl.style.display = 'block';
+    }
   }
 
   // Get current case ID using correct helper identifiers  
@@ -877,11 +907,32 @@
   }
 
   // Display invoice data in OCR style (copying from invoice upload.html)
-  function displayInvoiceOCRStyle(invoice, lines, document) {
-    console.log('🎨 Displaying invoice in OCR style:', { invoice, lines: lines?.length, document: !!document });
+  function displayInvoiceOCRStyle(invoice, lines, documentData) {
+    console.log('🎨 Displaying invoice in OCR style:', { invoice, lines: lines?.length, document: !!documentData });
+    
+    // Check if DOM is ready
+    if (!document || typeof document.getElementById !== 'function') {
+      console.error('❌ DOM not ready or document.getElementById not available');
+      setTimeout(() => displayInvoiceOCRStyle(invoice, lines, documentData), 100);
+      return;
+    }
+    
+    // Check if required elements exist
+    const noDataElement = document.getElementById('no-invoice-data');
+    const summaryElement = document.getElementById('invoice-summary');
+    
+    if (!noDataElement || !summaryElement) {
+      console.error('❌ Required DOM elements not found');
+      console.log('Available elements:', {
+        noData: !!noDataElement,
+        summary: !!summaryElement,
+        modalExists: !!document.getElementById('invoiceDetailsModal')
+      });
+      return;
+    }
     
     // Hide no-data section
-    document.getElementById('no-invoice-data').style.display = 'none';
+    noDataElement.style.display = 'none';
     
     // Format helper functions
     const formatValue = (value) => value && value.toString().trim() ? value : "-";
@@ -918,7 +969,7 @@
     const grandTotal = subtotal + vatAmount;
 
     // Create invoice summary (copying structure from invoice upload.html)
-    const summaryContainer = document.getElementById('invoice-summary');
+    const summaryContainer = summaryElement;
     summaryContainer.innerHTML = `
       <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 20px; border-radius: 12px; margin-bottom: 20px; color: white; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
         <h4 style="margin: 0 0 15px 0; font-size: 20px; border-bottom: 2px solid rgba(255,255,255,0.3); padding-bottom: 10px;">📋 סיכום חשבונית</h4>
@@ -992,12 +1043,13 @@
     displayInvoiceLines(lines);
     
     // Show/hide view invoice button
-    if (document) {
+    const viewInvoiceSection = document.getElementById('view-invoice-section');
+    if (documentData && viewInvoiceSection) {
       // Store document data for viewing
-      window._currentInvoiceDocument = document;
-      document.getElementById('view-invoice-section').style.display = 'block';
-    } else {
-      document.getElementById('view-invoice-section').style.display = 'none';
+      window._currentInvoiceDocument = documentData;
+      viewInvoiceSection.style.display = 'block';
+    } else if (viewInvoiceSection) {
+      viewInvoiceSection.style.display = 'none';
     }
     
     // Show all sections
@@ -1009,7 +1061,19 @@
   function displayInvoiceLines(lines) {
     console.log('📋 Displaying invoice lines:', lines?.length || 0);
     
+    // Check if DOM is ready
+    if (!document || typeof document.getElementById !== 'function') {
+      console.error('❌ DOM not ready in displayInvoiceLines');
+      return;
+    }
+    
     const tableBody = document.getElementById('invoice-lines-body');
+    const linesContainer = document.getElementById('invoice-lines-container');
+    
+    if (!tableBody) {
+      console.error('❌ invoice-lines-body element not found');
+      return;
+    }
     
     if (!lines || lines.length === 0) {
       tableBody.innerHTML = `
@@ -1019,7 +1083,7 @@
           </td>
         </tr>
       `;
-      document.getElementById('invoice-lines-container').style.display = 'block';
+      if (linesContainer) linesContainer.style.display = 'block';
       return;
     }
 
@@ -1079,7 +1143,7 @@
     tableRowsHTML += renderCategory('other', 'אחר', '📋', categorizedLines.other);
 
     tableBody.innerHTML = tableRowsHTML;
-    document.getElementById('invoice-lines-container').style.display = 'block';
+    if (linesContainer) linesContainer.style.display = 'block';
     
     console.log('✅ Invoice lines table populated');
   }
@@ -1168,6 +1232,12 @@
   async function loadDamageCenterMappings() {
     console.log('🔗 Loading damage center mappings...');
     
+    // Ensure the modal exists before proceeding
+    if (!document.getElementById('invoiceDetailsModal')) {
+      console.error('❌ Invoice modal not found - cannot load mappings');
+      return;
+    }
+    
     try {
       // Get current case ID
       const currentCaseId = await getCurrentCaseId();
@@ -1237,32 +1307,54 @@
 
   // Show loading state for mappings
   function showMappingsLoadingState(message) {
-    // Hide all sections
-    document.getElementById('mappings-summary').style.display = 'none';
-    document.getElementById('damage-centers-container').style.display = 'none';
+    // Check if DOM is ready
+    if (!document || typeof document.getElementById !== 'function') {
+      console.error('❌ DOM not ready in showMappingsLoadingState');
+      return;
+    }
+    
+    // Hide all sections safely
+    const summaryEl = document.getElementById('mappings-summary');
+    const centersEl = document.getElementById('damage-centers-container');
+    const noDataEl = document.getElementById('no-mappings-data');
+    
+    if (summaryEl) summaryEl.style.display = 'none';
+    if (centersEl) centersEl.style.display = 'none';
     
     // Show loading in no-data section
-    const noDataSection = document.getElementById('no-mappings-data');
-    noDataSection.innerHTML = `
-      <div class="no-results-icon">🔄</div>
-      <div>${message}</div>
-    `;
-    noDataSection.style.display = 'block';
+    if (noDataEl) {
+      noDataEl.innerHTML = `
+        <div class="no-results-icon">🔄</div>
+        <div>${message}</div>
+      `;
+      noDataEl.style.display = 'block';
+    }
   }
 
   // Show no data state for mappings
   function showMappingsNoDataState(message) {
-    // Hide all sections
-    document.getElementById('mappings-summary').style.display = 'none';
-    document.getElementById('damage-centers-container').style.display = 'none';
+    // Check if DOM is ready
+    if (!document || typeof document.getElementById !== 'function') {
+      console.error('❌ DOM not ready in showMappingsNoDataState');
+      return;
+    }
+    
+    // Hide all sections safely
+    const summaryEl = document.getElementById('mappings-summary');
+    const centersEl = document.getElementById('damage-centers-container');
+    const noDataEl = document.getElementById('no-mappings-data');
+    
+    if (summaryEl) summaryEl.style.display = 'none';
+    if (centersEl) centersEl.style.display = 'none';
     
     // Show no data message
-    const noDataSection = document.getElementById('no-mappings-data');
-    noDataSection.innerHTML = `
-      <div class="no-results-icon">🔗</div>
-      <div>${message}</div>
-    `;
-    noDataSection.style.display = 'block';
+    if (noDataEl) {
+      noDataEl.innerHTML = `
+        <div class="no-results-icon">🔗</div>
+        <div>${message}</div>
+      `;
+      noDataEl.style.display = 'block';
+    }
   }
 
   // Display damage center mappings in proper table format
