@@ -1161,8 +1161,65 @@
     if (modal) {
       modal.style.display = "block";
       console.log('🧪 Modal display set to block');
+      console.log('🧪 Modal position:', modal.style.position || 'CSS default');
+      console.log('🧪 Modal z-index:', modal.style.zIndex || 'CSS default');
+      console.log('🧪 Modal visibility:', getComputedStyle(modal).visibility);
+      console.log('🧪 Modal opacity:', getComputedStyle(modal).opacity);
+      console.log('🧪 Modal bounding rect:', modal.getBoundingClientRect());
     } else {
       console.log('🧪 Modal not found!');
+    }
+  };
+
+  // Debug function to check content divs
+  window.debugInvoiceContent = function() {
+    const modal = document.getElementById("invoiceDetailsModal");
+    const documentsContent = document.getElementById("documentsContent");
+    const documentsTab = document.getElementById("documentsTab");
+    
+    console.log('🔍 DEBUG: Modal found:', !!modal);
+    console.log('🔍 DEBUG: Modal display:', modal?.style?.display);
+    console.log('🔍 DEBUG: documentsContent found:', !!documentsContent);
+    console.log('🔍 DEBUG: documentsContent innerHTML length:', documentsContent?.innerHTML?.length || 0);
+    console.log('🔍 DEBUG: documentsTab found:', !!documentsTab);
+    console.log('🔍 DEBUG: documentsTab active class:', documentsTab?.classList?.contains('active'));
+    console.log('🔍 DEBUG: documentsTab display style:', getComputedStyle(documentsTab || {}).display);
+    
+    if (documentsContent) {
+      console.log('🔍 DEBUG: documentsContent computed styles:');
+      const styles = getComputedStyle(documentsContent);
+      console.log('  - display:', styles.display);
+      console.log('  - visibility:', styles.visibility);
+      console.log('  - opacity:', styles.opacity);
+      console.log('  - height:', styles.height);
+      console.log('  - overflow:', styles.overflow);
+    }
+  };
+
+  // Force display function for testing
+  window.forceShowInvoiceContent = function() {
+    const modal = document.getElementById("invoiceDetailsModal");
+    const documentsTab = document.getElementById("documentsTab");
+    const documentsContent = document.getElementById("documentsContent");
+    
+    if (modal) {
+      modal.style.display = "block";
+      modal.style.zIndex = "10000";
+      console.log('🔧 FORCE: Modal display forced to block');
+    }
+    
+    if (documentsTab) {
+      documentsTab.style.display = "block";
+      documentsTab.classList.add("active");
+      console.log('🔧 FORCE: documentsTab display forced to block');
+    }
+    
+    if (documentsContent) {
+      documentsContent.style.display = "block";
+      documentsContent.style.visibility = "visible";
+      documentsContent.style.opacity = "1";
+      console.log('🔧 FORCE: documentsContent styles forced');
+      console.log('🔧 FORCE: Content HTML length:', documentsContent.innerHTML.length);
     }
   };
 
