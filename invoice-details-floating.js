@@ -1336,6 +1336,8 @@
       }
 
       // Query invoice_damage_center_mappings table with related data
+      console.log('🔍 DEBUG: About to query mappings with case_id:', currentCaseId);
+      
       const { data: mappingsData, error } = await window.supabase
         .from('invoice_damage_center_mappings')
         .select(`
@@ -1361,6 +1363,9 @@
         .eq('case_id', currentCaseId)
         // .eq('validation_status', 'approved')  // Temporarily removed to get any data
         .order('created_at', { ascending: false });
+        
+      console.log('🔍 DEBUG: Mappings query completed. Error:', error);
+      console.log('🔍 DEBUG: Raw mappingsData:', mappingsData);
 
       if (error) {
         throw new Error(`Supabase query error: ${error.message}`);
