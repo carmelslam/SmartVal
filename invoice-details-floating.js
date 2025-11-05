@@ -1597,8 +1597,16 @@
       container: !!containerEl
     });
     
-    if (summaryEl) summaryEl.style.display = 'block';
-    if (containerEl) containerEl.style.display = 'block';
+    if (summaryEl) {
+      summaryEl.style.display = 'block';
+      console.log('🔍 DEBUG: Summary element display set to block');
+    }
+    if (containerEl) {
+      containerEl.style.display = 'block';
+      console.log('🔍 DEBUG: Container element display set to block');
+      console.log('🔍 DEBUG: Container innerHTML length after setting:', containerEl.innerHTML.length);
+      console.log('🔍 DEBUG: Container computed styles:', window.getComputedStyle(containerEl).display);
+    }
     
     console.log('✅ Damage center mappings tables displayed');
   }
