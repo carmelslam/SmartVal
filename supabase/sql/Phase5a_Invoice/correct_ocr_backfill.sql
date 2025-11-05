@@ -19,14 +19,13 @@ BEGIN
         ALTER TABLE public.invoice_lines DROP CONSTRAINT invoice_lines_item_category_check;
     END IF;
     
-    -- Add new constraint that allows Hebrew categories
+    -- Add constraint for English database values (UI will translate to Hebrew)
     ALTER TABLE public.invoice_lines 
     ADD CONSTRAINT invoice_lines_item_category_check 
     CHECK (
       (item_category IS NULL) OR 
       (item_category = ANY (ARRAY[
-        'part'::text, 'work'::text, 'repair'::text, 'material'::text,
-        'חלק'::text, 'עבודה'::text, 'תיקון'::text, 'חומר'::text
+        'part'::text, 'work'::text, 'repair'::text, 'material'::text
       ]))
     );
 END $$;
@@ -72,10 +71,10 @@ SET
     lm.part_data->>'קוד'
   ),
   item_category = CASE 
-    WHEN LOWER(lm.part_data->>'קטגוריה') LIKE '%עבודה%' THEN 'עבודה'
-    WHEN LOWER(lm.part_data->>'קטגוריה') LIKE '%תיקון%' THEN 'תיקון'
-    WHEN LOWER(lm.part_data->>'קטגוריה') LIKE '%חומר%' THEN 'חומר'
-    ELSE 'חלק'
+    WHEN LOWER(lm.part_data->>'קטגוריה') LIKE '%עבודה%' THEN 'work'
+    WHEN LOWER(lm.part_data->>'קטגוריה') LIKE '%תיקון%' THEN 'repair'
+    WHEN LOWER(lm.part_data->>'קטגוריה') LIKE '%חומר%' THEN 'material'
+    ELSE 'part'
   END
 FROM line_mapping lm
 WHERE invoice_lines.id = lm.line_id;
