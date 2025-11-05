@@ -62,6 +62,29 @@
   // Initialize Supabase client on module load
   loadSupabaseClient();
 
+  // Helper function to get catalog code display with invalid value filtering
+  function getCatalogCodeDisplay(item) {
+    const invalidValues = ['שם', 'תיאור', 'מחיר', 'כמות', 'סה"כ', 'קטגוריה', 'מקור', '-', ''];
+    
+    // Check catalog_code first
+    if (item.catalog_code && !invalidValues.includes(item.catalog_code.trim())) {
+      return item.catalog_code;
+    }
+    
+    // Check pcode
+    if (item.pcode && !invalidValues.includes(item.pcode.trim())) {
+      return item.pcode;
+    }
+    
+    // Check oem
+    if (item.oem && !invalidValues.includes(item.oem.trim())) {
+      return item.oem;
+    }
+    
+    // Fallback to dash
+    return '-';
+  }
+
   const style = document.createElement("style");
   style.innerHTML = `
     #invoiceDetailsModal {
@@ -1139,29 +1162,6 @@
     // Build table rows by category
     let tableRowsHTML = '';
     
-    // Helper function to get catalog code display with invalid value filtering
-    const getCatalogCodeDisplay = (item) => {
-      const invalidValues = ['שם', 'תיאור', 'מחיר', 'כמות', 'סה"כ', 'קטגוריה', 'מקור', '-', ''];
-      
-      // Check catalog_code first
-      if (item.catalog_code && !invalidValues.includes(item.catalog_code.trim())) {
-        return item.catalog_code;
-      }
-      
-      // Check pcode
-      if (item.pcode && !invalidValues.includes(item.pcode.trim())) {
-        return item.pcode;
-      }
-      
-      // Check oem
-      if (item.oem && !invalidValues.includes(item.oem.trim())) {
-        return item.oem;
-      }
-      
-      // Fallback to dash
-      return '-';
-    };
-
     // Helper function to render category
     const renderCategory = (categoryKey, categoryName, icon, items) => {
       if (items.length === 0) return '';
