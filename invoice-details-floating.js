@@ -1037,7 +1037,17 @@
   };
 
   // Main functions exposed to global scope
+  let isToggling = false; // Prevent rapid double-clicks
+  
   window.toggleInvoiceDetails = function () {
+    if (isToggling) {
+      console.log('🎬 toggleInvoiceDetails blocked - already toggling');
+      return;
+    }
+    
+    isToggling = true;
+    setTimeout(() => { isToggling = false; }, 300); // Reset after 300ms
+    
     console.log('🎬 toggleInvoiceDetails called');
     console.log('🎬 Function called from:', new Error().stack.split('\n')[2]);
     const modal = document.getElementById("invoiceDetailsModal");
@@ -1047,6 +1057,10 @@
     if (modal.style.display === "none" || !modal.style.display) {
       console.log('🎬 Opening modal...');
       modal.style.display = "block";
+      
+      // Force modal to be visible with higher z-index
+      modal.style.zIndex = "10000";
+      modal.style.position = "fixed";
       
       // Check if content divs exist
       const docsDiv = document.getElementById('documentsContent');
@@ -1066,6 +1080,8 @@
       
       loadInvoiceDocuments(); // Load initial tab
       makeDraggable(modal);
+      
+      console.log('🎬 Modal should now be visible with display:', modal.style.display);
     } else {
       console.log('🎬 Closing modal...');
       modal.style.display = "none";
