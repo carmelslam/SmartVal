@@ -1357,12 +1357,13 @@
       console.log('🔍 DEBUG: All mappings (without status filter):', allMappingsData?.length || 0);
       if (allMappingsData && allMappingsData.length > 0) {
         console.log('🔍 DEBUG: Sample mapping:', allMappingsData[0]);
-        console.log('🔍 DEBUG: Available statuses:', [...new Set(allMappingsData.map(m => m.mapping_status))]);
+        console.log('🔍 DEBUG: Available validation statuses:', [...new Set(allMappingsData.map(m => m.validation_status))]);
+        console.log('🔍 DEBUG: Available mapping statuses:', [...new Set(allMappingsData.map(m => m.mapping_status))]);
       }
       
       if (!mappingsData || mappingsData.length === 0) {
         if (allMappingsData && allMappingsData.length > 0) {
-          showMappingsNoDataState(`נמצאו ${allMappingsData.length} הקצאות אך אף אחת לא במצב 'active'`);
+          showMappingsNoDataState(`נמצאו ${allMappingsData.length} הקצאות אך אף אחת לא במצב 'approved'`);
         } else {
           showMappingsNoDataState('לא נמצאו הקצאות נזק עבור תיק זה');
         }
@@ -1480,9 +1481,10 @@
 
         return `
           <tr style="border-bottom: 1px solid #e2e8f0;">
-            <td style="padding: 8px; text-align: center; font-size: 12px;">${lineData.catalog_code || lineData.item_code || '-'}</td>
+            <td style="padding: 8px; text-align: center; font-size: 12px;">${lineData.line_number || mapping.field_index || '-'}</td>
             <td style="padding: 8px; text-align: right; font-size: 12px;">${lineData.description || '-'}</td>
-            <td style="padding: 8px; text-align: center; font-size: 12px;">${lineData.source || lineData.part_source || 'Original'}</td>
+            <td style="padding: 8px; text-align: center; font-size: 12px;">${invoiceData.supplier_name || '-'}</td>
+            <td style="padding: 8px; text-align: center; font-size: 12px;">${lineData.metadata?.source || lineData.part_source || 'Original'}</td>
             <td style="padding: 8px; text-align: center; font-size: 12px;">₪${(lineData.unit_price || 0).toLocaleString()}</td>
             <td style="padding: 8px; text-align: center; font-size: 12px;">${lineData.quantity || 1}</td>
             <td style="padding: 8px; text-align: center; font-weight: bold; font-size: 12px;">₪${lineTotal.toLocaleString()}</td>
@@ -1496,7 +1498,7 @@
           <div style="background: #059669; color: white; padding: 15px; display: flex; justify-content: space-between; align-items: center; cursor: pointer;" 
                onclick="toggleDamageCenterTable('${centerId}')">
             <div style="font-weight: bold; font-size: 16px;">
-              🔧 ${group.center_name}
+              מרכז נזק #${centerId}: ${group.center_name || 'לא מוגדר'}
               <span style="font-size: 12px; opacity: 0.8; margin-right: 10px;">
                 (${mappingsForCenter.length} הקצאות)
               </span>
@@ -1511,6 +1513,7 @@
                 <tr>
                   <th style="padding: 10px; text-align: center; border: 1px solid #e2e8f0; font-size: 12px;">קוד קטלוג</th>
                   <th style="padding: 10px; text-align: right; border: 1px solid #e2e8f0; font-size: 12px;">תיאור</th>
+                  <th style="padding: 10px; text-align: center; border: 1px solid #e2e8f0; font-size: 12px;">ספק/מוסך</th>
                   <th style="padding: 10px; text-align: center; border: 1px solid #e2e8f0; font-size: 12px;">מקור</th>
                   <th style="padding: 10px; text-align: center; border: 1px solid #e2e8f0; font-size: 12px;">מחיר יחידה</th>
                   <th style="padding: 10px; text-align: center; border: 1px solid #e2e8f0; font-size: 12px;">כמות</th>
