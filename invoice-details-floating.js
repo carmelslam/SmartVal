@@ -533,9 +533,13 @@
 
       console.log('✅ Loaded invoice documents:', invoiceDocuments);
       console.log('📊 Invoice documents count:', invoiceDocuments?.length || 0);
+      console.log('🔍 DEBUG: Sample document data:', invoiceDocuments?.[0]);
+      console.log('🔍 DEBUG: About to call displayInvoiceDocuments...');
       
       // Display the invoice documents
       displayInvoiceDocuments(invoiceDocuments || []);
+      
+      console.log('🔍 DEBUG: displayInvoiceDocuments call completed');
 
     } catch (error) {
       console.error('❌ Error loading invoice documents:', error);
@@ -781,9 +785,14 @@
       }
 
       console.log('✅ Loaded damage center mappings:', mappings);
+      console.log('📊 Mappings count:', mappings?.length || 0);
+      console.log('🔍 DEBUG: Sample mapping data:', mappings?.[0]);
+      console.log('🔍 DEBUG: About to call displayDamageCenterMappings...');
       
       // Display the mappings
       displayDamageCenterMappings(mappings || []);
+      
+      console.log('🔍 DEBUG: displayDamageCenterMappings call completed');
 
     } catch (error) {
       console.error('❌ Error loading damage center mappings:', error);
@@ -1084,6 +1093,9 @@
       // Set initial tab state
       currentTab = 'documents';
       console.log('🎬 Loading initial documents tab...');
+      console.log('🎬 Current case ID before loading:', currentCaseId);
+      console.log('🎬 Helper case info:', window.helper?.case_info);
+      
       loadInvoiceDocuments(); // Load initial tab
       makeDraggable(modal);
     } else {
