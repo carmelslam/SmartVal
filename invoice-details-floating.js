@@ -1383,6 +1383,38 @@
     console.log('🔍 BLOCKER CHECK: Suspicious elements:', suspiciousElements);
     console.log('🔍 BLOCKER CHECK: Document overflow:', getComputedStyle(document.documentElement).overflow);
     console.log('🔍 BLOCKER CHECK: Body overflow:', getComputedStyle(document.body).overflow);
+    
+    // Log the first few suspicious elements in detail
+    suspiciousElements.slice(0, 5).forEach((el, i) => {
+      console.log(`🔍 BLOCKER ${i+1}:`, el);
+    });
+  };
+  
+  // Function to remove potential blocking overlays
+  window.removeModalBlockers = function() {
+    console.log('🧹 CLEANUP: Removing potential modal blockers...');
+    
+    // Find elements with very high z-index that might be blocking
+    const allElements = document.querySelectorAll('*');
+    let removed = 0;
+    
+    allElements.forEach(el => {
+      const zIndex = parseInt(getComputedStyle(el).zIndex);
+      const position = getComputedStyle(el).position;
+      
+      // Check for elements that might be invisible overlays
+      if (zIndex > 50000 && position === 'fixed') {
+        const rect = el.getBoundingClientRect();
+        // If it covers most of the screen but has no visible content
+        if (rect.width > window.innerWidth * 0.8 && rect.height > window.innerHeight * 0.8) {
+          console.log('🧹 CLEANUP: Removing potential blocker:', el.tagName, el.id, el.className);
+          el.style.display = 'none';
+          removed++;
+        }
+      }
+    });
+    
+    console.log(`🧹 CLEANUP: Removed ${removed} potential blockers`);
   };
 
   // Add floating button to access invoice details from any page (like parts screen)
