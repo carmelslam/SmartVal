@@ -347,39 +347,7 @@
   let currentTab = 'documents';
   let currentCaseId = null;
 
-  // Tab switching function - exposed to global scope
-  window.setInvoiceTab = function(tabName) {
-    // Hide all tabs
-    document.querySelectorAll('.tab-section').forEach(section => {
-      section.classList.remove('active');
-    });
-    
-    // Remove active class from all buttons
-    document.querySelectorAll('.tab-btn').forEach(btn => {
-      btn.classList.remove('active');
-    });
-    
-    // Show selected tab
-    const tabElement = document.getElementById(tabName + 'Tab');
-    if (tabElement) {
-      tabElement.classList.add('active');
-    }
-    
-    // Set active button
-    const activeButton = document.querySelector(`[onclick="setInvoiceTab('${tabName}')"]`);
-    if (activeButton) {
-      activeButton.classList.add('active');
-    }
-    
-    currentTab = tabName;
-    
-    // Load tab data
-    if (tabName === 'documents') {
-      loadInvoiceDocuments();
-    } else if (tabName === 'mappings') {
-      loadDamageCenterMappings();
-    }
-  };
+  // Remove duplicate setInvoiceTab function - using switchTab instead
 
   // Get current case ID using correct helper identifiers
   async function getCurrentCaseId() {
@@ -1118,18 +1086,30 @@
   // Expose switchTab function
   window.switchTab = function(tabName, event) {
     console.log('🔄 Switching to tab:', tabName);
+    console.log('🔄 Modal visible:', document.getElementById("invoiceDetailsModal")?.style?.display !== "none");
     
     currentTab = tabName;
     
     // Update tab buttons
     document.querySelectorAll('#invoiceDetailsModal .tab-btn').forEach(btn => btn.classList.remove('active'));
-    document.querySelectorAll('#invoiceDetailsModal .tab-section').forEach(section => section.classList.remove('active'));
+    document.querySelectorAll('#invoiceDetailsModal .tab-section').forEach(section => {
+      section.classList.remove('active');
+      console.log('🔄 Removed active from section:', section.id);
+    });
     
     // Activate selected tab
     if (event && event.target) {
       event.target.classList.add('active');
+      console.log('🔄 Activated button:', event.target.textContent.trim());
     }
-    document.getElementById(tabName + 'Tab').classList.add('active');
+    
+    const targetTab = document.getElementById(tabName + 'Tab');
+    if (targetTab) {
+      targetTab.classList.add('active');
+      console.log('🔄 Activated tab section:', targetTab.id);
+    } else {
+      console.error('❌ Tab section not found:', tabName + 'Tab');
+    }
     
     // Load content for selected tab
     if (tabName === 'documents') {
@@ -1185,5 +1165,29 @@
       console.log('🧪 Modal not found!');
     }
   };
+
+  // Add floating button to access invoice details from any page (like parts screen)
+  if (!document.getElementById("invoiceFloatBtn")) {
+    const floatBtn = document.createElement("button");
+    floatBtn.id = "invoiceFloatBtn";
+    floatBtn.innerHTML = "📋 פרטי חשבונית";
+    floatBtn.style.cssText = `
+      position: fixed;
+      top: 70px;
+      left: 20px;
+      background: #fbbf24;
+      color: #78350f;
+      border: none;
+      padding: 8px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: bold;
+      z-index: 9998;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    `;
+    floatBtn.onclick = toggleInvoiceDetails;
+    document.body.appendChild(floatBtn);
+  }
 
 })();
