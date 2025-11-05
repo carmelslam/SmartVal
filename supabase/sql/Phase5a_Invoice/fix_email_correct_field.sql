@@ -4,10 +4,10 @@ SET email = ocr_data.email_value
 FROM (
   SELECT DISTINCT
     i.supplier_name,
-    i.metadata->'original_ocr_data'->>'דוא\'ל מוסך' as email_value
+    i.metadata->'original_ocr_data'->>'דוא''ל מוסך' as email_value
   FROM invoices i
-  WHERE i.metadata->'original_ocr_data'->>'דוא\'ל מוסך' IS NOT NULL
-    AND i.metadata->'original_ocr_data'->>'דוא\'ל מוסך' != ''
+  WHERE i.metadata->'original_ocr_data'->>'דוא''ל מוסך' IS NOT NULL
+    AND i.metadata->'original_ocr_data'->>'דוא''ל מוסך' != ''
 ) ocr_data
 WHERE invoice_suppliers.name = ocr_data.supplier_name;
 
