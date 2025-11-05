@@ -1446,10 +1446,5 @@
     console.log(`💥 FORCE CLEANUP: Modified ${modified} elements`);
   };
 
-  // Remove any existing floating invoice buttons
-  const existingInvoiceBtn = document.getElementById("invoiceFloatBtn");
-  if (existingInvoiceBtn) {
-    existingInvoiceBtn.remove();
-  }
 
 })();
