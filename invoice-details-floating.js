@@ -1333,7 +1333,7 @@
           )
         `)
         .eq('case_id', currentCaseId)
-        .eq('mapping_status', 'active')
+        .eq('validation_status', 'approved')
         .order('created_at', { ascending: false });
 
       if (error) {
@@ -1345,7 +1345,7 @@
       console.log('🔍 DEBUG: Current case ID:', currentCaseId);
       console.log('🔍 DEBUG: Query parameters used:', {
         case_id: currentCaseId,
-        mapping_status: 'active'
+        validation_status: 'approved'
       });
       
       // Debug: Let's also try without the mapping_status filter
