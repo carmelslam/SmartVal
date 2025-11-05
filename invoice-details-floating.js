@@ -1292,13 +1292,47 @@
     console.log('🚀 JUST OPEN: Bypassing all logic, forcing modal open...');
     const modal = document.getElementById("invoiceDetailsModal");
     if (modal) {
+      // Force very specific positioning to ensure visibility
       modal.style.display = "block";
-      modal.style.zIndex = "10000";
       modal.style.position = "fixed";
+      modal.style.top = "50px";
+      modal.style.left = "50px";
+      modal.style.width = "800px";
+      modal.style.height = "600px";
+      modal.style.zIndex = "99999";
+      modal.style.backgroundColor = "white";
+      modal.style.border = "5px solid red";
+      modal.style.visibility = "visible";
+      modal.style.opacity = "1";
+      
       modalState = 'open';
       loadInvoiceDocuments();
-      console.log('🚀 JUST OPEN: Modal forced open, loading data...');
+      console.log('🚀 JUST OPEN: Modal forced open with red border at 50,50');
+      
+      // Log the modal's position
+      const rect = modal.getBoundingClientRect();
+      console.log('🚀 JUST OPEN: Modal position:', rect);
     }
+  };
+  
+  // Ultra simple test - just show a basic div
+  window.testBasicModal = function() {
+    const testDiv = document.createElement('div');
+    testDiv.id = 'testModal';
+    testDiv.style.cssText = `
+      position: fixed;
+      top: 100px;
+      left: 100px;
+      width: 400px;
+      height: 300px;
+      background: red;
+      border: 5px solid black;
+      z-index: 99999;
+      display: block;
+    `;
+    testDiv.innerHTML = '<h1 style="color: white; text-align: center; margin-top: 100px;">TEST MODAL</h1>';
+    document.body.appendChild(testDiv);
+    console.log('🧪 TEST: Basic red modal added');
   };
 
   // Add floating button to access invoice details from any page (like parts screen)
