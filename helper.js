@@ -7,18 +7,55 @@ console.log('🧠 Loading enhanced helper system...');
 window.isActualInvoiceProcessing = false;
 console.log('🚫 PHANTOM PREVENTION: Invoice processing disabled during page load');
 
-// 🚫 PHANTOM INVOICE PREVENTION - Check for excessive invoices on page load
+// 🚫 PHANTOM INVOICE PREVENTION - Check for excessive invoices and clean assignments
 window.checkAndCleanPhantomInvoices = function() {
-  if (window.helper?.invoices?.length > 10) {
-    console.warn(`🚫 PHANTOM PREVENTION: Found ${window.helper.invoices.length} invoices, cleaning phantoms...`);
-    console.log('📊 Before cleanup - invoice count:', window.helper.invoices.length);
+  if (!window.helper?.invoices) {
+    console.log('✅ PHANTOM CHECK: No invoices array found');
+    return false;
+  }
+
+  const originalCount = window.helper.invoices.length;
+  console.log('🔍 PHANTOM CHECK: Analyzing', originalCount, 'items in helper.invoices');
+  
+  // Filter out assignments and keep only actual invoices
+  const actualInvoices = window.helper.invoices.filter(item => {
+    // Check if this is an actual invoice (has invoice-specific fields)
+    const isInvoice = item && (
+      item.invoice_number || 
+      item.supplier_name || 
+      item.total_amount || 
+      item.filename ||
+      item.ocr_text ||
+      (item.plate && item.owner && !item.damage_center_id) // Simple invoice without assignment data
+    );
     
-    // Keep only the first 5 most recent invoices
-    const validInvoices = window.helper.invoices.slice(0, 5);
-    window.helper.invoices = validInvoices;
+    // Check if this is an assignment (has assignment-specific fields)
+    const isAssignment = item && (
+      item.damage_center_id ||
+      item.field_id || 
+      item.mapping_status ||
+      item.assigned_to_center ||
+      item.assignment_id
+    );
     
-    console.log('✅ After cleanup - invoice count:', window.helper.invoices.length);
-    console.log('🧹 Phantom invoices cleaned, saving to storage...');
+    if (isAssignment) {
+      console.log('🚫 FILTERED OUT: Assignment found in invoices array:', item);
+      return false; // Remove assignments
+    }
+    
+    return isInvoice; // Keep only actual invoices
+  });
+  
+  // If we have too many invoices, keep only the most recent 5
+  let cleanedInvoices = actualInvoices;
+  if (actualInvoices.length > 10) {
+    console.warn(`🚫 PHANTOM PREVENTION: Found ${actualInvoices.length} actual invoices, keeping only 5 most recent`);
+    cleanedInvoices = actualInvoices.slice(0, 5);
+  }
+  
+  if (originalCount !== cleanedInvoices.length) {
+    console.warn(`🧹 CLEANUP: Reduced from ${originalCount} to ${cleanedInvoices.length} actual invoices`);
+    window.helper.invoices = cleanedInvoices;
     
     // Save cleaned data
     if (typeof window.saveHelperToAllStorageLocations === 'function') {
@@ -28,7 +65,7 @@ window.checkAndCleanPhantomInvoices = function() {
     return true; // Cleanup performed
   }
   
-  console.log('✅ PHANTOM CHECK: Invoice count normal:', window.helper?.invoices?.length || 0);
+  console.log('✅ PHANTOM CHECK: All', cleanedInvoices.length, 'items are actual invoices');
   return false; // No cleanup needed
 };
 
