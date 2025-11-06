@@ -1402,7 +1402,7 @@
           <td>${formatCurrency(item.unit_price || 0)}</td>
           <td>${formatCurrency(item.line_total || 0)}</td>
           <td>
-            <select class="dc-selector" data-line-id="${item.id}" ${isAssigned ? 'data-original-value="' + assignedDcId + '"' : ''}>
+            <select class="dc-selector" data-line-id="${item.id}" ${isAssigned ? 'data-original-value="' + assignedDcId + '" disabled' : ''}>
               <option value="">בחר מוקד נזק...</option>
               ${dcOptions}
             </select>
@@ -1507,10 +1507,7 @@
         btn.addEventListener('click', handleEditClick);
       });
 
-      // Selector change events for inline editing
-      document.querySelectorAll('.dc-selector').forEach(selector => {
-        selector.addEventListener('change', handleSelectorChange);
-      });
+      // Note: Selector change events removed - dropdowns now controlled through edit workflow only
 
       // Save button (no redirect)
       document.getElementById('save-assignments-btn').addEventListener('click', saveAssignments);
@@ -1793,7 +1790,7 @@
         return; // Already in edit mode
       }
       
-      // Enable selector and show original value
+      // Enable selector for editing and highlight it
       selector.disabled = false;
       selector.style.background = '#fff3cd'; // Highlight that it's in edit mode
       
@@ -1822,24 +1819,7 @@
       }
     }
 
-    /**
-     * Handle selector change for instant reassignment
-     */
-    async function handleSelectorChange(event) {
-      const selector = event.target;
-      const lineId = selector.dataset.lineId;
-      const newDcId = selector.value;
-      const row = selector.closest('tr');
-      
-      // Only auto-assign if it's an unassigned line and a value is selected
-      if (!existingAssignments.has(lineId) && newDcId) {
-        const assignBtn = row.querySelector('.btn-assign');
-        if (assignBtn) {
-          // Trigger assignment automatically
-          assignBtn.click();
-        }
-      }
-    }
+    // handleSelectorChange function removed - dropdowns now controlled through edit workflow only
 
     /**
      * Handle edit save - Save the reassignment
@@ -1948,8 +1928,8 @@
       const editBtn = row.querySelector('.btn-edit');
       const unassignBtn = row.querySelector('.btn-unassign');
       
-      // Reset selector
-      selector.disabled = false; // Keep it enabled for future edits
+      // Reset selector to disabled state (only editable through edit button)
+      selector.disabled = true; // Disable it again after edit
       selector.style.background = ''; // Remove edit highlight
       selector.value = selector.dataset.originalValue || '';
       
