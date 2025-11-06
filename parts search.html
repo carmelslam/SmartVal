@@ -4563,10 +4563,47 @@ window.addEventListener('DOMContentLoaded', function() {
     }
   });
 
+  // COPIED FROM INVOICE UPLOAD: Comprehensive user initialization
   const auth = sessionStorage.getItem("auth");
   if (!auth) {
     alert("הגישה חסומה - אנא התחבר דרך דף הבית");
     window.location.href = "index.html";
+    return;
+  }
+  
+  // Initialize user data for proper user tracking
+  try {
+    const authData = JSON.parse(auth);
+    const user = authData.session?.user || authData.user;
+    const profile = authData.profile;
+    
+    if (user) {
+      // Create a global currentUser object for parts search
+      window.currentUser = {
+        user_id: profile?.user_id || user.id,
+        email: profile?.email || user.email,
+        full_name: profile?.full_name || user.user_metadata?.full_name || user.email,
+        role: profile?.role || user.user_metadata?.role || 'user'
+      };
+      
+      console.log('✅ PARTS-SEARCH: User initialized:', window.currentUser.email);
+      console.log('   User ID:', window.currentUser.user_id);
+      
+      // Update helper with user info if it exists
+      if (window.helper) {
+        if (!window.helper.meta) window.helper.meta = {};
+        window.helper.meta.current_user_id = window.currentUser.user_id;
+        window.helper.meta.current_user_name = window.currentUser.full_name;
+        window.helper.meta.current_user_email = window.currentUser.email;
+        sessionStorage.setItem('helper', JSON.stringify(window.helper));
+      }
+      
+    } else {
+      console.error('❌ PARTS-SEARCH: No user found in auth data:', authData);
+    }
+  } catch (error) {
+    console.error('❌ PARTS-SEARCH: Failed to initialize user:', error);
+    console.error('   Auth data:', auth);
   }
 
   // COPIED FROM INVOICE UPLOAD: Working logout function
