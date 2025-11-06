@@ -1772,30 +1772,25 @@
         
         console.log('✅ PDF uploaded to storage:', publicUrl);
         
-        // Save to tracking table (EXPERTISE PATTERN)
-        const finalReportData = {
-          case_id: actualCaseId,
-          plate: normalizedPlate,
-          report_type: 'final_report',
-          damage_center_count: helper.vehicleItems?.length || helper.centers?.length || 0,
-          damage_center_name: helper.vehicleItems?.[0]?.center_name || helper.centers?.[0]?.name || 'כללי',
-          actual_repairs: helper.vehicleItems?.map(item => item.description).join(', ') || helper.centers?.map(c => c.description).join(', ') || '',
-          total_parts: helper.calculations?.total_parts || 0,
-          total_work: helper.calculations?.total_work || 0,
-          claim_amount: helper.calculations?.total_claim || helper.calculations?.total_amount || 0,
-          depreciation: helper.calculations?.depreciation_amount || 0,
-          final_compensation: helper.calculations?.final_compensation || helper.calculations?.total_amount || 0,
-          notes: `דוח סופי נוצר ב-${new Date().toLocaleDateString('he-IL')}`,
-          damage_center_index: 0,
-          pdf_public_url: publicUrl,
-          timestamp: new Date().toISOString()
+        // Save to tracking table using RPC (EXPERTISE PATTERN)
+        const centersData = helper.final_report?.centers || helper.centers || helper.damage_centers || [];
+        const helperForSupabase = {
+          ...helper,
+          final_report: {
+            ...helper.final_report,
+            centers: centersData
+          }
         };
-        
-        const { data: supabaseData, error: supabaseError } = await supabase
-          .from('tracking_final_report')
-          .insert([finalReportData])
-          .select()
-          .single();
+
+        const { data: supabaseData, error: supabaseError } = await supabase.rpc('upsert_tracking_final_report_from_helper', {
+          helper_json: helperForSupabase,
+          p_case_id: actualCaseId,
+          p_plate: normalizedPlate,
+          p_report_type: 'final_report',
+          p_status: 'final',
+          p_pdf_storage_path: storagePath,
+          p_pdf_public_url: publicUrl
+        });
         
         if (supabaseError) {
           console.error('❌ Tracking table save failed:', supabaseError);
@@ -1807,10 +1802,15 @@
         // Send to Make.com webhook (EXPERTISE PATTERN)
         console.log('🔗 Sending final report to עיבוד webhook...');
         const webhookPayload = {
-          ...finalReportData,
-          supabase_id: supabaseData.id,
+          ...helperForSupabase,
+          supabase_id: supabaseData,
           action: 'SUBMIT_FINAL_REPORT',
-          source: 'final_report_template_builder'
+          source: 'final_report_template_builder',
+          pdf_public_url: publicUrl,
+          case_id: actualCaseId,
+          plate: normalizedPlate,
+          report_type: 'final_report',
+          status: 'final'
         };
         
         const result = await sendToWebhook('SUBMIT_FINAL_REPORT', webhookPayload);
