@@ -707,7 +707,6 @@
       </div>
       <div style="margin-top: 10px; padding: 10px; background: #e0f2fe; border-radius: 6px; font-size: 14px; text-align: center; color: #0277bd;">
         📁 לחץ על הכפתור הרצוי כדי לצפות במסמכים קיימים<br>
-        כפתורי הפקה של מסמכים חדשים נמצאים בתחתית העמוד 🚀
       </div>
     </div>
     
@@ -2261,23 +2260,92 @@
     window.generateEstimate = async function() {
       console.log('📄 Generate estimate');
       
-      // SESSION 88: Save version FIRST before estimate generation
-      if (window.saveHelperVersion && window.helper) {
-        try {
-          console.log('💾 SESSION 88: Saving version before estimate generation...');
-          await window.saveHelperVersion('Estimate Generation', {
-            trigger_event: 'estimate_generation',
-            notes: 'Pre-generation save of estimate data'
-          });
-          console.log('✅ SESSION 88: Version saved successfully before estimate generation');
-        } catch (error) {
-          console.error('❌ SESSION 88: Failed to save version before estimate generation:', error);
+      try {
+        // SESSION 88: Save version FIRST before estimate generation
+        if (window.saveHelperVersion && window.helper) {
+          try {
+            console.log('💾 SESSION 88: Saving version before estimate generation...');
+            await window.saveHelperVersion('Estimate Generation', {
+              trigger_event: 'estimate_generation',
+              notes: 'Pre-generation save of estimate data'
+            });
+            console.log('✅ SESSION 88: Version saved successfully before estimate generation');
+          } catch (error) {
+            console.error('❌ SESSION 88: Failed to save version before estimate generation:', error);
+          }
         }
+        
+        // Save estimate data locally first
+        saveEstimate();
+        
+        // 1. SAVE TO SUPABASE TRACKING TABLE FIRST
+        console.log('💾 Saving estimate to Supabase tracking table...');
+        const { supabase } = await import('./lib/supabaseClient.js');
+        const helper = window.helper || JSON.parse(sessionStorage.getItem('helper') || '{}');
+        const caseInfo = helper.case_info || {};
+        
+        const estimateData = {
+          case_id: caseInfo.supabase_case_id,
+          plate: caseInfo.plate || helper.plate || helper.מספר_רכב || helper['מס רכב'],
+          report_type: 'estimate',
+          damage_center_count: helper.vehicleItems?.length || 0,
+          damage_center_name: helper.vehicleItems?.[0]?.center_name || 'כללי',
+          actual_repairs: helper.vehicleItems?.map(item => item.description).join(', ') || '',
+          total_parts: helper.calculations?.total_parts || 0,
+          total_work: helper.calculations?.total_work || 0,
+          claim_amount: helper.calculations?.total_claim || 0,
+          depreciation: helper.calculations?.depreciation_amount || 0,
+          final_compensation: helper.calculations?.final_compensation || 0,
+          notes: `אומדן ראשוני נוצר ב-${new Date().toLocaleDateString('he-IL')}`,
+          timestamp: new Date().toISOString()
+        };
+        
+        const { data: supabaseData, error: supabaseError } = await supabase
+          .from('tracking_final_report')
+          .insert([estimateData])
+          .select()
+          .single();
+        
+        if (supabaseError) {
+          console.error('❌ Supabase save failed:', supabaseError);
+          throw new Error(`שגיאה בשמירה לשרת: ${supabaseError.message}`);
+        }
+        
+        console.log('✅ Estimate saved to Supabase:', supabaseData);
+        
+        // 2. SEND TO MAKE.COM WEBHOOK SECOND
+        try {
+          console.log('🔗 Sending estimate to עיבוד webhook...');
+          const webhookResponse = await fetch('https://hook.eu2.make.com/tw4xhsqf8d37qg4tgs5k3hvobf7q5x1g', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              ...estimateData,
+              supabase_id: supabaseData.id,
+              action: 'estimate_generation',
+              source: 'estimator_builder'
+            })
+          });
+          
+          if (webhookResponse.ok) {
+            console.log('✅ Estimate sent to עיבוד successfully');
+          } else {
+            console.warn('⚠️ עיבוד webhook failed, but Supabase data saved');
+          }
+        } catch (webhookError) {
+          console.warn('⚠️ עיבוד webhook error:', webhookError);
+          // Don't fail - Supabase data is already saved
+        }
+        
+        // Navigate to validation page
+        window.location.href = 'estimate-validation.html';
+        
+      } catch (error) {
+        console.error('❌ Generate estimate failed:', error);
+        alert(`שגיאה בהפקת האומדן: ${error.message}`);
       }
-      
-      saveEstimate();
-      // Navigate to validation page
-      window.location.href = 'estimate-validation.html';
     };
     
     // Go home (back to selection page)

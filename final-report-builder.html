@@ -26711,154 +26711,285 @@
     }
 
     // LOCAL GENERATION FUNCTIONS - No webhooks needed, skip validation
-    window.generateEstimateReport = function() {
+    window.generateEstimateReport = async function() {
       console.log('🔧 Generating estimate report locally...');
       console.log('✅ GenerateEstimateReport function called successfully!');
       
-      // Get current helper data or plate from input
-      const helper = window.helper || JSON.parse(sessionStorage.getItem('helper') || '{}');
-      const plateInput = document.getElementById('builderPlateInput');
-      const currentPlate = helper.plate || helper.מספר_רכב || helper['מס רכב'] || (plateInput ? plateInput.value.trim() : '');
-      
-      console.log('📋 Current plate for estimate:', currentPlate);
-      console.log('📊 Current helper data:', helper);
-      
-      // If no plate in helper but there's one in input, create minimal helper structure
-      if (!currentPlate && plateInput && plateInput.value.trim()) {
-        const plateValue = plateInput.value.trim();
-        console.log('📝 Creating minimal helper structure with plate:', plateValue);
+      try {
+        // Get current helper data or plate from input
+        const helper = window.helper || JSON.parse(sessionStorage.getItem('helper') || '{}');
+        const plateInput = document.getElementById('builderPlateInput');
+        const currentPlate = helper.plate || helper.מספר_רכב || helper['מס רכב'] || (plateInput ? plateInput.value.trim() : '');
         
-        // Create basic helper structure with plate
-        const minimalHelper = {
-          plate: plateValue,
-          מספר_רכב: plateValue,
-          meta: {
-            case_id: `case_${plateValue}_${Date.now()}`,
-            created_at: new Date().toISOString()
-          }
+        console.log('📋 Current plate for estimate:', currentPlate);
+        console.log('📊 Current helper data:', helper);
+        
+        // 1. SAVE TO SUPABASE TRACKING TABLE FIRST
+        console.log('💾 Saving estimate to Supabase tracking table...');
+        const { supabase } = await import('./lib/supabaseClient.js');
+        const caseInfo = helper.case_info || {};
+        
+        const estimateData = {
+          case_id: caseInfo.supabase_case_id,
+          plate: caseInfo.plate || currentPlate,
+          report_type: 'estimate',
+          damage_center_count: helper.vehicleItems?.length || 0,
+          damage_center_name: helper.vehicleItems?.[0]?.center_name || 'כללי',
+          actual_repairs: helper.vehicleItems?.map(item => item.description).join(', ') || '',
+          total_parts: helper.calculations?.total_parts || 0,
+          total_work: helper.calculations?.total_work || 0,
+          claim_amount: helper.calculations?.total_claim || 0,
+          depreciation: helper.calculations?.depreciation_amount || 0,
+          final_compensation: helper.calculations?.final_compensation || 0,
+          notes: `אומדן ראשוני נוצר מבונה חוות הדעת ב-${new Date().toLocaleDateString('he-IL')}`,
+          timestamp: new Date().toISOString()
         };
         
-        // Merge with existing helper if any
-        const updatedHelper = { ...helper, ...minimalHelper };
-        sessionStorage.setItem('helper', JSON.stringify(updatedHelper));
-        window.helper = updatedHelper;
-      }
-      
-      // Skip saving final report data for direct report generation (avoids validation)
-      console.log('⏭️ Skipping final report save for direct report generation...');
-      
-      // Set multiple flags to ensure estimate builder skips validation
-      const reportConfig = {
-        selectedReportType: 'estimate',
-        skipValidation: true,
-        autoSelectReportType: 'estimate',
-        skipReportTypeDialog: true,
-        directGeneration: true,
-        fromFinalReportBuilder: 'true',
-        reportTypeSelected: true,
-        timestamp: new Date().toISOString()
-      };
-      
-      // Set individual items including the bypass flag
-      Object.keys(reportConfig).forEach(key => {
-        sessionStorage.setItem(key, String(reportConfig[key]));
-      });
-      
-      // Also set as complete config object
-      sessionStorage.setItem('reportConfig', JSON.stringify(reportConfig));
-      
-      console.log('🚀 Navigating directly to estimate builder...');
-      console.log('📋 Report configuration set:', reportConfig);
-      
-      // Navigate directly to estimate builder, bypassing fee-module and report selection
-      setTimeout(() => {
-        const finalPlate = helper.plate || helper.מספר_רכב || helper['מס רכב'] || (plateInput ? plateInput.value.trim() : '');
-        const urlWithParams = `estimate-report-builder.html?plate=${encodeURIComponent(finalPlate)}&skipValidation=true&fromFinalReportBuilder=true`;
-        console.log('🎯 Direct navigation to estimate report builder:', urlWithParams);
+        const { data: supabaseData, error: supabaseError } = await supabase
+          .from('tracking_final_report')
+          .insert([estimateData])
+          .select()
+          .single();
         
-        try {
-          // Create a proper PiP window using iframe approach
-          openInPiP(urlWithParams, 'Estimate Report Builder');
-        } catch (error) {
-          console.warn('⚠️ PiP opening failed, trying fallback navigation:', error);
-          window.location.href = 'estimate-report-builder.html?skipValidation=true&fromFinalReportBuilder=true';
+        if (supabaseError) {
+          console.error('❌ Supabase save failed:', supabaseError);
+          throw new Error(`שגיאה בשמירה לשרת: ${supabaseError.message}`);
         }
-      }, 100);
+        
+        console.log('✅ Estimate saved to Supabase:', supabaseData);
+        
+        // 2. SEND TO MAKE.COM WEBHOOK SECOND
+        try {
+          console.log('🔗 Sending estimate to עיבוד webhook...');
+          const webhookResponse = await fetch('https://hook.eu2.make.com/tw4xhsqf8d37qg4tgs5k3hvobf7q5x1g', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              ...estimateData,
+              supabase_id: supabaseData.id,
+              action: 'estimate_generation',
+              source: 'final_report_builder'
+            })
+          });
+          
+          if (webhookResponse.ok) {
+            console.log('✅ Estimate sent to עיבוד successfully');
+          } else {
+            console.warn('⚠️ עיבוד webhook failed, but Supabase data saved');
+          }
+        } catch (webhookError) {
+          console.warn('⚠️ עיבוד webhook error:', webhookError);
+          // Don't fail - Supabase data is already saved
+        }
+        
+        // If no plate in helper but there's one in input, create minimal helper structure
+        if (!currentPlate && plateInput && plateInput.value.trim()) {
+          const plateValue = plateInput.value.trim();
+          console.log('📝 Creating minimal helper structure with plate:', plateValue);
+          
+          // Create basic helper structure with plate
+          const minimalHelper = {
+            plate: plateValue,
+            מספר_רכב: plateValue,
+            meta: {
+              case_id: `case_${plateValue}_${Date.now()}`,
+              created_at: new Date().toISOString()
+            }
+          };
+          
+          // Merge with existing helper if any
+          const updatedHelper = { ...helper, ...minimalHelper };
+          sessionStorage.setItem('helper', JSON.stringify(updatedHelper));
+          window.helper = updatedHelper;
+        }
+        
+        // Skip saving final report data for direct report generation (avoids validation)
+        console.log('⏭️ Skipping final report save for direct report generation...');
+        
+        // Set multiple flags to ensure estimate builder skips validation
+        const reportConfig = {
+          selectedReportType: 'estimate',
+          skipValidation: true,
+          autoSelectReportType: 'estimate',
+          skipReportTypeDialog: true,
+          directGeneration: true,
+          fromFinalReportBuilder: 'true',
+          reportTypeSelected: true,
+          timestamp: new Date().toISOString()
+        };
+        
+        // Set individual items including the bypass flag
+        Object.keys(reportConfig).forEach(key => {
+          sessionStorage.setItem(key, String(reportConfig[key]));
+        });
+        
+        // Also set as complete config object
+        sessionStorage.setItem('reportConfig', JSON.stringify(reportConfig));
+        
+        console.log('🚀 Navigating directly to estimate builder...');
+        console.log('📋 Report configuration set:', reportConfig);
+        
+        // Navigate directly to estimate builder, bypassing fee-module and report selection
+        setTimeout(() => {
+          const finalPlate = helper.plate || helper.מספר_רכב || helper['מס רכב'] || (plateInput ? plateInput.value.trim() : '');
+          const urlWithParams = `estimate-report-builder.html?plate=${encodeURIComponent(finalPlate)}&skipValidation=true&fromFinalReportBuilder=true`;
+          console.log('🎯 Direct navigation to estimate report builder:', urlWithParams);
+          
+          try {
+            // Create a proper PiP window using iframe approach
+            openInPiP(urlWithParams, 'Estimate Report Builder');
+          } catch (error) {
+            console.warn('⚠️ PiP opening failed, trying fallback navigation:', error);
+            window.location.href = 'estimate-report-builder.html?skipValidation=true&fromFinalReportBuilder=true';
+          }
+        }, 100);
+        
+      } catch (error) {
+        console.error('❌ Generate estimate report failed:', error);
+        alert(`שגיאה בהפקת האומדן: ${error.message}`);
+      }
     };
     
-    window.generateExpertiseReport = function() {
+    window.generateExpertiseReport = async function() {
       console.log('🔧 Generating expertise report locally...');
       console.log('✅ GenerateExpertiseReport function called successfully!');
       
-      // Get current helper data or plate from input  
-      const helper = window.helper || JSON.parse(sessionStorage.getItem('helper') || '{}');
-      const plateInput = document.getElementById('builderPlateInput');
-      const currentPlate = helper.plate || helper.מספר_רכב || helper['מס רכב'] || (plateInput ? plateInput.value.trim() : '');
-      
-      console.log('📋 Current plate for expertise:', currentPlate);
-      console.log('📊 Current helper data:', helper);
-      
-      // If no plate in helper but there's one in input, create minimal helper structure
-      if (!currentPlate && plateInput && plateInput.value.trim()) {
-        const plateValue = plateInput.value.trim();
-        console.log('📝 Creating minimal helper structure with plate:', plateValue);
+      try {
+        // Get current helper data or plate from input  
+        const helper = window.helper || JSON.parse(sessionStorage.getItem('helper') || '{}');
+        const plateInput = document.getElementById('builderPlateInput');
+        const currentPlate = helper.plate || helper.מספר_רכב || helper['מס רכב'] || (plateInput ? plateInput.value.trim() : '');
         
-        // Create basic helper structure with plate
-        const minimalHelper = {
-          plate: plateValue,
-          מספר_רכב: plateValue,
-          meta: {
-            case_id: `case_${plateValue}_${Date.now()}`,
-            created_at: new Date().toISOString()
-          }
+        console.log('📋 Current plate for expertise:', currentPlate);
+        console.log('📊 Current helper data:', helper);
+        
+        // 1. SAVE TO SUPABASE TRACKING TABLE FIRST
+        console.log('💾 Saving expertise to Supabase tracking table...');
+        const { supabase } = await import('./lib/supabaseClient.js');
+        const caseInfo = helper.case_info || {};
+        
+        const expertiseData = {
+          case_id: caseInfo.supabase_case_id,
+          plate: caseInfo.plate || currentPlate,
+          damage_center_count: helper.vehicleItems?.length || 0,
+          damage_center_name: helper.vehicleItems?.[0]?.center_name || 'כללי',
+          description: helper.vehicleItems?.map(item => item.description).join(', ') || '',
+          planned_repairs: helper.vehicleItems?.map(item => item.repairs).join(', ') || '',
+          planned_parts: helper.vehicleItems?.map(item => item.parts).join(', ') || '',
+          planned_work: helper.vehicleItems?.map(item => item.work).join(', ') || '',
+          guidance: `אקספרטיזה נוצרה מבונה חוות הדעת ב-${new Date().toLocaleDateString('he-IL')}`,
+          notes: helper.notes || '',
+          damage_center_index: 0,
+          timestamp: new Date().toISOString()
         };
         
-        // Merge with existing helper if any
-        const updatedHelper = { ...helper, ...minimalHelper };
-        sessionStorage.setItem('helper', JSON.stringify(updatedHelper));
-        window.helper = updatedHelper;
-      }
-      
-      // Skip saving final report data for direct report generation (avoids validation)
-      console.log('⏭️ Skipping final report save for direct report generation...');
-      
-      // Set multiple flags to ensure fee module gets the message
-      const reportConfig = {
-        selectedReportType: 'expertise',
-        skipValidation: true,
-        autoSelectReportType: 'expertise',
-        skipReportTypeDialog: true,
-        directGeneration: true,
-        fromFinalReportBuilder: true,
-        reportTypeSelected: true,
-        timestamp: new Date().toISOString()
-      };
-      
-      // Set individual items
-      Object.keys(reportConfig).forEach(key => {
-        sessionStorage.setItem(key, String(reportConfig[key]));
-      });
-      
-      // Also set as complete config object
-      sessionStorage.setItem('reportConfig', JSON.stringify(reportConfig));
-      
-      console.log('🚀 Navigating directly to expertise builder...');
-      console.log('📋 Report configuration set:', reportConfig);
-      
-      // Navigate directly to expertise builder, bypassing fee-module and report selection
-      setTimeout(() => {
-        const finalPlate = helper.plate || helper.מספר_רכב || helper['מס רכב'] || (plateInput ? plateInput.value.trim() : '');
-        const urlWithParams = `expertise builder.html?plate=${encodeURIComponent(finalPlate)}&skipValidation=true&fromFinalReportBuilder=true`;
-        console.log('🎯 Direct navigation to expertise builder:', urlWithParams);
+        const { data: supabaseData, error: supabaseError } = await supabase
+          .from('tracking_expertise')
+          .insert([expertiseData])
+          .select()
+          .single();
         
-        try {
-          // Create a proper PiP window using iframe approach
-          openInPiP(urlWithParams, 'Expertise Builder');
-        } catch (error) {
-          console.warn('⚠️ PiP opening failed, trying fallback navigation:', error);
-          window.location.href = 'expertise builder.html?skipValidation=true&fromFinalReportBuilder=true';
+        if (supabaseError) {
+          console.error('❌ Supabase save failed:', supabaseError);
+          throw new Error(`שגיאה בשמירה לשרת: ${supabaseError.message}`);
         }
-      }, 100);
+        
+        console.log('✅ Expertise saved to Supabase:', supabaseData);
+        
+        // 2. SEND TO MAKE.COM WEBHOOK SECOND
+        try {
+          console.log('🔗 Sending expertise to עיבוד webhook...');
+          const webhookResponse = await fetch('https://hook.eu2.make.com/tw4xhsqf8d37qg4tgs5k3hvobf7q5x1g', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              ...expertiseData,
+              supabase_id: supabaseData.id,
+              action: 'expertise_generation',
+              source: 'final_report_builder'
+            })
+          });
+          
+          if (webhookResponse.ok) {
+            console.log('✅ Expertise sent to עיבוד successfully');
+          } else {
+            console.warn('⚠️ עיבוד webhook failed, but Supabase data saved');
+          }
+        } catch (webhookError) {
+          console.warn('⚠️ עיבוד webhook error:', webhookError);
+          // Don't fail - Supabase data is already saved
+        }
+        
+        // If no plate in helper but there's one in input, create minimal helper structure
+        if (!currentPlate && plateInput && plateInput.value.trim()) {
+          const plateValue = plateInput.value.trim();
+          console.log('📝 Creating minimal helper structure with plate:', plateValue);
+          
+          // Create basic helper structure with plate
+          const minimalHelper = {
+            plate: plateValue,
+            מספר_רכב: plateValue,
+            meta: {
+              case_id: `case_${plateValue}_${Date.now()}`,
+              created_at: new Date().toISOString()
+            }
+          };
+          
+          // Merge with existing helper if any
+          const updatedHelper = { ...helper, ...minimalHelper };
+          sessionStorage.setItem('helper', JSON.stringify(updatedHelper));
+          window.helper = updatedHelper;
+        }
+        
+        // Skip saving final report data for direct report generation (avoids validation)
+        console.log('⏭️ Skipping final report save for direct report generation...');
+        
+        // Set multiple flags to ensure fee module gets the message
+        const reportConfig = {
+          selectedReportType: 'expertise',
+          skipValidation: true,
+          autoSelectReportType: 'expertise',
+          skipReportTypeDialog: true,
+          directGeneration: true,
+          fromFinalReportBuilder: true,
+          reportTypeSelected: true,
+          timestamp: new Date().toISOString()
+        };
+        
+        // Set individual items
+        Object.keys(reportConfig).forEach(key => {
+          sessionStorage.setItem(key, String(reportConfig[key]));
+        });
+        
+        // Also set as complete config object
+        sessionStorage.setItem('reportConfig', JSON.stringify(reportConfig));
+        
+        console.log('🚀 Navigating directly to expertise builder...');
+        console.log('📋 Report configuration set:', reportConfig);
+        
+        // Navigate directly to expertise builder, bypassing fee-module and report selection
+        setTimeout(() => {
+          const finalPlate = helper.plate || helper.מספר_רכב || helper['מס רכב'] || (plateInput ? plateInput.value.trim() : '');
+          const urlWithParams = `expertise builder.html?plate=${encodeURIComponent(finalPlate)}&skipValidation=true&fromFinalReportBuilder=true`;
+          console.log('🎯 Direct navigation to expertise builder:', urlWithParams);
+          
+          try {
+            // Create a proper PiP window using iframe approach
+            openInPiP(urlWithParams, 'Expertise Builder');
+          } catch (error) {
+            console.warn('⚠️ PiP opening failed, trying fallback navigation:', error);
+            window.location.href = 'expertise builder.html?skipValidation=true&fromFinalReportBuilder=true';
+          }
+        }, 100);
+        
+      } catch (error) {
+        console.error('❌ Generate expertise report failed:', error);
+        alert(`שגיאה בהפקת האקספרטיזה: ${error.message}`);
+      }
     };
     
     console.log('✅ Local generation functions defined:', {
