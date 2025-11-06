@@ -433,13 +433,13 @@ Both paths run at the same time
 
     
 
-**FIX AND Integrate with existing helper structure rpoblems with parts_search:** *this section is for later - this inckudes the parts floating screen* 
+**FIX AND Integrate with existing helper structure rpoblems with parts_search:** *this section is for later - this includes the parts floating screen* 
   Parts required problems :
     1.The page doesn’t populate from helper when helper is restore, 
     2. The total cost is not detected 
     3. Second damage center handled - shows no parts at all - while helper shows the parts 
     4. Page is unstable 
-    5.  change the bidirectional regidtration to read and write from parts_search.required_parts and parts_required table in supabse and not from parts_search.selected_parts
+    5.  change the bidirectional registration to read and write from parts_search.required_parts and parts_required table in supabse and not from parts_search.selected_parts
     parts suggestions is based on the supabase selected parts table.
     THE SECTION NEEDS TO REGISTER EACH ROW ONE TIME - ONE PART CAN BE USED IN SEVERAL DAMAGE CENTERS 
   Helper.parts search:
