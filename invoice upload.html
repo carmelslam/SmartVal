@@ -1314,6 +1314,62 @@ class InvoiceProcessor {
     document.getElementById('viewInvoiceBtn').addEventListener('click', () => {
       this.viewInvoiceDocument();
     });
+
+    // AUTOSAVE: Add autosave for case info fields
+    this.setupCaseInfoAutosave();
+  }
+
+  setupCaseInfoAutosave() {
+    // Add autosave to case info fields
+    const fieldsToWatch = ['plate', 'owner', 'garage_name', 'date', 'invoice-type'];
+    
+    fieldsToWatch.forEach(fieldId => {
+      const element = document.getElementById(fieldId);
+      if (element) {
+        element.addEventListener('change', () => {
+          this.autosaveCaseInfo();
+        });
+        element.addEventListener('input', () => {
+          this.autosaveCaseInfo();
+        });
+      }
+    });
+  }
+
+  autosaveCaseInfo() {
+    const plateEl = document.getElementById('plate');
+    const ownerEl = document.getElementById('owner');
+    const garageEl = document.getElementById('garage_name');
+    const dateEl = document.getElementById('date');
+    const typeEl = document.getElementById('invoice-type');
+
+    const caseInfo = {
+      plate: plateEl ? plateEl.value : '',
+      owner: ownerEl ? ownerEl.value : '',
+      garage_name: garageEl ? garageEl.value : '',
+      date: dateEl ? dateEl.value : '',
+      invoice_type: typeEl ? typeEl.value : ''
+    };
+
+    // Save to helper object
+    if (!window.helper) {
+      window.helper = {};
+    }
+    if (!window.helper.invoice_case_info) {
+      window.helper.invoice_case_info = {};
+    }
+
+    window.helper.invoice_case_info = { ...window.helper.invoice_case_info, ...caseInfo };
+    
+    // Mark helper as modified for logout detection  
+    window.helper._session_modified = true;
+    window.helperHasChanges = true;
+
+    // Update sessionStorage
+    sessionStorage.setItem('helper', JSON.stringify(window.helper));
+    sessionStorage.setItem('invoiceCaseInfo', JSON.stringify(caseInfo));
+
+    console.log('💾 Invoice case info auto-saved:', caseInfo);
   }
 
   loadCaseData() {

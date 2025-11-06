@@ -1176,8 +1176,30 @@
       timestamp: new Date().toISOString()
     };
     
+    // FIXED: Also save to window.helper for persistent data
+    if (!window.helper) {
+      window.helper = {};
+    }
+    if (!window.helper.vehicle) {
+      window.helper.vehicle = {};
+    }
+    
+    // Update helper vehicle data
+    window.helper.vehicle.plate = plateValue;
+    window.helper.vehicle.manufacturer = document.getElementById('manufacturer').value;
+    window.helper.vehicle.model = document.getElementById('model').value;
+    window.helper.vehicle.year = document.getElementById('year').value;
+    window.helper.vehicle.engine_volume = document.getElementById('engine_volume').value;
+    
+    // Mark helper as modified for logout detection
+    window.helper._session_modified = true;
+    window.helperHasChanges = true;
+    
+    // Update sessionStorage helper
+    sessionStorage.setItem('helper', JSON.stringify(window.helper));
+    
     sessionStorage.setItem('partsSearchProgress', JSON.stringify(searchData));
-    console.log('💾 Auto-saved search progress');
+    console.log('💾 Auto-saved search progress to both sessionStorage and helper');
   }
   
   // 🎯 SMART FORM BUILDER for external sites - ENHANCED to capture ALL parts
