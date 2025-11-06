@@ -28,15 +28,15 @@ export const supabaseHelperService = {
       const versionMatch = helperName.match(/_v(\d+)$/);
       const version = versionMatch ? parseInt(versionMatch[1]) : 1;
       
-      // Step 3: Mark all previous versions as not current
+      // Step 3: Mark all previous versions as not current (preserve their original timestamps)
       if (caseRecord.id) {
         const userId = (window.caseOwnershipService?.getCurrentUser() || {}).userId || null;
         await supabase
           .from('case_helper')
           .update({ 
             is_current: false,
-            updated_by: userId,
-            updated_at: new Date().toISOString()
+            updated_by: userId
+            // NOTE: Do NOT update updated_at - preserve original timestamps for version history
           })
           .eq('case_id', caseRecord.id);
       }

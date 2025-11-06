@@ -6280,13 +6280,13 @@ window.saveHelperVersion = async function(versionLabel, metadata = {}) {
           console.warn('⚠️ SESSION 88: Version query failed, using version 1:', err);
         }
         
-        // Mark all previous versions as not current (following existing pattern)
+        // Mark all previous versions as not current (preserve their original timestamps)
         await window.supabase
           .from('case_helper')
           .update({ 
             is_current: false,
-            updated_by: userId,
-            updated_at: new Date().toISOString()
+            updated_by: userId
+            // NOTE: Do NOT update updated_at - preserve original timestamps for version history
           })
           .eq('case_id', caseId);
         
