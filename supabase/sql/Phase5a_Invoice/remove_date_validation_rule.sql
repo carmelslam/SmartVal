@@ -1,25 +1,6 @@
--- Fix validation function that references old issue_date field
--- The function validate_invoice is trying to access v_invoice.issue_date which no longer exists
+-- Remove invoice date validation rule from validate_invoice function
+-- Validation should be based on status (ACCEPTED/VALIDATED), not date population
 
--- First, let's see the current validation function
-SELECT 
-  'CURRENT FUNCTION' as section,
-  routine_name,
-  routine_definition
-FROM information_schema.routines 
-WHERE routine_schema = 'public' 
-  AND routine_name = 'validate_invoice';
-
--- Check what triggers are calling this function
-SELECT 
-  'TRIGGERS USING FUNCTION' as section,
-  trigger_name,
-  event_manipulation,
-  action_statement
-FROM information_schema.triggers 
-WHERE action_statement LIKE '%validate_invoice%';
-
--- Fix the validate_invoice function to use invoice_date instead of issue_date
 CREATE OR REPLACE FUNCTION validate_invoice(p_invoice_id UUID)
 RETURNS JSONB
 LANGUAGE plpgsql
@@ -65,17 +46,8 @@ BEGIN
       jsonb_build_object('passed', true, 'message', 'Supplier name present'));
   END IF;
   
-  -- Rule 3: Invoice date required and reasonable (FIXED: using invoice_date instead of issue_date)
-  IF v_invoice.invoice_date IS NULL THEN
-    v_errors := array_append(v_errors, 'Invoice date is required');
-    v_score := v_score - 10;
-  ELSIF v_invoice.invoice_date > CURRENT_DATE THEN
-    v_warnings := array_append(v_warnings, 'Invoice date is in the future');
-    v_score := v_score - 5;
-  ELSIF v_invoice.invoice_date < CURRENT_DATE - INTERVAL '5 years' THEN
-    v_warnings := array_append(v_warnings, 'Invoice date is more than 5 years old');
-    v_score := v_score - 5;
-  END IF;
+  -- REMOVED: Rule 3 - Invoice date validation (not needed for supplier invoices)
+  -- Validation should be based on invoice status (ACCEPTED/VALIDATED), not date population
   
   -- Rule 4: Total amount must be positive
   IF v_invoice.total_amount IS NULL OR v_invoice.total_amount <= 0 THEN
@@ -120,3 +92,8 @@ BEGIN
   RETURN v_validation_result;
 END;
 $$;
+
+-- Clean up existing validation records with date errors
+DELETE FROM invoice_validations 
+WHERE validation_errors::text LIKE '%Issue date%' 
+   OR validation_errors::text LIKE '%Invoice date%';
