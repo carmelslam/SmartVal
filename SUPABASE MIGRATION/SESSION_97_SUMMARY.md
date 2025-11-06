@@ -1,4 +1,4 @@
-# Session 97 Summary and Failure
+# Session 97 Summary 
 
 ## Problem Statement
 Invoice floating screen Tab 2 shows header statistics but completely empty body content. Shows "12 הקצאות" in header but no table data below.
@@ -62,3 +62,10 @@ Database has 12 mappings for case_id `c52af5d6-3b78-47b8-88a2-d2553ee3e1af` but 
 
 ## Next Agent Instructions
 **STOP DEBUGGING.** The issue is simple: fix why `window.helper.case_info.supabase_case_id` query returns empty when data exists. Focus on the query, not display logic.
+
+
+**EVENTUALY AFTER LOG OUT AND LOG IN TAB 2 DISPLAYED THE DATA CORRECTLY - SO IT WASNT A FAILD SESSION**
+
+2 fixes need to be yet done on tab 2 :
+1. the garage/suppier field is empty 
+2. add a ctegory field 
