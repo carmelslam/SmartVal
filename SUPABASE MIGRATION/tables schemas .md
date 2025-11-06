@@ -1,3 +1,79 @@
+helper version table :
+
+create table public.helper_versions (
+  id bigserial not null,
+  case_id uuid not null,
+  version integer not null,
+  helper_name text not null,
+  helper_json jsonb not null,
+  source text null default 'system'::text,
+  saved_by uuid null,
+  saved_at timestamp with time zone not null default now(),
+  constraint helper_versions_pkey primary key (id),
+  constraint helper_versions_case_id_fkey foreign KEY (case_id) references cases (id) on delete CASCADE,
+  constraint helper_versions_saved_by_fkey foreign KEY (saved_by) references profiles (user_id)
+) TABLESPACE pg_default;
+
+create trigger trg_log_version_save
+after INSERT on helper_versions for EACH row
+execute FUNCTION log_tracking_update_from_version ();
+
+case helper table :
+
+create table public.case_helper (
+  id uuid not null default gen_random_uuid (),
+  case_id uuid not null,
+  version integer not null default 1,
+  is_current boolean not null default false,
+  helper_name text not null,
+  helper_json jsonb not null,
+  source text null default 'system'::text,
+  sync_status text null default 'pending'::text,
+  sync_error text null,
+  updated_by uuid null,
+  updated_at timestamp with time zone not null default now(),
+  created_by uuid null,
+  constraint case_helper_pkey primary key (id),
+  constraint case_helper_case_id_fkey foreign KEY (case_id) references cases (id) on delete CASCADE,
+  constraint case_helper_created_by_fkey foreign KEY (created_by) references auth.users (id) on delete set null,
+  constraint case_helper_updated_by_fkey foreign KEY (updated_by) references profiles (user_id),
+  constraint case_helper_sync_status_check check (
+    (
+      sync_status = any (
+        array['pending'::text, 'synced'::text, 'failed'::text]
+      )
+    )
+  )
+) TABLESPACE pg_default;
+
+create index IF not exists idx_case_helper_created_by on public.case_helper using btree (created_by) TABLESPACE pg_default;
+
+create unique INDEX IF not exists idx_one_current_helper on public.case_helper using btree (case_id) TABLESPACE pg_default
+where
+  (is_current = true);
+
+create index IF not exists idx_case_helper_case_version on public.case_helper using btree (case_id, version desc) TABLESPACE pg_default;
+
+create index IF not exists idx_case_helper_sync_status on public.case_helper using btree (sync_status) TABLESPACE pg_default;
+
+create index IF not exists idx_helper_json_gin on public.case_helper using gin (helper_json jsonb_path_ops) TABLESPACE pg_default;
+
+create trigger save_helper_version_trigger
+after INSERT
+or
+update on case_helper for EACH row
+execute FUNCTION save_helper_version ();
+
+create trigger trg_update_tracking_on_helper_save
+after INSERT
+or
+update OF helper_json on case_helper for EACH row when (new.is_current = true)
+execute FUNCTION update_tracking_tables_from_helper ();
+
+create trigger update_case_helper_updated_at BEFORE
+update on case_helper for EACH row
+execute FUNCTION update_updated_at ();
+
 Invoice lines :
 create table public.invoice_lines (
   id uuid not null default gen_random_uuid (),
