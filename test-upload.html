@@ -34,8 +34,13 @@
         
         <br><br>
         
-        <label for="caseIdInput">Case ID (optional - will use test case if empty):</label>
-        <input type="text" id="caseIdInput" placeholder="Enter case ID or leave empty for test">
+        <label for="caseIdInput">Case ID (optional - will create test case if empty):</label>
+        <input type="text" id="caseIdInput" placeholder="Enter existing case ID or leave empty for test">
+        
+        <br><br>
+        
+        <button type="button" onclick="loadExistingCases()">Load Existing Cases</button>
+        <div id="existingCases" style="margin: 10px 0; font-size: 12px;"></div>
         
         <br><br>
         
@@ -67,6 +72,47 @@
                 Make sure lib/fileUploadService.js exists and is properly exported.
             `;
         });
+
+        // Function to load existing cases
+        window.loadExistingCases = async function() {
+            const existingCasesDiv = document.getElementById('existingCases');
+            existingCasesDiv.innerHTML = 'Loading cases...';
+            
+            try {
+                const { createClient } = supabase;
+                const supabaseClient = createClient(
+                    'https://nvqrptokmwdhvpiufrad.supabase.co',
+                    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im52cXJwdG9rbXdkaHZwaXVmcmFkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzA3MDc3NjUsImV4cCI6MjA0NjI4Mzc2NX0.KAGHPLq_26jO-LefNzVJzY9VgmIj_Zfw3C8T8W8cjDo'
+                );
+                
+                const { data: cases, error } = await supabaseClient
+                    .from('cases')
+                    .select('id, plate, owner_name, status')
+                    .order('created_at', { ascending: false })
+                    .limit(5);
+                
+                if (error) {
+                    existingCasesDiv.innerHTML = `Error loading cases: ${error.message}`;
+                    return;
+                }
+                
+                if (cases && cases.length > 0) {
+                    existingCasesDiv.innerHTML = `
+                        <strong>Recent Cases (click to use):</strong><br>
+                        ${cases.map(c => 
+                            `<span style="cursor: pointer; color: blue; text-decoration: underline;" 
+                             onclick="document.getElementById('caseIdInput').value='${c.id}'">
+                             ${c.plate} - ${c.owner_name} (${c.status})
+                             </span>`
+                        ).join('<br>')}
+                    `;
+                } else {
+                    existingCasesDiv.innerHTML = 'No cases found. Leave Case ID empty to create a test case.';
+                }
+            } catch (err) {
+                existingCasesDiv.innerHTML = `Error: ${err.message}`;
+            }
+        };
 
         // Test function
         window.testUpload = async function() {
@@ -102,7 +148,49 @@
             // Use test case ID if none provided (must be valid UUID)
             if (!caseId) {
                 caseId = crypto.randomUUID(); // Generate proper UUID
-                debug.innerHTML += `Using test case ID: ${caseId}<br>`;
+                debug.innerHTML += `Generated test case ID: ${caseId}<br>`;
+                
+                // Create test case in database first
+                try {
+                    debug.innerHTML += `Creating test case in database...<br>`;
+                    
+                    // Create test case using Supabase client
+                    const { createClient } = supabase;
+                    const supabaseClient = createClient(
+                        'https://nvqrptokmwdhvpiufrad.supabase.co',
+                        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im52cXJwdG9rbXdkaHZwaXVmcmFkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzA3MDc3NjUsImV4cCI6MjA0NjI4Mzc2NX0.KAGHPLq_26jO-LefNzVJzY9VgmIj_Zfw3C8T8W8cjDo'
+                    );
+                    
+                    const { data: caseData, error: caseError } = await supabaseClient
+                        .from('cases')
+                        .insert({
+                            id: caseId,
+                            plate: 'TEST-' + Math.floor(Math.random() * 1000),
+                            owner_name: 'Test Owner',
+                            vehicle_year: 2020,
+                            vehicle_make: 'Test Make',
+                            vehicle_model: 'Test Model',
+                            status: 'active',
+                            created_by: (await supabaseClient.auth.getUser()).data.user?.id
+                        })
+                        .select()
+                        .single();
+                    
+                    if (caseError) {
+                        debug.innerHTML += `Case creation error: ${caseError.message}<br>`;
+                        throw new Error(`Failed to create test case: ${caseError.message}`);
+                    }
+                    
+                    debug.innerHTML += `✅ Test case created successfully!<br>`;
+                    debug.innerHTML += `Case: ${caseData.plate} - ${caseData.owner_name}<br><br>`;
+                    
+                } catch (caseCreationError) {
+                    debug.innerHTML += `❌ Failed to create test case: ${caseCreationError.message}<br>`;
+                    result.innerHTML = `<div class="error">Failed to create test case: ${caseCreationError.message}</div>`;
+                    uploadBtn.disabled = false;
+                    uploadBtn.textContent = 'Upload File';
+                    return;
+                }
             }
             
             // Disable upload button
