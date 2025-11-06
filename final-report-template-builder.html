@@ -1703,26 +1703,29 @@
         
         console.log('✅ Final report saved to tracking table:', supabaseData);
         
-        // 2. SEND TO MAKE.COM WEBHOOK SECOND
+        // 2. SEND TO MAKE.COM WEBHOOK SECOND (USE WEBHOOK.JS)
         try {
           console.log('🔗 Sending final report to עיבוד webhook...');
-          const webhookResponse = await fetch('https://hook.eu2.make.com/k8e7x3z9v2n4m5q8w1r6t7y2e5r9t3y6', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json'
+          const webhookPayload = {
+            html: cleanHTML,
+            meta: {
+              ...helper.meta || {},
+              plate: finalReportData.plate,
+              owner_name: helper.car_details?.owner_name || helper.meta?.owner_name || ''
             },
-            body: JSON.stringify({
-              ...finalReportData,
-              supabase_id: supabaseData.id,
-              action: 'final_report_submission',
-              source: 'final_report_template_builder'
-            })
-          });
+            report_type: 'final_report',
+            date: new Date().toISOString(),
+            supabase_id: supabaseData.id,
+            action: 'final_report_submission',
+            source: 'final_report_template_builder'
+          };
           
-          if (webhookResponse.ok) {
+          const result = await sendToWebhook('SUBMIT_FINAL_REPORT', webhookPayload);
+          
+          if (result.success) {
             console.log('✅ Final report sent to עיבוד successfully');
           } else {
-            console.warn('⚠️ עיבוד webhook failed, but Supabase data saved');
+            console.warn('⚠️ עיבוד webhook failed:', result.error);
           }
         } catch (webhookError) {
           console.warn('⚠️ עיבוד webhook error:', webhookError);
