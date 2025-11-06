@@ -1667,16 +1667,115 @@
         }
       })();
       
-      // 💾 SAVE TO TRACKING_FINAL_REPORT TABLE FIRST
+      // 💾 SAVE TO TRACKING_FINAL_REPORT TABLE WITH PDF (EXPERTISE PATTERN)
       try {
-        console.log('💾 Saving final report to tracking table...');
+        console.log('💾 Saving final report with PDF generation...');
         const { supabase } = await import('./lib/supabaseClient.js');
         const helper = window.helper || {};
         const caseInfo = helper.case_info || {};
+        const plate = caseInfo.plate || helper.meta?.plate?.replace(/-/g, '') || helper.car_details?.plate?.replace(/-/g, '');
+        const caseIdOrNumber = caseInfo.supabase_case_id || helper.meta?.case_id;
         
+        // Validate case ID (EXPERTISE PATTERN)
+        let actualCaseId = caseIdOrNumber;
+        const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+        
+        if (!uuidPattern.test(caseIdOrNumber)) {
+          const { data: caseData, error: lookupError } = await supabase
+            .from('cases')
+            .select('id')
+            .or(`case_number.eq.${caseIdOrNumber},plate.eq.${plate}`)
+            .limit(1)
+            .single();
+          
+          if (lookupError || !caseData) {
+            throw new Error('לא נמצא תיק בשרת - נסה שוב');
+          }
+          actualCaseId = caseData.id;
+        }
+        
+        // Generate PDF from HTML (EXPERTISE PATTERN)
+        console.log('📄 Generating final report PDF...');
+        const reviewWindow = window.open('', '_blank');
+        if (!reviewWindow) {
+          throw new Error('חסימת חלונות קופצים - אנא אפשר חלונות קופצים');
+        }
+        
+        reviewWindow.document.write(cleanHTML);
+        reviewWindow.document.close();
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        // Use html2canvas (EXPERTISE PATTERN)
+        const canvas = await html2canvas(reviewWindow.document.body, {
+          scale: 1,
+          useCORS: true,
+          allowTaint: true,
+          logging: false,
+          imageTimeout: 0,
+          ignoreElements: (element) => {
+            return element.tagName === 'IMG' && element.src.includes('carmelcayouf.com');
+          }
+        });
+        
+        // Convert canvas to PDF (EXPERTISE PATTERN)
+        const { jsPDF } = window.jspdf;
+        const pdf = new jsPDF('p', 'mm', 'a4');
+        const imgData = canvas.toDataURL('image/jpeg', 0.7);
+        const pageWidth = 210;
+        const pageHeight = 297;
+        const topMargin = 15;
+        const bottomMargin = 15;
+        const leftMargin = 10;
+        const rightMargin = 10;
+        const contentWidth = pageWidth - leftMargin - rightMargin;
+        const contentHeight = pageHeight - topMargin - bottomMargin;
+        const imgHeight = (canvas.height * contentWidth) / canvas.width;
+        let heightLeft = imgHeight;
+        let position = topMargin;
+        
+        pdf.addImage(imgData, 'JPEG', leftMargin, position, contentWidth, imgHeight);
+        heightLeft -= contentHeight;
+        
+        while (heightLeft > 0) {
+          position = -(imgHeight - heightLeft) + topMargin;
+          pdf.addPage();
+          pdf.addImage(imgData, 'JPEG', leftMargin, position, contentWidth, imgHeight);
+          heightLeft -= contentHeight;
+        }
+        
+        reviewWindow.close();
+        const pdfBlob = pdf.output('blob');
+        
+        // Upload PDF to storage (EXPERTISE PATTERN)
+        console.log('☁️ Uploading final report PDF to Supabase Storage...');
+        const timestamp = new Date().toISOString().replace(/[:.]/g, '-').substring(0, 19);
+        const normalizedPlate = plate || 'UNKNOWN';
+        const filename = `${normalizedPlate}_final_report_final_${timestamp}.pdf`;
+        const storagePath = `${actualCaseId}/${filename}`;
+        
+        const { data: uploadData, error: uploadError } = await supabase.storage
+          .from('final-reports')
+          .upload(storagePath, pdfBlob, {
+            contentType: 'application/pdf',
+            upsert: false
+          });
+        
+        if (uploadError) {
+          console.error('❌ Storage upload error:', uploadError);
+          throw new Error('Failed to upload PDF: ' + uploadError.message);
+        }
+        
+        // Get public URL (EXPERTISE PATTERN)
+        const { data: { publicUrl } } = supabase.storage
+          .from('final-reports')
+          .getPublicUrl(storagePath);
+        
+        console.log('✅ PDF uploaded to storage:', publicUrl);
+        
+        // Save to tracking table (EXPERTISE PATTERN)
         const finalReportData = {
-          case_id: caseInfo.supabase_case_id,
-          plate: caseInfo.plate || helper.meta?.plate?.replace(/-/g, '') || helper.car_details?.plate?.replace(/-/g, ''),
+          case_id: actualCaseId,
+          plate: normalizedPlate,
           report_type: 'final_report',
           damage_center_count: helper.vehicleItems?.length || helper.centers?.length || 0,
           damage_center_name: helper.vehicleItems?.[0]?.center_name || helper.centers?.[0]?.name || 'כללי',
@@ -1686,7 +1785,9 @@
           claim_amount: helper.calculations?.total_claim || helper.calculations?.total_amount || 0,
           depreciation: helper.calculations?.depreciation_amount || 0,
           final_compensation: helper.calculations?.final_compensation || helper.calculations?.total_amount || 0,
-          notes: `חוות דעת סופית נוצרה ב-${new Date().toLocaleDateString('he-IL')}`,
+          notes: `דוח סופי נוצר ב-${new Date().toLocaleDateString('he-IL')}`,
+          damage_center_index: 0,
+          pdf_public_url: publicUrl,
           timestamp: new Date().toISOString()
         };
         
@@ -1703,67 +1804,34 @@
         
         console.log('✅ Final report saved to tracking table:', supabaseData);
         
-        // 2. SEND TO MAKE.COM WEBHOOK SECOND (USE WEBHOOK.JS)
-        try {
-          console.log('🔗 Sending final report to עיבוד webhook...');
-          const webhookPayload = {
-            html: cleanHTML,
-            meta: {
-              ...helper.meta || {},
-              plate: finalReportData.plate,
-              owner_name: helper.car_details?.owner_name || helper.meta?.owner_name || ''
-            },
-            report_type: 'final_report',
-            date: new Date().toISOString(),
-            supabase_id: supabaseData.id,
-            action: 'final_report_submission',
-            source: 'final_report_template_builder'
-          };
-          
-          const result = await sendToWebhook('SUBMIT_FINAL_REPORT', webhookPayload);
-          
-          if (result.success) {
-            console.log('✅ Final report sent to עיבוד successfully');
-          } else {
-            console.warn('⚠️ עיבוד webhook failed:', result.error);
-          }
-        } catch (webhookError) {
-          console.warn('⚠️ עיבוד webhook error:', webhookError);
-          // Don't fail - Supabase data is already saved
+        // Send to Make.com webhook (EXPERTISE PATTERN)
+        console.log('🔗 Sending final report to עיבוד webhook...');
+        const webhookPayload = {
+          ...finalReportData,
+          supabase_id: supabaseData.id,
+          action: 'SUBMIT_FINAL_REPORT',
+          source: 'final_report_template_builder'
+        };
+        
+        const result = await sendToWebhook('SUBMIT_FINAL_REPORT', webhookPayload);
+        
+        if (result.success) {
+          console.log('✅ Final report sent to עיבוד successfully');
+        } else {
+          console.warn('⚠️ עיבוד webhook failed:', result.error);
         }
         
+        alert('✅ הדוח הסופי נשלח בהצלחה');
+        
       } catch (trackingError) {
-        console.error('❌ Tracking table error:', trackingError);
-        alert(`שגיאה בשמירה לשרת: ${trackingError.message}`);
-        // Restore button state on error
+        console.error('❌ Final report submission failed:', trackingError);
+        alert(`שגיאה בשליחת הדוח: ${trackingError.message}`);
+      } finally {
+        // Restore button state
         submitButton.innerHTML = originalText;
         submitButton.disabled = false;
         submitButton.style.opacity = '1';
-        return; // Don't continue with original webhook
       }
-      
-      // Use the proper sendToWebhook function (as fallback)
-      window.sendToWebhook('SUBMIT_FINAL_REPORT', webhookData)
-        .then(response => {
-          console.log('Webhook success response:', response);
-          // Restore button state
-          submitButton.innerHTML = '✅ נשלח בהצלחה!';
-          submitButton.style.backgroundColor = '#28a745';
-          setTimeout(() => {
-            submitButton.innerHTML = originalText;
-            submitButton.disabled = false;
-            submitButton.style.opacity = '1';
-            submitButton.style.backgroundColor = '';
-          }, 3000);
-          alert('הדוח הסופי נשלח בהצלחה למערכת!');
-        })
-        .catch(error => {
-          console.error('Webhook error:', error);
-          submitButton.innerHTML = originalText;
-          submitButton.disabled = false;
-          submitButton.style.opacity = '1';
-          alert('שגיאה בשליחת הדוח: ' + error.message);
-        });
     }
     
     // Load adjustments data when page loads
