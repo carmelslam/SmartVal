@@ -1667,7 +1667,79 @@
         }
       })();
       
-      // Use the proper sendToWebhook function
+      // 💾 SAVE TO TRACKING_FINAL_REPORT TABLE FIRST
+      try {
+        console.log('💾 Saving final report to tracking table...');
+        const { supabase } = await import('./lib/supabaseClient.js');
+        const helper = window.helper || {};
+        const caseInfo = helper.case_info || {};
+        
+        const finalReportData = {
+          case_id: caseInfo.supabase_case_id,
+          plate: caseInfo.plate || helper.meta?.plate?.replace(/-/g, '') || helper.car_details?.plate?.replace(/-/g, ''),
+          report_type: 'final_report',
+          damage_center_count: helper.vehicleItems?.length || helper.centers?.length || 0,
+          damage_center_name: helper.vehicleItems?.[0]?.center_name || helper.centers?.[0]?.name || 'כללי',
+          actual_repairs: helper.vehicleItems?.map(item => item.description).join(', ') || helper.centers?.map(c => c.description).join(', ') || '',
+          total_parts: helper.calculations?.total_parts || 0,
+          total_work: helper.calculations?.total_work || 0,
+          claim_amount: helper.calculations?.total_claim || helper.calculations?.total_amount || 0,
+          depreciation: helper.calculations?.depreciation_amount || 0,
+          final_compensation: helper.calculations?.final_compensation || helper.calculations?.total_amount || 0,
+          notes: `חוות דעת סופית נוצרה ב-${new Date().toLocaleDateString('he-IL')}`,
+          timestamp: new Date().toISOString()
+        };
+        
+        const { data: supabaseData, error: supabaseError } = await supabase
+          .from('tracking_final_report')
+          .insert([finalReportData])
+          .select()
+          .single();
+        
+        if (supabaseError) {
+          console.error('❌ Tracking table save failed:', supabaseError);
+          throw new Error(`שגיאה בשמירה לשרת: ${supabaseError.message}`);
+        }
+        
+        console.log('✅ Final report saved to tracking table:', supabaseData);
+        
+        // 2. SEND TO MAKE.COM WEBHOOK SECOND
+        try {
+          console.log('🔗 Sending final report to עיבוד webhook...');
+          const webhookResponse = await fetch('https://hook.eu2.make.com/tw4xhsqf8d37qg4tgs5k3hvobf7q5x1g', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              ...finalReportData,
+              supabase_id: supabaseData.id,
+              action: 'final_report_submission',
+              source: 'final_report_template_builder'
+            })
+          });
+          
+          if (webhookResponse.ok) {
+            console.log('✅ Final report sent to עיבוד successfully');
+          } else {
+            console.warn('⚠️ עיבוד webhook failed, but Supabase data saved');
+          }
+        } catch (webhookError) {
+          console.warn('⚠️ עיבוד webhook error:', webhookError);
+          // Don't fail - Supabase data is already saved
+        }
+        
+      } catch (trackingError) {
+        console.error('❌ Tracking table error:', trackingError);
+        alert(`שגיאה בשמירה לשרת: ${trackingError.message}`);
+        // Restore button state on error
+        submitButton.innerHTML = originalText;
+        submitButton.disabled = false;
+        submitButton.style.opacity = '1';
+        return; // Don't continue with original webhook
+      }
+      
+      // Use the proper sendToWebhook function (as fallback)
       window.sendToWebhook('SUBMIT_FINAL_REPORT', webhookData)
         .then(response => {
           console.log('Webhook success response:', response);
