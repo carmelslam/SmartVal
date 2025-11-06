@@ -1592,10 +1592,29 @@
         watermarkElement.remove();
       }
       
-      // Set report as finalized
+      // Set report as finalized in helper metadata
+      helper.meta = helper.meta || {};
+      helper.meta.status = 'final';
+      helper.meta.finalized = true;
+      
+      // Update helper in sessionStorage to affect final_report.js logic
+      window.helper = helper;
+      sessionStorage.setItem('helper', JSON.stringify(helper));
+      
+      // Set finalReport object as finalized
       if (window.finalReport && window.finalReport.isDraft !== undefined) {
         window.finalReport.isDraft = false;
       }
+      
+      // Force re-render to remove watermark
+      if (window.finalReport?.init) {
+        window.finalReport.init();
+      } else if (window.finalReport?.inject) {
+        window.finalReport.inject();
+      }
+      
+      // Wait for re-render before capturing HTML
+      await new Promise(resolve => setTimeout(resolve, 500));
       
       // Get clean HTML content for PDF conversion (without buttons and draft elements)
       const cleanHTML = document.documentElement.outerHTML
