@@ -923,4 +923,151 @@ def parse(pdf_bytes, supplier_slug, version_date, source_path):
         print(f"Parsing complete. Total rows processed: {total_processed}")
         return []  # Return empty since we already uploaded everything
 
+expertise: 
 
+> ceate table public.tracking_expertise (
+    id uuid not null default gen_random_uuid (),
+    case_id uuid null,
+    case_number text null,
+    plate text not null,
+    damage_center_count integer null default 0,
+    damage_center_name text null,
+    description text null,
+    planned_repairs text null,
+    planned_parts text null,
+    planned_work text null,
+    guidance text null,
+    notes text null,
+    damage_center_index integer null,
+    timestamp timestamp with time zone null default now(),
+    created_at timestamp with time zone null default now(),
+    updated_at timestamp with time zone null default now(),
+    status text null default 'final'::text,
+    is_current boolean null default true,
+    pdf_storage_path text null,
+    pdf_public_url text null,
+    constraint tracking_expertise_pkey primary key (id),
+    constraint tracking_expertise_case_id_fkey foreign KEY (case_id) references 
+  cases (id) on delete CASCADE,
+    constraint tracking_expertise_status_check check (
+      (
+        status = any (array['draft'::text, 'final'::text])
+      )
+    )
+  ) TABLESPACE pg_default;
+
+  create index IF not exists idx_tracking_expertise_plate on 
+  public.tracking_expertise using btree (plate) TABLESPACE pg_default;
+
+  create index IF not exists idx_tracking_expertise_case_id on 
+  public.tracking_expertise using btree (case_id) TABLESPACE pg_default;
+
+  create index IF not exists idx_tracking_expertise_timestamp on 
+  public.tracking_expertise using btree ("timestamp" desc) TABLESPACE 
+  pg_default;
+
+  create index IF not exists idx_tracking_expertise_case_center on 
+  public.tracking_expertise using btree (case_id, damage_center_index) 
+  TABLESPACE pg_default
+  where
+    (damage_center_index is not null);
+
+  create index IF not exists idx_tracking_expertise_current on 
+  public.tracking_expertise using btree (case_id, is_current) TABLESPACE 
+  pg_default
+  where
+    (is_current = true);
+
+  create index IF not exists idx_tracking_expertise_status on 
+  public.tracking_expertise using btree (status, is_current) TABLESPACE 
+  pg_default;
+
+  create index IF not exists idx_tracking_expertise_pdf_url on 
+  public.tracking_expertise using btree (pdf_public_url) TABLESPACE pg_default
+  where
+    (pdf_public_url is not null);
+
+  create trigger trg_tracking_expertise_updated_at BEFORE
+  update on tracking_expertise for EACH row
+  execute FUNCTION update_tracking_expertise_timestamp (); , create table 
+  public.tracking_final_report (
+    id uuid not null default gen_random_uuid (),
+    case_id uuid null,
+    plate text not null,
+    damage_center_count integer null default 0,
+    damage_center_name text null,
+    actual_repairs text null,
+    total_parts numeric(10, 2) null,
+    total_work numeric(10, 2) null,
+    claim_amount numeric(10, 2) null,
+    depreciation numeric(10, 2) null,
+    final_compensation numeric(10, 2) null,
+    notes text null,
+    damage_center_index integer null,
+    report_type text null,
+    timestamp timestamp with time zone null default now(),
+    created_at timestamp with time zone null default now(),
+    updated_at timestamp with time zone null default now(),
+    status text null default 'draft'::text,
+    is_current boolean null default true,
+    pdf_storage_path text null,
+    pdf_public_url text null,
+    constraint tracking_final_report_pkey primary key (id),
+    constraint tracking_final_report_case_id_fkey foreign KEY (case_id) 
+  references cases (id) on delete CASCADE,
+    constraint tracking_final_report_report_type_check check (
+      (
+        report_type = any (
+          array[
+            'estimate'::text,
+            'final_report'::text,
+            'expertise'::text
+          ]
+        )
+      )
+    ),
+    constraint tracking_final_report_status_check check (
+      (
+        status = any (array['draft'::text, 'final'::text])
+      )
+    )
+  ) TABLESPACE pg_default;
+
+  create index IF not exists idx_tracking_final_report_plate on 
+  public.tracking_final_report using btree (plate) TABLESPACE pg_default;
+
+finak report 
+  create index IF not exists idx_tracking_final_report_case_id on 
+  public.tracking_final_report using btree (case_id) TABLESPACE pg_default;
+
+  create index IF not exists idx_tracking_final_report_timestamp on 
+  public.tracking_final_report using btree ("timestamp" desc) TABLESPACE 
+  pg_default;
+
+  create index IF not exists idx_tracking_final_report_type on 
+  public.tracking_final_report using btree (report_type) TABLESPACE pg_default;
+
+  create index IF not exists idx_tracking_final_report_case_center on 
+  public.tracking_final_report using btree (case_id, damage_center_index) 
+  TABLESPACE pg_default
+  where
+    (damage_center_index is not null);
+
+  create index IF not exists idx_tracking_final_report_current on 
+  public.tracking_final_report using btree (case_id, report_type, is_current) 
+  TABLESPACE pg_default
+  where
+    (is_current = true);
+
+  create index IF not exists idx_tracking_final_report_status on 
+  public.tracking_final_report using btree (report_type, status, is_current) 
+  TABLESPACE pg_default;
+
+  create index IF not exists idx_tracking_final_report_pdf_url on 
+  public.tracking_final_report using btree (pdf_public_url) TABLESPACE 
+  pg_default
+  where
+    (pdf_public_url is not null);
+
+  create trigger trg_tracking_final_report_updated_at BEFORE
+  update on tracking_final_report for EACH row
