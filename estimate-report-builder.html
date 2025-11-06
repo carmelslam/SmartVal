@@ -2285,8 +2285,33 @@
         button.textContent = '📤 מייצא...';
         button.disabled = true;
         
-        // Get clean HTML content for PDF conversion - SAME AS FINAL REPORT
-        // Use complete document HTML (document.documentElement.outerHTML) like final report
+        // 1. SAVE TO SUPABASE TRACKING TABLE FIRST (EXPERTISE PATTERN)
+        console.log('💾 Saving estimate to tracking table...');
+        const { supabase } = await import('./lib/supabaseClient.js');
+        const caseInfo = helper.case_info || {};
+        const plate = helper.estimate?.vehicle?.plateNumber || helper.vehicle?.plate_number || helper.car_details?.plate || helper.meta?.plate || '';
+        const caseIdOrNumber = caseInfo.supabase_case_id || helper.meta?.case_id;
+        
+        // Validate case ID
+        let actualCaseId = caseIdOrNumber;
+        const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+        
+        if (!uuidPattern.test(caseIdOrNumber)) {
+          const { data: caseData, error: lookupError } = await supabase
+            .from('cases')
+            .select('id')
+            .or(`case_number.eq.${caseIdOrNumber},plate.eq.${plate?.replace(/-/g, '')}`)
+            .limit(1)
+            .single();
+          
+          if (lookupError || !caseData) {
+            throw new Error('לא נמצא תיק בשרת - נסה שוב');
+          }
+          actualCaseId = caseData.id;
+        }
+        
+        // 2. GENERATE PDF FROM HTML (EXPERTISE PATTERN)
+        console.log('📄 Generating estimate PDF...');
         const cleanHTML = document.documentElement.outerHTML
           .replace(/<div class="control-buttons no-print">[\s\S]*?<\/div>/g, '')
           .replace(/<div[^>]*style="[^"]*טיוטה בלבד[^"]*"[^>]*>[\s\S]*?<\/div>/g, '')
