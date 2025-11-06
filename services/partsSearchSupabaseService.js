@@ -96,23 +96,27 @@
 
     /**
      * SESSION 11: Get Current User ID for Tracking
+     * FIXED: Use the same auth method as the rest of the system (sessionStorage)
      * 
      * @returns {Promise<string|null>} - User UUID from auth or null
      */
     async getCurrentUserId() {
       try {
-        const supabase = this.getSupabase();
-        const { data: { user }, error } = await supabase.auth.getUser();
-        
-        if (!error && user) {
-          console.log('  ✅ Authenticated user:', user.id);
-          return user.id;
-        } else {
-          console.log('  ⚠️ No authenticated user (auth not implemented yet)');
-          return null;
+        // UNIVERSAL AUTH: Use the same auth method as the rest of the system
+        const authData = sessionStorage.getItem('auth');
+        if (authData) {
+          const auth = JSON.parse(authData);
+          const userId = auth?.user?.id;
+          if (userId) {
+            console.log('  ✅ PARTS-SEARCH: User captured from sessionStorage:', userId);
+            return userId;
+          }
         }
+        
+        console.log('  ⚠️ PARTS-SEARCH: No authenticated user in sessionStorage');
+        return null;
       } catch (error) {
-        console.log('  ⚠️ Auth check failed:', error.message);
+        console.log('  ⚠️ PARTS-SEARCH: Auth check failed:', error.message);
         return null;
       }
     }
@@ -170,7 +174,7 @@
             engine_code: searchParams.engine_code || null,
             engine_type: searchParams.engine_type || null,
             vin: searchParams.vin || null,
-            created_by: userId, // SESSION 11: User tracking (null if no auth)
+            saved_by: userId, // SESSION 11: User tracking (null if no auth) - FIXED: Use correct field name
             created_at: new Date().toISOString()
           });
 
