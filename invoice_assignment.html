@@ -1862,9 +1862,11 @@
       
       try {
         // Show saving state
-        const saveBtn = row.querySelector('button[onclick*="handleEditSave"]');
-        saveBtn.disabled = true;
-        saveBtn.textContent = '💾 שומר...';
+        const saveBtn = row.querySelector('.btn-save-edit');
+        if (saveBtn) {
+          saveBtn.disabled = true;
+          saveBtn.textContent = '💾 שומר...';
+        }
         
         // Delete old assignment
         const { error: deleteError } = await window.supabase
@@ -1872,37 +1874,60 @@
           .delete()
           .eq('invoice_line_id', lineId)
           .eq('case_id', currentCase.id)
-          .eq('mapping_status', 'pending');
+          .or('mapping_status.eq.pending,mapping_status.eq.applied');
           
         if (deleteError) throw deleteError;
         
-        // Create new assignment using existing logic
-        const assignBtn = row.querySelector('.btn-assign');
-        if (!assignBtn) {
-          // Need to create temporary assign button to reuse existing logic
-          const tempBtn = document.createElement('button');
-          tempBtn.className = 'btn btn-assign';
-          tempBtn.style.display = 'none';
-          row.appendChild(tempBtn);
-          
-          // Update local state to show as unassigned temporarily
-          existingAssignments.delete(lineId);
-          
-          // Trigger assignment with new value
-          await new Promise((resolve) => {
-            tempBtn.onclick = async (e) => {
-              await handleAssignClick(e);
-              resolve();
-            };
-            tempBtn.click();
+        // Update local state first
+        existingAssignments.delete(lineId);
+        existingAssignments.set(lineId, newDcId);
+        
+        // Create new assignment directly (simplified)
+        const invoiceLine = invoiceLines.find(l => l.id === lineId);
+        const damageCenter = damageCenters.find(dc => (dc.Id || dc.id) === newDcId);
+        const damageCenterName = `${damageCenter?.['Damage center Number'] || '?'} - ${damageCenter?.Description || damageCenter?.Location || 'ללא תיאור'}`;
+        
+        // Create new mapping in database
+        const { error: insertError } = await window.supabase
+          .from('invoice_damage_center_mappings')
+          .insert({
+            invoice_id: invoiceLine.invoice_id,
+            invoice_line_id: lineId,
+            case_id: currentCase.id,
+            damage_center_id: newDcId,
+            damage_center_name: damageCenterName,
+            field_type: (invoiceLine?.metadata?.category || invoiceLine?.item_category || 'other').toLowerCase(),
+            original_field_data: {
+              description: invoiceLine.description,
+              quantity: invoiceLine.quantity,
+              unit_price: invoiceLine.unit_price,
+              line_total: invoiceLine.line_total,
+              catalog_code: invoiceLine?.metadata?.code || invoiceLine?.code || '',
+              supplier_name: invoiceLine?._supplier_name?.includes('מוסך') ? '' : (invoiceLine?._supplier_name || ''),
+              garage_name: invoiceLine?._supplier_name?.includes('מוסך') ? invoiceLine?._supplier_name : '',
+              invoice_number: invoiceLine._invoice_number,
+              plate: invoiceLine._plate
+            },
+            mapped_data: {
+              damage_center_id: newDcId,
+              damage_center_name: damageCenterName,
+              field_type: (invoiceLine?.metadata?.category || invoiceLine?.item_category || 'other').toLowerCase(),
+              assigned_at: new Date().toISOString()
+            },
+            mapping_status: 'pending',
+            validation_status: 'approved',
+            mapping_confidence: 100,
+            is_user_modified: true
           });
           
-          tempBtn.remove();
-        }
+        if (insertError) throw insertError;
+        
+        // Update selector's original value
+        selector.dataset.originalValue = newDcId;
         
         // Exit edit mode
         handleEditCancel(lineId, row);
-        
+        updateSummaryPanel();
         showSuccess('שיוך עודכן בהצלחה');
         
       } catch (error) {
