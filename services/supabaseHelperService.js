@@ -28,7 +28,7 @@ export const supabaseHelperService = {
       const versionMatch = helperName.match(/_v(\d+)$/);
       const version = versionMatch ? parseInt(versionMatch[1]) : 1;
       
-      // Step 3: Mark all previous versions as not current (preserve their original timestamps)
+      // Step 3: Mark only the current version as not current (avoid mass timestamp updates)
       if (caseRecord.id) {
         const userId = (window.caseOwnershipService?.getCurrentUser() || {}).userId || null;
         await supabase
@@ -36,9 +36,9 @@ export const supabaseHelperService = {
           .update({ 
             is_current: false,
             updated_by: userId
-            // NOTE: Do NOT update updated_at - preserve original timestamps for version history
           })
-          .eq('case_id', caseRecord.id);
+          .eq('case_id', caseRecord.id)
+          .eq('is_current', true); // Only update the currently active version
       }
       
       // Phase 6: Capture user ID for helper updates

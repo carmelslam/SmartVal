@@ -6280,15 +6280,15 @@ window.saveHelperVersion = async function(versionLabel, metadata = {}) {
           console.warn('⚠️ SESSION 88: Version query failed, using version 1:', err);
         }
         
-        // Mark all previous versions as not current (preserve their original timestamps)
+        // Mark only the current version as not current (avoid mass timestamp updates)
         await window.supabase
           .from('case_helper')
           .update({ 
             is_current: false,
             updated_by: userId
-            // NOTE: Do NOT update updated_at - preserve original timestamps for version history
           })
-          .eq('case_id', caseId);
+          .eq('case_id', caseId)
+          .eq('is_current', true); // Only update the currently active version
         
         // Create helper name in existing format
         const helperName = `${normalizedPlate}_helper_v${version}`;
