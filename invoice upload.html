@@ -484,6 +484,8 @@
   import { caseOwnershipService } from './services/caseOwnershipService.js';
   
   window.WEBHOOKS = WEBHOOKS;
+  // Make caseOwnershipService available globally for supabaseHelperService
+  window.caseOwnershipService = caseOwnershipService;
   
   // Phase 6: Case ownership check
   (async () => {
@@ -1203,6 +1205,7 @@ class InvoiceProcessor {
   init() {
     this.setupEventListeners();
     this.loadCaseData();
+    this.loadSavedCaseInfo(); // Load autosaved case info
     this.setupDragAndDrop();
   }
 
@@ -1327,13 +1330,18 @@ class InvoiceProcessor {
       const element = document.getElementById(fieldId);
       if (element) {
         element.addEventListener('change', () => {
+          console.log('📝 Invoice field changed:', fieldId);
           this.autosaveCaseInfo();
         });
         element.addEventListener('input', () => {
+          console.log('📝 Invoice field input:', fieldId);
           this.autosaveCaseInfo();
         });
+      } else {
+        console.warn('⚠️ Invoice field not found:', fieldId);
       }
     });
+    console.log('✅ Invoice autosave setup completed');
   }
 
   autosaveCaseInfo() {
@@ -1370,6 +1378,34 @@ class InvoiceProcessor {
     sessionStorage.setItem('invoiceCaseInfo', JSON.stringify(caseInfo));
 
     console.log('💾 Invoice case info auto-saved:', caseInfo);
+  }
+
+  loadSavedCaseInfo() {
+    // Load saved case info from sessionStorage and helper
+    try {
+      const savedInfo = sessionStorage.getItem('invoiceCaseInfo');
+      const helperInfo = window.helper?.invoice_case_info;
+      
+      // Use helper data first, then sessionStorage as fallback
+      const caseInfo = helperInfo || (savedInfo ? JSON.parse(savedInfo) : {});
+      
+      if (Object.keys(caseInfo).length > 0) {
+        // Populate form fields
+        const fields = ['plate', 'owner', 'garage_name', 'date', 'invoice-type'];
+        fields.forEach(fieldId => {
+          const element = document.getElementById(fieldId);
+          const value = caseInfo[fieldId.replace('-', '_')]; // Handle invoice-type -> invoice_type
+          if (element && value) {
+            element.value = value;
+            console.log('🔄 Restored invoice field:', fieldId, '=', value);
+          }
+        });
+        
+        console.log('✅ Invoice case info restored from saved data');
+      }
+    } catch (error) {
+      console.error('❌ Error loading saved case info:', error);
+    }
   }
 
   loadCaseData() {
