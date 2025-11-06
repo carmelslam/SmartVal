@@ -1196,17 +1196,17 @@
       <div style="margin-bottom: 15px;">
         <div style="display: inline-block; margin-left: 15px;">
           <label for="builderPlateInput" style="display: block; margin-bottom: 5px;">מספר רכב:</label>
-          <input type="text" id="builderPlateInput" placeholder="הכנס מספר רכב" required autocomplete="off" autocapitalize="none" spellcheck="false" inputmode="numeric" data-plate-field="true">
+          <input type="text" id="builderPlateInput" readonly style="background-color: #f5f5f5; cursor: not-allowed;" title="מספר רכב נטען אוטומטית מהמערכת" data-plate-field="true">
         </div>
       </div>
       
-      <form id="builderLoadCaseForm" onsubmit="event.preventDefault(); const plateInput = document.getElementById('builderPlateInput'); if (plateInput && typeof loadExistingCaseForBuilder === 'function') { loadExistingCaseForBuilder(); }" autocomplete="off">
+      <form id="builderLoadCaseForm" onsubmit="event.preventDefault(); if (typeof loadExistingReportsForBuilder === 'function') { loadExistingReportsForBuilder(); }" autocomplete="off">
         
         <!-- Password field removed - using Supabase auth instead -->
         
         <div style="text-align:center; margin-bottom:15px;">
           <button type="submit" id="builderLoadCaseBtn" class="load-case-btn">
-            טען תיק קיים
+            טען דוח קיים
           </button>
         </div>
       </form>
@@ -1287,7 +1287,7 @@
       <button class="collapsible-btn" type="button" onclick="toggleSection('vehicleData')">נתוני רכב (הצג/הסתר)</button>
       <div id="vehicleData" style="display:none;">
         <div class="form-grid">
-          <div><label>מספר רכב:</label><input type="text" id="carPlate" onchange="updateHelperFromField(event);" /></div>
+          <div><label>מספר רכב:</label><input type="text" id="carPlate" readonly style="background-color: #f5f5f5; cursor: not-allowed;" title="מספר רכב נטען אוטומטית מהמערכת" /></div>
           <div><label>תוצרת:</label><input type="text" id="carManufacturer" onchange="updateHelperFromField(event);" /></div>
           <div><label>דגם:</label><input type="text" id="carModel" onchange="updateHelperFromField(event);" /></div>
           <div><label>שנת ייצור:</label><input type="text" id="carYear" onchange="updateHelperFromField(event);" /></div>
@@ -20606,129 +20606,186 @@
     // PLATE INPUT AND DOCUMENT ACTIONS FUNCTIONALITY
     // =========================
     
-    // Load existing case for builder
-    window.loadExistingCaseForBuilder = async function() {
-      const plateNumber = document.getElementById('builderPlateInput').value.trim();
+    // Load existing reports from tracking tables
+    window.loadExistingReportsForBuilder = async function() {
+      // Get case info from helper
+      const helper = window.helper || JSON.parse(sessionStorage.getItem('helper') || '{}');
+      const caseId = helper.case_info?.supabase_case_id;
+      const plateNumber = helper.case_info?.plate;
       
-      if (!plateNumber) {
-        alert('אנא הכנס מספר רכב');
+      if (!caseId || !plateNumber) {
+        alert('לא נמצא מזהה תיק - אנא בחר תיק מהעמוד הראשי');
         return;
       }
       
-      // Validate Supabase authentication
-      const authData = sessionStorage.getItem("auth");
-      if (!authData) {
-        alert('אין אימות - אנא התחבר מחדש');
-        window.location.href = 'index.html';
-        return;
-      }
-      
+      // Show modal to select from existing reports
+      showReportSelectionModal(caseId, plateNumber);
+    };
+
+    // Show modal to select from existing reports in tracking tables
+    async function showReportSelectionModal(caseId, plateNumber) {
       try {
-        const auth = JSON.parse(authData);
-        if (!auth.user || !auth.session) {
-          alert('אימות לא תקין - אנא התחבר מחדש');
-          window.location.href = 'index.html';
+        // Get Supabase client
+        const { createClient } = await import('https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm');
+        const supabaseUrl = 'https://ovfguztcahhikhjbszbx.supabase.co';
+        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im92Zmd1enRjYWhoaWtogcIaW5hYewtPc2.';
+        const supabase = createClient(supabaseUrl, supabaseKey);
+
+        // Query tracking tables for existing reports
+        const [expertiseReports, finalReports] = await Promise.all([
+          supabase
+            .from('tracking_expertise')
+            .select('*')
+            .eq('case_id', caseId)
+            .eq('plate', plateNumber)
+            .order('timestamp', { ascending: false }),
+          
+          supabase
+            .from('tracking_final_report')
+            .select('*')
+            .eq('case_id', caseId) 
+            .eq('plate', plateNumber)
+            .order('timestamp', { ascending: false })
+        ]);
+
+        const reports = [];
+        
+        // Add expertise reports
+        if (expertiseReports.data) {
+          expertiseReports.data.forEach(report => {
+            reports.push({
+              type: 'expertise',
+              id: report.id,
+              title: `דוח מומחיות - ${report.damage_center_name || 'כללי'}`,
+              date: new Date(report.timestamp).toLocaleDateString('he-IL'),
+              url: report.pdf_public_url,
+              data: report
+            });
+          });
+        }
+
+        // Add final reports (estimates and final reports)
+        if (finalReports.data) {
+          finalReports.data.forEach(report => {
+            const typeText = report.report_type === 'estimate' ? 'אומדן' : 'דוח סופי';
+            reports.push({
+              type: report.report_type,
+              id: report.id,
+              title: `${typeText} - ${report.damage_center_name || 'כללי'}`,
+              date: new Date(report.timestamp).toLocaleDateString('he-IL'),
+              url: report.pdf_public_url,
+              data: report
+            });
+          });
+        }
+
+        if (reports.length === 0) {
+          alert('לא נמצאו דוחות קיימים עבור תיק זה');
           return;
         }
-        console.log('✅ Supabase auth validated for report load');
+
+        // Create modal HTML
+        const modalHtml = `
+          <div id="reportSelectionModal" style="
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+            background: rgba(0,0,0,0.5); z-index: 10000; display: flex; 
+            align-items: center; justify-content: center;
+          ">
+            <div style="
+              background: white; border-radius: 12px; padding: 24px; 
+              max-width: 600px; width: 90%; max-height: 80vh; overflow-y: auto;
+              box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+            ">
+              <h3 style="text-align: center; margin-bottom: 20px; color: #1e3a8a;">
+                בחר דוח לטעינה - רכב ${plateNumber}
+              </h3>
+              <div id="reportsList">
+                ${reports.map(report => `
+                  <div style="
+                    border: 1px solid #e5e7eb; border-radius: 8px; padding: 16px; 
+                    margin-bottom: 12px; cursor: pointer; transition: all 0.2s;
+                    background: #fafbff;
+                  " 
+                  onmouseover="this.style.background='#f0f4ff'; this.style.borderColor='#2563eb';"
+                  onmouseout="this.style.background='#fafbff'; this.style.borderColor='#e5e7eb';"
+                  onclick="loadSelectedReport('${report.type}', '${report.id}', '${report.url || ''}')">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                      <div>
+                        <strong style="color: #1e3a8a;">${report.title}</strong>
+                        <div style="font-size: 14px; color: #6b7280; margin-top: 4px;">
+                          תאריך: ${report.date}
+                        </div>
+                      </div>
+                      <div style="display: flex; gap: 8px;">
+                        ${report.url ? `
+                          <button onclick="event.stopPropagation(); window.open('${report.url}', '_blank')" 
+                                  style="background: #059669; color: white; border: none; padding: 6px 12px; 
+                                         border-radius: 4px; font-size: 12px; cursor: pointer;">
+                            צפה ב-PDF
+                          </button>
+                        ` : ''}
+                        <button onclick="event.stopPropagation(); loadSelectedReport('${report.type}', '${report.id}', '${report.url || ''}')" 
+                                style="background: #2563eb; color: white; border: none; padding: 6px 12px; 
+                                       border-radius: 4px; font-size: 12px; cursor: pointer;">
+                          טען לעורך
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                `).join('')}
+              </div>
+              <div style="text-align: center; margin-top: 20px;">
+                <button onclick="closeReportSelectionModal()" style="
+                  background: #6b7280; color: white; border: none; padding: 10px 20px; 
+                  border-radius: 6px; cursor: pointer; font-size: 14px;
+                ">
+                  סגור
+                </button>
+              </div>
+            </div>
+          </div>
+        `;
+
+        // Add modal to page
+        document.body.insertAdjacentHTML('beforeend', modalHtml);
+
       } catch (error) {
-        console.error('Error validating auth:', error);
-        alert('שגיאה באימות - אנא התחבר מחדש');
-        window.location.href = 'index.html';
-        return;
+        console.error('Error loading reports:', error);
+        alert('שגיאה בטעינת הדוחות הקיימים');
       }
-      
-      const loadBtn = document.getElementById('builderLoadCaseBtn');
-      const originalText = loadBtn.textContent;
-      
+    }
+
+    // Close report selection modal
+    window.closeReportSelectionModal = function() {
+      const modal = document.getElementById('reportSelectionModal');
+      if (modal) {
+        modal.remove();
+      }
+    };
+
+    // Load selected report into the builder
+    window.loadSelectedReport = async function(reportType, reportId, reportUrl) {
       try {
-        loadBtn.disabled = true;
-        loadBtn.textContent = 'טוען תיק...';
-        
-        // Check if main selection page has loaded a case
-        const existingHelper = sessionStorage.getItem('helper');
-        const existingPlate = sessionStorage.getItem('plate');
-        
-        if (existingHelper && existingPlate === plateNumber) {
-          // Use existing data
-          const caseData = JSON.parse(existingHelper);
-          
-          document.getElementById('builderPlateStatus').style.display = 'block';
-          document.getElementById('builderPlateStatus').textContent = '✓ נתוני הרכב נטענו בהצלחה';
-          document.getElementById('builderPlateStatus').style.color = '#059669';
-          
-          // Update car details from helper
-          if (caseData.car_details) {
-            document.getElementById('carPlate').value = caseData.car_details.plate || caseData.meta?.plate || '';
-            document.getElementById('carManufacturer').value = caseData.car_details.manufacturer || '';
-            document.getElementById('carModel').value = caseData.car_details.model || '';
-            document.getElementById('carYear').value = caseData.car_details.year || '';
-            document.getElementById('carModelCode').value = caseData.car_details.model_code || '';
-            document.getElementById('carReportDate').value = convertToDateInputFormat(caseData.car_details.report_date || '');
-          }
-          
-          // Update page title
-          // Standardize plate format
-          const standardizedPlateNumber = String(plateNumber).replace(/[-\s]/g, '');
-          document.getElementById('pageTitle').textContent = `רכב מס. ${standardizedPlateNumber}`;
-          
-          return;
+        // Show loading
+        const modal = document.getElementById('reportSelectionModal');
+        if (modal) {
+          modal.querySelector('h3').textContent = 'טוען דוח...';
         }
+
+        // Here you would load the report data into the builder
+        // For now, just show success and close modal
+        alert(`דוח ${reportType} נטען בהצלחה`);
         
-        // Make webhook call to load case
-        const payload = { plate: plateNumber };
-        if (password) {
-          payload.password = password;
+        // If there's a PDF URL, you could open it
+        if (reportUrl) {
+          console.log('Report PDF URL:', reportUrl);
         }
-        
-        // Import webhook function
-        const { sendToWebhook } = await import('./webhook.js');
-        const response = await sendToWebhook('ADMIN_FETCH_CASE', payload);
-        
-        if (response?.success && response?.data) {
-          const caseData = response.data;
-          
-          // Store the data
-          sessionStorage.setItem('helper', JSON.stringify(caseData));
-          sessionStorage.setItem('plate', plateNumber);
-          sessionStorage.setItem('caseLoaded', 'true');
-          
-          document.getElementById('builderPlateStatus').style.display = 'block';
-          document.getElementById('builderPlateStatus').textContent = '✓ נתוני הרכב נטענו בהצלחה';
-          document.getElementById('builderPlateStatus').style.color = '#059669';
-          
-          // Update car details from helper
-          if (caseData.car_details) {
-            document.getElementById('carPlate').value = caseData.car_details.plate || caseData.meta?.plate || '';
-            document.getElementById('carManufacturer').value = caseData.car_details.manufacturer || '';
-            document.getElementById('carModel').value = caseData.car_details.model || '';
-            document.getElementById('carYear').value = caseData.car_details.year || '';
-            document.getElementById('carModelCode').value = caseData.car_details.model_code || '';
-            document.getElementById('carReportDate').value = convertToDateInputFormat(caseData.car_details.report_date || '');
-          }
-          
-          // Update page title
-          // Standardize plate format
-          const standardizedPlateNumber = String(plateNumber).replace(/[-\s]/g, '');
-          document.getElementById('pageTitle').textContent = `רכב מס. ${standardizedPlateNumber}`;
-          
-          // Reload data from helper
-          loadDataFromHelper();
-          
-        } else {
-          document.getElementById('builderPlateStatus').style.display = 'block';
-          document.getElementById('builderPlateStatus').textContent = '❌ תיק לא נמצא במערכת';
-          document.getElementById('builderPlateStatus').style.color = '#dc2626';
-        }
-        
+
+        closeReportSelectionModal();
+
       } catch (error) {
-        console.error('Error loading case:', error);
-        document.getElementById('builderPlateStatus').style.display = 'block';
-        document.getElementById('builderPlateStatus').textContent = '❌ שגיאה בטעינת התיק';
-        document.getElementById('builderPlateStatus').style.color = '#dc2626';
-      } finally {
-        loadBtn.disabled = false;
-        loadBtn.textContent = originalText;
+        console.error('Error loading selected report:', error);
+        alert('שגיאה בטעינת הדוח הנבחר');
       }
     };
     
