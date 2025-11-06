@@ -691,6 +691,21 @@
     <div class="title">ירון כיוף - שמאות וייעוץ</div>
     <div class="subtitle">שמאות והערכת נזקי רכב ורכוש</div>
     
+    <!-- Load Existing Reports Section -->
+    <div style="margin: 20px 0; padding: 15px; background: #f8fafc; border-radius: 8px; border: 1px solid #e2e8f0;">
+      <div style="font-size: 16px; font-weight: 600; color: #1e3a8a; margin-bottom: 15px; text-align: center;">
+        טען דוח קיים
+      </div>
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+        <button class="nav-btn" onclick="openReportForEstimator('expertise')" style="background: #8b5cf6; color: white;">
+          🔍 טען אקספרטיזה
+        </button>
+        <button class="nav-btn" onclick="openReportForEstimator('estimate')" style="background: #dc2626; color: white;">
+          📋 טען אומדן קיים
+        </button>
+      </div>
+    </div>
+    
     <h1>בניית אומדן נזקי רכב</h1>
     <h2 id="pageTitle">רכב מס. ...</h2>
 
@@ -12169,6 +12184,172 @@
         console.error('❌ Error loading data on page load:', error);
       }
     });
+
+    // Open existing report PDF from tracking tables (for estimator load buttons)
+    window.openReportForEstimator = async function(reportType) {
+      console.log('📄 Opening report for estimator:', reportType);
+
+      // Get case info from helper or session storage
+      const helper = window.helper || JSON.parse(sessionStorage.getItem('helper') || '{}');
+      const caseId = helper.case_info?.supabase_case_id;
+      const plateNumber = helper.case_info?.plate;
+      
+      if (!caseId || !plateNumber) {
+        alert('אנא טען תיק מהעמוד הראשי תחילה');
+        return;
+      }
+
+      console.log('✅ Case loaded - ID:', caseId, 'Plate:', plateNumber);
+
+      try {
+        const { createClient } = await import('https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm');
+        const supabaseUrl = 'https://ovfguztcahhikhjbszbx.supabase.co';
+        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im92Zmd1enRjYWhoaWtogcIaW5hYewtPc2.';
+        const supabase = createClient(supabaseUrl, supabaseKey);
+        
+        // Query appropriate tracking table based on report type
+        let reports = [];
+        
+        if (reportType === 'expertise') {
+          const { data, error } = await supabase
+            .from('tracking_expertise')
+            .select('*')
+            .eq('case_id', caseId)
+            .eq('plate', plateNumber)
+            .order('timestamp', { ascending: false });
+          
+          if (error) throw error;
+          reports = data || [];
+          
+        } else if (reportType === 'estimate') {
+          const { data, error } = await supabase
+            .from('tracking_final_report')
+            .select('*')
+            .eq('case_id', caseId)
+            .eq('plate', plateNumber)
+            .eq('report_type', 'estimate')
+            .order('timestamp', { ascending: false });
+          
+          if (error) throw error;
+          reports = data || [];
+        }
+
+        if (reports.length === 0) {
+          const categoryMap = {
+            'expertise': 'אקספרטיזה',
+            'estimate': 'אומדן ראשוני'
+          };
+          
+          alert(`לא נמצא ${categoryMap[reportType]} עבור תיק זה.\n\nיש ליצור אותו תחילה.`);
+          return;
+        }
+
+        // If multiple reports exist, show selection modal
+        if (reports.length > 1) {
+          showEstimatorReportSelectionModal(reports, reportType);
+        } else {
+          // Single report - open directly
+          const report = reports[0];
+          if (report.pdf_public_url) {
+            console.log('✅ Opening PDF in new tab');
+            window.open(report.pdf_public_url, '_blank');
+          } else {
+            alert('דוח זה אינו זמין כ-PDF עדיין');
+          }
+        }
+
+      } catch (error) {
+        console.error('❌ Error opening report:', error);
+        alert('שגיאה בפתיחת הדוח');
+      }
+    };
+
+    // Show modal to select from multiple reports (for estimator)
+    function showEstimatorReportSelectionModal(reports, reportType) {
+      const categoryMap = {
+        'expertise': 'אקספרטיזה',
+        'estimate': 'אומדן ראשוני'
+      };
+
+      const modalHtml = `
+        <div id="reportSelectionModal" style="
+          position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+          background: rgba(0,0,0,0.5); z-index: 10000; display: flex; 
+          align-items: center; justify-content: center;
+        ">
+          <div style="
+            background: white; border-radius: 12px; padding: 24px; 
+            max-width: 600px; width: 90%; max-height: 80vh; overflow-y: auto;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+          ">
+            <h3 style="text-align: center; margin-bottom: 20px; color: #1e3a8a;">
+              בחר ${categoryMap[reportType]} לפתיחה
+            </h3>
+            <div id="reportsList">
+              ${reports.map((report, index) => `
+                <div style="
+                  border: 1px solid #e5e7eb; border-radius: 8px; padding: 16px; 
+                  margin-bottom: 12px; cursor: pointer; transition: all 0.2s;
+                  background: #fafbff;
+                " 
+                onmouseover="this.style.background='#f0f4ff'; this.style.borderColor='#2563eb';"
+                onmouseout="this.style.background='#fafbff'; this.style.borderColor='#e5e7eb';"
+                onclick="openSelectedEstimatorReport('${report.pdf_public_url || ''}', '${report.id}')">
+                  <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                      <strong style="color: #1e3a8a;">${categoryMap[reportType]} ${index + 1}</strong>
+                      <div style="font-size: 14px; color: #6b7280; margin-top: 4px;">
+                        תאריך: ${new Date(report.timestamp).toLocaleDateString('he-IL')}
+                        ${report.damage_center_name ? ` • ${report.damage_center_name}` : ''}
+                      </div>
+                    </div>
+                    <div style="display: flex; gap: 8px;">
+                      ${report.pdf_public_url ? `
+                        <button onclick="event.stopPropagation(); window.open('${report.pdf_public_url}', '_blank')" 
+                                style="background: #059669; color: white; border: none; padding: 6px 12px; 
+                                       border-radius: 4px; font-size: 12px; cursor: pointer;">
+                          צפה ב-PDF
+                        </button>
+                      ` : `
+                        <span style="color: #6b7280; font-size: 12px;">אין PDF זמין</span>
+                      `}
+                    </div>
+                  </div>
+                </div>
+              `).join('')}
+            </div>
+            <div style="text-align: center; margin-top: 20px;">
+              <button onclick="closeEstimatorReportSelectionModal()" style="
+                background: #6b7280; color: white; border: none; padding: 10px 20px; 
+                border-radius: 6px; cursor: pointer; font-size: 14px;
+              ">
+                סגור
+              </button>
+            </div>
+          </div>
+        </div>
+      `;
+
+      document.body.insertAdjacentHTML('beforeend', modalHtml);
+    }
+
+    // Open selected report from estimator modal
+    window.openSelectedEstimatorReport = function(pdfUrl, reportId) {
+      if (pdfUrl) {
+        window.open(pdfUrl, '_blank');
+      } else {
+        alert('דוח זה אינו זמין כ-PDF עדיין');
+      }
+      closeEstimatorReportSelectionModal();
+    };
+
+    // Close estimator report selection modal
+    window.closeEstimatorReportSelectionModal = function() {
+      const modal = document.getElementById('reportSelectionModal');
+      if (modal) {
+        modal.remove();
+      }
+    };
   </script>
 </body>
 </html>
