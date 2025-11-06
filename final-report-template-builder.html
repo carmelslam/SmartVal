@@ -1586,12 +1586,6 @@
         }
       }
       
-      // Remove draft watermark before submission
-      const watermarkElement = document.querySelector('[style*="טיוטה בלבד"]');
-      if (watermarkElement) {
-        watermarkElement.remove();
-      }
-      
       // Set report as finalized in helper metadata
       helper.meta = helper.meta || {};
       helper.meta.status = 'final';
@@ -1616,12 +1610,10 @@
       // Wait for re-render before capturing HTML
       await new Promise(resolve => setTimeout(resolve, 500));
       
-      // Get clean HTML content for PDF conversion (without buttons and draft elements)
+      // Get clean HTML content for PDF conversion (remove only buttons and no-print elements)
+      // Since we properly finalized the report, final_report.js won't add watermark anymore
       const cleanHTML = document.documentElement.outerHTML
         .replace(/<div class="control-buttons no-print">[\s\S]*?<\/div>/g, '')
-        .replace(/<div[^>]*style="[^"]*טיוטה בלבד[^"]*"[^>]*>[\s\S]*?<\/div>/g, '')
-        .replace(/<div[^>]*style="[^"]*position:fixed[^"]*טיוטה בלבד[^"]*"[^>]*>[\s\S]*?<\/div>/g, '')
-        .replace(/טיוטה בלבד/g, '')
         .replace(/<button[\s\S]*?<\/button>/g, '')
         .replace(/<div[^>]*class="[^"]*no-print[^"]*"[^>]*>[\s\S]*?<\/div>/g, '');
       
