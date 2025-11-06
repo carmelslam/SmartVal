@@ -66,6 +66,39 @@ Database has 12 mappings for case_id `c52af5d6-3b78-47b8-88a2-d2553ee3e1af` but 
 
 **EVENTUALY AFTER LOG OUT AND LOG IN TAB 2 DISPLAYED THE DATA CORRECTLY - SO IT WASNT A FAILD SESSION**
 
-2 fixes need to be yet done on tab 2 :
-1. the garage/suppier field is empty 
-2. add a ctegory field 
+## Phase 5a Continuation: Invoice Management Integration Success
+
+### Initial Issues Fixed (Tab 2)
+1. ✅ **Empty garage/supplier field** - Fixed supplier/garage field display using garage_name as fallback when supplier_name is empty
+2. ✅ **Missing category field** - Added category column showing Hebrew labels for part/work classification ('חלק'/'עבודה')
+
+### Assignment Page Improvements  
+3. ✅ **Reassign functionality** - Enabled editing for assigned and accepted invoices in assignment page
+4. ✅ **Assignment status messages** - Added comprehensive Hebrew status feedback showing which invoices are assigned/not assigned 
+5. ✅ **Inline editing** - Fixed edit button functionality for all assigned lines with proper in-line saving
+6. ✅ **Button state management** - Resolved duplicate button creation and stuck grey button states 
+7. ✅ **UX confusion prevention** - Disabled damage center dropdowns for assigned items to prevent accidental changes
+8. ✅ **Layout optimization** - Redistributed table column widths to prioritize damage center selection (32% vs 20%)
+
+### Technical Fixes
+9. ✅ **Supabase query syntax** - Fixed .in() method error by changing to .or() syntax for status filtering
+10. ✅ **Database integration** - Implemented dual storage approach using both invoice_damage_center_mappings and helper.final_report
+11. ✅ **Error handling** - Added comprehensive error handling and user feedback systems
+
+### Invoice Upload Page
+12. ✅ **Reload button feedback** - Fixed "טען חשבונית ממאגר" button to show proper "לא נמצאו חשבוניות עבור רכב xxx" message by adding missing CSS styling for .alert.info
+
+## Files Modified
+- `/invoice-details-floating.js` - Fixed supplier display and added category column
+- `/invoice_assignment.html` - Complete overhaul of assignment interface with improved UX and error handling
+- `/invoice upload.html` - Added missing CSS styling for info alerts
+
+## Technical Patterns Established
+- Hebrew UI text and RTL design consistency
+- Comprehensive button state management
+- Database query optimization with Supabase
+- Dual storage persistence strategy
+- Error handling with user-friendly Hebrew messages
+
+## Phase 5a Status: ✅ **COMPLETED**
+All invoice management integration tasks successfully implemented with full functionality and improved UX.
