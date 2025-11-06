@@ -54,19 +54,30 @@
   window.logoutWithSound = async function() {
     console.log('🚗 SESSION 88: Logout initiated with version save and sound');
     
-    // SESSION 88: Save version FIRST (before clearing data)
+    // SESSION 88: Only save version if there were actual changes during the session
     let versionSaved = false;
     if (window.saveHelperVersion && window.helper) {
       try {
-        console.log('💾 SESSION 88: Saving version on manual logout...');
-        versionSaved = await window.saveHelperVersion('Manual Logout', {
-          trigger_event: 'manual_logout',
-          notes: 'User clicked logout button'
-        });
-        if (versionSaved) {
-          console.log('✅ SESSION 88: Version saved successfully on logout');
+        // Check if any changes were made during this session
+        const hasChanges = window.helperHasChanges || 
+                          window.helper._session_modified || 
+                          (window.helper.parts_search?.current_selected_list && 
+                           window.helper.parts_search.current_selected_list.length > 0);
+        
+        if (hasChanges) {
+          console.log('💾 SESSION 88: Changes detected, saving version on manual logout...');
+          versionSaved = await window.saveHelperVersion('Manual Logout', {
+            trigger_event: 'manual_logout',
+            notes: 'User clicked logout button with changes'
+          });
+          if (versionSaved) {
+            console.log('✅ SESSION 88: Version saved successfully on logout');
+          } else {
+            console.log('⚠️ SESSION 88: Version save returned false, will try fallback');
+          }
         } else {
-          console.log('⚠️ SESSION 88: Version save returned false, will try fallback');
+          console.log('ℹ️ SESSION 88: No changes detected, skipping version save on logout');
+          versionSaved = null; // Indicate that save was skipped intentionally
         }
       } catch (error) {
         console.error('❌ SESSION 88: Failed to save version on logout:', error);
@@ -83,8 +94,8 @@
     // Show logout message
     showLogoutMessage();
     
-    // Only run legacy backup if modern version saving failed
-    if (!versionSaved) {
+    // Only run legacy backup if modern version saving failed (not if skipped due to no changes)
+    if (versionSaved === false) {
       console.log('🔄 SESSION 88: Modern version save failed, trying legacy backup...');
       
       // Preserve helper data and save to Supabase (legacy support)  
@@ -200,8 +211,10 @@
         console.error('Error saving helper data on logout:', error);
       }
       } // End of legacy backup
-    } else {
+    } else if (versionSaved === true) {
       console.log('✅ SESSION 88: Modern version save succeeded, skipping legacy backup');
+    } else {
+      console.log('ℹ️ SESSION 88: No changes detected, skipping both modern and legacy saves');
     }
     
     // Clear only auth-related session data
