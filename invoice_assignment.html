@@ -1676,13 +1676,23 @@
         sessionStorage.setItem('helper', JSON.stringify(window.helper));
         console.log('💾 Saved updated helper to sessionStorage');
 
-        // Update UI
+        // Update UI - recreate button structure for assigned state
         row.classList.add('assigned');
-        selector.disabled = true;
         selector.value = dcId;
-        btn.className = 'btn btn-unassign';
-        btn.textContent = 'בטל שיוך';
-        btn.onclick = handleUnassignClick;
+        selector.dataset.originalValue = dcId;
+        
+        // Replace assign button with unassign + edit buttons
+        const buttonCell = btn.parentNode;
+        buttonCell.innerHTML = `
+          <button class="btn btn-unassign" data-dc-id="${dcId}" style="margin-left: 5px;">בטל שיוך</button>
+          <button class="btn btn-edit" data-line-id="${lineId}" style="background: #ff9800; color: white; margin-left: 5px;">ערוך</button>
+        `;
+        
+        // Re-attach event listeners for new buttons
+        const newUnassignBtn = buttonCell.querySelector('.btn-unassign');
+        const newEditBtn = buttonCell.querySelector('.btn-edit');
+        newUnassignBtn.addEventListener('click', handleUnassignClick);
+        newEditBtn.addEventListener('click', handleEditClick);
 
         updateSummaryPanel();
         showSuccess('השיוך נשמר בהצלחה');
@@ -1740,12 +1750,22 @@
           console.log('⚠️ No helper.final_report.invoice_assignments found');
         }
 
-        // Update UI
+        // Update UI - recreate button structure for unassigned state
         row.classList.remove('assigned');
-        row.querySelector('.dc-selector').disabled = false;
-        btn.className = 'btn btn-assign';
-        btn.textContent = 'שייך';
-        btn.onclick = handleAssignClick;
+        const selector = row.querySelector('.dc-selector');
+        selector.disabled = false;
+        selector.value = '';
+        selector.dataset.originalValue = '';
+        
+        // Replace unassign/edit buttons with single assign button
+        const buttonCell = btn.parentNode;
+        buttonCell.innerHTML = `
+          <button class="btn btn-assign">שייך</button>
+        `;
+        
+        // Re-attach event listener for new assign button
+        const newAssignBtn = buttonCell.querySelector('.btn-assign');
+        newAssignBtn.addEventListener('click', handleAssignClick);
 
         updateSummaryPanel();
         showSuccess('השיוך בוטל בהצלחה');
@@ -1768,6 +1788,11 @@
       const selector = row.querySelector('.dc-selector');
       const unassignBtn = row.querySelector('.btn-unassign');
       
+      // Check if already in edit mode (prevent duplicates)
+      if (row.querySelector('button[onclick*="handleEditSave"]')) {
+        return; // Already in edit mode
+      }
+      
       // Enable selector and show original value
       selector.disabled = false;
       selector.style.background = '#fff3cd'; // Highlight that it's in edit mode
@@ -1775,15 +1800,15 @@
       // Hide edit button, show save/cancel buttons
       btn.style.display = 'none';
       
-      // Add save and cancel buttons
+      // Add save and cancel buttons (only if they don't exist)
       const saveBtn = document.createElement('button');
-      saveBtn.className = 'btn';
+      saveBtn.className = 'btn btn-save-edit';
       saveBtn.style.cssText = 'background: #28a745; color: white; margin-left: 3px;';
       saveBtn.textContent = '💾 שמור';
       saveBtn.onclick = () => handleEditSave(lineId, row);
       
       const cancelBtn = document.createElement('button');
-      cancelBtn.className = 'btn';  
+      cancelBtn.className = 'btn btn-cancel-edit';  
       cancelBtn.style.cssText = 'background: #6c757d; color: white; margin-left: 3px;';
       cancelBtn.textContent = '❌ בטל';
       cancelBtn.onclick = () => handleEditCancel(lineId, row);
@@ -1792,7 +1817,9 @@
       btn.parentNode.appendChild(cancelBtn);
       
       // Hide unassign button during edit
-      unassignBtn.style.display = 'none';
+      if (unassignBtn) {
+        unassignBtn.style.display = 'none';
+      }
     }
 
     /**
@@ -1901,12 +1928,17 @@
       selector.style.background = ''; // Remove edit highlight
       selector.value = selector.dataset.originalValue || '';
       
-      // Remove save/cancel buttons
-      row.querySelectorAll('button[onclick*="handleEdit"]').forEach(btn => btn.remove());
+      // Remove all dynamically created buttons (save/cancel)
+      const dynamicButtons = row.querySelectorAll('.btn-save-edit, .btn-cancel-edit');
+      dynamicButtons.forEach(btn => btn.remove());
       
       // Show edit and unassign buttons again
-      editBtn.style.display = '';
-      unassignBtn.style.display = '';
+      if (editBtn) {
+        editBtn.style.display = '';
+      }
+      if (unassignBtn) {
+        unassignBtn.style.display = '';
+      }
     }
 
     /**
@@ -1966,11 +1998,15 @@
         // Show success message
         showSuccess('שיוכים נשמרו בהצלחה');
         
-        // Reset button after delay
+        // Reset button after delay and refresh UI
         setTimeout(() => {
           saveBtn.innerHTML = originalText;
           saveBtn.disabled = assignmentStats.totalAssignments === 0;
           saveBtn.style.background = '';
+          
+          // Refresh the entire UI to reflect saved state
+          renderInvoicesContent();
+          updateSummaryPanel();
         }, 2000);
         
       } catch (error) {
