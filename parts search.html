@@ -4544,20 +4544,27 @@ window.addEventListener('DOMContentLoaded', function() {
     window.location.href = "index.html";
   }
 
+  // UNIVERSAL LOGOUT: Use global logout function defined in logout-sound.js
+  window.logout = function() {
+    console.log('🌍 PARTS-SEARCH: Using universal logout function');
+    if (typeof window.logoutWithSound === 'function') {
+      window.logoutWithSound();
+    } else {
+      // Fallback - only clear auth-related data, preserve helper for potential saving
+      console.warn('⚠️ PARTS-SEARCH: logout-sound.js not loaded, using fallback');
+      sessionStorage.removeItem('auth');
+      sessionStorage.removeItem('loginTime');
+      sessionStorage.removeItem('lastActivityTime');
+      window.location.href = "index.html";
+    }
+  };
+
   const logoutBtn = document.querySelector(".logout-btn");
   if (logoutBtn) {
     logoutBtn.addEventListener("click", function (e) {
       e.preventDefault();
-      // Use the enhanced logout with sound and version saving if available
-      if (typeof window.logoutWithSound === 'function') {
-        window.logoutWithSound();
-      } else {
-        // Fallback - only clear auth-related data, preserve helper for potential saving
-        sessionStorage.removeItem('auth');
-        sessionStorage.removeItem('loginTime');
-        sessionStorage.removeItem('lastActivityTime');
-        window.location.href = "index.html";
-      }
+      // Use the universal logout function
+      window.logout();
     });
   }
   
