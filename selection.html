@@ -1226,16 +1226,22 @@
     window.location.href = pageName;
   }
 
-  function logout() {
-    // Use the enhanced logout with sound if available
+  // UNIVERSAL LOGOUT: Use global logout function defined in logout-sound.js
+  // This ensures consistent user tracking and version saving across all pages
+  window.logout = function() {
+    console.log('🌍 SELECTION: Using universal logout function');
+    // The universal logout is defined in logout-sound.js and loaded via script tag
     if (typeof window.logoutWithSound === 'function') {
       window.logoutWithSound();
     } else {
-      // Fallback to regular logout
-      sessionStorage.clear();
+      // Fallback to basic logout if logout-sound.js hasn't loaded yet
+      console.warn('⚠️ SELECTION: logout-sound.js not loaded, using fallback');
+      sessionStorage.removeItem('auth');
+      sessionStorage.removeItem('loginTime');
+      sessionStorage.removeItem('lastActivityTime');
       window.location.href = 'index.html';
     }
-  }
+  };
 
   document.addEventListener("DOMContentLoaded", function() {
     // ✅ CRITICAL FIX: Check for incoming URL parameters for data capture

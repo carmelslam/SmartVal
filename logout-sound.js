@@ -260,6 +260,20 @@
     return window.logoutWithSound();
   };
 
+  // Universal logout function - this is the ONLY logout function that should be used across all pages
+  window.logout = function() {
+    console.log('🌍 UNIVERSAL: Universal logout called from page:', window.location.pathname);
+    return window.logoutWithSound();
+  };
+
+  // Ensure the logout function is accessible even if called before this script loads
+  if (!window.logout) {
+    window.logout = function() {
+      console.log('🌍 UNIVERSAL: Fallback universal logout called');
+      return window.logoutWithSound();
+    };
+  }
+
   console.log('🚗 Logout sound functionality loaded');
 
 })();

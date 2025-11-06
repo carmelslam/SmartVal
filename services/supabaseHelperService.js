@@ -31,14 +31,27 @@ export const supabaseHelperService = {
       // Step 3: Mark only the current version as not current (avoid mass timestamp updates)
       if (caseRecord.id) {
         const userId = (window.caseOwnershipService?.getCurrentUser() || {}).userId || null;
-        await supabase
+        
+        // First check if there's a current version to avoid unnecessary updates
+        const { data: currentVersion } = await supabase
           .from('case_helper')
-          .update({ 
-            is_current: false,
-            updated_by: userId
-          })
+          .select('id')
           .eq('case_id', caseRecord.id)
-          .eq('is_current', true); // Only update the currently active version
+          .eq('is_current', true)
+          .limit(1);
+        
+        // Only update if there's actually a current version
+        if (currentVersion && currentVersion.length > 0) {
+          await supabase
+            .from('case_helper')
+            .update({ 
+              is_current: false,
+              updated_by: userId
+            })
+            .eq('case_id', caseRecord.id)
+            .eq('is_current', true)
+            .eq('id', currentVersion[0].id); // Target specific record by ID to prevent mass updates
+        }
       }
       
       // Phase 6: Capture user ID for helper updates
