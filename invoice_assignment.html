@@ -1032,7 +1032,8 @@
               _invoice_number: invoice.invoice_number,
               _supplier_name: invoice.supplier_name,
               _plate: invoice.plate,
-              _invoice_total: invoice.total_amount
+              _invoice_total: invoice.total_amount,
+              _invoice_status: invoice.status // Add invoice status to lines
             }));
             
             allLines = allLines.concat(enrichedLines);
@@ -1054,21 +1055,39 @@
      */
     async function loadExistingAssignments(caseId) {
       try {
+        // Load assignments from main storage: invoice_damage_center_mappings (both pending and applied)
         const { data: mappings, error } = await window.supabase
           .from('invoice_damage_center_mappings')
           .select('*')
           .eq('case_id', caseId)
-          .eq('mapping_status', 'pending');
+          .or('mapping_status.eq.pending,mapping_status.eq.applied');
 
-        if (error) throw error;
+        if (error) {
+          console.error('❌ Error loading mappings from database:', error);
+        }
 
         const assignmentsMap = new Map();
-        if (mappings) {
+        
+        // Process database mappings (primary source)
+        if (mappings && mappings.length > 0) {
+          console.log('📋 Found', mappings.length, 'existing assignments in database');
           mappings.forEach(mapping => {
             assignmentsMap.set(mapping.invoice_line_id, mapping.damage_center_id);
           });
         }
 
+        // Also check helper.final_report.invoice_assignments as secondary source
+        if (window.helper?.final_report?.invoice_assignments) {
+          console.log('📋 Found', window.helper.final_report.invoice_assignments.length, 'assignments in helper');
+          window.helper.final_report.invoice_assignments.forEach(assignment => {
+            // Only add if not already in database assignments
+            if (!assignmentsMap.has(assignment.invoice_line_id)) {
+              assignmentsMap.set(assignment.invoice_line_id, assignment.damage_center_id);
+            }
+          });
+        }
+
+        console.log('📋 Total assignments loaded:', assignmentsMap.size);
         return assignmentsMap;
       } catch (error) {
         console.error('❌ SESSION 86: Failed to load existing assignments:', error);
@@ -1107,7 +1126,6 @@
       // Group lines by invoice to get invoice-level status
       const invoiceGroups = groupLinesByInvoice(invoiceLines);
       const totalInvoices = invoiceGroups.length;
-      let assignedInvoices = 0;
       let assignedInvoicesList = [];
       let unassignedInvoicesList = [];
 
@@ -1124,25 +1142,29 @@
           });
         });
 
+        // Get actual invoice status from database and convert to Hebrew
+        const invoiceStatus = getInvoiceStatusInHebrew(group.invoice_status || 'PENDING');
         const isFullyAssigned = assignedLines === totalLines && totalLines > 0;
         const isPartiallyAssigned = assignedLines > 0 && assignedLines < totalLines;
 
-        if (isFullyAssigned) {
-          assignedInvoices++;
+        // Use actual invoice status from database, not just line assignment count
+        if (group.invoice_status === 'ASSIGNED' || group.invoice_status === 'ACCEPTED' || isFullyAssigned) {
           assignedInvoicesList.push({
             number: group.invoice_number || 'לא מזוהה',
             supplier: group.supplier_name || 'ספק לא ידוע',
             assignedLines,
             totalLines,
-            status: 'מושלם'
+            status: invoiceStatus,
+            dbStatus: group.invoice_status || 'PENDING'
           });
-        } else if (isPartiallyAssigned) {
+        } else if (isPartiallyAssigned || group.invoice_status === 'PENDING') {
           unassignedInvoicesList.push({
             number: group.invoice_number || 'לא מזוהה', 
             supplier: group.supplier_name || 'ספק לא ידוע',
             assignedLines,
             totalLines,
-            status: 'חלקי'
+            status: isPartiallyAssigned ? 'חלקי' : invoiceStatus,
+            dbStatus: group.invoice_status || 'PENDING'
           });
         } else {
           unassignedInvoicesList.push({
@@ -1150,7 +1172,8 @@
             supplier: group.supplier_name || 'ספק לא ידוע', 
             assignedLines: 0,
             totalLines,
-            status: 'לא משויך'
+            status: invoiceStatus,
+            dbStatus: group.invoice_status || 'PENDING'
           });
         }
       });
@@ -1169,7 +1192,10 @@
         `;
         assignedInvoicesList.forEach(invoice => {
           statusHtml += `
-            <li>חשבונית מס' ${invoice.number} - ${invoice.supplier} (${invoice.assignedLines}/${invoice.totalLines} פריטים)</li>
+            <li>חשבונית מס' ${invoice.number} - ${invoice.supplier} 
+                <span style="color: #2e7d32; font-weight: bold;">[${invoice.status}]</span> 
+                (${invoice.assignedLines}/${invoice.totalLines} פריטים)
+            </li>
           `;
         });
         statusHtml += `</ul></div>`;
@@ -1182,10 +1208,11 @@
             <ul style="margin: 5px 0 0 20px; padding: 0;">
         `;
         unassignedInvoicesList.forEach(invoice => {
-          const statusColor = invoice.status === 'לא משויך' ? '#d32f2f' : '#ff9800';
+          const statusColor = invoice.status === 'ממתין לשיוך' ? '#d32f2f' : '#ff9800';
           statusHtml += `
             <li>חשבונית מס' ${invoice.number} - ${invoice.supplier} 
-                <span style="color: ${statusColor}; font-weight: bold;">(${invoice.status}: ${invoice.assignedLines}/${invoice.totalLines} פריטים)</span>
+                <span style="color: ${statusColor}; font-weight: bold;">[${invoice.status}]</span> 
+                (${invoice.assignedLines}/${invoice.totalLines} פריטים)
             </li>
           `;
         });
@@ -1193,6 +1220,20 @@
       }
 
       return statusHtml;
+    }
+
+    /**
+     * Convert invoice status to Hebrew
+     */
+    function getInvoiceStatusInHebrew(status) {
+      switch(status?.toUpperCase()) {
+        case 'PENDING': return 'ממתין לשיוך';
+        case 'ASSIGNED': return 'משויך';
+        case 'ACCEPTED': return 'מאושר';
+        case 'PAID': return 'שולם';
+        case 'CANCELLED': return 'מבוטל';
+        default: return 'לא ידוע';
+      }
     }
 
     /**
@@ -1243,6 +1284,7 @@
             supplier_name: line._supplier_name,
             plate: line._plate,
             total_amount: line._invoice_total,
+            invoice_status: line._invoice_status, // Add invoice status
             parts: [],
             works: [],
             repairs: [],
