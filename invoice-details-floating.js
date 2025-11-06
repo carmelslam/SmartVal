@@ -1512,14 +1512,15 @@
       const tableRowsHTML = mappingsForCenter.map(mapping => {
         // Use original_field_data as fallback since JOINs aren't working
         const lineData = mapping.invoice_line || mapping.original_field_data || {};
-        const invoiceData = mapping.invoice || { supplier_name: mapping.original_field_data?.supplier_name };
+        const invoiceData = mapping.invoice || { supplier_name: mapping.original_field_data?.supplier_name || mapping.original_field_data?.garage_name };
         const lineTotal = parseFloat(lineData.line_total || 0);
 
         return `
           <tr style="border-bottom: 1px solid #e2e8f0;">
             <td style="padding: 8px; text-align: center; font-size: 12px;">${lineData.catalog_code || '-'}</td>
             <td style="padding: 8px; text-align: right; font-size: 12px;">${lineData.description || '-'}</td>
-            <td style="padding: 8px; text-align: center; font-size: 12px;">${invoiceData.supplier_name || '-'}</td>
+            <td style="padding: 8px; text-align: center; font-size: 12px;">${invoiceData.supplier_name || mapping.original_field_data?.garage_name || '-'}</td>
+            <td style="padding: 8px; text-align: center; font-size: 12px;">${mapping.mapped_data?.field_type === 'part' ? 'חלק' : mapping.mapped_data?.field_type === 'work' ? 'עבודה' : (mapping.original_field_data?.field_type || '-')}</td>
             <td style="padding: 8px; text-align: center; font-size: 12px;">${lineData.source || 'מקורי'}</td>
             <td style="padding: 8px; text-align: center; font-size: 12px;">₪${(lineData.unit_price || 0).toLocaleString()}</td>
             <td style="padding: 8px; text-align: center; font-size: 12px;">${lineData.quantity || 1}</td>
@@ -1550,6 +1551,7 @@
                   <th style="padding: 10px; text-align: center; border: 1px solid #e2e8f0; font-size: 12px;">קוד קטלוג</th>
                   <th style="padding: 10px; text-align: right; border: 1px solid #e2e8f0; font-size: 12px;">תיאור</th>
                   <th style="padding: 10px; text-align: center; border: 1px solid #e2e8f0; font-size: 12px;">ספק/מוסך</th>
+                  <th style="padding: 10px; text-align: center; border: 1px solid #e2e8f0; font-size: 12px;">קטגוריה</th>
                   <th style="padding: 10px; text-align: center; border: 1px solid #e2e8f0; font-size: 12px;">מקור</th>
                   <th style="padding: 10px; text-align: center; border: 1px solid #e2e8f0; font-size: 12px;">מחיר יחידה</th>
                   <th style="padding: 10px; text-align: center; border: 1px solid #e2e8f0; font-size: 12px;">כמות</th>
