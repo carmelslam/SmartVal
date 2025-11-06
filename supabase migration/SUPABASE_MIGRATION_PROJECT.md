@@ -388,14 +388,15 @@ INSERT INTO storage.buckets (id, name, public) VALUES
 8. admin hub preview version history status showing wrong information -**not fixed**
 
 
-**MOST IMPORTANT - HIGH PRIORITY TASKS :** 
-*9. **VERY IMPORTANT** *helper is not creating another version , its staying on v1 in supabase - NEW VERSIONS ARE NOT BEING SAVED AND ARE REVERTED TO V1* -** fixed**
-10.**OPEN CASE PAGE  open-cases.html DOESNT TRIGGER A NEW CASE CREATION IN SUPABASE - CASE ID - PLATE IN : CASES, CASE_HELPER, HELPER_VERSIONS TABLES** FIXED
-11. ADD A SAVE FUNCTION TO SAVE HELPER IN TEH VERSIONS ON LOG OUT/ CLOSED SESSION - OR THE BEST WAY TO DO THAT - I DONT KNOW **SUGGEST** for now closing a session or logout doesnt save  the helper to supabase* FIXED
+**MOST IMPORTANT - HIGH PRIORITY TASKS :**   *FIXED*
+*9. **VERY IMPORTANT** *helper is not creating another version , its staying on v1 in supabase - NEW VERSIONS ARE NOT BEING SAVED AND ARE REVERTED TO V1* -*fixed*
+10.**OPEN CASE PAGE  open-cases.html DOESNT TRIGGER A NEW CASE CREATION IN SUPABASE - CASE ID - PLATE IN : CASES, CASE_HELPER, HELPER_VERSIONS TABLES** *FIXED*
+11. ADD A SAVE FUNCTION TO SAVE HELPER IN TEH VERSIONS ON LOG OUT/ CLOSED SESSION - OR THE BEST WAY TO DO THAT - I DONT KNOW **SUGGEST** for now closing a session or logout doesnt save  the helper to supabase* *FIXED*
 
 
 
-### Phase 5: New Modules parts and invoices **PARTS MODULE IS COMPLETE**
+### Phase 5: New Modules parts and invoices 
+*PARTS MODULE IS COMPLETE*
 **read the following documents also : Parts module and supabase.md and Parts module and supabase.md** 
 1. based on parts Catalog and search UI in Supabase - use the current parts search module - parts search.html and use the parts search results json : read the following architecture first:
     1. Read the parts module logic.md in documentation - pay attention to the differences brought in this updated version 
