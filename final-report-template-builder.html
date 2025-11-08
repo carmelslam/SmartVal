@@ -5,7 +5,6 @@
   <style>
     /* Modern Professional PDF Styling */
     @import url('https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700;800;900&display=swap');
-    @import url('./css/modern-buttons.css');
     
     @page { size: A4; margin: 0; }
     body{ margin:0; direction:rtl; -webkit-print-color-adjust:exact; print-color-adjust:exact;
@@ -1223,7 +1222,7 @@
         🖨️ תצוגה מקדימה להדפסה
       </button>
       <button type="button" class="control-btn submit-btn" onclick="submitFinalReport()">
-        <span class="btn-text">📤 הפק חוות דעת</span>
+        📤 הפק דוח סופי
       </button>
       <button type="button" class="control-btn home-btn" onclick="window.location.href='selection.html'">
         🏠 חזור לדף הבחירה
@@ -1566,11 +1565,12 @@
     }
     
     async function submitFinalReport() {
-      // Get submit button and show modern loading state
-      const submitButton = document.querySelector('.submit-btn');
+      // Get submit button and show loading state
+      const submitButton = event.target;
       const originalText = submitButton.innerHTML;
-      submitButton.classList.add('loading');
+      submitButton.innerHTML = '⏳ שולח דוח...';
       submitButton.disabled = true;
+      submitButton.style.opacity = '0.7';
       
       // SESSION 88: Save version FIRST before submission
       if (window.saveHelperVersion && window.helper) {
@@ -1857,21 +1857,16 @@
           console.warn('⚠️ עיבוד webhook failed:', result.error);
         }
         
-        alert('✅ חוות הדעת נשלחה בהצלחה');
-        
-        // Show success state
-        submitButton.classList.remove('loading');
-        submitButton.classList.add('success');
-        submitButton.innerHTML = '<span class="btn-text">✅ נשלח בהצלחה</span>';
+        alert('✅ הדוח הסופי נשלח בהצלחה');
         
       } catch (trackingError) {
         console.error('❌ Final report submission failed:', trackingError);
         alert(`שגיאה בשליחת הדוח: ${trackingError.message}`);
-        
-        // Restore button state on error
-        submitButton.classList.remove('loading');
-        submitButton.disabled = false;
+      } finally {
+        // Restore button state
         submitButton.innerHTML = originalText;
+        submitButton.disabled = false;
+        submitButton.style.opacity = '1';
       }
     }
     

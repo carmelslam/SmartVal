@@ -304,20 +304,16 @@ BEGIN
         p_report_type,
         0,
         COALESCE(
-          (summary_data->>'Total parts')::NUMERIC,
           (summary_data->>'total_parts')::NUMERIC,
           (calculations_data->>'total_parts')::NUMERIC,
           0
         ),
         COALESCE(
-          (summary_data->>'Total works')::NUMERIC,
           (summary_data->>'total_work')::NUMERIC,
           (calculations_data->>'total_work')::NUMERIC,
           0
         ),
         COALESCE(
-          (summary_data->>'Total with VAT')::NUMERIC,
-          (summary_data->>'Subtotal')::NUMERIC,
           (summary_data->>'total_claim')::NUMERIC,
           (calculations_data->>'total_claim')::NUMERIC,
           0
