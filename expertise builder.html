@@ -1353,11 +1353,14 @@
 
         if (error) {
           console.error(`❌ ${reportType} ${status} save failed:`, error);
+          return null;
         } else {
           console.log(`✅ ${reportType} ${status} saved to Supabase (${data} records)`);
+          return publicUrl;  // 🔧 PHASE 10 FIX: Return PDF URL for webhook payload
         }
       } catch (error) {
         console.error(`❌ Error saving ${reportType} ${status}:`, error);
+        return null;
       }
     }
 
@@ -1826,7 +1829,7 @@
                 );
 
                 // 💾 Save estimate DRAFT to Supabase WITH PDF
-                await saveReportDraftToSupabase('estimate', 'draft', estimateHTML, false);
+                const estimatePdfUrl = await saveReportDraftToSupabase('estimate', 'draft', estimateHTML, false);
 
                 const estimatePayload = {
                   plate: payload.plate,
@@ -1834,6 +1837,7 @@
                   action: 'SUBMIT_ESTIMATE_DRAFT',
                   submittedAt: new Date().toISOString(),
                   html: estimateHTML,
+                  pdf_url: estimatePdfUrl,  // 🔧 PHASE 10 FIX: Include PDF URL in webhook payload
                   case_id: payload.meta?.case_id || `YC-${payload.plate.replace(/[-\/]/g, '')}-${new Date().getFullYear()}`,
                   callbackUrl: null
                 };
@@ -1851,7 +1855,7 @@
                 );
 
                 // 💾 Save final report DRAFT to Supabase WITH PDF
-                await saveReportDraftToSupabase('final_report', 'draft', finalReportHTML, false);
+                const finalReportPdfUrl = await saveReportDraftToSupabase('final_report', 'draft', finalReportHTML, false);
 
                 const finalReportPayload = {
                   plate: payload.plate,
@@ -1859,6 +1863,7 @@
                   action: 'FINAL_REPORT_DRAFT',
                   submittedAt: new Date().toISOString(),
                   html: finalReportHTML,
+                  pdf_url: finalReportPdfUrl,  // 🔧 PHASE 10 FIX: Include PDF URL in webhook payload
                   case_id: payload.meta?.case_id || `YC-${payload.plate.replace(/[-\/]/g, '')}-${new Date().getFullYear()}`,
                   callbackUrl: null
                 };

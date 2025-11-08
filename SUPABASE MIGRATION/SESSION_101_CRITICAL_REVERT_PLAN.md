@@ -65,7 +65,7 @@ SUBMIT FINAL REPORT BUTTON:
 - Find existing configuration and implement correctly
 
 **Webhook Triggers** (4 webhooks total):
-1. `SUBMIT_EXPERTISE` → Triggered by Submit Expertise button
+1. `LAUNCH_EXPERTISE` → Triggered by Submit Expertise button
 2. `SUBMIT_ESTIMATE_DRAFT` → Triggered by Submit Expertise button (auto-draft creation)
 3. `SUBMIT_ESTIMATE` → Triggered by Submit Estimate button
 4. `FINAL_REPORT_DRAFT` → Triggered by Submit Expertise AND Submit Estimate buttons (auto-draft creation)
@@ -120,8 +120,28 @@ NEW SEARCH (3 parameters):
 ├─ report_name (e.g., "Final Report")
 ├─ report_nature ("draft" OR "finalized")
 └─ current = true (filtered by nature)
-```
 
+## ADDITIONAL REQUIREMENT: VIEW REPORT WINDOW
+
+**Location**: The modal/window that opens when clicking "View Report" buttons
+
+**Current Problem**:
+- When displaying reports with the new dual "current = true" system
+- Window shows TWO current reports (one draft, one finalized)
+- Rows do NOT indicate which version is draft vs. finalized
+- User cannot distinguish between them
+
+**Required Fix**:
+- Add visual indicator/label to each row showing report nature
+- Display "DRAFT" or "FINALIZED" flag clearly on each result
+- Ensure distinction is visible when both current_draft=true AND current_finalized=true exist
+
+**Implementation**:
+- Show `report_nature` field value in the view report results
+- Apply styling/badging to differentiate (e.g., badge, color coding, icon)
+- Maintain mobile responsiveness for these indicators
+```
+MAKE SURE ALL REPORTS FINLIZAED AND DRAFTS GET THEIR PDF URL FOR VIEWING AND DOWNLOADING TEH PDF
 ---
 
 ## UI/UX REQUIREMENTS
@@ -169,6 +189,7 @@ NEW SEARCH (3 parameters):
 ✓ Dual "current = true" flags working (draft vs finalized)
 ✓ report_nature field populated correctly
 ✓ Search functionality uses 3-parameter query
+MAKE SURE ALL REPORTS FINLIZAED AND DRAFTS GET THEIR PDF URL FOR VIEWING AND DOWNLOADING TEH PDF 
 ✓ Modern UI with animations and user feedback
 ✓ Mobile responsive design
 ✓ All labels updated (דו"ח סופי → חוות דעת)

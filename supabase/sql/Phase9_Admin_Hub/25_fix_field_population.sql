@@ -404,9 +404,24 @@ IF centers_array IS NOT NULL AND jsonb_typeof(centers_array) = 'array' THEN
   FOR center_item IN SELECT * FROM jsonb_array_elements(centers_array)
   LOOP
     -- 🔧 PHASE 10 FIX: Use correct field paths based on actual helper structure
-    total_parts_sum := total_parts_sum + COALESCE((center_item->'Parts'->'parts_meta'->>'total_cost')::NUMERIC, 0);
-    total_work_sum := total_work_sum + COALESCE((center_item->'Works'->'works_meta'->>'total_cost')::NUMERIC, 0);
-    total_repairs_sum := total_repairs_sum + COALESCE((center_item->'Repairs'->'repairs_meta'->>'total_cost')::NUMERIC, 0);
+    total_parts_sum := total_parts_sum + COALESCE(
+      (center_item->'Parts'->>'total_cost')::NUMERIC,
+      (center_item->'parts'->>'total_cost')::NUMERIC,
+      (center_item->'Parts'->'parts_meta'->>'total_cost')::NUMERIC,
+      0
+    );
+    total_work_sum := total_work_sum + COALESCE(
+      (center_item->'Works'->>'total_cost')::NUMERIC,
+      (center_item->'works'->>'total_cost')::NUMERIC,
+      (center_item->'Works'->'works_meta'->>'total_cost')::NUMERIC,
+      0
+    );
+    total_repairs_sum := total_repairs_sum + COALESCE(
+      (center_item->'Repairs'->>'total_cost')::NUMERIC,
+      (center_item->'repairs'->>'total_cost')::NUMERIC,
+      (center_item->'Repairs'->'repairs_meta'->>'total_cost')::NUMERIC,
+      0
+    );
     
     -- 🔧 PHASE 10 FIX: Extract actual repairs performed
     IF center_item->'actual_repairs' IS NOT NULL THEN
