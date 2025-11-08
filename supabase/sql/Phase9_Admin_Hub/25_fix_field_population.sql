@@ -27,7 +27,7 @@ DECLARE
   planned_repairs_text TEXT := '';
   planned_parts_text TEXT := '';
   planned_work_text TEXT := '';
-  center JSONB;
+  center_item JSONB;
   repair_item JSONB;
   part_item JSONB;
   work_item JSONB;
@@ -59,11 +59,11 @@ BEGIN
     FROM jsonb_array_elements(centers_array) AS center;
 
     -- 🔧 PHASE 10 FIX: Extract planned repairs, parts, and work properly
-    FOR center IN SELECT * FROM jsonb_array_elements(centers_array)
+    FOR center_item IN SELECT * FROM jsonb_array_elements(centers_array)
     LOOP
       -- Extract repairs
-      IF center->'Repairs' IS NOT NULL THEN
-        FOR repair_item IN SELECT * FROM jsonb_array_elements(COALESCE(center->'Repairs'->'repairs', '[]'::JSONB))
+      IF center_item->'Repairs' IS NOT NULL THEN
+        FOR repair_item IN SELECT * FROM jsonb_array_elements(COALESCE(center_item->'Repairs'->'repairs', '[]'::JSONB))
         LOOP
           planned_repairs_text := planned_repairs_text || 
             COALESCE(repair_item->>'description', repair_item->>'name', '') || '; ';
@@ -71,8 +71,8 @@ BEGIN
       END IF;
 
       -- Extract parts
-      IF center->'Parts' IS NOT NULL THEN
-        FOR part_item IN SELECT * FROM jsonb_array_elements(COALESCE(center->'Parts'->'parts_required', center->'Parts'->'parts', '[]'::JSONB))
+      IF center_item->'Parts' IS NOT NULL THEN
+        FOR part_item IN SELECT * FROM jsonb_array_elements(COALESCE(center_item->'Parts'->'parts_required', center_item->'Parts'->'parts', '[]'::JSONB))
         LOOP
           planned_parts_text := planned_parts_text || 
             COALESCE(part_item->>'name', part_item->>'description', '') || 
@@ -84,8 +84,8 @@ BEGIN
       END IF;
 
       -- Extract work
-      IF center->'Works' IS NOT NULL THEN
-        FOR work_item IN SELECT * FROM jsonb_array_elements(COALESCE(center->'Works'->'works', center->'Works'->'labor', '[]'::JSONB))
+      IF center_item->'Works' IS NOT NULL THEN
+        FOR work_item IN SELECT * FROM jsonb_array_elements(COALESCE(center_item->'Works'->'works', center_item->'Works'->'labor', '[]'::JSONB))
         LOOP
           planned_work_text := planned_work_text || 
             COALESCE(work_item->>'description', work_item->>'name', '') || 
@@ -213,7 +213,7 @@ DECLARE
   actual_repairs_text TEXT := '';
   depreciation_amount NUMERIC := 0;
   final_compensation_amount NUMERIC := 0;
-  center JSONB;
+  center_item JSONB;
   repair_item JSONB;
 BEGIN
   -- Mark existing current records for this case and report type as not current
@@ -238,16 +238,16 @@ BEGIN
     FROM jsonb_array_elements(centers_array) AS c;
 
     -- Sum up totals and extract actual repairs from all centers
-    FOR center IN SELECT * FROM jsonb_array_elements(centers_array)
+    FOR center_item IN SELECT * FROM jsonb_array_elements(centers_array)
     LOOP
       -- 🔧 PHASE 10 FIX: Use correct field paths based on actual helper structure
-      total_parts_sum := total_parts_sum + COALESCE((center->'Parts'->'parts_meta'->>'total_cost')::NUMERIC, 0);
-      total_work_sum := total_work_sum + COALESCE((center->'Works'->'works_meta'->>'total_cost')::NUMERIC, 0);
-      total_repairs_sum := total_repairs_sum + COALESCE((center->'Repairs'->'repairs_meta'->>'total_cost')::NUMERIC, 0);
+      total_parts_sum := total_parts_sum + COALESCE((center_item->'Parts'->'parts_meta'->>'total_cost')::NUMERIC, 0);
+      total_work_sum := total_work_sum + COALESCE((center_item->'Works'->'works_meta'->>'total_cost')::NUMERIC, 0);
+      total_repairs_sum := total_repairs_sum + COALESCE((center_item->'Repairs'->'repairs_meta'->>'total_cost')::NUMERIC, 0);
       
       -- 🔧 PHASE 10 FIX: Extract actual repairs performed
-      IF center->'actual_repairs' IS NOT NULL THEN
-        FOR repair_item IN SELECT * FROM jsonb_array_elements(COALESCE(center->'actual_repairs', '[]'::JSONB))
+      IF center_item->'actual_repairs' IS NOT NULL THEN
+        FOR repair_item IN SELECT * FROM jsonb_array_elements(COALESCE(center_item->'actual_repairs', '[]'::JSONB))
         LOOP
           actual_repairs_text := actual_repairs_text || 
             COALESCE(repair_item->>'description', repair_item->>'name', '') || '; ';
