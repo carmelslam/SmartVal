@@ -1,0 +1,263 @@
+```markdown
+# PHASE 10: REPORT SUBMISSION SYSTEM - COMPLETE SPECIFICATION
+
+## PROJECT CONTEXT
+
+**Primary Task Document**: `SUPABASE MIGRATION/SUPABASE_MIGRATION_PROJECT.md` - Phase 10
+**Reference Documents**:
+- `SUPABASE MIGRATION/REPORTS/SESSION_DOCUMENTATION_Report_Backup_Migration.md` (initial planning - partially implemented)
+- `SUPABASE MIGRATION/SESSION_100_Phase10_Report_Evolution_Summary.md` (failed attempts - learn from errors)
+
+---
+
+## SCOPE: THREE SUBMISSION BUTTONS
+
+### Button Locations (be precise - similar names exist):
+1. **Submit Expertise** → Located on: `expertise_builder.html` (the expertise builder page)
+2. **Submit Estimate** → Located on: `estimate_report_builder.html` (NOT the estimator page)
+   - **CLEANUP REQUIRED**: This page currently has TWO submit buttons by mistake
+   - **ACTION**: Keep only ONE button - choose which to keep and ensure full functionality
+3. **Submit Final Report** → Located on: `final_report_template_builder.html` (NOT final_report_builder.html)
+
+---
+
+## SUBMISSION LOGIC FLOW
+
+### What Each Button Does:
+
+```
+SUBMIT EXPERTISE BUTTON:
+├─ Creates: Finalized Expertise Report (PDF)
+├─ Auto-generates: Estimate Report DRAFT
+└─ Auto-generates: Final Report DRAFT
+
+SUBMIT ESTIMATE BUTTON:
+├─ Creates: Finalized Estimate Report (PDF)
+└─ Auto-generates: Final Report DRAFT
+
+SUBMIT FINAL REPORT BUTTON:
+└─ Creates: Finalized Final Report (PDF) ONLY
+```
+
+---
+
+## DATA DESTINATIONS (Execute in this order)
+
+### PRIMARY ACTION (First): Supabase Tables
+
+**Table Routing**:
+- **Expertise Report** (finalized) → `tracking_expertise` table
+- **Estimate Report** (draft OR finalized) → `tracking_final_report` table
+- **Final Report** (draft OR finalized) → `tracking_final_report` table
+
+**Requirements**:
+- Fill ALL table fields with complete report details
+- Generate PDF URL for EVERY report (including drafts)
+- Store PDF URL in table record
+
+### SECONDARY ACTION (Second): Make.com Webhooks
+
+**Webhook Configuration**:
+- Webhooks are NEVER hardcoded
+- All webhook URLs stored in: `webhook.js`
+- Find existing configuration and implement correctly
+
+**Webhook Triggers** (4 webhooks total):
+1. `SUBMIT_EXPERTISE` → Triggered by Submit Expertise button
+2. `SUBMIT_ESTIMATE_DRAFT` → Triggered by Submit Expertise button (auto-draft creation)
+3. `SUBMIT_ESTIMATE` → Triggered by Submit Estimate button
+4. `FINAL_REPORT_DRAFT` → Triggered by Submit Expertise AND Submit Estimate buttons (auto-draft creation)
+5. `SUBMIT_FINAL_REPORT` → Triggered by Submit Final Report button
+
+**Webhook Payload Structure**:
+- **CRITICAL**: Current webhook sends: case data + HTML content
+- **KEEP EXISTING**: Do NOT modify current data structure or webhook architecture
+- **ADD ONLY**: Include PDF URL in payload alongside existing data
+- **DO NOT BREAK**: Existing Make.com integration must continue working
+
+---
+
+## NEW VERSIONING SYSTEM (Critical Change)
+
+### CURRENT BEHAVIOR (Wrong):
+- New draft/finalized overwrites old version
+- Only one document marked as "current = true"
+
+### NEW REQUIRED BEHAVIOR:
+
+**Version Retention**:
+- Keep ALL drafts (never overwrite)
+- Keep ALL finalized versions (never overwrite)
+- Track version history
+
+**"current = true" Logic** (revised):
+```
+Each report type has TWO "current = true" flags:
+├─ current_draft = true (most recent DRAFT version)
+└─ current_finalized = true (most recent FINALIZED version)
+
+Example: Final Report in database
+├─ Final Report DRAFT v1 (current_draft = false)
+├─ Final Report DRAFT v2 (current_draft = true) ← Latest draft
+├─ Final Report FINALIZED v1 (current_finalized = false)
+└─ Final Report FINALIZED v2 (current_finalized = true) ← Latest finalized
+```
+
+**Table Schema Addition**:
+- Add field: `report_nature` (values: "draft" | "finalized")
+- Differentiate between draft and finalized versions
+- Trigger determines report_nature value
+
+**Search Query Requirements** (3 parameters):
+```
+OLD SEARCH (2 parameters):
+├─ report_name
+└─ current = true
+
+NEW SEARCH (3 parameters):
+├─ report_name (e.g., "Final Report")
+├─ report_nature ("draft" OR "finalized")
+└─ current = true (filtered by nature)
+```
+## ADDITIONAL REQUIREMENT: VIEW REPORT WINDOW
+
+**Location**: The modal/window that opens when clicking "View Report" buttons
+
+**Current Problem**:
+- When displaying reports with the new dual "current = true" system
+- Window shows TWO current reports (one draft, one finalized)
+- Rows do NOT indicate which version is draft vs. finalized
+- User cannot distinguish between them
+
+**Required Fix**:
+- Add visual indicator/label to each row showing report nature
+- Display "DRAFT" or "FINALIZED" flag clearly on each result
+- Ensure distinction is visible when both current_draft=true AND current_finalized=true exist
+
+**Implementation**:
+- Show `report_nature` field value in the view report results
+- Apply styling/badging to differentiate (e.g., badge, color coding, icon)
+- Maintain mobile responsiveness for these indicators
+
+ALL DRAFT FILES AND ALL FINALZED FILES NEED TO HAVE A TORAGE PATH AND A PDF URL .
+
+ALL WEBHOOKS TO MAKE.COM NEED TO SEND PDF URL IN ADDITION TO WHAT THEY SEND NOW 
+
+
+---
+
+## UI/UX REQUIREMENTS
+
+### Button Styling:
+- Modern, professional design
+- 3D-like appearance for visual depth
+- **Container**: Place ALL three buttons in ONE styled box at bottom of each respective page
+- **Animation**: Add loading/submission animation for each button
+- **User Feedback**: Display informative progress message during submission
+
+### Label Update:
+- **FIND**: All instances of "דו"ח סופי"
+- **REPLACE WITH**: "חוות דעת"
+
+### Mobile Responsiveness:
+- Ensure buttons work on mobile devices
+- Verify page layouts are mobile-friendly
+- Test PiP (Picture-in-Picture) functionality on mobile
+
+---
+
+## CONSTRAINTS & RULES
+
+**DO NOT MODIFY**:
+- Other pages not in scope
+- Helper functions (except `webhooks.js` for webhook implementation)
+- Existing page logic/functionality
+- Current behavior of pages (maintain all existing features)
+
+**MAINTAIN**:
+- All existing functionality
+- Current user workflows
+- Database tables (already defined and working)
+- Storage buckets (already configured)
+DO NOT TOUCH TEH AUTH LOGIC - FIX WHAT CLAUDE BROKE BUT DONT CHANGE NOTHING AFTER THAT 
+---
+
+## SUCCESS CRITERIA
+
+✓ Three submission buttons work correctly with proper routing
+✓ All Supabase tables receive complete data with PDF URLs
+✓ All Make.com webhooks trigger with PDF URLs added to existing payload
+✓ Version history preserved (no overwrites)
+✓ Dual "current = true" flags working (draft vs finalized)
+✓ report_nature field populated correctly
+✓ Search functionality uses 3-parameter query
+✓ Modern UI with animations and user feedback
+✓ Mobile responsive design
+✓ All labels updated (דו"ח סופי → חוות דעת)
+✓ NO other pages/logic modified
+```
+
+
+
+CURRENT STATUS :
+
+EXPERTISE SUBMISSION:
+1. Expertise webhook doesn’t  send a pdf url to make.com webhook 
+2, expertise fields : planned repairs and planned works, don't mature any data :
+The data needs to come from :expertise_snapshot.damage_blocks
+Fallback to: expertise.damage_blocks 
+the planned parts populates a json but it needs also to be submitted to to the flow above .
+3. Non of the drafts - final report and estimate draft have a pdf url or a storage path the submission needs to send a draft pdf url  - the drafts needs to maintain the watermark "draft"
+
+
+ESTIMATE SUBMISSION:
+1.for the finalized estimate - the webhook meta data to make.come is sending the final report meta not the estimate meta - the meta is totally fucked up and wrong 
+2. The final report draft created on estimate submission doesnt send the final report draft with the draft watermark - finally the final report draft from estimate submission seems to work - but its clearing the draft watermark
+
+
+
+
+FINAL REPORT
+CLAUDE CHANGED SOMETHING THAT IS BLOCKING FROM GOING TO THE VALIDATION PAGE - THE FINAL REPORT FINALIZATION IS BLOCKED - YOU BROKE AN AUTH CONFIGURATION - THE FLOW CANNOR BE TESTED
+WHEN I GO FROM THE FEE APGE TO THE validation-workflow.html the system is logging out and asking for auth - this was working before and claude broke it  
+
+DRAFT WATERMARK :
+Expertise submission needs to send the final report and the estimate with the draft watermark
+Estimate submission - needs to clear the draft watermark firm the finalized estimate report and keep it on the final report draft 
+Final report submission : needs to clear the watermark from the finalized final report 
+
+Signatures and stamps :
+NON OF THE PDFs GENERATED KEEP THE SIGNATURES OR THE STAMPS - THE REPORT ARE CREATED WITHOUT THOSE ELEMENTS AND THIS IS NOT GOOD 
+
+REPORT VIEWING :
+1. There is no flag of what line is the finalized and what is the draft 
+2. The result need to show just the current not all the draft versions by default - this view is meant for the last current version of finalized and of draft 
+
+CORRECT WEBHOOK LOAD :
+CAR DETAILS 
+CASE DETAILS 
+FULL REPORT HTML - AS IT WAS/ IS BEFORE 
+PDF URL 
+
+WEBHOOK LOADS EXAMPLE - JUST AN EXAMPLE THAT NEES TO BE IMPLEMENTED ON ALL WEBHOOKS:
+
+plate	22184003
+owner_name	כרמל כיוף
+action	FINAL_REPORT_DRAFT
+submittedAt	8. November 2025 19:47
+htmlLong String
+pdf_url	empty
+case_id	c52af5d6-3b78-47b8-88a2-d2553ee3e1af
+callbackUrl	empty
+
+
+
+Bundle 1Collection
+plate	22184003
+owner_name	כרמל כיוף
+action	SUBMIT_ESTIMATE_DRAFT
+submittedAt	8. November 2025 19:47
+htmlLong String
+pdf_url	empty
+case_id	c52af5d6-3b78-47b8-88a2-d2553ee3e1af
+callbackUrl	empty
