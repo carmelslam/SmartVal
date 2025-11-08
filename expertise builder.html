@@ -1222,6 +1222,8 @@
                   allowTaint: true,
                   logging: false,
                   imageTimeout: 15000, // 15 second timeout for images
+                  foreignObjectRendering: true,
+                  proxy: undefined,
                   ignoreElements: (element) => {
                     // Don't ignore any images - we want all images including logo, signatures, stamps
                     return false;
@@ -1256,13 +1258,40 @@
               let heightLeft = imgHeight;
               let position = topMargin;
 
+              // Add watermark function for expertise directive
+              function addDirectiveWatermark(pdf, pageWidth, pageHeight) {
+                const helper = window.helper || JSON.parse(sessionStorage.getItem('helper') || '{}');
+                const directive = helper.expertise?.summary?.directive || helper.expertise?.guidance || 'לתיקון';
+                
+                pdf.setFontSize(40);
+                pdf.setTextColor(100, 100, 100, 0.3); // Gray with transparency
+                pdf.saveGraphicsState();
+                pdf.setGState(pdf.GState({ opacity: 0.3 }));
+                
+                // Calculate center position
+                const textWidth = pdf.getTextWidth(directive);
+                const x = (pageWidth - textWidth) / 2;
+                const y = pageHeight / 2;
+                
+                // Add directive watermark text at 45 degree angle
+                pdf.text(directive, x, y, { angle: -45, align: 'center' });
+                pdf.restoreGraphicsState();
+              }
+
               pdf.addImage(imgData, 'JPEG', leftMargin, position, contentWidth, imgHeight);
               heightLeft -= contentHeight;
+
+              // Add directive watermark to first page
+              addDirectiveWatermark(pdf, pageWidth, pageHeight);
 
               while (heightLeft > 0) {
                 position = -(imgHeight - heightLeft) + topMargin;
                 pdf.addPage();
                 pdf.addImage(imgData, 'JPEG', leftMargin, position, contentWidth, imgHeight);
+                
+                // Add directive watermark to each additional page
+                addDirectiveWatermark(pdf, pageWidth, pageHeight);
+                
                 heightLeft -= contentHeight;
               }
 
@@ -1686,9 +1715,11 @@
                     allowTaint: true,
                     logging: false,
                     imageTimeout: 0,
+                    foreignObjectRendering: true,
+                    proxy: undefined,
                     ignoreElements: (element) => {
-                      // Only ignore the logo, not signatures/stamps
-                      return element.tagName === 'IMG' && element.src.includes('carmelcayouf.com/wp-content/uploads/2025/06/g.webp');
+                      // Don't ignore any images - we want all images including logo, signatures, stamps
+                      return false;
                     }
                   });
 
