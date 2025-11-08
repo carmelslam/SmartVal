@@ -2310,7 +2310,8 @@
                   logging: false,
                   imageTimeout: 15000, // 15 second timeout for images
                   ignoreElements: (element) => {
-                    return element.tagName === 'IMG' && element.src.includes('carmelcayouf.com');
+                    // Don't ignore any images - we want all images including logo, signatures, stamps
+                    return false;
                   }
                 }),
                 new Promise((_, reject) => 
@@ -2342,13 +2343,41 @@
               let heightLeft = imgHeight;
               let position = topMargin;
 
+              // Add watermark for draft PDFs
+              function addWatermarkToPage(pdf, pageWidth, pageHeight, text) {
+                pdf.setFontSize(60);
+                pdf.setTextColor(220, 38, 38, 0.1); // Light red with transparency
+                pdf.saveGraphicsState();
+                pdf.setGState(pdf.GState({ opacity: 0.1 }));
+                
+                // Calculate center position
+                const textWidth = pdf.getTextWidth(text);
+                const x = (pageWidth - textWidth) / 2;
+                const y = pageHeight / 2;
+                
+                // Add watermark text at 45 degree angle
+                pdf.text(text, x, y, { angle: -45, align: 'center' });
+                pdf.restoreGraphicsState();
+              }
+
               pdf.addImage(imgData, 'JPEG', leftMargin, position, contentWidth, imgHeight);
               heightLeft -= contentHeight;
+
+              // Add watermark to first page if draft
+              if (status === 'draft') {
+                addWatermarkToPage(pdf, pageWidth, pageHeight, 'טיוטה בלבד');
+              }
 
               while (heightLeft > 0) {
                 position = -(imgHeight - heightLeft) + topMargin;
                 pdf.addPage();
                 pdf.addImage(imgData, 'JPEG', leftMargin, position, contentWidth, imgHeight);
+                
+                // Add watermark to each additional page if draft
+                if (status === 'draft') {
+                  addWatermarkToPage(pdf, pageWidth, pageHeight, 'טיוטה בלבד');
+                }
+                
                 heightLeft -= contentHeight;
               }
 
@@ -2469,6 +2498,31 @@
         let actualCaseId = caseIdOrNumber;
         const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
         
+        // Define webhookPayload (FIX for undefined error)
+        const webhookPayload = {
+          // Standard webhook fields
+          plate: plate || '',
+          owner_name: helper.stakeholders?.owner?.name || helper.vehicle?.owner || helper.meta?.client_name || '',
+          action: 'SUBMIT_ESTIMATE',
+          submittedAt: new Date().toISOString(),
+          callbackUrl: null,
+          
+          // Estimate-specific metadata
+          report_type: 'estimate',
+          status: 'finalized',
+          estimate_type: helper.estimate_type || 'אובדן_להלכה',
+          
+          // Report content
+          html: '', // Will be populated with cleanHTML
+          pdf_url: null, // Will be populated after PDF generation
+          
+          // Case identification
+          case_id: caseIdOrNumber || '',
+          
+          // Include helper data
+          helper: helper
+        };
+        
         if (!uuidPattern.test(caseIdOrNumber)) {
           const { data: caseData, error: lookupError } = await supabase
             .from('cases')
@@ -2482,6 +2536,9 @@
           }
           actualCaseId = caseData.id;
         }
+        
+        // Update webhookPayload with actual case ID
+        webhookPayload.case_id = actualCaseId;
         
         // 2. GENERATE PDF FROM HTML (EXPERTISE PATTERN)
         console.log('📄 Generating estimate PDF...');
@@ -2561,7 +2618,8 @@
                 logging: false,
                 imageTimeout: 0,
                 ignoreElements: (element) => {
-                  return element.tagName === 'IMG' && element.src.includes('carmelcayouf.com');
+                  // Don't ignore any images - we want all images including logo, signatures, stamps
+                  return false;
                 }
               });
 
@@ -2581,13 +2639,41 @@
               let heightLeft = imgHeight;
               let position = topMargin;
 
+              // Add watermark for draft PDFs
+              function addWatermarkToPage(pdf, pageWidth, pageHeight, text) {
+                pdf.setFontSize(60);
+                pdf.setTextColor(220, 38, 38, 0.1); // Light red with transparency
+                pdf.saveGraphicsState();
+                pdf.setGState(pdf.GState({ opacity: 0.1 }));
+                
+                // Calculate center position
+                const textWidth = pdf.getTextWidth(text);
+                const x = (pageWidth - textWidth) / 2;
+                const y = pageHeight / 2;
+                
+                // Add watermark text at 45 degree angle
+                pdf.text(text, x, y, { angle: -45, align: 'center' });
+                pdf.restoreGraphicsState();
+              }
+
               pdf.addImage(imgData, 'JPEG', leftMargin, position, contentWidth, imgHeight);
               heightLeft -= contentHeight;
+
+              // Add watermark to first page if draft
+              if (status === 'draft') {
+                addWatermarkToPage(pdf, pageWidth, pageHeight, 'טיוטה בלבד');
+              }
 
               while (heightLeft > 0) {
                 position = -(imgHeight - heightLeft) + topMargin;
                 pdf.addPage();
                 pdf.addImage(imgData, 'JPEG', leftMargin, position, contentWidth, imgHeight);
+                
+                // Add watermark to each additional page if draft
+                if (status === 'draft') {
+                  addWatermarkToPage(pdf, pageWidth, pageHeight, 'טיוטה בלבד');
+                }
+                
                 heightLeft -= contentHeight;
               }
 
@@ -2718,7 +2804,8 @@
                       logging: false,
                       imageTimeout: 0,
                       ignoreElements: (element) => {
-                        return element.tagName === 'IMG' && element.src.includes('carmelcayouf.com');
+                        // Don't ignore any images - we want all images including logo, signatures, stamps
+                        return false;
                       }
                     });
 

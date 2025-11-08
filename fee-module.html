@@ -328,11 +328,31 @@
 </head>
 <body>
   <script>
-    // Authentication check
-    const auth = sessionStorage.getItem("auth");
-    if (!auth) {
-      alert("הגישה חסומה - אנא התחבר דרך דף הבית");
-      window.location.href = "index.html";
+    // Authentication check - handle both iframe and direct access
+    try {
+      // Check if we're in an iframe
+      const isInIframe = window.self !== window.top;
+      
+      if (isInIframe) {
+        // If in iframe, check parent's auth
+        if (window.parent.sessionStorage && !window.parent.sessionStorage.getItem("auth")) {
+          window.parent.location.href = "index.html";
+        }
+      } else {
+        // Direct access - check local sessionStorage
+        const auth = sessionStorage.getItem("auth");
+        if (!auth) {
+          alert("הגישה חסומה - אנא התחבר דרך דף הבית");
+          window.location.href = "index.html";
+        }
+      }
+    } catch (e) {
+      // If there's any error accessing parent (cross-origin), check local auth
+      const auth = sessionStorage.getItem("auth");
+      if (!auth) {
+        alert("הגישה חסומה - אנא התחבר דרך דף הבית");
+        window.location.href = "index.html";
+      }
     }
   </script>
   <div class="container">

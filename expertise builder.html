@@ -1223,7 +1223,8 @@
                   logging: false,
                   imageTimeout: 15000, // 15 second timeout for images
                   ignoreElements: (element) => {
-                    return element.tagName === 'IMG' && element.src.includes('carmelcayouf.com');
+                    // Don't ignore any images - we want all images including logo, signatures, stamps
+                    return false;
                   }
                 }),
                 new Promise((_, reject) => 
@@ -1686,7 +1687,8 @@
                     logging: false,
                     imageTimeout: 0,
                     ignoreElements: (element) => {
-                      return element.tagName === 'IMG' && element.src.includes('carmelcayouf.com');
+                      // Only ignore the logo, not signatures/stamps
+                      return element.tagName === 'IMG' && element.src.includes('carmelcayouf.com/wp-content/uploads/2025/06/g.webp');
                     }
                   });
 
@@ -1802,6 +1804,8 @@
                       ...helper.damage_assessment,
                       centers: centersData.map((block, index) => ({
                         ...block,
+                        name: block.Location || block.location || block.name || `מוקד ${index + 1}`,
+                        damage_center_name: block.Location || block.location || block.name || `מוקד ${index + 1}`,
                         planned_repairs: block.planned_repairs || block.PlannedRepairs || block['תיקונים מתוכננים'] || '',
                         planned_work: block.planned_work || block.planned_works || block.PlannedWork || block['עבודות מתוכננות'] || ''
                       }))
