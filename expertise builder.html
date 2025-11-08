@@ -1474,11 +1474,14 @@
             }
             
             const htmlContent = clonedDoc.documentElement.outerHTML;
+            let expertisePdfUrl = null; // Will be populated after PDF generation
             const htmlPayload = {
               plate: payload.plate,
-              action: 'EXPERTISE_HTML',
+              owner_name: payload.owner_name,
+              action: 'LAUNCH_EXPERTISE',
               submittedAt: new Date().toISOString(),
               html: htmlContent,
+              pdf_url: null, // Will be updated after PDF generation
               case_id: payload.meta?.case_id || `YC-${payload.plate.replace(/[-\/]/g, '')}-${new Date().getFullYear()}`,
               callbackUrl: null
             };
@@ -1620,9 +1623,9 @@
               }
             }
 
-            // 💾 CRITICAL FIX: Save to Supabase BEFORE webhooks
-            // This ensures expertise reports are backed up to database
-            (async () => {
+            // 💾 CRITICAL FIX: Save to Supabase and get PDF URL BEFORE webhooks
+            // This ensures expertise reports are backed up to database with PDF
+            const expertiseSaveResult = await (async () => {
               try {
                 const helper = window.helper || JSON.parse(sessionStorage.getItem('helper') || '{}');
                 // ✅ FIX: Check supabase_case_id first (actual UUID), fallback to case_id (filing ID)
@@ -1750,19 +1753,59 @@
                   console.log('🔗 PDF public URL:', publicUrl);
 
                   // 🔧 FIX: Transform helper structure for SQL function
-                  // SQL PRIMARILY looks for expertise.damage_blocks, then falls back to centers
-                  const centersData = helper.centers || helper.damage_centers || [];
+                  // Use expertise_snapshot.damage_blocks first, then expertise.damage_blocks, then centers
+                  const centersData = helper.expertise_snapshot?.damage_blocks || 
+                                    helper.expertise?.damage_blocks || 
+                                    helper.centers || 
+                                    helper.damage_centers || 
+                                    [];
+                  
+                  // Extract planned repairs/works from damage blocks
+                  const extractPlannedData = (blocks) => {
+                    const plannedRepairs = [];
+                    const plannedWorks = [];
+                    
+                    blocks.forEach(block => {
+                      // Look for planned repairs in various possible field names
+                      if (block.planned_repairs || block.PlannedRepairs || block['תיקונים מתוכננים']) {
+                        plannedRepairs.push(block.planned_repairs || block.PlannedRepairs || block['תיקונים מתוכננים']);
+                      }
+                      // Look for planned works in various possible field names  
+                      if (block.planned_work || block.planned_works || block.PlannedWork || block['עבודות מתוכננות']) {
+                        plannedWorks.push(block.planned_work || block.planned_works || block.PlannedWork || block['עבודות מתוכננות']);
+                      }
+                    });
+                    
+                    return {
+                      plannedRepairs: plannedRepairs.filter(Boolean).join(', '),
+                      plannedWorks: plannedWorks.filter(Boolean).join(', ')
+                    };
+                  };
+                  
+                  const { plannedRepairs, plannedWorks } = extractPlannedData(centersData);
+                  
                   const helperForSupabase = {
                     ...helper,
                     expertise: {
                       ...helper.expertise,
                       damage_blocks: centersData,  // PRIMARY path for expertise SQL function
+                      planned_repairs: plannedRepairs,
+                      planned_works: plannedWorks,
                       summary: {
                         directive: helper.expertise?.summary?.directive || helper.expertise?.guidance || 'לתיקון',
                         notes: helper.expertise?.summary?.notes || helper.expertise?.notes || 'לשלוח תמונות אחרי פירוק'
                       }
                     },
-                    centers: centersData  // Fallback path
+                    centers: centersData,  // Fallback path
+                    // Also include at root level for SQL function
+                    damage_assessment: {
+                      ...helper.damage_assessment,
+                      centers: centersData.map((block, index) => ({
+                        ...block,
+                        planned_repairs: block.planned_repairs || block.PlannedRepairs || block['תיקונים מתוכננים'] || '',
+                        planned_work: block.planned_work || block.planned_works || block.PlannedWork || block['עבודות מתוכננות'] || ''
+                      }))
+                    }
                   };
 
                   console.log('🔍 DEBUG: Calling RPC with parameters:', {
@@ -1803,14 +1846,25 @@
                     console.log('✅ Expertise saved to Supabase successfully');
                     console.log('✅ Number of records inserted:', data);
                   }
+                  
+                  // Return the PDF URL for webhook
+                  return publicUrl;
                 } else {
                   console.warn('⚠️ Missing case_id or plate - skipping Supabase save');
+                  return null;
                 }
               } catch (error) {
                 console.error('❌ Error saving expertise to Supabase:', error);
                 console.warn('⚠️ Continuing with webhooks despite Supabase error');
+                return null;
               }
             })();
+            
+            // Update htmlPayload with the PDF URL
+            if (expertiseSaveResult) {
+              htmlPayload.pdf_url = expertiseSaveResult;
+              expertisePdfUrl = expertiseSaveResult;
+            }
 
             // 🔧 PHASE 10 FIX: Send 3 essential webhooks sequentially for better reliability
             console.log('📤 1/3 Sending LAUNCH_EXPERTISE...');

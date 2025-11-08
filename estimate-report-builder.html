@@ -2174,63 +2174,46 @@
         // Get the current HTML content for the estimate
         const estimateContent = document.getElementById('estimate-output').innerHTML;
         
-        const payload = {
-          type: 'estimate',
-          plate: helper.meta?.plate || '',
-          owner: helper.meta?.client_name || '',
-          helper: helper,
+        // Build webhook payload with correct estimate metadata
+        const webhookPayload = {
+          // Standard webhook fields
+          plate: helper.car_details?.plate || helper.vehicle?.plate || helper.meta?.plate || '',
+          owner_name: helper.stakeholders?.owner?.name || helper.vehicle?.owner || helper.meta?.client_name || '',
+          action: 'SUBMIT_ESTIMATE',
+          submittedAt: new Date().toISOString(),
+          callbackUrl: null,
+          
+          // Estimate-specific metadata
+          report_type: 'estimate',
+          status: 'finalized',
           estimate_type: helper.estimate_type || 'אובדן_להלכה',
-          html_content: estimateContent,
-          timestamp: new Date().toISOString(),
+          
+          // Report content
+          html: estimateContent,
+          pdf_url: null, // Will be populated after PDF generation
+          
+          // Case identification
+          case_id: helper.case_info?.supabase_case_id || helper.meta?.case_id || `YC-${(helper.meta?.plate || '').replace(/[-\/]/g, '')}-${new Date().getFullYear()}`,
+          
+          // Include helper data for Make.com processing
+          helper: helper,
           calculations: helper.calculations || {}
         };
 
-        console.log('📋 Payload being sent:', {
-          type: payload.type,
-          plate: payload.plate,
-          owner: payload.owner,
-          estimate_type: payload.estimate_type,
-          timestamp: payload.timestamp,
-          html_content_length: payload.html_content.length
+        console.log('📋 Webhook payload being sent:', {
+          action: webhookPayload.action,
+          plate: webhookPayload.plate,
+          owner_name: webhookPayload.owner_name,
+          report_type: webhookPayload.report_type,
+          status: webhookPayload.status,
+          estimate_type: webhookPayload.estimate_type,
+          timestamp: webhookPayload.submittedAt,
+          html_length: webhookPayload.html.length
         });
 
-        // Use the SUBMIT_ESTIMATE webhook URL
-        const webhookUrl = 'https://hook.eu2.make.com/7dvgi7patq0vlgbd53hjbjasf6tek16l';
-        console.log('🌐 Webhook URL:', webhookUrl);
-        
-        // Show loading message
-        const originalAlert = window.alert;
-        window.alert = () => {}; // Temporarily disable alerts
-        
-        console.log('📡 Sending request to Make.com...');
-        const response = await fetch(webhookUrl, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Accept': '*/*'
-          },
-          body: JSON.stringify(payload)
-        });
-        
-        console.log('📨 Response received:');
-        console.log('- Status:', response.status);
-        console.log('- Status Text:', response.statusText);
-        console.log('- Headers:', Object.fromEntries(response.headers.entries()));
-        
-        // Restore alert function
-        window.alert = originalAlert;
-        
-        if (response.status >= 200 && response.status < 300) {
-          // Handle successful response
-          let responseText = '';
-          try {
-            responseText = await response.text();
-            console.log('📄 Response body:', responseText || '(empty)');
-          } catch (textError) {
-            console.log('⚠️ Could not read response text:', textError.message);
-          }
-          
-          console.log('✅ Estimate submitted successfully to Make.com');
+        // Import webhook module
+        const { sendToWebhook } = await import('./webhook.js');
+        console.log('✅ Webhook module loaded');
           
           // 🔧 PHASE 10 FIX: Create draft final report for the workflow
           try {
@@ -2734,17 +2717,8 @@
           .replace(/<button[\s\S]*?<\/button>/g, '')
           .replace(/<div[^>]*class="[^"]*no-print[^"]*"[^>]*>[\s\S]*?<\/div>/g, '');
         
-        // Use the same format as SUBMIT_FINAL_REPORT for consistency with Make.com
-        const payload = {
-          html: cleanHTML,
-          meta: {
-            ...helper.meta || {},
-            plate: (helper.estimate?.vehicle?.plateNumber || helper.vehicle?.plate_number || helper.car_details?.plate || helper.meta?.plate || '').replace(/-/g, ''),
-            owner_name: helper.estimate?.client?.name || helper.client?.name || helper.car_details?.owner_name || helper.meta?.owner_name || ''
-          },
-          report_type: 'estimate',
-          date: new Date().toISOString()
-        };
+        // Update webhookPayload with clean HTML
+        webhookPayload.html = cleanHTML;
 
         // 💾 CRITICAL FIX: Save to Supabase BEFORE webhook
         // This ensures estimates are backed up to database
@@ -2898,6 +2872,9 @@
                 console.warn('⚠️ Estimate will still be sent to Make.com webhook');
               } else {
                 console.log('✅ Estimate saved to Supabase successfully');
+                
+                // Update webhook payload with PDF URL
+                webhookPayload.pdf_url = publicUrl;
 
                 // 📄 ALSO save final_report draft (workflow requirement) using expertise pattern
                 try {
@@ -3071,7 +3048,7 @@
         }
 
         // Send to webhook with correct parameter order: (id, payload)
-        const result = await sendToWebhook('SUBMIT_ESTIMATE', payload);
+        const result = await sendToWebhook('SUBMIT_ESTIMATE', webhookPayload);
         
         if (result.success) {
           alert('✅ האומדן יוצא בהצלחה');
