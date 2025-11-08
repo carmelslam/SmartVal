@@ -1861,39 +1861,57 @@
 
                   console.log('🔍 DEBUG: helperForSupabase.centers:', helperForSupabase.centers);
                   
-                  // Create concatenated data for single row insertion
-                  const allDamageCenterNames = centersData
-                    .map(block => block.Location || block.location || block.name || 'מוקד לא ידוע')
-                    .filter(name => name && name.trim())
-                    .join(', ');
-                  
-                  const allPlannedRepairs = centersData
-                    .map(block => block.planned_repairs || block.PlannedRepairs || block['תיקונים מתוכננים'] || '')
-                    .filter(repair => repair && repair.trim())
-                    .join('; ');
+                  // Map centers data to match the final report structure for proper field extraction
+                  const mappedCenters = centersData.map((block, index) => ({
+                    ...block,
+                    // Map all possible location field names
+                    Location: block.Location || block.location || block.name || `מוקד ${index + 1}`,
+                    location: block.Location || block.location || block.name || `מוקד ${index + 1}`,
+                    name: block.Location || block.location || block.name || `מוקד ${index + 1}`,
                     
-                  const allPlannedWork = centersData
-                    .map(block => block.planned_work || block.planned_works || block.PlannedWork || block['עבודות מתוכננות'] || '')
-                    .filter(work => work && work.trim())
-                    .join('; ');
+                    // Map description fields
+                    Description: block.Description || block.description || block.details || '',
+                    description: block.Description || block.description || block.details || '',
+                    
+                    // Map repairs - ensure they're in the right structure
+                    repairs: block.repairs || (block.Repairs ? block.Repairs.repairs : null) || [],
+                    Repairs: block.Repairs || { repairs: block.repairs || [] },
+                    
+                    // Map parts - ensure they're in the right structure  
+                    parts: block.parts || (block.Parts ? block.Parts.parts_required : null) || [],
+                    Parts: block.Parts || { parts_required: block.parts || [], parts: block.parts || [] },
+                    
+                    // Map work - ensure they're in the right structure
+                    work: block.work || block.works || (block.Works ? block.Works.works : null) || [],
+                    works: block.work || block.works || (block.Works ? block.Works.works : null) || [],
+                    Works: block.Works || { works: block.work || block.works || [], labor: block.work || block.works || [] },
+                    
+                    // Add direct field mappings for simpler access
+                    planned_repairs: block.planned_repairs || block.PlannedRepairs || block['תיקונים מתוכננים'] || '',
+                    planned_work: block.planned_work || block.planned_works || block.PlannedWork || block['עבודות מתוכננות'] || '',
+                    planned_parts: block.planned_parts || block.PlannedParts || block['חלקים מתוכננים'] || ''
+                  }));
                   
-                  // Create modified helper with concatenated data for single row
+                  // Create helper structure that matches final report pattern but for expertise
                   const helperForSupabaseConcat = {
                     ...helperForSupabase,
-                    damage_assessment: {
-                      ...helperForSupabase.damage_assessment,
-                      // Add concatenated fields
-                      concatenated_damage_center_names: allDamageCenterNames,
-                      concatenated_planned_repairs: allPlannedRepairs,
-                      concatenated_planned_work: allPlannedWork,
-                      centers: centersData // Keep original for compatibility
-                    }
+                    // Use expertise structure similar to final report
+                    expertise: {
+                      ...helperForSupabase.expertise,
+                      damage_blocks: mappedCenters,
+                      centers: mappedCenters
+                    },
+                    // Also keep at centers level for compatibility
+                    centers: mappedCenters,
+                    damage_centers: mappedCenters
                   };
                   
-                  console.log('🔍 DEBUG: Concatenated data:', {
-                    damage_center_names: allDamageCenterNames,
-                    planned_repairs: allPlannedRepairs,
-                    planned_work: allPlannedWork
+                  console.log('🔍 DEBUG: Mapped centers for expertise:', {
+                    mapped_centers_count: mappedCenters.length,
+                    first_center_location: mappedCenters[0]?.Location,
+                    first_center_description: mappedCenters[0]?.Description,
+                    first_center_planned_repairs: mappedCenters[0]?.planned_repairs,
+                    first_center_planned_work: mappedCenters[0]?.planned_work
                   });
 
                   const { data, error } = await window.supabase.rpc('upsert_tracking_expertise_from_helper', {
