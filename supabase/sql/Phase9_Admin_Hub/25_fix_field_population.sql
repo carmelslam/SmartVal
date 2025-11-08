@@ -44,8 +44,13 @@ BEGIN
     helper_json->>'case_number'
   );
 
-  -- Get centers array from helper.centers (top level)
-  centers_array := helper_json->'centers';
+  -- Get centers array from helper.centers (top level) with expertise fallbacks
+  centers_array := COALESCE(
+    helper_json->'centers',
+    helper_json->'expertise'->'damage_blocks',
+    helper_json->'expertise'->'centers',
+    helper_json->'damage_centers'
+  );
 
   IF centers_array IS NOT NULL AND jsonb_typeof(centers_array) = 'array' THEN
     -- Concatenate all damage center names
@@ -142,7 +147,47 @@ BEGIN
     RETURN 1;  -- One row inserted
   END IF;
 
-  RETURN 0;
+  -- 🔧 FALLBACK: If no centers found, still save basic expertise data
+  INSERT INTO tracking_expertise (
+    case_id,
+    case_number,
+    plate,
+    damage_center_count,
+    damage_center_index,
+    damage_center_name,
+    description,
+    planned_repairs,
+    planned_parts,
+    planned_work,
+    guidance,
+    notes,
+    status,
+    is_current,
+    pdf_storage_path,
+    pdf_public_url,
+    timestamp
+  )
+  VALUES (
+    p_case_id,
+    case_number_val,
+    p_plate,
+    0,  -- No centers
+    1,
+    'No damage centers found',
+    COALESCE(helper_json->>'description', 'Expertise report'),
+    '',  -- Empty planned repairs
+    '',  -- Empty planned parts
+    '',  -- Empty planned work
+    COALESCE(helper_json->'expertise'->>'guidance', helper_json->>'guidance', ''),
+    COALESCE(helper_json->'expertise'->>'notes', helper_json->>'notes', ''),
+    p_status,
+    true,
+    p_pdf_storage_path,
+    p_pdf_public_url,
+    now()
+  );
+
+  RETURN 1;  -- Fallback row inserted
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
