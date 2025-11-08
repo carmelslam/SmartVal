@@ -189,20 +189,11 @@ BEGIN
     INTO damage_centers_names
     FROM jsonb_array_elements(centers_array) AS c;
 
-    -- 🔧 CRITICAL FIX: Sum up totals from Summary field and extract actual repairs from all centers
+    -- Sum up totals and extract actual repairs from all centers
     FOR center IN SELECT * FROM jsonb_array_elements(centers_array)
     LOOP
-      -- Extract from Summary field (where actual calculated totals are stored)
-      total_parts_sum := total_parts_sum + COALESCE(
-        (center->'Summary'->>'Total parts')::NUMERIC,
-        (center->'Parts'->>'total_cost')::NUMERIC,
-        0
-      );
-      total_work_sum := total_work_sum + COALESCE(
-        (center->'Summary'->>'Total works')::NUMERIC,
-        (center->'Works'->>'total_cost')::NUMERIC,
-        0
-      );
+      total_parts_sum := total_parts_sum + COALESCE((center->'Parts'->>'total_cost')::NUMERIC, 0);
+      total_work_sum := total_work_sum + COALESCE((center->'Works'->>'total_cost')::NUMERIC, 0);
       
       -- 🔧 PHASE 10 FIX: Extract actual repairs performed
       IF center->'actual_repairs' IS NOT NULL THEN
