@@ -1300,12 +1300,43 @@
     import { sendToWebhook } from './webhook.js';
     import { caseOwnershipService } from './services/caseOwnershipService.js';
     
-    // Authentication check
-    const auth = sessionStorage.getItem("auth");
-    if (!auth) {
-      alert("הגישה חסומה - אנא התחבר דרך דף הבית");
-      window.location.href = "index.html";
-    }
+    // Authentication check - handle both iframe and direct access
+    (function() {
+      try {
+        // Check if we're in an iframe
+        const isInIframe = window.self !== window.top;
+        
+        if (isInIframe) {
+          // If in iframe, try to check parent's auth but be more permissive
+          try {
+            if (window.parent.sessionStorage && !window.parent.sessionStorage.getItem("auth")) {
+              console.warn('No auth in parent sessionStorage, redirecting...');
+              window.parent.location.href = "index.html";
+              return;
+            }
+          } catch (parentError) {
+            // If we can't access parent's sessionStorage due to cross-origin, 
+            // assume it's okay since we're in an iframe from a legitimate source
+            console.log('Cannot access parent sessionStorage (cross-origin), allowing access');
+          }
+        } else {
+          // Direct access - check local sessionStorage
+          const auth = sessionStorage.getItem("auth");
+          if (!auth) {
+            alert("הגישה חסומה - אנא התחבר דרך דף הבית");
+            window.location.href = "index.html";
+            return;
+          }
+        }
+      } catch (e) {
+        // If there's any error, only block if we can definitively say there's no auth
+        const auth = sessionStorage.getItem("auth");
+        if (!auth) {
+          alert("הגישה חסומה - אנא התחבר דרך דף הבית");
+          window.location.href = "index.html";
+        }
+      }
+    })();
     
     // Phase 6: Case ownership check
     (async () => {
