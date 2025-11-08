@@ -36,6 +36,7 @@
   <!-- SESSION 29: PDF Export Libraries -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="./image-cors-fix.js"></script>
 
   <link rel="icon" type="image/webp" href="https://carmelcayouf.com/wp-content/uploads/2025/06/g.webp">
   <link rel="shortcut icon" href="https://carmelcayouf.com/wp-content/uploads/2025/06/g.webp">
@@ -5720,18 +5721,11 @@ ${partsText}`;
       
       console.log('📄 SESSION 33: Generating PDF using html2canvas...');
       
+      // 🔧 PHASE 10 FIX: Convert external images to data URIs to fix CORS issues
+      await window.ImageCorsFix.fixImagesForPDF(reviewWindow.document);
+      
       // SESSION 33: Use html2canvas with REDUCED scale to avoid 413 error
-      const canvas = await html2canvas(reviewWindow.document.body, {
-        scale: 1,  // SESSION 33: Reduced from 2 to 1 to reduce file size
-        useCORS: true,
-        allowTaint: true,
-        logging: false,
-        imageTimeout: 0,
-        ignoreElements: (element) => {
-          // Don't ignore any images - we want all images including logo, signatures, stamps
-          return false;
-        }
-      });
+      const canvas = await html2canvas(reviewWindow.document.body, window.ImageCorsFix.HTML2CANVAS_OPTIONS);
       
       // SESSION 33: Convert canvas to PDF with multiple pages and margins
       const { jsPDF } = window.jspdf;
@@ -6324,18 +6318,11 @@ ${partsText}`;
       // Wait for content to load
       await new Promise(resolve => setTimeout(resolve, 1000));
       
+      // 🔧 PHASE 10 FIX: Convert external images to data URIs to fix CORS issues
+      await window.ImageCorsFix.fixImagesForPDF(previewWindow.document);
+      
       // Use html2canvas to capture the content
-      const canvas = await html2canvas(previewWindow.document.body, {
-        scale: 2,
-        useCORS: true,
-        allowTaint: true,
-        logging: false,
-        imageTimeout: 0,
-        ignoreElements: (element) => {
-          // Don't ignore any images - we want all images including logo, signatures, stamps
-          return false;
-        }
-      });
+      const canvas = await html2canvas(previewWindow.document.body, {...window.ImageCorsFix.HTML2CANVAS_OPTIONS, scale: 2});
       
       // SESSION 33: Convert canvas to PDF with multiple pages and margins (same as search results)
       const { jsPDF } = window.jspdf;

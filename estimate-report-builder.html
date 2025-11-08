@@ -830,12 +830,14 @@
   <!-- PDF Export Libraries (same as parts search) -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="./image-cors-fix.js"></script>
 
   <script src="https://cdn.jsdelivr.net/npm/handlebars@latest/dist/handlebars.min.js"></script>
   <script src="./math-preview.js"></script>
 </head>
 <body>
-  <img class="bg" src="https://assets.carmelcayouf.com/assets/bg-report.png" alt="">
+  <!-- Background image moved to CSS to avoid CORS issues -->
+  <div class="bg-container"></div>
   <div class="page">
   <div class="estimate-header">
     <img src="https://carmelcayouf.com/wp-content/uploads/2025/06/g.webp" alt="Logo" style="width: 80px; margin-bottom: 15px;">
@@ -2301,19 +2303,12 @@
             // Use html2canvas with timeout protection and optimized settings
             let canvas;
             try {
+              // 🔧 PHASE 10 FIX: Convert external images to data URIs to fix CORS issues
+              await window.ImageCorsFix.fixImagesForPDF(reviewWindow.document);
+              
               // Add timeout wrapper for html2canvas to prevent hanging
               canvas = await Promise.race([
-                html2canvas(reviewWindow.document.body, {
-                  scale: 1,
-                  useCORS: true,
-                  allowTaint: true,
-                  logging: false,
-                  imageTimeout: 15000, // 15 second timeout for images
-                  ignoreElements: (element) => {
-                    // Don't ignore any images - we want all images including logo, signatures, stamps
-                    return false;
-                  }
-                }),
+                html2canvas(reviewWindow.document.body, window.ImageCorsFix.HTML2CANVAS_OPTIONS),
                 new Promise((_, reject) => 
                   setTimeout(() => reject(new Error('PDF generation timeout')), 30000) // 30 second total timeout
                 )
@@ -2614,20 +2609,11 @@
               // Wait for content to load
               await new Promise(resolve => setTimeout(resolve, 1000));
 
+              // 🔧 PHASE 10 FIX: Convert external images to data URIs to fix CORS issues
+              await window.ImageCorsFix.fixImagesForPDF(reviewWindow.document);
+
               // Use html2canvas with REDUCED scale to avoid 413 error
-              const canvas = await html2canvas(reviewWindow.document.body, {
-                scale: 1,
-                useCORS: true,
-                allowTaint: true,
-                logging: false,
-                imageTimeout: 0,
-                foreignObjectRendering: true,
-                proxy: undefined,
-                ignoreElements: (element) => {
-                  // Don't ignore any images - we want all images including logo, signatures, stamps
-                  return false;
-                }
-              });
+              const canvas = await html2canvas(reviewWindow.document.body, window.ImageCorsFix.HTML2CANVAS_OPTIONS);
 
               // Convert canvas to PDF with multiple pages and margins
               const { jsPDF } = window.jspdf;
