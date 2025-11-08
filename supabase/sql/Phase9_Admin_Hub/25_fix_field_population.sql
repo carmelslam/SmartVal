@@ -101,6 +101,64 @@ BEGIN
     planned_repairs_text := TRIM(TRAILING '; ' FROM planned_repairs_text);
     planned_parts_text := TRIM(TRAILING '; ' FROM planned_parts_text);
     planned_work_text := TRIM(TRAILING '; ' FROM planned_work_text);
+    
+    -- 🔧 FALLBACK: If no data extracted, try expertise.damage_blocks
+    IF planned_repairs_text = '' AND planned_parts_text = '' AND planned_work_text = '' THEN
+      DECLARE
+        damage_blocks_array JSONB;
+        block_item JSONB;
+        repair_item JSONB;
+        part_item JSONB;
+        work_item JSONB;
+      BEGIN
+        damage_blocks_array := helper_json->'expertise'->'damage_blocks';
+        
+        IF damage_blocks_array IS NOT NULL AND jsonb_typeof(damage_blocks_array) = 'array' THEN
+          FOR block_item IN SELECT * FROM jsonb_array_elements(damage_blocks_array)
+          LOOP
+            -- Extract repairs from damage_blocks
+            IF block_item->'repairs' IS NOT NULL THEN
+              FOR repair_item IN SELECT * FROM jsonb_array_elements(COALESCE(block_item->'repairs', '[]'::JSONB))
+              LOOP
+                planned_repairs_text := planned_repairs_text || 
+                  COALESCE(repair_item->>'description', repair_item->>'name', repair_item->>'title', '') || '; ';
+              END LOOP;
+            END IF;
+
+            -- Extract parts from damage_blocks
+            IF block_item->'parts' IS NOT NULL THEN
+              FOR part_item IN SELECT * FROM jsonb_array_elements(COALESCE(block_item->'parts', '[]'::JSONB))
+              LOOP
+                planned_parts_text := planned_parts_text || 
+                  COALESCE(part_item->>'name', part_item->>'description', part_item->>'title', '') || 
+                  CASE WHEN part_item->>'quantity' IS NOT NULL 
+                       THEN ' (כמות: ' || (part_item->>'quantity') || ')'
+                       ELSE ''
+                  END || '; ';
+              END LOOP;
+            END IF;
+
+            -- Extract work from damage_blocks
+            IF block_item->'work' IS NOT NULL OR block_item->'works' IS NOT NULL THEN
+              FOR work_item IN SELECT * FROM jsonb_array_elements(COALESCE(block_item->'work', block_item->'works', '[]'::JSONB))
+              LOOP
+                planned_work_text := planned_work_text || 
+                  COALESCE(work_item->>'description', work_item->>'name', work_item->>'title', '') || 
+                  CASE WHEN work_item->>'hours' IS NOT NULL 
+                       THEN ' (' || (work_item->>'hours') || ' שעות)'
+                       ELSE ''
+                  END || '; ';
+              END LOOP;
+            END IF;
+          END LOOP;
+          
+          -- Clean up trailing separators
+          planned_repairs_text := TRIM(TRAILING '; ' FROM planned_repairs_text);
+          planned_parts_text := TRIM(TRAILING '; ' FROM planned_parts_text);
+          planned_work_text := TRIM(TRAILING '; ' FROM planned_work_text);
+        END IF;
+      END;
+    END IF;
 
     -- Insert ONE row for the entire report with properly extracted data
     INSERT INTO tracking_expertise (
@@ -147,45 +205,103 @@ BEGIN
     RETURN 1;  -- One row inserted
   END IF;
 
-  -- 🔧 FALLBACK: If no centers found, still save basic expertise data
-  INSERT INTO tracking_expertise (
-    case_id,
-    case_number,
-    plate,
-    damage_center_count,
-    damage_center_index,
-    damage_center_name,
-    description,
-    planned_repairs,
-    planned_parts,
-    planned_work,
-    guidance,
-    notes,
-    status,
-    is_current,
-    pdf_storage_path,
-    pdf_public_url,
-    timestamp
-  )
-  VALUES (
-    p_case_id,
-    case_number_val,
-    p_plate,
-    0,  -- No centers
-    1,
-    'No damage centers found',
-    COALESCE(helper_json->>'description', 'Expertise report'),
-    '',  -- Empty planned repairs
-    '',  -- Empty planned parts
-    '',  -- Empty planned work
-    COALESCE(helper_json->'expertise'->'summary'->>'directive', helper_json->'expertise'->>'guidance', helper_json->>'guidance', ''),
-    COALESCE(helper_json->'expertise'->'summary'->>'notes', helper_json->'expertise'->>'notes', helper_json->>'notes', ''),
-    p_status,
-    true,
-    p_pdf_storage_path,
-    p_pdf_public_url,
-    now()
-  );
+  -- 🔧 FALLBACK: If no centers found, try to extract from expertise.damage_blocks
+  DECLARE
+    fallback_repairs_text TEXT := '';
+    fallback_parts_text TEXT := '';
+    fallback_work_text TEXT := '';
+    damage_blocks_array JSONB;
+    block_item JSONB;
+    repair_item JSONB;
+    part_item JSONB;
+    work_item JSONB;
+  BEGIN
+    damage_blocks_array := helper_json->'expertise'->'damage_blocks';
+    
+    IF damage_blocks_array IS NOT NULL AND jsonb_typeof(damage_blocks_array) = 'array' THEN
+      FOR block_item IN SELECT * FROM jsonb_array_elements(damage_blocks_array)
+      LOOP
+        -- Extract repairs from damage_blocks
+        IF block_item->'repairs' IS NOT NULL THEN
+          FOR repair_item IN SELECT * FROM jsonb_array_elements(COALESCE(block_item->'repairs', '[]'::JSONB))
+          LOOP
+            fallback_repairs_text := fallback_repairs_text || 
+              COALESCE(repair_item->>'description', repair_item->>'name', repair_item->>'title', '') || '; ';
+          END LOOP;
+        END IF;
+
+        -- Extract parts from damage_blocks
+        IF block_item->'parts' IS NOT NULL THEN
+          FOR part_item IN SELECT * FROM jsonb_array_elements(COALESCE(block_item->'parts', '[]'::JSONB))
+          LOOP
+            fallback_parts_text := fallback_parts_text || 
+              COALESCE(part_item->>'name', part_item->>'description', part_item->>'title', '') || 
+              CASE WHEN part_item->>'quantity' IS NOT NULL 
+                   THEN ' (כמות: ' || (part_item->>'quantity') || ')'
+                   ELSE ''
+              END || '; ';
+          END LOOP;
+        END IF;
+
+        -- Extract work from damage_blocks
+        IF block_item->'work' IS NOT NULL OR block_item->'works' IS NOT NULL THEN
+          FOR work_item IN SELECT * FROM jsonb_array_elements(COALESCE(block_item->'work', block_item->'works', '[]'::JSONB))
+          LOOP
+            fallback_work_text := fallback_work_text || 
+              COALESCE(work_item->>'description', work_item->>'name', work_item->>'title', '') || 
+              CASE WHEN work_item->>'hours' IS NOT NULL 
+                   THEN ' (' || (work_item->>'hours') || ' שעות)'
+                   ELSE ''
+              END || '; ';
+          END LOOP;
+        END IF;
+      END LOOP;
+      
+      -- Clean up trailing separators
+      fallback_repairs_text := TRIM(TRAILING '; ' FROM fallback_repairs_text);
+      fallback_parts_text := TRIM(TRAILING '; ' FROM fallback_parts_text);
+      fallback_work_text := TRIM(TRAILING '; ' FROM fallback_work_text);
+    END IF;
+  
+    INSERT INTO tracking_expertise (
+      case_id,
+      case_number,
+      plate,
+      damage_center_count,
+      damage_center_index,
+      damage_center_name,
+      description,
+      planned_repairs,
+      planned_parts,
+      planned_work,
+      guidance,
+      notes,
+      status,
+      is_current,
+      pdf_storage_path,
+      pdf_public_url,
+      timestamp
+    )
+    VALUES (
+      p_case_id,
+      case_number_val,
+      p_plate,
+      COALESCE(jsonb_array_length(damage_blocks_array), 0),
+      1,
+      'Extracted from damage blocks',
+      COALESCE(helper_json->>'description', 'Expertise report from damage blocks'),
+      fallback_repairs_text,  -- 🔧 FALLBACK: Extracted from expertise.damage_blocks
+      fallback_parts_text,    -- 🔧 FALLBACK: Extracted from expertise.damage_blocks
+      fallback_work_text,     -- 🔧 FALLBACK: Extracted from expertise.damage_blocks
+      COALESCE(helper_json->'expertise'->'summary'->>'directive', helper_json->'expertise'->>'guidance', helper_json->>'guidance', ''),
+      COALESCE(helper_json->'expertise'->'summary'->>'notes', helper_json->'expertise'->>'notes', helper_json->>'notes', ''),
+      p_status,
+      true,
+      p_pdf_storage_path,
+      p_pdf_public_url,
+      now()
+    );
+  END;
 
   RETURN 1;  -- Fallback row inserted
 END;
