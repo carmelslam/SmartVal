@@ -133,10 +133,10 @@ BEGIN
       planned_repairs_text,  -- 🔧 PHASE 10 FIX: Properly formatted text
       planned_parts_text,    -- 🔧 PHASE 10 FIX: Properly formatted text
       planned_work_text,     -- 🔧 PHASE 10 FIX: Properly formatted text
-      -- 🔧 PHASE 10 FIX: Enhanced guidance extraction with multiple fallback paths
-      COALESCE(helper_json->'expertise'->>'guidance', helper_json->>'guidance', ''),
-      -- 🔧 PHASE 10 FIX: Enhanced notes extraction with multiple fallback paths  
-      COALESCE(helper_json->'expertise'->>'notes', helper_json->>'notes', ''),
+      -- 🔧 PHASE 10 FIX: Correct guidance extraction (directive)
+      COALESCE(helper_json->'expertise'->'summary'->>'directive', helper_json->'expertise'->>'guidance', helper_json->>'guidance', ''),
+      -- 🔧 PHASE 10 FIX: Correct notes extraction  
+      COALESCE(helper_json->'expertise'->'summary'->>'notes', helper_json->'expertise'->>'notes', helper_json->>'notes', ''),
       p_status,
       true,
       p_pdf_storage_path,
@@ -178,8 +178,8 @@ BEGIN
     '',  -- Empty planned repairs
     '',  -- Empty planned parts
     '',  -- Empty planned work
-    COALESCE(helper_json->'expertise'->>'guidance', helper_json->>'guidance', ''),
-    COALESCE(helper_json->'expertise'->>'notes', helper_json->>'notes', ''),
+    COALESCE(helper_json->'expertise'->'summary'->>'directive', helper_json->'expertise'->>'guidance', helper_json->>'guidance', ''),
+    COALESCE(helper_json->'expertise'->'summary'->>'notes', helper_json->'expertise'->>'notes', helper_json->>'notes', ''),
     p_status,
     true,
     p_pdf_storage_path,

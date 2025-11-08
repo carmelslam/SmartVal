@@ -2483,13 +2483,18 @@
                 }
               };
 
+              // 🔧 PHASE 10 FIX: Only save to database if PDF upload succeeded
+              if (uploadError) {
+                throw new Error('PDF upload failed - cannot save estimate without PDF');
+              }
+              
               const { data, error } = await window.supabase.rpc('upsert_tracking_final_report_from_helper', {
                 helper_json: helperForSupabase,
                 p_case_id: actualCaseId,
                 p_plate: plate?.replace(/-/g, ''),
                 p_report_type: 'estimate',
                 p_status: 'final',  // ✅ Export button creates final version
-                p_pdf_storage_path: uploadError ? null : storagePath,
+                p_pdf_storage_path: storagePath,
                 p_pdf_public_url: publicUrl
               });
 
