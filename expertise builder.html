@@ -1250,24 +1250,51 @@
               let heightLeft = imgHeight;
               let position = topMargin;
 
-              // Add watermark function for expertise directive
+              // Add watermark function for expertise directive with enhanced Hebrew support
               function addDirectiveWatermark(pdf, pageWidth, pageHeight) {
-                const helper = window.helper || JSON.parse(sessionStorage.getItem('helper') || '{}');
-                const directive = helper.expertise?.summary?.directive || helper.expertise?.guidance || 'לתיקון';
-                
-                pdf.setFontSize(40);
-                pdf.setTextColor(100, 100, 100, 0.3); // Gray with transparency
-                pdf.saveGraphicsState();
-                pdf.setGState(pdf.GState({ opacity: 0.3 }));
-                
-                // Calculate center position
-                const textWidth = pdf.getTextWidth(directive);
-                const x = (pageWidth - textWidth) / 2;
-                const y = pageHeight / 2;
-                
-                // Add directive watermark text at 45 degree angle
-                pdf.text(directive, x, y, { angle: -45, align: 'center' });
-                pdf.restoreGraphicsState();
+                try {
+                  const helper = window.helper || JSON.parse(sessionStorage.getItem('helper') || '{}');
+                  const directive = helper.expertise?.summary?.directive || helper.expertise?.guidance || 'לתיקון';
+                  
+                  console.log(`📋 Adding directive watermark: "${directive}"`);
+                  
+                  pdf.setFontSize(50); // Increased size for better visibility
+                  pdf.setTextColor(120, 120, 120); // Darker gray for better visibility
+                  pdf.saveGraphicsState();
+                  pdf.setGState(pdf.GState({ opacity: 0.4 })); // Increased opacity
+                  
+                  // Calculate center position with proper text width measurement
+                  const textWidth = pdf.getTextWidth(directive);
+                  const x = (pageWidth - textWidth) / 2;
+                  const y = pageHeight / 2;
+                  
+                  // Add directive watermark text at 45 degree angle with proper encoding
+                  pdf.text(directive, x, y, { 
+                    angle: -45, 
+                    align: 'center',
+                    renderingMode: 'fill'
+                  });
+                  pdf.restoreGraphicsState();
+                  console.log(`✅ Successfully added directive watermark on page`);
+                } catch (e) {
+                  console.warn('Failed to add directive watermark:', e);
+                  // Fallback to English if Hebrew fails
+                  try {
+                    pdf.setFontSize(50);
+                    pdf.setTextColor(120, 120, 120);
+                    pdf.saveGraphicsState();
+                    pdf.setGState(pdf.GState({ opacity: 0.4 }));
+                    const fallbackText = 'FOR REPAIR';
+                    const textWidth = pdf.getTextWidth(fallbackText);
+                    const x = (pageWidth - textWidth) / 2;
+                    const y = pageHeight / 2;
+                    pdf.text(fallbackText, x, y, { angle: -45, align: 'center' });
+                    pdf.restoreGraphicsState();
+                    console.log(`✅ Added fallback directive watermark`);
+                  } catch (fallbackError) {
+                    console.error('Failed to add fallback directive watermark:', fallbackError);
+                  }
+                }
               }
 
               pdf.addImage(imgData, 'JPEG', leftMargin, position, contentWidth, imgHeight);

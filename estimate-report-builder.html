@@ -2338,24 +2338,46 @@
               let heightLeft = imgHeight;
               let position = topMargin;
 
-              // Add watermark for draft PDFs
+              // Add watermark for draft PDFs with proper Hebrew support
               function addWatermarkToPage(pdf, pageWidth, pageHeight, text) {
                 try {
+                  // Ensure Hebrew text is properly encoded
+                  const hebrewText = text || 'DRAFT ONLY';
+                  
                   pdf.setFontSize(60);
                   pdf.setTextColor(220, 38, 38); // Light red 
                   pdf.saveGraphicsState();
                   pdf.setGState(pdf.GState({ opacity: 0.2 }));
                   
-                  // Calculate center position
-                  const textWidth = pdf.getTextWidth(text);
+                  // Calculate center position with proper text width measurement
+                  const textWidth = pdf.getTextWidth(hebrewText);
                   const x = (pageWidth - textWidth) / 2;
                   const y = pageHeight / 2;
                   
-                  // Add watermark text at 45 degree angle
-                  pdf.text(text, x, y, { angle: -45, align: 'center' });
+                  // Add watermark text at 45 degree angle with proper encoding
+                  pdf.text(hebrewText, x, y, { 
+                    angle: -45, 
+                    align: 'center',
+                    renderingMode: 'fill'
+                  });
                   pdf.restoreGraphicsState();
                 } catch (e) {
                   console.warn('Failed to add watermark:', e);
+                  // Fallback to English if Hebrew fails
+                  try {
+                    pdf.setFontSize(60);
+                    pdf.setTextColor(220, 38, 38);
+                    pdf.saveGraphicsState();
+                    pdf.setGState(pdf.GState({ opacity: 0.2 }));
+                    const fallbackText = 'DRAFT ONLY';
+                    const textWidth = pdf.getTextWidth(fallbackText);
+                    const x = (pageWidth - textWidth) / 2;
+                    const y = pageHeight / 2;
+                    pdf.text(fallbackText, x, y, { angle: -45, align: 'center' });
+                    pdf.restoreGraphicsState();
+                  } catch (fallbackError) {
+                    console.error('Failed to add fallback watermark:', fallbackError);
+                  }
                 }
               }
 
@@ -2631,24 +2653,46 @@
               let heightLeft = imgHeight;
               let position = topMargin;
 
-              // Add watermark for draft PDFs
+              // Add watermark for draft PDFs with proper Hebrew support
               function addWatermarkToPage(pdf, pageWidth, pageHeight, text) {
                 try {
+                  // Ensure Hebrew text is properly encoded
+                  const hebrewText = text || 'DRAFT ONLY';
+                  
                   pdf.setFontSize(60);
                   pdf.setTextColor(220, 38, 38); // Light red 
                   pdf.saveGraphicsState();
                   pdf.setGState(pdf.GState({ opacity: 0.2 }));
                   
-                  // Calculate center position
-                  const textWidth = pdf.getTextWidth(text);
+                  // Calculate center position with proper text width measurement
+                  const textWidth = pdf.getTextWidth(hebrewText);
                   const x = (pageWidth - textWidth) / 2;
                   const y = pageHeight / 2;
                   
-                  // Add watermark text at 45 degree angle
-                  pdf.text(text, x, y, { angle: -45, align: 'center' });
+                  // Add watermark text at 45 degree angle with proper encoding
+                  pdf.text(hebrewText, x, y, { 
+                    angle: -45, 
+                    align: 'center',
+                    renderingMode: 'fill'
+                  });
                   pdf.restoreGraphicsState();
                 } catch (e) {
                   console.warn('Failed to add watermark:', e);
+                  // Fallback to English if Hebrew fails
+                  try {
+                    pdf.setFontSize(60);
+                    pdf.setTextColor(220, 38, 38);
+                    pdf.saveGraphicsState();
+                    pdf.setGState(pdf.GState({ opacity: 0.2 }));
+                    const fallbackText = 'DRAFT ONLY';
+                    const textWidth = pdf.getTextWidth(fallbackText);
+                    const x = (pageWidth - textWidth) / 2;
+                    const y = pageHeight / 2;
+                    pdf.text(fallbackText, x, y, { angle: -45, align: 'center' });
+                    pdf.restoreGraphicsState();
+                  } catch (fallbackError) {
+                    console.error('Failed to add fallback watermark:', fallbackError);
+                  }
                 }
               }
 
