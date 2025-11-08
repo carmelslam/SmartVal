@@ -128,8 +128,10 @@ BEGIN
       planned_repairs_text,  -- 🔧 PHASE 10 FIX: Properly formatted text
       planned_parts_text,    -- 🔧 PHASE 10 FIX: Properly formatted text
       planned_work_text,     -- 🔧 PHASE 10 FIX: Properly formatted text
-      COALESCE(helper_json->'expertise'->>'guidance', helper_json->>'guidance'), -- 🔧 PHASE 10 FIX: Extract guidance
-      COALESCE(helper_json->'expertise'->>'notes', helper_json->>'notes'), -- 🔧 PHASE 10 FIX: Extract notes
+      -- 🔧 PHASE 10 FIX: Enhanced guidance extraction with multiple fallback paths
+      COALESCE(helper_json->'expertise'->>'guidance', helper_json->>'guidance', ''),
+      -- 🔧 PHASE 10 FIX: Enhanced notes extraction with multiple fallback paths  
+      COALESCE(helper_json->'expertise'->>'notes', helper_json->>'notes', ''),
       p_status,
       true,
       p_pdf_storage_path,
@@ -162,6 +164,7 @@ DECLARE
   damage_centers_names TEXT;
   total_parts_sum NUMERIC := 0;
   total_work_sum NUMERIC := 0;
+  total_repairs_sum NUMERIC := 0;
   actual_repairs_text TEXT := '';
   depreciation_amount NUMERIC := 0;
   final_compensation_amount NUMERIC := 0;
@@ -192,8 +195,10 @@ BEGIN
     -- Sum up totals and extract actual repairs from all centers
     FOR center IN SELECT * FROM jsonb_array_elements(centers_array)
     LOOP
-      total_parts_sum := total_parts_sum + COALESCE((center->'Parts'->>'total_cost')::NUMERIC, 0);
-      total_work_sum := total_work_sum + COALESCE((center->'Works'->>'total_cost')::NUMERIC, 0);
+      -- 🔧 PHASE 10 FIX: Use correct field paths based on actual helper structure
+      total_parts_sum := total_parts_sum + COALESCE((center->'Parts'->'parts_meta'->>'total_cost')::NUMERIC, 0);
+      total_work_sum := total_work_sum + COALESCE((center->'Works'->'works_meta'->>'total_cost')::NUMERIC, 0);
+      total_repairs_sum := total_repairs_sum + COALESCE((center->'Repairs'->'repairs_meta'->>'total_cost')::NUMERIC, 0);
       
       -- 🔧 PHASE 10 FIX: Extract actual repairs performed
       IF center->'actual_repairs' IS NOT NULL THEN
@@ -220,7 +225,7 @@ BEGIN
       (helper_json->'calculations'->>'final_compensation')::NUMERIC,
       (helper_json->'calculations'->>'total_compensation')::NUMERIC,
       (helper_json->'valuation'->>'final_compensation')::NUMERIC,
-      total_parts_sum + total_work_sum - depreciation_amount
+      total_parts_sum + total_work_sum + total_repairs_sum - depreciation_amount
     );
 
     -- Insert ONE row for the entire report with properly extracted data
@@ -254,10 +259,11 @@ BEGIN
       actual_repairs_text,  -- 🔧 PHASE 10 FIX: Properly formatted repairs text
       total_parts_sum,
       total_work_sum,
-      total_parts_sum + total_work_sum,  -- Claim amount = parts + work
+      total_parts_sum + total_work_sum + total_repairs_sum,  -- Claim amount = parts + work + repairs
       depreciation_amount,  -- 🔧 PHASE 10 FIX: Properly extracted depreciation
       final_compensation_amount,  -- 🔧 PHASE 10 FIX: Properly calculated compensation
-      COALESCE(helper_json->p_report_type->>'notes', helper_json->>'notes'), -- 🔧 PHASE 10 FIX: Extract notes
+      -- 🔧 PHASE 10 FIX: Enhanced notes extraction with report type specific paths
+      COALESCE(helper_json->p_report_type->>'notes', helper_json->'final_report'->>'notes', helper_json->'estimate'->>'notes', helper_json->>'notes', ''),
       p_status,
       true,
       p_pdf_storage_path,
