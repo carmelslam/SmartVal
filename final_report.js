@@ -147,8 +147,17 @@ const urlParams = new URLSearchParams(window.location.search);
 const fromExpertise = urlParams.get('from') === 'expertise';
 const skipValidation = urlParams.get('skipValidation') === 'true';
 
-// Draft mode: either explicitly set as draft, coming from expertise, or not finalized
-const isDraft = helper.meta?.status === 'draft' || fromExpertise || skipValidation || !helper.meta?.finalized;
+// 🔧 PHASE 10 FIX: Make isDraft calculation dynamic and reactive
+function getIsDraft() {
+  // Always get the latest helper state
+  const currentHelper = window.helper || JSON.parse(sessionStorage.getItem('helper') || '{}');
+  
+  // Draft mode: either explicitly set as draft, coming from expertise, or not finalized
+  return currentHelper.meta?.status === 'draft' || fromExpertise || skipValidation || !currentHelper.meta?.finalized;
+}
+
+// Legacy variable for backward compatibility - but always get current state
+let isDraft = getIsDraft();
 const isInvoiceOverride = helper.invoice_uploaded === true;
 
 // --- Vault Placeholder Replacer ---
@@ -331,14 +340,25 @@ function setupHandlebarsHelpers() {
 
 // --- Watermark Handling ---
 function applyDraftWatermark(html) {
-  if (!isDraft) return html;
+  // 🔧 PHASE 10 FIX: Use dynamic draft status check
+  const currentIsDraft = getIsDraft();
+  console.log('🔍 Watermark check - currentIsDraft:', currentIsDraft);
+  
+  if (!currentIsDraft) {
+    console.log('✅ Final report - no watermark applied');
+    return html;
+  }
+  
+  console.log('⚠️ Draft report - applying watermark');
   const watermark = '<div style="position:fixed; top:50%; left:50%; transform:translate(-50%, -50%) rotate(-45deg); font-size:6rem; color:rgba(220, 38, 38, 0.2); z-index:9999; pointer-events:none; font-weight:bold;">טיוטה בלבד</div>';
   return watermark + html;
 }
 
 // --- Report Title Logic ---
 function getReportTitle() {
-  if (isDraft) return 'טיוטת חוות דעת';
+  // 🔧 PHASE 10 FIX: Use dynamic draft status check
+  const currentIsDraft = getIsDraft();
+  if (currentIsDraft) return 'טיוטת חוות דעת';
   return vault[reportType]?.title || 'חוות דעת';
 }
 
@@ -1679,7 +1699,30 @@ window.finalReport = {
   inject: injectReportHTML,
   export: exportFinalReport,
   print: printReport,
-  init: initializeFinalReport
+  init: initializeFinalReport,
+  // 🔧 PHASE 10 FIX: Add refresh method for watermark status changes
+  refresh: function() {
+    console.log('🔄 Refreshing final report status...');
+    
+    // Update the legacy isDraft variable for backward compatibility
+    isDraft = getIsDraft();
+    console.log('✅ Updated isDraft status:', isDraft);
+    
+    // Remove any existing watermarks from DOM
+    const existingWatermarks = document.querySelectorAll('[style*="טיוטה בלבד"]');
+    console.log('🧹 Removing existing watermarks:', existingWatermarks.length);
+    existingWatermarks.forEach(el => el.remove());
+    
+    // Re-inject the report with updated status
+    if (typeof injectReportHTML === 'function') {
+      console.log('💉 Re-injecting report HTML...');
+      injectReportHTML();
+    }
+    
+    console.log('✅ Final report refresh completed');
+  },
+  // Expose the dynamic draft status checker
+  getIsDraft: getIsDraft
 };
 
 console.log('✅ final_report.js loaded with session logic, fees, watermark, and vault rendering');

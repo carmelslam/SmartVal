@@ -4,6 +4,7 @@
   <meta charset="utf-8">
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700;800;900&display=swap');
+    @import url('./css/modern-buttons.css');
     
     @page { size: A4; margin: 0; }
     body{ margin:0; direction:rtl; -webkit-print-color-adjust:exact; print-color-adjust:exact;
@@ -356,6 +357,129 @@
     .home-btn { background: linear-gradient(135deg, #6c757d 0%, #495057 100%); }
     .draft-opinion-btn { background: linear-gradient(135deg, #17a2b8 0%, #138496 100%); }
     .draft-estimate-btn { background: linear-gradient(135deg, #fd7e14 0%, #e8690b 100%); }
+    
+    /* 🔥 PHASE 10: Enhanced 3D Button Styling with Animations */
+    .control-btn {
+      position: relative;
+      overflow: hidden;
+      border: none;
+      border-radius: 12px;
+      padding: 14px 24px;
+      font-size: 16px;
+      font-weight: 600;
+      color: white;
+      cursor: pointer;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      min-height: 52px;
+      box-shadow: 
+        0 4px 15px rgba(0,0,0,0.2),
+        0 2px 8px rgba(0,0,0,0.1),
+        inset 0 1px 0 rgba(255,255,255,0.2);
+      transform: translateY(0);
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+    }
+
+    .control-btn:hover {
+      transform: translateY(-3px);
+      box-shadow: 
+        0 8px 25px rgba(0,0,0,0.3),
+        0 4px 12px rgba(0,0,0,0.15),
+        inset 0 1px 0 rgba(255,255,255,0.3);
+    }
+
+    .control-btn:active {
+      transform: translateY(-1px);
+      box-shadow: 
+        0 3px 10px rgba(0,0,0,0.25),
+        0 1px 4px rgba(0,0,0,0.1),
+        inset 0 1px 0 rgba(255,255,255,0.2);
+    }
+
+    /* Enhanced Submit Button with Loading State */
+    .submit-btn {
+      background: linear-gradient(135deg, #28a745 0%, #20c997 100%) !important;
+      position: relative;
+    }
+
+    .submit-btn:hover {
+      background: linear-gradient(135deg, #34ce57 0%, #2dd4aa 100%) !important;
+    }
+
+    .submit-btn.loading {
+      background: linear-gradient(135deg, #6c757d 0%, #495057 100%) !important;
+      cursor: not-allowed;
+      transform: translateY(0) !important;
+      pointer-events: none;
+    }
+
+    .submit-btn.loading::after {
+      content: "";
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 20px;
+      height: 20px;
+      border: 2px solid rgba(255,255,255,0.3);
+      border-top: 2px solid white;
+      border-radius: 50%;
+      transform: translate(-50%, -50%);
+      animation: buttonSpin 1s linear infinite;
+    }
+
+    .submit-btn.loading .btn-text {
+      opacity: 0.6;
+    }
+
+    /* Loading Animation */
+    @keyframes buttonSpin {
+      0% { transform: translate(-50%, -50%) rotate(0deg); }
+      100% { transform: translate(-50%, -50%) rotate(360deg); }
+    }
+
+    /* Success Animation */
+    @keyframes successPulse {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.05); }
+      100% { transform: scale(1); }
+    }
+
+    .submit-btn.success {
+      background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important;
+      animation: successPulse 0.6s ease-in-out;
+    }
+
+    .submit-btn.success::after {
+      content: "✅";
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 20px;
+    }
+
+    /* Button Ripple Effect */
+    .control-btn::before {
+      content: "";
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 0;
+      height: 0;
+      background: rgba(255,255,255,0.3);
+      border-radius: 50%;
+      transform: translate(-50%, -50%);
+      transition: width 0.6s ease, height 0.6s ease;
+    }
+
+    .control-btn:active::before {
+      width: 300px;
+      height: 300px;
+    }
     
     /* Text boxes for all non-table content */
     .text-box {
@@ -1185,11 +1309,10 @@
       }
       
       if (confirm('האם אתה בטוח שברצונך לשלוח את האקספירטיזה הסופית? לא יהיה ניתן לערוך לאחר מכן.')) {
-        // Disable button and change text to show it's processing
+        // 🔥 PHASE 10: Enhanced loading state with modern CSS
         submitButton.disabled = true;
+        submitButton.classList.add('loading');
         const originalText = submitButton.innerHTML;
-        submitButton.innerHTML = '⏳ שולח... אנא המתן';
-        submitButton.style.opacity = '0.6';
         
         // SESSION 88: Save version FIRST before submission
         if (window.saveHelperVersion && window.helper) {
@@ -1615,14 +1738,14 @@
               }
             })();
 
-            // Send 3 essential webhooks sequentially for better reliability
-            console.log('📤 1/3 Sending EXPERTISE_HTML...');
-            console.log('🔍 DEBUG: EXPERTISE_HTML payload size:', JSON.stringify(htmlPayload).length, 'characters');
+            // 🔧 PHASE 10 FIX: Send 3 essential webhooks sequentially for better reliability
+            console.log('📤 1/3 Sending LAUNCH_EXPERTISE...');
+            console.log('🔍 DEBUG: LAUNCH_EXPERTISE payload size:', JSON.stringify(htmlPayload).length, 'characters');
             console.log('🔍 DEBUG: HTML content preview:', htmlPayload.html.substring(0, 500) + '...');
             console.log('🔍 DEBUG: HTML contains populated data?', htmlPayload.html.includes(payload.plate), htmlPayload.html.includes('דו"ח אקספרטיזה'));
-            return sendToWebhook('EXPERTISE_HTML', htmlPayload)
+            return sendToWebhook('LAUNCH_EXPERTISE', htmlPayload)
               .then(async () => {
-                console.log('✅ 1/3 EXPERTISE_HTML sent successfully');
+                console.log('✅ 1/3 LAUNCH_EXPERTISE sent successfully');
                 console.log('📤 2/3 Sending SUBMIT_ESTIMATE_DRAFT...');
 
                 // Fetch estimate HTML from the actual report URL
@@ -1680,17 +1803,18 @@
           .then(() => {
             console.log('✅ All webhooks completed successfully');
             alert('האקספירטיזה נשלחה בהצלחה! (3 webhooks sent)');
-            // Keep button disabled after successful submission
-            submitButton.innerHTML = '✅ נשלח בהצלחה';
-            submitButton.style.backgroundColor = '#059669';
+            // 🔥 PHASE 10: Enhanced success state with modern CSS
+            submitButton.classList.remove('loading');
+            submitButton.classList.add('success');
+            submitButton.innerHTML = '<span class="btn-text">✅ נשלח בהצלחה</span>';
           })
           .catch((error) => {
             console.error('❌ Webhook sequence failed:', error);
             alert('שגיאה בשליחה: ' + error.message);
-            // Re-enable button on error so user can retry
+            // 🔥 PHASE 10: Enhanced error state reset
+            submitButton.classList.remove('loading');
             submitButton.disabled = false;
             submitButton.innerHTML = originalText;
-            submitButton.style.opacity = '1';
             submitButton.style.backgroundColor = '';
           });
           
@@ -1978,7 +2102,7 @@
         🖨️ תצוגה מקדימה להדפסה
       </button>
       <button type="button" class="control-btn submit-btn" onclick="submitFinalExpertise()">
-        📤 אישור סופי ושליחה
+        <span class="btn-text">📤 אישור סופי ושליחה</span>
       </button>
       <button type="button" class="control-btn home-btn" onclick="window.location.href='selection.html'">
         🏠 חזור לדף הבחירה

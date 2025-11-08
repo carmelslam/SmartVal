@@ -2602,6 +2602,26 @@
                       });
 
                       console.log('✅ Final report draft saved successfully');
+                      
+                      // 🔥 PHASE 10: Send FINAL_REPORT_DRAFT webhook for final report draft
+                      try {
+                        console.log('📤 Sending FINAL_REPORT_DRAFT webhook...');
+                        const frWebhookPayload = {
+                          action: 'FINAL_REPORT_DRAFT',
+                          plate: plate,
+                          case_id: actualCaseId,
+                          helper: frHelperForSupabase,
+                          pdf_url: frPublicUrl,
+                          storage_path: frStoragePath,
+                          report_type: 'final_report',
+                          status: 'draft'
+                        };
+                        
+                        await sendToWebhook('FINAL_REPORT_DRAFT', frWebhookPayload);
+                        console.log('✅ FINAL_REPORT_DRAFT webhook sent successfully');
+                      } catch (webhookError) {
+                        console.warn('⚠️ Failed to send FINAL_REPORT_DRAFT webhook:', webhookError);
+                      }
                     }
                   }
                 } catch (finalReportError) {

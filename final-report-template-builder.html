@@ -1586,36 +1586,61 @@
         }
       }
       
-      // Set report as finalized in helper metadata
+      // 🔧 PHASE 10 FIX: Set report as finalized in helper metadata
       helper.meta = helper.meta || {};
       helper.meta.status = 'final';
       helper.meta.finalized = true;
       
-      // Update helper in sessionStorage to affect final_report.js logic
+      // Update helper in sessionStorage and window to affect final_report.js logic
       window.helper = helper;
       sessionStorage.setItem('helper', JSON.stringify(helper));
+      console.log('✅ Updated helper status to final:', helper.meta);
       
-      // Set finalReport object as finalized
-      if (window.finalReport && window.finalReport.isDraft !== undefined) {
-        window.finalReport.isDraft = false;
+      // 🔧 PHASE 10 FIX: Use new refresh method to properly update watermark
+      if (window.finalReport?.refresh) {
+        console.log('🔄 Using new refresh method...');
+        window.finalReport.refresh();
+      } else {
+        console.log('⚠️ Refresh method not available, using legacy method...');
+        // Fallback to legacy method if refresh not available
+        if (window.finalReport?.init) {
+          window.finalReport.init();
+        } else if (window.finalReport?.inject) {
+          window.finalReport.inject();
+        }
       }
       
-      // Force re-render to remove watermark
-      if (window.finalReport?.init) {
-        window.finalReport.init();
-      } else if (window.finalReport?.inject) {
-        window.finalReport.inject();
-      }
+      // 🔧 PHASE 10 FIX: Additional DOM-level watermark cleanup for PDF generation
+      console.log('🧹 Additional watermark cleanup...');
+      document.querySelectorAll('[style*="טיוטה בלבד"]').forEach(el => {
+        console.log('🗑️ Removing watermark element:', el);
+        el.remove();
+      });
       
-      // Wait for re-render before capturing HTML
-      await new Promise(resolve => setTimeout(resolve, 500));
+      // Wait for re-render and cleanup before capturing HTML
+      await new Promise(resolve => setTimeout(resolve, 800));
       
-      // Get clean HTML content for PDF conversion (remove only buttons and no-print elements)
-      // Since we properly finalized the report, final_report.js won't add watermark anymore
+      // 🔧 PHASE 10 FIX: Improved clean HTML for PDF conversion
+      // Remove control elements but preserve signatures, stamps, and legitimate content
       const cleanHTML = document.documentElement.outerHTML
+        // Remove control buttons and no-print elements
         .replace(/<div class="control-buttons no-print">[\s\S]*?<\/div>/g, '')
+        .replace(/<div[^>]*class="[^"]*no-print[^"]*"[^>]*>[\s\S]*?<\/div>/g, '')
         .replace(/<button[\s\S]*?<\/button>/g, '')
-        .replace(/<div[^>]*class="[^"]*no-print[^"]*"[^>]*>[\s\S]*?<\/div>/g, '');
+        
+        // 🎯 SPECIFIC watermark removal patterns - more targeted to avoid removing legitimate content
+        .replace(/<div[^>]*style="[^"]*position:\s*fixed[^"]*"[^>]*>[^<]*טיוטה בלבד[^<]*<\/div>/g, '')
+        .replace(/<div[^>]*style="[^"]*טיוטה בלבד[^"]*"[^>]*>[\s\S]*?<\/div>/g, '')
+        .replace(/style="[^"]*position:\s*fixed[^"]*transform:[^"]*טיוטה[^"]*"/g, 'style=""')
+        
+        // Remove any remaining standalone watermark text (but preserve legitimate Hebrew content)
+        .replace(/(?<![\u0590-\u05FF\w])(טיוטה\s+בלבד)(?![\u0590-\u05FF\w])/g, '')
+        
+        // Remove print-related artifacts but preserve content
+        .replace(/<script[\s\S]*?<\/script>/g, '')
+        .replace(/\s+style=""\s*/g, ' ');
+        
+      console.log('🧹 Final HTML cleaned for PDF generation, length:', cleanHTML.length);
       
       // Use the same format as final_report.js for consistency with Make.com
       const webhookData = {

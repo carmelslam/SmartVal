@@ -146,7 +146,7 @@
               <strong>איך אני מעלה דו"ח לוי יצחק?</strong>
             </div>
             <div class="faq-item" style="margin-bottom: 10px; padding: 10px; background: #f8f9fa; border-radius: 8px; cursor: pointer;" onclick="showAnswer('validation')">
-              <strong>איך מאמתים דו"ח סופי?</strong>
+              <strong>איך מאמתים חוות דעת?</strong>
             </div>
           </div>
           
@@ -240,7 +240,7 @@
 
             <div class="workflow-item" style="margin-bottom: 20px; padding: 15px; background: #f8f9fa; border-radius: 12px; border-right: 4px solid #7c3aed;">
               <h4 style="color: #2c3e50; margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">
-                ✅ אימות דו"ח סופי
+                ✅ אימות חוות דעת
               </h4>
               <div class="workflow-steps" style="display: flex; flex-direction: column; gap: 8px;">
                 <div class="step" style="display: flex; align-items: center; gap: 10px; padding: 8px; background: white; border-radius: 8px;">
@@ -414,7 +414,7 @@
         tips: ['בדוק את חישובי ירידת הערך', 'בחר את סוג חוות הדעת הנכון', 'שמור לפני סיום']
       },
       'validation-workflow.html': {
-        title: 'אימות דו"ח סופי',
+        title: 'אימות חוות דעת',
         description: 'תהליך אימות הדו"ח הסופי לפני שליחה.',
         tips: ['עבור על כל הסעיפים', 'אמת כל מידע לפני אישור סופי', 'לא ניתן לשנות אחרי אישור']
       }
@@ -575,7 +575,7 @@
       // Final report
       finalReport: {
         keywords: ['דוח סופי', 'הפקה', 'אימות', 'סיום'],
-        response: `להפקת דו"ח סופי:
+        response: `להפקת חוות דעת:
 1. וודא שכל המודולים הושלמו:
    - פרטי רכב ובעלים
    - דו"ח לוי יצחק
@@ -841,7 +841,7 @@
 - העלאת דו"ח לוי יצחק
 - ניהול מוקדי נזק
 - חישוב ירידת ערך
-- הפקת דו"ח סופי
+- הפקת חוות דעת
 - פתרון בעיות
 
 נסה לשאול שאלה יותר ספציפית או בחר אחד מהנושאים למעלה.`;
@@ -854,7 +854,7 @@
     const answers = {
       general: 'לפתיחת תיק חדש: לחץ על "פתיחת תיק חדש" בדף הבחירה, מלא את פרטי הרכב והנזק, ולחץ "פתח תיק".',
       levi: 'להעלאת דו"ח לוי יצחק: לחץ על "העלאת דו"ח לוי יצחק", בחר קובץ PDF או תמונה, והמתן לעיבוד האוטומטי.',
-      validation: 'לאימות דו"ח סופי: עבור דרך כל שלבי האימות, בדוק שכל המידע נכון, ולחץ "אישור סופי".'
+      validation: 'לאימות חוות דעת: עבור דרך כל שלבי האימות, בדוק שכל המידע נכון, ולחץ "אישור סופי".'
     };
     
     responseDiv.style.display = 'block';
