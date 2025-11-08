@@ -44,12 +44,12 @@ case_number_val := COALESCE(
   helper_json->>'case_number'
 );
 
--- Get centers array from helper.centers (top level) with expertise fallbacks
+-- Get centers array - prioritize expertise.damage_blocks for expertise data
 centers_array := COALESCE(
-  helper_json->'centers',
-  helper_json->'expertise'->'damage_blocks',
-  helper_json->'expertise'->'centers',
-  helper_json->'damage_centers'
+  helper_json->'expertise'->'damage_blocks',  -- PRIMARY for expertise
+  helper_json->'centers',                     -- Fallback to general centers
+  helper_json->'expertise'->'centers',        -- Alternative expertise path
+  helper_json->'damage_centers'               -- Legacy fallback
 );
 
 IF centers_array IS NOT NULL AND jsonb_typeof(centers_array) = 'array' THEN
@@ -58,11 +58,19 @@ IF centers_array IS NOT NULL AND jsonb_typeof(centers_array) = 'array' THEN
   INTO damage_centers_names
   FROM jsonb_array_elements(centers_array) AS center;
 
-  -- 🔧 PHASE 10 FIX: Extract planned repairs, parts, and work properly
+  -- 🔧 PHASE 10 FIX: Extract planned repairs, parts, and work from damage_blocks or centers
   FOR center_item IN SELECT * FROM jsonb_array_elements(centers_array)
   LOOP
-    -- Extract repairs
-    IF center_item->'Repairs' IS NOT NULL THEN
+    -- Extract repairs (try both damage_blocks format and centers format)
+    IF center_item->'repairs' IS NOT NULL THEN
+      -- damage_blocks format (lowercase)
+      FOR repair_item IN SELECT * FROM jsonb_array_elements(COALESCE(center_item->'repairs', '[]'::JSONB))
+      LOOP
+        planned_repairs_text := planned_repairs_text || 
+          COALESCE(repair_item->>'description', repair_item->>'name', repair_item->>'title', '') || '; ';
+      END LOOP;
+    ELSIF center_item->'Repairs' IS NOT NULL THEN
+      -- centers format (capitalized)
       FOR repair_item IN SELECT * FROM jsonb_array_elements(COALESCE(center_item->'Repairs'->'repairs', '[]'::JSONB))
       LOOP
         planned_repairs_text := planned_repairs_text || 
@@ -70,8 +78,20 @@ IF centers_array IS NOT NULL AND jsonb_typeof(centers_array) = 'array' THEN
       END LOOP;
     END IF;
 
-    -- Extract parts
-    IF center_item->'Parts' IS NOT NULL THEN
+    -- Extract parts (try both formats)
+    IF center_item->'parts' IS NOT NULL THEN
+      -- damage_blocks format
+      FOR part_item IN SELECT * FROM jsonb_array_elements(COALESCE(center_item->'parts', '[]'::JSONB))
+      LOOP
+        planned_parts_text := planned_parts_text || 
+          COALESCE(part_item->>'name', part_item->>'description', part_item->>'title', '') || 
+          CASE WHEN part_item->>'quantity' IS NOT NULL 
+                THEN ' (כמות: ' || (part_item->>'quantity') || ')'
+                ELSE ''
+          END || '; ';
+      END LOOP;
+    ELSIF center_item->'Parts' IS NOT NULL THEN
+      -- centers format
       FOR part_item IN SELECT * FROM jsonb_array_elements(COALESCE(center_item->'Parts'->'parts_required', center_item->'Parts'->'parts', '[]'::JSONB))
       LOOP
         planned_parts_text := planned_parts_text || 
@@ -83,8 +103,20 @@ IF centers_array IS NOT NULL AND jsonb_typeof(centers_array) = 'array' THEN
       END LOOP;
     END IF;
 
-    -- Extract work
-    IF center_item->'Works' IS NOT NULL THEN
+    -- Extract work (try both formats)
+    IF center_item->'work' IS NOT NULL OR center_item->'works' IS NOT NULL THEN
+      -- damage_blocks format
+      FOR work_item IN SELECT * FROM jsonb_array_elements(COALESCE(center_item->'work', center_item->'works', '[]'::JSONB))
+      LOOP
+        planned_work_text := planned_work_text || 
+          COALESCE(work_item->>'description', work_item->>'name', work_item->>'title', '') || 
+          CASE WHEN work_item->>'hours' IS NOT NULL 
+                THEN ' (' || (work_item->>'hours') || ' שעות)'
+                ELSE ''
+          END || '; ';
+      END LOOP;
+    ELSIF center_item->'Works' IS NOT NULL THEN
+      -- centers format
       FOR work_item IN SELECT * FROM jsonb_array_elements(COALESCE(center_item->'Works'->'works', center_item->'Works'->'labor', '[]'::JSONB))
       LOOP
         planned_work_text := planned_work_text || 
