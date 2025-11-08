@@ -2472,6 +2472,223 @@
       }
     };
 
+    // Helper function to save report drafts to Supabase (copied from expertise builder)
+    async function saveReportDraftToSupabase(reportType, status, htmlContent, skipPdfGeneration = false) {
+      try {
+        const helper = window.helper || JSON.parse(sessionStorage.getItem('helper') || '{}');
+        let caseIdOrNumber = helper.case_info?.supabase_case_id || helper.meta?.case_id;
+        const plate = helper.car_details?.plate || helper.vehicle?.plate || helper.meta?.plate;
+
+        if (!caseIdOrNumber || !plate || !window.supabase) {
+          console.warn(`⚠️ Missing data for ${reportType} draft save - skipping`);
+          return;
+        }
+
+        console.log(`💾 Saving ${reportType} ${status} to Supabase...`, { caseIdOrNumber, plate });
+
+        // Check if case_id is a valid UUID
+        const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+        let actualCaseId = caseIdOrNumber;
+
+        if (!uuidPattern.test(caseIdOrNumber)) {
+          const { data: caseData, error: lookupError } = await window.supabase
+            .from('cases')
+            .select('id')
+            .or(`case_number.eq.${caseIdOrNumber},plate.eq.${plate?.replace(/-/g, '')}`)
+            .limit(1)
+            .single();
+
+          if (lookupError || !caseData) {
+            console.warn(`⚠️ Could not find case UUID for ${reportType} - skipping`);
+            return;
+          }
+          actualCaseId = caseData.id;
+        }
+
+        // 📄 Generate PDF from HTML (skip for drafts during expertise submit)
+        let storagePath = null;
+        let publicUrl = null;
+
+        if (htmlContent && !skipPdfGeneration) {
+          console.log(`📄 Generating ${reportType} PDF using html2canvas...`);
+          
+          // 🔒 Refresh authentication before long PDF operation to prevent token expiry
+          try {
+            console.log('🔒 Refreshing session before PDF generation...');
+            const { data: sessionData, error: refreshError } = await window.supabase.auth.refreshSession();
+            if (refreshError) {
+              console.warn('⚠️ Session refresh failed:', refreshError);
+            } else {
+              console.log('✅ Session refreshed successfully');
+            }
+          } catch (authError) {
+            console.warn('⚠️ Auth refresh error:', authError);
+          }
+
+          // Open HTML in hidden window for rendering
+          const reviewWindow = window.open('', '_blank');
+
+          // Check if popup was blocked
+          if (!reviewWindow) {
+            console.warn(`⚠️ Popup blocked - ${reportType} will be saved without PDF`);
+            // Continue without PDF - just save metadata
+          } else {
+            reviewWindow.document.write(htmlContent);
+            reviewWindow.document.close();
+
+            // Wait for content to load with timeout protection
+            await new Promise(resolve => setTimeout(resolve, 1000));
+
+            // Use html2canvas with timeout protection and optimized settings
+            let canvas;
+            try {
+              // Add timeout wrapper for html2canvas to prevent hanging
+              canvas = await Promise.race([
+                html2canvas(reviewWindow.document.body, {
+                  scale: 1,
+                  useCORS: true,
+                  allowTaint: true,
+                  logging: false,
+                  imageTimeout: 15000, // 15 second timeout for images
+                  ignoreElements: (element) => {
+                    return element.tagName === 'IMG' && element.src.includes('carmelcayouf.com');
+                  }
+                }),
+                new Promise((_, reject) => 
+                  setTimeout(() => reject(new Error('PDF generation timeout')), 30000) // 30 second total timeout
+                )
+              ]);
+            } catch (canvasError) {
+              console.error('❌ html2canvas failed:', canvasError);
+              reviewWindow.close();
+              console.warn(`⚠️ PDF generation failed for ${reportType} - saving metadata only`);
+              // Continue without PDF
+              canvas = null;
+            }
+
+            // Convert canvas to PDF only if canvas generation succeeded
+            if (canvas) {
+              const { jsPDF } = window.jspdf;
+              const pdf = new jsPDF('p', 'mm', 'a4');
+              const imgData = canvas.toDataURL('image/jpeg', 0.7);
+              const pageWidth = 210;
+              const pageHeight = 297;
+              const topMargin = 15;
+              const bottomMargin = 15;
+              const leftMargin = 10;
+              const rightMargin = 10;
+              const contentWidth = pageWidth - leftMargin - rightMargin;
+              const contentHeight = pageHeight - topMargin - bottomMargin;
+              const imgHeight = (canvas.height * contentWidth) / canvas.width;
+              let heightLeft = imgHeight;
+              let position = topMargin;
+
+              pdf.addImage(imgData, 'JPEG', leftMargin, position, contentWidth, imgHeight);
+              heightLeft -= contentHeight;
+
+              while (heightLeft > 0) {
+                position = -(imgHeight - heightLeft) + topMargin;
+                pdf.addPage();
+                pdf.addImage(imgData, 'JPEG', leftMargin, position, contentWidth, imgHeight);
+                heightLeft -= contentHeight;
+              }
+
+              reviewWindow.close();
+              const pdfBlob = pdf.output('blob');
+
+              console.log(`☁️ Uploading ${reportType} PDF to Supabase Storage...`);
+              const timestamp = new Date().toISOString().replace(/[:.]/g, '-').substring(0, 19);
+              const normalizedPlate = plate?.replace(/-/g, '') || 'UNKNOWN';
+              const filename = `${normalizedPlate}_${reportType}_${status}_${timestamp}.pdf`;
+              const bucketName = reportType === 'estimate' ? 'estimate-reports' : 
+                                reportType === 'final_report' ? 'final-reports' : 
+                                reportType === 'expertise' ? 'expertise-reports' : 'reports';
+              storagePath = `${caseIdOrNumber}/${filename}`;
+
+              // Try upload with retry logic for authentication failures
+              let uploadAttempts = 0;
+              const maxRetries = 2;
+              let uploadError = null;
+              let uploadData = null;
+
+              while (uploadAttempts <= maxRetries) {
+                const { data, error } = await window.supabase.storage
+                  .from(bucketName)
+                  .upload(storagePath, pdfBlob, {
+                    contentType: 'application/pdf',
+                    upsert: false
+                  });
+
+                uploadData = data;
+                uploadError = error;
+
+                // Check for authentication errors and retry with fresh token
+                if (error && (error.message?.includes('exp') || error.message?.includes('JWT') || error.message?.includes('401'))) {
+                  console.warn(`⚠️ Upload attempt ${uploadAttempts + 1} failed with auth error, refreshing session...`);
+                  try {
+                    await window.supabase.auth.refreshSession();
+                    uploadAttempts++;
+                    if (uploadAttempts <= maxRetries) {
+                      await new Promise(resolve => setTimeout(resolve, 1000)); // Wait 1 second before retry
+                      continue;
+                    }
+                  } catch (refreshErr) {
+                    console.error('❌ Session refresh failed:', refreshErr);
+                    break;
+                  }
+                } else {
+                  break; // Success or non-auth error
+                }
+              }
+
+              if (uploadError) {
+                console.error(`❌ Storage upload error for ${reportType} after ${uploadAttempts + 1} attempts:`, uploadError);
+              } else {
+                // Get public URL (simple, no signing needed - bucket is public)
+                const { data: { publicUrl: url } } = window.supabase.storage
+                  .from(bucketName)
+                  .getPublicUrl(storagePath);
+
+                publicUrl = url;
+                console.log(`✅ ${reportType} PDF uploaded to storage:`, publicUrl);
+              }
+            } else {
+              reviewWindow.close();
+              console.warn(`⚠️ ${reportType} PDF generation failed - saving metadata only`);
+            }
+          }
+        }
+
+        // Transform helper structure for SQL function
+        const centersData = helper[reportType]?.centers || helper.centers || helper.damage_centers || [];
+        const helperForSupabase = {
+          ...helper,
+          [reportType]: {
+            ...helper[reportType],
+            centers: centersData
+          }
+        };
+
+        const { data, error } = await window.supabase.rpc('upsert_tracking_final_report_from_helper', {
+          helper_json: helperForSupabase,
+          p_case_id: actualCaseId,
+          p_plate: plate?.replace(/-/g, ''),
+          p_report_type: reportType,
+          p_status: status,
+          p_pdf_storage_path: storagePath,
+          p_pdf_public_url: publicUrl
+        });
+
+        if (error) {
+          console.error(`❌ ${reportType} ${status} save failed:`, error);
+        } else {
+          console.log(`✅ ${reportType} ${status} saved to Supabase (${data} records)`);
+        }
+      } catch (error) {
+        console.error(`❌ Error saving ${reportType} ${status}:`, error);
+      }
+    }
+
     window.exportToMake = async function(event) {
       const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
       const button = event.target;
@@ -2682,39 +2899,57 @@
               } else {
                 console.log('✅ Estimate saved to Supabase successfully');
 
-                // 📄 ALSO save final_report draft (workflow requirement)
+                // 📄 ALSO save final_report draft (workflow requirement) using expertise pattern
                 try {
-                  console.log('📄 Generating final_report draft PDF...');
-
-                  // Fetch final report HTML
-                  const finalReportIframe = document.createElement('iframe');
-                  finalReportIframe.style.display = 'none';
-                  document.body.appendChild(finalReportIframe);
-
+                  console.log('📄 Creating final_report draft...');
+                  
+                  // Use same pattern as expertise - fetch HTML and call saveReportDraftToSupabase
                   const finalReportHTML = await new Promise((resolve, reject) => {
-                    const timeout = setTimeout(() => {
-                      document.body.removeChild(finalReportIframe);
-                      reject(new Error('Timeout loading final report'));
-                    }, 10000);
-
-                    finalReportIframe.onload = () => {
-                      try {
-                        clearTimeout(timeout);
-                        const html = finalReportIframe.contentDocument.documentElement.outerHTML;
-                        document.body.removeChild(finalReportIframe);
-                        resolve(html);
-                      } catch (err) {
-                        clearTimeout(timeout);
-                        document.body.removeChild(finalReportIframe);
-                        reject(err);
+                    const iframe = document.createElement('iframe');
+                    iframe.style.display = 'none';
+                    iframe.style.position = 'absolute';
+                    iframe.style.left = '-9999px';
+                    document.body.appendChild(iframe);
+                    
+                    let timeoutId = setTimeout(() => {
+                      if (iframe.parentNode) {
+                        document.body.removeChild(iframe);
                       }
+                      reject(new Error('Final report load timeout'));
+                    }, 10000);
+                    
+                    iframe.onload = () => {
+                      clearTimeout(timeoutId);
+                      
+                      setTimeout(() => {
+                        try {
+                          const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
+                          if (iframeDoc && iframeDoc.body) {
+                            const html = iframeDoc.documentElement.outerHTML;
+                            if (iframe.parentNode) {
+                              document.body.removeChild(iframe);
+                            }
+                            resolve(html);
+                          } else {
+                            if (iframe.parentNode) {
+                              document.body.removeChild(iframe);
+                            }
+                            reject(new Error('Could not access iframe document'));
+                          }
+                        } catch (err) {
+                          if (iframe.parentNode) {
+                            document.body.removeChild(iframe);
+                          }
+                          reject(err);
+                        }
+                      }, 1000);
                     };
-
-                    finalReportIframe.src = 'https://yaron-cayouf-portal.netlify.app/final-report-template-builder.html?from=estimate&skipValidation=true';
+                    
+                    iframe.src = 'final-report-template-builder.html?from=estimate&skipValidation=true';
                   });
 
-                  // Generate PDF from final report HTML
-                  const frReviewWindow = window.open('', '_blank');
+                  // 💾 Save final report DRAFT with PDF using expertise function
+                  await saveReportDraftToSupabase('final_report', 'draft', finalReportHTML, false);
 
                   if (!frReviewWindow) {
                     console.warn('⚠️ Popup blocked - skipping final_report draft PDF');

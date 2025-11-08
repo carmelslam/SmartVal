@@ -53,8 +53,16 @@ centers_array := COALESCE(
 );
 
 IF centers_array IS NOT NULL AND jsonb_typeof(centers_array) = 'array' THEN
-  -- Concatenate all damage center names
-  SELECT string_agg(center->>'Location', ', ')
+  -- Concatenate all damage center names - try multiple possible field names
+  SELECT string_agg(
+    COALESCE(
+      center->>'Location', 
+      center->>'location', 
+      center->>'name', 
+      center->>'center_name',
+      center->>'damage_center',
+      'מוקד נזק'
+    ), ', ')
   INTO damage_centers_names
   FROM jsonb_array_elements(centers_array) AS center;
 
@@ -219,7 +227,14 @@ IF centers_array IS NOT NULL AND jsonb_typeof(centers_array) = 'array' THEN
     jsonb_array_length(centers_array),
     1,  -- Single row, so index is always 1
     damage_centers_names,
-    (SELECT string_agg(center->>'Description', ' | ') FROM jsonb_array_elements(centers_array) AS center),
+    (SELECT string_agg(
+      COALESCE(
+        center->>'Description',
+        center->>'description', 
+        center->>'details',
+        center->>'damage_description',
+        'תיאור נזק'
+      ), ' | ') FROM jsonb_array_elements(centers_array) AS center),
     planned_repairs_text,  -- 🔧 PHASE 10 FIX: Properly formatted text
     planned_parts_text,    -- 🔧 PHASE 10 FIX: Properly formatted text
     planned_work_text,     -- 🔧 PHASE 10 FIX: Properly formatted text

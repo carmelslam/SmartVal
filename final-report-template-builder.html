@@ -1741,17 +1741,35 @@
         reviewWindow.document.close();
         await new Promise(resolve => setTimeout(resolve, 1000));
         
-        // Use html2canvas (EXPERTISE PATTERN)
-        const canvas = await html2canvas(reviewWindow.document.body, {
-          scale: 1,
-          useCORS: true,
-          allowTaint: true,
-          logging: false,
-          imageTimeout: 0,
-          ignoreElements: (element) => {
-            return element.tagName === 'IMG' && element.src.includes('carmelcayouf.com');
+        // 🔒 Refresh authentication before PDF generation to prevent token expiry
+        try {
+          console.log('🔒 Refreshing session before PDF generation...');
+          const { data: sessionData, error: refreshError } = await supabase.auth.refreshSession();
+          if (refreshError) {
+            console.warn('⚠️ Session refresh failed:', refreshError);
+          } else {
+            console.log('✅ Session refreshed successfully');
           }
-        });
+        } catch (authError) {
+          console.warn('⚠️ Auth refresh error:', authError);
+        }
+
+        // Use html2canvas with timeout protection (IMPROVED EXPERTISE PATTERN)
+        const canvas = await Promise.race([
+          html2canvas(reviewWindow.document.body, {
+            scale: 1,
+            useCORS: true,
+            allowTaint: true,
+            logging: false,
+            imageTimeout: 15000, // 15 second timeout for images
+            ignoreElements: (element) => {
+              return element.tagName === 'IMG' && element.src.includes('carmelcayouf.com');
+            }
+          }),
+          new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('PDF generation timeout')), 30000) // 30 second total timeout
+          )
+        ]);
         
         // Convert canvas to PDF (EXPERTISE PATTERN)
         const { jsPDF } = window.jspdf;
@@ -1789,15 +1807,44 @@
         const filename = `${normalizedPlate}_final_report_final_${timestamp}.pdf`;
         const storagePath = `${actualCaseId}/${filename}`;
         
-        const { data: uploadData, error: uploadError } = await supabase.storage
-          .from('final-reports')
-          .upload(storagePath, pdfBlob, {
-            contentType: 'application/pdf',
-            upsert: false
-          });
+        // Try upload with retry logic for authentication failures (IMPROVED EXPERTISE PATTERN)
+        let uploadAttempts = 0;
+        const maxRetries = 2;
+        let uploadError = null;
+        let uploadData = null;
+
+        while (uploadAttempts <= maxRetries) {
+          const { data, error } = await supabase.storage
+            .from('final-reports')
+            .upload(storagePath, pdfBlob, {
+              contentType: 'application/pdf',
+              upsert: false
+            });
+
+          uploadData = data;
+          uploadError = error;
+
+          // Check for authentication errors and retry with fresh token
+          if (error && (error.message?.includes('exp') || error.message?.includes('JWT') || error.message?.includes('401'))) {
+            console.warn(`⚠️ Upload attempt ${uploadAttempts + 1} failed with auth error, refreshing session...`);
+            try {
+              await supabase.auth.refreshSession();
+              uploadAttempts++;
+              if (uploadAttempts <= maxRetries) {
+                await new Promise(resolve => setTimeout(resolve, 1000)); // Wait 1 second before retry
+                continue;
+              }
+            } catch (refreshErr) {
+              console.error('❌ Session refresh failed:', refreshErr);
+              break;
+            }
+          } else {
+            break; // Success or non-auth error
+          }
+        }
         
         if (uploadError) {
-          console.error('❌ Storage upload error:', uploadError);
+          console.error(`❌ Storage upload error after ${uploadAttempts + 1} attempts:`, uploadError);
           throw new Error('Failed to upload PDF: ' + uploadError.message);
         }
         

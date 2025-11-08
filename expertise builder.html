@@ -1272,7 +1272,9 @@
               const timestamp = new Date().toISOString().replace(/[:.]/g, '-').substring(0, 19);
               const normalizedPlate = plate?.replace(/-/g, '') || 'UNKNOWN';
               const filename = `${normalizedPlate}_${reportType}_${status}_${timestamp}.pdf`;
-              const bucketName = reportType === 'estimate' ? 'estimate-reports' : 'final-reports';
+              const bucketName = reportType === 'estimate' ? 'estimate-reports' : 
+                                reportType === 'final_report' ? 'final-reports' : 
+                                reportType === 'expertise' ? 'expertise-reports' : 'reports';
               storagePath = `${caseIdOrNumber}/${filename}`;
 
               // Try upload with retry logic for authentication failures
@@ -1745,11 +1747,19 @@
                   console.log('🔗 PDF public URL:', publicUrl);
 
                   // 🔧 FIX: Transform helper structure for SQL function
-                  // SQL expects helper.centers at TOP LEVEL (not damage_assessment.centers)
+                  // SQL PRIMARILY looks for expertise.damage_blocks, then falls back to centers
                   const centersData = helper.centers || helper.damage_centers || [];
                   const helperForSupabase = {
                     ...helper,
-                    centers: centersData  // Put centers at top level for SQL
+                    expertise: {
+                      ...helper.expertise,
+                      damage_blocks: centersData,  // PRIMARY path for expertise SQL function
+                      summary: {
+                        directive: helper.expertise?.summary?.directive || helper.expertise?.guidance || 'לתיקון',
+                        notes: helper.expertise?.summary?.notes || helper.expertise?.notes || 'לשלוח תמונות אחרי פירוק'
+                      }
+                    },
+                    centers: centersData  // Fallback path
                   };
 
                   console.log('🔍 DEBUG: Calling RPC with parameters:', {

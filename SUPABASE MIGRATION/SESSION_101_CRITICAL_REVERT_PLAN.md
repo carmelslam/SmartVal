@@ -1,57 +1,181 @@
 # SESSION 101: CRITICAL REVERT PLAN - Phase 10 Fixes Gone Wrong
 
-Task description :
-Finish phase 10 of the migration project - SUPABASE MIGRATION/SUPABASE_MIGRATION_PROJECT.md file .
-File for context :
-SUPABASE MIGRATION/REPORTS/SESSION_DOCUMENTATION_Report_Backup_Migration.md - Initial planning and documentation - some if not all tasks have been already implemented in a way or another.
-SUPABASE MIGRATION/SESSION_100_Phase10_Report_Evolution_Summary.md - mainly failed and wrong understanding 
-Locations and files in the task scope :
-The buttons for report submission in the reports final stage builders - don’t confuse with the main builders :
-Submit expertise located on the expertise builder page 
-Submit estimate report located on the estimate report builder (not the estimator ) - pay attention: in the estimate builder- there are 2 buttons by mistake we need just one button - decide etc button you want to keep and ensure full functionality according the the instructions 
-Submit final report located on the final report template builder (NOT the final report builder)
-Actions :
-Each submission the following :
-Submit expertise : creates the finalized expertise report and creates : estimate report draft and final report draft 
-Submit estimate : creates the finalized estimate report and creates :  final report draft 
-Submit final report : creates the finalized final  report only
-Each submission button needs to have an animation and an informative message 
-Destinations:
-Each button triggers 2 locations :
-Supabase table - primary and first action in line 
-    - Expertise goes to tracking_expertise table 
-    - Estimate and final reports - drafts and finalized - go to tracking_final_report table
-Make.com webhook - second in line 
-Content :
-Supabase location:
-Each buttons sends the full report details and ills all the fields in the table 
-Each button creates a pdf url for all the reports sent including drafts
-Make.com:
-The webhooks are configured - find the configuration and ensure implementation - this include general data that is already defined and the url of the pdf .
 
-Webhooks triggers : webhook are never hardcoded and the are in the webhook.js
-WEBHOOK SEN THE PDF URL TO MAKE.COME - YPU NEED TO ADD TEH URL WITHOUT CHANGING TEH EXISTING DATA SENT OR WEBHOOK STRUCTURE - CURRENT LT SENDS CASE DATA AND HTML , THIS NEEDS TO STAY AND JUST ADD THE URL
-FINAL_REPORT_DRAFT - triggered from submit estimate and expertise  - 
-SUBMIT_FINAL_REPORT triggered from teh final report template builder submit button only 
-SUBMIT_ESTIMATE:  triggered from teh estimate builder submit button only 
-SUBMIT_ESTIMATE_DRAFT:triggered from submit expertise  
-  
-General and styling:
-Ensure modern and good styling of the buttons - place the buttons in a 3d like box in all files in the task.(put all the buttons in the bottom of the page in one box ).
-Change any label דו”ח סופי to חוות דעת
-Ensure mobile styling for the buttons , pages and PiP s
-Do not modify any other page , helper or logic.
-Maintain functionality of pages as it is now .
-Storage and buckets :
-All tables and stogie buckets are defined and working 
+# PHASE 10: REPORT SUBMISSION SYSTEM - COMPLETE SPECIFICATION
 
-Pay attention : 
-For now  I think the configuration is that a new draft or new finalized overwrites  an old draft or finalized and replaces it - we want to change that and keep all the drafts and all versions of finalized  - the last version will have the current is true status 
-For now the current status is given for the last document in the table - I want to make a distinction between last draft and last finalized - so each report nature will have its own current is true . We will have for final report for example 2 current is tru : one for final report draft and one for final report finalized 
-The tables needs to register the nature of the report depending on the trigger for the submission button 
-When searching for drafts or finalized reports - the system needs to have 3 parameters : the name of the report , the nature of the report and the current is true of  the report = for now it just 2 I think :the name of the report and the current is true of  the report
+## PROJECT CONTEXT
 
+**Primary Task Document**: `SUPABASE MIGRATION/SUPABASE_MIGRATION_PROJECT.md` - Phase 10
+**Reference Documents**:
+- `SUPABASE MIGRATION/REPORTS/SESSION_DOCUMENTATION_Report_Backup_Migration.md` (initial planning - partially implemented)
+- `SUPABASE MIGRATION/SESSION_100_Phase10_Report_Evolution_Summary.md` (failed attempts - learn from errors)
 
+---
+
+## SCOPE: THREE SUBMISSION BUTTONS
+
+### Button Locations (be precise - similar names exist):
+1. **Submit Expertise** → Located on: `expertise_builder.html` (the expertise builder page)
+2. **Submit Estimate** → Located on: `estimate_report_builder.html` (NOT the estimator page)
+   - **CLEANUP REQUIRED**: This page currently has TWO submit buttons by mistake
+   - **ACTION**: Keep only ONE button - choose which to keep and ensure full functionality
+3. **Submit Final Report** → Located on: `final_report_template_builder.html` (NOT final_report_builder.html)
+
+---
+
+## SUBMISSION LOGIC FLOW
+
+### What Each Button Does:
+
+```
+SUBMIT EXPERTISE BUTTON:
+├─ Creates: Finalized Expertise Report (PDF)
+├─ Auto-generates: Estimate Report DRAFT
+└─ Auto-generates: Final Report DRAFT
+
+SUBMIT ESTIMATE BUTTON:
+├─ Creates: Finalized Estimate Report (PDF)
+└─ Auto-generates: Final Report DRAFT
+
+SUBMIT FINAL REPORT BUTTON:
+└─ Creates: Finalized Final Report (PDF) ONLY
+```
+
+---
+
+## DATA DESTINATIONS (Execute in this order)
+
+### PRIMARY ACTION (First): Supabase Tables
+
+**Table Routing**:
+- **Expertise Report** (finalized) → `tracking_expertise` table
+- **Estimate Report** (draft OR finalized) → `tracking_final_report` table
+- **Final Report** (draft OR finalized) → `tracking_final_report` table
+
+**Requirements**:
+- Fill ALL table fields with complete report details
+- Generate PDF URL for EVERY report (including drafts)
+- Store PDF URL in table record
+
+### SECONDARY ACTION (Second): Make.com Webhooks
+
+**Webhook Configuration**:
+- Webhooks are NEVER hardcoded
+- All webhook URLs stored in: `webhook.js`
+- Find existing configuration and implement correctly
+
+**Webhook Triggers** (4 webhooks total):
+1. `SUBMIT_EXPERTISE` → Triggered by Submit Expertise button
+2. `SUBMIT_ESTIMATE_DRAFT` → Triggered by Submit Expertise button (auto-draft creation)
+3. `SUBMIT_ESTIMATE` → Triggered by Submit Estimate button
+4. `FINAL_REPORT_DRAFT` → Triggered by Submit Expertise AND Submit Estimate buttons (auto-draft creation)
+5. `SUBMIT_FINAL_REPORT` → Triggered by Submit Final Report button
+
+**Webhook Payload Structure**:
+- **CRITICAL**: Current webhook sends: case data + HTML content
+- **KEEP EXISTING**: Do NOT modify current data structure or webhook architecture
+- **ADD ONLY**: Include PDF URL in payload alongside existing data
+- **DO NOT BREAK**: Existing Make.com integration must continue working
+
+---
+
+## NEW VERSIONING SYSTEM (Critical Change)
+
+### CURRENT BEHAVIOR (Wrong):
+- New draft/finalized overwrites old version
+- Only one document marked as "current = true"
+
+### NEW REQUIRED BEHAVIOR:
+
+**Version Retention**:
+- Keep ALL drafts (never overwrite)
+- Keep ALL finalized versions (never overwrite)
+- Track version history
+
+**"current = true" Logic** (revised):
+```
+Each report type has TWO "current = true" flags:
+├─ current_draft = true (most recent DRAFT version)
+└─ current_finalized = true (most recent FINALIZED version)
+
+Example: Final Report in database
+├─ Final Report DRAFT v1 (current_draft = false)
+├─ Final Report DRAFT v2 (current_draft = true) ← Latest draft
+├─ Final Report FINALIZED v1 (current_finalized = false)
+└─ Final Report FINALIZED v2 (current_finalized = true) ← Latest finalized
+```
+
+**Table Schema Addition**:
+- Add field: `report_nature` (values: "draft" | "finalized")
+- Differentiate between draft and finalized versions
+- Trigger determines report_nature value
+
+**Search Query Requirements** (3 parameters):
+```
+OLD SEARCH (2 parameters):
+├─ report_name
+└─ current = true
+
+NEW SEARCH (3 parameters):
+├─ report_name (e.g., "Final Report")
+├─ report_nature ("draft" OR "finalized")
+└─ current = true (filtered by nature)
+```
+
+---
+
+## UI/UX REQUIREMENTS
+
+### Button Styling:
+- Modern, professional design
+- 3D-like appearance for visual depth
+- **Container**: Place ALL three buttons in ONE styled box at bottom of each respective page
+- **Animation**: Add loading/submission animation for each button
+- **User Feedback**: Display informative progress message during submission
+
+### Label Update:
+- **FIND**: All instances of "דו"ח סופי"
+- **REPLACE WITH**: "חוות דעת"
+
+### Mobile Responsiveness:
+- Ensure buttons work on mobile devices
+- Verify page layouts are mobile-friendly
+- Test PiP (Picture-in-Picture) functionality on mobile
+
+---
+
+## CONSTRAINTS & RULES
+
+**DO NOT MODIFY**:
+- Other pages not in scope
+- Helper functions (except `webhooks.js` for webhook implementation)
+- Existing page logic/functionality
+- Current behavior of pages (maintain all existing features)
+
+**MAINTAIN**:
+- All existing functionality
+- Current user workflows
+- Database tables (already defined and working)
+- Storage buckets (already configured)
+
+---
+
+## SUCCESS CRITERIA
+
+✓ Three submission buttons work correctly with proper routing
+✓ All Supabase tables receive complete data with PDF URLs
+✓ All Make.com webhooks trigger with PDF URLs added to existing payload
+✓ Version history preserved (no overwrites)
+✓ Dual "current = true" flags working (draft vs finalized)
+✓ report_nature field populated correctly
+✓ Search functionality uses 3-parameter query
+✓ Modern UI with animations and user feedback
+✓ Mobile responsive design
+✓ All labels updated (דו"ח סופי → חוות דעת)
+✓ NO other pages/logic modified
+```
+
+-
 
 ## **PROBLEM SUMMARY**
 In the previous session, I made critical errors that broke existing functionality while attempting to fix the following user-reported issues:
