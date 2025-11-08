@@ -30,6 +30,7 @@ Make.com:
 The webhooks are configured - find the configuration and ensure implementation - this include general data that is already defined and the url of the pdf .
 
 Webhooks triggers : webhook are never hardcoded and the are in the webhook.js
+WEBHOOK SEN THE PDF URL TO MAKE.COME - YPU NEED TO ADD TEH URL WITHOUT CHANGING TEH EXISTING DATA SENT OR WEBHOOK STRUCTURE - CURRENT LT SENDS CASE DATA AND HTML , THIS NEEDS TO STAY AND JUST ADD THE URL
 FINAL_REPORT_DRAFT - triggered from submit estimate and expertise  - 
 SUBMIT_FINAL_REPORT triggered from teh final report template builder submit button only 
 SUBMIT_ESTIMATE:  triggered from teh estimate builder submit button only 
