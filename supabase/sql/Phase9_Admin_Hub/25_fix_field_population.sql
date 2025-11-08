@@ -213,11 +213,13 @@ BEGIN
     -- Clean up trailing separators
     actual_repairs_text := TRIM(TRAILING '; ' FROM actual_repairs_text);
 
-    -- 🔧 PHASE 10 FIX: Extract depreciation and final compensation
+    -- 🔧 PHASE 10 FIX: Extract depreciation with correct paths
     depreciation_amount := COALESCE(
-      (helper_json->'calculations'->>'depreciation')::NUMERIC,
-      (helper_json->'valuation'->>'depreciation')::NUMERIC,
-      (helper_json->'depreciation'->>'total_amount')::NUMERIC,
+      (helper_json->'depreciation'->>'global_amount')::NUMERIC,
+      (helper_json->'estimate'->'depreciation'->>'global_amount')::NUMERIC,
+      (helper_json->'final_report'->'depreciation'->>'global_amount')::NUMERIC,
+      (helper_json->'expertise'->'depreciation'->>'global_amount')::NUMERIC,
+      (helper_json->'valuation'->'depreciation'->>'global_amount')::NUMERIC,
       0
     );
 
