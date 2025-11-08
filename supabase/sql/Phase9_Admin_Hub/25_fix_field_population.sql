@@ -189,11 +189,20 @@ BEGIN
     INTO damage_centers_names
     FROM jsonb_array_elements(centers_array) AS c;
 
-    -- Sum up totals and extract actual repairs from all centers
+    -- 🔧 CRITICAL FIX: Sum up totals from Summary field and extract actual repairs from all centers
     FOR center IN SELECT * FROM jsonb_array_elements(centers_array)
     LOOP
-      total_parts_sum := total_parts_sum + COALESCE((center->'Parts'->>'total_cost')::NUMERIC, 0);
-      total_work_sum := total_work_sum + COALESCE((center->'Works'->>'total_cost')::NUMERIC, 0);
+      -- Extract from Summary field (where actual calculated totals are stored)
+      total_parts_sum := total_parts_sum + COALESCE(
+        (center->'Summary'->>'Total parts')::NUMERIC,
+        (center->'Parts'->>'total_cost')::NUMERIC,
+        0
+      );
+      total_work_sum := total_work_sum + COALESCE(
+        (center->'Summary'->>'Total works')::NUMERIC,
+        (center->'Works'->>'total_cost')::NUMERIC,
+        0
+      );
       
       -- 🔧 PHASE 10 FIX: Extract actual repairs performed
       IF center->'actual_repairs' IS NOT NULL THEN
@@ -304,16 +313,20 @@ BEGIN
         p_report_type,
         0,
         COALESCE(
+          (summary_data->>'Total parts')::NUMERIC,
           (summary_data->>'total_parts')::NUMERIC,
           (calculations_data->>'total_parts')::NUMERIC,
           0
         ),
         COALESCE(
+          (summary_data->>'Total works')::NUMERIC,
           (summary_data->>'total_work')::NUMERIC,
           (calculations_data->>'total_work')::NUMERIC,
           0
         ),
         COALESCE(
+          (summary_data->>'Total with VAT')::NUMERIC,
+          (summary_data->>'Subtotal')::NUMERIC,
           (summary_data->>'total_claim')::NUMERIC,
           (calculations_data->>'total_claim')::NUMERIC,
           0

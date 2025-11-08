@@ -5,6 +5,7 @@
   <style>
     /* Modern Professional PDF Styling */
     @import url('https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700;800;900&display=swap');
+    @import url('./css/modern-buttons.css');
     
     @page { 
       size: A4; 
@@ -2124,7 +2125,8 @@
       window.print();
     };
 
-    window.generateEstimateReport = async function() {
+    // 🗑️ REMOVED generateEstimateReport function - replaced by comprehensive exportToMake
+    window.generateEstimateReport_REMOVED = async function() {
       const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
       
       // SESSION 88: Save version FIRST before estimate report generation
@@ -2281,8 +2283,8 @@
       const originalText = button.textContent;
       
       try {
-        // Show loading message
-        button.textContent = '📤 מייצא...';
+        // Show modern loading state
+        button.classList.add('loading');
         button.disabled = true;
         
         // 1. SAVE TO SUPABASE TRACKING TABLE FIRST (EXPERTISE PATTERN)
@@ -2643,16 +2645,27 @@
         
         if (result.success) {
           alert('✅ האומדן יוצא בהצלחה');
+          
+          // Show success state
+          button.classList.remove('loading');
+          button.classList.add('success');
+          button.innerHTML = '<span class="btn-text">✅ יוצא בהצלחה</span>';
         } else {
           alert('❌ שגיאה ביצוא האומדן: ' + (result.error || 'שגיאה לא ידועה'));
+          
+          // Restore button on error
+          button.classList.remove('loading');
+          button.disabled = false;
+          button.innerHTML = originalText;
         }
       } catch (error) {
         console.error('Error exporting estimate:', error);
         alert('❌ שגיאה ביצוא האומדן: ' + error.message);
-      } finally {
-        // Restore button
-        button.textContent = originalText;
+        
+        // Restore button on error
+        button.classList.remove('loading');
         button.disabled = false;
+        button.innerHTML = originalText;
       }
     };
 
@@ -2924,8 +2937,9 @@
   <div class="control-buttons no-print" style="margin-top: 40px;">
     <button class="btn-secondary" onclick="editEstimate()">✏️ ערוך אומדן</button>
     <button class="btn-primary" onclick="previewEstimate()">👁️ תצוגה מקדימה</button>
-    <button class="btn-success" onclick="generateEstimateReport()">📄 הפק דו"ח אומדן</button>
-    <button class="btn-info" onclick="exportToMake(event)">📤 יצוא אומדן</button>
+    <button class="btn-info export-btn" onclick="exportToMake(event)">
+      <span class="btn-text">📄 הפק ויצא אומדן</span>
+    </button>
     <button class="btn-secondary" onclick="goHome()">🏠 חזור לדף הבית</button>
   </div>
   
