@@ -1,5 +1,57 @@
 # SESSION 101: CRITICAL REVERT PLAN - Phase 10 Fixes Gone Wrong
 
+Task description :
+Finish phase 10 of the migration project - SUPABASE MIGRATION/SUPABASE_MIGRATION_PROJECT.md file .
+File for context :
+SUPABASE MIGRATION/REPORTS/SESSION_DOCUMENTATION_Report_Backup_Migration.md - Initial planning and documentation - some if not all tasks have been already implemented in a way or another.
+SUPABASE MIGRATION/SESSION_100_Phase10_Report_Evolution_Summary.md - mainly failed and wrong understanding 
+Locations and files in the task scope :
+The buttons for report submission in the reports final stage builders - don’t confuse with the main builders :
+Submit expertise located on the expertise builder page 
+Submit estimate report located on the estimate report builder (not the estimator ) - pay attention: in the estimate builder- there are 2 buttons by mistake we need just one button - decide etc button you want to keep and ensure full functionality according the the instructions 
+Submit final report located on the final report template builder (NOT the final report builder)
+Actions :
+Each submission the following :
+Submit expertise : creates the finalized expertise report and creates : estimate report draft and final report draft 
+Submit estimate : creates the finalized estimate report and creates :  final report draft 
+Submit final report : creates the finalized final  report only
+Each submission button needs to have an animation and an informative message 
+Destinations:
+Each button triggers 2 locations :
+Supabase table - primary and first action in line 
+    - Expertise goes to tracking_expertise table 
+    - Estimate and final reports - drafts and finalized - go to tracking_final_report table
+Make.com webhook - second in line 
+Content :
+Supabase location:
+Each buttons sends the full report details and ills all the fields in the table 
+Each button creates a pdf url for all the reports sent including drafts
+Make.com:
+The webhooks are configured - find the configuration and ensure implementation - this include general data that is already defined and the url of the pdf .
+
+Webhooks triggers : webhook are never hardcoded and the are in the webhook.js
+FINAL_REPORT_DRAFT - triggered from submit estimate and expertise  - 
+SUBMIT_FINAL_REPORT triggered from teh final report template builder submit button only 
+SUBMIT_ESTIMATE:  triggered from teh estimate builder submit button only 
+SUBMIT_ESTIMATE_DRAFT:triggered from submit expertise  
+  
+General and styling:
+Ensure modern and good styling of the buttons - place the buttons in a 3d like box in all files in the task.(put all the buttons in the bottom of the page in one box ).
+Change any label דו”ח סופי to חוות דעת
+Ensure mobile styling for the buttons , pages and PiP s
+Do not modify any other page , helper or logic.
+Maintain functionality of pages as it is now .
+Storage and buckets :
+All tables and stogie buckets are defined and working 
+
+Pay attention : 
+For now  I think the configuration is that a new draft or new finalized overwrites  an old draft or finalized and replaces it - we want to change that and keep all the drafts and all versions of finalized  - the last version will have the current is true status 
+For now the current status is given for the last document in the table - I want to make a distinction between last draft and last finalized - so each report nature will have its own current is true . We will have for final report for example 2 current is tru : one for final report draft and one for final report finalized 
+The tables needs to register the nature of the report depending on the trigger for the submission button 
+When searching for drafts or finalized reports - the system needs to have 3 parameters : the name of the report , the nature of the report and the current is true of  the report = for now it just 2 I think :the name of the report and the current is true of  the report
+
+
+
 ## **PROBLEM SUMMARY**
 In the previous session, I made critical errors that broke existing functionality while attempting to fix the following user-reported issues:
 
