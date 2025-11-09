@@ -2364,67 +2364,17 @@
               let heightLeft = imgHeight;
               let position = topMargin;
 
-              // Add watermark for draft PDFs with proper Hebrew support
-              function addWatermarkToPage(pdf, pageWidth, pageHeight, text) {
-                try {
-                  // Ensure Hebrew text is properly encoded
-                  const hebrewText = text || 'DRAFT ONLY';
-                  
-                  pdf.setFontSize(60);
-                  pdf.setTextColor(220, 38, 38); // Light red 
-                  pdf.saveGraphicsState();
-                  pdf.setGState(pdf.GState({ opacity: 0.2 }));
-                  
-                  // Calculate center position with proper text width measurement
-                  const textWidth = pdf.getTextWidth(hebrewText);
-                  const x = (pageWidth - textWidth) / 2;
-                  const y = pageHeight / 2;
-                  
-                  // Add watermark text at 45 degree angle with proper encoding
-                  pdf.text(hebrewText, x, y, { 
-                    angle: -45, 
-                    align: 'center',
-                    renderingMode: 'fill'
-                  });
-                  pdf.restoreGraphicsState();
-                } catch (e) {
-                  console.warn('Failed to add watermark:', e);
-                  // Fallback to English if Hebrew fails
-                  try {
-                    pdf.setFontSize(60);
-                    pdf.setTextColor(220, 38, 38);
-                    pdf.saveGraphicsState();
-                    pdf.setGState(pdf.GState({ opacity: 0.2 }));
-                    const fallbackText = 'DRAFT ONLY';
-                    const textWidth = pdf.getTextWidth(fallbackText);
-                    const x = (pageWidth - textWidth) / 2;
-                    const y = pageHeight / 2;
-                    pdf.text(fallbackText, x, y, { angle: -45, align: 'center' });
-                    pdf.restoreGraphicsState();
-                  } catch (fallbackError) {
-                    console.error('Failed to add fallback watermark:', fallbackError);
-                  }
-                }
-              }
+              // 🔧 PHASE 10 FIX: Watermarks are now rendered in HTML (captured by html2canvas)
+              // Removed old jsPDF text-based watermark that caused Hebrew gibberish
 
               pdf.addImage(imgData, 'JPEG', leftMargin, position, contentWidth, imgHeight);
               heightLeft -= contentHeight;
-
-              // Add watermark to first page if draft
-              if (status === 'draft') {
-                addWatermarkToPage(pdf, pageWidth, pageHeight, 'טיוטה בלבד');
-              }
 
               while (heightLeft > 0) {
                 position = -(imgHeight - heightLeft) + topMargin;
                 pdf.addPage();
                 pdf.addImage(imgData, 'JPEG', leftMargin, position, contentWidth, imgHeight);
-                
-                // Add watermark to each additional page if draft
-                if (status === 'draft') {
-                  addWatermarkToPage(pdf, pageWidth, pageHeight, 'טיוטה בלבד');
-                }
-                
+                // 🔧 PHASE 10 FIX: Watermark already in HTML, no need to add programmatically
                 heightLeft -= contentHeight;
               }
 
@@ -2528,8 +2478,16 @@
       const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
       const button = event.target;
       const originalText = button.textContent;
-      
+
       try {
+        // 🔧 PHASE 10 FIX: Inject assets into main document BEFORE capturing HTML
+        if (window.assetLoader) {
+          console.log('🖼️ Injecting user assets before capturing HTML...');
+          window.assetLoader.injectAssets(document);
+          // Give time for image URLs to update
+          await new Promise(resolve => setTimeout(resolve, 300));
+        }
+
         // Show loading message
         button.textContent = '📤 מייצא...';
         button.disabled = true;
@@ -2686,67 +2644,17 @@
               let heightLeft = imgHeight;
               let position = topMargin;
 
-              // Add watermark for draft PDFs with proper Hebrew support
-              function addWatermarkToPage(pdf, pageWidth, pageHeight, text) {
-                try {
-                  // Ensure Hebrew text is properly encoded
-                  const hebrewText = text || 'DRAFT ONLY';
-                  
-                  pdf.setFontSize(60);
-                  pdf.setTextColor(220, 38, 38); // Light red 
-                  pdf.saveGraphicsState();
-                  pdf.setGState(pdf.GState({ opacity: 0.2 }));
-                  
-                  // Calculate center position with proper text width measurement
-                  const textWidth = pdf.getTextWidth(hebrewText);
-                  const x = (pageWidth - textWidth) / 2;
-                  const y = pageHeight / 2;
-                  
-                  // Add watermark text at 45 degree angle with proper encoding
-                  pdf.text(hebrewText, x, y, { 
-                    angle: -45, 
-                    align: 'center',
-                    renderingMode: 'fill'
-                  });
-                  pdf.restoreGraphicsState();
-                } catch (e) {
-                  console.warn('Failed to add watermark:', e);
-                  // Fallback to English if Hebrew fails
-                  try {
-                    pdf.setFontSize(60);
-                    pdf.setTextColor(220, 38, 38);
-                    pdf.saveGraphicsState();
-                    pdf.setGState(pdf.GState({ opacity: 0.2 }));
-                    const fallbackText = 'DRAFT ONLY';
-                    const textWidth = pdf.getTextWidth(fallbackText);
-                    const x = (pageWidth - textWidth) / 2;
-                    const y = pageHeight / 2;
-                    pdf.text(fallbackText, x, y, { angle: -45, align: 'center' });
-                    pdf.restoreGraphicsState();
-                  } catch (fallbackError) {
-                    console.error('Failed to add fallback watermark:', fallbackError);
-                  }
-                }
-              }
+              // 🔧 PHASE 10 FIX: Watermarks are now rendered in HTML (captured by html2canvas)
+              // Removed old jsPDF text-based watermark that caused Hebrew gibberish
 
               pdf.addImage(imgData, 'JPEG', leftMargin, position, contentWidth, imgHeight);
               heightLeft -= contentHeight;
-
-              // Add watermark to first page if draft
-              if (status === 'draft') {
-                addWatermarkToPage(pdf, pageWidth, pageHeight, 'טיוטה בלבד');
-              }
 
               while (heightLeft > 0) {
                 position = -(imgHeight - heightLeft) + topMargin;
                 pdf.addPage();
                 pdf.addImage(imgData, 'JPEG', leftMargin, position, contentWidth, imgHeight);
-                
-                // Add watermark to each additional page if draft
-                if (status === 'draft') {
-                  addWatermarkToPage(pdf, pageWidth, pageHeight, 'טיוטה בלבד');
-                }
-                
+                // 🔧 PHASE 10 FIX: Watermark already in HTML, no need to add programmatically
                 heightLeft -= contentHeight;
               }
 

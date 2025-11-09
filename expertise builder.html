@@ -1258,67 +1258,17 @@
               let heightLeft = imgHeight;
               let position = topMargin;
 
-              // Add watermark function for expertise directive with enhanced Hebrew support
-              function addDirectiveWatermark(pdf, pageWidth, pageHeight) {
-                try {
-                  const helper = window.helper || JSON.parse(sessionStorage.getItem('helper') || '{}');
-                  const directive = helper.expertise?.summary?.directive || helper.expertise?.guidance || 'לתיקון';
-                  
-                  console.log(`📋 Adding directive watermark: "${directive}"`);
-                  
-                  pdf.setFontSize(50); // Increased size for better visibility
-                  pdf.setTextColor(120, 120, 120); // Darker gray for better visibility
-                  pdf.saveGraphicsState();
-                  pdf.setGState(pdf.GState({ opacity: 0.4 })); // Increased opacity
-                  
-                  // Calculate center position with proper text width measurement
-                  const textWidth = pdf.getTextWidth(directive);
-                  const x = (pageWidth - textWidth) / 2;
-                  const y = pageHeight / 2;
-                  
-                  // Add directive watermark text at 45 degree angle with proper encoding
-                  pdf.text(directive, x, y, { 
-                    angle: -45, 
-                    align: 'center',
-                    renderingMode: 'fill'
-                  });
-                  pdf.restoreGraphicsState();
-                  console.log(`✅ Successfully added directive watermark on page`);
-                } catch (e) {
-                  console.warn('Failed to add directive watermark:', e);
-                  // Fallback to English if Hebrew fails
-                  try {
-                    pdf.setFontSize(50);
-                    pdf.setTextColor(120, 120, 120);
-                    pdf.saveGraphicsState();
-                    pdf.setGState(pdf.GState({ opacity: 0.4 }));
-                    const fallbackText = 'FOR REPAIR';
-                    const textWidth = pdf.getTextWidth(fallbackText);
-                    const x = (pageWidth - textWidth) / 2;
-                    const y = pageHeight / 2;
-                    pdf.text(fallbackText, x, y, { angle: -45, align: 'center' });
-                    pdf.restoreGraphicsState();
-                    console.log(`✅ Added fallback directive watermark`);
-                  } catch (fallbackError) {
-                    console.error('Failed to add fallback directive watermark:', fallbackError);
-                  }
-                }
-              }
+              // 🔧 PHASE 10 FIX: Watermarks are now rendered in HTML (captured by html2canvas)
+              // Removed old jsPDF text-based watermark that caused Hebrew gibberish
 
               pdf.addImage(imgData, 'JPEG', leftMargin, position, contentWidth, imgHeight);
               heightLeft -= contentHeight;
-
-              // Add directive watermark to first page
-              addDirectiveWatermark(pdf, pageWidth, pageHeight);
 
               while (heightLeft > 0) {
                 position = -(imgHeight - heightLeft) + topMargin;
                 pdf.addPage();
                 pdf.addImage(imgData, 'JPEG', leftMargin, position, contentWidth, imgHeight);
-                
-                // Add directive watermark to each additional page
-                addDirectiveWatermark(pdf, pageWidth, pageHeight);
-                
+                // 🔧 PHASE 10 FIX: Watermark already in HTML, no need to add programmatically
                 heightLeft -= contentHeight;
               }
 
@@ -1450,6 +1400,19 @@
             console.error('❌ SESSION 88: Failed to save version before expertise submission:', error);
           }
         }
+
+        // 🔧 PHASE 10 FIX: Inject assets into main document BEFORE capturing HTML
+        if (window.assetLoader) {
+          console.log('🖼️ Injecting user assets before capturing HTML...');
+          window.assetLoader.injectAssets(document);
+          // Also inject watermark with current status
+          const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+          const watermarkStatus = helper.expertise?.summary?.directive || helper.case_info?.status || 'draft';
+          window.assetLoader.injectWatermark(document, watermarkStatus);
+          // Give time for image URLs to update
+          await new Promise(resolve => setTimeout(resolve, 300));
+        }
+
         try {
           console.log('⏱️ Getting helper data...');
           const currentHelper = JSON.parse(sessionStorage.getItem('helper') || '{}');
