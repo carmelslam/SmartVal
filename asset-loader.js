@@ -148,6 +148,8 @@ export class AssetLoader {
       const logoUrl = this.getAssetUrl('logo');
       if (logoUrl) {
         const oldSrc = img.src;
+        // 🔧 PHASE 10 FIX: Set crossOrigin BEFORE changing src to enable canvas export
+        img.crossOrigin = 'anonymous';
         img.src = logoUrl;
         img.dataset.assetInjected = 'true';
         injectedCount++;
@@ -163,6 +165,8 @@ export class AssetLoader {
       const signatureUrl = this.getAssetUrl('signature');
       if (signatureUrl) {
         const oldSrc = img.src;
+        // 🔧 PHASE 10 FIX: Set crossOrigin BEFORE changing src to enable canvas export
+        img.crossOrigin = 'anonymous';
         img.src = signatureUrl;
         img.dataset.assetInjected = 'true';
         injectedCount++;
@@ -178,6 +182,8 @@ export class AssetLoader {
       const stampUrl = this.getAssetUrl('stamp');
       if (stampUrl) {
         const oldSrc = img.src;
+        // 🔧 PHASE 10 FIX: Set crossOrigin BEFORE changing src to enable canvas export
+        img.crossOrigin = 'anonymous';
         img.src = stampUrl;
         img.dataset.assetInjected = 'true';
         injectedCount++;
@@ -193,6 +199,8 @@ export class AssetLoader {
       const backgroundUrl = this.getAssetUrl('background');
       if (backgroundUrl) {
         const oldSrc = img.src;
+        // 🔧 PHASE 10 FIX: Set crossOrigin BEFORE changing src to enable canvas export
+        img.crossOrigin = 'anonymous';
         img.src = backgroundUrl;
         img.dataset.assetInjected = 'true';
         injectedCount++;
@@ -288,7 +296,24 @@ export class AssetLoader {
 
     for (const img of images) {
       try {
-        if (!img.complete) {
+        // 🔧 PHASE 10 FIX: If image doesn't have crossOrigin set, reload it with CORS enabled
+        if (!img.crossOrigin || img.crossOrigin === '') {
+          console.log(`🔄 Reloading image with CORS enabled: ${img.alt || 'unnamed'}`);
+          const originalSrc = img.src;
+          img.crossOrigin = 'anonymous';
+          // Force reload by clearing and resetting src
+          img.src = '';
+          img.src = originalSrc;
+
+          // Wait for reload
+          if (!img.complete) {
+            await new Promise((resolve, reject) => {
+              img.onload = resolve;
+              img.onerror = reject;
+              setTimeout(() => reject(new Error('reload timeout')), 5000);
+            });
+          }
+        } else if (!img.complete) {
           console.log(`⏳ Waiting for image to load: ${img.alt}`);
           await new Promise((resolve, reject) => {
             img.onload = resolve;
@@ -307,12 +332,14 @@ export class AssetLoader {
         const dataURI = canvas.toDataURL('image/png');
         img.src = dataURI;
         img.removeAttribute('data-asset-injected'); // Mark as converted
+        img.removeAttribute('crossorigin'); // No longer needed
         img.dataset.converted = 'true';
         convertedCount++;
 
         console.log(`✅ Converted to data URI: ${img.alt || 'unnamed'}`);
       } catch (error) {
         console.warn(`⚠️ Failed to convert image: ${img.alt ||'unnamed'}`, error);
+        // Continue with other images even if one fails
       }
     }
 
