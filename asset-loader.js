@@ -212,14 +212,83 @@ export class AssetLoader {
   }
 
   /**
+   * Inject conditional watermark based on report status
+   * @param {Document} document - DOM document to inject into
+   * @param {string} status - Report status: 'draft', 'directive', 'final', or custom text
+   * @returns {boolean} - True if watermark was injected
+   */
+  injectWatermark(document, status = null) {
+    if (!this.assets) {
+      this.loadFromSession();
+    }
+
+    const watermarkElement = document.querySelector('.watermark, .draft-watermark');
+    if (!watermarkElement) {
+      console.warn('⚠️ AssetLoader: No watermark element found in document');
+      return false;
+    }
+
+    // Determine watermark text based on status
+    let watermarkText = '';
+
+    if (!status || status === '' || status === 'final' || status === 'completed') {
+      // Hide watermark for final/completed reports
+      watermarkElement.style.display = 'none';
+      console.log('✅ AssetLoader: Watermark hidden for final report');
+      return true;
+    } else if (status.toLowerCase() === 'draft' || status.toLowerCase() === 'טיוטה') {
+      // Use custom draft watermark text or default
+      watermarkText = this.assets?.draft_watermark_text || 'טיוטה בלבד';
+      console.log('📋 AssetLoader: Injecting draft watermark:', watermarkText);
+    } else if (status.toLowerCase() === 'directive' || status.toLowerCase() === 'לתיקון') {
+      // Use custom directive watermark text or default
+      watermarkText = this.assets?.directive_watermark_text || 'לתיקון';
+      console.log('📋 AssetLoader: Injecting directive watermark:', watermarkText);
+    } else {
+      // Use status text as-is (custom directive text)
+      watermarkText = status;
+      console.log('📋 AssetLoader: Injecting custom watermark:', watermarkText);
+    }
+
+    // Apply watermark text
+    if (watermarkText) {
+      watermarkElement.textContent = watermarkText;
+      watermarkElement.style.display = '';
+
+      // Dynamic font sizing based on text length
+      const textLength = watermarkText.length;
+      if (textLength > 20) {
+        watermarkElement.style.fontSize = '5rem';
+      } else if (textLength > 15) {
+        watermarkElement.style.fontSize = '6rem';
+      } else if (textLength > 10) {
+        watermarkElement.style.fontSize = '7rem';
+      } else {
+        watermarkElement.style.fontSize = '8rem';
+      }
+
+      console.log('✅ AssetLoader: Watermark injected successfully');
+      return true;
+    }
+
+    return false;
+  }
+
+  /**
    * Inject assets into a cloned document (for PDF generation)
    * @param {Document} document - DOM document to inject into
+   * @param {string} status - Optional report status for watermark injection
    * @returns {Promise<number>} - Number of images updated
    */
-  async injectAssetsForPDF(document) {
+  async injectAssetsForPDF(document, status = null) {
     console.log('📄 AssetLoader: Injecting assets for PDF generation...');
 
     const count = this.injectAssets(document);
+
+    // Inject watermark if status is provided
+    if (status !== null) {
+      this.injectWatermark(document, status);
+    }
 
     // Wait a bit for images to start loading
     await new Promise(resolve => setTimeout(resolve, 300));
