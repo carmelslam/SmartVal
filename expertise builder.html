@@ -1215,7 +1215,9 @@
             // 🔧 PHASE 10 FIX: Inject user-specific assets into cloned document before PDF generation
             if (window.assetLoader) {
               console.log('🖼️ Injecting user assets into PDF document...');
-              await window.assetLoader.injectAssetsForPDF(reviewWindow.document);
+              // Pass status for conditional watermark injection
+              const watermarkStatus = status || helper.expertise?.summary?.directive || helper.case_info?.status || null;
+              await window.assetLoader.injectAssetsForPDF(reviewWindow.document, watermarkStatus);
             }
 
             // Use html2canvas with timeout protection and optimized settings
@@ -2170,11 +2172,25 @@
     document.addEventListener('DOMContentLoaded', () => {
       console.log('🖼️ Injecting user assets into expertise builder...');
       assetLoader.injectAssets(document);
+
+      // Inject watermark based on helper data when available
+      setTimeout(() => {
+        const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+        const status = helper.expertise?.summary?.directive || helper.case_info?.status || 'draft';
+        assetLoader.injectWatermark(document, status);
+      }, 500);
     });
   } else {
     // DOM already loaded
     console.log('🖼️ Injecting user assets into expertise builder...');
     assetLoader.injectAssets(document);
+
+    // Inject watermark based on helper data
+    setTimeout(() => {
+      const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+      const status = helper.expertise?.summary?.directive || helper.case_info?.status || 'draft';
+      assetLoader.injectWatermark(document, status);
+    }, 500);
   }
 
   // Make asset loader available globally for PDF generation
