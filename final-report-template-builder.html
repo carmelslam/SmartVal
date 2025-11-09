@@ -1646,7 +1646,38 @@
       
       // Wait for re-render and cleanup before capturing HTML
       await new Promise(resolve => setTimeout(resolve, 800));
-      
+
+      // 🔧 PHASE 10 FIX: Inject assets into main document BEFORE capturing HTML
+      if (window.assetLoader) {
+        console.log('🖼️ Injecting user assets before capturing HTML...');
+        window.assetLoader.injectAssets(document);
+        // No watermark for final reports (status = 'final' hides watermark)
+        // window.assetLoader.injectWatermark(document, 'final');
+
+        // Wait for all injected images to actually load
+        const images = document.querySelectorAll('img[data-asset-injected="true"]');
+        if (images.length > 0) {
+          console.log(`⏳ Waiting for ${images.length} images to load before capturing HTML...`);
+          await Promise.all(Array.from(images).map(img => {
+            return new Promise(resolve => {
+              if (img.complete) {
+                resolve();
+              } else {
+                img.onload = () => resolve();
+                img.onerror = () => resolve();
+                setTimeout(() => resolve(), 3000); // 3 second timeout per image
+              }
+            });
+          }));
+          console.log('✅ All images loaded');
+        }
+
+        // Convert images to data URIs so they're embedded in HTML
+        console.log('🔄 Converting images to data URIs...');
+        await window.assetLoader.convertImagesToDataURIs(document);
+        console.log('✅ Images embedded, ready to capture HTML');
+      }
+
       // 🔧 PHASE 10 FIX: Improved clean HTML for PDF conversion
       // Remove control elements but preserve signatures, stamps, and legitimate content
       const cleanHTML = document.documentElement.outerHTML
@@ -1781,15 +1812,9 @@
           console.warn('⚠️ Auth refresh error:', authError);
         }
 
-        // 🔧 PHASE 10 FIX: Inject user-specific assets into cloned document before PDF generation
-        if (window.assetLoader) {
-          console.log('🖼️ Injecting user assets into final report PDF document...');
-          // Pass 'final' status to hide watermark for final reports
-          await window.assetLoader.injectAssetsForPDF(reviewWindow.document, 'final');
-        }
-
-        // 🔧 PHASE 10 FIX: Convert external images to data URIs to fix CORS issues
-        await window.ImageCorsFix.fixImagesForPDF(reviewWindow.document);
+        // 🔧 PHASE 10 FIX: Images are already embedded as data URIs in HTML
+        // No need to inject again - assets already embedded in cleanHTML
+        console.log('✅ Images already embedded, skipping asset injection in cloned window');
         
         // Use html2canvas with timeout protection (IMPROVED EXPERTISE PATTERN)
         const canvas = await Promise.race([
