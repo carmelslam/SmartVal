@@ -53,10 +53,34 @@ class AuthService {
       if (profileError || !profile) {
         console.error('❌ Profile not found:', profileError);
         await supabase.auth.signOut();
-        return { 
-          success: false, 
-          error: 'פרופיל משתמש לא נמצא במערכת' 
+        return {
+          success: false,
+          error: 'פרופיל משתמש לא נמצא במערכת'
         };
+      }
+
+      // 🔧 PHASE 10 FIX: Fetch user assets (logo, stamp, signature) from user_assets table
+      console.log('🖼️ Fetching user assets...');
+      let userAssets = {};
+      const { data: assetsData, error: assetsError } = await supabase
+        .from('user_assets')
+        .select('company_logo_url, company_stamp_url, user_signature_url, draft_watermark_text, directive_watermark_text')
+        .eq('user_id', authData.user.id)
+        .single();
+
+      if (assetsError) {
+        // Not critical - user may not have uploaded assets yet
+        console.warn('⚠️ No user assets found (this is OK for new users):', assetsError.message);
+        userAssets = {
+          company_logo_url: null,
+          company_stamp_url: null,
+          user_signature_url: null,
+          draft_watermark_text: 'טיוטה בלבד',
+          directive_watermark_text: null
+        };
+      } else {
+        console.log('✅ User assets loaded successfully');
+        userAssets = assetsData || {};
       }
 
       // Check if account is active
@@ -78,6 +102,7 @@ class AuthService {
         user: authData.user,
         session: authData.session,
         profile: profile,
+        assets: userAssets,  // 🔧 PHASE 10 FIX: Include user assets
         loginTime: loginTime
       }));
       sessionStorage.setItem('loginTime', loginTime); // For backwards compatibility
@@ -324,6 +349,44 @@ class AuthService {
     }
 
     return null;
+  }
+
+  /**
+   * 🔧 PHASE 10 FIX: Get current user assets (logo, stamp, signature)
+   * @returns {object|null}
+   */
+  getCurrentAssets() {
+    // Try from sessionStorage
+    const authData = sessionStorage.getItem('auth');
+    if (authData) {
+      try {
+        const parsed = JSON.parse(authData);
+        return parsed.assets || null;
+      } catch (e) {
+        console.error('Failed to parse auth data:', e);
+      }
+    }
+
+    return null;
+  }
+
+  /**
+   * 🔧 PHASE 10 FIX: Get specific asset URL
+   * @param {string} assetType - Type of asset: 'logo', 'stamp', or 'signature'
+   * @returns {string|null}
+   */
+  getAssetUrl(assetType) {
+    const assets = this.getCurrentAssets();
+    if (!assets) return null;
+
+    const assetMap = {
+      'logo': 'company_logo_url',
+      'stamp': 'company_stamp_url',
+      'signature': 'user_signature_url'
+    };
+
+    const fieldName = assetMap[assetType];
+    return fieldName ? assets[fieldName] : null;
   }
 
   /**
