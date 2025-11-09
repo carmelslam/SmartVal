@@ -275,6 +275,52 @@ export class AssetLoader {
   }
 
   /**
+   * Convert images to data URIs for embedding in PDFs
+   * This prevents CORS issues and timeout problems
+   * @param {Document} document - DOM document
+   * @returns {Promise<number>} - Number of images converted
+   */
+  async convertImagesToDataURIs(document) {
+    console.log('🔄 AssetLoader: Converting images to data URIs...');
+
+    const images = document.querySelectorAll('img[data-asset-injected="true"]');
+    let convertedCount = 0;
+
+    for (const img of images) {
+      try {
+        if (!img.complete) {
+          console.log(`⏳ Waiting for image to load: ${img.alt}`);
+          await new Promise((resolve, reject) => {
+            img.onload = resolve;
+            img.onerror = reject;
+            setTimeout(() => reject(new Error('timeout')), 3000);
+          });
+        }
+
+        // Create canvas and convert to data URI
+        const canvas = document.createElement('canvas');
+        canvas.width = img.naturalWidth || img.width;
+        canvas.height = img.naturalHeight || img.height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0);
+
+        const dataURI = canvas.toDataURL('image/png');
+        img.src = dataURI;
+        img.removeAttribute('data-asset-injected'); // Mark as converted
+        img.dataset.converted = 'true';
+        convertedCount++;
+
+        console.log(`✅ Converted to data URI: ${img.alt || 'unnamed'}`);
+      } catch (error) {
+        console.warn(`⚠️ Failed to convert image: ${img.alt ||'unnamed'}`, error);
+      }
+    }
+
+    console.log(`✅ Converted ${convertedCount} images to data URIs`);
+    return convertedCount;
+  }
+
+  /**
    * Inject assets into a cloned document (for PDF generation)
    * @param {Document} document - DOM document to inject into
    * @param {string} status - Optional report status for watermark injection

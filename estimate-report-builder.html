@@ -2319,12 +2319,9 @@
             // Wait for content to load with timeout protection
             await new Promise(resolve => setTimeout(resolve, 1000));
 
-            // 🔧 PHASE 10 FIX: Inject user-specific assets into cloned document before PDF generation
-            if (window.assetLoader) {
-              console.log('🖼️ Injecting user assets into estimate PDF document...');
-              // Pass status for conditional watermark injection
-              await window.assetLoader.injectAssetsForPDF(reviewWindow.document, status);
-            }
+            // 🔧 PHASE 10 FIX: Images are already embedded as data URIs in HTML
+            // No need to inject again - watermark is already in captured HTML
+            console.log('✅ Images already embedded, skipping asset injection in cloned window');
 
             // Use html2canvas with timeout protection and optimized settings
             let canvas;
@@ -2500,8 +2497,13 @@
                 }
               });
             }));
-            console.log('✅ All images loaded, capturing HTML now');
+            console.log('✅ All images loaded');
           }
+
+          // Convert images to data URIs so they're embedded in HTML
+          console.log('🔄 Converting images to data URIs...');
+          await window.assetLoader.convertImagesToDataURIs(document);
+          console.log('✅ Images embedded, ready to capture HTML');
         }
 
         // Show loading message
@@ -2631,12 +2633,9 @@
               // Wait for content to load
               await new Promise(resolve => setTimeout(resolve, 1000));
 
-              // 🔧 PHASE 10 FIX: Inject user-specific assets into cloned document before PDF generation
-              if (window.assetLoader) {
-                console.log('🖼️ Injecting user assets into estimate PDF document...');
-                // Pass 'final' status to hide watermark for finalized estimates
-                await window.assetLoader.injectAssetsForPDF(reviewWindow.document, 'final');
-              }
+              // 🔧 PHASE 10 FIX: Images are already embedded as data URIs in HTML
+              // No need to inject again - watermark is already in captured HTML
+              console.log('✅ Images already embedded, skipping asset injection in cloned window');
 
               // 🔧 PHASE 10 FIX: Convert external images to data URIs to fix CORS issues
               await window.ImageCorsFix.fixImagesForPDF(reviewWindow.document);
