@@ -330,13 +330,15 @@ export class AssetLoader {
         ctx.drawImage(img, 0, 0);
 
         const dataURI = canvas.toDataURL('image/png');
+        // 🔧 CRITICAL: Set BOTH property AND attribute to ensure outerHTML captures it
         img.src = dataURI;
+        img.setAttribute('src', dataURI);
         img.removeAttribute('data-asset-injected'); // Mark as converted
         img.removeAttribute('crossorigin'); // No longer needed
         img.dataset.converted = 'true';
         convertedCount++;
 
-        console.log(`✅ Converted to data URI: ${img.alt || 'unnamed'}`);
+        console.log(`✅ Converted to data URI: ${img.alt || 'unnamed'} (length: ${dataURI.length})`);
       } catch (error) {
         console.warn(`⚠️ Failed to convert image: ${img.alt ||'unnamed'}`, error);
         // Continue with other images even if one fails
