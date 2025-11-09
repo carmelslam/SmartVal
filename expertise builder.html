@@ -1428,6 +1428,15 @@
           console.log('🔄 Converting images to data URIs...');
           await window.assetLoader.convertImagesToDataURIs(document);
           console.log('✅ Images embedded, ready to capture HTML');
+
+          // 🔍 DIAGNOSTIC: Verify conversion worked on original document
+          console.log('🔍 DIAGNOSTIC: Checking img src attributes in ORIGINAL document after conversion...');
+          const originalImages = document.querySelectorAll('img');
+          originalImages.forEach((img, index) => {
+            const srcAttr = img.getAttribute('src');
+            const isDataURI = srcAttr && srcAttr.startsWith('data:');
+            console.log(`  Original Image ${index + 1}: alt="${img.alt}", src is ${isDataURI ? 'DATA URI' : 'URL'} (${srcAttr ? srcAttr.substring(0, 50) : 'null'}...)`);
+          });
         }
 
         try {
@@ -1509,7 +1518,16 @@
             if (controlSection) {
               controlSection.remove();
             }
-            
+
+            // 🔍 DIAGNOSTIC: Check what's actually in the cloned img src attributes
+            console.log('🔍 DIAGNOSTIC: Checking img src attributes in cloned document...');
+            const clonedImages = clonedDoc.querySelectorAll('img');
+            clonedImages.forEach((img, index) => {
+              const srcAttr = img.getAttribute('src');
+              const isDataURI = srcAttr && srcAttr.startsWith('data:');
+              console.log(`  Image ${index + 1}: alt="${img.alt}", src is ${isDataURI ? 'DATA URI' : 'URL'} (${srcAttr ? srcAttr.substring(0, 50) : 'null'}...)`);
+            });
+
             const htmlContent = clonedDoc.documentElement.outerHTML;
             let expertisePdfUrl = null; // Will be populated after PDF generation
             const htmlPayload = {
