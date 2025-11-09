@@ -1557,7 +1557,7 @@
                     if (timeoutId) clearTimeout(timeoutId);
                     
                     // Wait longer for the report to fully populate with data
-                    timeoutId = setTimeout(() => {
+                    timeoutId = setTimeout(async () => {
                       try {
                         // Get the populated HTML from the iframe
                         let iframeDoc;
@@ -1598,7 +1598,39 @@
                         // Remove any no-print elements before capturing
                         const noPrintElements = iframeDoc.querySelectorAll('.no-print, .control-buttons, .no-pdf');
                         noPrintElements.forEach(el => el.remove());
-                        
+
+                        // 🔧 PHASE 10 FIX: Convert images to data URIs before capturing HTML
+                        const iframeWindow = iframe.contentWindow;
+                        if (iframeWindow && iframeWindow.assetLoader) {
+                          console.log(`🔄 ${reportType}: Converting images to data URIs...`);
+                          try {
+                            // Inject assets first
+                            iframeWindow.assetLoader.injectAssets(iframeDoc);
+
+                            // Wait for images to load
+                            const images = iframeDoc.querySelectorAll('img[data-asset-injected="true"]');
+                            if (images.length > 0) {
+                              console.log(`⏳ ${reportType}: Waiting for ${images.length} images to load...`);
+                              await Promise.all(Array.from(images).map(img => {
+                                return new Promise(resolve => {
+                                  if (img.complete) resolve();
+                                  else {
+                                    img.onload = () => resolve();
+                                    img.onerror = () => resolve();
+                                    setTimeout(() => resolve(), 3000);
+                                  }
+                                });
+                              }));
+                            }
+
+                            // Convert to data URIs
+                            await iframeWindow.assetLoader.convertImagesToDataURIs(iframeDoc);
+                            console.log(`✅ ${reportType}: Images converted to data URIs`);
+                          } catch (assetError) {
+                            console.warn(`⚠️ ${reportType}: Asset conversion failed:`, assetError);
+                          }
+                        }
+
                         const populatedHTML = iframeDoc.documentElement.outerHTML;
                         
                         // Cleanup
