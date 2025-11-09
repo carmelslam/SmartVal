@@ -1185,21 +1185,9 @@
 
         if (htmlContent && !skipPdfGeneration) {
           console.log(`📄 Generating ${reportType} PDF using html2canvas...`);
-          
-          // 🔒 Refresh authentication before long PDF operation to prevent token expiry
-          try {
-            console.log('🔒 Refreshing session before PDF generation...');
-            const { data: sessionData, error: refreshError } = await window.supabase.auth.refreshSession();
-            if (refreshError) {
-              console.warn('⚠️ Session refresh failed:', refreshError);
-            } else {
-              console.log('✅ Session refreshed successfully');
-            }
-          } catch (authError) {
-            console.warn('⚠️ Auth refresh error:', authError);
-          }
 
-          // Open HTML in hidden window for rendering
+          // 🔧 PHASE 10 FIX: Open window BEFORE async operations to avoid popup blocker
+          // Browser blocks popups if opened after async callbacks
           const reviewWindow = window.open('', '_blank');
 
           // Check if popup was blocked
@@ -1207,6 +1195,20 @@
             console.warn(`⚠️ Popup blocked - ${reportType} will be saved without PDF`);
             // Continue without PDF - just save metadata
           } else {
+            // 🔒 Refresh authentication before long PDF operation to prevent token expiry
+            try {
+              console.log('🔒 Refreshing session before PDF generation...');
+              const { data: sessionData, error: refreshError } = await window.supabase.auth.refreshSession();
+              if (refreshError) {
+                console.warn('⚠️ Session refresh failed:', refreshError);
+              } else {
+                console.log('✅ Session refreshed successfully');
+              }
+            } catch (authError) {
+              console.warn('⚠️ Auth refresh error:', authError);
+            }
+
+            // Write HTML to the already-opened window
             reviewWindow.document.write(htmlContent);
             reviewWindow.document.close();
 
