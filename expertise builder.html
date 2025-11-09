@@ -1208,6 +1208,15 @@
               console.warn('⚠️ Auth refresh error:', authError);
             }
 
+            // 🔍 DIAGNOSTIC: Check what's actually in the HTML before writing
+            const imgMatches = htmlContent.match(/<img[^>]*>/g) || [];
+            console.log(`🔍 DIAGNOSTIC: Found ${imgMatches.length} img tags in ${reportType} HTML`);
+            imgMatches.forEach((imgTag, i) => {
+              const isDataURI = imgTag.includes('src="data:');
+              const srcMatch = imgTag.match(/src="([^"]{0,100})/);
+              console.log(`  ${reportType} img ${i + 1}: ${isDataURI ? 'DATA URI' : 'EXTERNAL URL'} - ${srcMatch ? srcMatch[1] + '...' : 'no src'}`);
+            });
+
             // Write HTML to the already-opened window
             reviewWindow.document.write(htmlContent);
             reviewWindow.document.close();
