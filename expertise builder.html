@@ -1214,19 +1214,16 @@
             await new Promise(resolve => setTimeout(resolve, 1000));
 
             // 🔧 PHASE 10 FIX: Images are already embedded as data URIs in HTML
-            // No need to inject again - watermark is already in captured HTML
-            console.log('✅ Images already embedded, skipping asset injection in cloned window');
+            // No need to inject again or convert - everything is already in the HTML
+            console.log('✅ Images already embedded as data URIs, ready for html2canvas');
 
             // Use html2canvas with timeout protection and optimized settings
             let canvas;
             try {
-              // 🔧 PHASE 10 FIX: Convert external images to data URIs to fix CORS issues
-              await window.ImageCorsFix.fixImagesForPDF(reviewWindow.document);
-              
               // Add timeout wrapper for html2canvas to prevent hanging
               canvas = await Promise.race([
                 html2canvas(reviewWindow.document.body, window.ImageCorsFix.HTML2CANVAS_OPTIONS),
-                new Promise((_, reject) => 
+                new Promise((_, reject) =>
                   setTimeout(() => reject(new Error('PDF generation timeout')), 30000) // 30 second total timeout
                 )
               ]);
@@ -1606,6 +1603,10 @@
                           try {
                             // Inject assets first
                             iframeWindow.assetLoader.injectAssets(iframeDoc);
+
+                            // 🔧 PHASE 10 FIX: Inject watermark for draft reports
+                            // Estimate and Final Report drafts should show 'draft' watermark
+                            iframeWindow.assetLoader.injectWatermark(iframeDoc, 'draft');
 
                             // Wait for images to load
                             const images = iframeDoc.querySelectorAll('img[data-asset-injected="true"]');
