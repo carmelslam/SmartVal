@@ -448,9 +448,29 @@
 
   <script src="https://cdn.jsdelivr.net/npm/handlebars@latest/dist/handlebars.min.js"></script>
   <script src="./math-preview.js"></script>
+  <script type="module">
+    // 🔧 PHASE 10 FIX: Import and use asset-loader for dynamic user assets
+    import { assetLoader } from './asset-loader.js';
+
+    // Inject assets as soon as DOM is ready
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', () => {
+        console.log('🖼️ Injecting user assets into final report template...');
+        assetLoader.injectAssets(document);
+      });
+    } else {
+      // DOM already loaded
+      console.log('🖼️ Injecting user assets into final report template...');
+      assetLoader.injectAssets(document);
+    }
+
+    // Make asset loader available globally for PDF generation
+    window.assetLoader = assetLoader;
+  </script>
 </head>
 <body>
-  <img class="bg" src="https://assets.carmelcayouf.com/assets/bg-report.png" alt="">
+  <!-- 🔧 PHASE 10 FIX: Background will be injected dynamically via asset-loader -->
+  <img class="bg" src="https://assets.carmelcayouf.com/assets/bg-report.png" alt="" data-asset-type="background">
   <div class="page">
   <div id="report-output"></div>
 
@@ -1741,7 +1761,7 @@
         reviewWindow.document.write(cleanHTML);
         reviewWindow.document.close();
         await new Promise(resolve => setTimeout(resolve, 1000));
-        
+
         // 🔒 Refresh authentication before PDF generation to prevent token expiry
         try {
           console.log('🔒 Refreshing session before PDF generation...');
@@ -1753,6 +1773,12 @@
           }
         } catch (authError) {
           console.warn('⚠️ Auth refresh error:', authError);
+        }
+
+        // 🔧 PHASE 10 FIX: Inject user-specific assets into cloned document before PDF generation
+        if (window.assetLoader) {
+          console.log('🖼️ Injecting user assets into final report PDF document...');
+          await window.assetLoader.injectAssetsForPDF(reviewWindow.document);
         }
 
         // 🔧 PHASE 10 FIX: Convert external images to data URIs to fix CORS issues

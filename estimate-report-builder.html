@@ -834,6 +834,25 @@
 
   <script src="https://cdn.jsdelivr.net/npm/handlebars@latest/dist/handlebars.min.js"></script>
   <script src="./math-preview.js"></script>
+  <script type="module">
+    // 🔧 PHASE 10 FIX: Import and use asset-loader for dynamic user assets
+    import { assetLoader } from './asset-loader.js';
+
+    // Inject assets as soon as DOM is ready
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', () => {
+        console.log('🖼️ Injecting user assets into estimate builder...');
+        assetLoader.injectAssets(document);
+      });
+    } else {
+      // DOM already loaded
+      console.log('🖼️ Injecting user assets into estimate builder...');
+      assetLoader.injectAssets(document);
+    }
+
+    // Make asset loader available globally for PDF generation
+    window.assetLoader = assetLoader;
+  </script>
 </head>
 <body>
   <!-- Background image moved to CSS to avoid CORS issues -->
@@ -2300,6 +2319,12 @@
             // Wait for content to load with timeout protection
             await new Promise(resolve => setTimeout(resolve, 1000));
 
+            // 🔧 PHASE 10 FIX: Inject user-specific assets into cloned document before PDF generation
+            if (window.assetLoader) {
+              console.log('🖼️ Injecting user assets into estimate PDF document...');
+              await window.assetLoader.injectAssetsForPDF(reviewWindow.document);
+            }
+
             // Use html2canvas with timeout protection and optimized settings
             let canvas;
             try {
@@ -2630,6 +2655,12 @@
 
               // Wait for content to load
               await new Promise(resolve => setTimeout(resolve, 1000));
+
+              // 🔧 PHASE 10 FIX: Inject user-specific assets into cloned document before PDF generation
+              if (window.assetLoader) {
+                console.log('🖼️ Injecting user assets into estimate PDF document...');
+                await window.assetLoader.injectAssetsForPDF(reviewWindow.document);
+              }
 
               // 🔧 PHASE 10 FIX: Convert external images to data URIs to fix CORS issues
               await window.ImageCorsFix.fixImagesForPDF(reviewWindow.document);
