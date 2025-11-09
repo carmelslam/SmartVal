@@ -187,6 +187,21 @@ export class AssetLoader {
       }
     });
 
+    // Update all background images (by data attribute)
+    const backgroundImages = document.querySelectorAll('img[data-asset-type="background"]');
+    backgroundImages.forEach(img => {
+      const backgroundUrl = this.getAssetUrl('background');
+      if (backgroundUrl) {
+        const oldSrc = img.src;
+        img.src = backgroundUrl;
+        img.dataset.assetInjected = 'true';
+        injectedCount++;
+        console.log(`🖼️  Background updated: ${oldSrc.substring(0, 50)}... → ${backgroundUrl.substring(0, 50)}...`);
+      } else {
+        console.warn('⚠️  No background URL available, keeping existing src');
+      }
+    });
+
     if (injectedCount > 0) {
       console.log(`✅ AssetLoader: Successfully injected ${injectedCount} asset(s)`);
     } else {
