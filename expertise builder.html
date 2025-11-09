@@ -1409,8 +1409,24 @@
           const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
           const watermarkStatus = helper.expertise?.summary?.directive || helper.case_info?.status || 'draft';
           window.assetLoader.injectWatermark(document, watermarkStatus);
-          // Give time for image URLs to update
-          await new Promise(resolve => setTimeout(resolve, 300));
+
+          // Wait for all injected images to actually load
+          const images = document.querySelectorAll('img[data-asset-injected="true"]');
+          if (images.length > 0) {
+            console.log(`⏳ Waiting for ${images.length} images to load before capturing HTML...`);
+            await Promise.all(Array.from(images).map(img => {
+              return new Promise(resolve => {
+                if (img.complete) {
+                  resolve();
+                } else {
+                  img.onload = () => resolve();
+                  img.onerror = () => resolve();
+                  setTimeout(() => resolve(), 3000); // 3 second timeout per image
+                }
+              });
+            }));
+            console.log('✅ All images loaded, capturing HTML now');
+          }
         }
 
         try {

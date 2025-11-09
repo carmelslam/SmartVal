@@ -290,8 +290,39 @@ export class AssetLoader {
       this.injectWatermark(document, status);
     }
 
-    // Wait a bit for images to start loading
-    await new Promise(resolve => setTimeout(resolve, 300));
+    // Wait for ALL images to actually load
+    const images = document.querySelectorAll('img[data-asset-injected="true"]');
+    if (images.length > 0) {
+      console.log(`⏳ Waiting for ${images.length} injected images to load...`);
+      const imageLoadPromises = Array.from(images).map(img => {
+        return new Promise((resolve) => {
+          if (img.complete) {
+            console.log(`✅ Image already loaded: ${img.alt || 'unnamed'}`);
+            resolve();
+          } else {
+            img.onload = () => {
+              console.log(`✅ Image loaded: ${img.alt || 'unnamed'}`);
+              resolve();
+            };
+            img.onerror = () => {
+              console.warn(`⚠️ Image failed to load: ${img.alt || 'unnamed'}`);
+              resolve(); // Still resolve to not block
+            };
+            // Timeout after 5 seconds
+            setTimeout(() => {
+              console.warn(`⏱️ Image load timeout: ${img.alt || 'unnamed'}`);
+              resolve();
+            }, 5000);
+          }
+        });
+      });
+
+      await Promise.all(imageLoadPromises);
+      console.log('✅ All images loaded, ready for PDF generation');
+    } else {
+      // Still wait a bit for any non-injected images
+      await new Promise(resolve => setTimeout(resolve, 300));
+    }
 
     return count;
   }
