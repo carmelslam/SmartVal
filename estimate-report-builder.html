@@ -25,6 +25,21 @@
     
     .bg{ position:fixed; inset:0; width:100%; height:100%; object-fit:cover; z-index:0; pointer-events:none }
     .page{ position:relative; z-index:1; padding:25mm 15mm 20mm 15mm; }
+
+    /* 🔧 PHASE 10 FIX: Watermark styles */
+    .watermark {
+      position: fixed;
+      top: 40%;
+      left: 50%;
+      transform: translate(-50%, -50%) rotate(-30deg);
+      font-size: 8rem;
+      color: rgba(59, 130, 246, 0.15);
+      font-weight: bold;
+      z-index: 999;
+      pointer-events: none;
+      white-space: nowrap;
+      font-family: 'Heebo', Arial, sans-serif;
+    }
   </style>
   <style>
     body {
@@ -272,6 +287,7 @@
         left: 0 !important;
         width: 210mm !important;
         height: 297mm !important;
+        object-fit: cover !important;
         z-index: 0 !important;
       }
       
@@ -843,11 +859,15 @@
       document.addEventListener('DOMContentLoaded', () => {
         console.log('🖼️ Injecting user assets into estimate builder...');
         assetLoader.injectAssets(document);
+        // Inject watermark as draft by default
+        assetLoader.injectWatermark(document, 'draft');
       });
     } else {
       // DOM already loaded
       console.log('🖼️ Injecting user assets into estimate builder...');
       assetLoader.injectAssets(document);
+      // Inject watermark as draft by default
+      assetLoader.injectWatermark(document, 'draft');
     }
 
     // Make asset loader available globally for PDF generation
@@ -855,8 +875,12 @@
   </script>
 </head>
 <body>
-  <!-- Background image moved to CSS to avoid CORS issues -->
-  <div class="bg-container"></div>
+  <!-- 🔧 PHASE 10 FIX: Background will be injected dynamically via asset-loader -->
+  <img class="bg" src="https://assets.carmelcayouf.com/assets/bg-report.png" alt="" data-asset-type="background">
+
+  <!-- 🔧 PHASE 10 FIX: Watermark element for conditional injection -->
+  <div class="watermark">סטטוס</div>
+
   <div class="page">
   <div class="estimate-header">
     <img src="https://carmelcayouf.com/wp-content/uploads/2025/06/g.webp" alt="Logo" style="width: 80px; margin-bottom: 15px;">
@@ -2481,6 +2505,8 @@
         if (window.assetLoader) {
           console.log('🖼️ Injecting user assets before capturing HTML...');
           window.assetLoader.injectAssets(document);
+          // Inject watermark - will be hidden for 'final' status later
+          window.assetLoader.injectWatermark(document, 'draft');
 
           // Wait for all injected images to actually load
           const images = document.querySelectorAll('img[data-asset-injected="true"]');
