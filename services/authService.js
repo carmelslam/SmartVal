@@ -59,12 +59,12 @@ class AuthService {
         };
       }
 
-      // 🔧 PHASE 10 FIX: Fetch user assets (logo, stamp, signature) from user_assets table
+      // 🔧 PHASE 10 FIX: Fetch user assets (logo, stamp, signature, background) from user_assets table
       console.log('🖼️ Fetching user assets...');
       let userAssets = {};
       const { data: assetsData, error: assetsError } = await supabase
         .from('user_assets')
-        .select('company_logo_url, company_stamp_url, user_signature_url, draft_watermark_text, directive_watermark_text')
+        .select('company_logo_url, company_stamp_url, user_signature_url, background_url, draft_watermark_text, directive_watermark_text')
         .eq('user_id', authData.user.id)
         .single();
 
@@ -75,6 +75,7 @@ class AuthService {
           company_logo_url: null,
           company_stamp_url: null,
           user_signature_url: null,
+          background_url: null,
           draft_watermark_text: 'טיוטה בלבד',
           directive_watermark_text: null
         };
@@ -372,7 +373,7 @@ class AuthService {
 
   /**
    * 🔧 PHASE 10 FIX: Get specific asset URL
-   * @param {string} assetType - Type of asset: 'logo', 'stamp', or 'signature'
+   * @param {string} assetType - Type of asset: 'logo', 'stamp', 'signature', or 'background'
    * @returns {string|null}
    */
   getAssetUrl(assetType) {
@@ -382,7 +383,8 @@ class AuthService {
     const assetMap = {
       'logo': 'company_logo_url',
       'stamp': 'company_stamp_url',
-      'signature': 'user_signature_url'
+      'signature': 'user_signature_url',
+      'background': 'background_url'
     };
 
     const fieldName = assetMap[assetType];
