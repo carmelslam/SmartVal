@@ -25,6 +25,21 @@
     
     .bg{ position:fixed; inset:0; width:100%; height:100%; object-fit:cover; z-index:0; pointer-events:none }
     .page{ position:relative; z-index:1; padding:25mm 15mm 20mm 15mm; }
+
+    /* 🔧 PHASE 10 FIX: Watermark styles */
+    .watermark {
+      position: fixed;
+      top: 40%;
+      left: 50%;
+      transform: translate(-50%, -50%) rotate(-30deg);
+      font-size: 8rem;
+      color: rgba(59, 130, 246, 0.15);
+      font-weight: bold;
+      z-index: 999;
+      pointer-events: none;
+      white-space: nowrap;
+      font-family: 'Heebo', Arial, sans-serif;
+    }
   </style>
   <style>
     body {
@@ -272,6 +287,7 @@
         left: 0 !important;
         width: 210mm !important;
         height: 297mm !important;
+        object-fit: cover !important;
         z-index: 0 !important;
       }
       
@@ -843,11 +859,15 @@
       document.addEventListener('DOMContentLoaded', () => {
         console.log('🖼️ Injecting user assets into estimate builder...');
         assetLoader.injectAssets(document);
+        // Inject watermark as draft by default
+        assetLoader.injectWatermark(document, 'draft');
       });
     } else {
       // DOM already loaded
       console.log('🖼️ Injecting user assets into estimate builder...');
       assetLoader.injectAssets(document);
+      // Inject watermark as draft by default
+      assetLoader.injectWatermark(document, 'draft');
     }
 
     // Make asset loader available globally for PDF generation
@@ -855,8 +875,12 @@
   </script>
 </head>
 <body>
-  <!-- Background image moved to CSS to avoid CORS issues -->
-  <div class="bg-container"></div>
+  <!-- 🔧 PHASE 10 FIX: Background will be injected dynamically via asset-loader -->
+  <img class="bg" src="https://assets.carmelcayouf.com/assets/bg-report.png" alt="" data-asset-type="background">
+
+  <!-- 🔧 PHASE 10 FIX: Watermark element for conditional injection -->
+  <div class="watermark">סטטוס</div>
+
   <div class="page">
   <div class="estimate-header">
     <img src="https://carmelcayouf.com/wp-content/uploads/2025/06/g.webp" alt="Logo" style="width: 80px; margin-bottom: 15px;">
@@ -2319,12 +2343,9 @@
             // Wait for content to load with timeout protection
             await new Promise(resolve => setTimeout(resolve, 1000));
 
-            // 🔧 PHASE 10 FIX: Inject user-specific assets into cloned document before PDF generation
-            if (window.assetLoader) {
-              console.log('🖼️ Injecting user assets into estimate PDF document...');
-              // Pass status for conditional watermark injection
-              await window.assetLoader.injectAssetsForPDF(reviewWindow.document, status);
-            }
+            // 🔧 PHASE 10 FIX: Images are already embedded as data URIs in HTML
+            // No need to inject again - watermark is already in captured HTML
+            console.log('✅ Images already embedded, skipping asset injection in cloned window');
 
             // Use html2canvas with timeout protection and optimized settings
             let canvas;
@@ -2484,6 +2505,8 @@
         if (window.assetLoader) {
           console.log('🖼️ Injecting user assets before capturing HTML...');
           window.assetLoader.injectAssets(document);
+          // Inject watermark - will be hidden for 'final' status later
+          window.assetLoader.injectWatermark(document, 'draft');
 
           // Wait for all injected images to actually load
           const images = document.querySelectorAll('img[data-asset-injected="true"]');
@@ -2500,8 +2523,13 @@
                 }
               });
             }));
-            console.log('✅ All images loaded, capturing HTML now');
+            console.log('✅ All images loaded');
           }
+
+          // Convert images to data URIs so they're embedded in HTML
+          console.log('🔄 Converting images to data URIs...');
+          await window.assetLoader.convertImagesToDataURIs(document);
+          console.log('✅ Images embedded, ready to capture HTML');
         }
 
         // Show loading message
@@ -2631,12 +2659,9 @@
               // Wait for content to load
               await new Promise(resolve => setTimeout(resolve, 1000));
 
-              // 🔧 PHASE 10 FIX: Inject user-specific assets into cloned document before PDF generation
-              if (window.assetLoader) {
-                console.log('🖼️ Injecting user assets into estimate PDF document...');
-                // Pass 'final' status to hide watermark for finalized estimates
-                await window.assetLoader.injectAssetsForPDF(reviewWindow.document, 'final');
-              }
+              // 🔧 PHASE 10 FIX: Images are already embedded as data URIs in HTML
+              // No need to inject again - watermark is already in captured HTML
+              console.log('✅ Images already embedded, skipping asset injection in cloned window');
 
               // 🔧 PHASE 10 FIX: Convert external images to data URIs to fix CORS issues
               await window.ImageCorsFix.fixImagesForPDF(reviewWindow.document);
