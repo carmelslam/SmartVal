@@ -78,7 +78,7 @@ export class AssetLoader {
 
   /**
    * Get specific asset URL with optional fallback
-   * @param {string} assetType - Type: 'logo', 'stamp', 'signature'
+   * @param {string} assetType - Type: 'logo', 'stamp', 'signature', 'background'
    * @param {string} fallbackUrl - Optional fallback URL if asset not found
    * @returns {string|null} - Asset URL or fallback
    */
@@ -90,7 +90,8 @@ export class AssetLoader {
     const assetMap = {
       'logo': 'company_logo_url',
       'stamp': 'company_stamp_url',
-      'signature': 'user_signature_url'
+      'signature': 'user_signature_url',
+      'background': 'background_url'
     };
 
     const fieldName = assetMap[assetType];
@@ -223,7 +224,8 @@ export class AssetLoader {
     return !!(
       this.assets?.company_logo_url ||
       this.assets?.company_stamp_url ||
-      this.assets?.user_signature_url
+      this.assets?.user_signature_url ||
+      this.assets?.background_url
     );
   }
 
@@ -240,9 +242,11 @@ export class AssetLoader {
       hasLogo: !!this.assets?.company_logo_url,
       hasStamp: !!this.assets?.company_stamp_url,
       hasSignature: !!this.assets?.user_signature_url,
+      hasBackground: !!this.assets?.background_url,
       logoUrl: this.assets?.company_logo_url || null,
       stampUrl: this.assets?.company_stamp_url || null,
       signatureUrl: this.assets?.user_signature_url || null,
+      backgroundUrl: this.assets?.background_url || null,
       draftWatermark: this.assets?.draft_watermark_text || 'טיוטה בלבד',
       directiveWatermark: this.assets?.directive_watermark_text || 'לתיקון'
     };
