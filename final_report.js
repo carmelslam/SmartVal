@@ -1308,20 +1308,23 @@ function injectReportHTML() {
         console.log('✅ Template rendered successfully');
         container.innerHTML = applyDraftWatermark(rendered);
 
-        // 🔧 PHASE 10 CRITICAL FIX: Inject assets into cloned template content
-        // The template contains images with hardcoded URLs that only appear in DOM after cloning
-        if (window.assetLoader) {
-          console.log('🔧 PHASE 10: Running asset injection on cloned template content');
-          window.assetLoader.injectAssets(document);
-        } else {
-          console.warn('⚠️ PHASE 10: Asset loader not available for post-template injection');
-        }
-
         // Generate dynamic damage centers after template rendering
         generateDamageCentersForFinalReport(helper);
-        
+
         // Populate dynamic legal text and attachments
         populateDynamicContent(transformedHelper);
+
+        // 🔧 PHASE 10 CRITICAL FIX: Inject assets into cloned template content
+        // The template contains images with hardcoded URLs that only appear in DOM after cloning
+        // Use setTimeout to ensure all dynamic content is fully rendered before injection
+        setTimeout(() => {
+          if (window.assetLoader) {
+            console.log('🔧 PHASE 10: Running asset injection on cloned template content (after all rendering)');
+            window.assetLoader.injectAssets(document);
+          } else {
+            console.warn('⚠️ PHASE 10: Asset loader not available for post-template injection');
+          }
+        }, 200);
       } catch (compileError) {
         console.error('💥 Handlebars compilation error:', compileError);
         console.error('💥 Error details:', {
