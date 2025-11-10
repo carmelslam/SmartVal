@@ -1444,17 +1444,20 @@
 
         container.innerHTML = html;
 
-        // 🔧 PHASE 10 CRITICAL FIX: Inject assets into dynamically created content
-        // The signature and other images were just added via innerHTML, so they need asset injection
-        if (window.assetLoader) {
-          console.log('🔧 PHASE 10: Running asset injection on dynamically created estimate content');
-          window.assetLoader.injectAssets(document);
-        } else {
-          console.warn('⚠️ PHASE 10: Asset loader not available for post-innerHTML injection');
-        }
-
         // Apply dynamic page layout management
         adjustContentForPrint();
+
+        // 🔧 PHASE 10 CRITICAL FIX: Inject assets into dynamically created content
+        // The signature and other images were just added via innerHTML, so they need asset injection
+        // Use setTimeout to ensure DOM is fully rendered and layout is applied before injection
+        setTimeout(() => {
+          if (window.assetLoader) {
+            console.log('🔧 PHASE 10: Running asset injection on dynamically created estimate content (after layout)');
+            window.assetLoader.injectAssets(document);
+          } else {
+            console.warn('⚠️ PHASE 10: Asset loader not available for post-innerHTML injection');
+          }
+        }, 200);
         
       } catch (error) {
         console.error('Error generating estimate report:', error);
