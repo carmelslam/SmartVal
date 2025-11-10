@@ -1224,9 +1224,11 @@
             // Wait for content to load with timeout protection
             await new Promise(resolve => setTimeout(resolve, 1000));
 
-            // 🔧 PHASE 10 FIX: Images are already embedded as data URIs in HTML
-            // No need to inject again or convert - everything is already in the HTML
-            console.log('✅ Images already embedded as data URIs, ready for html2canvas');
+            // 🔧 PHASE 10 FIX: Fix CORS issues before html2canvas
+            if (window.ImageCorsFix) {
+              console.log('🔧 Fixing CORS issues before PDF generation...');
+              await window.ImageCorsFix.fixImagesForPDF(reviewWindow.document);
+            }
 
             // Use html2canvas with timeout protection and optimized settings
             let canvas;
@@ -1633,14 +1635,54 @@
                         const noPrintElements = iframeDoc.querySelectorAll('.no-print, .control-buttons, .no-pdf');
                         noPrintElements.forEach(el => el.remove());
 
-                        // 🔧 PHASE 10 CRITICAL FIX: Wait for child page's setTimeout to complete
-                        // The child pages (estimate-report-builder.html, final_report.js) have setTimeout(1000ms)
-                        // that runs AFTER they insert content. We need to wait for those to complete.
-                        console.log(`⏳ ${reportType}: Waiting 1500ms for child page's asset injection setTimeout to complete...`);
-                        await new Promise(resolve => setTimeout(resolve, 1500));
+                        // Get iframe window reference early
+                        const iframeWindow = iframe.contentWindow;
+
+                        // 🔧 PHASE 10 CRITICAL FIX: Wait for child page's asset injection to complete
+                        // For final report, we need to wait for the template to be rendered AND assets to be injected
+                        if (reportType === 'Final Report') {
+                          console.log(`⏳ ${reportType}: Waiting for template rendering and asset injection...`);
+                          
+                          // Check if the iframe window has the assetsInjected flag or wait for the event
+                          const waitForAssets = new Promise((resolve) => {
+                            // Check if already injected
+                            if (iframeWindow && iframeWindow.assetsInjected) {
+                              console.log(`✅ ${reportType}: Assets already injected`);
+                              resolve();
+                              return;
+                            }
+                            
+                            // Wait for the event
+                            const handleAssetsInjected = (event) => {
+                              console.log(`✅ ${reportType}: Assets injected event received`);
+                              resolve();
+                            };
+                            
+                            if (iframeWindow) {
+                              iframeWindow.addEventListener('assetsInjected', handleAssetsInjected);
+                            }
+                            
+                            // Timeout after 3 seconds
+                            setTimeout(() => {
+                              console.log(`⏱️ ${reportType}: Asset injection timeout, proceeding anyway`);
+                              if (iframeWindow) {
+                                iframeWindow.removeEventListener('assetsInjected', handleAssetsInjected);
+                              }
+                              resolve();
+                            }, 3000);
+                          });
+                          
+                          await waitForAssets;
+                          
+                          // Give a bit more time for rendering to stabilize
+                          await new Promise(resolve => setTimeout(resolve, 500));
+                        } else {
+                          // For other reports, use the original wait time
+                          console.log(`⏳ ${reportType}: Waiting 1500ms for child page's asset injection setTimeout to complete...`);
+                          await new Promise(resolve => setTimeout(resolve, 1500));
+                        }
 
                         // 🔧 PHASE 10 FIX: Convert images to data URIs before capturing HTML
-                        const iframeWindow = iframe.contentWindow;
                         if (iframeWindow && iframeWindow.assetLoader) {
                           console.log(`🔄 ${reportType}: Converting images to data URIs...`);
                           try {
@@ -1788,8 +1830,14 @@
                   // Wait for content to load
                   await new Promise(resolve => setTimeout(resolve, 1000));
 
-                  // Use html2canvas with REDUCED scale to avoid 413 error
-                  const canvas = await html2canvas(reviewWindow.document.body, {
+                  // 🔧 PHASE 10 FIX: Fix CORS issues before html2canvas
+                  if (window.ImageCorsFix) {
+                    console.log('🔧 Fixing CORS issues before PDF generation...');
+                    await window.ImageCorsFix.fixImagesForPDF(reviewWindow.document);
+                  }
+
+                  // Use html2canvas with CORS-safe options
+                  const canvas = await html2canvas(reviewWindow.document.body, window.ImageCorsFix?.HTML2CANVAS_OPTIONS || {
                     scale: 1,
                     useCORS: true,
                     allowTaint: true,

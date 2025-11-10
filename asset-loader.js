@@ -142,8 +142,18 @@ export class AssetLoader {
     console.log('🔧 AssetLoader: Injecting assets into document...');
     let injectedCount = 0;
 
-    // Update all logo images (by alt attribute)
-    const logoImages = document.querySelectorAll('img[alt="Logo"], img[data-asset-type="logo"]');
+    // Debug: Log all images in document to understand why they're not being found
+    const allImages = document.querySelectorAll('img');
+    console.log(`🔍 AssetLoader: Found ${allImages.length} total images in document`);
+    if (allImages.length < 10) { // Only log details if reasonable number
+      allImages.forEach((img, index) => {
+        console.log(`  Image ${index + 1}: alt="${img.alt}", data-asset-type="${img.dataset?.assetType}", src="${img.src?.substring(0, 50)}..."`);
+      });
+    }
+
+    // Update all logo images (by alt attribute - case insensitive and flexible)
+    const logoImages = document.querySelectorAll('img[alt="Logo"], img[alt="logo"], img[data-asset-type="logo"]');
+    console.log(`🔍 AssetLoader: Found ${logoImages.length} logo images to update`);
     logoImages.forEach(img => {
       const logoUrl = this.getAssetUrl('logo');
       if (logoUrl) {
@@ -234,19 +244,12 @@ export class AssetLoader {
       this.loadFromSession();
     }
 
-    const watermarkElement = document.querySelector('.watermark, .draft-watermark');
-    if (!watermarkElement) {
-      console.warn('⚠️ AssetLoader: No watermark element found in document');
-      return false;
-    }
-
     // Determine watermark text based on status
     let watermarkText = '';
 
     if (!status || status === '' || status === 'final' || status === 'completed') {
-      // Hide watermark for final/completed reports
-      watermarkElement.style.display = 'none';
-      console.log('✅ AssetLoader: Watermark hidden for final report');
+      // No watermark for final/completed reports
+      console.log('✅ AssetLoader: No watermark for final report');
       return true;
     } else if (status.toLowerCase() === 'draft' || status.toLowerCase() === 'טיוטה') {
       // Use custom draft watermark text or default
@@ -262,28 +265,56 @@ export class AssetLoader {
       console.log('📋 AssetLoader: Injecting custom watermark:', watermarkText);
     }
 
-    // Apply watermark text
+    // 🔧 PHASE 10 FIX: Use fixed positioning for watermarks
+    // This ensures watermarks appear on all printed pages automatically
     if (watermarkText) {
-      watermarkElement.textContent = watermarkText;
-      watermarkElement.style.display = '';
+      // Remove any existing watermarks first
+      const existingWatermarks = document.querySelectorAll('.watermark-injected');
+      existingWatermarks.forEach(w => w.remove());
 
-      // Dynamic font sizing based on text length
-      const textLength = watermarkText.length;
-      if (textLength > 20) {
-        watermarkElement.style.fontSize = '5rem';
-      } else if (textLength > 15) {
-        watermarkElement.style.fontSize = '6rem';
-      } else if (textLength > 10) {
-        watermarkElement.style.fontSize = '7rem';
-      } else {
-        watermarkElement.style.fontSize = '8rem';
-      }
+      // Inject single watermark with fixed positioning at body level
+      console.log('🔧 AssetLoader: Injecting fixed-position watermark');
+      this.injectWatermarkIntoContainer(document.body, watermarkText);
 
       console.log('✅ AssetLoader: Watermark injected successfully');
       return true;
     }
 
     return false;
+  }
+
+  /**
+   * Helper method to inject watermark into a specific container
+   * @private
+   */
+  injectWatermarkIntoContainer(container, watermarkText) {
+    // Create watermark element
+    const watermark = document.createElement('div');
+    watermark.className = 'watermark-injected';
+    watermark.textContent = watermarkText;
+    
+    // Style for fixed positioning to appear on all printed pages
+    watermark.style.cssText = `
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%) rotate(-45deg);
+      font-size: ${watermarkText.length > 10 ? '5rem' : '6rem'};
+      color: rgba(220, 38, 38, 0.15);
+      font-weight: bold;
+      pointer-events: none;
+      z-index: 1000;
+      white-space: nowrap;
+      user-select: none;
+      -webkit-user-select: none;
+      -moz-user-select: none;
+      -ms-user-select: none;
+    `;
+
+    // No need to modify container positioning with fixed positioning
+
+    // Insert watermark at the beginning of container
+    container.insertBefore(watermark, container.firstChild);
   }
 
   /**

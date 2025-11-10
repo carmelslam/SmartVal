@@ -349,9 +349,11 @@ function applyDraftWatermark(html) {
     return html;
   }
   
-  console.log('⚠️ Draft report - applying watermark');
-  const watermark = '<div style="position:fixed; top:50%; left:50%; transform:translate(-50%, -50%) rotate(-45deg); font-size:6rem; color:rgba(220, 38, 38, 0.2); z-index:9999; pointer-events:none; font-weight:bold;">טיוטה בלבד</div>';
-  return watermark + html;
+  console.log('⚠️ Draft report - watermark will be applied after render');
+  // 🔧 PHASE 10 FIX: Don't inject fixed watermark in HTML
+  // Instead, use assetLoader.injectWatermark() after DOM is rendered
+  // This ensures watermarks appear on all pages properly
+  return html;
 }
 
 // --- Report Title Logic ---
@@ -1316,15 +1318,32 @@ function injectReportHTML() {
 
         // 🔧 PHASE 10 CRITICAL FIX: Inject assets into cloned template content
         // The template contains images with hardcoded URLs that only appear in DOM after cloning
-        // Use setTimeout to ensure all dynamic content is fully rendered before injection
-        setTimeout(() => {
-          if (window.assetLoader) {
-            console.log('🔧 PHASE 10: Running asset injection on cloned template content (after all rendering)');
+        // Run immediately and then again after delay to catch any dynamic content
+        if (window.assetLoader) {
+          console.log('🔧 PHASE 10: Running immediate asset injection after template render');
+          window.assetLoader.injectAssets(document);
+          
+          // Also set a flag that assets have been injected for the parent frame
+          window.assetsInjected = true;
+          
+          // Dispatch event to notify parent that assets are ready
+          window.dispatchEvent(new CustomEvent('assetsInjected', { detail: { success: true } }));
+          
+          // Run again after delay to catch any dynamic content
+          setTimeout(() => {
+            console.log('🔧 PHASE 10: Running delayed asset injection for dynamic content');
             window.assetLoader.injectAssets(document);
-          } else {
-            console.warn('⚠️ PHASE 10: Asset loader not available for post-template injection');
-          }
-        }, 1000); // Increased to 1000ms to ensure DOM is fully rendered
+            
+            // 🔧 PHASE 10 FIX: Inject watermark after DOM is ready
+            const currentIsDraft = getIsDraft();
+            if (currentIsDraft) {
+              console.log('🔧 PHASE 10: Injecting draft watermark into rendered pages');
+              window.assetLoader.injectWatermark(document, 'draft');
+            }
+          }, 500);
+        } else {
+          console.warn('⚠️ PHASE 10: Asset loader not available for post-template injection');
+        }
       } catch (compileError) {
         console.error('💥 Handlebars compilation error:', compileError);
         console.error('💥 Error details:', {

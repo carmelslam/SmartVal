@@ -878,8 +878,7 @@
   <!-- 🔧 PHASE 10 TEST: Background image temporarily removed to test if it's causing issues -->
   <!-- <img class="bg" src="https://assets.carmelcayouf.com/assets/bg-report.png" alt="" data-asset-type="background"> -->
 
-  <!-- 🔧 PHASE 10 FIX: Watermark element for conditional injection -->
-  <div class="watermark">סטטוס</div>
+  <!-- 🔧 PHASE 10 FIX: Watermark will be injected dynamically by assetLoader -->
 
   <div class="page">
   <div class="estimate-header">
@@ -2355,9 +2354,11 @@
             // Wait for content to load with timeout protection
             await new Promise(resolve => setTimeout(resolve, 1000));
 
-            // 🔧 PHASE 10 FIX: Images are already embedded as data URIs in HTML
-            // No need to inject again or convert - everything is already in the HTML
-            console.log('✅ Images already embedded as data URIs, ready for html2canvas');
+            // 🔧 PHASE 10 FIX: Fix CORS issues before html2canvas
+            if (window.ImageCorsFix) {
+              console.log('🔧 Fixing CORS issues before PDF generation...');
+              await window.ImageCorsFix.fixImagesForPDF(reviewWindow.document);
+            }
 
             // Use html2canvas with timeout protection and optimized settings
             let canvas;
@@ -2514,8 +2515,7 @@
         if (window.assetLoader) {
           console.log('🖼️ Injecting user assets before capturing HTML...');
           window.assetLoader.injectAssets(document);
-          // Inject watermark - will be hidden for 'final' status later
-          window.assetLoader.injectWatermark(document, 'draft');
+          // 🔧 PHASE 10 FIX: Don't inject watermark here - it's already injected on page load
 
           // Wait for all injected images to actually load
           const images = document.querySelectorAll('img[data-asset-injected="true"]');
@@ -2668,9 +2668,11 @@
               // Wait for content to load
               await new Promise(resolve => setTimeout(resolve, 1000));
 
-              // 🔧 PHASE 10 FIX: Images are already embedded as data URIs in HTML
-              // No need to inject again or convert - everything is already in the HTML
-              console.log('✅ Images already embedded as data URIs, ready for html2canvas');
+              // 🔧 PHASE 10 FIX: Fix CORS issues before html2canvas
+              if (window.ImageCorsFix) {
+                console.log('🔧 Fixing CORS issues before PDF generation...');
+                await window.ImageCorsFix.fixImagesForPDF(reviewWindow.document);
+              }
 
               // Use html2canvas with REDUCED scale to avoid 413 error
               const canvas = await html2canvas(reviewWindow.document.body, window.ImageCorsFix.HTML2CANVAS_OPTIONS);
@@ -3206,8 +3208,8 @@
         console.log('✅ Builder mode - validation requirement removed');
       }
       
-      // Add draft watermark if in draft mode
-      addDraftWatermark();
+      // 🔧 PHASE 10 FIX: Don't add watermark here - assetLoader already handles watermarks
+      // addDraftWatermark();
       
       // Start real-time helper watcher
       startEstimateHelperWatcher();
