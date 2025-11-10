@@ -1307,7 +1307,16 @@ function injectReportHTML() {
         const rendered = template(renderData);
         console.log('✅ Template rendered successfully');
         container.innerHTML = applyDraftWatermark(rendered);
-        
+
+        // 🔧 PHASE 10 CRITICAL FIX: Inject assets into cloned template content
+        // The template contains images with hardcoded URLs that only appear in DOM after cloning
+        if (window.assetLoader) {
+          console.log('🔧 PHASE 10: Running asset injection on cloned template content');
+          window.assetLoader.injectAssets(document);
+        } else {
+          console.warn('⚠️ PHASE 10: Asset loader not available for post-template injection');
+        }
+
         // Generate dynamic damage centers after template rendering
         generateDamageCentersForFinalReport(helper);
         
