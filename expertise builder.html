@@ -1633,20 +1633,22 @@
                         const noPrintElements = iframeDoc.querySelectorAll('.no-print, .control-buttons, .no-pdf');
                         noPrintElements.forEach(el => el.remove());
 
+                        // 🔧 PHASE 10 CRITICAL FIX: Wait for child page's setTimeout to complete
+                        // The child pages (estimate-report-builder.html, final_report.js) have setTimeout(1000ms)
+                        // that runs AFTER they insert content. We need to wait for those to complete.
+                        console.log(`⏳ ${reportType}: Waiting 1500ms for child page's asset injection setTimeout to complete...`);
+                        await new Promise(resolve => setTimeout(resolve, 1500));
+
                         // 🔧 PHASE 10 FIX: Convert images to data URIs before capturing HTML
                         const iframeWindow = iframe.contentWindow;
                         if (iframeWindow && iframeWindow.assetLoader) {
                           console.log(`🔄 ${reportType}: Converting images to data URIs...`);
                           try {
-                            // Inject assets first
-                            iframeWindow.assetLoader.injectAssets(iframeDoc);
-
-                            // 🔧 PHASE 10 FIX: Inject watermark for draft reports
-                            // Estimate and Final Report drafts should show 'draft' watermark
-                            iframeWindow.assetLoader.injectWatermark(iframeDoc, 'draft');
+                            // 🔧 Note: Watermark injection removed - child pages handle their own watermarks
+                            // to avoid duplicate watermarks
 
                             // Wait for images to load
-                            const images = iframeDoc.querySelectorAll('img[data-asset-injected="true"]');
+                            const images = iframeDoc.querySelectorAll('img');
                             if (images.length > 0) {
                               console.log(`⏳ ${reportType}: Waiting for ${images.length} images to load...`);
                               await Promise.all(Array.from(images).map(img => {
