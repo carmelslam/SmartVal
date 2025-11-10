@@ -148,9 +148,10 @@ export class AssetLoader {
       const logoUrl = this.getAssetUrl('logo');
       if (logoUrl) {
         const oldSrc = img.src;
-        // 🔧 PHASE 10 FIX: Set crossOrigin BEFORE changing src to enable canvas export
-        img.crossOrigin = 'anonymous';
+        // Update src first
         img.src = logoUrl;
+        // 🔧 PHASE 10 FIX: Set crossOrigin AFTER changing src to avoid CORS errors on old URL
+        img.crossOrigin = 'anonymous';
         img.dataset.assetInjected = 'true';
         injectedCount++;
         console.log(`🖼️  Logo updated: ${oldSrc.substring(0, 50)}... → ${logoUrl.substring(0, 50)}...`);
@@ -165,9 +166,10 @@ export class AssetLoader {
       const signatureUrl = this.getAssetUrl('signature');
       if (signatureUrl) {
         const oldSrc = img.src;
-        // 🔧 PHASE 10 FIX: Set crossOrigin BEFORE changing src to enable canvas export
-        img.crossOrigin = 'anonymous';
+        // Update src first
         img.src = signatureUrl;
+        // 🔧 PHASE 10 FIX: Set crossOrigin AFTER changing src to avoid CORS errors on old URL
+        img.crossOrigin = 'anonymous';
         img.dataset.assetInjected = 'true';
         injectedCount++;
         console.log(`✍️  Signature updated: ${oldSrc.substring(0, 50)}... → ${signatureUrl.substring(0, 50)}...`);
@@ -182,9 +184,10 @@ export class AssetLoader {
       const stampUrl = this.getAssetUrl('stamp');
       if (stampUrl) {
         const oldSrc = img.src;
-        // 🔧 PHASE 10 FIX: Set crossOrigin BEFORE changing src to enable canvas export
-        img.crossOrigin = 'anonymous';
+        // Update src first
         img.src = stampUrl;
+        // 🔧 PHASE 10 FIX: Set crossOrigin AFTER changing src to avoid CORS errors on old URL
+        img.crossOrigin = 'anonymous';
         img.dataset.assetInjected = 'true';
         injectedCount++;
         console.log(`🏛️  Stamp updated: ${oldSrc.substring(0, 50)}... → ${stampUrl.substring(0, 50)}...`);
@@ -199,9 +202,10 @@ export class AssetLoader {
       const backgroundUrl = this.getAssetUrl('background');
       if (backgroundUrl) {
         const oldSrc = img.src;
-        // 🔧 PHASE 10 FIX: Set crossOrigin BEFORE changing src to enable canvas export
-        img.crossOrigin = 'anonymous';
+        // Update src first
         img.src = backgroundUrl;
+        // 🔧 PHASE 10 FIX: Set crossOrigin AFTER changing src to avoid CORS errors on old URL
+        img.crossOrigin = 'anonymous';
         img.dataset.assetInjected = 'true';
         injectedCount++;
         console.log(`🖼️  Background updated: ${oldSrc.substring(0, 50)}... → ${backgroundUrl.substring(0, 50)}...`);

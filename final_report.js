@@ -1324,7 +1324,7 @@ function injectReportHTML() {
           } else {
             console.warn('⚠️ PHASE 10: Asset loader not available for post-template injection');
           }
-        }, 200);
+        }, 1000); // Increased to 1000ms to ensure DOM is fully rendered
       } catch (compileError) {
         console.error('💥 Handlebars compilation error:', compileError);
         console.error('💥 Error details:', {
