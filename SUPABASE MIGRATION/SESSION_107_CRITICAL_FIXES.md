@@ -145,6 +145,19 @@ if (iframe.contentWindow?.assetLoader) {
 - Proper asset injection into iframes before HTML capture
 - Increased timeouts for content to load properly
 
+### Fixed Session Refresh Clearing Assets
+**File**: `lib/supabaseClient.js`
+**Line**: 787
+**Issue**: When `refreshSession()` was called during PDF generation, it updated the auth object in sessionStorage but didn't preserve the user assets
+**Fix**: Added `assets: auth.assets || null` to preserve assets during refresh
+**Result**: User assets now persist through session refreshes, no need to logout/login repeatedly
+
+---
+
+## 🎉 NO MORE LOGOUT/LOGIN NEEDED!
+
+With this fix, you no longer need to logout and login every time you generate a report. The assets will persist through session refreshes that happen during PDF generation.
+
 ---
 
 **Session 107 - Continued from Session 106**
