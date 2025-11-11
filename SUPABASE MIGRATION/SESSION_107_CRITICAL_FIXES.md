@@ -68,4 +68,38 @@ This preserves the user's Supabase assets while preventing the hardcoded YC logo
 
 ---
 
+## 🔧 ESTIMATE SUBMISSION FIXES
+
+### Fixed Watermark Centering
+**File**: `asset-loader.js`
+**Line**: 299-314
+**Change**: Added `!important` to all CSS properties to override existing styles
+**Result**: Watermarks now appear in the center of the page (50% from top and left)
+
+### Fixed Final Report Draft from Estimate Submission
+**File**: `estimate-report-builder.html`
+**Lines**: 2854-2871
+**Change**: Added asset injection and watermark injection for final report draft
+```javascript
+// Inject assets and watermark for final report draft
+if (window.assetLoader) {
+  await window.assetLoader.injectAssets(frReviewWindow.document);
+  window.assetLoader.injectWatermark(frReviewWindow.document, 'draft');
+  await new Promise(resolve => setTimeout(resolve, 500));
+}
+```
+**Result**: Final report draft from estimate submission now has:
+- User assets (logo, signature)
+- Centered draft watermark
+
+### Finalized Estimate (Already Working)
+The code already removes watermarks from finalized estimates:
+```javascript
+// Remove watermark from finalized estimate PDF
+const watermarks = reviewWindow.document.querySelectorAll('.draft-watermark');
+watermarks.forEach(w => w.remove());
+```
+
+---
+
 **Session 107 - Continued from Session 106**

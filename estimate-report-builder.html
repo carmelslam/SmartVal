@@ -2851,6 +2851,25 @@
                     frReviewWindow.document.close();
                     await new Promise(resolve => setTimeout(resolve, 1000));
 
+                    // 🔧 PHASE 10 FIX: Inject assets and watermark for final report draft
+                    if (window.assetLoader) {
+                      console.log('🔧 Injecting user assets into final report draft...');
+                      await window.assetLoader.injectAssets(frReviewWindow.document);
+                      
+                      // Inject draft watermark for final report draft
+                      console.log('🔧 Injecting draft watermark for final report draft...');
+                      window.assetLoader.injectWatermark(frReviewWindow.document, 'draft');
+                      
+                      // Wait for images to load
+                      await new Promise(resolve => setTimeout(resolve, 500));
+                    }
+                    
+                    // 🔧 PHASE 10 FIX: Fix CORS issues before html2canvas
+                    if (window.ImageCorsFix) {
+                      console.log('🔧 Fixing CORS issues before final report PDF generation...');
+                      await window.ImageCorsFix.fixImagesForPDF(frReviewWindow.document);
+                    }
+
                     const frCanvas = await html2canvas(frReviewWindow.document.body, {
                       scale: 1,
                       useCORS: true,

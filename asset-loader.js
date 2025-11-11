@@ -295,21 +295,22 @@ export class AssetLoader {
     watermark.textContent = watermarkText;
     
     // Style for fixed positioning to appear on all printed pages
+    // Using !important to override any existing CSS
     watermark.style.cssText = `
-      position: fixed;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%) rotate(-45deg);
-      font-size: ${watermarkText.length > 10 ? '5rem' : '6rem'};
-      color: rgba(220, 38, 38, 0.15);
-      font-weight: bold;
-      pointer-events: none;
-      z-index: 1000;
-      white-space: nowrap;
-      user-select: none;
-      -webkit-user-select: none;
-      -moz-user-select: none;
-      -ms-user-select: none;
+      position: fixed !important;
+      top: 50% !important;
+      left: 50% !important;
+      transform: translate(-50%, -50%) rotate(-45deg) !important;
+      font-size: ${watermarkText.length > 10 ? '5rem' : '6rem'} !important;
+      color: rgba(220, 38, 38, 0.15) !important;
+      font-weight: bold !important;
+      pointer-events: none !important;
+      z-index: 1000 !important;
+      white-space: nowrap !important;
+      user-select: none !important;
+      -webkit-user-select: none !important;
+      -moz-user-select: none !important;
+      -ms-user-select: none !important;
     `;
 
     // No need to modify container positioning with fixed positioning
