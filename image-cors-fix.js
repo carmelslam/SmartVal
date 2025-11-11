@@ -35,47 +35,9 @@ const ALLOWED_DOMAINS = [
  * Replace external image URLs with safe alternatives
  */
 function getSafeImageUrl(imageUrl) {
-  // Check if we have a known mapping for this URL
-  if (IMAGE_MAPPINGS[imageUrl]) {
-    console.log(`🔄 Replacing CORS-blocked image: ${imageUrl}`);
-    return IMAGE_MAPPINGS[imageUrl];
-  }
-  
-  // Check if URL matches any problematic domains
-  if (imageUrl && (imageUrl.startsWith('http://') || imageUrl.startsWith('https://'))) {
-    const url = new URL(imageUrl);
-
-    // 🔧 PHASE 10 FIX: Check if domain is whitelisted (Supabase Storage, etc.)
-    const isAllowedDomain = ALLOWED_DOMAINS.some(domain => url.hostname.includes(domain));
-    if (isAllowedDomain) {
-      console.log(`✅ Allowing whitelisted domain image: ${url.hostname}`);
-      return imageUrl; // Keep the original URL
-    }
-
-    const isCorsDomain = CORS_DOMAINS.some(domain => url.hostname.includes(domain));
-
-    if (isCorsDomain) {
-      console.warn(`⚠️ Blocking CORS domain image: ${imageUrl}`);
-      // Return appropriate placeholder based on image type
-      if (imageUrl.includes('logo') || imageUrl.includes('g.webp')) {
-        return IMAGE_MAPPINGS['https://carmelcayouf.com/wp-content/uploads/2025/06/g.webp'];
-      } else if (imageUrl.includes('signature')) {
-        return IMAGE_MAPPINGS['https://carmelcayouf.com/wp-content/uploads/2025/04/yaron-signature-transparent-.webp'];
-      } else if (imageUrl.includes('bg-') || imageUrl.includes('background')) {
-        return IMAGE_MAPPINGS['https://assets.carmelcayouf.com/assets/bg-report.png'];
-      } else {
-        return 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KICA8cmVjdCB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgZmlsbD0iI2Y0ZjRmNCIgLz4KICA8dGV4dCB4PSI1MCIgeT0iNTUiIGZvbnQtZmFtaWx5PSJBcmlhbCwgc2Fucy1zZXJpZiIgZm9udC1zaXplPSIxMiIgZmlsbD0iIzY2NiIgdGV4dC1hbmNob3I9Im1pZGRsZSI+SW1hZ2U8L3RleHQ+Cjwvc3ZnPg==';
-      }
-    }
-
-    // For other unknown external URLs (not whitelisted and not same hostname), return a generic placeholder
-    if (url.hostname !== window.location.hostname) {
-      console.warn(`⚠️ Unknown external image, using placeholder: ${imageUrl}`);
-      return 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KICA8cmVjdCB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgZmlsbD0iI2Y0ZjRmNCIgLz4KICA8dGV4dCB4PSI1MCIgeT0iNTUiIGZvbnQtZmFtaWx5PSJBcmlhbCwgc2Fucy1zZXJpZiIgZm9udC1zaXplPSIxMiIgZmlsbD0iIzY2NiIgdGV4dC1hbmNob3I9Im1pZGRsZSI+SW1hZ2U8L3RleHQ+Cjwvc3ZnPg==';
-    }
-  }
-  
-  // Return the original URL if it's already a data URI or relative path
+  // 🔧 PHASE 10 EMERGENCY FIX: DISABLE ALL IMAGE REPLACEMENT
+  // The hardcoded YC logos and signatures are interfering with user assets
+  // Just return the original URL without any replacements
   return imageUrl;
 }
 
