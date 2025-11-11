@@ -33,7 +33,8 @@ export class AssetLoader {
       console.log('✅ AssetLoader: Loaded assets from session:', {
         hasLogo: !!this.assets.company_logo_url,
         hasStamp: !!this.assets.company_stamp_url,
-        hasSignature: !!this.assets.user_signature_url
+        hasSignature: !!this.assets.user_signature_url,
+        hasBackground: !!this.assets.background_url
       });
 
       return this.assets;
@@ -56,7 +57,7 @@ export class AssetLoader {
 
       const { data, error } = await supabase
         .from('user_assets')
-        .select('company_logo_url, company_stamp_url, user_signature_url, draft_watermark_text, directive_watermark_text')
+        .select('company_logo_url, company_stamp_url, user_signature_url, background_url, draft_watermark_text, directive_watermark_text')
         .eq('user_id', userId)
         .single();
 
