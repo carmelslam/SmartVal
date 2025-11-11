@@ -100,6 +100,23 @@ const watermarks = reviewWindow.document.querySelectorAll('.draft-watermark');
 watermarks.forEach(w => w.remove());
 ```
 
+### Fixed Final Report Draft Missing Images
+**File**: `estimate-report-builder.html`
+**Lines**: 2821-2827, 2848
+**Changes**: 
+1. Added `frReviewWindow` variable definition to fix undefined error
+2. Added asset injection into iframe before capturing HTML
+3. Increased timeout from 1s to 3s to allow assets to load
+```javascript
+// Inject assets into iframe before capturing HTML
+if (iframe.contentWindow?.assetLoader) {
+  console.log('🔧 Injecting assets into final report iframe before capture...');
+  await iframe.contentWindow.assetLoader.injectAssets(iframeDoc);
+  await new Promise(resolve => setTimeout(resolve, 1000));
+}
+```
+**Result**: Final report draft should now capture HTML with injected assets instead of old carmelcayouf.com URLs
+
 ---
 
 **Session 107 - Continued from Session 106**
