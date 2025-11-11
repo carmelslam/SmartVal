@@ -132,6 +132,9 @@ async function fixImagesForPDF(document) {
   }
 }
 
+  */
+}
+
 /**
  * Enhanced html2canvas options with CORS handling
  */
