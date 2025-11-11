@@ -25,6 +25,27 @@ This fix resolves the following cascade of errors:
 
 ---
 
+## 🚨 NEW ISSUE: No User Assets Loading
+
+### Problem
+The AssetLoader is showing:
+```
+{hasLogo: false, hasStamp: false, hasSignature: false, hasBackground: false}
+```
+
+This means user assets aren't being loaded from sessionStorage, causing:
+1. All images showing as carmelcayouf.com URLs
+2. CORS errors blocking image loading
+3. PDFs generating without any images
+
+### Root Cause
+The user has assets in the `user_assets` table (confirmed in Session 106), but they're not in the current browser session. The assets are loaded during login and stored in `sessionStorage.auth.assets`.
+
+### Solution Required
+The user needs to **log out and log back in** to reload their session with the assets from the database.
+
+---
+
 ## 📝 WHAT THE FIX DOES
 
 The `image-cors-fix.js` file now:
@@ -36,12 +57,14 @@ This preserves the user's Supabase assets while preventing the hardcoded YC logo
 
 ---
 
-## ⚠️ NEXT STEPS
+## ⚠️ IMMEDIATE ACTION NEEDED
 
-1. Test all three submission buttons to verify PDF generation works
-2. Check if user assets are loading correctly from Supabase
-3. Verify watermarks appear as expected
-4. Monitor for any new CORS-related errors
+1. **User must log out and log back in** to refresh their session with assets
+2. After login, verify assets are loaded by checking console for:
+   ```
+   AssetLoader: Loaded assets from session: {hasLogo: true, hasStamp: true, hasSignature: true, ...}
+   ```
+3. Then test all three submission buttons
 
 ---
 
