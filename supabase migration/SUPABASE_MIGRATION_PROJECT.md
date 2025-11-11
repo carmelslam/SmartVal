@@ -526,6 +526,7 @@ final report / estimata
 7, make an extenstive plan create a session file - you are session number 75 . all sql need to be in supabase/sql under phase 9 and all teh log , sunnaries and documentation in the supabase migration folder 
 
 **### Phase 10 : connect the load report on modules to supabase**
+*80% completed requires pdf report styling and formattimng to look good on pdf display/print* DOCUMENTATION/report styling.md
 1. expertise report, final report builder and estimate builder ned to be saved as pdf in teh documents, in supabase
 final report builder and estimate builderhave reload case, ourpose : to reload existing reports.
 2. Restored case on selection page P populates the plate window in estimator builder and the fina report builder in the window טען תיק קיים
