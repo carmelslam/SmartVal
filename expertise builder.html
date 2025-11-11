@@ -3,19 +3,61 @@
 <head>
   <meta charset="utf-8">
   <style>
+    /* Modern Professional PDF Styling - FIXED */
     @import url('https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700;800;900&display=swap');
     @import url('./css/modern-buttons.css');
-    
-    @page { size: A4; margin: 0; }
-    body{ margin:0; direction:rtl; -webkit-print-color-adjust:exact; print-color-adjust:exact;
-          font-family:'Heebo', 'Segoe UI', Tahoma, Arial, sans-serif; }
-    
-    /* Ensure watermark shows in PDF */
+
+    @page {
+      size: A4;
+      margin: 42mm 12mm 30mm 12mm; /* Top Right Bottom Left - space for headers/footers */
+    }
+
+    @page:first {
+      margin-top: 20mm; /* Less top margin on first page */
+    }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      direction: rtl;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+      font-family: 'Heebo', 'Segoe UI', Tahoma, Arial, sans-serif;
+      font-weight: 400;
+      line-height: 1.6;
+      color: #2c3e50;
+      background: white;
+      height: 100%;
+    }
+
+    .bg {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      z-index: -1; /* Behind all content */
+      pointer-events: none;
+      opacity: 0.03; /* Very subtle background */
+    }
+
+    .page {
+      position: relative;
+      z-index: 1;
+      padding: 10mm; /* Minimal padding - margins handled by @page */
+      box-sizing: border-box;
+      min-height: 100%;
+    }
+
+    /* Ensure watermark and borders show in PDF */
     @media print {
       -webkit-print-color-adjust: exact !important;
       color-adjust: exact !important;
       print-color-adjust: exact !important;
-      
+
       /* Force all table borders to show when printing */
       table, .outer-border {
         border: 3px solid #1e3a8a !important;
@@ -23,16 +65,27 @@
         border-bottom: 3px solid #1e3a8a !important;
         border-left: 3px solid #1e3a8a !important;
         border-right: 3px solid #1e3a8a !important;
+        border-collapse: separate !important; /* FIXED: Maintain borders at breaks */
+        border-spacing: 0 !important;
       }
-      
+
       th, td {
         border: 1px solid #aaa !important;
         -webkit-print-color-adjust: exact !important;
         print-color-adjust: exact !important;
       }
+
+      .bg {
+        z-index: -1 !important;
+        opacity: 0.03 !important;
+      }
+
+      .page {
+        padding: 8mm !important;
+        width: 100% !important;
+        overflow: visible !important;
+      }
     }
-    .bg{ position:fixed; inset:0; width:100%; height:100%; object-fit:cover; z-index:0; pointer-events:none }
-    .page{ position:relative; z-index:1; padding:25mm 15mm 20mm 15mm; }
     
     /* Draft watermark styles */
     .draft-watermark { 
@@ -89,12 +142,32 @@
     table {
       width: 100%;
       max-width: 100%;
-      border-collapse: collapse;
+      border-collapse: separate !important; /* FIXED: Maintains borders at page breaks */
+      border-spacing: 0;
       margin-bottom: 15px;
       border: 3px solid #1e3a8a !important;
       border-color: #1e3a8a !important;
       table-layout: fixed;
       background: white;
+      position: relative;
+      z-index: 2; /* Above background */
+    }
+
+    /* tbody tr break rules - prevent rows from splitting */
+    tbody tr {
+      break-inside: avoid !important;
+      page-break-inside: avoid !important;
+    }
+
+    /* Handle table continuation after page break */
+    tbody tr:first-child td {
+      border-top: 2px solid #003366 !important;
+    }
+
+    /* Keep minimum rows together */
+    tbody tr:nth-last-child(-n+3) {
+      break-before: avoid !important;
+      page-break-before: avoid !important;
     }
     
     table + table {
@@ -263,7 +336,54 @@
     
     /* Force page breaks when needed */
     .page-break { break-before: page; page-break-before: always; }
-    
+
+    /* Enhanced section break protection */
+    .signature-stamp,
+    .summary-box,
+    .damage-assessment,
+    .intellectual-box {
+      break-inside: avoid !important;
+      page-break-inside: avoid !important;
+      position: relative;
+      z-index: 2;
+    }
+
+    /* Keep headers with their content */
+    h1, h2, h3, h4, h5, h6 {
+      break-after: avoid !important;
+      page-break-after: avoid !important;
+      margin-bottom: 10px;
+    }
+
+    /* Ensure at least 3 lines of content after a header */
+    h1 + *, h2 + *, h3 + * {
+      orphans: 3;
+      widows: 3;
+    }
+
+    /* Global orphan/widow control */
+    * {
+      orphans: 2;
+      widows: 2;
+    }
+
+    p {
+      orphans: 3;
+      widows: 3;
+    }
+
+    /* Prevent single lines */
+    li {
+      break-inside: avoid;
+      page-break-inside: avoid;
+    }
+
+    /* Keep lists together when possible */
+    ul, ol {
+      break-inside: avoid;
+      page-break-inside: avoid;
+    }
+
     .header-bottom-bold th {
       border-bottom: 3px solid #1e3a8a !important;
       background: #f8fafc !important;
@@ -2306,8 +2426,8 @@
 
 </head>
 <body>
-  <!-- 🔧 PHASE 10 TEST: Background image temporarily removed to test if it's causing issues -->
-  <!-- <img class="bg" src="https://assets.carmelcayouf.com/assets/bg-report.png" alt="" data-asset-type="background"> -->
+  <!-- Background image with proper styling (z-index: -1, opacity: 0.03) for subtle PDF watermark -->
+  <img class="bg" src="https://nvqrptokmwdhvpiufrad.supabase.co/storage/v1/object/public/user_background/good.jpg" alt="">
   <div class="page">
   <div class="banner" style="border: 4px solid #d4af37; padding: 12px 16px; background-color: #fff8e1; text-align: center; position: relative; min-height: 120px; display: flex; align-items: center; justify-content: space-between; box-sizing: border-box;">
     <div style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 0 8px;">

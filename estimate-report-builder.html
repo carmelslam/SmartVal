@@ -3,30 +3,55 @@
 <head>
   <meta charset="utf-8">
   <style>
-    /* Modern Professional PDF Styling */
+    /* Modern Professional PDF Styling - FIXED */
     @import url('https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700;800;900&display=swap');
-    
-    @page { 
-      size: A4; 
-      margin: 0; 
+
+    @page {
+      size: A4;
+      margin: 42mm 12mm 30mm 12mm; /* Top Right Bottom Left - space for headers/footers */
     }
-    
-    body{ 
-      margin: 0; 
-      direction: rtl; 
-      -webkit-print-color-adjust: exact; 
+
+    @page:first {
+      margin-top: 20mm; /* Less top margin on first page */
+    }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      direction: rtl;
+      -webkit-print-color-adjust: exact;
       print-color-adjust: exact;
       font-family: 'Heebo', 'Segoe UI', Tahoma, Arial, sans-serif;
       font-weight: 400;
       line-height: 1.6;
       color: #2c3e50;
       background: white;
+      height: 100%;
     }
-    
-    .bg{ position:fixed; inset:0; width:100%; height:100%; object-fit:cover; z-index:0; pointer-events:none }
-    .page{ position:relative; z-index:1; padding:25mm 15mm 20mm 15mm; }
 
-    /* 🔧 PHASE 10 FIX: Watermark styles */
+    .bg {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      z-index: -1; /* Behind all content */
+      pointer-events: none;
+      opacity: 0.03; /* Very subtle background */
+    }
+
+    .page {
+      position: relative;
+      z-index: 1;
+      padding: 10mm; /* Minimal padding - margins handled by @page */
+      box-sizing: border-box;
+      min-height: 100%;
+    }
+
+    /* Watermark styles */
     .watermark {
       position: fixed;
       top: 40%;
@@ -76,7 +101,8 @@
     table {
       width: 100%;
       max-width: 100%;
-      border-collapse: collapse;
+      border-collapse: separate !important; /* FIXED: Maintains borders at page breaks */
+      border-spacing: 0;
       margin-bottom: 20px;
       border: none;
       table-layout: fixed;
@@ -85,6 +111,30 @@
       overflow: hidden;
       box-shadow: 0 4px 20px rgba(0,0,0,0.08);
       font-family: 'Heebo', 'Segoe UI', Tahoma, Arial, sans-serif;
+      position: relative;
+      z-index: 2; /* Above background */
+    }
+
+    /* Force table headers to repeat on each page */
+    thead {
+      display: table-header-group !important;
+    }
+
+    /* Prevent rows from splitting */
+    tbody tr {
+      break-inside: avoid !important;
+      page-break-inside: avoid !important;
+    }
+
+    /* Handle table continuation after page break */
+    tbody tr:first-child td {
+      border-top: 2px solid #003366 !important;
+    }
+
+    /* Keep minimum rows together */
+    tbody tr:nth-last-child(-n+3) {
+      break-before: avoid !important;
+      page-break-before: avoid !important;
     }
     
     table + table {
@@ -214,6 +264,59 @@
       font-family: 'Heebo', 'Segoe UI', Tahoma, Arial, sans-serif;
       color: #1e3a8a;
     }
+
+    /* CRITICAL: Prevent sections from breaking across pages */
+    .text-box,
+    .legal-texts,
+    .credentials-box,
+    .car-details,
+    .section,
+    .signature-stamp,
+    .summary-box,
+    .damage-assessment,
+    .estimate-disclaimer {
+      break-inside: avoid !important;
+      page-break-inside: avoid !important;
+      position: relative;
+      z-index: 2;
+    }
+
+    /* Keep headers with their content */
+    h1, h2, h3, h4, h5, h6 {
+      break-after: avoid !important;
+      page-break-after: avoid !important;
+      margin-bottom: 10px;
+    }
+
+    /* Ensure at least 3 lines of content after a header */
+    h1 + *, h2 + *, h3 + * {
+      orphans: 3;
+      widows: 3;
+    }
+
+    /* Global orphan/widow control */
+    * {
+      orphans: 2;
+      widows: 2;
+    }
+
+    p {
+      orphans: 3;
+      widows: 3;
+    }
+
+    /* Prevent single lines */
+    li {
+      break-inside: avoid;
+      page-break-inside: avoid;
+    }
+
+    /* Keep lists together when possible */
+    ul, ol {
+      break-inside: avoid;
+      page-break-inside: avoid;
+    }
+
     .buttons {
       text-align: center;
       margin-top: 40px;
@@ -264,83 +367,77 @@
     }
     
     @media print {
-      body {
-        padding: 0 !important;
-        margin: 0 !important;
-      }
-      
-      .page {
-        padding: 25mm 15mm 20mm 15mm !important;
-      }
-      
       html, body {
         margin: 0 !important;
         padding: 0 !important;
-        width: 210mm !important;
-        font-size: 11px !important;
-        line-height: 1.3 !important;
+        width: 100% !important; /* FIXED: Use percentage instead of fixed width */
+        font-size: 12px !important; /* FIXED: Increased from 11px for readability */
+        line-height: 1.4 !important;
+        overflow: visible !important;
       }
-      
+
       .bg {
         position: fixed !important;
         top: 0 !important;
         left: 0 !important;
-        width: 210mm !important;
-        height: 297mm !important;
+        width: 100% !important;
+        height: 100% !important;
         object-fit: cover !important;
-        z-index: 0 !important;
+        z-index: -1 !important; /* FIXED: Negative to stay behind content */
+        opacity: 0.03 !important;
       }
-      
+
       .page {
-        width: 210mm !important;
-        padding: 20mm 12mm 15mm 12mm !important;
+        width: 100% !important; /* FIXED: Percentage instead of fixed */
+        padding: 8mm !important; /* FIXED: Reduced padding - margins handled by @page */
         margin: 0 !important;
         box-sizing: border-box !important;
         position: relative !important;
         z-index: 1 !important;
+        overflow: visible !important;
       }
-      
+
       /* Proper page breaks */
       .section {
         page-break-inside: avoid !important;
         margin-bottom: 6mm !important;
       }
-      
+
       table {
         page-break-inside: avoid !important;
         margin-bottom: 4mm !important;
-        font-size: 10px !important;
+        font-size: 11px !important; /* FIXED: Increased from 10px */
+        position: relative !important;
+        z-index: 2 !important;
+        background: white !important;
+        border-collapse: separate !important; /* FIXED: Maintain borders at breaks */
+        border-spacing: 0 !important;
       }
-      
+
       th, td {
         padding: 3mm !important;
-        font-size: 9px !important;
+        font-size: 10px !important; /* FIXED: Increased from 9px */
       }
-      
+
       .text-box,
       .credentials-box,
       .estimate-disclaimer {
         page-break-inside: avoid !important;
         margin-bottom: 4mm !important;
+        background: rgba(255, 255, 255, 0.98) !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
       }
-      
+
       h1, h2, h3 {
         page-break-after: avoid !important;
         margin-bottom: 3mm !important;
         font-size: 14px !important;
       }
-      
+
       .buttons,
       .control-buttons {
         display: none !important;
-      }
-      
-      .text-box,
-      .credentials-box {
-        page-break-inside: avoid;
-        background: rgba(255, 255, 255, 0.98) !important;
-        -webkit-print-color-adjust: exact !important;
-        print-color-adjust: exact !important;
       }
     }
     .buttons button {
@@ -438,11 +535,8 @@
     
     /* Print Styles for A4 Format */
     @media print {
-      @page {
-        size: A4;
-        margin: 25mm 20mm 25mm 20mm;
-      }
-      
+      /* REMOVED DUPLICATE @page - using the global one at top with proper margins */
+
       body {
         font-family: sans-serif;
         font-size: 12pt;
@@ -464,8 +558,9 @@
       /* Optimize tables for print */
       table {
         width: 100% !important;
-        max-width: 180mm !important; /* A4 width minus margins */
-        border-collapse: collapse !important;
+        max-width: 100% !important; /* FIXED: Use percentage */
+        border-collapse: separate !important; /* FIXED: Maintain borders at breaks */
+        border-spacing: 0 !important;
         page-break-inside: avoid;
         font-size: 10pt;
         table-layout: fixed !important;
@@ -883,8 +978,8 @@
   </script>
 </head>
 <body>
-  <!-- 🔧 PHASE 10 TEST: Background image temporarily removed to test if it's causing issues -->
-  <!-- <img class="bg" src="https://assets.carmelcayouf.com/assets/bg-report.png" alt="" data-asset-type="background"> -->
+  <!-- Background image with proper styling (z-index: -1, opacity: 0.03) for subtle PDF watermark -->
+  <img class="bg" src="https://nvqrptokmwdhvpiufrad.supabase.co/storage/v1/object/public/user_background/good.jpg" alt="">
 
   <!-- 🔧 PHASE 10 FIX: Watermark will be injected dynamically by assetLoader -->
 
