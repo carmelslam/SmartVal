@@ -83,8 +83,12 @@ function getSafeImageUrl(imageUrl) {
  * Replace all external images in a document with safe alternatives
  */
 async function fixImagesForPDF(document) {
-  console.log('🔧 Replacing CORS-blocked external images with safe alternatives...');
+  console.log('🔧 PHASE 10 FIX: Skipping all image replacement - user has Supabase assets');
+  // DO NOT replace any images - let Supabase URLs work as-is
+  return 0;
   
+  // DISABLED CODE BELOW
+  /*
   const images = document.querySelectorAll('img');
   let replacedCount = 0;
   
