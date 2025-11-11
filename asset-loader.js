@@ -290,7 +290,7 @@ export class AssetLoader {
   injectWatermarkIntoContainer(container, watermarkText) {
     // Create watermark element
     const watermark = document.createElement('div');
-    watermark.className = 'watermark-injected';
+    watermark.className = 'watermark-injected draft-watermark';
     watermark.textContent = watermarkText;
     
     // Style for fixed positioning to appear on all printed pages
@@ -315,6 +315,52 @@ export class AssetLoader {
 
     // Insert watermark at the beginning of container
     container.insertBefore(watermark, container.firstChild);
+  }
+
+  /**
+   * Add watermark to PDF pages using jsPDF
+   * @param {jsPDF} pdf - The jsPDF instance
+   * @param {string} watermarkText - Text to display as watermark
+   * @param {number} pageNum - Page number to add watermark to (optional, adds to current page if not specified)
+   */
+  static addWatermarkToPDF(pdf, watermarkText, pageNum = null) {
+    if (!watermarkText) return;
+    
+    // Save current state
+    const currentPage = pdf.internal.getCurrentPageInfo().pageNumber;
+    
+    // If specific page requested, switch to it
+    if (pageNum) {
+      pdf.setPage(pageNum);
+    }
+    
+    // Set watermark style
+    pdf.saveGraphicsState();
+    pdf.setTextColor(220, 38, 38); // Red color
+    pdf.setFontSize(60);
+    pdf.setFont(undefined, 'bold');
+    
+    // Calculate center position
+    const pageWidth = pdf.internal.pageSize.getWidth();
+    const pageHeight = pdf.internal.pageSize.getHeight();
+    const centerX = pageWidth / 2;
+    const centerY = pageHeight / 2;
+    
+    // Add rotated text
+    // Note: jsPDF doesn't support text rotation directly, so we use a workaround
+    pdf.text(watermarkText, centerX, centerY, {
+      angle: 45,
+      align: 'center',
+      baseline: 'middle'
+    });
+    
+    // Restore state
+    pdf.restoreGraphicsState();
+    
+    // Return to original page if we switched
+    if (pageNum && pageNum !== currentPage) {
+      pdf.setPage(currentPage);
+    }
   }
 
   /**

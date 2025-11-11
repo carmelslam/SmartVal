@@ -1812,9 +1812,19 @@
           console.warn('⚠️ Auth refresh error:', authError);
         }
 
-        // 🔧 PHASE 10 FIX: Images are already embedded as data URIs in HTML
-        // No need to inject again - assets already embedded in cleanHTML
-        console.log('✅ Images already embedded, skipping asset injection in cloned window');
+        // 🔧 PHASE 10 FIX: Inject user assets into review window
+        if (window.assetLoader) {
+          console.log('🔧 Injecting user assets into review window before PDF generation...');
+          await window.assetLoader.injectAssets(reviewWindow.document);
+          // Wait a bit for images to load
+          await new Promise(resolve => setTimeout(resolve, 500));
+        }
+
+        // 🔧 PHASE 10 FIX: Fix CORS issues before html2canvas
+        if (window.ImageCorsFix) {
+          console.log('🔧 Fixing CORS issues before PDF generation...');
+          await window.ImageCorsFix.fixImagesForPDF(reviewWindow.document);
+        }
         
         // Use html2canvas with timeout protection (IMPROVED EXPERTISE PATTERN)
         const canvas = await Promise.race([

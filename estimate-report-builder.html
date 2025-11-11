@@ -859,15 +859,23 @@
       document.addEventListener('DOMContentLoaded', () => {
         console.log('🖼️ Injecting user assets into estimate builder...');
         assetLoader.injectAssets(document);
-        // Inject watermark as draft by default
-        assetLoader.injectWatermark(document, 'draft');
+        // Check if estimate is finalized before injecting watermark
+        const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+        const isFinalized = helper.meta?.finalized === true || helper.meta?.estimate_finalized === true;
+        if (!isFinalized) {
+          assetLoader.injectWatermark(document, 'draft');
+        }
       });
     } else {
       // DOM already loaded
       console.log('🖼️ Injecting user assets into estimate builder...');
       assetLoader.injectAssets(document);
-      // Inject watermark as draft by default
-      assetLoader.injectWatermark(document, 'draft');
+      // Check if estimate is finalized before injecting watermark
+      const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+      const isFinalized = helper.meta?.finalized === true || helper.meta?.estimate_finalized === true;
+      if (!isFinalized) {
+        assetLoader.injectWatermark(document, 'draft');
+      }
     }
 
     // Make asset loader available globally for PDF generation
@@ -1446,17 +1454,20 @@
         // Apply dynamic page layout management
         adjustContentForPrint();
 
-        // 🔧 PHASE 10 CRITICAL FIX: Inject assets into dynamically created content
-        // The signature and other images were just added via innerHTML, so they need asset injection
-        // Use setTimeout to ensure DOM is fully rendered and layout is applied before injection
-        setTimeout(() => {
-          if (window.assetLoader) {
-            console.log('🔧 PHASE 10: Running asset injection on dynamically created estimate content (after layout)');
+        // 🔧 PHASE 10 CRITICAL FIX: Inject assets immediately after innerHTML
+        // This ensures signatures and logos are replaced before any PDF generation
+        if (window.assetLoader) {
+          console.log('🔧 PHASE 10: Running immediate asset injection on dynamically created estimate content');
+          window.assetLoader.injectAssets(document);
+          
+          // Also run delayed injection for any async content
+          setTimeout(() => {
+            console.log('🔧 PHASE 10: Running delayed asset injection to catch any async content');
             window.assetLoader.injectAssets(document);
-          } else {
-            console.warn('⚠️ PHASE 10: Asset loader not available for post-innerHTML injection');
-          }
-        }, 1000); // Increased to 1000ms to ensure DOM is fully rendered
+          }, 1000);
+        } else {
+          console.warn('⚠️ PHASE 10: Asset loader not available for post-innerHTML injection');
+        }
         
       } catch (error) {
         console.error('Error generating estimate report:', error);
@@ -2667,6 +2678,19 @@
 
               // Wait for content to load
               await new Promise(resolve => setTimeout(resolve, 1000));
+
+              // 🔧 PHASE 10 FIX: Inject user assets into review window
+              if (window.assetLoader) {
+                console.log('🔧 Injecting user assets into review window before PDF generation...');
+                await window.assetLoader.injectAssets(reviewWindow.document);
+                // Wait a bit for images to load
+                await new Promise(resolve => setTimeout(resolve, 500));
+              }
+
+              // 🔧 PHASE 10 FIX: Remove watermark from finalized estimate PDF
+              const watermarks = reviewWindow.document.querySelectorAll('.draft-watermark');
+              watermarks.forEach(w => w.remove());
+              console.log(`🔧 Removed ${watermarks.length} watermark(s) from finalized estimate`);
 
               // 🔧 PHASE 10 FIX: Fix CORS issues before html2canvas
               if (window.ImageCorsFix) {
