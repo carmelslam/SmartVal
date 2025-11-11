@@ -292,6 +292,7 @@ export class AssetLoader {
     // Create watermark element
     const watermark = document.createElement('div');
     watermark.className = 'watermark-injected draft-watermark';
+    watermark.id = 'asset-loader-watermark-' + Date.now(); // Unique ID to prevent CSS conflicts
     watermark.textContent = watermarkText;
     
     // Style for fixed positioning to appear on all printed pages
@@ -311,12 +312,30 @@ export class AssetLoader {
       -webkit-user-select: none !important;
       -moz-user-select: none !important;
       -ms-user-select: none !important;
+      width: auto !important;
+      height: auto !important;
+      margin: 0 !important;
+      padding: 0 !important;
+      line-height: 1 !important;
+      text-align: center !important;
     `;
 
     // No need to modify container positioning with fixed positioning
 
     // Insert watermark at the beginning of container
     container.insertBefore(watermark, container.firstChild);
+    
+    // 🔧 PHASE 10 FIX: Force re-apply centering after insertion to override any CSS
+    // This ensures absolute centering even if other CSS tries to override
+    setTimeout(() => {
+      const injectedWatermark = document.getElementById(watermark.id);
+      if (injectedWatermark) {
+        injectedWatermark.style.top = '50%';
+        injectedWatermark.style.left = '50%';
+        injectedWatermark.style.transform = 'translate(-50%, -50%) rotate(-45deg)';
+        console.log('✅ Watermark centering verified and enforced');
+      }
+    }, 100);
   }
 
   /**
