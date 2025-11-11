@@ -1220,6 +1220,14 @@
       } else if (window.finalReport?.inject) {
         finalReport.inject();
       }
+      
+      // 🔧 PHASE 10 FIX: Inject assets after report initialization
+      setTimeout(() => {
+        if (window.assetLoader) {
+          console.log('🔧 Re-injecting assets after final report initialization...');
+          window.assetLoader.injectAssets(document);
+        }
+      }, 2000);
     });
   </script>
   <script type="module" src="final_report.js"></script>
@@ -1647,9 +1655,18 @@
       // Wait for re-render and cleanup before capturing HTML
       await new Promise(resolve => setTimeout(resolve, 800));
 
-      // 🔧 PHASE 10 FIX: Inject assets into main document BEFORE capturing HTML
+      // 🔧 PHASE 10 FIX: Force re-inject assets multiple times to catch dynamic content
+      // Final report content is added dynamically so we need multiple injections
       if (window.assetLoader) {
-        console.log('🖼️ Injecting user assets before capturing HTML...');
+        console.log('🖼️ First asset injection pass...');
+        window.assetLoader.injectAssets(document);
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
+        console.log('🖼️ Second asset injection pass (for dynamically added content)...');
+        window.assetLoader.injectAssets(document);
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
+        console.log('🖼️ Final asset injection pass before capturing HTML...');
         window.assetLoader.injectAssets(document);
         // No watermark for final reports (status = 'final' hides watermark)
         // window.assetLoader.injectWatermark(document, 'final');
