@@ -417,7 +417,7 @@
       }
 
       table {
-        page-break-inside: avoid !important;
+        page-break-inside: auto !important; /* CHANGED: Allow long tables to split across pages */
         margin-bottom: 4mm !important;
         font-size: 13px !important; /* INCREASED: Much larger */
         position: relative !important;
@@ -425,6 +425,22 @@
         background: white !important;
         border-collapse: separate !important;
         border-spacing: 0 !important;
+      }
+
+      /* CRITICAL: Repeat table headers on each page */
+      thead {
+        display: table-header-group !important;
+      }
+
+      /* CRITICAL: Prevent individual rows from splitting */
+      tbody tr {
+        page-break-inside: avoid !important;
+        break-inside: avoid !important;
+      }
+
+      /* Ensure borders remain intact after page breaks */
+      tbody tr:first-child td {
+        border-top: 2px solid #003366 !important;
       }
 
       th, td {
@@ -555,7 +571,7 @@
       background: #545b62;
     }
     
-    /* Print Styles for A4 Format */
+    /* Print Styles for A4 Format - CONSOLIDATED */
     @media print {
       /* REMOVED DUPLICATE @page - using the global one at top with proper margins */
 
@@ -564,9 +580,23 @@
         font-size: 12pt;
         line-height: 1.4;
         color: #000;
-        background: white;
+        background: white !important; /* Keep body white */
         margin: 0;
         padding: 0;
+      }
+
+      /* CRITICAL: Ensure background image shows in print */
+      .bg {
+        position: fixed !important;
+        top: 0 !important;
+        left: 0 !important;
+        width: 100% !important;
+        height: 100% !important;
+        object-fit: cover !important;
+        z-index: -1 !important;
+        opacity: 0.15 !important;
+        display: block !important; /* Force display */
+        visibility: visible !important; /* Force visibility */
       }
       
       /* Hide control elements */
@@ -583,12 +613,28 @@
         max-width: 100% !important; /* FIXED: Use percentage */
         border-collapse: separate !important; /* FIXED: Maintain borders at breaks */
         border-spacing: 0 !important;
-        page-break-inside: avoid;
+        page-break-inside: auto !important; /* CHANGED: Allow long tables to split */
         font-size: 10pt;
         table-layout: fixed !important;
         margin: 0 auto !important;
       }
-      
+
+      /* CRITICAL: Repeat table headers on each page */
+      thead {
+        display: table-header-group !important;
+      }
+
+      /* CRITICAL: Prevent individual rows from splitting */
+      tbody tr {
+        page-break-inside: avoid !important;
+        break-inside: avoid !important;
+      }
+
+      /* Ensure borders remain intact after page breaks */
+      tbody tr:first-child td {
+        border-top: 2px solid #003366 !important;
+      }
+
       th, td {
         padding: 4px 6px !important;
         border: 1px solid #000 !important;
@@ -707,6 +753,7 @@
       /* Optimize estimate totals table to fit on same page */
       .estimate-totals {
         page-break-inside: auto !important;
+        page-break-before: always !important; /* ADDED: Force summary to new page after damage centers */
         margin-top: 2mm !important;
       }
       
@@ -731,10 +778,11 @@
       .damage-center-container {
         page-break-inside: avoid !important;
         margin-bottom: 4mm !important;
-        page-break-before: avoid !important;
+        page-break-before: always !important; /* CHANGED: Force each damage center to start on new page */
       }
-      
-      .damage-center-container:nth-child(n+3) {
+
+      /* Exception: First damage center stays on same page as intro */
+      .damage-center-container:first-child {
         page-break-before: avoid !important;
       }
       
@@ -799,9 +847,7 @@
       }
       
       /* Enhanced border restoration for page breaks */
-      @page {
-        margin: 20mm;
-      }
+      /* REMOVED CONFLICTING @page RULE - using global @page at top of file */
       
       /* Ensure borders are maintained when content spans pages */
       .car-details-page-break {

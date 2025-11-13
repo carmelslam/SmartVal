@@ -83,7 +83,24 @@
         border-right: 3px solid #1e3a8a !important;
         border-collapse: separate !important; /* FIXED: Maintain borders at breaks */
         border-spacing: 0 !important;
+        page-break-inside: auto !important; /* ADDED: Allow long tables to split */
         font-size: 13px !important; /* INCREASED */
+      }
+
+      /* CRITICAL: Repeat table headers on each page */
+      thead {
+        display: table-header-group !important;
+      }
+
+      /* CRITICAL: Prevent individual rows from splitting */
+      tbody tr {
+        page-break-inside: avoid !important;
+        break-inside: avoid !important;
+      }
+
+      /* Ensure borders remain intact after page breaks */
+      tbody tr:first-child td {
+        border-top: 2px solid #003366 !important;
       }
 
       th, td {
@@ -651,7 +668,7 @@
     /* Complete A4 Print Layout */
     @page {
       size: A4;
-      margin: 0;
+      margin: 20mm 12mm 30mm 12mm; /* CHANGED: Proper margins for headers/footers */
     }
     
     @media print {
@@ -671,7 +688,10 @@
         width: 210mm !important;
         height: 297mm !important;
         object-fit: cover !important;
-        z-index: 0 !important;
+        z-index: -1 !important; /* FIXED: Negative to stay behind content */
+        opacity: 0.15 !important; /* ADDED: Match other print block */
+        display: block !important;
+        visibility: visible !important;
       }
       
       .page {
@@ -699,11 +719,29 @@
       }
       
       table {
-        page-break-inside: avoid !important;
+        page-break-inside: auto !important; /* CHANGED: Allow long tables to split */
         margin-bottom: 4mm !important;
         font-size: 10px !important;
+        border-collapse: separate !important;
+        border-spacing: 0 !important;
       }
-      
+
+      /* CRITICAL: Repeat table headers on each page */
+      thead {
+        display: table-header-group !important;
+      }
+
+      /* CRITICAL: Prevent individual rows from splitting */
+      tbody tr {
+        page-break-inside: avoid !important;
+        break-inside: avoid !important;
+      }
+
+      /* Ensure borders remain intact after page breaks */
+      tbody tr:first-child td {
+        border-top: 2px solid #003366 !important;
+      }
+
       th, td {
         padding: 3mm !important;
         font-size: 9px !important;
@@ -715,7 +753,13 @@
       
       .damage-centers-container > div {
         page-break-inside: avoid !important;
+        page-break-before: always !important; /* ADDED: Force each damage center to new page */
         margin-bottom: 3mm !important;
+      }
+
+      /* Exception: First damage center stays on same page */
+      .damage-centers-container > div:first-child {
+        page-break-before: avoid !important;
       }
       
       h1, h2, .section-title {
