@@ -181,35 +181,39 @@ window.NativePdfGenerator = {
           unicode-range: U+0590-05FF, U+20AA, U+25CC, U+FB1D-FB4F;
         }
 
-        /* ✅ FIX FONT HIERARCHY: Balanced font sizes - larger text, smaller tables */
+        /* ✅ FIXED: Proper font hierarchy - clear distinction between elements */
         * {
-          font-size: 12px !important; /* Increased from 8px for readability */
+          font-size: 16px !important; /* Base font size for all elements */
         }
 
         h1 {
-          font-size: 22px !important; /* Increased from 14px - main titles */
+          font-size: 32px !important; /* FIXED: Main titles 2x body size for clear hierarchy */
         }
 
         h2 {
-          font-size: 18px !important; /* Increased from 12px - subtitles */
+          font-size: 24px !important; /* FIXED: Subtitles clearly distinct */
         }
 
-        h3, h4, h5, h6 {
-          font-size: 14px !important; /* Increased from 10px - section headers */
+        h3 {
+          font-size: 18px !important; /* FIXED: Section headers */
+        }
+
+        h4, h5, h6 {
+          font-size: 16px !important; /* FIXED: Subsection headers, same as body but bold */
         }
 
         p, div, span, li {
-          font-size: 12px !important; /* Increased from 8px - body text */
+          font-size: 16px !important; /* Body text - readable base size */
         }
 
-        /* Tables: Keep text readable but reduce cell padding */
+        /* Tables: Slightly smaller but still readable */
         table {
-          font-size: 11px !important; /* Slightly smaller than body for compact tables */
+          font-size: 14px !important; /* Table content compact but readable */
         }
 
         td, th {
-          font-size: 11px !important;
-          padding: 3px 5px !important; /* Reduced padding for compact tables */
+          font-size: 13px !important; /* Cell text readable */
+          padding: 4px 6px !important; /* Balanced padding */
         }
 
         /* Core Page Structure */
@@ -243,7 +247,7 @@ window.NativePdfGenerator = {
           height: 100% !important;
           object-fit: cover !important;
           z-index: -1 !important; /* Behind all content */
-          opacity: 0.08 !important; /* Subtle but visible */
+          opacity: 0.25 !important; /* FIXED: More visible background */
           pointer-events: none !important;
         }
 

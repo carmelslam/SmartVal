@@ -96,16 +96,38 @@ class ReportStorageService {
         console.log('✅ Document record created:', docData.id);
       }
 
-      // 3. Create signed URL for immediate access (1 hour expiry)
+      // 3. Create long-lived signed URL (1 year expiry = 31536000 seconds)
+      // Using signed URL instead of public URL since reports bucket is private
       const { data: urlData, error: urlError } = await this.supabase.storage
         .from('reports')
-        .createSignedUrl(storagePath, 3600);
+        .createSignedUrl(storagePath, 31536000); // 1 year expiry
 
       if (urlError) {
         console.warn('⚠️ Failed to create signed URL:', urlError);
       }
 
       const signedUrl = urlData?.signedUrl;
+
+      // 4. Store PDF URL in appropriate tracking table
+      if (signedUrl) {
+        const trackingTable = reportType === 'expertise'
+          ? 'tracking_expertise'
+          : 'tracking_final_report';
+
+        const { error: trackingError } = await this.supabase
+          .from(trackingTable)
+          .update({
+            pdf_storage_path: storagePath,
+            pdf_public_url: signedUrl
+          })
+          .eq('case_id', caseId);
+
+        if (trackingError) {
+          console.warn(`⚠️ Failed to update ${trackingTable}:`, trackingError);
+        } else {
+          console.log(`✅ Updated ${trackingTable} with PDF URL`);
+        }
+      }
 
       console.log('✅ Report uploaded successfully');
 
@@ -191,10 +213,10 @@ class ReportStorageService {
         };
       }
 
-      // Create signed URL
+      // Create long-lived signed URL (1 year expiry)
       const { data: urlData, error: urlError } = await this.supabase.storage
         .from('reports')
-        .createSignedUrl(documents[0].storage_key, 3600);
+        .createSignedUrl(documents[0].storage_key, 31536000);
 
       if (urlError) {
         throw new Error(urlError.message);
