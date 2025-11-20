@@ -612,10 +612,11 @@
     }
   </style>
 
-  <!-- PDF Export Libraries (same as parts search) -->
+  <!-- PDF Export Libraries - Native approach (keeping old libs for backwards compatibility) -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <script src="./image-cors-fix.js"></script>
+  <script src="./native-pdf-generator.js"></script>
 
   <script src="https://cdn.jsdelivr.net/npm/handlebars@latest/dist/handlebars.min.js"></script>
   <script src="./math-preview.js"></script>
@@ -1975,85 +1976,21 @@
           actualCaseId = caseData.id;
         }
         
-        // Generate PDF from HTML (EXPERTISE PATTERN)
-        console.log('📄 Generating final report PDF...');
-        const reviewWindow = window.open('', '_blank');
-        if (!reviewWindow) {
-          throw new Error('חסימת חלונות קופצים - אנא אפשר חלונות קופצים');
+        // Generate PDF from HTML using improved native PDF generator
+        console.log('📄 Generating final report PDF using native PDF generator...');
+
+        const pdfResult = await window.NativePdfGenerator.generatePDF(
+          cleanHTML,
+          'final_report',
+          'final' // Final report submission
+        );
+
+        const pdfBlob = pdfResult.blob;
+
+        // Close preview window
+        if (pdfResult.window) {
+          pdfResult.window.close();
         }
-        
-        reviewWindow.document.write(cleanHTML);
-        reviewWindow.document.close();
-        await new Promise(resolve => setTimeout(resolve, 1000));
-
-        // 🔒 Refresh authentication before PDF generation to prevent token expiry
-        try {
-          console.log('🔒 Refreshing session before PDF generation...');
-          const { data: sessionData, error: refreshError } = await supabase.auth.refreshSession();
-          if (refreshError) {
-            console.warn('⚠️ Session refresh failed:', refreshError);
-          } else {
-            console.log('✅ Session refreshed successfully');
-          }
-        } catch (authError) {
-          console.warn('⚠️ Auth refresh error:', authError);
-        }
-
-        // 🔧 PHASE 10 FIX: Inject user assets into review window
-        if (window.assetLoader) {
-          console.log('🔧 Injecting user assets into review window before PDF generation...');
-          await window.assetLoader.injectAssets(reviewWindow.document);
-          // Wait a bit for images to load
-          await new Promise(resolve => setTimeout(resolve, 500));
-        }
-
-        // 🔧 PHASE 10 FIX: Fix CORS issues before html2canvas
-        if (window.ImageCorsFix) {
-          console.log('🔧 Fixing CORS issues before PDF generation...');
-          await window.ImageCorsFix.fixImagesForPDF(reviewWindow.document);
-        }
-        
-        // Use html2canvas with timeout protection (IMPROVED EXPERTISE PATTERN)
-        const canvas = await Promise.race([
-          html2canvas(reviewWindow.document.body, window.ImageCorsFix.HTML2CANVAS_OPTIONS),
-          new Promise((_, reject) => 
-            setTimeout(() => reject(new Error('PDF generation timeout')), 30000) // 30 second total timeout
-          )
-        ]);
-        
-        // Convert canvas to PDF (EXPERTISE PATTERN)
-        const { jsPDF } = window.jspdf;
-        const pdf = new jsPDF('p', 'mm', 'a4');
-        const imgData = canvas.toDataURL('image/jpeg', 0.7);
-        const pageWidth = 210;
-        const pageHeight = 297;
-        const topMargin = 15;
-        const bottomMargin = 15;
-        const leftMargin = 10;
-        const rightMargin = 10;
-        const contentWidth = pageWidth - leftMargin - rightMargin;
-        const contentHeight = pageHeight - topMargin - bottomMargin;
-        const imgHeight = (canvas.height * contentWidth) / canvas.width;
-        let heightLeft = imgHeight;
-        let position = topMargin;
-
-        // 🔧 PHASE 10 FIX: Watermarks are now rendered in HTML (captured by html2canvas)
-        // Removed old jsPDF text-based watermark that caused Hebrew gibberish
-        // Final reports should not have watermarks anyway
-
-        pdf.addImage(imgData, 'JPEG', leftMargin, position, contentWidth, imgHeight);
-        heightLeft -= contentHeight;
-
-        while (heightLeft > 0) {
-          position = -(imgHeight - heightLeft) + topMargin;
-          pdf.addPage();
-          pdf.addImage(imgData, 'JPEG', leftMargin, position, contentWidth, imgHeight);
-          // 🔧 PHASE 10 FIX: No watermark on final reports
-          heightLeft -= contentHeight;
-        }
-        
-        reviewWindow.close();
-        const pdfBlob = pdf.output('blob');
         
         // Upload PDF to storage (EXPERTISE PATTERN)
         console.log('☁️ Uploading final report PDF to Supabase Storage...');
