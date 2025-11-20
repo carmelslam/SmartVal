@@ -282,3 +282,58 @@ To test the new PDF generation, you need to:
 ---
 
 **Status:** ✅ IMPLEMENTATION COMPLETE - READY FOR TESTING
+
+---
+
+## NEW ISSUE DISCOVERED: PDF Content Not Visible (Nov 20, 2025)
+
+### Problem Report:
+User reports that PDFs stored in database show:
+- ❌ Table borders visible
+- ❌ But NO actual content/text visible
+- ❌ PDFs appear mostly empty
+
+### Root Cause Analysis:
+**File:** `/home/user/SmartVal/native-pdf-generator.js:94-100`
+
+The issue is **content overflow** caused by excessive scaling:
+
+```javascript
+html2canvas: {
+  scale: 2, // ← THIS IS THE PROBLEM
+  // Scale 2 makes content 2x bigger
+  // Combined with margins, content overflows page bounds
+  // Text flows outside visible area → appears empty
+}
+```
+
+**Why Only Borders Show:**
+- Table borders are structural elements that auto-size to fit
+- Text content flows in normal document flow
+- When scale=2, text overflows outside A4 page boundaries
+- Result: Borders visible, content invisible
+
+### Solution:
+Reduce scale from 2 to 1 (or maximum 1.2) to prevent overflow.
+
+### Implementation Tasks:
+
+#### ✅ Task 1: Investigation Complete
+- [x] Identified scale: 2 as root cause
+- [x] Confirmed symptom match (borders visible, content not)
+- [x] Analyzed margin stacking effect
+
+#### Task 2: Fix PDF Generation Settings
+- [ ] Modify `/home/user/SmartVal/native-pdf-generator.js`
+- [ ] Change scale from 2 to 1
+- [ ] Optionally adjust margins
+- [ ] Add windowWidth for better control
+
+#### Task 3: Test Fix
+- [ ] Generate test PDF
+- [ ] Verify content is now visible
+- [ ] Confirm proper page sizing
+
+#### Task 4: Commit & Push
+- [ ] Commit with clear message
+- [ ] Push to `claude/audit-report-styling-011CV2M2WWp3yiMRyyQ9RUqN`
