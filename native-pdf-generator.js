@@ -87,8 +87,13 @@ window.NativePdfGenerator = {
       // This self-contained method removes whitespace from base64 strings in data URIs
       // Unlike the previous assetLoader approach, this ALWAYS executes (no dependencies)
       console.log('🔄 Cleaning all image data URIs to prevent atob() errors...');
-      const cleanedCount = await this._cleanAllImageDataURIs(reviewWindow.document);
-      console.log(`✅ Cleaned ${cleanedCount} images with whitespace in base64 data`);
+      try {
+        const cleanedCount = await this._cleanAllImageDataURIs(reviewWindow.document);
+        console.log(`✅ Cleaned ${cleanedCount} total images (img tags + CSS backgrounds)`);
+      } catch (cleanError) {
+        console.error('❌ CRITICAL: Image cleaning failed:', cleanError);
+        // Continue anyway - better to try PDF generation than fail completely
+      }
 
       // Additional wait for assets
       await new Promise(resolve => setTimeout(resolve, 500));
@@ -536,51 +541,109 @@ window.NativePdfGenerator = {
   async _cleanAllImageDataURIs(document) {
     console.log('🧹 Cleaning all image data URIs (removing whitespace from base64)...');
 
-    const images = document.querySelectorAll('img');
-    let cleanedCount = 0;
+    // Get ALL images: <img> tags, CSS backgrounds, SVG images, etc.
+    const imgTags = document.querySelectorAll('img');
+    const allElements = document.querySelectorAll('*');
 
-    for (const img of images) {
+    let cleanedCount = 0;
+    let skippedCount = 0;
+    let totalDataURIs = 0;
+    let backgroundsCleaned = 0;
+
+    console.log(`  📊 Found ${imgTags.length} <img> tags, scanning ${allElements.length} total elements for images...`);
+
+    // STEP 1: Clean <img> tag sources
+    for (const img of imgTags) {
       try {
         const src = img.src;
 
-        // Skip empty or non-data-URI images
-        if (!src || !src.startsWith('data:image')) {
+        // Skip empty images
+        if (!src) {
+          skippedCount++;
           continue;
         }
 
-        // Extract image type and base64 data
-        // Pattern: data:image/TYPE;base64,BASE64DATA
-        const base64Match = src.match(/^data:image\/(\w+);base64,(.+)$/);
-        if (!base64Match) {
-          continue; // Not a proper data URI, skip
+        // Skip non-data-URI images (URLs)
+        if (!src.startsWith('data:image')) {
+          skippedCount++;
+          continue;
         }
 
-        const imageType = base64Match[1]; // e.g., 'png', 'jpeg', 'svg+xml'
+        totalDataURIs++;
+
+        // Extract image type and base64 data
+        // Pattern: data:image/TYPE;base64,BASE64DATA
+        // ✅ FIXED: Use [^;]+ instead of \w+ to match image types like 'svg+xml'
+        const base64Match = src.match(/^data:image\/([^;]+);base64,(.+)$/);
+        if (!base64Match) {
+          console.warn(`  ⚠️ Malformed data URI in <img>: ${src.substring(0, 100)}...`);
+          continue;
+        }
+
+        const imageType = base64Match[1];
         const base64Data = base64Match[2];
 
-        // Check if base64 contains whitespace (spaces, tabs, newlines, carriage returns)
+        // Check if base64 contains whitespace
         if (/\s/.test(base64Data)) {
-          // Clean the base64 string by removing ALL whitespace
           const cleanBase64 = base64Data.replace(/\s/g, '');
-
-          // Reconstruct clean data URI
           const cleanDataURI = `data:image/${imageType};base64,${cleanBase64}`;
 
-          // Update image source
           img.src = cleanDataURI;
           img.setAttribute('src', cleanDataURI);
 
           cleanedCount++;
-          console.log(`  🧼 Cleaned image #${cleanedCount}: ${imageType} (removed ${base64Data.length - cleanBase64.length} whitespace chars)`);
+          const removedChars = base64Data.length - cleanBase64.length;
+          console.log(`  🧼 Cleaned <img> #${cleanedCount}: ${imageType} (removed ${removedChars} whitespace chars)`);
         }
       } catch (error) {
-        console.warn('⚠️ Error cleaning image data URI:', error);
-        // Continue with other images even if one fails
+        console.warn('⚠️ Error cleaning <img> tag:', error);
       }
     }
 
-    console.log(`✅ Image cleaning complete: ${cleanedCount} images cleaned`);
-    return cleanedCount;
+    // STEP 2: Clean CSS background-image properties
+    console.log('  🔍 Scanning CSS background-image properties...');
+    for (const element of allElements) {
+      try {
+        const style = window.getComputedStyle(element);
+        const bgImage = style.backgroundImage;
+
+        if (!bgImage || bgImage === 'none') continue;
+
+        // Check if background contains data URI
+        if (bgImage.includes('data:image')) {
+          // Extract data URI from url("data:image/...")
+          const dataURIMatch = bgImage.match(/url\(["']?(data:image\/[^"')]+)["']?\)/);
+          if (!dataURIMatch) continue;
+
+          const dataURI = dataURIMatch[1];
+
+          // Check if it's a base64 data URI with whitespace
+          const base64Match = dataURI.match(/^data:image\/([^;]+);base64,(.+)$/);
+          if (!base64Match) continue;
+
+          const imageType = base64Match[1];
+          const base64Data = base64Match[2];
+
+          if (/\s/.test(base64Data)) {
+            const cleanBase64 = base64Data.replace(/\s/g, '');
+            const cleanDataURI = `data:image/${imageType};base64,${cleanBase64}`;
+
+            element.style.backgroundImage = `url("${cleanDataURI}")`;
+
+            backgroundsCleaned++;
+            const removedChars = base64Data.length - cleanBase64.length;
+            console.log(`  🧼 Cleaned CSS background #${backgroundsCleaned}: ${imageType} (removed ${removedChars} whitespace chars)`);
+          }
+        }
+      } catch (error) {
+        // Silently continue - some elements may not have accessible styles
+      }
+    }
+
+    const summary = `✅ Image cleaning complete: ${cleanedCount} <img> tags cleaned, ${backgroundsCleaned} CSS backgrounds cleaned, ${totalDataURIs - cleanedCount} already clean, ${skippedCount} skipped`;
+    console.log(summary);
+
+    return cleanedCount + backgroundsCleaned;
   }
 };
 
