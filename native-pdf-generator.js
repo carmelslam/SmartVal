@@ -92,7 +92,7 @@ window.NativePdfGenerator = {
         filename: `${reportType}_${status}.pdf`,
         image: { type: 'jpeg', quality: 0.95 },
         html2canvas: {
-          scale: 1, // Normal size - prevents content overflow (was 2, caused text to flow outside visible area)
+          scale: 0.55, // Reduced scale to properly fit content - A4 with margins (~718px) / windowWidth (1024px) ≈ 0.70, using 0.55 for safety margin
           windowWidth: 1024, // Control content width for consistent rendering
           useCORS: true,
           logging: false,
