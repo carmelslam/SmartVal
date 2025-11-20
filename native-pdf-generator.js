@@ -555,17 +555,31 @@ window.NativePdfGenerator = {
     // STEP 1: Clean <img> tag sources
     for (const img of imgTags) {
       try {
-        const src = img.src;
+        // ✅ CRITICAL FIX: Check BOTH img.src property AND src attribute
+        // Browser may transform data URIs to blob: URLs in the property
+        // but keep the original data URI in the attribute
+        const srcProperty = img.src;
+        const srcAttribute = img.getAttribute('src');
+
+        // Use attribute if available, fallback to property
+        const src = srcAttribute || srcProperty;
 
         // Skip empty images
         if (!src) {
           skippedCount++;
+          console.log(`  ⏭️ Skipped EMPTY image (no src)`);
           continue;
         }
+
+        // Log what we're seeing
+        console.log(`  🔍 Image ${totalDataURIs + skippedCount + 1}: alt="${img.alt}"`);
+        console.log(`      Property: ${srcProperty?.substring(0, 60)}...`);
+        console.log(`      Attribute: ${srcAttribute?.substring(0, 60)}...`);
 
         // Skip non-data-URI images (URLs)
         if (!src.startsWith('data:image')) {
           skippedCount++;
+          console.log(`  ⏭️ Skipped NON-DATA-URI (${src.substring(0, 20)}...)`);
           continue;
         }
 
@@ -588,12 +602,15 @@ window.NativePdfGenerator = {
           const cleanBase64 = base64Data.replace(/\s/g, '');
           const cleanDataURI = `data:image/${imageType};base64,${cleanBase64}`;
 
-          img.src = cleanDataURI;
+          // Update BOTH property and attribute
           img.setAttribute('src', cleanDataURI);
+          img.src = cleanDataURI;
 
           cleanedCount++;
           const removedChars = base64Data.length - cleanBase64.length;
-          console.log(`  🧼 Cleaned <img> #${cleanedCount}: ${imageType} (removed ${removedChars} whitespace chars)`);
+          console.log(`  🧼 Cleaned <img> #${cleanedCount}: ${imageType} (removed ${removedChars} whitespace chars, new length: ${cleanBase64.length})`);
+        } else {
+          console.log(`  ✓ Image already clean: ${imageType} (${base64Data.length} chars, no whitespace)`);
         }
       } catch (error) {
         console.warn('⚠️ Error cleaning <img> tag:', error);
