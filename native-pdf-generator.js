@@ -40,7 +40,7 @@ window.NativePdfGenerator = {
 
     try {
       // 🔒 Refresh authentication before long PDF operation
-      if (window.supabase && window.supabase.auth) {
+      if (window.supabase?.auth?.refreshSession) {
         try {
           console.log('🔒 Refreshing session before PDF generation...');
           const { data: sessionData, error: refreshError } = await window.supabase.auth.refreshSession();
@@ -52,6 +52,8 @@ window.NativePdfGenerator = {
         } catch (authError) {
           console.warn('⚠️ Auth refresh error:', authError);
         }
+      } else {
+        console.warn('⚠️ refreshSession not available, skipping auth refresh');
       }
 
       // Inject enhanced print-specific CSS into HTML
@@ -77,11 +79,9 @@ window.NativePdfGenerator = {
         window.assetLoader.injectWatermark(reviewWindow.document, 'draft');
       }
 
-      // 🔧 Fix CORS issues for images
-      if (window.ImageCorsFix) {
-        console.log('🔧 Fixing CORS issues before PDF generation...');
-        await window.ImageCorsFix.fixImagesForPDF(reviewWindow.document);
-      }
+      // 🔧 Fix CORS issues for images - CRITICAL FIX
+      console.log('🔧 Validating and fixing images before PDF generation...');
+      await this._fixAndValidateImages(reviewWindow.document);
 
       // Additional wait for assets
       await new Promise(resolve => setTimeout(resolve, 500));
@@ -436,6 +436,86 @@ window.NativePdfGenerator = {
     }
 
     return windows;
+  },
+
+  /**
+   * Fix and validate images to prevent atob() encoding errors
+   * Replaces CORS-blocked images with safe SVG data URLs
+   *
+   * @param {Document} document - The document containing images to fix
+   * @returns {Promise<void>}
+   */
+  async _fixAndValidateImages(document) {
+    console.log('🔍 Scanning images for CORS and encoding issues...');
+
+    // Safe SVG placeholders for different image types
+    const SAFE_PLACEHOLDERS = {
+      logo: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KICA8ZGVmcz4KICAgIDxsaW5lYXJHcmFkaWVudCBpZD0ibG9nb0dyYWQiIHgxPSIwJSIgeTE9IjAlIiB4Mj0iMTAwJSIgeTI9IjEwMCUiPgogICAgICA8c3RvcCBvZmZzZXQ9IjAlIiBzdHlsZT0ic3RvcC1jb2xvcjojMjU2M2ViO3N0b3Atb3BhY2l0eToxIiAvPgogICAgICA8c3RvcCBvZmZzZXQ9IjEwMCUiIHN0eWxlPSJzdG9wLWNvbG9yOiMxZDRlZDg7c3RvcC1vcGFjaXR5OjEiIC8+CiAgICA8L2xpbmVhckdyYWRpZW50PgogIDwvZGVmcz4KICA8Y2lyY2xlIGN4PSI1MCIgY3k9IjUwIiByPSI0OCIgZmlsbD0idXJsKCNsb2dvR3JhZCkiIHN0cm9rZT0iIzFmMjkzNyIgc3Ryb2tlLXdpZHRoPSI0Ii8+CiAgPHRleHQgeD0iNTAiIHk9IjU4IiBmb250LWZhbWlseT0iSGVsdmV0aWNhLCBBcmlhbCwgc2Fucy1zZXJpZiIgZm9udC1zaXplPSIyOCIgZm9udC13ZWlnaHQ9ImJvbGQiIGZpbGw9IndoaXRlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIj5ZQzwvdGV4dD4KPC9zdmc+',
+      signature: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjgwIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPgogIDx0ZXh0IHg9IjEwMCIgeT0iMzAiIGZvbnQtZmFtaWx5PSJBcmlhbCwgc2Fucy1zZXJpZiIgZm9udC1zaXplPSIxNiIgZm9udC13ZWlnaHQ9ImJvbGQiIGZpbGw9IiMyNTYzZWIiIHRleHQtYW5jaG9yPSJtaWRkbGUiPtee16jXldefINeS15nXldeTPC90ZXh0PgogIDx0ZXh0IHg9IjEwMCIgeT0iNDgiIGZvbnQtZmFtaWx5PSJBcmlhbCwgc2Fucy1zZXJpZiIgZm9udC1zaXplPSIxMiIgZmlsbD0iIzM3NDE1MSIgdGV4dC1hbmNob3I9Im1pZGRsZSI+16nXnteQ15og16jXmdeRINeV15TXoteo15vXqSDXoNeW15nXmdedPC90ZXh0PgogIDx0ZXh0IHg9IjEwMCIgeT0iNjIiIGZvbnQtZmFtaWx5PSJBcmlhbCwgc2Fucy1zZXJpZiIgZm9udC1zaXplPSIxMCIgZmlsbD0iIzY2NjY2NiIgdGV4dC1hbmNob3I9Im1pZGRsZSI+bGljLiMgMTIzNDU2PC90ZXh0Pgo8L3N2Zz4=',
+      generic: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KICA8cmVjdCB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgZmlsbD0iI2Y0ZjRmNCIgLz4KICA8dGV4dCB4PSI1MCIgeT0iNTUiIGZvbnQtZmFtaWx5PSJBcmlhbCwgc2Fucy1zZXJpZiIgZm9udC1zaXplPSIxMiIgZmlsbD0iIzY2NiIgdGV4dC1hbmNob3I9Im1pZGRsZSI+SW1hZ2U8L3RleHQ+Cjwvc3ZnPg=='
+    };
+
+    // CORS-blocked domains that need replacement
+    const CORS_DOMAINS = ['carmelcayouf.com'];
+
+    const images = document.querySelectorAll('img');
+    let replacedCount = 0;
+    let removedCount = 0;
+
+    for (const img of images) {
+      try {
+        const src = img.src;
+
+        // Skip if already a data URL
+        if (src.startsWith('data:')) {
+          continue;
+        }
+
+        // Check if image is from CORS-blocked domain
+        let isBlocked = false;
+        for (const domain of CORS_DOMAINS) {
+          if (src.includes(domain)) {
+            isBlocked = true;
+            break;
+          }
+        }
+
+        if (isBlocked) {
+          // Replace with safe placeholder based on image type
+          let placeholder = SAFE_PLACEHOLDERS.generic;
+
+          if (img.alt === 'Logo' || img.alt === 'logo' || img.dataset?.assetType === 'logo') {
+            placeholder = SAFE_PLACEHOLDERS.logo;
+            console.log('🔄 Replacing CORS-blocked logo with safe placeholder');
+          } else if (img.alt === 'חתימה' || img.dataset?.assetType === 'signature') {
+            placeholder = SAFE_PLACEHOLDERS.signature;
+            console.log('🔄 Replacing CORS-blocked signature with safe placeholder');
+          } else {
+            console.log('🔄 Replacing CORS-blocked image with generic placeholder');
+          }
+
+          img.src = placeholder;
+          replacedCount++;
+          continue;
+        }
+
+        // For Supabase images, ensure CORS is enabled
+        if (src.includes('supabase.co')) {
+          img.crossOrigin = 'anonymous';
+        }
+
+      } catch (error) {
+        console.warn('⚠️ Error processing image, removing to prevent PDF generation failure:', error);
+        // Remove problematic image completely to prevent atob() error
+        img.remove();
+        removedCount++;
+      }
+    }
+
+    console.log(`✅ Image validation complete: ${replacedCount} replaced, ${removedCount} removed`);
+
+    // Wait a bit for image updates to take effect
+    await new Promise(resolve => setTimeout(resolve, 300));
   }
 };
 
