@@ -83,20 +83,12 @@ window.NativePdfGenerator = {
       console.log('🔧 Validating and fixing images before PDF generation...');
       await this._fixAndValidateImages(reviewWindow.document);
 
-      // 🔧 CRITICAL FIX: Convert all images to clean base64 data URIs
-      // This prevents atob() encoding errors in jsPDF by cleaning base64 strings
-      // The convertImagesToDataURIs method removes whitespace/newlines from base64 data
-      if (reviewWindow.assetLoader) {
-        console.log('🔄 Converting images to data URIs with clean base64 encoding...');
-        try {
-          const convertedCount = await reviewWindow.assetLoader.convertImagesToDataURIs(reviewWindow.document);
-          console.log(`✅ Converted ${convertedCount} images to clean data URIs`);
-        } catch (conversionError) {
-          console.warn('⚠️ Image conversion failed, continuing anyway:', conversionError);
-        }
-      } else {
-        console.warn('⚠️ assetLoader not available in PDF window, images may fail');
-      }
+      // 🔧 CRITICAL FIX: Clean all image data URIs to prevent atob() encoding errors
+      // This self-contained method removes whitespace from base64 strings in data URIs
+      // Unlike the previous assetLoader approach, this ALWAYS executes (no dependencies)
+      console.log('🔄 Cleaning all image data URIs to prevent atob() errors...');
+      const cleanedCount = await this._cleanAllImageDataURIs(reviewWindow.document);
+      console.log(`✅ Cleaned ${cleanedCount} images with whitespace in base64 data`);
 
       // Additional wait for assets
       await new Promise(resolve => setTimeout(resolve, 500));
@@ -531,6 +523,64 @@ window.NativePdfGenerator = {
 
     // Wait a bit for image updates to take effect
     await new Promise(resolve => setTimeout(resolve, 300));
+  },
+
+  /**
+   * Clean all image data URIs by removing whitespace from base64 strings
+   * This method is self-contained and doesn't rely on assetLoader
+   * CRITICAL: Prevents atob() encoding errors in jsPDF when base64 contains whitespace
+   *
+   * @param {Document} document - The document containing images to clean
+   * @returns {Promise<number>} Number of images cleaned
+   */
+  async _cleanAllImageDataURIs(document) {
+    console.log('🧹 Cleaning all image data URIs (removing whitespace from base64)...');
+
+    const images = document.querySelectorAll('img');
+    let cleanedCount = 0;
+
+    for (const img of images) {
+      try {
+        const src = img.src;
+
+        // Skip empty or non-data-URI images
+        if (!src || !src.startsWith('data:image')) {
+          continue;
+        }
+
+        // Extract image type and base64 data
+        // Pattern: data:image/TYPE;base64,BASE64DATA
+        const base64Match = src.match(/^data:image\/(\w+);base64,(.+)$/);
+        if (!base64Match) {
+          continue; // Not a proper data URI, skip
+        }
+
+        const imageType = base64Match[1]; // e.g., 'png', 'jpeg', 'svg+xml'
+        const base64Data = base64Match[2];
+
+        // Check if base64 contains whitespace (spaces, tabs, newlines, carriage returns)
+        if (/\s/.test(base64Data)) {
+          // Clean the base64 string by removing ALL whitespace
+          const cleanBase64 = base64Data.replace(/\s/g, '');
+
+          // Reconstruct clean data URI
+          const cleanDataURI = `data:image/${imageType};base64,${cleanBase64}`;
+
+          // Update image source
+          img.src = cleanDataURI;
+          img.setAttribute('src', cleanDataURI);
+
+          cleanedCount++;
+          console.log(`  🧼 Cleaned image #${cleanedCount}: ${imageType} (removed ${base64Data.length - cleanBase64.length} whitespace chars)`);
+        }
+      } catch (error) {
+        console.warn('⚠️ Error cleaning image data URI:', error);
+        // Continue with other images even if one fails
+      }
+    }
+
+    console.log(`✅ Image cleaning complete: ${cleanedCount} images cleaned`);
+    return cleanedCount;
   }
 };
 

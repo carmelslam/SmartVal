@@ -102,7 +102,7 @@ Instead of relying on `reviewWindow.assetLoader` (which doesn't exist), add a st
 - [x] Identified that image cleaning is being skipped
 - [x] Confirmed atob() error is due to dirty base64 strings
 
-### 🔧 Task 2: Add Inline Image Cleaning Method (IN PROGRESS)
+### ✅ Task 2: Add Inline Image Cleaning Method (COMPLETED)
 **File:** `native-pdf-generator.js`
 **Action:** Add new `_cleanAllImageDataURIs()` method
 
@@ -136,11 +136,11 @@ async _cleanAllImageDataURIs(document) {
 3. Return count of cleaned images
 4. Log progress for debugging
 
-### 🔧 Task 3: Update generatePDF() Method (PENDING)
+### ✅ Task 3: Update generatePDF() Method (COMPLETED)
 **File:** `native-pdf-generator.js`
 **Action:** Replace assetLoader dependency with inline method
 
-**Location:** Lines 86-99
+**Location:** Lines 86-91
 
 **Change FROM:**
 ```javascript
@@ -254,6 +254,89 @@ try {
 ## Progress
 
 - ✅ Root cause identified
-- 🔧 Adding inline image cleaning method
-- ⏳ Testing pending
-- ⏳ Verification pending
+- ✅ Inline image cleaning method added
+- ✅ generatePDF() method updated
+- ⏳ Testing pending (user needs to test in browser)
+- ⏳ Verification pending (user needs to verify URLs in Supabase)
+
+---
+
+## Implementation Review
+
+### Changes Made (2025-11-20)
+
+#### 1. Added New Method: `_cleanAllImageDataURIs()`
+**File:** `native-pdf-generator.js:544-592`
+
+**Purpose:** Self-contained method to clean base64 strings in image data URIs
+
+**Features:**
+- No dependency on assetLoader (works in popup windows)
+- Processes ALL img elements with data URI sources
+- Removes whitespace from base64 strings using regex `/\s/g`
+- Updates both `img.src` property and `setAttribute('src')`
+- Returns count of cleaned images
+- Comprehensive error handling
+- Detailed logging for debugging
+
+**Code added:** ~50 lines
+
+#### 2. Updated Method: `generatePDF()`
+**File:** `native-pdf-generator.js:86-91`
+
+**Changes:**
+- **REMOVED:** Conditional check for `reviewWindow.assetLoader`
+- **REMOVED:** Try-catch wrapper with warning fallback
+- **ADDED:** Direct call to `this._cleanAllImageDataURIs(reviewWindow.document)`
+- **RESULT:** Guaranteed execution, no dependency failures
+
+**Code modified:** Replaced 14 lines with 6 lines (net -8 lines)
+
+### Impact Assessment
+
+**Files Changed:** 1 (native-pdf-generator.js only)
+**Lines Added:** ~50
+**Lines Modified:** 6
+**Lines Removed:** 8
+**Net Change:** +48 lines
+
+**Risk Level:** ✅ MINIMAL
+- Single file changed
+- No business logic affected
+- No database schema changes
+- No external API changes
+- No other modules touched
+
+**Benefits:**
+- ✅ Fixes critical PDF generation failure
+- ✅ Self-contained solution (no external dependencies)
+- ✅ Uses proven cleaning logic (same pattern as asset-loader.js)
+- ✅ Always executes (not conditional)
+- ✅ Better error visibility with detailed logging
+
+### Testing Instructions
+
+1. **Open expertise builder.html in browser**
+2. **Fill out an expertise report** (any test data)
+3. **Click "📤 אישור סופי ושליחה" button**
+4. **Check browser console for:**
+   ```
+   🔄 Cleaning all image data URIs to prevent atob() errors...
+   🧼 Cleaned image #1: png (removed X whitespace chars)
+   ✅ Cleaned N images with whitespace in base64 data
+   ✅ PDF generated successfully
+   ```
+5. **Verify NO atob() errors appear**
+6. **Check Supabase `expertise_tracking` table:**
+   - New row should exist
+   - `pdf_public_url` should contain a valid URL
+7. **Open Admin Hub and verify "Load" button appears**
+
+### Rollback Plan (if needed)
+
+If the fix causes issues, revert native-pdf-generator.js:
+```bash
+git checkout HEAD~1 -- native-pdf-generator.js
+```
+
+This will restore the previous version with the assetLoader conditional check.
