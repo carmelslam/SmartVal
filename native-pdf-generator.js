@@ -83,9 +83,20 @@ window.NativePdfGenerator = {
       console.log('🔧 Validating and fixing images before PDF generation...');
       await this._fixAndValidateImages(reviewWindow.document);
 
-      // 🔧 CRITICAL FIX: Clean all image data URIs to prevent atob() encoding errors
-      // This self-contained method removes whitespace from base64 strings in data URIs
-      // Unlike the previous assetLoader approach, this ALWAYS executes (no dependencies)
+      // 🔧 CRITICAL FIX: Convert URL images back to data URIs in reviewWindow
+      // The browser reverts some data URIs back to URLs when HTML is serialized/deserialized
+      // We need to convert them INSIDE the reviewWindow before html2canvas processes them
+      console.log('🔄 Converting URL images to data URIs in reviewWindow...');
+      try {
+        const convertedCount = await this._convertURLImagesToDataURIs(reviewWindow.document, reviewWindow);
+        console.log(`✅ Converted ${convertedCount} URL images to data URIs`);
+      } catch (convertError) {
+        console.error('❌ CRITICAL: Image conversion failed:', convertError);
+        // Continue anyway
+      }
+
+      // 🔧 Clean all image data URIs to prevent atob() encoding errors
+      // This removes whitespace from base64 strings in data URIs
       console.log('🔄 Cleaning all image data URIs to prevent atob() errors...');
       try {
         const cleanedCount = await this._cleanAllImageDataURIs(reviewWindow.document);
@@ -528,6 +539,90 @@ window.NativePdfGenerator = {
 
     // Wait a bit for image updates to take effect
     await new Promise(resolve => setTimeout(resolve, 300));
+  },
+
+  /**
+   * Convert URL-based images to data URIs in the reviewWindow
+   * This fixes the issue where browser reverts data URIs back to URLs during HTML serialization
+   *
+   * @param {Document} document - The document containing images
+   * @param {Window} windowContext - The window context (needed for canvas operations)
+   * @returns {Promise<number>} Number of images converted
+   */
+  async _convertURLImagesToDataURIs(document, windowContext) {
+    console.log('  📊 Converting URL images to data URIs...');
+
+    const images = document.querySelectorAll('img');
+    let convertedCount = 0;
+
+    for (const img of images) {
+      try {
+        const src = img.getAttribute('src') || img.src;
+
+        // Skip if already a data URI
+        if (!src || src.startsWith('data:')) {
+          continue;
+        }
+
+        // Skip if not a valid http(s) URL
+        if (!src.startsWith('http://') && !src.startsWith('https://')) {
+          continue;
+        }
+
+        console.log(`  🔄 Converting URL to data URI: ${src.substring(0, 60)}...`);
+
+        // Create a new image element in the reviewWindow context
+        const tempImg = new windowContext.Image();
+        tempImg.crossOrigin = 'anonymous'; // Enable CORS
+
+        // Wait for image to load
+        await new Promise((resolve, reject) => {
+          tempImg.onload = resolve;
+          tempImg.onerror = () => {
+            console.warn(`  ⚠️ Failed to load image: ${src.substring(0, 60)}...`);
+            resolve(); // Continue even if this image fails
+          };
+          tempImg.src = src;
+
+          // Timeout after 10 seconds
+          setTimeout(() => {
+            console.warn(`  ⏱️ Timeout loading image: ${src.substring(0, 60)}...`);
+            resolve();
+          }, 10000);
+        });
+
+        // Only convert if image loaded successfully
+        if (tempImg.complete && tempImg.naturalWidth > 0) {
+          // Create canvas in reviewWindow context
+          const canvas = windowContext.document.createElement('canvas');
+          canvas.width = tempImg.naturalWidth;
+          canvas.height = tempImg.naturalHeight;
+
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(tempImg, 0, 0);
+
+          // Convert to data URI
+          try {
+            const dataURI = canvas.toDataURL('image/png');
+
+            // Update image source
+            img.setAttribute('src', dataURI);
+            img.src = dataURI;
+
+            convertedCount++;
+            console.log(`  ✅ Converted to data URI: ${dataURI.substring(0, 60)}... (length: ${dataURI.length})`);
+          } catch (canvasError) {
+            console.warn(`  ⚠️ Failed to convert canvas to data URI:`, canvasError);
+          }
+        }
+      } catch (error) {
+        console.warn('  ⚠️ Error converting image:', error);
+        // Continue with other images
+      }
+    }
+
+    console.log(`  ✅ Conversion complete: ${convertedCount} images converted to data URIs`);
+    return convertedCount;
   },
 
   /**
