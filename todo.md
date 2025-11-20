@@ -285,6 +285,124 @@ To test the new PDF generation, you need to:
 
 ---
 
+## CRITICAL FIXES: Table Sizing and Hebrew Encoding (Nov 20, 2025)
+
+### Problem Reports:
+1. **❌ Tables too large** - Only 1/4 of table content visible in PDF
+2. **❌ Hebrew text garbled** - Shows as "Ð×ÕèÙ ÑÞÒß ÞèÛÖÙ çÙéÕØä" instead of Hebrew characters
+
+### Root Cause Analysis:
+
+#### Issue 1: Hebrew Encoding
+**Cause:**
+- `reviewWindow.document.write()` was not setting UTF-8 charset before writing HTML
+- Heebo font not fully loaded before html2canvas capture
+- html2canvas using `foreignObjectRendering` which has poor font support
+
+**Impact:** Hebrew characters rendered as Windows-1252/Latin-1 instead of UTF-8
+
+#### Issue 2: Table Sizing
+**Cause:**
+- windowWidth (1024px) too large for A4 page
+- scale (0.55) too small, causing excessive shrinking
+- No table width constraints in CSS
+- Calculation mismatch: 1024px * 0.55 = 563px, but tables rendered at full width before scaling
+
+**Impact:** Tables extended beyond page boundaries, only ~25% visible
+
+### Solutions Implemented:
+
+#### ✅ Fix 1: Hebrew Encoding (native-pdf-generator.js)
+
+**Changes at lines 60-72:**
+```javascript
+// OLD:
+reviewWindow.document.write(enhancedHtml);
+reviewWindow.document.close();
+await new Promise(resolve => setTimeout(resolve, 1000));
+
+// NEW:
+reviewWindow.document.open('text/html', 'replace');
+reviewWindow.document.charset = 'UTF-8'; // ✅ Set charset FIRST
+reviewWindow.document.write(enhancedHtml);
+reviewWindow.document.close();
+
+// ✅ Wait for fonts to load
+await reviewWindow.document.fonts.ready;
+await new Promise(resolve => setTimeout(resolve, 1500));
+```
+
+**Changes at lines 158-161:**
+- Added Heebo font import link to injected HTML
+
+**Changes at lines 174-184:**
+- Added `direction: rtl !important`
+- Added `font-family: 'Heebo', 'Arial', sans-serif !important`
+- Added font smoothing properties
+
+**Changes at lines 101-115:**
+```javascript
+html2canvas: {
+  scale: 0.95, // Increased from 0.55
+  windowWidth: 750, // Reduced from 1024
+  foreignObjectRendering: false, // ✅ Use canvas rendering for better fonts
+  imageTimeout: 15000 // ✅ More time for font loading
+}
+```
+
+#### ✅ Fix 2: Table Sizing (native-pdf-generator.js)
+
+**Changes at lines 98:**
+- Reduced margins from `[10, 10, 10, 10]` to `[8, 8, 8, 8]` mm
+
+**Changes at lines 102-106:**
+- **windowWidth:** 1024px → **750px** (better matches A4 page)
+- **scale:** 0.55 → **0.95** (less shrinking, better quality)
+- **Calculation:** 750px * 0.95 = 712px fits in 733px available (194mm - 16mm margins)
+
+**Changes at lines 203-220:**
+```css
+table {
+  table-layout: fixed !important; /* ✅ Prevent expansion */
+  word-wrap: break-word !important;
+  overflow-wrap: break-word !important;
+  max-width: 100% !important;
+}
+
+td, th {
+  max-width: 100% !important;
+  word-wrap: break-word !important;
+  overflow-wrap: break-word !important;
+  overflow: hidden !important;
+}
+```
+
+### Expected Results After Fix:
+
+#### Hebrew Text:
+- ✅ Hebrew characters display correctly (not garbled)
+- ✅ Heebo font renders properly
+- ✅ RTL direction maintained
+- ✅ Font smoothing applied
+
+#### Table Sizing:
+- ✅ Tables fit completely on page (100% visible, not just 25%)
+- ✅ Content properly scaled to A4 dimensions
+- ✅ No horizontal overflow
+- ✅ Text wraps within cells as needed
+
+### Files Modified:
+1. `/home/user/SmartVal/native-pdf-generator.js` - 8 sections updated
+
+### Testing Checklist:
+- [ ] Generate PDF with Hebrew text - verify characters display correctly
+- [ ] Generate PDF with wide tables - verify all columns visible
+- [ ] Check table content is readable and not cut off
+- [ ] Verify page margins are appropriate
+- [ ] Test with expertise, estimate, and final report builders
+
+---
+
 ## NEW ISSUE DISCOVERED: PDF Content Not Visible (Nov 20, 2025)
 
 ### Problem Report:
