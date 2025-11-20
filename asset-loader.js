@@ -387,17 +387,70 @@ export class AssetLoader {
   /**
    * Convert images to data URIs for embedding in PDFs
    * This prevents CORS issues and timeout problems
+   * 🔧 CRITICAL FIX: Process ALL images to prevent atob() encoding errors
    * @param {Document} document - DOM document
-   * @returns {Promise<number>} - Number of images converted
+   * @returns {Promise<number>} - Number of images processed
    */
   async convertImagesToDataURIs(document) {
     console.log('🔄 AssetLoader: Converting images to data URIs...');
 
-    const images = document.querySelectorAll('img[data-asset-injected="true"]');
+    // 🔧 CRITICAL FIX: Process ALL images, not just injected ones
+    // This prevents atob() errors from malformed base64 in any image
+    const images = document.querySelectorAll('img');
     let convertedCount = 0;
+    let cleanedCount = 0;
+    let skippedCount = 0;
+
+    console.log(`🔍 Found ${images.length} images to process`);
 
     for (const img of images) {
       try {
+        const src = img.src;
+
+        // Skip images with empty src
+        if (!src || src === '') {
+          console.log(`⏭️ Skipping image with empty src: ${img.alt || 'unnamed'}`);
+          skippedCount++;
+          continue;
+        }
+
+        // 🔧 FIX: If image already has a data URI, just clean the base64 string
+        if (src.startsWith('data:image')) {
+          console.log(`🧹 Cleaning existing data URI: ${img.alt || 'unnamed'}`);
+
+          // Extract and clean base64 string
+          const base64Match = src.match(/^data:image\/(\w+);base64,(.+)$/);
+          if (base64Match) {
+            const imageType = base64Match[1];
+            const base64Data = base64Match[2];
+
+            // Check if base64 string has whitespace/newlines that would break atob()
+            if (/\s/.test(base64Data)) {
+              console.log(`🔧 Found whitespace in base64 string - cleaning...`);
+              const cleanBase64 = base64Data.replace(/\s/g, '');
+              const cleanDataURI = `data:image/${imageType};base64,${cleanBase64}`;
+
+              // Update both property and attribute
+              img.src = cleanDataURI;
+              img.setAttribute('src', cleanDataURI);
+              img.dataset.cleaned = 'true';
+              cleanedCount++;
+
+              console.log(`✅ Cleaned base64 string: ${img.alt || 'unnamed'} (removed ${base64Data.length - cleanBase64.length} whitespace chars)`);
+            } else {
+              console.log(`✓ Base64 already clean: ${img.alt || 'unnamed'}`);
+              skippedCount++;
+            }
+          } else {
+            console.warn(`⚠️ Could not parse data URI: ${img.alt || 'unnamed'}`);
+            skippedCount++;
+          }
+          continue;
+        }
+
+        // 🔧 For URL images, convert to data URI via canvas (existing logic)
+        console.log(`🖼️ Converting URL to data URI: ${img.alt || 'unnamed'}`);
+
         // 🔧 PHASE 10 FIX: If image doesn't have crossOrigin set, reload it with CORS enabled
         if (!img.crossOrigin || img.crossOrigin === '') {
           console.log(`🔄 Reloading image with CORS enabled: ${img.alt || 'unnamed'}`);
@@ -451,13 +504,19 @@ export class AssetLoader {
 
         console.log(`✅ Converted to data URI: ${img.alt || 'unnamed'} (length: ${dataURI.length})`);
       } catch (error) {
-        console.warn(`⚠️ Failed to convert image: ${img.alt ||'unnamed'}`, error);
+        console.warn(`⚠️ Failed to process image: ${img.alt ||'unnamed'}`, error);
         // Continue with other images even if one fails
+        skippedCount++;
       }
     }
 
-    console.log(`✅ Converted ${convertedCount} images to data URIs`);
-    return convertedCount;
+    console.log(`✅ Image processing complete:`);
+    console.log(`   - Converted (URL → data URI): ${convertedCount}`);
+    console.log(`   - Cleaned (fixed base64): ${cleanedCount}`);
+    console.log(`   - Skipped (errors/empty): ${skippedCount}`);
+    console.log(`   - Total processed: ${images.length}`);
+
+    return convertedCount + cleanedCount;
   }
 
   /**

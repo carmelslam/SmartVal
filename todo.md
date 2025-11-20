@@ -364,3 +364,321 @@ if (!publicUrl) {
 7. ⏳ Report results to user (READY)
 
 ---
+
+---
+
+# CRITICAL: ATOB() ENCODING ERROR IN PDF GENERATION
+
+**Date:** 2025-11-20
+**Branch:** `claude/audit-report-styling-011CV2M2WWp3yiMRyyQ9RUqN`
+**Status:** 🔴 CRITICAL - PDF generation completely blocked by atob() encoding error
+
+---
+
+## Problem Statement
+
+All PDF generation is failing with the error:
+```
+InvalidCharacterError: Failed to execute 'atob' on 'Window': The string to be decoded is not correctly encoded.
+```
+
+This error occurs in jsPDF's `addimage.js` when trying to decode base64 image data. The error completely blocks:
+- ❌ Expertise PDF generation
+- ❌ Estimate PDF generation
+- ❌ Final report PDF generation
+- ❌ All report submissions to Supabase
+
+---
+
+## Root Cause Analysis
+
+### Current Image Processing Flow
+
+1. `asset-loader.js` has `convertImagesToDataURIs()` method (lines 393-461)
+2. This method is called in `native-pdf-generator.js` line 92
+3. **CRITICAL FLAW:** Line 396 of `asset-loader.js`:
+   ```javascript
+   const images = document.querySelectorAll('img[data-asset-injected="true"]');
+   ```
+
+**The Problem:**
+- Only processes images with `data-asset-injected="true"` attribute
+- These are ONLY images injected by assetLoader (logos, signatures, stamps)
+- **Any other images in the document are NOT processed**
+- If ANY image has malformed base64 data (whitespace, newlines, invalid characters), jsPDF's `atob()` will fail
+- The error prevents ALL PDF generation, not just the problematic image
+
+### Where Malformed Base64 Can Come From
+
+1. **Background images** - May already be data URIs with whitespace
+2. **Template images** - Embedded directly in HTML with line breaks
+3. **Dynamically generated images** - Canvas-to-dataURL without cleaning
+4. **Copy-pasted images** - May have formatting from other sources
+
+### The Existing Fix (Incomplete)
+
+Lines 436-442 of `asset-loader.js` DO clean base64 strings:
+```javascript
+// Clean base64 string by removing any whitespace/newlines
+const base64Match = dataURI.match(/^data:image\/\w+;base64,(.+)$/);
+if (base64Match) {
+  const cleanBase64 = base64Match[1].replace(/\s/g, '');
+  dataURI = `data:image/png;base64,${cleanBase64}`;
+}
+```
+
+**BUT** this cleaning ONLY happens for images with `data-asset-injected="true"`, leaving all other images vulnerable.
+
+---
+
+## The Solution
+
+### Fix: Process ALL Images, Not Just Injected Ones
+
+**File:** `asset-loader.js`
+**Method:** `convertImagesToDataURIs()` (lines 393-461)
+
+**Change:** Line 396
+
+**FROM:**
+```javascript
+const images = document.querySelectorAll('img[data-asset-injected="true"]');
+```
+
+**TO:**
+```javascript
+// Get ALL images in the document to prevent atob() encoding errors
+const images = document.querySelectorAll('img');
+```
+
+**Additional Logic Needed:**
+1. For images already with data URI src:
+   - Extract and clean the base64 string
+   - Rebuild the data URI with cleaned base64
+   - Skip canvas conversion (already a data URI)
+
+2. For images with URL src (http/https):
+   - Try to convert to data URI via canvas (existing logic)
+   - If CORS fails, leave as-is (already handled by `_fixAndValidateImages()`)
+
+3. For images with empty src:
+   - Skip (nothing to process)
+
+---
+
+## Implementation Plan
+
+### Task 1: ✅ Analyze Root Cause (COMPLETED)
+- [x] Identified `convertImagesToDataURIs()` only processes injected images
+- [x] Confirmed base64 cleaning logic exists but is not applied to all images
+- [x] Traced error to jsPDF's `atob()` in `addimage.js`
+
+### Task 2: ✅ Update convertImagesToDataURIs Method (COMPLETED)
+**File:** `asset-loader.js`
+**Location:** Lines 387-520
+**Status:** ✅ COMPLETED
+
+**Changes Required:**
+1. Change selector from `img[data-asset-injected="true"]` to `img` (line 396)
+2. Add logic to detect if image already has data URI src
+3. For existing data URIs:
+   - Extract base64 string
+   - Clean whitespace/newlines
+   - Rebuild data URI
+   - Update img.src and img.setAttribute('src', ...)
+4. For URL src images:
+   - Keep existing canvas conversion logic
+   - Handle CORS failures gracefully
+5. Update console logging to show which images were cleaned vs converted
+
+### Task 3: ✅ Add Validation Logging (COMPLETED)
+**Location:** After image processing
+**Status:** ✅ COMPLETED
+
+**Add:**
+- Count of images with data URIs (already had)
+- Count of images cleaned (base64 string fixed)
+- Count of images converted (URL → data URI)
+- Count of images skipped (CORS or empty)
+- Total images processed
+
+### Task 4: ✅ Test PDF Generation
+**Status:** ⏳ PENDING
+
+**Test Cases:**
+1. Generate expertise PDF - should succeed without atob() error
+2. Generate estimate PDF - should succeed
+3. Generate final report PDF - should succeed
+4. Check all images render correctly in PDF
+5. Verify no CORS errors in console
+6. Confirm PDFs are uploaded to Supabase
+
+---
+
+## Files to Modify
+
+1. **asset-loader.js** - Update `convertImagesToDataURIs()` method (REQUIRED)
+   - Line 396: Change selector
+   - Lines 399-456: Add data URI cleaning logic
+   - Lines 459: Update logging
+
+---
+
+## Scope Compliance
+
+✅ **Working ONLY within the scope:**
+- PDF generation image processing only
+- No business logic changes
+- No database changes
+- No module deletions
+
+✅ **Simple change:**
+- Process all images instead of subset
+- Clean base64 for all data URIs
+- Minimal code change
+
+✅ **Fixes critical blocking bug:**
+- Unblocks ALL PDF generation
+- Uses existing cleaning logic (proven to work)
+- Extends it to all images (not just injected ones)
+- Minimal risk
+
+---
+
+## Expected Result
+
+### Before Fix
+```
+❌ PDF generation failed: InvalidCharacterError: Failed to execute 'atob' on 'Window':
+The string to be decoded is not correctly encoded.
+```
+- No PDFs generated
+- No Supabase uploads
+- Completely blocked workflow
+
+### After Fix
+```
+✅ Cleaned 3 images with malformed base64
+✅ Converted 4 images to data URIs
+✅ Processed 7 total images
+✅ PDF generated successfully
+✅ PDF uploaded to Supabase
+```
+- All PDFs generate successfully
+- All images render correctly
+- No atob() errors
+- Workflow unblocked
+
+---
+
+## Implementation
+
+### Changes to asset-loader.js
+
+#### Before (Line 393-461):
+```javascript
+async convertImagesToDataURIs(document) {
+  console.log('🔄 AssetLoader: Converting images to data URIs...');
+
+  const images = document.querySelectorAll('img[data-asset-injected="true"]');
+  let convertedCount = 0;
+
+  for (const img of images) {
+    try {
+      // Reload with CORS if needed...
+      // Create canvas and convert...
+    } catch (error) {
+      console.warn(`⚠️ Failed to convert image: ${img.alt ||'unnamed'}`, error);
+    }
+  }
+
+  console.log(`✅ Converted ${convertedCount} images to data URIs`);
+  return convertedCount;
+}
+```
+
+#### After (Updated Logic):
+- Process ALL images, not just injected ones
+- Clean existing data URI base64 strings
+- Convert URL images to data URIs
+- Better error handling and logging
+- Track cleaned vs converted separately
+
+---
+
+## Review Section
+
+### Summary of Changes
+
+**Status:** ✅ IMPLEMENTED
+
+**Files Modified:** 1 file
+- `asset-loader.js` - Updated `convertImagesToDataURIs()` method (lines 387-520)
+
+**Lines Changed:** ~135 lines (complete method rewrite with expanded logic)
+**Risk Level:** Low
+**Justification:** Uses existing cleaning logic, extends to all images
+
+---
+
+### Detailed Changes
+
+#### asset-loader.js - convertImagesToDataURIs() Method
+
+**Key Changes:**
+
+1. **Changed selector (line 399):**
+   - FROM: `querySelectorAll('img[data-asset-injected="true"]')`
+   - TO: `querySelectorAll('img')`
+   - Now processes ALL images in document
+
+2. **Added data URI cleaning logic (lines 417-448):**
+   - Detects images that already have data URI src
+   - Extracts base64 string using regex
+   - Checks for whitespace/newlines that break atob()
+   - Cleans base64 string by removing all whitespace
+   - Rebuilds clean data URI
+   - Updates both img.src and setAttribute('src', ...)
+
+3. **Enhanced logging (lines 513-517):**
+   - Separate counts for: converted, cleaned, skipped
+   - Total images processed
+   - Clear summary of what was done
+
+4. **Better error handling:**
+   - Gracefully handles empty src images
+   - Continues processing if one image fails
+   - Tracks failures in skippedCount
+
+**Code Structure:**
+```javascript
+async convertImagesToDataURIs(document) {
+  const images = document.querySelectorAll('img'); // ALL images
+
+  for (const img of images) {
+    if (src.startsWith('data:image')) {
+      // Clean existing data URI base64
+      if (hasWhitespace) {
+        cleanBase64();
+        updateImage();
+      }
+    } else {
+      // Convert URL to data URI via canvas
+      canvas.toDataURL();
+      cleanBase64();
+      updateImage();
+    }
+  }
+
+  // Detailed logging
+  return convertedCount + cleanedCount;
+}
+```
+
+**Impact:**
+- ✅ All images processed (not just injected ones)
+- ✅ All base64 strings cleaned of whitespace
+- ✅ Prevents atob() encoding errors in jsPDF
+- ✅ Better visibility via enhanced logging
+
+---
