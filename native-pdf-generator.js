@@ -99,10 +99,11 @@ window.NativePdfGenerator = {
         filename: `${reportType}_${status}.pdf`,
         image: { type: 'jpeg', quality: 0.95 },
         html2canvas: {
-          // ✅ FIX CONTENT SIZE: Drastically reduced scale to 0.28 to make content fit pages
-          // User reported content needs to be reduced by ~300% (1/3 to 1/4 size)
-          // Calculation: 800px window * 0.28 scale = 224px content width fits in A4
-          scale: 0.28,
+          // ✅ FIX BALANCE: Increased scale from 0.28 to 0.55 for readable text
+          // Combined with increased font sizes (12-22px) and reduced table padding
+          // This provides better balance: larger visible text, compact tables
+          // Calculation: 800px window * 0.55 scale = 440px content width in A4
+          scale: 0.55,
           windowWidth: 800, // Optimized window width for better content layout
           useCORS: true,
           logging: false,
@@ -180,25 +181,35 @@ window.NativePdfGenerator = {
           unicode-range: U+0590-05FF, U+20AA, U+25CC, U+FB1D-FB4F;
         }
 
-        /* ✅ FIX CONTENT SIZE: Aggressive font size scaling for PDF */
+        /* ✅ FIX FONT HIERARCHY: Balanced font sizes - larger text, smaller tables */
         * {
-          font-size: 8px !important;
+          font-size: 12px !important; /* Increased from 8px for readability */
         }
 
         h1 {
-          font-size: 14px !important;
+          font-size: 22px !important; /* Increased from 14px - main titles */
         }
 
         h2 {
-          font-size: 12px !important;
+          font-size: 18px !important; /* Increased from 12px - subtitles */
         }
 
         h3, h4, h5, h6 {
-          font-size: 10px !important;
+          font-size: 14px !important; /* Increased from 10px - section headers */
         }
 
-        table, td, th, p, div, span, li {
-          font-size: 8px !important;
+        p, div, span, li {
+          font-size: 12px !important; /* Increased from 8px - body text */
+        }
+
+        /* Tables: Keep text readable but reduce cell padding */
+        table {
+          font-size: 11px !important; /* Slightly smaller than body for compact tables */
+        }
+
+        td, th {
+          font-size: 11px !important;
+          padding: 3px 5px !important; /* Reduced padding for compact tables */
         }
 
         /* Core Page Structure */
