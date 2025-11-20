@@ -86,6 +86,7 @@ window.NativePdfGenerator = {
       const pdf = new jsPDF('p', 'mm', 'a4', true); // true = compress
 
       // Configure jsPDF.html() options for better rendering
+      // Note: jsPDF instance config is set in constructor (line 86), not in html() options
       const pdfOptions = {
         margin: [15, 10, 15, 10], // [top, left, bottom, right] in mm
         filename: `${reportType}_${status}.pdf`,
@@ -98,13 +99,8 @@ window.NativePdfGenerator = {
           allowTaint: false,
           backgroundColor: '#ffffff'
         },
-        jsPDF: {
-          unit: 'mm',
-          format: 'a4',
-          orientation: 'portrait',
-          compress: true
-        },
         // Page break settings
+        autoPaging: 'text', // Enable automatic page breaks
         pagebreak: {
           mode: ['avoid-all', 'css', 'legacy'],
           before: '.page-break-before',
