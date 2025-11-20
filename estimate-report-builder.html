@@ -1006,10 +1006,11 @@
     }
   </style>
 
-  <!-- PDF Export Libraries (same as parts search) -->
+  <!-- PDF Export Libraries - Native approach (keeping old libs for backwards compatibility) -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <script src="./image-cors-fix.js"></script>
+  <script src="./native-pdf-generator.js"></script>
 
   <script src="https://cdn.jsdelivr.net/npm/handlebars@latest/dist/handlebars.min.js"></script>
   <script src="./math-preview.js"></script>
@@ -2499,92 +2500,27 @@
         let publicUrl = null;
 
         if (htmlContent && !skipPdfGeneration) {
-          console.log(`📄 Generating ${reportType} PDF using html2canvas...`);
-          
-          // 🔒 Refresh authentication before long PDF operation to prevent token expiry
+          console.log(`📄 Generating ${reportType} PDF using native PDF generator...`);
+
+          // Use new native PDF generator (jsPDF.html method - respects CSS better)
+          let pdfResult = null;
+          let pdfBlob = null;
+
           try {
-            console.log('🔒 Refreshing session before PDF generation...');
-            const { data: sessionData, error: refreshError } = await window.supabase.auth.refreshSession();
-            if (refreshError) {
-              console.warn('⚠️ Session refresh failed:', refreshError);
-            } else {
-              console.log('✅ Session refreshed successfully');
-            }
-          } catch (authError) {
-            console.warn('⚠️ Auth refresh error:', authError);
-          }
+            pdfResult = await window.NativePdfGenerator.generatePDF(
+              htmlContent,
+              reportType,
+              status
+            );
+            pdfBlob = pdfResult.blob;
 
-          // Open HTML in hidden window for rendering
-          const reviewWindow = window.open('', '_blank');
-
-          // Check if popup was blocked
-          if (!reviewWindow) {
-            console.warn(`⚠️ Popup blocked - ${reportType} will be saved without PDF`);
-            // Continue without PDF - just save metadata
-          } else {
-            reviewWindow.document.write(htmlContent);
-            reviewWindow.document.close();
-
-            // Wait for content to load with timeout protection
-            await new Promise(resolve => setTimeout(resolve, 1000));
-
-            // 🔧 PHASE 10 FIX: Fix CORS issues before html2canvas
-            if (window.ImageCorsFix) {
-              console.log('🔧 Fixing CORS issues before PDF generation...');
-              await window.ImageCorsFix.fixImagesForPDF(reviewWindow.document);
+            // Close the review window after PDF generation
+            if (pdfResult.window) {
+              pdfResult.window.close();
             }
 
-            // Use html2canvas with timeout protection and optimized settings
-            let canvas;
-            try {
-              // Add timeout wrapper for html2canvas to prevent hanging
-              canvas = await Promise.race([
-                html2canvas(reviewWindow.document.body, window.ImageCorsFix.HTML2CANVAS_OPTIONS),
-                new Promise((_, reject) =>
-                  setTimeout(() => reject(new Error('PDF generation timeout')), 30000) // 30 second total timeout
-                )
-              ]);
-            } catch (canvasError) {
-              console.error('❌ html2canvas failed:', canvasError);
-              reviewWindow.close();
-              console.warn(`⚠️ PDF generation failed for ${reportType} - saving metadata only`);
-              // Continue without PDF
-              canvas = null;
-            }
-
-            // Convert canvas to PDF only if canvas generation succeeded
-            if (canvas) {
-              const { jsPDF } = window.jspdf;
-              const pdf = new jsPDF('p', 'mm', 'a4');
-              const imgData = canvas.toDataURL('image/jpeg', 0.7);
-              const pageWidth = 210;
-              const pageHeight = 297;
-              const topMargin = 15;
-              const bottomMargin = 15;
-              const leftMargin = 10;
-              const rightMargin = 10;
-              const contentWidth = pageWidth - leftMargin - rightMargin;
-              const contentHeight = pageHeight - topMargin - bottomMargin;
-              const imgHeight = (canvas.height * contentWidth) / canvas.width;
-              let heightLeft = imgHeight;
-              let position = topMargin;
-
-              // 🔧 PHASE 10 FIX: Watermarks are now rendered in HTML (captured by html2canvas)
-              // Removed old jsPDF text-based watermark that caused Hebrew gibberish
-
-              pdf.addImage(imgData, 'JPEG', leftMargin, position, contentWidth, imgHeight);
-              heightLeft -= contentHeight;
-
-              while (heightLeft > 0) {
-                position = -(imgHeight - heightLeft) + topMargin;
-                pdf.addPage();
-                pdf.addImage(imgData, 'JPEG', leftMargin, position, contentWidth, imgHeight);
-                // 🔧 PHASE 10 FIX: Watermark already in HTML, no need to add programmatically
-                heightLeft -= contentHeight;
-              }
-
-              reviewWindow.close();
-              const pdfBlob = pdf.output('blob');
+            // Upload PDF to Supabase
+            if (pdfBlob) {
 
               console.log(`☁️ Uploading ${reportType} PDF to Supabase Storage...`);
               const timestamp = new Date().toISOString().replace(/[:.]/g, '-').substring(0, 19);
@@ -2643,9 +2579,11 @@
                 console.log(`✅ ${reportType} PDF uploaded to storage:`, publicUrl);
               }
             } else {
-              reviewWindow.close();
-              console.warn(`⚠️ ${reportType} PDF generation failed - saving metadata only`);
+              console.warn(`⚠️ ${reportType} PDF blob is empty - saving metadata only`);
             }
+          } catch (pdfError) {
+            console.error(`❌ PDF generation failed for ${reportType}:`, pdfError);
+            console.warn(`⚠️ ${reportType} PDF generation failed - saving metadata only`);
           }
         }
 
@@ -2824,79 +2762,22 @@
 
             // Only save if we have a valid UUID
             if (uuidPattern.test(actualCaseId)) {
-              // 📄 Generate PDF from HTML (exact copy from parts search)
-              console.log('📄 Generating estimate PDF using html2canvas...');
+              // 📄 Generate PDF from HTML using improved PDF generator
+              console.log('📄 Generating estimate PDF using native PDF generator...');
 
-              // Open HTML in hidden window for rendering
-              const reviewWindow = window.open('', '_blank');
+              // Use new native PDF generator (jsPDF.html method - respects CSS better)
+              const pdfResult = await window.NativePdfGenerator.generatePDF(
+                cleanHTML,
+                'estimate',
+                'final' // Export button creates final version
+              );
 
-              // Check if popup was blocked
-              if (!reviewWindow) {
-                console.error('❌ Popup blocked - cannot generate PDF');
-                throw new Error('Popup blocked - please allow popups for this site');
+              const pdfBlob = pdfResult.blob;
+
+              // Close preview window
+              if (pdfResult.window) {
+                pdfResult.window.close();
               }
-
-              reviewWindow.document.write(cleanHTML);
-              reviewWindow.document.close();
-
-              // Wait for content to load
-              await new Promise(resolve => setTimeout(resolve, 1000));
-
-              // 🔧 PHASE 10 FIX: Inject user assets into review window
-              if (window.assetLoader) {
-                console.log('🔧 Injecting user assets into review window before PDF generation...');
-                await window.assetLoader.injectAssets(reviewWindow.document);
-                // Wait a bit for images to load
-                await new Promise(resolve => setTimeout(resolve, 500));
-              }
-
-              // 🔧 PHASE 10 FIX: Remove watermark from finalized estimate PDF
-              const watermarks = reviewWindow.document.querySelectorAll('.draft-watermark');
-              watermarks.forEach(w => w.remove());
-              console.log(`🔧 Removed ${watermarks.length} watermark(s) from finalized estimate`);
-
-              // 🔧 PHASE 10 FIX: Fix CORS issues before html2canvas
-              if (window.ImageCorsFix) {
-                console.log('🔧 Fixing CORS issues before PDF generation...');
-                await window.ImageCorsFix.fixImagesForPDF(reviewWindow.document);
-              }
-
-              // Use html2canvas with REDUCED scale to avoid 413 error
-              const canvas = await html2canvas(reviewWindow.document.body, window.ImageCorsFix.HTML2CANVAS_OPTIONS);
-
-              // Convert canvas to PDF with multiple pages and margins
-              const { jsPDF } = window.jspdf;
-              const pdf = new jsPDF('p', 'mm', 'a4');
-              const imgData = canvas.toDataURL('image/jpeg', 0.7);
-              const pageWidth = 210;
-              const pageHeight = 297;
-              const topMargin = 15;
-              const bottomMargin = 15;
-              const leftMargin = 10;
-              const rightMargin = 10;
-              const contentWidth = pageWidth - leftMargin - rightMargin;
-              const contentHeight = pageHeight - topMargin - bottomMargin;
-              const imgHeight = (canvas.height * contentWidth) / canvas.width;
-              let heightLeft = imgHeight;
-              let position = topMargin;
-
-              // 🔧 PHASE 10 FIX: Watermarks are now rendered in HTML (captured by html2canvas)
-              // Removed old jsPDF text-based watermark that caused Hebrew gibberish
-
-              pdf.addImage(imgData, 'JPEG', leftMargin, position, contentWidth, imgHeight);
-              heightLeft -= contentHeight;
-
-              while (heightLeft > 0) {
-                position = -(imgHeight - heightLeft) + topMargin;
-                pdf.addPage();
-                pdf.addImage(imgData, 'JPEG', leftMargin, position, contentWidth, imgHeight);
-                // 🔧 PHASE 10 FIX: Watermark already in HTML, no need to add programmatically
-                heightLeft -= contentHeight;
-              }
-
-              reviewWindow.close();
-
-              const pdfBlob = pdf.output('blob');
 
               console.log('☁️ Uploading estimate PDF to Supabase Storage...');
               const timestamp = new Date().toISOString().replace(/[:.]/g, '-').substring(0, 19);
@@ -3020,73 +2901,20 @@
                   // 💾 Save final report DRAFT with PDF using expertise function
                   await saveReportDraftToSupabase('final_report', 'draft', finalReportHTML, false);
 
-                  // 🔧 PHASE 10 FIX: Create the review window for final report PDF
-                  const frReviewWindow = window.open('', '_blank', 'width=1200,height=800,scrollbars=yes,resizable=yes');
-                  
-                  if (!frReviewWindow) {
-                    console.warn('⚠️ Popup blocked - skipping final_report draft PDF');
-                  } else {
-                    frReviewWindow.document.write(finalReportHTML);
-                    frReviewWindow.document.close();
-                    await new Promise(resolve => setTimeout(resolve, 1000));
+                  // 🔧 Generate final report draft PDF using native PDF generator
+                  try {
+                    const frPdfResult = await window.NativePdfGenerator.generatePDF(
+                      finalReportHTML,
+                      'final_report',
+                      'draft' // This is a draft final report
+                    );
 
-                    // 🔧 PHASE 10 FIX: Inject assets and watermark for final report draft
-                    if (window.assetLoader) {
-                      console.log('🔧 Injecting user assets into final report draft...');
-                      await window.assetLoader.injectAssets(frReviewWindow.document);
-                      
-                      // Inject draft watermark for final report draft
-                      console.log('🔧 Injecting draft watermark for final report draft...');
-                      window.assetLoader.injectWatermark(frReviewWindow.document, 'draft');
-                      
-                      // Wait for images to load
-                      await new Promise(resolve => setTimeout(resolve, 500));
+                    const frPdfBlob = frPdfResult.blob;
+
+                    // Close preview window
+                    if (frPdfResult.window) {
+                      frPdfResult.window.close();
                     }
-                    
-                    // 🔧 PHASE 10 FIX: Fix CORS issues before html2canvas
-                    if (window.ImageCorsFix) {
-                      console.log('🔧 Fixing CORS issues before final report PDF generation...');
-                      await window.ImageCorsFix.fixImagesForPDF(frReviewWindow.document);
-                    }
-
-                    const frCanvas = await html2canvas(frReviewWindow.document.body, {
-                      scale: 1,
-                      useCORS: true,
-                      allowTaint: true,
-                      logging: false,
-                      imageTimeout: 0,
-                      ignoreElements: (element) => {
-                        // Don't ignore any images - we want all images including logo, signatures, stamps
-                        return false;
-                      }
-                    });
-
-                    const { jsPDF } = window.jspdf;
-                    const frPdf = new jsPDF('p', 'mm', 'a4');
-                    const frImgData = frCanvas.toDataURL('image/jpeg', 0.7);
-                    const frPageWidth = 210;
-                    const frPageHeight = 297;
-                    const frTopMargin = 15;
-                    const frLeftMargin = 10;
-                    const frRightMargin = 10;
-                    const frContentWidth = frPageWidth - frLeftMargin - frRightMargin;
-                    const frContentHeight = frPageHeight - frTopMargin - 15;
-                    const frImgHeight = (frCanvas.height * frContentWidth) / frCanvas.width;
-                    let frHeightLeft = frImgHeight;
-                    let frPosition = frTopMargin;
-
-                    frPdf.addImage(frImgData, 'JPEG', frLeftMargin, frPosition, frContentWidth, frImgHeight);
-                    frHeightLeft -= frContentHeight;
-
-                    while (frHeightLeft > 0) {
-                      frPosition = -(frImgHeight - frHeightLeft) + frTopMargin;
-                      frPdf.addPage();
-                      frPdf.addImage(frImgData, 'JPEG', frLeftMargin, frPosition, frContentWidth, frImgHeight);
-                      frHeightLeft -= frContentHeight;
-                    }
-
-                    frReviewWindow.close();
-                    const frPdfBlob = frPdf.output('blob');
 
                     // Upload final_report draft PDF
                     const frTimestamp = new Date().toISOString().replace(/[:.]/g, '-').substring(0, 19);
@@ -3147,6 +2975,9 @@
                         console.warn('⚠️ Failed to send FINAL_REPORT_DRAFT webhook:', webhookError);
                       }
                     }
+                  } catch (frPdfError) {
+                    console.error('❌ Failed to generate/upload final_report draft PDF:', frPdfError);
+                    console.warn('⚠️ Continuing without final_report draft PDF');
                   }
                 } catch (finalReportError) {
                   console.warn('⚠️ Failed to save final_report draft:', finalReportError);
