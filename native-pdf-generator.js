@@ -83,6 +83,21 @@ window.NativePdfGenerator = {
       console.log('🔧 Validating and fixing images before PDF generation...');
       await this._fixAndValidateImages(reviewWindow.document);
 
+      // 🔧 CRITICAL FIX: Convert all images to clean base64 data URIs
+      // This prevents atob() encoding errors in jsPDF by cleaning base64 strings
+      // The convertImagesToDataURIs method removes whitespace/newlines from base64 data
+      if (reviewWindow.assetLoader) {
+        console.log('🔄 Converting images to data URIs with clean base64 encoding...');
+        try {
+          const convertedCount = await reviewWindow.assetLoader.convertImagesToDataURIs(reviewWindow.document);
+          console.log(`✅ Converted ${convertedCount} images to clean data URIs`);
+        } catch (conversionError) {
+          console.warn('⚠️ Image conversion failed, continuing anyway:', conversionError);
+        }
+      } else {
+        console.warn('⚠️ assetLoader not available in PDF window, images may fail');
+      }
+
       // Additional wait for assets
       await new Promise(resolve => setTimeout(resolve, 500));
 
