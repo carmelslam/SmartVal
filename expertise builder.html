@@ -1933,47 +1933,62 @@
                   // 📄 Generate PDF from HTML using improved PDF generator
                   console.log('📄 Generating PDF using native PDF generator...');
 
-                  // Use new native PDF generator (jsPDF.html method - respects CSS better)
-                  const pdfResult = await window.NativePdfGenerator.generatePDF(
-                    htmlContent,
-                    'expertise',
-                    'final' // This is the final expertise submission
-                  );
+                  // Try to generate PDF, but continue even if it fails
+                  let publicUrl = null;
+                  let storagePath = null;
+                  let uploadError = null;
 
-                  const pdfBlob = pdfResult.blob;
+                  try {
+                    // Use new native PDF generator (jsPDF.html method - respects CSS better)
+                    const pdfResult = await window.NativePdfGenerator.generatePDF(
+                      htmlContent,
+                      'expertise',
+                      'final' // This is the final expertise submission
+                    );
 
-                  // Close preview window
-                  if (pdfResult.window) {
-                    pdfResult.window.close();
+                    const pdfBlob = pdfResult.blob;
+
+                    // Close preview window
+                    if (pdfResult.window) {
+                      pdfResult.window.close();
+                    }
+
+                    console.log('☁️ Uploading expertise PDF to Supabase Storage...');
+                    const timestamp = new Date().toISOString().replace(/[:.]/g, '-').substring(0, 19);
+                    const normalizedPlate = plate?.replace(/-/g, '') || 'UNKNOWN';
+                    const filename = `${normalizedPlate}_expertise_${timestamp}.pdf`;
+                    storagePath = `${actualCaseId}/${filename}`;
+
+                    // Upload PDF to Supabase Storage
+                    const { data: uploadData, error: uploadErr } = await window.supabase.storage
+                      .from('expertise-reports')
+                      .upload(storagePath, pdfBlob, {
+                        contentType: 'application/pdf',
+                        upsert: false
+                      });
+
+                    if (uploadErr) {
+                      console.error('❌ Storage upload error:', uploadErr);
+                      uploadError = uploadErr;
+                      throw new Error('Failed to upload PDF: ' + uploadErr.message);
+                    }
+
+                    console.log('✅ PDF uploaded to storage:', storagePath);
+
+                    // Get public URL (simple, no signing needed - bucket is public)
+                    const { data: { publicUrl: url } } = window.supabase.storage
+                      .from('expertise-reports')
+                      .getPublicUrl(storagePath);
+
+                    publicUrl = url;
+                    console.log('🔗 PDF public URL:', publicUrl);
+                  } catch (pdfError) {
+                    console.error('❌ PDF generation/upload failed:', pdfError);
+                    console.warn('⚠️ Continuing to save expertise metadata without PDF');
+                    uploadError = pdfError;
+                    publicUrl = null;
+                    storagePath = null;
                   }
-
-                  console.log('☁️ Uploading expertise PDF to Supabase Storage...');
-                  const timestamp = new Date().toISOString().replace(/[:.]/g, '-').substring(0, 19);
-                  const normalizedPlate = plate?.replace(/-/g, '') || 'UNKNOWN';
-                  const filename = `${normalizedPlate}_expertise_${timestamp}.pdf`;
-                  const storagePath = `${caseIdOrNumber}/${filename}`;
-
-                  // Upload PDF to Supabase Storage
-                  const { data: uploadData, error: uploadError } = await window.supabase.storage
-                    .from('expertise-reports')
-                    .upload(storagePath, pdfBlob, {
-                      contentType: 'application/pdf',
-                      upsert: false
-                    });
-
-                  if (uploadError) {
-                    console.error('❌ Storage upload error:', uploadError);
-                    throw new Error('Failed to upload PDF: ' + uploadError.message);
-                  }
-
-                  console.log('✅ PDF uploaded to storage:', storagePath);
-
-                  // Get public URL (simple, no signing needed - bucket is public)
-                  const { data: { publicUrl } } = window.supabase.storage
-                    .from('expertise-reports')
-                    .getPublicUrl(storagePath);
-
-                  console.log('🔗 PDF public URL:', publicUrl);
 
                   // 🔧 FIX: Transform helper structure for SQL function
                   // Use expertise_snapshot.damage_blocks first, then expertise.damage_blocks, then centers
