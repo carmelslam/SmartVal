@@ -68,8 +68,8 @@ window.NativePdfGenerator = {
       await reviewWindow.document.fonts.ready;
       console.log('✅ Fonts loaded successfully');
 
-      // Wait for content and images to load
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      // Wait for content and images to load (increased for better font loading)
+      await new Promise(resolve => setTimeout(resolve, 3000));
 
       // 🔧 Inject watermark for draft reports
       if (status === 'draft' && window.assetLoader) {
@@ -95,22 +95,22 @@ window.NativePdfGenerator = {
       // Configure jsPDF.html() options for better rendering
       // Note: jsPDF instance config is set in constructor (line 86), not in html() options
       const pdfOptions = {
-        margin: [8, 8, 8, 8], // [top, left, bottom, right] in mm - minimal margins for maximum content space
+        margin: [5, 5, 5, 5], // [top, left, bottom, right] in mm - minimal margins for maximum content space
         filename: `${reportType}_${status}.pdf`,
         image: { type: 'jpeg', quality: 0.95 },
         html2canvas: {
-          // ✅ FIX TABLE SIZE: Reduced windowWidth to 750px and increased scale to 0.95
-          // Calculation: A4 width (210mm) - margins (16mm) = 194mm ≈ 733px at 96dpi
-          // Using 750px window * 0.95 scale = 712px output, which fits perfectly in 733px available
-          scale: 0.95,
-          windowWidth: 750, // Smaller window width = tables fit better
+          // ✅ FIX CONTENT SIZE: Drastically reduced scale to 0.28 to make content fit pages
+          // User reported content needs to be reduced by ~300% (1/3 to 1/4 size)
+          // Calculation: 800px window * 0.28 scale = 224px content width fits in A4
+          scale: 0.28,
+          windowWidth: 800, // Optimized window width for better content layout
           useCORS: true,
           logging: false,
           letterRendering: true,
           allowTaint: false,
           backgroundColor: '#ffffff',
-          // ✅ FIX HEBREW: Better font rendering for RTL text
-          foreignObjectRendering: false, // Use canvas rendering for better font support
+          // ✅ FIX HEBREW: Use SVG rendering which handles Hebrew fonts better
+          foreignObjectRendering: true, // SVG rendering for better RTL/Hebrew support
           imageTimeout: 15000 // Give more time for font loading
         },
         // Page break settings
@@ -155,16 +155,51 @@ window.NativePdfGenerator = {
   _injectPrintCSS(htmlContent) {
     // CSS enhancements for native print
     const printEnhancementCSS = `
-      <!-- ✅ FIX HEBREW: Import Heebo font for Hebrew text support -->
+      <!-- ✅ FIX HEBREW: Explicit UTF-8 encoding -->
+      <meta charset="UTF-8">
+      <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
+      <!-- ✅ FIX HEBREW: Preload and import Heebo font for Hebrew text support -->
       <link rel="preconnect" href="https://fonts.googleapis.com">
       <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-      <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+      <link rel="preload" href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700;800;900&display=swap" as="style">
+      <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700;800;900&display=swap">
 
       <style id="native-pdf-print-enhancements">
         /* ========================================
          * NATIVE PDF PRINT ENHANCEMENTS
          * Applied for window.print() API
          * ======================================== */
+
+        /* ✅ FIX HEBREW: Explicit font-face for Hebrew characters */
+        @font-face {
+          font-family: 'Heebo';
+          font-style: normal;
+          font-weight: 400;
+          src: url(https://fonts.gstatic.com/s/heebo/v21/NGSpv5_NC0k9P_v6ZUCbLRAHxK1EiS2cckOnz02SXQ.woff2) format('woff2');
+          unicode-range: U+0590-05FF, U+20AA, U+25CC, U+FB1D-FB4F;
+        }
+
+        /* ✅ FIX CONTENT SIZE: Aggressive font size scaling for PDF */
+        * {
+          font-size: 8px !important;
+        }
+
+        h1 {
+          font-size: 14px !important;
+        }
+
+        h2 {
+          font-size: 12px !important;
+        }
+
+        h3, h4, h5, h6 {
+          font-size: 10px !important;
+        }
+
+        table, td, th, p, div, span, li {
+          font-size: 8px !important;
+        }
 
         /* Core Page Structure */
         @page {
