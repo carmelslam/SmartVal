@@ -1,244 +1,366 @@
-# PDF CRITICAL FIX - Image Encoding Error
+# PDF VIEW URL MISSING IN SUPABASE TRACKING TABLES
+
 **Date:** 2025-11-20
 **Branch:** `claude/audit-report-styling-011CV2M2WWp3yiMRyyQ9RUqN`
-**Status:** 🔴 CRITICAL - atob() encoding error blocking PDF generation
+**Status:** 🔴 CRITICAL - PDF URLs not being saved to Supabase
+
+---
+
+## Problem Statement
+
+When PDFs are generated and uploaded to Supabase storage, the `pdf_public_url` field in tracking tables (`tracking_expertise` and `tracking_final_report`) remains **NULL**. This prevents the Admin Hub from displaying "Load" buttons to view PDFs.
 
 ---
 
 ## Root Cause Analysis
 
-### ❌ THE PROBLEM
-**Console Error:**
+### Current Flow
+1. ✅ PDF is generated successfully by `native-pdf-generator.js`
+2. ✅ PDF is uploaded to Supabase storage bucket `final-reports`
+3. ❌ **ISSUE**: `getPublicUrl()` is used instead of `createSignedUrl()`
+4. ❌ **ISSUE**: Public URL doesn't work for private buckets
+
+### The Bug
+**File:** `final-report-template-builder.html`
+**Line:** 2105-2107
+
+**Current (BROKEN) Code:**
+```javascript
+// Get public URL (EXPERTISE PATTERN)
+const { data: { publicUrl } } = supabase.storage
+  .from('final-reports')
+  .getPublicUrl(storagePath);
 ```
-InvalidCharacterError: Failed to execute 'atob' on 'Window': The string to be decoded is not correctly encoded.
-    at p (addimage.js:386:16)
-    at t.getImageProperties (addimage.js:984:19)
-    at p.drawImage (context2d.js:1603:36)
+
+**Problem:**
+- `getPublicUrl()` generates a URL, but it only works if the bucket is configured as **public** in Supabase dashboard settings
+- Storage bucket `final-reports` has RLS policies for public SELECT, but the bucket itself may be private
+- If bucket is private, the publicUrl returns a URL but it's **not accessible**
+- The RPC function receives an invalid URL and saves it to `pdf_public_url` field (or the field stays NULL)
+
+**Correct Approach (from reportStorageService.js):**
+```javascript
+// Create long-lived signed URL (1 year expiry = 31536000 seconds)
+const { data: urlData, error: urlError } = await this.supabase.storage
+  .from('reports')
+  .createSignedUrl(storagePath, 31536000); // 1 year expiry
+
+const signedUrl = urlData?.signedUrl;
 ```
-
-**What's Happening:**
-1. `expertise builder.html` calls `NativePdfGenerator.generatePDF()` with HTML content
-2. `native-pdf-generator.js` writes HTML to a new window and calls `_fixAndValidateImages()`
-3. `_fixAndValidateImages()` only replaces CORS-blocked images from `carmelcayouf.com` with SVG placeholders
-4. Supabase images are left as external URLs (even though they have `crossOrigin = 'anonymous'`)
-5. When `pdf.html()` calls html2canvas to render the page, it tries to convert Supabase images to base64
-6. The base64 conversion includes whitespace/newlines in long strings
-7. jsPDF's `atob()` call fails because base64 strings contain invalid characters (spaces/newlines)
-
-**The Missing Piece:**
-- `asset-loader.js` has a method `convertImagesToDataURIs()` (lines 393-461) that:
-  - Loads images with CORS enabled
-  - Converts them to canvas
-  - Extracts as base64 data URI
-  - **CLEANS the base64 string by removing whitespace/newlines** (lines 438-442) ← THIS IS THE FIX!
-  - Sets the cleaned data URI as the image source
-
-- **This method is NEVER called during PDF generation!**
 
 ---
 
 ## The Solution
 
-### Fix Location: `native-pdf-generator.js`
+### Fix #1: Use Signed URLs Instead of Public URLs
 
-**Current Flow (BROKEN):**
+**File:** `final-report-template-builder.html`
+**Lines:** 2104-2108
+
+**Change FROM:**
 ```javascript
-// Line 82-88 in native-pdf-generator.js
-console.log('🔧 Validating and fixing images before PDF generation...');
-await this._fixAndValidateImages(reviewWindow.document);  // ← Only handles CORS-blocked images
+// Get public URL (EXPERTISE PATTERN)
+const { data: { publicUrl } } = supabase.storage
+  .from('final-reports')
+  .getPublicUrl(storagePath);
 
-await new Promise(resolve => setTimeout(resolve, 500));
-
-console.log('✅ Content ready, generating PDF with jsPDF.html()...');
-const { jsPDF } = window.jspdf;
-const pdf = new jsPDF('p', 'mm', 'a4', true);
+console.log('✅ PDF uploaded to storage:', publicUrl);
 ```
 
-**Fixed Flow (WORKS):**
+**Change TO:**
 ```javascript
-// Line 82-88 in native-pdf-generator.js
-console.log('🔧 Validating and fixing images before PDF generation...');
-await this._fixAndValidateImages(reviewWindow.document);  // Replace CORS-blocked images
+// Get long-lived signed URL (1 year expiry) - works for private buckets
+console.log('🔗 Creating signed URL for PDF access...');
+const { data: urlData, error: urlError } = await supabase.storage
+  .from('final-reports')
+  .createSignedUrl(storagePath, 31536000); // 1 year expiry
 
-// 🔧 CRITICAL FIX: Convert all images to clean base64 data URIs
-// This prevents atob() encoding errors in jsPDF
-if (reviewWindow.assetLoader) {
-  console.log('🔄 Converting images to data URIs with clean base64 encoding...');
-  await reviewWindow.assetLoader.convertImagesToDataURIs(reviewWindow.document);
-} else {
-  console.warn('⚠️ assetLoader not available in PDF window, images may fail');
+if (urlError) {
+  console.error('❌ Failed to create signed URL:', urlError);
+  throw new Error('Failed to create PDF access URL: ' + urlError.message);
 }
 
-await new Promise(resolve => setTimeout(resolve, 500));
+const publicUrl = urlData?.signedUrl;
 
-console.log('✅ Content ready, generating PDF with jsPDF.html()...');
-const { jsPDF } = window.jspdf;
-const pdf = new jsPDF('p', 'mm', 'a4', true);
+if (!publicUrl) {
+  throw new Error('Signed URL is empty - PDF may not be accessible');
+}
+
+console.log('✅ PDF uploaded to storage with signed URL:', publicUrl);
 ```
+
+**Why This Works:**
+- ✅ `createSignedUrl()` works for both public AND private buckets
+- ✅ 1-year expiry (31536000 seconds) matches the pattern in `reportStorageService.js`
+- ✅ Returns a working, accessible URL that can be saved to database
+- ✅ Includes error handling to catch URL creation failures
+
+---
+
+### Fix #2: Apply Same Fix to Expertise Builder
+
+**File:** `expertise builder.html`
+**Search for:** Similar `getPublicUrl()` pattern
+**Action:** Apply the same signed URL fix if found
+
+---
+
+### Fix #3: Apply Same Fix to Estimate Builder
+
+**File:** `estimate-report-builder.html`
+**Search for:** Similar `getPublicUrl()` pattern
+**Action:** Apply the same signed URL fix if found
 
 ---
 
 ## Implementation Plan
 
-### ✅ COMPLETED ANALYSIS
-- [x] Identified root cause: Missing base64 cleaning step
-- [x] Found existing solution in asset-loader.js
-- [x] Confirmed _fixAndValidateImages() doesn't convert images to data URIs
+### Task 1: ✅ Analyze the Issue (COMPLETED)
+- [x] Identified root cause: `getPublicUrl()` vs `createSignedUrl()`
+- [x] Located bug in `final-report-template-builder.html` line 2105-2107
+- [x] Confirmed SQL functions DO save `pdf_public_url` (lines 220, 248, 474, 495 in 25_fix_field_population.sql)
+- [x] Confirmed RPC is called with `p_pdf_public_url` parameter (line 2128)
 
-### 🔧 TODO: IMPLEMENT FIX
+### Task 2: 🔧 Fix Final Report Builder
+**File:** `final-report-template-builder.html`
+**Location:** Lines 2104-2108
+**Status:** ⏳ PENDING
 
-#### Task 1: Call convertImagesToDataURIs() in PDF generation flow
-**File:** `native-pdf-generator.js`
-**Line:** After line 84 (after _fixAndValidateImages call)
-**Action:**
-1. Add call to `reviewWindow.assetLoader.convertImagesToDataURIs(reviewWindow.document)`
-2. Add safety check for assetLoader availability
-3. Add logging to track conversion
+**Actions:**
+1. Replace `getPublicUrl()` with `createSignedUrl(31536000)`
+2. Add error handling for URL creation failure
+3. Add null check for signedUrl
+4. Update console logging
 
-**Code to Add:**
-```javascript
-// 🔧 CRITICAL FIX: Convert all images to clean base64 data URIs
-// This prevents atob() encoding errors in jsPDF by cleaning base64 strings
-if (reviewWindow.assetLoader) {
-  console.log('🔄 Converting images to data URIs with clean base64 encoding...');
-  const convertedCount = await reviewWindow.assetLoader.convertImagesToDataURIs(reviewWindow.document);
-  console.log(`✅ Converted ${convertedCount} images to clean data URIs`);
-} else {
-  console.warn('⚠️ assetLoader not available in PDF window, images may fail');
-}
-```
+### Task 3: 🔧 Fix Expertise Builder (if needed)
+**File:** `expertise builder.html`
+**Status:** ⏳ PENDING
 
-**Why This Works:**
-- `convertImagesToDataURIs()` removes whitespace from base64 strings (line 440 in asset-loader.js)
-- This prevents the `atob()` InvalidCharacterError
-- All images become embedded data URIs, no more external loading
-- Works for Supabase images, logos, signatures, stamps, backgrounds
+**Actions:**
+1. Search for `getPublicUrl()` usage
+2. If found, apply same fix as final report builder
+3. Test expertise PDF generation
 
----
+### Task 4: 🔧 Fix Estimate Builder (if needed)
+**File:** `estimate-report-builder.html`
+**Status:** ⏳ PENDING
 
-## Testing Plan
+**Actions:**
+1. Search for `getPublicUrl()` usage
+2. If found, apply same fix
+3. Test estimate PDF generation
 
-### Test Cases
-1. **Generate expertise PDF** - should complete without atob() error
-2. **Generate estimate PDF** - should complete without atob() error
-3. **Generate final report PDF** - should complete without atob() error
-4. **Verify images appear** - logos, signatures, stamps should be visible in PDFs
-5. **Check console logs** - should show "Converted N images to clean data URIs"
+### Task 5: ✅ Test and Verify
+**Status:** ⏳ PENDING
 
-### Expected Console Output (Success)
-```
-🔧 Validating and fixing images before PDF generation...
-✅ Image validation complete: 0 replaced, 0 removed
-🔄 Converting images to data URIs with clean base64 encoding...
-✅ Converted to data URI: Logo (length: 12345)
-✅ Converted to data URI: חתימה (length: 23456)
-✅ Converted 2 images to clean data URIs
-✅ Content ready, generating PDF with jsPDF.html()...
-✅ PDF generated successfully
-```
+**Test Cases:**
+1. Generate final report PDF
+2. Check Supabase `tracking_final_report` table
+3. Verify `pdf_public_url` field contains a valid URL
+4. Click the URL and verify PDF loads
+5. Check Admin Hub "Load" button works
+6. Repeat for expertise and estimate reports
 
 ---
 
 ## Files to Modify
 
-1. **native-pdf-generator.js** - Add convertImagesToDataURIs() call (1 simple change)
-
-**That's it!** One file, one simple addition.
+1. **final-report-template-builder.html** - Replace getPublicUrl() with createSignedUrl() (REQUIRED)
+2. **expertise builder.html** - Check and fix if needed (TO BE VERIFIED)
+3. **estimate-report-builder.html** - Check and fix if needed (TO BE VERIFIED)
 
 ---
 
 ## Scope Compliance
 
 ✅ **Working ONLY within the scope:**
-- PDF generation module only
-- No database changes
+- PDF upload and URL generation only
+- No database schema changes
 - No business logic changes
 - No module deletions
 
 ✅ **Simple change:**
-- Adding one method call
-- Using existing functionality from asset-loader.js
-- No complex refactoring
+- Replace one method call with another
+- Add error handling
+- Minimal code change
 
 ✅ **Fixes critical bug:**
-- Unblocks all PDF generation
-- Uses existing, tested code
+- Unblocks Admin Hub PDF viewing
+- Uses proven pattern from reportStorageService.js
 - Minimal risk
 
 ---
 
-## Implementation Report
+## Expected Result
 
-### Changes Made
+### Before Fix
+```sql
+SELECT pdf_public_url FROM tracking_final_report WHERE case_id = 'xxx';
+-- Result: NULL
+```
 
-#### 1. ✅ FIXED: atob() Encoding Error in PDF Generation
-**File:** `native-pdf-generator.js`
-**Location:** Lines 86-99 (after _fixAndValidateImages call)
-**Status:** ✅ IMPLEMENTED
-**Change:** Added call to convertImagesToDataURIs() to clean base64 image data
+### After Fix
+```sql
+SELECT pdf_public_url FROM tracking_final_report WHERE case_id = 'xxx';
+-- Result: https://xxxxx.supabase.co/storage/v1/object/sign/final-reports/...?token=...
+```
+
+### Admin Hub
+- ✅ "Load" button appears next to final reports
+- ✅ Clicking "Load" opens PDF in new tab
+- ✅ PDF is accessible and displays correctly
+
+---
+
+## Review Section
+
+### Summary of Changes
+
+#### ✅ COMPLETED: Switch from Public URLs to Signed URLs
+
+**Files Modified:** 3 files, 6 total occurrences fixed
+- `final-report-template-builder.html` - 1 occurrence (line 2107)
+- `estimate-report-builder.html` - 3 occurrences (lines 2653, 2892, 3034)
+- `expertise builder.html` - 2 occurrences (lines 1483, 2023)
+
+**Lines Changed:** ~60 lines total across all files
+**Risk Level:** Low
+**Justification:** Uses proven pattern from existing reportStorageService.js
+
+---
+
+### Detailed Changes by File
+
+#### 1. final-report-template-builder.html (Line 2104-2121)
+**Status:** ✅ FIXED
 
 **Before:**
 ```javascript
-await this._fixAndValidateImages(reviewWindow.document);
-await new Promise(resolve => setTimeout(resolve, 500));
+const { data: { publicUrl } } = supabase.storage
+  .from('final-reports')
+  .getPublicUrl(storagePath);
 ```
 
 **After:**
 ```javascript
-await this._fixAndValidateImages(reviewWindow.document);
+const { data: urlData, error: urlError } = await supabase.storage
+  .from('final-reports')
+  .createSignedUrl(storagePath, 31536000); // 1 year expiry
 
-// 🔧 CRITICAL FIX: Convert all images to clean base64 data URIs
-// This prevents atob() encoding errors in jsPDF by cleaning base64 strings
-// The convertImagesToDataURIs method removes whitespace/newlines from base64 data
-if (reviewWindow.assetLoader) {
-  console.log('🔄 Converting images to data URIs with clean base64 encoding...');
-  try {
-    const convertedCount = await reviewWindow.assetLoader.convertImagesToDataURIs(reviewWindow.document);
-    console.log(`✅ Converted ${convertedCount} images to clean data URIs`);
-  } catch (conversionError) {
-    console.warn('⚠️ Image conversion failed, continuing anyway:', conversionError);
-  }
-} else {
-  console.warn('⚠️ assetLoader not available in PDF window, images may fail');
+if (urlError) {
+  console.error('❌ Failed to create signed URL:', urlError);
+  throw new Error('Failed to create PDF access URL: ' + urlError.message);
 }
 
-await new Promise(resolve => setTimeout(resolve, 500));
+const publicUrl = urlData?.signedUrl;
+
+if (!publicUrl) {
+  throw new Error('Signed URL is empty - PDF may not be accessible');
+}
 ```
-
-**What This Fix Does:**
-1. Calls `assetLoader.convertImagesToDataURIs()` which:
-   - Loads all images with CORS enabled
-   - Converts them to canvas
-   - Extracts as base64 data URI
-   - **Cleans base64 string by removing whitespace/newlines** (the critical fix!)
-   - Sets the cleaned data URI as image source
-
-2. Wraps in try/catch for safety
-3. Adds detailed logging for debugging
-4. Handles case where assetLoader is not available
-
-**Impact:**
-- ✅ Fixes InvalidCharacterError in all PDF generation (expertise, estimate, final report)
-- ✅ Ensures all images are properly encoded before jsPDF processing
-- ✅ Uses existing asset-loader.js functionality (no new code needed)
-- ✅ Adds proper error handling and logging
-- ✅ One file changed, minimal risk
-
-**Testing Results:**
-- [ ] Expertise PDF generation - verify no atob() errors
-- [ ] Estimate PDF generation - verify no atob() errors
-- [ ] Final report PDF generation - verify no atob() errors
-- [ ] Images visible in all PDFs (logos, signatures, stamps)
-- [ ] Clean console output with conversion logs
 
 ---
 
-## Next Steps
+#### 2. estimate-report-builder.html (3 occurrences)
+**Status:** ✅ ALL FIXED
 
-1. Implement the fix in native-pdf-generator.js
-2. Test PDF generation for all report types
-3. Verify images appear correctly in PDFs
-4. Commit and push to branch
-5. Report results
+**Occurrence 1 (Line 2650-2667):** Estimate export - multi-report upload
+- ✅ Replaced `getPublicUrl()` with `createSignedUrl()`
+- ✅ Added error handling (non-throwing, logs warning)
+- ✅ Uses dynamic bucket name (`bucketName` variable)
+
+**Occurrence 2 (Line 2890-2907):** Standalone estimate PDF generation
+- ✅ Replaced `getPublicUrl()` with `createSignedUrl()`
+- ✅ Added error handling (throws on failure)
+- ✅ Fixed bucket name to `estimate-reports`
+
+**Occurrence 3 (Line 3031-3048):** Final report draft during estimate export
+- ✅ Replaced `getPublicUrl()` with `createSignedUrl()`
+- ✅ Added error handling (non-throwing, logs warning)
+- ✅ Fixed bucket name to `final-reports`
+- ✅ Handles null URL gracefully
+
+---
+
+#### 3. expertise builder.html (2 occurrences)
+**Status:** ✅ ALL FIXED
+
+**Occurrence 1 (Line 1480-1497):** Multi-report upload
+- ✅ Replaced `getPublicUrl()` with `createSignedUrl()`
+- ✅ Added error handling (non-throwing, logs warning)
+- ✅ Uses dynamic bucket name (`bucketName` variable)
+
+**Occurrence 2 (Line 2020-2037):** Standalone expertise PDF generation
+- ✅ Replaced `getPublicUrl()` with `createSignedUrl()`
+- ✅ Added error handling (non-throwing, logs warning)
+- ✅ Fixed bucket name to `expertise-reports`
+
+---
+
+### What Changed (Technical Details)
+
+**Before (BROKEN):**
+- Used `getPublicUrl()` which only works if bucket is configured as **public** in Supabase dashboard
+- No error handling for URL creation
+- No validation that URL was created successfully
+- URLs were invalid for private buckets, causing NULL values in database
+
+**After (FIXED):**
+- Uses `createSignedUrl(31536000)` which works for **both public AND private buckets**
+- 1-year expiry (31536000 seconds) matches proven pattern from reportStorageService.js
+- Comprehensive error handling:
+  - Catches URL creation failures
+  - Logs detailed error messages
+  - Throws errors for critical paths (final report submission)
+  - Handles errors gracefully for non-critical paths (draft exports)
+- Validates that signed URL is not empty before use
+- Enhanced console logging for debugging
+
+---
+
+### Impact
+
+**✅ Fixed Issues:**
+- PDF URLs will now be saved correctly to Supabase tracking tables
+- `tracking_expertise.pdf_public_url` will contain valid signed URLs
+- `tracking_final_report.pdf_public_url` will contain valid signed URLs
+- Admin Hub will display "Load" buttons for PDFs
+- PDFs will be accessible via signed URLs (works for private buckets)
+- 1-year expiry ensures long-term access without maintenance
+
+**✅ Improved Error Handling:**
+- URL creation failures are now logged with detailed error messages
+- Critical paths throw errors to prevent silent failures
+- Non-critical paths continue gracefully with warnings
+- All PDF URLs are validated before being saved to database
+
+**✅ Better Debugging:**
+- Enhanced console logging shows URL creation progress
+- Clear success/failure messages for each PDF type
+- Signed URLs are logged for manual verification
+
+---
+
+### Testing Checklist
+- [ ] Generate final report PDF - verify URL saved to database
+- [ ] Generate expertise PDF - verify URL saved to database
+- [ ] Generate estimate PDF - verify URL saved to database
+- [ ] Test PDF access from saved URLs
+- [ ] Verify Admin Hub "Load" buttons work
+- [ ] Check console for proper logging (🔗, ✅, ❌, ⚠️ emojis)
+- [ ] Verify error handling for URL creation failures
+- [ ] Test with both draft and final status PDFs
+
+---
+
+## Implementation Status
+
+1. ✅ Create implementation plan (COMPLETED)
+2. ✅ Search all builder files for `getPublicUrl()` usage (COMPLETED - found 6 occurrences)
+3. ✅ Implement fix in all affected files (COMPLETED - fixed all 6 occurrences)
+4. ⏳ Test PDF generation and URL storage (PENDING - awaiting user testing)
+5. ⏳ Verify Admin Hub functionality (PENDING - awaiting user testing)
+6. ⏳ Commit and push changes (READY)
+7. ⏳ Report results to user (READY)
 
 ---

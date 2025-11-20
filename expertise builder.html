@@ -1477,13 +1477,24 @@
               if (uploadError) {
                 console.error(`❌ Storage upload error for ${reportType} after ${uploadAttempts + 1} attempts:`, uploadError);
               } else {
-                // Get public URL (simple, no signing needed - bucket is public)
-                const { data: { publicUrl: url } } = window.supabase.storage
+                // Get long-lived signed URL (1 year expiry) - works for private buckets
+                console.log(`🔗 Creating signed URL for ${reportType} PDF access...`);
+                const { data: urlData, error: urlError } = await window.supabase.storage
                   .from(bucketName)
-                  .getPublicUrl(storagePath);
+                  .createSignedUrl(storagePath, 31536000); // 1 year expiry
 
-                publicUrl = url;
-                console.log(`✅ ${reportType} PDF uploaded to storage:`, publicUrl);
+                if (urlError) {
+                  console.error(`❌ Failed to create signed URL for ${reportType}:`, urlError);
+                  // Don't throw - just log the error and continue without URL
+                  publicUrl = null;
+                } else {
+                  publicUrl = urlData?.signedUrl;
+                  if (!publicUrl) {
+                    console.warn(`⚠️ Signed URL is empty for ${reportType} - PDF may not be accessible`);
+                  } else {
+                    console.log(`✅ ${reportType} PDF uploaded to storage with signed URL:`, publicUrl);
+                  }
+                }
               }
             } else {
               console.warn(`⚠️ ${reportType} PDF blob is empty - saving metadata only`);
@@ -2006,12 +2017,24 @@
 
                     console.log('✅ PDF uploaded to storage:', storagePath);
 
-                    // Get public URL (simple, no signing needed - bucket is public)
-                    const { data: { publicUrl: url } } = window.supabase.storage
+                    // Get long-lived signed URL (1 year expiry) - works for private buckets
+                    console.log('🔗 Creating signed URL for expertise PDF access...');
+                    const { data: urlData, error: urlError } = await window.supabase.storage
                       .from('expertise-reports')
-                      .getPublicUrl(storagePath);
+                      .createSignedUrl(storagePath, 31536000); // 1 year expiry
 
-                    publicUrl = url;
+                    if (urlError) {
+                      console.error('❌ Failed to create signed URL for expertise PDF:', urlError);
+                      // Don't throw - just log the error and continue without URL
+                      publicUrl = null;
+                    } else {
+                      publicUrl = urlData?.signedUrl;
+                      if (!publicUrl) {
+                        console.warn('⚠️ Signed URL is empty for expertise PDF - may not be accessible');
+                      } else {
+                        console.log('✅ Expertise PDF signed URL created:', publicUrl);
+                      }
+                    }
                     console.log('🔗 PDF public URL:', publicUrl);
                   } catch (pdfError) {
                     console.error('❌ PDF generation/upload failed:', pdfError);
