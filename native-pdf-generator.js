@@ -57,12 +57,19 @@ window.NativePdfGenerator = {
       // Inject enhanced print-specific CSS into HTML
       const enhancedHtml = this._injectPrintCSS(htmlContent);
 
-      // Write HTML to review window
+      // ✅ FIX ENCODING: Set charset BEFORE writing HTML
+      reviewWindow.document.open('text/html', 'replace');
+      reviewWindow.document.charset = 'UTF-8';
       reviewWindow.document.write(enhancedHtml);
       reviewWindow.document.close();
 
+      // ✅ FIX HEBREW: Wait for fonts to load completely (especially Heebo font)
+      console.log('⏳ Waiting for fonts to load...');
+      await reviewWindow.document.fonts.ready;
+      console.log('✅ Fonts loaded successfully');
+
       // Wait for content and images to load
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await new Promise(resolve => setTimeout(resolve, 1500));
 
       // 🔧 Inject watermark for draft reports
       if (status === 'draft' && window.assetLoader) {
@@ -88,17 +95,23 @@ window.NativePdfGenerator = {
       // Configure jsPDF.html() options for better rendering
       // Note: jsPDF instance config is set in constructor (line 86), not in html() options
       const pdfOptions = {
-        margin: [10, 10, 10, 10], // [top, left, bottom, right] in mm - reduced to prevent overflow
+        margin: [8, 8, 8, 8], // [top, left, bottom, right] in mm - minimal margins for maximum content space
         filename: `${reportType}_${status}.pdf`,
         image: { type: 'jpeg', quality: 0.95 },
         html2canvas: {
-          scale: 0.55, // Reduced scale to properly fit content - A4 with margins (~718px) / windowWidth (1024px) ≈ 0.70, using 0.55 for safety margin
-          windowWidth: 1024, // Control content width for consistent rendering
+          // ✅ FIX TABLE SIZE: Reduced windowWidth to 750px and increased scale to 0.95
+          // Calculation: A4 width (210mm) - margins (16mm) = 194mm ≈ 733px at 96dpi
+          // Using 750px window * 0.95 scale = 712px output, which fits perfectly in 733px available
+          scale: 0.95,
+          windowWidth: 750, // Smaller window width = tables fit better
           useCORS: true,
           logging: false,
           letterRendering: true,
           allowTaint: false,
-          backgroundColor: '#ffffff'
+          backgroundColor: '#ffffff',
+          // ✅ FIX HEBREW: Better font rendering for RTL text
+          foreignObjectRendering: false, // Use canvas rendering for better font support
+          imageTimeout: 15000 // Give more time for font loading
         },
         // Page break settings
         autoPaging: 'text', // Enable automatic page breaks
@@ -142,6 +155,11 @@ window.NativePdfGenerator = {
   _injectPrintCSS(htmlContent) {
     // CSS enhancements for native print
     const printEnhancementCSS = `
+      <!-- ✅ FIX HEBREW: Import Heebo font for Hebrew text support -->
+      <link rel="preconnect" href="https://fonts.googleapis.com">
+      <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+      <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+
       <style id="native-pdf-print-enhancements">
         /* ========================================
          * NATIVE PDF PRINT ENHANCEMENTS
@@ -163,6 +181,11 @@ window.NativePdfGenerator = {
           padding: 0 !important;
           width: 100% !important;
           height: 100% !important;
+          /* ✅ FIX HEBREW: Ensure proper RTL and Hebrew font rendering */
+          direction: rtl !important;
+          font-family: 'Heebo', 'Arial', sans-serif !important;
+          -webkit-font-smoothing: antialiased !important;
+          -moz-osx-font-smoothing: grayscale !important;
         }
 
         /* Background Image Fix */
@@ -192,6 +215,18 @@ window.NativePdfGenerator = {
           border-spacing: 0 !important;
           page-break-inside: auto !important;
           width: 100% !important;
+          max-width: 100% !important;
+          table-layout: fixed !important; /* Prevent tables from expanding beyond container */
+          word-wrap: break-word !important; /* Break long words to fit */
+          overflow-wrap: break-word !important;
+        }
+
+        /* Ensure table cells don't overflow */
+        td, th {
+          max-width: 100% !important;
+          word-wrap: break-word !important;
+          overflow-wrap: break-word !important;
+          overflow: hidden !important;
         }
 
         thead {
