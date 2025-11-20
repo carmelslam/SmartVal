@@ -323,16 +323,43 @@ Reduce scale from 2 to 1 (or maximum 1.2) to prevent overflow.
 - [x] Confirmed symptom match (borders visible, content not)
 - [x] Analyzed margin stacking effect
 
-#### Task 2: Fix PDF Generation Settings
-- [ ] Modify `/home/user/SmartVal/native-pdf-generator.js`
-- [ ] Change scale from 2 to 1
-- [ ] Optionally adjust margins
-- [ ] Add windowWidth for better control
+#### ✅ Task 2: Fix PDF Generation Settings - COMPLETE
+- [x] Modified `/home/user/SmartVal/native-pdf-generator.js`
+- [x] Changed scale from 2 to 1
+- [x] Reduced margins from [15,10,15,10] to [10,10,10,10]
+- [x] Added windowWidth: 1024 for better control
+
+**Changes Made:**
+```javascript
+// BEFORE (Lines 91-100):
+margin: [15, 10, 15, 10],
+html2canvas: {
+  scale: 2, // Higher quality
+  useCORS: true,
+  ...
+}
+
+// AFTER (Lines 91-102):
+margin: [10, 10, 10, 10], // Reduced to prevent overflow
+html2canvas: {
+  scale: 1, // Normal size - prevents content overflow
+  windowWidth: 1024, // Control content width for consistent rendering
+  useCORS: true,
+  ...
+}
+```
 
 #### Task 3: Test Fix
-- [ ] Generate test PDF
+- [ ] User should test PDF generation in their environment
 - [ ] Verify content is now visible
 - [ ] Confirm proper page sizing
+- [ ] Check tables render correctly with content
+
+**Expected Results:**
+- ✅ Text content should now be visible
+- ✅ Table borders AND table content should both show
+- ✅ Content should fit within page boundaries
+- ✅ Margins should be appropriate
 
 #### Task 4: Commit & Push
 - [ ] Commit with clear message
