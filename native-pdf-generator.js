@@ -88,11 +88,12 @@ window.NativePdfGenerator = {
       // Configure jsPDF.html() options for better rendering
       // Note: jsPDF instance config is set in constructor (line 86), not in html() options
       const pdfOptions = {
-        margin: [15, 10, 15, 10], // [top, left, bottom, right] in mm
+        margin: [10, 10, 10, 10], // [top, left, bottom, right] in mm - reduced to prevent overflow
         filename: `${reportType}_${status}.pdf`,
         image: { type: 'jpeg', quality: 0.95 },
         html2canvas: {
-          scale: 2, // Higher quality
+          scale: 1, // Normal size - prevents content overflow (was 2, caused text to flow outside visible area)
+          windowWidth: 1024, // Control content width for consistent rendering
           useCORS: true,
           logging: false,
           letterRendering: true,
