@@ -431,7 +431,16 @@ export class AssetLoader {
         const ctx = canvas.getContext('2d');
         ctx.drawImage(img, 0, 0);
 
-        const dataURI = canvas.toDataURL('image/png');
+        let dataURI = canvas.toDataURL('image/png');
+
+        // 🔧 FIX atob ERROR: Clean base64 string by removing any whitespace/newlines
+        // Some browsers add line breaks in long base64 strings which breaks atob()
+        const base64Match = dataURI.match(/^data:image\/\w+;base64,(.+)$/);
+        if (base64Match) {
+          const cleanBase64 = base64Match[1].replace(/\s/g, '');
+          dataURI = `data:image/png;base64,${cleanBase64}`;
+        }
+
         // 🔧 CRITICAL: Set BOTH property AND attribute to ensure outerHTML captures it
         img.src = dataURI;
         img.setAttribute('src', dataURI);
