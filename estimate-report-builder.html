@@ -2647,13 +2647,24 @@
               if (uploadError) {
                 console.error(`❌ Storage upload error for ${reportType} after ${uploadAttempts + 1} attempts:`, uploadError);
               } else {
-                // Get public URL (simple, no signing needed - bucket is public)
-                const { data: { publicUrl: url } } = window.supabase.storage
+                // Get long-lived signed URL (1 year expiry) - works for private buckets
+                console.log(`🔗 Creating signed URL for ${reportType} PDF access...`);
+                const { data: urlData, error: urlError } = await window.supabase.storage
                   .from(bucketName)
-                  .getPublicUrl(storagePath);
+                  .createSignedUrl(storagePath, 31536000); // 1 year expiry
 
-                publicUrl = url;
-                console.log(`✅ ${reportType} PDF uploaded to storage:`, publicUrl);
+                if (urlError) {
+                  console.error(`❌ Failed to create signed URL for ${reportType}:`, urlError);
+                  // Don't throw - just log the error and continue without URL
+                  publicUrl = null;
+                } else {
+                  publicUrl = urlData?.signedUrl;
+                  if (!publicUrl) {
+                    console.warn(`⚠️ Signed URL is empty for ${reportType} - PDF may not be accessible`);
+                  } else {
+                    console.log(`✅ ${reportType} PDF uploaded to storage with signed URL:`, publicUrl);
+                  }
+                }
               }
             } else {
               console.warn(`⚠️ ${reportType} PDF blob is empty - saving metadata only`);
@@ -2876,12 +2887,24 @@
 
               console.log('✅ PDF uploaded to storage:', storagePath);
 
-              // Get public URL (simple, no signing needed - bucket is public)
-              const { data: { publicUrl } } = window.supabase.storage
+              // Get long-lived signed URL (1 year expiry) - works for private buckets
+              console.log('🔗 Creating signed URL for estimate PDF access...');
+              const { data: urlData, error: urlError } = await window.supabase.storage
                 .from('estimate-reports')
-                .getPublicUrl(storagePath);
+                .createSignedUrl(storagePath, 31536000); // 1 year expiry
 
-              console.log('🔗 PDF public URL:', publicUrl);
+              if (urlError) {
+                console.error('❌ Failed to create signed URL:', urlError);
+                throw new Error('Failed to create PDF access URL: ' + urlError.message);
+              }
+
+              const publicUrl = urlData?.signedUrl;
+
+              if (!publicUrl) {
+                throw new Error('Signed URL is empty - PDF may not be accessible');
+              }
+
+              console.log('✅ Estimate PDF signed URL created:', publicUrl);
 
               // 🔧 FIX: Transform helper structure for SQL function
               // SQL expects helper.estimate.centers but data might be at helper.centers
@@ -3006,9 +3029,23 @@
                       });
 
                     if (!frUploadError) {
-                      const { data: { publicUrl: frPublicUrl } } = window.supabase.storage
+                      // Get long-lived signed URL (1 year expiry) - works for private buckets
+                      console.log('🔗 Creating signed URL for final report draft PDF access...');
+                      const { data: frUrlData, error: frUrlError } = await window.supabase.storage
                         .from('final-reports')
-                        .getPublicUrl(frStoragePath);
+                        .createSignedUrl(frStoragePath, 31536000); // 1 year expiry
+
+                      if (frUrlError) {
+                        console.error('❌ Failed to create signed URL for final report draft:', frUrlError);
+                      }
+
+                      const frPublicUrl = frUrlData?.signedUrl || null;
+
+                      if (!frPublicUrl) {
+                        console.warn('⚠️ Signed URL is empty for final report draft - PDF may not be accessible');
+                      } else {
+                        console.log('✅ Final report draft PDF signed URL created:', frPublicUrl);
+                      }
 
                       // Save final_report draft to database
                       const frCentersData = helper.final_report?.centers || helper.centers || helper.damage_centers || [];
