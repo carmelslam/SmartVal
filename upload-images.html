@@ -439,23 +439,29 @@
     
     .upload-progress {
       display: none;
-      margin-top: 20px;
+      margin: 25px 0;
+      padding: 20px;
+      background: rgba(255, 255, 255, 0.95);
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
     }
-    
+
     .progress-bar {
       width: 100%;
-      height: 30px;
-      background: #ecf0f1;
-      border-radius: 5px;
+      height: 40px;
+      background: #e0e7ff;
+      border-radius: 8px;
       overflow: hidden;
       position: relative;
+      border: 2px solid #6366f1;
     }
 
     .progress-fill {
       height: 100%;
-      background: linear-gradient(90deg, #3498db, #2980b9);
+      background: linear-gradient(90deg, #6366f1, #8b5cf6);
       width: 0%;
       transition: width 0.3s ease;
+      box-shadow: inset 0 2px 4px rgba(255,255,255,0.3);
     }
 
     .progress-text {
@@ -463,10 +469,11 @@
       top: 50%;
       left: 50%;
       transform: translate(-50%, -50%);
-      color: #333;
-      font-weight: bold;
-      font-size: 14px;
-      text-shadow: 0 1px 2px rgba(255,255,255,0.8);
+      color: #1e293b;
+      font-weight: 700;
+      font-size: 16px;
+      text-shadow: 0 1px 2px rgba(255,255,255,0.9);
+      z-index: 10;
     }
     
     .stats-container {
@@ -496,8 +503,27 @@
       display: block;
       color: #1e40af;
       margin-bottom: 2px;
+      transition: all 0.3s ease;
     }
-    
+
+    #upload-status {
+      font-size: 16px;
+      font-weight: 700;
+      padding: 8px 16px;
+      border-radius: 6px;
+      background: rgba(255, 255, 255, 0.3);
+      transition: all 0.3s ease;
+    }
+
+    #upload-status.uploading {
+      animation: pulse 1.5s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.6; }
+    }
+
     .stat-label {
       font-size: 11px;
       color: #64748b;
@@ -1137,9 +1163,11 @@ class ImageUploadManager {
     this.uploadInProgress = true;
     this.showUploadProgress(true);
 
-    // Update status to show uploading
-    document.getElementById('upload-status').textContent = 'מעלה תמונות...';
-    document.getElementById('upload-status').style.color = '#3498db';
+    // Update status to show uploading with animation
+    const statusElement = document.getElementById('upload-status');
+    statusElement.textContent = 'מעלה תמונות...';
+    statusElement.style.color = '#3498db';
+    statusElement.classList.add('uploading');
 
     try {
       // Get case ID from sessionStorage
@@ -1285,8 +1313,10 @@ class ImageUploadManager {
 
       if (uploadedImages.length > 0) {
         // Update status to completed
-        document.getElementById('upload-status').textContent = '✅ הושלם';
-        document.getElementById('upload-status').style.color = '#27ae60';
+        const statusElement = document.getElementById('upload-status');
+        statusElement.classList.remove('uploading');
+        statusElement.textContent = '✅ הושלם';
+        statusElement.style.color = '#27ae60';
 
         // Update helper for backward compatibility
         await this.updateHelperWithSupabaseImages(uploadedImages);
@@ -1301,19 +1331,25 @@ class ImageUploadManager {
         this.updateUI();
         this.renderPreviews();
       } else {
-        document.getElementById('upload-status').textContent = '❌ שגיאה';
-        document.getElementById('upload-status').style.color = '#e74c3c';
+        const statusElement = document.getElementById('upload-status');
+        statusElement.classList.remove('uploading');
+        statusElement.textContent = '❌ שגיאה';
+        statusElement.style.color = '#e74c3c';
         this.showAlert('❌ לא הצלחנו להעלות תמונות', 'error');
       }
 
     } catch (error) {
       console.error('Upload error:', error);
-      document.getElementById('upload-status').textContent = '❌ שגיאה';
-      document.getElementById('upload-status').style.color = '#e74c3c';
+      const statusElement = document.getElementById('upload-status');
+      statusElement.classList.remove('uploading');
+      statusElement.textContent = '❌ שגיאה';
+      statusElement.style.color = '#e74c3c';
       this.showAlert(`❌ שגיאה בהעלאת התמונות: ${error.message}`, 'error');
     } finally {
       this.uploadInProgress = false;
       this.showUploadProgress(false);
+      // Make sure animation class is removed
+      document.getElementById('upload-status').classList.remove('uploading');
     }
   }
 
