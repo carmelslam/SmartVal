@@ -131,11 +131,30 @@ window.NativePdfGenerator = {
           useCORS: true,
           logging: false,
           letterRendering: true,
-          allowTaint: false,
+          allowTaint: true, // ✅ CRITICAL FIX: Allow tainted canvas to prevent CORS issues with data URIs
           backgroundColor: '#ffffff',
-          // ✅ FIX HEBREW: Use SVG rendering which handles Hebrew fonts better
-          foreignObjectRendering: true, // SVG rendering for better RTL/Hebrew support
-          imageTimeout: 15000 // Give more time for font loading
+          // ✅ CRITICAL FIX: Disable foreignObjectRendering to avoid atob() encoding errors
+          // Use canvas rendering which handles data URIs better than SVG rendering
+          foreignObjectRendering: false, // Canvas rendering prevents atob() base64 errors
+          imageTimeout: 0, // ✅ FIX: Disable timeout since images are already converted to data URIs
+          removeContainer: false, // Keep container for debugging if needed
+          // ✅ CRITICAL FIX: onclone callback to verify images in cloned document
+          onclone: function(clonedDoc) {
+            console.log('  🔍 html2canvas: onclone callback - checking cloned document images...');
+            const clonedImages = clonedDoc.querySelectorAll('img');
+            let dataUriCount = 0;
+            let urlCount = 0;
+            clonedImages.forEach((img, index) => {
+              const src = img.getAttribute('src') || img.src;
+              if (src && src.startsWith('data:')) {
+                dataUriCount++;
+              } else if (src && (src.startsWith('http://') || src.startsWith('https://'))) {
+                urlCount++;
+                console.warn(`  ⚠️ html2canvas: Image ${index + 1} is still a URL: ${src.substring(0, 60)}...`);
+              }
+            });
+            console.log(`  ✅ html2canvas: Cloned doc has ${dataUriCount} data URIs, ${urlCount} URLs`);
+          }
         },
         // Page break settings
         autoPaging: 'text', // Enable automatic page breaks
