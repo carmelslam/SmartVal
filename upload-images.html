@@ -1214,27 +1214,46 @@ class ImageUploadManager {
           // Generate Cloudinary transformation URL (INSTANT)
           const plate = document.getElementById('plate').value.trim();
 
-          const transformedUrl = generateTransformationUrl(result.publicUrl, {
-            plate: plate
-          });
+          console.log('🔧 DEBUG: About to generate transformation URL');
+          console.log('📸 result.publicUrl:', result.publicUrl);
+          console.log('🚗 plate:', plate);
+          console.log('🆔 image.id:', result.image.id);
 
-          console.log('🎨 Generated transformation URL:', transformedUrl);
-          console.log('📸 Original URL:', result.publicUrl);
+          let transformedUrl = null;
+          try {
+            transformedUrl = generateTransformationUrl(result.publicUrl, {
+              plate: plate
+            });
 
-          // Update database with transformed URL (both columns for compatibility)
-          const { error: updateError } = await supabase
-            .from('images')
-            .update({
-              transformed_url: transformedUrl,
-              cloudinary_url: transformedUrl, // Also update legacy column
-              optimization_status: 'optimized'
-            })
-            .eq('id', result.image.id);
+            console.log('✅ Generated transformation URL:', transformedUrl);
+            console.log('📏 URL length:', transformedUrl?.length || 0);
+          } catch (genError) {
+            console.error('❌ Error generating transformation URL:', genError);
+            console.error('❌ Error stack:', genError.stack);
+          }
 
-          if (updateError) {
-            console.error('❌ Error updating transformed URL:', updateError);
+          if (!transformedUrl) {
+            console.error('⚠️ Transformation URL is null/undefined - skipping database update');
           } else {
-            console.log('✅ Transformation URL saved to database');
+            // Update database with transformed URL (both columns for compatibility)
+            console.log('💾 Updating database with transformation URL...');
+            const { data: updateData, error: updateError } = await supabase
+              .from('images')
+              .update({
+                transformed_url: transformedUrl,
+                cloudinary_url: transformedUrl, // Also update legacy column
+                optimization_status: 'optimized'
+              })
+              .eq('id', result.image.id)
+              .select();
+
+            if (updateError) {
+              console.error('❌ Error updating transformed URL:', updateError);
+              console.error('❌ Error details:', JSON.stringify(updateError, null, 2));
+            } else {
+              console.log('✅ Transformation URL saved to database');
+              console.log('✅ Updated record:', updateData);
+            }
           }
 
           uploadedImages.push({

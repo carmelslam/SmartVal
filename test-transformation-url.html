@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Test Cloudinary Transformation URL</title>
+</head>
+<body>
+  <h1>Test Cloudinary Transformation URL Generation</h1>
+
+  <div>
+    <label>Supabase Image URL:</label><br>
+    <input type="text" id="supabaseUrl" style="width: 600px;"
+           value="https://nvqrptokmwdhvpiufrad.supabase.co/storage/v1/object/public/originals/case-c52af5d6-3b78-47b8-88a2-d2553ee3e1af/damage/20251121_133649_7A385BEB-5CD4-4DD1-8FB4-65DC037E885D_1_105_c.jpeg">
+  </div>
+
+  <div style="margin-top: 10px;">
+    <label>Plate Number:</label><br>
+    <input type="text" id="plate" value="22-184-00">
+  </div>
+
+  <div style="margin-top: 10px;">
+    <button onclick="testTransformation()">Generate Transformation URL</button>
+  </div>
+
+  <div id="result" style="margin-top: 20px; white-space: pre-wrap; font-family: monospace;"></div>
+
+  <script type="module">
+    import { generateTransformationUrl } from './lib/cloudinaryTransformService.js';
+
+    window.testTransformation = function() {
+      const supabaseUrl = document.getElementById('supabaseUrl').value;
+      const plate = document.getElementById('plate').value;
+      const resultDiv = document.getElementById('result');
+
+      try {
+        console.log('Testing transformation URL generation...');
+        console.log('Supabase URL:', supabaseUrl);
+        console.log('Plate:', plate);
+
+        const transformedUrl = generateTransformationUrl(supabaseUrl, {
+          plate: plate
+        });
+
+        console.log('✅ Generated URL:', transformedUrl);
+
+        resultDiv.innerHTML = `
+✅ SUCCESS!
+
+Generated Transformation URL:
+${transformedUrl}
+
+Components:
+- Cloud name: dwl9x9acl
+- Base URL: https://res.cloudinary.com/dwl9x9acl/image/fetch/
+- Transformations: c_pad,w_850,h_750,g_north,b_ivory,q_auto:good,f_jpg
+- Watermarks: Business name + License + Plate
+- Source: ${supabaseUrl}
+
+Click to test:
+<a href="${transformedUrl}" target="_blank">Open Transformation URL</a>
+        `;
+
+      } catch (error) {
+        console.error('❌ Error:', error);
+        resultDiv.innerHTML = `
+❌ ERROR!
+
+${error.message}
+
+Stack trace:
+${error.stack}
+        `;
+      }
+    };
+  </script>
+</body>
+</html>
