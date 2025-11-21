@@ -53,8 +53,8 @@ BEGIN
   ON storage.objects
   FOR UPDATE
   TO authenticated
-  USING (bucket_id = 'originals' AND owner_id = auth.uid())
-  WITH CHECK (bucket_id = 'originals' AND owner_id = auth.uid());
+  USING (bucket_id = 'originals' AND (owner_id)::text = (auth.uid())::text)
+  WITH CHECK (bucket_id = 'originals' AND (owner_id)::text = (auth.uid())::text);
 
   RAISE NOTICE '✅ Update policy created for authenticated users';
 
@@ -65,7 +65,7 @@ BEGIN
   ON storage.objects
   FOR DELETE
   TO authenticated
-  USING (bucket_id = 'originals' AND owner_id = auth.uid());
+  USING (bucket_id = 'originals' AND (owner_id)::text = (auth.uid())::text);
 
   RAISE NOTICE '✅ Delete policy created for authenticated users';
 END $$;
