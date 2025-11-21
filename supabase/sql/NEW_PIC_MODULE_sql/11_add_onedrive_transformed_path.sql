@@ -88,18 +88,19 @@ AND column_name IN ('onedrive_path', 'onedrive_transformed_path');
 
 -- Check function signature
 SELECT
-  routine_name,
-  parameter_name,
-  data_type,
-  parameter_mode
-FROM information_schema.parameters
-WHERE specific_name IN (
-  SELECT specific_name
-  FROM information_schema.routines
-  WHERE routine_name = 'update_backup_status'
-  AND specific_schema = 'public'
+  p.specific_name,
+  p.parameter_name,
+  p.data_type,
+  p.parameter_mode,
+  p.ordinal_position
+FROM information_schema.parameters p
+WHERE p.specific_name IN (
+  SELECT r.specific_name
+  FROM information_schema.routines r
+  WHERE r.routine_name = 'update_backup_status'
+  AND r.specific_schema = 'public'
 )
-ORDER BY ordinal_position;
+ORDER BY p.ordinal_position;
 
 -- ============================================================================
 -- NOTES
