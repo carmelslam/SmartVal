@@ -69,6 +69,77 @@ window.checkAndCleanPhantomInvoices = function() {
   return false; // No cleanup needed
 };
 
+// 🧹 STORAGE OPTIMIZATION: Cleanup audit trail to prevent storage bloat
+window.cleanupAuditTrail = function() {
+  if (!window.helper?.damage_assessment?.audit_trail) {
+    console.log('✅ AUDIT CLEANUP: No audit trail found');
+    return false;
+  }
+
+  const originalCount = window.helper.damage_assessment.audit_trail.length;
+  const MAX_AUDIT_ENTRIES = 50; // Keep only last 50 entries
+
+  if (originalCount > MAX_AUDIT_ENTRIES) {
+    console.warn(`🧹 AUDIT CLEANUP: Found ${originalCount} audit entries, keeping only ${MAX_AUDIT_ENTRIES} most recent`);
+
+    // Keep only the most recent entries
+    window.helper.damage_assessment.audit_trail =
+      window.helper.damage_assessment.audit_trail.slice(-MAX_AUDIT_ENTRIES);
+
+    console.log(`✅ AUDIT CLEANUP: Reduced from ${originalCount} to ${window.helper.damage_assessment.audit_trail.length} entries`);
+
+    // Save cleaned data
+    if (typeof window.saveHelperToAllStorageLocations === 'function') {
+      window.saveHelperToAllStorageLocations();
+    }
+
+    return true; // Cleanup performed
+  }
+
+  console.log('✅ AUDIT CLEANUP: Audit trail size OK (', originalCount, 'entries)');
+  return false; // No cleanup needed
+};
+
+// 🧹 STORAGE OPTIMIZATION: General cleanup function for all helper data
+window.cleanupHelperData = function() {
+  console.log('🧹 STORAGE CLEANUP: Starting comprehensive helper data cleanup...');
+
+  let cleanupPerformed = false;
+
+  // Cleanup phantom invoices
+  if (typeof window.checkAndCleanPhantomInvoices === 'function') {
+    cleanupPerformed = window.checkAndCleanPhantomInvoices() || cleanupPerformed;
+  }
+
+  // Cleanup audit trail
+  if (typeof window.cleanupAuditTrail === 'function') {
+    cleanupPerformed = window.cleanupAuditTrail() || cleanupPerformed;
+  }
+
+  // Remove any empty or null fields to reduce size
+  if (window.helper) {
+    // Remove empty arrays and null values
+    Object.keys(window.helper).forEach(key => {
+      const value = window.helper[key];
+      if (value === null || value === undefined) {
+        delete window.helper[key];
+        cleanupPerformed = true;
+      } else if (Array.isArray(value) && value.length === 0) {
+        delete window.helper[key];
+        cleanupPerformed = true;
+      }
+    });
+  }
+
+  if (cleanupPerformed) {
+    console.log('✅ STORAGE CLEANUP: Cleanup completed successfully');
+  } else {
+    console.log('✅ STORAGE CLEANUP: No cleanup needed');
+  }
+
+  return cleanupPerformed;
+};
+
 // 🛠️ UNIVERSAL SOLUTION: Duplicate Key JSON Parser
 // Handles JSON objects with duplicate keys by preserving all values
 function parseJSONWithDuplicates(jsonString) {
@@ -4555,31 +4626,58 @@ function deepMerge(target, source) {
   return target;
 }
 
-// 🔧 PHASE 2 FIX: Use centralized storage manager
+// 🔧 STORAGE OPTIMIZATION: Debouncing and reduced redundancy
+let saveHelperDebounceTimer = null;
+const SAVE_DEBOUNCE_DELAY = 2000; // Save max once per 2 seconds
+
+// 🔧 PHASE 2 FIX: Optimized storage manager (removed redundant saves, added debouncing)
 // Centralized storage save using the new storage manager
 function saveHelperToAllStorageLocations() {
-  try {
-    const helperString = JSON.stringify(window.helper);
-    const timestamp = new Date().toISOString();
-    
-    // Primary storage
-    sessionStorage.setItem('helper', helperString);
-    
-    // Backup storage locations
-    sessionStorage.setItem('helper_backup', helperString);
-    sessionStorage.setItem('helper_timestamp', timestamp);
-    
-    // Persistent storage
-    localStorage.setItem('helper_data', helperString);
-    localStorage.setItem('helper_last_save', timestamp);
-    
-    console.log('✅ Helper saved to all storage locations (fallback method)');
-    return true;
-    
-  } catch (error) {
-    console.error('❌ Failed to save helper to storage:', error);
-    return false;
+  // Clear existing timer
+  if (saveHelperDebounceTimer) {
+    clearTimeout(saveHelperDebounceTimer);
   }
+
+  // Debounce: delay save to batch multiple updates
+  saveHelperDebounceTimer = setTimeout(() => {
+    try {
+      const helperString = JSON.stringify(window.helper);
+      const timestamp = new Date().toISOString();
+
+      // Primary storage (sessionStorage only - removed redundant helper_backup)
+      sessionStorage.setItem('helper', helperString);
+      sessionStorage.setItem('helper_timestamp', timestamp);
+
+      // Persistent backup storage (localStorage for cross-session persistence)
+      localStorage.setItem('helper_data', helperString);
+      localStorage.setItem('helper_last_save', timestamp);
+
+      console.log('✅ Helper saved to storage (debounced, optimized)');
+      return true;
+
+    } catch (error) {
+      console.error('❌ Failed to save helper to storage:', error);
+
+      // If quota exceeded, try to cleanup and retry
+      if (error.name === 'QuotaExceededError') {
+        console.warn('🧹 Storage quota exceeded, attempting cleanup...');
+        if (typeof window.cleanupHelperData === 'function') {
+          window.cleanupHelperData();
+          // Retry save after cleanup
+          try {
+            const helperString = JSON.stringify(window.helper);
+            sessionStorage.setItem('helper', helperString);
+            localStorage.setItem('helper_data', helperString);
+            console.log('✅ Helper saved after cleanup');
+            return true;
+          } catch (retryError) {
+            console.error('❌ Save failed even after cleanup:', retryError);
+          }
+        }
+      }
+      return false;
+    }
+  }, SAVE_DEBOUNCE_DELAY);
 }
 
 // Detect current module to optimize field population
@@ -6402,6 +6500,17 @@ window.startAutoSaveTimer = function() {
 // Initialize auto-save on page load
 document.addEventListener('DOMContentLoaded', () => {
   if (window.helper) {
+    // 🧹 PHASE 2 FIX: Clean up phantom invoices and excess data on page load
+    console.log('🧹 Running cleanup on page load...');
+    if (typeof window.checkAndCleanPhantomInvoices === 'function') {
+      window.checkAndCleanPhantomInvoices();
+    }
+
+    // 🧹 Clean up audit trail (limit to 50 most recent entries)
+    if (typeof window.cleanupAuditTrail === 'function') {
+      window.cleanupAuditTrail();
+    }
+
     window.startAutoSaveTimer();
     window.lastSavedHelper = JSON.parse(JSON.stringify(window.helper));
   }
