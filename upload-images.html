@@ -807,9 +807,6 @@
     <div class="form-section" id="more-options-section" style="display: none;">
       <h3 style="text-align: center; color: #1e3a8a; margin-bottom: 20px;">אפשרויות מתקדמות</h3>
       <div style="display: flex; gap: 15px; justify-content: center; flex-wrap: wrap;">
-        <button type="button" class="btn btn-secondary" onclick="processAdvancedOption('transform')" style="flex: 1; min-width: 200px; max-width: 250px;">
-          🔄 עיבוד תמונות
-        </button>
         <button type="button" class="btn btn-secondary" onclick="processAdvancedOption('pdf')" style="flex: 1; min-width: 200px; max-width: 250px;">
           📄 יצירת PDF
         </button>
@@ -1140,6 +1137,10 @@ class ImageUploadManager {
     this.uploadInProgress = true;
     this.showUploadProgress(true);
 
+    // Update status to show uploading
+    document.getElementById('upload-status').textContent = 'מעלה תמונות...';
+    document.getElementById('upload-status').style.color = '#3498db';
+
     try {
       // Get case ID from sessionStorage
       let caseId = sessionStorage.getItem('case_id');
@@ -1193,6 +1194,9 @@ class ImageUploadManager {
       // Upload each file
       for (let i = 0; i < this.files.length; i++) {
         const file = this.files[i];
+
+        // Update status text to show current file
+        document.getElementById('upload-status').textContent = `מעלה ${i + 1} מתוך ${totalFiles}`;
 
         try {
           // Update progress
@@ -1280,6 +1284,10 @@ class ImageUploadManager {
       this.updateProgressBar(100);
 
       if (uploadedImages.length > 0) {
+        // Update status to completed
+        document.getElementById('upload-status').textContent = '✅ הושלם';
+        document.getElementById('upload-status').style.color = '#27ae60';
+
         // Update helper for backward compatibility
         await this.updateHelperWithSupabaseImages(uploadedImages);
 
@@ -1293,11 +1301,15 @@ class ImageUploadManager {
         this.updateUI();
         this.renderPreviews();
       } else {
+        document.getElementById('upload-status').textContent = '❌ שגיאה';
+        document.getElementById('upload-status').style.color = '#e74c3c';
         this.showAlert('❌ לא הצלחנו להעלות תמונות', 'error');
       }
 
     } catch (error) {
       console.error('Upload error:', error);
+      document.getElementById('upload-status').textContent = '❌ שגיאה';
+      document.getElementById('upload-status').style.color = '#e74c3c';
       this.showAlert(`❌ שגיאה בהעלאת התמונות: ${error.message}`, 'error');
     } finally {
       this.uploadInProgress = false;
