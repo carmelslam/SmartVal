@@ -1377,13 +1377,8 @@ class ImageUploadManager {
 
   async triggerOneDriveBackup(images) {
     try {
-      // Send each image to OneDrive backup webhook
-      for (const img of images) {
-        // Don't wait for webhook - fire and forget
-        this.sendToOneDriveBackup(img.id).catch(error => {
-          console.warn(`Failed to backup image ${img.id} to OneDrive:`, error);
-        });
-      }
+      // Send ALL images in one webhook call (Make.com will iterate)
+      await this.sendAllImagesToOneDrive(images);
 
       console.log(`🔄 Triggered OneDrive backup for ${images.length} images`);
 
@@ -1393,39 +1388,71 @@ class ImageUploadManager {
     }
   }
 
-  async sendToOneDriveBackup(imageId) {
+  async sendAllImagesToOneDrive(images) {
     try {
-      // Get image details from database
-      const { data: image, error } = await supabase
-        .from('images')
-        .select('*, documents(*)')
-        .eq('id', imageId)
-        .single();
+      const plate = document.getElementById('plate').value.trim();
 
-      if (error) throw error;
+      // Prepare array of all images with URLs
+      const imageData = await Promise.all(images.map(async (img) => {
+        // Get full image details from database
+        const { data: imageRecord } = await supabase
+          .from('images')
+          .select('*, documents(*)')
+          .eq('id', img.id)
+          .single();
 
-      // Generate 24-hour signed URL for Make.com to download
-      const { data: urlData } = await supabase.storage
-        .from(image.documents.bucket_name)
-        .createSignedUrl(image.documents.storage_path, 86400); // 24 hours
+        if (!imageRecord) return null;
 
-      // Send to UPLOAD_PICTURES webhook (modified for backup-only)
-      const formData = new FormData();
-      formData.append('image_id', imageId);
-      formData.append('supabase_url', urlData.signedUrl);
-      formData.append('case_id', image.case_id);
-      formData.append('plate', document.getElementById('plate').value.trim() || '');
-      formData.append('action', 'backup_to_onedrive'); // New field to indicate backup-only
+        // Generate signed URL for Make.com to download original
+        const { data: urlData } = await supabase.storage
+          .from(imageRecord.documents.bucket_name)
+          .createSignedUrl(imageRecord.documents.storage_path, 86400); // 24 hours
 
-      await sendToWebhook('UPLOAD_PICTURES', formData);
+        return {
+          image_id: img.id,
+          filename: img.filename,
+          original_url: urlData?.signedUrl || imageRecord.original_url,
+          transformed_url: img.transformed_url, // Already has Cloudinary URL
+          category: img.category,
+          case_id: sessionStorage.getItem('case_id'),
+          plate: plate
+        };
+      }));
 
-      console.log(`✅ Sent image ${imageId} to OneDrive backup`);
+      // Filter out nulls
+      const validImages = imageData.filter(img => img !== null);
+
+      if (validImages.length === 0) {
+        console.warn('⚠️ No valid images to send to Make.com');
+        return;
+      }
+
+      // Send as JSON array to Make.com
+      const response = await fetch(getWebhook('UPLOAD_PICTURES'), {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          images: validImages, // ← Array of all images
+          batch_upload: true,
+          total_count: validImages.length
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`Make.com webhook failed: ${response.status}`);
+      }
+
+      console.log(`✅ Sent ${validImages.length} images to Make.com webhook`);
 
     } catch (error) {
-      console.error(`Error sending image to OneDrive backup:`, error);
+      console.error('❌ Error sending images to OneDrive:', error);
       throw error;
     }
   }
+
+  // OLD FUNCTION REMOVED - Now using batch upload (sendAllImagesToOneDrive)
 
   async processAdvancedOption(type) {
     // Check for required data - only plate number is needed
