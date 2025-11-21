@@ -1218,17 +1218,23 @@ class ImageUploadManager {
             plate: plate
           });
 
-          // Update database with transformed URL
+          console.log('🎨 Generated transformation URL:', transformedUrl);
+          console.log('📸 Original URL:', result.publicUrl);
+
+          // Update database with transformed URL (both columns for compatibility)
           const { error: updateError } = await supabase
             .from('images')
             .update({
               transformed_url: transformedUrl,
+              cloudinary_url: transformedUrl, // Also update legacy column
               optimization_status: 'optimized'
             })
             .eq('id', result.image.id);
 
           if (updateError) {
-            console.error('Error updating transformed URL:', updateError);
+            console.error('❌ Error updating transformed URL:', updateError);
+          } else {
+            console.log('✅ Transformation URL saved to database');
           }
 
           uploadedImages.push({
@@ -1328,33 +1334,40 @@ class ImageUploadManager {
         helper.images = [];
       }
 
-      // Convert Supabase images to helper format
+      // Convert Supabase images to helper format (minimal data to save space)
       const helperImages = images.map(img => ({
-        id: img.id,  // Add ID for future reference
-        url: img.url,  // Supabase URL (will be replaced by Cloudinary later)
+        id: img.id,
+        url: img.transformed_url || img.url, // Use transformation URL if available
         filename: img.filename,
-        category: img.category,
-        display_order: img.display_order,
-        upload_date: new Date().toISOString(),
-        size: img.size,
-        source: 'supabase'  // Mark as from new system
+        source: 'supabase'
       }));
 
       // Add to helper
       helper.images.push(...helperImages);
 
-      // Update session storage
-      sessionStorage.setItem('helper', JSON.stringify(helper));
+      // Try to update session storage (may fail due to quota)
+      try {
+        sessionStorage.setItem('helper', JSON.stringify(helper));
+        console.log('✅ Helper updated in sessionStorage:', helperImages.length, 'images');
+      } catch (quotaError) {
+        console.warn('⚠️ SessionStorage quota exceeded - skipping helper update');
+        console.log('📌 Images are safely stored in Supabase database');
+        // Don't throw - this is not critical
+        return;
+      }
 
       // Update via helper system (if available)
       if (typeof window.updateHelper === 'function') {
-        window.updateHelper('images', helper.images, 'upload-images');
+        try {
+          window.updateHelper('images', helper.images, 'upload-images');
+          console.log('✅ Helper system notified of image upload');
+        } catch (updateError) {
+          console.warn('⚠️ Helper system update failed - ignoring');
+        }
       }
 
-      console.log('✅ Helper updated with Supabase images:', helperImages.length);
-
     } catch (error) {
-      console.warn('Could not update helper with images:', error);
+      console.warn('⚠️ Could not update helper with images:', error.message);
       // Don't throw - helper update failure shouldn't break upload
     }
   }
