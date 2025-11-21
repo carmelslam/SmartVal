@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Cloudinary Fetch Diagnosis</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+      direction: rtl;
+    }
+    .test-section {
+      margin: 20px 0;
+      padding: 15px;
+      border: 2px solid #ccc;
+      border-radius: 5px;
+      background: #f9f9f9;
+    }
+    .test-section h3 {
+      margin-top: 0;
+      color: #333;
+    }
+    button {
+      background: #007bff;
+      color: white;
+      padding: 10px 20px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      margin: 5px;
+      font-size: 14px;
+    }
+    button:hover {
+      background: #0056b3;
+    }
+    .result {
+      margin-top: 15px;
+      padding: 15px;
+      border-radius: 5px;
+      direction: ltr;
+      white-space: pre-wrap;
+      font-family: monospace;
+      font-size: 12px;
+    }
+    .success {
+      background: #d4edda;
+      border: 2px solid #28a745;
+      color: #155724;
+    }
+    .error {
+      background: #f8d7da;
+      border: 2px solid #dc3545;
+      color: #721c24;
+    }
+    .warning {
+      background: #fff3cd;
+      border: 2px solid #ffc107;
+      color: #856404;
+    }
+    .info {
+      background: #d1ecf1;
+      border: 2px solid #17a2b8;
+      color: #0c5460;
+    }
+    img {
+      max-width: 100%;
+      margin-top: 10px;
+      border: 2px solid #ddd;
+    }
+    .url-display {
+      background: #fff;
+      padding: 10px;
+      border: 1px solid #ddd;
+      border-radius: 3px;
+      word-break: break-all;
+      margin: 10px 0;
+      font-size: 11px;
+    }
+  </style>
+</head>
+<body>
+  <h1>🔍 אבחון בעיית Cloudinary Fetch</h1>
+  <p><strong>מטרה:</strong> לזהות למה Cloudinary מחזיר 401 Unauthorized</p>
+
+  <!-- Test 1: Known public image -->
+  <div class="test-section">
+    <h3>Test 1: בדיקת Fetch מתמונה ציבורית ידועה</h3>
+    <p>בודק אם Cloudinary Fetch עובד בכלל עם תמונה ציבורית ידועה (Unsplash)</p>
+    <button onclick="testPublicImageFetch()">🧪 בדוק Fetch מ-Unsplash</button>
+    <div id="test1Result"></div>
+  </div>
+
+  <!-- Test 2: Direct Supabase access -->
+  <div class="test-section">
+    <h3>Test 2: גישה ישירה ל-Supabase (ללא Cloudinary)</h3>
+    <p>בודק אם התמונה ב-Supabase נגישה ללא הגבלות CORS</p>
+    <button onclick="testDirectSupabaseAccess()">🔗 בדוק גישה ישירה</button>
+    <div id="test2Result"></div>
+  </div>
+
+  <!-- Test 3: Cloudinary account type check -->
+  <div class="test-section">
+    <h3>Test 3: בדיקת הגדרות Cloudinary</h3>
+    <p>בודק אם חשבון Cloudinary מוגדר נכון</p>
+    <button onclick="testCloudinaryConfig()">⚙️ בדוק הגדרות</button>
+    <div id="test3Result"></div>
+  </div>
+
+  <!-- Test 4: Alternative - Use signed URLs -->
+  <div class="test-section">
+    <h3>Test 4: פתרון חלופי - Signed URLs</h3>
+    <p>אם Fetch לא עובד, אפשר להשתמש ב-Signed URLs מ-Supabase</p>
+    <button onclick="testSignedUrlApproach()">🔐 בדוק Signed URL</button>
+    <div id="test4Result"></div>
+  </div>
+
+  <script type="module">
+    const CLOUDINARY_CONFIG = {
+      cloudName: 'dwl9x9acl',
+      fetchBaseUrl: 'https://res.cloudinary.com/dwl9x9acl/image/fetch/'
+    };
+
+    const SUPABASE_URL = 'https://nvqrptokmwdhvpiufrad.supabase.co/storage/v1/object/public/originals/case-c52af5d6-3b78-47b8-88a2-d2553ee3e1af/damage/20251121_152321_10B46889-5D09-4593-B544-801735454E96_1_105_c.jpeg';
+
+    // Test 1: Fetch from known public source
+    window.testPublicImageFetch = async function() {
+      const resultDiv = document.getElementById('test1Result');
+      resultDiv.className = 'result info';
+      resultDiv.textContent = 'בודק...';
+
+      try {
+        // Use a known public image from Unsplash
+        const publicImageUrl = 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4';
+        const transformations = 'w_400,h_300,c_fill';
+        const encodedUrl = encodeURIComponent(publicImageUrl);
+        const cloudinaryUrl = `${CLOUDINARY_CONFIG.fetchBaseUrl}${transformations}/${encodedUrl}`;
+
+        console.log('🧪 Testing with public image:', cloudinaryUrl);
+
+        const response = await fetch(cloudinaryUrl, { method: 'HEAD' });
+
+        if (response.ok) {
+          resultDiv.className = 'result success';
+          resultDiv.innerHTML = `
+✅ Cloudinary Fetch עובד תקין!
+
+זה אומר שהחשבון שלך תומך ב-Fetch.
+הבעיה היא ספציפית לדומיין של Supabase.
+
+Test URL:
+<div class="url-display">${cloudinaryUrl}</div>
+
+Status: ${response.status} ${response.statusText}
+
+<a href="${cloudinaryUrl}" target="_blank">🔗 פתח תמונה</a>
+
+<img src="${cloudinaryUrl}" alt="Test Image">
+
+✅ המסקנה: Cloudinary Fetch פעיל, אבל דומיין Supabase עדיין חסום.
+          `;
+        } else {
+          resultDiv.className = 'result error';
+          resultDiv.innerHTML = `
+❌ Cloudinary Fetch לא עובד בכלל!
+
+Status: ${response.status} ${response.statusText}
+
+זה אומר שאחת מהאפשרויות:
+1. חשבון Cloudinary Free לא תומך ב-Fetch
+2. Fetch לא מופעל בהגדרות
+3. צריך חשבון בתשלום
+
+פתרון אפשרי:
+→ עבור ל-Test 4 לפתרון חלופי עם Signed URLs
+          `;
+        }
+      } catch (error) {
+        resultDiv.className = 'result error';
+        resultDiv.innerHTML = `
+❌ שגיאה: ${error.message}
+
+זה עשוי להצביע על בעיית רשת או הגדרות CORS.
+        `;
+      }
+    };
+
+    // Test 2: Direct Supabase access
+    window.testDirectSupabaseAccess = async function() {
+      const resultDiv = document.getElementById('test2Result');
+      resultDiv.className = 'result info';
+      resultDiv.textContent = 'בודק גישה ל-Supabase...';
+
+      try {
+        const response = await fetch(SUPABASE_URL);
+
+        if (response.ok) {
+          const blob = await response.blob();
+          const objectUrl = URL.createObjectURL(blob);
+
+          resultDiv.className = 'result success';
+          resultDiv.innerHTML = `
+✅ Supabase נגיש לחלוטין!
+
+URL: ${SUPABASE_URL}
+Status: ${response.status} ${response.statusText}
+Content-Type: ${response.headers.get('content-type')}
+Size: ${(blob.size / 1024).toFixed(2)} KB
+
+CORS Headers:
+- Access-Control-Allow-Origin: ${response.headers.get('access-control-allow-origin') || 'לא קיים'}
+
+<img src="${objectUrl}" alt="Supabase Image">
+
+✅ המסקנה: Supabase תקין, הבעיה היא בהגדרות Cloudinary.
+          `;
+        } else {
+          resultDiv.className = 'result error';
+          resultDiv.innerHTML = `
+❌ לא מצליח לגשת ל-Supabase!
+
+Status: ${response.status} ${response.statusText}
+
+בדוק:
+1. האם ה-bucket 'originals' public?
+2. האם הפוליסיות במקום?
+          `;
+        }
+      } catch (error) {
+        resultDiv.className = 'result error';
+        resultDiv.innerHTML = `
+❌ שגיאה: ${error.message}
+
+ייתכן בעיית CORS או רשת.
+        `;
+      }
+    };
+
+    // Test 3: Check Cloudinary configuration
+    window.testCloudinaryConfig = function() {
+      const resultDiv = document.getElementById('test3Result');
+
+      resultDiv.className = 'result warning';
+      resultDiv.innerHTML = `
+⚙️ בדיקת הגדרות Cloudinary
+
+Cloud Name: ${CLOUDINARY_CONFIG.cloudName}
+Fetch Base URL: ${CLOUDINARY_CONFIG.fetchBaseUrl}
+
+📋 רשימת בדיקות שצריך לעשות ב-Cloudinary Dashboard:
+
+1️⃣ Settings → Security → Allowed fetch domains
+   ✓ הוסף: nvqrptokmwdhvpiufrad.supabase.co
+   ✓ או: * (allow all - לא מומלץ לפרודקשן)
+
+2️⃣ Settings → Upload → Auto Upload Mapping
+   ✓ בדוק אם צריך להוסיף mapping
+
+3️⃣ Account Details
+   ✓ בדוק איזה תוכנית יש לך (Free/Plus/Advanced)
+   ✓ Fetch feature זמין רק בתוכניות מסוימות
+
+4️⃣ Settings → Security → Fetch images
+   ✓ וודא שהאפשרות מסומנת
+
+⚠️ לאחר שינויים בהגדרות, המתן 2-3 דקות לעדכון.
+
+אם עדיין לא עובד אחרי כל הבדיקות:
+→ עבור ל-Test 4 לפתרון חלופי
+      `;
+    };
+
+    // Test 4: Alternative approach with signed URLs
+    window.testSignedUrlApproach = function() {
+      const resultDiv = document.getElementById('test4Result');
+
+      resultDiv.className = 'result info';
+      resultDiv.innerHTML = `
+🔐 פתרון חלופי: Signed URLs (מומלץ!)
+
+אם Cloudinary Fetch לא עובד, יש שתי אפשרויות:
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📌 אפשרות 1: Upload ישירות ל-Cloudinary (מומלץ!)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+במקום Fetch, Upload את התמונה ל-Cloudinary בזמן ההעלאה:
+
+1. משתמש מעלה → Supabase + Cloudinary (במקביל)
+2. שומר את שני ה-URLs בדאטאבייס
+3. עובד עם Cloudinary URL ישירות (לא Fetch)
+
+יתרונות:
+✅ לא תלוי ב-Fetch permissions
+✅ טרנספורמציות מהירות יותר
+✅ עובד בכל תוכנית Cloudinary
+
+חסרונות:
+❌ תמונות מאוחסנות בשני מקומות
+❌ משתמש quota של Cloudinary
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📌 אפשרות 2: Signed URLs ארוכות מ-Supabase
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+אם רוצה לשמור רק ב-Supabase:
+
+1. ליצור Signed URL עם expiry ארוך (1 שנה)
+2. להשתמש בו ב-Cloudinary Fetch
+3. לעדכן URL בדאטאבייס לפני שפג
+
+יתרונות:
+✅ תמונה מאוחסנת רק ב-Supabase
+✅ פחות ניהול
+
+חסרונות:
+❌ URLs פגים ויש לחדש אותם
+❌ עדיין תלוי ב-Cloudinary Fetch
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+💡 המליץ: אפשרות 1 (Upload ישירות ל-Cloudinary)
+
+רוצה שאעזור לך לשנות את הקוד לעבודה עם Upload ישירות?
+      `;
+    };
+  </script>
+</body>
+</html>
