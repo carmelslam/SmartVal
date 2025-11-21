@@ -444,23 +444,29 @@
     
     .progress-bar {
       width: 100%;
-      height: 10px;
+      height: 30px;
       background: #ecf0f1;
       border-radius: 5px;
       overflow: hidden;
+      position: relative;
     }
-    
+
     .progress-fill {
       height: 100%;
       background: linear-gradient(90deg, #3498db, #2980b9);
       width: 0%;
       transition: width 0.3s ease;
     }
-    
+
     .progress-text {
-      text-align: center;
-      margin-top: 10px;
-      color: #7f8c8d;
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      color: #333;
+      font-weight: bold;
+      font-size: 14px;
+      text-shadow: 0 1px 2px rgba(255,255,255,0.8);
     }
     
     .stats-container {
@@ -775,8 +781,8 @@
       <div class="upload-progress" id="upload-progress">
         <div class="progress-bar">
           <div class="progress-fill" id="progress-fill"></div>
+          <div class="progress-text" id="progress-text">0%</div>
         </div>
-        <div class="progress-text" id="progress-text">מעלה תמונות...</div>
       </div>
     </div>
 
@@ -833,6 +839,9 @@
 <script type="module">
 import { sendToWebhook, getWebhook } from './webhook.js';
 import { caseOwnershipService } from './services/caseOwnershipService.js';
+import { fileUploadService } from './lib/fileUploadService.js';
+import { supabase } from './lib/supabaseClient.js';
+import { generateTransformationUrl } from './lib/cloudinaryTransformService.js';
 
 // Phase 6: Case ownership check
 (async () => {
@@ -858,8 +867,8 @@ import { caseOwnershipService } from './services/caseOwnershipService.js';
 class ImageUploadManager {
   constructor() {
     this.files = [];
-    this.maxFileSize = 10 * 1024 * 1024; // 10MB
-    this.allowedTypes = ['image/jpeg', 'image/png', 'image/heic', 'image/webp'];
+    this.maxFileSize = 50 * 1024 * 1024; // 50MB (updated for Phase 1A)
+    this.allowedTypes = ['image/jpeg', 'image/png', 'image/heic', 'image/webp', 'image/heif'];
     this.uploadInProgress = false;
     
     this.init();
@@ -1128,63 +1137,180 @@ class ImageUploadManager {
   async uploadImages() {
     if (this.uploadInProgress || this.files.length === 0) return;
 
-    // SESSION 74: Password validation removed - using Supabase auth only
-
     this.uploadInProgress = true;
     this.showUploadProgress(true);
-    
-    try {
-      const formData = new FormData();
-      
-      // Add case information
-      formData.append('plate', document.getElementById('plate').value);
-      formData.append('owner', document.getElementById('owner').value);
-      // SESSION 74: Password removed from formData - using Supabase auth only
-      
-      // Handle damage center selection
-      const damageCenterValue = document.getElementById('damage-center').value;
-      if (damageCenterValue === 'custom') {
-        const customName = document.getElementById('custom-damage-name').value.trim();
-        formData.append('damage_center', `custom:${customName}`);
-        formData.append('damage_center_type', 'custom');
-        formData.append('custom_damage_name', customName);
-      } else {
-        formData.append('damage_center', damageCenterValue);
-        formData.append('damage_center_type', damageCenterValue.startsWith('existing_') ? 'existing' : 'all');
-      }
-      
-      formData.append('image_category', document.getElementById('image-category').value);
-      
-      // Add default processing options
-      formData.append('auto_tag', true);
-      formData.append('optimize_images', true);
-      formData.append('add_watermark', true);
-      
-      // Add files
-      this.files.forEach((file, index) => {
-        formData.append(`images[]`, file);
-      });
 
-      // FIXED: Use sendToWebhook to get proper Make.com array parsing
-      const result = await sendToWebhook('UPLOAD_PICTURES', formData);
-      
-      console.log('✅ Image upload webhook response:', result);
-      this.showAlert('✅ התמונות הועלו בהצלחה', 'success');
-      
-      // Update helper with image data (result already parsed by sendToWebhook)
-      this.updateHelperWithImages(result);
-        
-      // Clear files after successful upload
-      this.files = [];
-      this.updateUI();
-      this.renderPreviews();
-      
+    try {
+      // Get case ID from sessionStorage
+      let caseId = sessionStorage.getItem('case_id');
+
+      // If no case_id, try to find/create from plate
+      if (!caseId) {
+        const plate = document.getElementById('plate').value.trim();
+        if (!plate) {
+          throw new Error('נדרש מספר רישוי');
+        }
+
+        // Try to find existing case
+        const { data: cases } = await supabase
+          .from('cases')
+          .select('id')
+          .eq('plate', plate)
+          .limit(1);
+
+        if (cases && cases.length > 0) {
+          caseId = cases[0].id;
+          sessionStorage.setItem('case_id', caseId);
+        } else {
+          throw new Error('לא נמצא תיק עבור מספר רישוי זה');
+        }
+      }
+
+      // Get category and damage center
+      const category = document.getElementById('image-category').value;
+      const damageCenterSelect = document.getElementById('damage-center').value;
+
+      // Determine damage center ID
+      let damageCenterId = null;
+      if (damageCenterSelect && damageCenterSelect.startsWith('existing_')) {
+        // Extract ID from helper
+        const index = parseInt(damageCenterSelect.replace('existing_', ''));
+        const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+        if (helper.damage_centers && helper.damage_centers[index]) {
+          damageCenterId = helper.damage_centers[index].id;
+        }
+      } else if (damageCenterSelect === 'custom') {
+        // Create new damage center first
+        const customName = document.getElementById('custom-damage-name').value.trim();
+        if (customName) {
+          damageCenterId = await this.createDamageCenter(caseId, customName);
+        }
+      }
+
+      const uploadedImages = [];
+      const totalFiles = this.files.length;
+
+      // Upload each file
+      for (let i = 0; i < this.files.length; i++) {
+        const file = this.files[i];
+
+        try {
+          // Update progress
+          const baseProgress = (i / totalFiles) * 100;
+
+          // Upload image (combines file upload + database record)
+          const result = await fileUploadService.uploadImage(file, {
+            caseId: caseId,
+            category: category,
+            damageCenterId: damageCenterId,
+            onProgress: (percentage) => {
+              // Calculate overall progress
+              const fileProgress = (percentage / totalFiles);
+              const totalProgress = baseProgress + fileProgress;
+              this.updateProgressBar(Math.round(totalProgress));
+            }
+          });
+
+          // Generate Cloudinary transformation URL (INSTANT)
+          const plate = document.getElementById('plate').value.trim();
+
+          const transformedUrl = generateTransformationUrl(result.publicUrl, {
+            plate: plate
+          });
+
+          // Update database with transformed URL
+          const { error: updateError } = await supabase
+            .from('images')
+            .update({
+              transformed_url: transformedUrl,
+              optimization_status: 'optimized'
+            })
+            .eq('id', result.image.id);
+
+          if (updateError) {
+            console.error('Error updating transformed URL:', updateError);
+          }
+
+          uploadedImages.push({
+            id: result.image.id,
+            document_id: result.document.id,
+            filename: file.name,
+            url: result.publicUrl,
+            transformed_url: transformedUrl,
+            category: category,
+            display_order: result.image.display_order,
+            size: file.size
+          });
+
+          console.log(`✅ Uploaded and transformed ${i + 1}/${totalFiles}: ${file.name}`);
+
+        } catch (error) {
+          console.error(`❌ Failed to upload ${file.name}:`, error);
+          this.showAlert(`שגיאה בהעלאת ${file.name}`, 'warning');
+          // Continue with other files
+        }
+      }
+
+      // Update progress to 100%
+      this.updateProgressBar(100);
+
+      if (uploadedImages.length > 0) {
+        // Update helper for backward compatibility
+        await this.updateHelperWithSupabaseImages(uploadedImages);
+
+        // Trigger OneDrive backup (async, non-blocking)
+        this.triggerOneDriveBackup(uploadedImages);
+
+        this.showAlert(`✅ ${uploadedImages.length} תמונות הועלו ועובדו בהצלחה`, 'success');
+
+        // Clear files
+        this.files = [];
+        this.updateUI();
+        this.renderPreviews();
+      } else {
+        this.showAlert('❌ לא הצלחנו להעלות תמונות', 'error');
+      }
+
     } catch (error) {
       console.error('Upload error:', error);
-      this.showAlert('❌ שגיאה בהעלאת התמונות', 'error');
+      this.showAlert(`❌ שגיאה בהעלאת התמונות: ${error.message}`, 'error');
     } finally {
       this.uploadInProgress = false;
       this.showUploadProgress(false);
+    }
+  }
+
+  async createDamageCenter(caseId, name) {
+    try {
+      const { data, error } = await supabase
+        .from('damage_centers')
+        .insert({
+          case_id: caseId,
+          name: name,
+          type: 'garage'
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      // Also add to helper for backward compatibility
+      const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
+      if (!helper.damage_centers) {
+        helper.damage_centers = [];
+      }
+      helper.damage_centers.push({
+        id: data.id,
+        name: name,
+        type: 'garage'
+      });
+      sessionStorage.setItem('helper', JSON.stringify(helper));
+
+      return data.id;
+
+    } catch (error) {
+      console.error('Error creating damage center:', error);
+      throw new Error('לא הצלחנו ליצור מוסך חדש');
     }
   }
 
@@ -1194,32 +1320,96 @@ class ImageUploadManager {
     return true;
   }
 
-  updateHelperWithImages(uploadResult) {
+  async updateHelperWithSupabaseImages(images) {
     try {
       const helper = JSON.parse(sessionStorage.getItem('helper') || '{}');
-      
+
       if (!helper.images) {
         helper.images = [];
       }
-      
-      // Add uploaded images to helper
-      if (uploadResult.images) {
-        helper.images.push(...uploadResult.images);
-      }
-      
+
+      // Convert Supabase images to helper format
+      const helperImages = images.map(img => ({
+        id: img.id,  // Add ID for future reference
+        url: img.url,  // Supabase URL (will be replaced by Cloudinary later)
+        filename: img.filename,
+        category: img.category,
+        display_order: img.display_order,
+        upload_date: new Date().toISOString(),
+        size: img.size,
+        source: 'supabase'  // Mark as from new system
+      }));
+
+      // Add to helper
+      helper.images.push(...helperImages);
+
       // Update session storage
       sessionStorage.setItem('helper', JSON.stringify(helper));
-      
-      // SESSION 56: Update via helper system with correct parameters
+
+      // Update via helper system (if available)
       if (typeof window.updateHelper === 'function') {
         window.updateHelper('images', helper.images, 'upload-images');
       }
-      
-    } catch (e) {
-      console.warn('Could not update helper with images:', e);
+
+      console.log('✅ Helper updated with Supabase images:', helperImages.length);
+
+    } catch (error) {
+      console.warn('Could not update helper with images:', error);
+      // Don't throw - helper update failure shouldn't break upload
     }
   }
 
+  async triggerOneDriveBackup(images) {
+    try {
+      // Send each image to OneDrive backup webhook
+      for (const img of images) {
+        // Don't wait for webhook - fire and forget
+        this.sendToOneDriveBackup(img.id).catch(error => {
+          console.warn(`Failed to backup image ${img.id} to OneDrive:`, error);
+        });
+      }
+
+      console.log(`🔄 Triggered OneDrive backup for ${images.length} images`);
+
+    } catch (error) {
+      console.error('Error triggering OneDrive backup:', error);
+      // Don't throw - backup is optional
+    }
+  }
+
+  async sendToOneDriveBackup(imageId) {
+    try {
+      // Get image details from database
+      const { data: image, error } = await supabase
+        .from('images')
+        .select('*, documents(*)')
+        .eq('id', imageId)
+        .single();
+
+      if (error) throw error;
+
+      // Generate 24-hour signed URL for Make.com to download
+      const { data: urlData } = await supabase.storage
+        .from(image.documents.bucket_name)
+        .createSignedUrl(image.documents.storage_path, 86400); // 24 hours
+
+      // Send to UPLOAD_PICTURES webhook (modified for backup-only)
+      const formData = new FormData();
+      formData.append('image_id', imageId);
+      formData.append('supabase_url', urlData.signedUrl);
+      formData.append('case_id', image.case_id);
+      formData.append('plate', document.getElementById('plate').value.trim() || '');
+      formData.append('action', 'backup_to_onedrive'); // New field to indicate backup-only
+
+      await sendToWebhook('UPLOAD_PICTURES', formData);
+
+      console.log(`✅ Sent image ${imageId} to OneDrive backup`);
+
+    } catch (error) {
+      console.error(`Error sending image to OneDrive backup:`, error);
+      throw error;
+    }
+  }
 
   async processAdvancedOption(type) {
     // Check for required data - only plate number is needed
@@ -1271,18 +1461,23 @@ class ImageUploadManager {
     const progressElement = document.getElementById('upload-progress');
     if (show) {
       progressElement.style.display = 'block';
-      // Simulate progress - in real implementation, you'd track actual upload progress
-      let progress = 0;
-      const interval = setInterval(() => {
-        progress += 10;
-        document.getElementById('progress-fill').style.width = `${progress}%`;
-        if (progress >= 100) {
-          clearInterval(interval);
-        }
-      }, 200);
+      this.updateProgressBar(0);
     } else {
       progressElement.style.display = 'none';
-      document.getElementById('progress-fill').style.width = '0%';
+      this.updateProgressBar(0);
+    }
+  }
+
+  updateProgressBar(percentage) {
+    const progressFill = document.getElementById('progress-fill');
+    const progressText = document.getElementById('progress-text');
+
+    if (progressFill) {
+      progressFill.style.width = `${percentage}%`;
+    }
+
+    if (progressText) {
+      progressText.textContent = `${percentage}%`;
     }
   }
 
