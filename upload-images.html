@@ -1346,23 +1346,26 @@ class ImageUploadManager {
       helper.images.push(...helperImages);
 
       // Try to update session storage (may fail due to quota)
+      let quotaExceeded = false;
       try {
         sessionStorage.setItem('helper', JSON.stringify(helper));
         console.log('✅ Helper updated in sessionStorage:', helperImages.length, 'images');
       } catch (quotaError) {
-        console.warn('⚠️ SessionStorage quota exceeded - skipping helper update');
+        quotaExceeded = true;
+        console.warn('⚠️ SessionStorage quota exceeded - skipping all helper updates');
         console.log('📌 Images are safely stored in Supabase database');
-        // Don't throw - this is not critical
+        // Don't try to call window.updateHelper - it will also fail with quota errors
         return;
       }
 
-      // Update via helper system (if available)
-      if (typeof window.updateHelper === 'function') {
+      // Update via helper system (only if quota not exceeded)
+      if (!quotaExceeded && typeof window.updateHelper === 'function') {
         try {
           window.updateHelper('images', helper.images, 'upload-images');
           console.log('✅ Helper system notified of image upload');
         } catch (updateError) {
           console.warn('⚠️ Helper system update failed - ignoring');
+          // This is OK - images are in Supabase regardless
         }
       }
 
