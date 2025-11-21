@@ -36,7 +36,8 @@ CREATE TABLE IF NOT EXISTS images (
 
   -- Damage center association (which garage/shop)
   -- Note: May be NULL if image is general or not associated with specific center
-  damage_center_id UUID REFERENCES damage_centers(id) ON DELETE SET NULL,
+  -- Note: Foreign key constraint will be added after damage_centers table is created
+  damage_center_id UUID,
 
   -- ========================================
   -- URLs & Storage References
@@ -201,7 +202,8 @@ COMMENT ON FUNCTION update_images_updated_at() IS 'Automatically updates the upd
 -- Grant authenticated users access to the table
 -- (RLS policies will control what they can actually see/modify)
 GRANT SELECT, INSERT, UPDATE, DELETE ON images TO authenticated;
-GRANT USAGE ON SEQUENCE images_id_seq TO authenticated;
+
+-- Note: No sequence needed for UUID primary keys (gen_random_uuid())
 
 -- ============================================================================
 -- END OF FILE
