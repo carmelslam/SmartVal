@@ -3021,16 +3021,9 @@ document.addEventListener('DOMContentLoaded', () => {
           }
 
           // Download
-          pdf.save('${filename}');
+          pdf.save(filename);
 
           alert('✅ PDF נשמר בהצלחה!');
-
-          // Close window - multiple attempts for browser compatibility
-          window.open('', '_self').close();
-          setTimeout(() => {
-            window.close();
-            self.close();
-          }, 100);
 
         } catch (error) {
           console.error('Error downloading PDF:', error);
@@ -3086,7 +3079,7 @@ document.addEventListener('DOMContentLoaded', () => {
           const base64 = pdf.output('datauristring').split(',')[1];
 
           // Use webhook URL from parent closure
-          const savedWebhookUrl = '${webhookUrl}';
+          const savedWebhookUrl = webhookUrl;
 
           if (!savedWebhookUrl || savedWebhookUrl === 'null') {
             throw new Error('CREATE_PDF webhook לא מוגדר');
@@ -3098,9 +3091,9 @@ document.addEventListener('DOMContentLoaded', () => {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               pdf_base64: base64,
-              filename: '${filename}',
-              case_id: '${caseId}',
-              plate: '${plate}',
+              filename: filename,
+              case_id: caseId,
+              plate: plate,
               type: 'thumbnails'
             })
           });
@@ -3110,13 +3103,6 @@ document.addEventListener('DOMContentLoaded', () => {
           }
 
           alert('✅ PDF הועלה ל-OneDrive בהצלחה!');
-
-          // Close window - multiple attempts for browser compatibility
-          window.open('', '_self').close();
-          setTimeout(() => {
-            window.close();
-            self.close();
-          }, 100);
 
         } catch (error) {
           console.error('Error uploading to OneDrive:', error);
