@@ -1136,7 +1136,11 @@
       </button>
 
       <button type="button" class="btn btn-primary" onclick="pdfGenerator.generate()" style="background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%);">
-        📄 ייצא PDF תמונות ממוזערות
+        📄 תצוגה מקדימה PDF
+      </button>
+
+      <button type="button" class="btn btn-primary" onclick="pdfGenerator.uploadToOneDrive()" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%);">
+        ☁️ העלה PDF ל-OneDrive
       </button>
 
       <div style="flex: 1;">
@@ -2665,6 +2669,52 @@ document.addEventListener('DOMContentLoaded', () => {
       } catch (error) {
         console.error('❌ Error generating PDF:', error);
         alert('❌ שגיאה ביצירת PDF: ' + error.message);
+      }
+    }
+
+    async uploadToOneDrive() {
+      // Get active images
+      const activeImages = this.galleryManager.images.filter(img => !img.deleted_at);
+
+      if (activeImages.length === 0) {
+        alert('❌ אין תמונות להעלאה');
+        return;
+      }
+
+      // Get case ID from session
+      const caseId = sessionStorage.getItem('case_id');
+
+      if (!caseId) {
+        alert('❌ לא נמצא מזהה תיק');
+        return;
+      }
+
+      // Show loading
+      alert(`⏳ מעלה PDF עם ${activeImages.length} תמונות ל-OneDrive...\nאנא המתן, זה עשוי לקחת מספר שניות.`);
+
+      try {
+        // Fetch case details
+        const caseDetails = await this.getCaseDetails(caseId);
+
+        if (!caseDetails) {
+          throw new Error('לא ניתן לטעון פרטי תיק');
+        }
+
+        // Build HTML for PDF
+        const htmlContent = await this.buildPDFHTML(activeImages, caseDetails);
+
+        // Generate PDF directly without opening window
+        const pdfBlob = await this.generatePDFFromHTML(htmlContent);
+
+        // Upload to Supabase and Make.com
+        const filename = `${caseDetails.plate}_thumbnails_${new Date().toISOString().substring(0, 10)}.pdf`;
+        await this.uploadPDFToSupabaseAndMake(pdfBlob, filename, caseDetails.id, caseDetails.plate);
+
+        alert('✅ PDF הועלה ל-OneDrive בהצלחה!');
+
+      } catch (error) {
+        console.error('❌ Error uploading to OneDrive:', error);
+        alert('❌ שגיאה בהעלאה ל-OneDrive: ' + error.message);
       }
     }
 
