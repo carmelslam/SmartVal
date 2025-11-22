@@ -1082,7 +1082,7 @@
 
   <!-- Image Gallery Section -->
   <div class="form-section" id="gallery-section" style="margin-top: 30px;">
-    <h2 style="text-align: center; color: #1e3a8a; margin-bottom: 20px;">
+    <h2 style="text-align: center; color: #ffffff; margin-bottom: 20px; text-shadow: 2px 2px 4px rgba(0,0,0,0.5);">
       📷 גלריית תמונות קיימות
     </h2>
 
@@ -2048,8 +2048,8 @@ document.addEventListener('DOMContentLoaded', () => {
       }
 
       try {
-        // Query images directly using Supabase
-        let query = supabase
+        // Build base query
+        const baseQuery = supabase
           .from('images')
           .select(`
             *,
@@ -2061,9 +2061,14 @@ document.addEventListener('DOMContentLoaded', () => {
           `)
           .eq('case_id', caseId);
 
-        // Apply deleted filter
-        if (!this.showDeleted) {
-          query = query.eq('deleted_at', null);
+        // Apply deleted filter - only show non-deleted by default
+        let query;
+        if (this.showDeleted) {
+          // Show all images including deleted
+          query = baseQuery;
+        } else {
+          // Show only non-deleted images (where deleted_at IS NULL)
+          query = baseQuery.filter('deleted_at', 'is', null);
         }
 
         // Order by display_order
@@ -2071,7 +2076,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const { data: images, error } = await query;
 
-        if (error) throw error;
+        if (error) {
+          console.error('Supabase query error:', error);
+          throw error;
+        }
 
         this.allImages = images || [];
         this.images = [...this.allImages];
@@ -2081,7 +2089,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
       } catch (error) {
         console.error('Error loading gallery:', error);
-        alert('שגיאה בטעינת הגלריה');
+        alert('שגיאה בטעינת הגלריה: ' + (error.message || 'Unknown error'));
       }
     }
 
@@ -2219,25 +2227,29 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async saveImageOrder() {
       try {
-        // Prepare order updates
+        // Prepare order updates - format for RPC function
         const orderUpdates = this.images
           .filter(img => !img.deleted_at)
           .map((img, idx) => ({
-            imageId: img.id,
-            displayOrder: idx + 1
+            image_id: img.id,
+            display_order: idx + 1
           }));
 
-        // Use fileUploadService to update order
-        const { error } = await fileUploadService.updateImageOrder(orderUpdates);
+        console.log('Saving order for', orderUpdates.length, 'images');
 
-        if (error) throw error;
+        // Use fileUploadService to update order
+        const result = await fileUploadService.updateImageOrder(orderUpdates);
+
+        if (!result.success) {
+          throw new Error('Failed to update order');
+        }
 
         alert('✅ הסדר נשמר בהצלחה!');
         await this.loadGallery(); // Reload to confirm
 
       } catch (error) {
         console.error('Error saving order:', error);
-        alert('❌ שגיאה בשמירת הסדר');
+        alert('❌ שגיאה בשמירת הסדר: ' + error.message);
       }
     }
 
@@ -2246,31 +2258,35 @@ document.addEventListener('DOMContentLoaded', () => {
       if (!confirmed) return;
 
       try {
-        const { error } = await fileUploadService.softDeleteImage(imageId);
+        const result = await fileUploadService.softDeleteImage(imageId);
 
-        if (error) throw error;
+        if (!result.success) {
+          throw new Error(result.message || 'Failed to delete image');
+        }
 
         alert('✅ התמונה נמחקה');
         await this.loadGallery();
 
       } catch (error) {
         console.error('Error deleting image:', error);
-        alert('❌ שגיאה במחיקת התמונה');
+        alert('❌ שגיאה במחיקת התמונה: ' + error.message);
       }
     }
 
     async restoreImage(imageId) {
       try {
-        const { error } = await fileUploadService.restoreImage(imageId);
+        const result = await fileUploadService.restoreImage(imageId);
 
-        if (error) throw error;
+        if (!result.success) {
+          throw new Error(result.message || 'Failed to restore image');
+        }
 
         alert('✅ התמונה שוחזרה');
         await this.loadGallery();
 
       } catch (error) {
         console.error('Error restoring image:', error);
-        alert('❌ שגיאה בשחזור התמונה');
+        alert('❌ שגיאה בשחזור התמונה: ' + error.message);
       }
     }
 
@@ -2302,19 +2318,28 @@ document.addEventListener('DOMContentLoaded', () => {
         if (error) throw error;
 
         const filterSelect = document.getElementById('damage-center-filter');
-        filterSelect.innerHTML = '<option value="">כל מוקדי הנזק</option>';
 
         if (centers && centers.length > 0) {
+          // Show filter if damage centers exist
+          filterSelect.style.display = 'block';
+          filterSelect.innerHTML = '<option value="">כל מוקדי הנזק</option>';
+
           centers.forEach(center => {
             const option = document.createElement('option');
             option.value = center.id;
             option.textContent = center.name;
             filterSelect.appendChild(option);
           });
+        } else {
+          // Hide filter if no damage centers
+          filterSelect.style.display = 'none';
         }
 
       } catch (error) {
         console.error('Error loading damage centers:', error);
+        // Hide filter on error
+        const filterSelect = document.getElementById('damage-center-filter');
+        if (filterSelect) filterSelect.style.display = 'none';
       }
     }
 
