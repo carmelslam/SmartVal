@@ -2584,19 +2584,30 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
       }
 
-      // Get case info
-      const caseId = sessionStorage.getItem('case_id') || 'לא ידוע';
-      const plate = sessionStorage.getItem('plate_number') || 'לא ידוע';
+      // Get case ID from session
+      const caseId = sessionStorage.getItem('case_id');
+
+      if (!caseId) {
+        alert('❌ לא נמצא מזהה תיק');
+        return;
+      }
 
       // Show loading
       alert(`⏳ מייצר תצוגה מקדימה של PDF עם ${activeImages.length} תמונות ממוזערות...\nאנא המתן, זה עשוי לקחת מספר שניות.`);
 
       try {
+        // Fetch case details and user business name
+        const caseDetails = await this.getCaseDetails(caseId);
+
+        if (!caseDetails) {
+          throw new Error('לא ניתן לטעון פרטי תיק');
+        }
+
         // Build HTML for PDF
-        const htmlContent = await this.buildPDFHTML(activeImages, plate, caseId);
+        const htmlContent = await this.buildPDFHTML(activeImages, caseDetails);
 
         // Open preview window with controls
-        this.openPDFPreview(htmlContent, plate, caseId);
+        this.openPDFPreview(htmlContent, caseDetails.plate, caseDetails.office_case_id);
 
       } catch (error) {
         console.error('❌ Error generating PDF:', error);
@@ -2604,7 +2615,47 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     }
 
-    async buildPDFHTML(images, plate, caseId) {
+    async getCaseDetails(caseId) {
+      try {
+        // Get case details from Supabase
+        const { data: caseData, error: caseError } = await supabase
+          .from('cases')
+          .select('office_case_id, plate, id')
+          .eq('id', caseId)
+          .single();
+
+        if (caseError) throw caseError;
+
+        // Get user's business name
+        const { data: { user } } = await supabase.auth.getUser();
+        let businessName = 'SmartVal Pro';
+
+        if (user) {
+          const { data: userData } = await supabase
+            .from('users')
+            .select('business_name')
+            .eq('id', user.id)
+            .single();
+
+          if (userData && userData.business_name) {
+            businessName = userData.business_name;
+          }
+        }
+
+        return {
+          id: caseData.id,
+          office_case_id: caseData.office_case_id || caseData.id,
+          plate: caseData.plate || 'לא ידוע',
+          business_name: businessName
+        };
+
+      } catch (error) {
+        console.error('Error fetching case details:', error);
+        return null;
+      }
+    }
+
+    async buildPDFHTML(images, caseDetails) {
       // Group images by damage center
       const grouped = this.groupByDamageCenter(images);
 
@@ -2715,9 +2766,9 @@ document.addEventListener('DOMContentLoaded', () => {
         <!-- Header -->
         <div class="header">
           ${assets.logo ? `<img src="${assets.logo}" alt="Logo">` : ''}
-          <h1>ריכוז תמונות לרכב מספר ${plate}</h1>
+          <h1>ריכוז תמונות לרכב מספר ${caseDetails.plate}</h1>
           <div class="subtitle">
-            תיק מספר: ${caseId} • סה"כ תמונות: ${images.length} • תאריך: ${new Date().toLocaleDateString('he-IL')}
+            תיק מספר: ${caseDetails.office_case_id} • סה"כ תמונות: ${images.length} • תאריך: ${new Date().toLocaleDateString('he-IL')}
           </div>
         </div>
 
@@ -2744,10 +2795,12 @@ document.addEventListener('DOMContentLoaded', () => {
           for (const img of row) {
             const smartName = this.getSmartName(img);
             const imageUrl = img.transformed_url || img.original_url;
+            // Fix: Display order starts from 1 (display_order is 0-indexed in some cases)
+            const displayNumber = img.display_order || (images.indexOf(img) + 1);
 
             html += `
               <div class="thumbnail-item">
-                <div class="order">${img.display_order}</div>
+                <div class="order">${displayNumber}</div>
                 <img src="${imageUrl}" alt="${smartName}" crossorigin="anonymous">
                 <div class="name">${smartName}</div>
               </div>
@@ -2763,7 +2816,7 @@ document.addEventListener('DOMContentLoaded', () => {
       // Footer
       html += `
         <div class="footer">
-          SmartVal Pro • רישיון מספר 1097 • ${new Date().toLocaleDateString('he-IL')}
+          ${caseDetails.business_name} • רישיון מספר 1097 • ${new Date().toLocaleDateString('he-IL')}
         </div>
       </body>
       </html>
