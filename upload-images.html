@@ -2048,27 +2048,36 @@ document.addEventListener('DOMContentLoaded', () => {
       }
 
       try {
-        // Build base query
-        const baseQuery = supabase
-          .from('images')
-          .select(`
-            *,
-            damage_centers(
-              id,
-              name,
-              type
-            )
-          `)
-          .eq('case_id', caseId);
-
-        // Apply deleted filter - only show non-deleted by default
+        // Query images directly - handle deleted filter in SQL
         let query;
+
         if (this.showDeleted) {
           // Show all images including deleted
-          query = baseQuery;
+          query = supabase
+            .from('images')
+            .select(`
+              *,
+              damage_centers(
+                id,
+                name,
+                type
+              )
+            `)
+            .eq('case_id', caseId);
         } else {
-          // Show only non-deleted images (where deleted_at IS NULL)
-          query = baseQuery.filter('deleted_at', 'is', null);
+          // Show only non-deleted images (deleted_at IS NULL)
+          query = supabase
+            .from('images')
+            .select(`
+              *,
+              damage_centers(
+                id,
+                name,
+                type
+              )
+            `)
+            .eq('case_id', caseId)
+            .is('deleted_at', null);
         }
 
         // Order by display_order
@@ -2080,6 +2089,8 @@ document.addEventListener('DOMContentLoaded', () => {
           console.error('Supabase query error:', error);
           throw error;
         }
+
+        console.log(`Loaded ${images?.length || 0} images for case ${caseId}`);
 
         this.allImages = images || [];
         this.images = [...this.allImages];
@@ -2227,23 +2238,34 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async saveImageOrder() {
       try {
-        // Prepare order updates - format for RPC function
+        // Prepare order updates
         const orderUpdates = this.images
           .filter(img => !img.deleted_at)
           .map((img, idx) => ({
-            image_id: img.id,
+            id: img.id,
             display_order: idx + 1
           }));
 
-        console.log('Saving order for', orderUpdates.length, 'images');
+        console.log('Saving order for', orderUpdates.length, 'images:', orderUpdates);
 
-        // Use fileUploadService to update order
-        const result = await fileUploadService.updateImageOrder(orderUpdates);
+        // Update each image individually
+        const updatePromises = orderUpdates.map(update =>
+          supabase
+            .from('images')
+            .update({ display_order: update.display_order })
+            .eq('id', update.id)
+        );
 
-        if (!result.success) {
-          throw new Error('Failed to update order');
+        const results = await Promise.all(updatePromises);
+
+        // Check for errors
+        const errors = results.filter(r => r.error);
+        if (errors.length > 0) {
+          console.error('Some updates failed:', errors);
+          throw new Error(`Failed to update ${errors.length} images`);
         }
 
+        console.log('All images updated successfully');
         alert('✅ הסדר נשמר בהצלחה!');
         await this.loadGallery(); // Reload to confirm
 
@@ -2258,12 +2280,28 @@ document.addEventListener('DOMContentLoaded', () => {
       if (!confirmed) return;
 
       try {
-        const result = await fileUploadService.softDeleteImage(imageId);
+        console.log('Attempting to delete image:', imageId);
 
-        if (!result.success) {
-          throw new Error(result.message || 'Failed to delete image');
+        // Try direct update instead of RPC
+        const { data, error } = await supabase
+          .from('images')
+          .update({
+            deleted_at: new Date().toISOString(),
+            deleted_by: (await supabase.auth.getUser()).data.user?.id
+          })
+          .eq('id', imageId)
+          .select();
+
+        if (error) {
+          console.error('Delete error:', error);
+          throw error;
         }
 
+        if (!data || data.length === 0) {
+          throw new Error('Image not found');
+        }
+
+        console.log('Image deleted successfully:', data);
         alert('✅ התמונה נמחקה');
         await this.loadGallery();
 
@@ -2275,12 +2313,28 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async restoreImage(imageId) {
       try {
-        const result = await fileUploadService.restoreImage(imageId);
+        console.log('Attempting to restore image:', imageId);
 
-        if (!result.success) {
-          throw new Error(result.message || 'Failed to restore image');
+        // Try direct update instead of RPC
+        const { data, error } = await supabase
+          .from('images')
+          .update({
+            deleted_at: null,
+            deleted_by: null
+          })
+          .eq('id', imageId)
+          .select();
+
+        if (error) {
+          console.error('Restore error:', error);
+          throw error;
         }
 
+        if (!data || data.length === 0) {
+          throw new Error('Image not found');
+        }
+
+        console.log('Image restored successfully:', data);
         alert('✅ התמונה שוחזרה');
         await this.loadGallery();
 
