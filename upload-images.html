@@ -3075,8 +3075,31 @@ document.addEventListener('DOMContentLoaded', () => {
             heightLeft -= pageHeight;
           }
 
-          // Convert to base64
-          const base64 = pdf.output('datauristring').split(',')[1];
+          // Convert PDF to blob (not base64)
+          const pdfBlob = pdf.output('blob');
+
+          // Upload to Supabase Storage first
+          const storagePath = caseId + '/thumbnails/' + filename;
+
+          const { data: uploadData, error: uploadError } = await window.supabase.storage
+            .from('docs')
+            .upload(storagePath, pdfBlob, {
+              contentType: 'application/pdf',
+              upsert: true
+            });
+
+          if (uploadError) {
+            throw new Error('שגיאה בהעלאה לשרת: ' + uploadError.message);
+          }
+
+          // Get signed URL (valid for 24 hours)
+          const { data: urlData, error: urlError } = await window.supabase.storage
+            .from('docs')
+            .createSignedUrl(storagePath, 86400);
+
+          if (urlError || !urlData?.signedUrl) {
+            throw new Error('שגיאה ביצירת קישור: ' + (urlError?.message || 'לא נוצר קישור'));
+          }
 
           // Use webhook URL from parent closure
           const savedWebhookUrl = webhookUrl;
@@ -3085,16 +3108,17 @@ document.addEventListener('DOMContentLoaded', () => {
             throw new Error('CREATE_PDF webhook לא מוגדר');
           }
 
-          // Send to Make.com (Make.com will convert base64 to PDF and upload to OneDrive)
+          // Send URL to Make.com (NOT base64 - Make.com will download from URL)
           const response = await fetch(savedWebhookUrl, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              pdf_base64: base64,
+              pdf_url: urlData.signedUrl,
               filename: filename,
               case_id: caseId,
               plate: plate,
-              type: 'thumbnails'
+              type: 'thumbnails',
+              storage_path: storagePath
             })
           });
 
