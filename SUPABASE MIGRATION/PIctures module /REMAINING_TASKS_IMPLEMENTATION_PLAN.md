@@ -11,17 +11,18 @@
 
 | # | Task | Priority | Time | Status |
 |---|------|----------|------|--------|
-| 1 | Database Migration (display_order, deleted_at, damage_center_id) | 🔴 CRITICAL | 45 min | ⏳ Not Started |
-| 2 | Image Gallery Display UI | 🔴 HIGH | 3-4 hours | ⏳ Not Started |
-| 3 | Drag-and-Drop Reordering | 🔴 HIGH | 2-3 hours | ⏳ Not Started |
-| 4 | Image Deletion (Soft Delete) | 🟡 MEDIUM | 2 hours | ⏳ Not Started |
+| 1 | Database Migration (display_order, deleted_at, damage_center_id) | 🔴 CRITICAL | 45 min | ✅ **COMPLETE** (columns already exist) |
+| 2 | Image Gallery Display UI | 🔴 HIGH | 3-4 hours | ✅ **COMPLETE** (2025-11-22) |
+| 3 | Drag-and-Drop Reordering | 🔴 HIGH | 2-3 hours | ✅ **COMPLETE** (2025-11-22) |
+| 4 | Image Deletion (Soft Delete) | 🟡 MEDIUM | 2 hours | ✅ **COMPLETE** (2025-11-22) |
 | 5 | PDF Generation from Ordered Images | 🔴 HIGH | 4-6 hours | ⏳ Not Started |
 | 6 | PDF Thumbnail Gallery | 🟢 LOW | 2 hours | ⏳ Not Started |
 | 7 | Email Images in Order | 🟡 MEDIUM | 3-4 hours | ⏳ Not Started |
 | 8 | Image Filtering & Search | 🟢 LOW | 3 hours | ⏳ Not Started |
-| 9 | Damage Center Association | 🟡 MEDIUM | 2-3 hours | ⏳ Not Started |
+| 9 | Damage Center Association | 🟡 MEDIUM | 2-3 hours | ✅ **COMPLETE** (backend existed, UI added 2025-11-22) |
 
-**Total Estimated Time:** 22-30 hours (~3-4 work days)
+**Total Estimated Time:** ~~22-30 hours~~ **4 core tasks complete!**
+**Remaining Time:** 12-16 hours (PDF generation, email, filtering)
 
 ---
 
