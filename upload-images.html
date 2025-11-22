@@ -2588,7 +2588,7 @@ document.addEventListener('DOMContentLoaded', () => {
         .from('temp')
         .upload(storagePath, pdfBlob, {
           contentType: 'application/pdf',
-          upsert: true
+          upsert: false
         });
 
       if (uploadError) {
@@ -2706,8 +2706,9 @@ document.addEventListener('DOMContentLoaded', () => {
         // Generate PDF directly without opening window
         const pdfBlob = await this.generatePDFFromHTML(htmlContent);
 
-        // Upload to Supabase and Make.com
-        const filename = `${caseDetails.plate}_thumbnails_${new Date().toISOString().substring(0, 10)}.pdf`;
+        // Upload to Supabase and Make.com (add timestamp to avoid conflicts)
+        const timestamp = new Date().toISOString().replace(/[:.]/g, '-').substring(0, 19);
+        const filename = `${caseDetails.plate}_thumbnails_${timestamp}.pdf`;
         await this.uploadPDFToSupabaseAndMake(pdfBlob, filename, caseDetails.id, caseDetails.plate);
 
         alert('✅ PDF הועלה ל-OneDrive בהצלחה!');
