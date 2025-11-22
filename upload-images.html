@@ -2125,13 +2125,19 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Create AI-generated smart name from recognized damage and part
         let displayName = img.filename; // Default to filename
-        if (img.recognized_damage && img.recognized_part) {
+
+        // Check if AI data exists and is not "חלק לא ברור" (unclear part)
+        const hasValidPart = img.recognized_part && img.recognized_part !== 'חלק לא ברור';
+        const hasValidDamage = img.recognized_damage && img.recognized_damage !== 'חלק לא ברור';
+
+        if (hasValidPart && hasValidDamage) {
           displayName = `${img.recognized_part} - ${img.recognized_damage}`;
-        } else if (img.recognized_part) {
+        } else if (hasValidPart) {
           displayName = img.recognized_part;
-        } else if (img.recognized_damage) {
+        } else if (hasValidDamage) {
           displayName = img.recognized_damage;
         }
+        // Otherwise fallback to filename
 
         return `
         <div class="gallery-card ${img.deleted_at ? 'deleted' : ''}"
