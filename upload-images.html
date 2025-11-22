@@ -3087,7 +3087,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
       };
 
-      // Upload function - call parent window to do the upload
+      // Upload function - use postMessage to communicate with parent
       previewWindow.uploadToOneDriveFromPreview = async function() {
         try {
           // Hide controls
@@ -3129,12 +3129,19 @@ document.addEventListener('DOMContentLoaded', () => {
             heightLeft -= pageHeight;
           }
 
-          // Convert PDF to blob
-          const pdfBlob = pdf.output('blob');
+          // Convert PDF to ArrayBuffer for postMessage
+          const pdfArrayBuffer = pdf.output('arraybuffer');
 
-          // Call parent window function to upload (parent has supabase access)
-          if (window.opener && window.opener.uploadPDFToSupabaseAndMake) {
-            await window.opener.uploadPDFToSupabaseAndMake(pdfBlob, filename, caseId, plate);
+          // Send to parent window via postMessage
+          if (window.opener) {
+            window.opener.postMessage({
+              type: 'UPLOAD_PDF_TO_ONEDRIVE',
+              pdfData: pdfArrayBuffer,
+              filename: filename,
+              caseId: caseId,
+              plate: plate
+            }, '*');
+
             alert('✅ PDF הועלה ל-OneDrive בהצלחה!');
           } else {
             throw new Error('חלון ההורה לא זמין');
@@ -3283,6 +3290,28 @@ document.addEventListener('DOMContentLoaded', () => {
   window.uploadPDFToSupabaseAndMake = (pdfBlob, filename, caseId, plate) => {
     return window.pdfGenerator.uploadPDFToSupabaseAndMake(pdfBlob, filename, caseId, plate);
   };
+
+  // Listen for messages from child windows (preview window)
+  window.addEventListener('message', async (event) => {
+    if (event.data.type === 'UPLOAD_PDF_TO_ONEDRIVE') {
+      try {
+        // Convert ArrayBuffer back to Blob
+        const pdfBlob = new Blob([event.data.pdfData], { type: 'application/pdf' });
+
+        // Upload using the existing function
+        await window.uploadPDFToSupabaseAndMake(
+          pdfBlob,
+          event.data.filename,
+          event.data.caseId,
+          event.data.plate
+        );
+
+        console.log('✅ PDF uploaded successfully from child window');
+      } catch (error) {
+        console.error('❌ Error handling PDF upload from child window:', error);
+      }
+    }
+  });
 
   // Connect PDF generator to gallery manager
   setTimeout(() => {
