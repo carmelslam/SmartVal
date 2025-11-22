@@ -2123,6 +2123,16 @@ document.addEventListener('DOMContentLoaded', () => {
         };
         const categoryLabel = img.category ? categoryLabels[img.category] || img.category : null;
 
+        // Create AI-generated smart name from recognized damage and part
+        let displayName = img.filename; // Default to filename
+        if (img.recognized_damage && img.recognized_part) {
+          displayName = `${img.recognized_part} - ${img.recognized_damage}`;
+        } else if (img.recognized_part) {
+          displayName = img.recognized_part;
+        } else if (img.recognized_damage) {
+          displayName = img.recognized_damage;
+        }
+
         return `
         <div class="gallery-card ${img.deleted_at ? 'deleted' : ''}"
              data-id="${img.id}"
@@ -2143,8 +2153,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
           <!-- Info -->
           <div class="gallery-info">
-            <div class="gallery-filename" title="${img.smart_name || img.ai_generated_name || img.filename}">
-              ${img.smart_name || img.ai_generated_name || img.filename}
+            <div class="gallery-filename" title="${displayName}">
+              ${displayName}
             </div>
 
             <div class="gallery-meta">
