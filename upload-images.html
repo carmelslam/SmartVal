@@ -847,6 +847,15 @@
       background: #bfdbfe;
     }
 
+    .gallery-btn.rename {
+      background: #fef3c7;
+      color: #92400e;
+    }
+
+    .gallery-btn.rename:hover {
+      background: #fde68a;
+    }
+
     /* Order Badge */
     .order-badge {
       position: absolute;
@@ -1120,6 +1129,38 @@
       <div class="gallery-empty-icon">📷</div>
       <h3 class="gallery-empty-title">אין תמונות בגלריה</h3>
       <p class="gallery-empty-text">העלה תמונות כדי להתחיל</p>
+    </div>
+  </div>
+
+  <!-- Rename Modal -->
+  <div id="rename-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 9999; align-items: center; justify-content: center;">
+    <div style="background: white; padding: 30px; border-radius: 12px; max-width: 500px; width: 90%; direction: rtl;">
+      <h3 style="margin-bottom: 20px; color: #1e293b;">✏️ עריכת שם תמונה</h3>
+
+      <div style="margin-bottom: 15px;">
+        <label style="display: block; margin-bottom: 5px; font-weight: 600;">חלק רכב:</label>
+        <input type="text" id="rename-part-input"
+               placeholder="לדוגמה: פגוש קדמי, דלת נהג"
+               style="width: 100%; padding: 10px; border: 2px solid #e2e8f0; border-radius: 6px; font-size: 16px;">
+      </div>
+
+      <div style="margin-bottom: 20px;">
+        <label style="display: block; margin-bottom: 5px; font-weight: 600;">סוג נזק:</label>
+        <input type="text" id="rename-damage-input"
+               placeholder="לדוגמה: שריטה עמוקה, שקע"
+               style="width: 100%; padding: 10px; border: 2px solid #e2e8f0; border-radius: 6px; font-size: 16px;">
+      </div>
+
+      <div style="display: flex; gap: 10px; justify-content: flex-end;">
+        <button onclick="galleryManager.closeRenameModal()"
+                style="padding: 10px 20px; background: #e2e8f0; border: none; border-radius: 6px; cursor: pointer;">
+          ביטול
+        </button>
+        <button onclick="galleryManager.saveRename()"
+                style="padding: 10px 20px; background: #6366f1; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600;">
+          💾 שמור
+        </button>
+      </div>
     </div>
   </div>
 
@@ -2038,6 +2079,7 @@ document.addEventListener('DOMContentLoaded', () => {
       this.allImages = []; // Store unfiltered list
       this.showDeleted = false;
       this.sortableInstance = null;
+      this.currentRenameImageId = null; // Track image being renamed
     }
 
     async loadGallery() {
@@ -2184,6 +2226,9 @@ document.addEventListener('DOMContentLoaded', () => {
               ` : `
                 <button class="gallery-btn view" onclick="galleryManager.viewImage('${img.id}')">
                   👁️ צפה
+                </button>
+                <button class="gallery-btn rename" onclick="galleryManager.renameImage('${img.id}', '${(img.recognized_part || '').replace(/'/g, "\\'")}', '${(img.recognized_damage || '').replace(/'/g, "\\'")}')">
+                  ✏️ ערוך שם
                 </button>
                 <button class="gallery-btn delete" onclick="galleryManager.deleteImage('${img.id}')">
                   🗑️ מחק
@@ -2344,6 +2389,75 @@ document.addEventListener('DOMContentLoaded', () => {
       } catch (error) {
         console.error('Error restoring image:', error);
         alert('❌ שגיאה בשחזור התמונה: ' + error.message);
+      }
+    }
+
+    // Rename functionality
+    renameImage(imageId, currentPart, currentDamage) {
+      this.currentRenameImageId = imageId;
+
+      // Pre-fill inputs with current values
+      document.getElementById('rename-part-input').value = currentPart || '';
+      document.getElementById('rename-damage-input').value = currentDamage || '';
+
+      // Show modal
+      const modal = document.getElementById('rename-modal');
+      modal.style.display = 'flex';
+
+      // Focus first input
+      setTimeout(() => {
+        document.getElementById('rename-part-input').focus();
+      }, 100);
+    }
+
+    closeRenameModal() {
+      document.getElementById('rename-modal').style.display = 'none';
+      this.currentRenameImageId = null;
+    }
+
+    async saveRename() {
+      if (!this.currentRenameImageId) return;
+
+      const newPart = document.getElementById('rename-part-input').value.trim();
+      const newDamage = document.getElementById('rename-damage-input').value.trim();
+
+      // Validation: at least one field must have value
+      if (!newPart && !newDamage) {
+        alert('❌ נא למלא לפחות שדה אחד (חלק או נזק)');
+        return;
+      }
+
+      try {
+        console.log('Updating image:', this.currentRenameImageId);
+        console.log('New part:', newPart || null);
+        console.log('New damage:', newDamage || null);
+
+        // Update Supabase
+        const { data, error } = await supabase
+          .from('images')
+          .update({
+            recognized_part: newPart || null,
+            recognized_damage: newDamage || null
+          })
+          .eq('id', this.currentRenameImageId)
+          .select();
+
+        if (error) throw error;
+
+        console.log('✅ Image renamed successfully:', data);
+
+        // Close modal
+        this.closeRenameModal();
+
+        // Show success
+        alert('✅ השם עודכן בהצלחה!');
+
+        // Reload gallery to show new name
+        await this.loadGallery();
+
+      } catch (error) {
+        console.error('❌ Error renaming image:', error);
+        alert('❌ שגיאה בעדכון השם: ' + error.message);
       }
     }
 
