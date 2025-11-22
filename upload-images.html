@@ -798,6 +798,11 @@
       color: #92400e;
     }
 
+    .gallery-tag.category {
+      background: #dbeafe;
+      color: #1e40af;
+    }
+
     /* Gallery Card Actions */
     .gallery-actions {
       display: flex;
@@ -2043,10 +2048,28 @@ document.addEventListener('DOMContentLoaded', () => {
       }
 
       try {
-        // Use fileUploadService to get images with damage center join
-        const { images, error } = await fileUploadService.getImagesByCaseId(caseId, {
-          includeDeleted: this.showDeleted
-        });
+        // Query images directly using Supabase
+        let query = supabase
+          .from('images')
+          .select(`
+            *,
+            damage_centers(
+              id,
+              name,
+              type
+            )
+          `)
+          .eq('case_id', caseId);
+
+        // Apply deleted filter
+        if (!this.showDeleted) {
+          query = query.eq('deleted_at', null);
+        }
+
+        // Order by display_order
+        query = query.order('display_order', { ascending: true });
+
+        const { data: images, error } = await query;
 
         if (error) throw error;
 
@@ -2084,6 +2107,16 @@ document.addEventListener('DOMContentLoaded', () => {
       grid.innerHTML = this.images.map((img, index) => {
         const damageCenterName = img.damage_center?.name || img.damage_centers?.name || null;
 
+        // Map category to Hebrew label
+        const categoryLabels = {
+          'damage': 'תמונות נזק',
+          'general': 'תמונות כלליות',
+          'parts': 'תמונות חלקים',
+          'documents': 'מסמכים',
+          'other': 'אחר'
+        };
+        const categoryLabel = img.category ? categoryLabels[img.category] || img.category : null;
+
         return `
         <div class="gallery-card ${img.deleted_at ? 'deleted' : ''}"
              data-id="${img.id}"
@@ -2110,11 +2143,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
             <div class="gallery-meta">
               ${new Date(img.created_at).toLocaleDateString('he-IL')}
-              ${img.category ? ` • ${img.category}` : ''}
             </div>
 
-            ${img.recognized_damage || img.recognized_part || damageCenterName ? `
+            ${img.recognized_damage || img.recognized_part || damageCenterName || categoryLabel ? `
               <div class="gallery-tags">
+                ${categoryLabel ? `<span class="gallery-tag category">📂 ${categoryLabel}</span>` : ''}
                 ${damageCenterName ? `<span class="gallery-tag damage-center">🎯 ${damageCenterName}</span>` : ''}
                 ${img.recognized_damage ? `<span class="gallery-tag damage">${img.recognized_damage}</span>` : ''}
                 ${img.recognized_part ? `<span class="gallery-tag">${img.recognized_part}</span>` : ''}
