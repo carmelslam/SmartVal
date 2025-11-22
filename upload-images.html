@@ -2905,6 +2905,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
       const filename = `${plate}_thumbnails_${new Date().toISOString().substring(0, 10)}.pdf`;
 
+      // Get webhook URL before opening preview
+      const webhookUrl = window.getWebhook ? window.getWebhook('CREATE_PDF') : null;
+
       // Add control panel to HTML
       const htmlWithControls = htmlContent.replace(
         '<body>',
@@ -3034,8 +3037,8 @@ document.addEventListener('DOMContentLoaded', () => {
           // Convert to base64
           const base64 = pdf.output('datauristring').split(',')[1];
 
-          // Get webhook
-          const webhookUrl = window.opener.getWebhook ? window.opener.getWebhook('CREATE_PDF') : null;
+          // Use webhook URL from parent closure
+          const webhookUrl = '${webhookUrl || ''}';
 
           if (!webhookUrl) {
             throw new Error('CREATE_PDF webhook לא מוגדר');
