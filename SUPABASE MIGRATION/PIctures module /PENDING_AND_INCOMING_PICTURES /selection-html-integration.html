@@ -1,0 +1,155 @@
+<!-- ========================================= -->
+<!-- PENDING IMAGES ALERT INTEGRATION          -->
+<!-- Add this code to your selection.html      -->
+<!-- Location: Inside the main content area    -->
+<!-- ========================================= -->
+
+<style>
+  /* Pending Images Alert Styling */
+  .pending-images-alert {
+    background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+    border: 3px solid #f59e0b;
+    border-radius: 12px;
+    padding: 20px;
+    margin: 20px 0;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    text-align: center;
+    animation: pulse-border 2s infinite;
+  }
+
+  @keyframes pulse-border {
+    0%, 100% {
+      border-color: #f59e0b;
+    }
+    50% {
+      border-color: #d97706;
+    }
+  }
+
+  .pending-images-alert h3 {
+    color: #92400e;
+    margin: 0 0 15px 0;
+    font-size: 22px;
+  }
+
+  .pending-images-alert .count {
+    font-size: 36px;
+    font-weight: bold;
+    color: #f59e0b;
+  }
+
+  .btn-review-pending {
+    background: #f59e0b;
+    color: white;
+    border: none;
+    padding: 14px 28px;
+    border-radius: 8px;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+    margin-top: 15px;
+    transition: all 0.2s;
+  }
+
+  .btn-review-pending:hover {
+    background: #d97706;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 12px rgba(245, 158, 11, 0.3);
+  }
+
+  .last-update {
+    font-size: 12px;
+    color: #78350f;
+    margin-top: 10px;
+  }
+</style>
+
+<!-- Alert Box (Add this where you want the alert to appear) -->
+<div id="pending-images-alert" style="display: none;">
+  <div class="pending-images-alert">
+    <h3>
+      ⚠️ יש לך 
+      <span class="count" id="pending-count">0</span> 
+      תמונות ממתינות לבדיקה
+    </h3>
+    <button class="btn-review-pending" onclick="window.location.href='pending-images.html'">
+      בדוק תמונות ממתינות כעת
+    </button>
+    <p class="last-update">
+      עדכון אחרון: <span id="last-update-time">טוען...</span>
+    </p>
+  </div>
+</div>
+
+<script type="module">
+  // Pending Images Counter
+  // This script checks for pending images and shows alert if any exist
+
+  import { supabase, getCurrentUser } from './lib/supabaseClient.js';
+
+  async function checkPendingImages() {
+    try {
+      // Get current user
+      const currentUser = await getCurrentUser();
+      if (!currentUser) {
+        console.log('No user logged in, skipping pending images check');
+        return;
+      }
+
+      console.log('🔍 Checking pending images for user:', currentUser.id);
+
+      // Query count
+      const { count, error } = await supabase
+        .from('pending_images')
+        .select('*', { count: 'exact', head: true })
+        .eq('assigned_to_user', currentUser.id)
+        .eq('status', 'pending');
+
+      if (error) {
+        console.error('❌ Error checking pending images:', error);
+        return;
+      }
+
+      console.log(`📊 Pending images count: ${count}`);
+
+      // Show/hide alert
+      const alertEl = document.getElementById('pending-images-alert');
+      if (count > 0) {
+        alertEl.style.display = 'block';
+        document.getElementById('pending-count').textContent = count;
+        document.getElementById('last-update-time').textContent = 
+          new Date().toLocaleTimeString('he-IL');
+      } else {
+        alertEl.style.display = 'none';
+      }
+
+      // Setup real-time updates
+      supabase
+        .channel('pending-count-updates')
+        .on('postgres_changes', {
+          event: '*',
+          schema: 'public',
+          table: 'pending_images',
+          filter: `assigned_to_user=eq.${currentUser.id}`
+        }, (payload) => {
+          console.log('🔔 Pending images changed, refreshing count');
+          checkPendingImages(); // Refresh count
+        })
+        .subscribe();
+
+    } catch (error) {
+      console.error('❌ Exception in checkPendingImages:', error);
+    }
+  }
+
+  // Run on page load
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', checkPendingImages);
+  } else {
+    checkPendingImages();
+  }
+</script>
+
+<!-- ========================================= -->
+<!-- END OF PENDING IMAGES ALERT INTEGRATION   -->
+<!-- ========================================= -->

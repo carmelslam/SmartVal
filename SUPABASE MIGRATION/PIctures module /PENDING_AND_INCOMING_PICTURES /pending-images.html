@@ -1,0 +1,689 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="he">
+<head>
+  <meta charset="utf-8"/>
+  <title>בדיקת תמונות ממתינות - EVALIX</title>
+  <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+  <link rel="icon" href="https://carmelcayouf.com/wp-content/uploads/2025/06/g.webp" type="image/webp"/>
+  
+  <!-- Supabase Client -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      padding: 20px;
+      direction: rtl;
+    }
+
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+    }
+
+    header {
+      background: white;
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 20px;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    h1 {
+      font-size: 28px;
+      color: #1e3a8a;
+      margin: 0;
+    }
+
+    .btn-back {
+      background: #6b7280;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: bold;
+      transition: all 0.2s;
+    }
+
+    .btn-back:hover {
+      background: #4b5563;
+      transform: translateY(-1px);
+    }
+
+    /* Loading State */
+    .loading {
+      background: white;
+      border-radius: 12px;
+      padding: 60px 20px;
+      text-align: center;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    }
+
+    .loading p {
+      font-size: 18px;
+      color: #6b7280;
+    }
+
+    /* Empty State */
+    .empty-state {
+      background: white;
+      border-radius: 12px;
+      padding: 60px 20px;
+      text-align: center;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    }
+
+    .empty-state h2 {
+      font-size: 32px;
+      color: #10b981;
+      margin-bottom: 10px;
+    }
+
+    .empty-state p {
+      font-size: 18px;
+      color: #6b7280;
+      margin-bottom: 30px;
+    }
+
+    .btn-primary {
+      background: #2563eb;
+      color: white;
+      border: none;
+      padding: 14px 28px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 16px;
+      font-weight: bold;
+      transition: all 0.2s;
+    }
+
+    .btn-primary:hover {
+      background: #1d4ed8;
+      transform: translateY(-1px);
+    }
+
+    /* Progress Bar */
+    .progress-container {
+      background: white;
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 20px;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    }
+
+    .progress-bar {
+      background: #e5e7eb;
+      height: 40px;
+      border-radius: 20px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .progress-fill {
+      background: linear-gradient(90deg, #2563eb, #7c3aed);
+      height: 100%;
+      transition: width 0.3s ease;
+      border-radius: 20px;
+    }
+
+    .progress-text {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-weight: bold;
+      color: #1e3a8a;
+      z-index: 1;
+      font-size: 14px;
+    }
+
+    /* Image Display */
+    .image-card {
+      background: white;
+      border-radius: 12px;
+      padding: 24px;
+      margin-bottom: 20px;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+      position: relative;
+    }
+
+    .source-badge {
+      position: absolute;
+      top: 15px;
+      left: 15px;
+      padding: 6px 12px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: bold;
+      z-index: 1;
+    }
+
+    .badge-whatsapp {
+      background: #25d366;
+      color: white;
+    }
+
+    .badge-email {
+      background: #2563eb;
+      color: white;
+    }
+
+    .image-container {
+      text-align: center;
+      margin-bottom: 20px;
+      position: relative;
+    }
+
+    .current-image {
+      max-width: 100%;
+      max-height: 500px;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      cursor: pointer;
+    }
+
+    .btn-expand {
+      position: absolute;
+      bottom: 10px;
+      right: 10px;
+      background: rgba(0,0,0,0.7);
+      color: white;
+      border: none;
+      padding: 8px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 12px;
+    }
+
+    .btn-expand:hover {
+      background: rgba(0,0,0,0.9);
+    }
+
+    .image-info {
+      font-size: 14px;
+      color: #6b7280;
+      text-align: right;
+      line-height: 1.8;
+    }
+
+    .image-info p {
+      margin: 5px 0;
+    }
+
+    .image-info strong {
+      color: #1e3a8a;
+    }
+
+    /* Case Assignment */
+    .assignment-card {
+      background: white;
+      border-radius: 12px;
+      padding: 24px;
+      margin-bottom: 20px;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    }
+
+    .assignment-card h3 {
+      color: #1e3a8a;
+      margin-bottom: 15px;
+      font-size: 20px;
+    }
+
+    .notice-success {
+      background: #d1fae5;
+      border: 2px solid #10b981;
+      border-radius: 8px;
+      padding: 12px;
+      margin-bottom: 15px;
+      color: #065f46;
+      text-align: center;
+      font-size: 14px;
+    }
+
+    .search-box {
+      position: relative;
+      margin-bottom: 15px;
+    }
+
+    .search-input {
+      width: 100%;
+      padding: 12px 16px;
+      border: 2px solid #e5e7eb;
+      border-radius: 8px;
+      font-size: 16px;
+      font-family: inherit;
+      transition: border-color 0.2s;
+    }
+
+    .search-input:focus {
+      outline: none;
+      border-color: #2563eb;
+    }
+
+    .case-dropdown {
+      position: absolute;
+      top: 100%;
+      left: 0;
+      right: 0;
+      background: white;
+      border: 2px solid #e5e7eb;
+      border-radius: 8px;
+      max-height: 300px;
+      overflow-y: auto;
+      z-index: 10;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+      margin-top: 4px;
+    }
+
+    .case-item {
+      padding: 12px 16px;
+      cursor: pointer;
+      border-bottom: 1px solid #f3f4f6;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      transition: background 0.2s;
+    }
+
+    .case-item:last-child {
+      border-bottom: none;
+    }
+
+    .case-item:hover {
+      background: #f9fafb;
+    }
+
+    .case-item.case-open {
+      background: #ecfdf5;
+      border-right: 4px solid #10b981;
+    }
+
+    .case-item.case-open:hover {
+      background: #d1fae5;
+    }
+
+    .case-details {
+      flex: 1;
+    }
+
+    .case-plate {
+      font-weight: bold;
+      color: #1e3a8a;
+      font-size: 16px;
+    }
+
+    .case-meta {
+      font-size: 12px;
+      color: #6b7280;
+      margin-top: 4px;
+    }
+
+    .case-status {
+      background: #e5e7eb;
+      color: #374151;
+      padding: 2px 8px;
+      border-radius: 12px;
+      font-size: 11px;
+      font-weight: bold;
+    }
+
+    .case-status.status-open {
+      background: #d1fae5;
+      color: #065f46;
+    }
+
+    .selected-case {
+      background: #eff6ff;
+      border: 2px solid #2563eb;
+      border-radius: 8px;
+      padding: 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .selected-case strong {
+      color: #1e3a8a;
+    }
+
+    .btn-clear {
+      background: #ef4444;
+      color: white;
+      border: none;
+      padding: 6px 12px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 12px;
+    }
+
+    .btn-clear:hover {
+      background: #dc2626;
+    }
+
+    /* Action Buttons */
+    .action-buttons {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr 2fr;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+
+    .action-buttons button {
+      padding: 14px;
+      border: none;
+      border-radius: 8px;
+      font-size: 15px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn-delete {
+      background: #fee2e2;
+      color: #991b1b;
+    }
+
+    .btn-delete:hover {
+      background: #fecaca;
+      transform: translateY(-1px);
+    }
+
+    .btn-deny {
+      background: #fef3c7;
+      color: #92400e;
+    }
+
+    .btn-deny:hover {
+      background: #fde68a;
+      transform: translateY(-1px);
+    }
+
+    .btn-nav {
+      background: #f1f5f9;
+      color: #475569;
+    }
+
+    .btn-nav:hover:not(:disabled) {
+      background: #e2e8f0;
+      transform: translateY(-1px);
+    }
+
+    .btn-nav:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .btn-accept {
+      background: #10b981;
+      color: white;
+      grid-column: span 1;
+    }
+
+    .btn-accept:hover:not(:disabled) {
+      background: #059669;
+      transform: translateY(-1px);
+    }
+
+    .btn-accept:disabled {
+      background: #d1d5db;
+      cursor: not-allowed;
+    }
+
+    /* Batch Actions */
+    .batch-card {
+      background: white;
+      border-radius: 12px;
+      padding: 20px;
+      text-align: center;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    }
+
+    .batch-card p {
+      color: #6b7280;
+      margin-bottom: 12px;
+    }
+
+    .btn-batch {
+      background: #7c3aed;
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn-batch:hover:not(:disabled) {
+      background: #6d28d9;
+      transform: translateY(-1px);
+    }
+
+    .btn-batch:disabled {
+      background: #d1d5db;
+      cursor: not-allowed;
+    }
+
+    /* Lightbox */
+    .lightbox {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.95);
+      z-index: 10000;
+      justify-content: center;
+      align-items: center;
+      cursor: pointer;
+    }
+
+    .lightbox img {
+      max-width: 95%;
+      max-height: 95%;
+      border-radius: 8px;
+    }
+
+    /* Toast Notifications */
+    .toast-container {
+      position: fixed;
+      bottom: 20px;
+      left: 20px;
+      z-index: 9999;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .toast {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 14px 18px;
+      border-radius: 8px;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+      font-size: 14px;
+      font-weight: 500;
+      opacity: 0;
+      transform: translateX(-100%);
+      transition: all 0.3s ease;
+      min-width: 280px;
+      max-width: 400px;
+    }
+
+    .toast.show {
+      opacity: 1;
+      transform: translateX(0);
+    }
+
+    .toast-icon {
+      font-size: 20px;
+    }
+
+    .toast-success {
+      background: #d1fae5;
+      color: #065f46;
+      border-right: 4px solid #10b981;
+    }
+
+    .toast-error {
+      background: #fee2e2;
+      color: #991b1b;
+      border-right: 4px solid #ef4444;
+    }
+
+    .toast-warning {
+      background: #fef3c7;
+      color: #92400e;
+      border-right: 4px solid #f59e0b;
+    }
+
+    .toast-info {
+      background: #dbeafe;
+      color: #1e40af;
+      border-right: 4px solid #2563eb;
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      .action-buttons {
+        grid-template-columns: 1fr 1fr;
+      }
+
+      .btn-accept {
+        grid-column: span 2;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    
+    <!-- Header -->
+    <header>
+      <h1>בדיקת תמונות ממתינות</h1>
+      <button class="btn-back" onclick="window.location.href='selection.html'">
+        חזרה לבחירת פעולה
+      </button>
+    </header>
+
+    <!-- Loading State -->
+    <div id="loading-state" class="loading">
+      <p>טוען תמונות ממתינות...</p>
+    </div>
+
+    <!-- Empty State -->
+    <div id="empty-state" class="empty-state" style="display: none;">
+      <h2>✓ כל התמונות נבדקו!</h2>
+      <p>אין תמונות ממתינות לבדיקה כרגע</p>
+      <button class="btn-primary" onclick="window.location.href='selection.html'">
+        חזרה לבחירת פעולה
+      </button>
+    </div>
+
+    <!-- Review Interface -->
+    <div id="review-interface" style="display: none;">
+      
+      <!-- Progress -->
+      <div class="progress-container">
+        <div class="progress-bar">
+          <div class="progress-text" id="progress-text">תמונה 1 מתוך 5</div>
+          <div class="progress-fill" id="progress-fill" style="width: 0%"></div>
+        </div>
+      </div>
+
+      <!-- Image Display -->
+      <div class="image-card">
+        <div class="source-badge" id="source-badge"></div>
+        
+        <div class="image-container">
+          <img id="current-image" class="current-image" src="" alt="תמונה ממתינה" onclick="expandImage()"/>
+          <button class="btn-expand" onclick="expandImage()">🔍 הגדל</button>
+        </div>
+
+        <div class="image-info">
+          <p><strong>שם קובץ:</strong> <span id="filename"></span></p>
+          <p><strong>התקבל:</strong> <span id="received-time"></span></p>
+          <p id="email-info" style="display: none;">
+            <strong>שולח:</strong> <span id="sender"></span>
+          </p>
+          <p id="plate-info" style="display: none;">
+            <strong>מספר רכב מזוהה:</strong> <span id="detected-plate"></span>
+          </p>
+        </div>
+      </div>
+
+      <!-- Case Assignment -->
+      <div class="assignment-card">
+        <h3>שיוך לתיק</h3>
+        
+        <div id="auto-match-notice" class="notice-success" style="display: none;">
+          ✓ זוהתה התאמה אוטומטית לתיק פתוח
+        </div>
+
+        <div class="search-box">
+          <input 
+            type="text" 
+            id="case-search" 
+            class="search-input"
+            placeholder="חפש לפי מספר רכב או שם..."
+            autocomplete="off"
+          />
+          <div id="case-results" class="case-dropdown" style="display: none;"></div>
+        </div>
+
+        <div id="selected-case" class="selected-case" style="display: none;">
+          <strong id="selected-case-name"></strong>
+          <button class="btn-clear" onclick="clearSelection()">נקה</button>
+        </div>
+      </div>
+
+      <!-- Action Buttons -->
+      <div class="action-buttons">
+        <button class="btn-delete" onclick="deleteImage()">❌ מחק</button>
+        <button class="btn-deny" onclick="denyImage()">⊘ דחה</button>
+        <button class="btn-nav" id="btn-prev" onclick="previousImage()" disabled>← הקודם</button>
+        <button class="btn-accept" id="btn-accept" onclick="acceptImage()" disabled>✓ אשר →</button>
+      </div>
+
+      <!-- Batch Actions -->
+      <div class="batch-card">
+        <p>אותו תיק לכל התמונות?</p>
+        <button class="btn-batch" id="btn-batch" onclick="batchAcceptAll()" disabled>
+          אשר הכל לתיק הנבחר
+        </button>
+      </div>
+
+    </div>
+
+  </div>
+
+  <!-- Lightbox -->
+  <div id="image-lightbox" class="lightbox" onclick="closeLightbox()">
+    <img id="lightbox-image" src="" alt=""/>
+  </div>
+
+  <!-- Toast Container -->
+  <div class="toast-container" id="toast-container"></div>
+
+  <!-- Scripts -->
+  <script type="module" src="pending-images.js"></script>
+
+</body>
+</html>
