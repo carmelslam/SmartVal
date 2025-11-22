@@ -3140,21 +3140,24 @@ document.addEventListener('DOMContentLoaded', () => {
     async generatePDFFromHTML(htmlContent) {
       return new Promise(async (resolve, reject) => {
         try {
-          // Open HTML in hidden window
-          const reviewWindow = window.open('', '_blank', 'width=800,height=600');
+          // Create hidden iframe in current document
+          const iframe = document.createElement('iframe');
+          iframe.style.position = 'fixed';
+          iframe.style.top = '-9999px';
+          iframe.style.left = '-9999px';
+          iframe.style.width = '900px';
+          iframe.style.height = '1200px';
+          document.body.appendChild(iframe);
 
-          if (!reviewWindow) {
-            throw new Error('חסום חלון קופץ - אנא אפשר חלונות קופצים');
-          }
-
-          reviewWindow.document.write(htmlContent);
-          reviewWindow.document.close();
+          // Write HTML to iframe
+          iframe.contentDocument.write(htmlContent);
+          iframe.contentDocument.close();
 
           // Wait for images to load
           await new Promise(resolve => setTimeout(resolve, 2000));
 
-          // Use html2canvas to capture
-          const canvas = await html2canvas(reviewWindow.document.body, {
+          // Use html2canvas to capture iframe body
+          const canvas = await html2canvas(iframe.contentDocument.body, {
             scale: 2,
             useCORS: true,
             allowTaint: true,
@@ -3189,8 +3192,8 @@ document.addEventListener('DOMContentLoaded', () => {
             heightLeft -= pageHeight;
           }
 
-          // Close preview window
-          reviewWindow.close();
+          // Remove iframe
+          document.body.removeChild(iframe);
 
           // Get PDF as blob
           const pdfBlob = pdf.output('blob');
