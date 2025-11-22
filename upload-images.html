@@ -1135,6 +1135,10 @@
         💾 שמור סדר
       </button>
 
+      <button type="button" class="btn btn-primary" onclick="pdfGenerator.generate()" style="background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%);">
+        📄 ייצא PDF תמונות ממוזערות
+      </button>
+
       <div style="flex: 1;">
         <span id="gallery-count">0 תמונות</span>
       </div>
@@ -1212,12 +1216,19 @@
 <!-- SortableJS Library for Drag-and-Drop -->
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
 
+<!-- PDF Generation Libraries -->
+<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+
 <script type="module">
 import { sendToWebhook, getWebhook } from './webhook.js';
 import { caseOwnershipService } from './services/caseOwnershipService.js';
 import { fileUploadService } from './lib/fileUploadService.js';
 import { supabase } from './lib/supabaseClient.js';
 import { generateTransformationUrl } from './lib/cloudinaryTransformService.js';
+
+// Expose getWebhook globally for PDF preview window
+window.getWebhook = getWebhook;
 
 // Phase 6: Case ownership check
 (async () => {
@@ -2555,8 +2566,586 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
+  // ========================================================================
+  // PDF THUMBNAIL GENERATOR
+  // ========================================================================
+
+  class PDFThumbnailGenerator {
+    constructor() {
+      this.galleryManager = null;
+    }
+
+    async generate() {
+      // Get active images
+      const activeImages = this.galleryManager.images.filter(img => !img.deleted_at);
+
+      if (activeImages.length === 0) {
+        alert('❌ אין תמונות לייצוא ל-PDF');
+        return;
+      }
+
+      // Get case info
+      const caseId = sessionStorage.getItem('case_id') || 'לא ידוע';
+      const plate = sessionStorage.getItem('plate_number') || 'לא ידוע';
+
+      // Show loading
+      alert(`⏳ מייצר תצוגה מקדימה של PDF עם ${activeImages.length} תמונות ממוזערות...\nאנא המתן, זה עשוי לקחת מספר שניות.`);
+
+      try {
+        // Build HTML for PDF
+        const htmlContent = await this.buildPDFHTML(activeImages, plate, caseId);
+
+        // Open preview window with controls
+        this.openPDFPreview(htmlContent, plate, caseId);
+
+      } catch (error) {
+        console.error('❌ Error generating PDF:', error);
+        alert('❌ שגיאה ביצירת PDF: ' + error.message);
+      }
+    }
+
+    async buildPDFHTML(images, plate, caseId) {
+      // Group images by damage center
+      const grouped = this.groupByDamageCenter(images);
+
+      // Get user assets (logo, signature)
+      const assets = await this.getUserAssets();
+
+      // Build HTML
+      let html = `
+      <!DOCTYPE html>
+      <html dir="rtl">
+      <head>
+        <meta charset="UTF-8">
+        <style>
+          body {
+            font-family: Arial, sans-serif;
+            direction: rtl;
+            margin: 0;
+            padding: 20px;
+            background: white;
+          }
+          .header {
+            text-align: center;
+            margin-bottom: 30px;
+            border-bottom: 3px solid #6366f1;
+            padding-bottom: 20px;
+          }
+          .header img {
+            height: 80px;
+            margin-bottom: 10px;
+          }
+          .header h1 {
+            color: #1e293b;
+            font-size: 28px;
+            margin: 10px 0;
+          }
+          .header .subtitle {
+            color: #64748b;
+            font-size: 16px;
+          }
+          .damage-center-section {
+            margin: 30px 0;
+            page-break-inside: avoid;
+          }
+          .damage-center-title {
+            background: #6366f1;
+            color: white;
+            padding: 10px 15px;
+            border-radius: 6px;
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 15px;
+          }
+          .thumbnail-row {
+            display: flex;
+            justify-content: space-around;
+            margin-bottom: 20px;
+            page-break-inside: avoid;
+          }
+          .thumbnail-item {
+            width: 30%;
+            text-align: center;
+          }
+          .thumbnail-item img {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+          }
+          .thumbnail-item .name {
+            margin-top: 8px;
+            font-size: 14px;
+            color: #1e293b;
+            font-weight: 600;
+          }
+          .thumbnail-item .order {
+            background: #1e293b;
+            color: white;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            margin-bottom: 5px;
+          }
+          .footer {
+            text-align: center;
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 2px solid #e2e8f0;
+            color: #64748b;
+            font-size: 14px;
+          }
+          /* Hide controls when printing */
+          @media print {
+            #pdf-controls {
+              display: none !important;
+            }
+            body {
+              padding-top: 0 !important;
+            }
+          }
+        </style>
+      </head>
+      <body>
+        <!-- Header -->
+        <div class="header">
+          ${assets.logo ? `<img src="${assets.logo}" alt="Logo">` : ''}
+          <h1>ריכוז תמונות לרכב מספר ${plate}</h1>
+          <div class="subtitle">
+            תיק מספר: ${caseId} • סה"כ תמונות: ${images.length} • תאריך: ${new Date().toLocaleDateString('he-IL')}
+          </div>
+        </div>
+
+        <!-- Content -->
+      `;
+
+      // Add grouped sections
+      for (const [damageCenter, centerImages] of Object.entries(grouped)) {
+        const centerNumber = centerImages[0].damage_centers?.id || '';
+        const centerName = damageCenter;
+
+        html += `
+          <div class="damage-center-section">
+            <div class="damage-center-title">
+              מוקד נזק: ${centerName} ${centerNumber ? `(#${centerNumber})` : ''}
+            </div>
+        `;
+
+        // Add images in rows of 3
+        for (let i = 0; i < centerImages.length; i += 3) {
+          const row = centerImages.slice(i, i + 3);
+          html += '<div class="thumbnail-row">';
+
+          for (const img of row) {
+            const smartName = this.getSmartName(img);
+            const imageUrl = img.transformed_url || img.original_url;
+
+            html += `
+              <div class="thumbnail-item">
+                <div class="order">${img.display_order}</div>
+                <img src="${imageUrl}" alt="${smartName}" crossorigin="anonymous">
+                <div class="name">${smartName}</div>
+              </div>
+            `;
+          }
+
+          html += '</div>';
+        }
+
+        html += '</div>';
+      }
+
+      // Footer
+      html += `
+        <div class="footer">
+          SmartVal Pro • רישיון מספר 1097 • ${new Date().toLocaleDateString('he-IL')}
+        </div>
+      </body>
+      </html>
+      `;
+
+      return html;
+    }
+
+    groupByDamageCenter(images) {
+      const grouped = {};
+
+      for (const img of images) {
+        const centerName = img.damage_centers?.name || 'כללי';
+        if (!grouped[centerName]) {
+          grouped[centerName] = [];
+        }
+        grouped[centerName].push(img);
+      }
+
+      return grouped;
+    }
+
+    getSmartName(img) {
+      const hasValidPart = img.recognized_part && img.recognized_part !== 'חלק לא ברור';
+      const hasValidDamage = img.recognized_damage && img.recognized_damage !== 'חלק לא ברור';
+
+      if (hasValidPart && hasValidDamage) {
+        return `${img.recognized_part} - ${img.recognized_damage}`;
+      } else if (hasValidPart) {
+        return img.recognized_part;
+      } else if (hasValidDamage) {
+        return img.recognized_damage;
+      } else {
+        return img.filename;
+      }
+    }
+
+    async getUserAssets() {
+      try {
+        // Try to get from sessionStorage first
+        const auth = JSON.parse(sessionStorage.getItem('auth') || '{}');
+        if (auth.assets && auth.assets.company_logo_url) {
+          return {
+            logo: auth.assets.company_logo_url,
+            signature: auth.assets.user_signature_url
+          };
+        }
+
+        // Fallback: fetch from database
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return {};
+
+        const { data } = await supabase
+          .from('users')
+          .select('company_logo_url, user_signature_url')
+          .eq('id', user.id)
+          .single();
+
+        return {
+          logo: data?.company_logo_url || null,
+          signature: data?.user_signature_url || null
+        };
+
+      } catch (error) {
+        console.warn('Could not load user assets:', error);
+        return {};
+      }
+    }
+
+    openPDFPreview(htmlContent, plate, caseId) {
+      // Open preview window
+      const previewWindow = window.open('', '_blank', 'width=900,height=800');
+
+      if (!previewWindow) {
+        alert('❌ חסום חלון קופץ - אנא אפשר חלונות קופצים בדפדפן');
+        return;
+      }
+
+      const filename = `${plate}_thumbnails_${new Date().toISOString().substring(0, 10)}.pdf`;
+
+      // Add control panel to HTML
+      const htmlWithControls = htmlContent.replace(
+        '<body>',
+        `<body>
+          <!-- Control Panel -->
+          <div id="pdf-controls" style="position: fixed; top: 0; left: 0; right: 0; background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%); padding: 15px; box-shadow: 0 4px 12px rgba(0,0,0,0.3); z-index: 10000; display: flex; gap: 10px; justify-content: center; align-items: center; flex-wrap: wrap;">
+            <button onclick="window.print()" style="padding: 10px 20px; background: white; color: #4f46e5; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.2);">
+              🖨️ הדפס
+            </button>
+            <button onclick="downloadPDFFromPreview()" style="padding: 10px 20px; background: white; color: #4f46e5; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.2);">
+              💾 שמור למכשיר
+            </button>
+            <button onclick="uploadToOneDriveFromPreview()" style="padding: 10px 20px; background: #10b981; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.2);">
+              ☁️ העלה ל-OneDrive
+            </button>
+            <button onclick="window.close()" style="padding: 10px 20px; background: #ef4444; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.2);">
+              ❌ סגור
+            </button>
+          </div>
+          <div style="height: 70px;"></div>
+        `
+      );
+
+      // Write HTML
+      previewWindow.document.write(htmlWithControls);
+
+      // Add control functions
+      previewWindow.downloadPDFFromPreview = async function() {
+        try {
+          // Hide controls before generating PDF
+          const controls = previewWindow.document.getElementById('pdf-controls');
+          controls.style.display = 'none';
+
+          // Wait a bit for reflow
+          await new Promise(resolve => setTimeout(resolve, 100));
+
+          // Use html2canvas + jsPDF
+          const canvas = await html2canvas(previewWindow.document.body, {
+            scale: 2,
+            useCORS: true,
+            allowTaint: true,
+            logging: false,
+            imageTimeout: 0
+          });
+
+          const { jsPDF } = window.jspdf;
+          const pdf = new jsPDF({
+            orientation: 'portrait',
+            unit: 'mm',
+            format: 'a4'
+          });
+
+          const imgWidth = 210;
+          const imgHeight = (canvas.height * imgWidth) / canvas.width;
+          const pageHeight = 297;
+
+          let heightLeft = imgHeight;
+          let position = 0;
+
+          pdf.addImage(canvas.toDataURL('image/jpeg', 0.95), 'JPEG', 0, position, imgWidth, imgHeight);
+          heightLeft -= pageHeight;
+
+          while (heightLeft > 0) {
+            position = heightLeft - imgHeight;
+            pdf.addPage();
+            pdf.addImage(canvas.toDataURL('image/jpeg', 0.95), 'JPEG', 0, position, imgWidth, imgHeight);
+            heightLeft -= pageHeight;
+          }
+
+          // Download
+          pdf.save('${filename}');
+
+          // Show controls again
+          controls.style.display = 'flex';
+
+          alert('✅ PDF נשמר בהצלחה!');
+
+        } catch (error) {
+          console.error('Error downloading PDF:', error);
+          alert('❌ שגיאה בשמירת PDF: ' + error.message);
+          // Show controls again
+          previewWindow.document.getElementById('pdf-controls').style.display = 'flex';
+        }
+      };
+
+      previewWindow.uploadToOneDriveFromPreview = async function() {
+        try {
+          // Hide controls
+          const controls = previewWindow.document.getElementById('pdf-controls');
+          controls.style.display = 'none';
+
+          await new Promise(resolve => setTimeout(resolve, 100));
+
+          // Generate PDF
+          const canvas = await html2canvas(previewWindow.document.body, {
+            scale: 2,
+            useCORS: true,
+            allowTaint: true,
+            logging: false,
+            imageTimeout: 0
+          });
+
+          const { jsPDF } = window.jspdf;
+          const pdf = new jsPDF({
+            orientation: 'portrait',
+            unit: 'mm',
+            format: 'a4'
+          });
+
+          const imgWidth = 210;
+          const imgHeight = (canvas.height * imgWidth) / canvas.width;
+          const pageHeight = 297;
+
+          let heightLeft = imgHeight;
+          let position = 0;
+
+          pdf.addImage(canvas.toDataURL('image/jpeg', 0.95), 'JPEG', 0, position, imgWidth, imgHeight);
+          heightLeft -= pageHeight;
+
+          while (heightLeft > 0) {
+            position = heightLeft - imgHeight;
+            pdf.addPage();
+            pdf.addImage(canvas.toDataURL('image/jpeg', 0.95), 'JPEG', 0, position, imgWidth, imgHeight);
+            heightLeft -= pageHeight;
+          }
+
+          // Convert to base64
+          const base64 = pdf.output('datauristring').split(',')[1];
+
+          // Get webhook
+          const webhookUrl = window.opener.getWebhook ? window.opener.getWebhook('CREATE_PDF') : null;
+
+          if (!webhookUrl) {
+            throw new Error('CREATE_PDF webhook לא מוגדר');
+          }
+
+          // Send to Make.com
+          const response = await fetch(webhookUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              pdf_base64: base64,
+              filename: '${filename}',
+              case_id: '${caseId}',
+              plate: '${plate}',
+              type: 'thumbnails'
+            })
+          });
+
+          if (!response.ok) {
+            throw new Error('Webhook נכשל');
+          }
+
+          // Show controls again
+          controls.style.display = 'flex';
+
+          alert('✅ PDF הועלה ל-OneDrive בהצלחה!');
+
+        } catch (error) {
+          console.error('Error uploading to OneDrive:', error);
+          alert('❌ שגיאה בהעלאה ל-OneDrive: ' + error.message);
+          previewWindow.document.getElementById('pdf-controls').style.display = 'flex';
+        }
+      };
+
+      previewWindow.document.close();
+    }
+
+    async generatePDFFromHTML(htmlContent) {
+      return new Promise(async (resolve, reject) => {
+        try {
+          // Open HTML in hidden window
+          const reviewWindow = window.open('', '_blank', 'width=800,height=600');
+
+          if (!reviewWindow) {
+            throw new Error('חסום חלון קופץ - אנא אפשר חלונות קופצים');
+          }
+
+          reviewWindow.document.write(htmlContent);
+          reviewWindow.document.close();
+
+          // Wait for images to load
+          await new Promise(resolve => setTimeout(resolve, 2000));
+
+          // Use html2canvas to capture
+          const canvas = await html2canvas(reviewWindow.document.body, {
+            scale: 2,
+            useCORS: true,
+            allowTaint: true,
+            logging: false,
+            imageTimeout: 0
+          });
+
+          // Convert to PDF using jsPDF
+          const { jsPDF } = window.jspdf;
+          const pdf = new jsPDF({
+            orientation: 'portrait',
+            unit: 'mm',
+            format: 'a4'
+          });
+
+          const imgWidth = 210; // A4 width in mm
+          const imgHeight = (canvas.height * imgWidth) / canvas.width;
+          const pageHeight = 297; // A4 height in mm
+
+          let heightLeft = imgHeight;
+          let position = 0;
+
+          // Add first page
+          pdf.addImage(canvas.toDataURL('image/jpeg', 0.95), 'JPEG', 0, position, imgWidth, imgHeight);
+          heightLeft -= pageHeight;
+
+          // Add additional pages if needed
+          while (heightLeft > 0) {
+            position = heightLeft - imgHeight;
+            pdf.addPage();
+            pdf.addImage(canvas.toDataURL('image/jpeg', 0.95), 'JPEG', 0, position, imgWidth, imgHeight);
+            heightLeft -= pageHeight;
+          }
+
+          // Close preview window
+          reviewWindow.close();
+
+          // Get PDF as blob
+          const pdfBlob = pdf.output('blob');
+          resolve(pdfBlob);
+
+        } catch (error) {
+          reject(error);
+        }
+      });
+    }
+
+    downloadPDF(pdfBlob, filename) {
+      const url = URL.createObjectURL(pdfBlob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
+
+    async sendToOneDrive(pdfBlob, filename, caseId, plate) {
+      try {
+        // Convert blob to base64
+        const reader = new FileReader();
+        reader.readAsDataURL(pdfBlob);
+
+        await new Promise((resolve) => {
+          reader.onloadend = () => resolve();
+        });
+
+        const base64 = reader.result.split(',')[1];
+
+        // Get CREATE_PDF webhook URL
+        const webhookUrl = window.getWebhook ? window.getWebhook('CREATE_PDF') : null;
+
+        if (!webhookUrl) {
+          throw new Error('CREATE_PDF webhook לא מוגדר');
+        }
+
+        // Send to Make.com
+        const response = await fetch(webhookUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            pdf_base64: base64,
+            filename: filename,
+            case_id: caseId,
+            plate: plate,
+            type: 'thumbnails'
+          })
+        });
+
+        if (!response.ok) {
+          throw new Error('Webhook נכשל');
+        }
+
+        alert('✅ PDF נשמר ב-OneDrive בהצלחה!');
+
+      } catch (error) {
+        console.error('Error sending to OneDrive:', error);
+        alert('⚠️ שגיאה בשמירה ל-OneDrive: ' + error.message);
+      }
+    }
+  }
+
   // Initialize gallery manager
   window.galleryManager = new ImageGalleryManager();
+
+  // Initialize PDF generator
+  window.pdfGenerator = new PDFThumbnailGenerator();
+
+  // Connect PDF generator to gallery manager
+  setTimeout(() => {
+    if (window.galleryManager) {
+      window.pdfGenerator.galleryManager = window.galleryManager;
+      console.log('✅ PDF Generator connected to Gallery Manager');
+    }
+  }, 500);
 
   // Expose functions for onclick handlers
   window.refreshGallery = () => galleryManager.loadGallery();
