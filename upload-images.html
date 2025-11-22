@@ -2673,45 +2673,46 @@ document.addEventListener('DOMContentLoaded', () => {
             font-family: Arial, sans-serif;
             direction: rtl;
             margin: 0;
-            padding: 10px 20px;
+            padding: 5px 15px;
             background: white;
           }
           .header {
             text-align: center;
-            margin-bottom: 15px;
-            border-bottom: 3px solid #6366f1;
-            padding-bottom: 10px;
+            margin-bottom: 8px;
+            border-bottom: 2px solid #6366f1;
+            padding-bottom: 6px;
           }
           .header img {
-            height: 120px;
-            margin-bottom: 5px;
+            height: 80px;
+            margin-bottom: 3px;
           }
           .header h1 {
             color: #1e293b;
-            font-size: 24px;
-            margin: 5px 0;
+            font-size: 20px;
+            margin: 3px 0;
           }
           .header .subtitle {
             color: #64748b;
-            font-size: 14px;
+            font-size: 12px;
+            margin: 2px 0;
           }
           .damage-center-section {
-            margin: 15px 0;
+            margin: 10px 0;
             page-break-inside: avoid;
           }
           .damage-center-title {
             background: #6366f1;
             color: white;
-            padding: 10px 15px;
+            padding: 8px 12px;
             border-radius: 6px;
-            font-size: 18px;
+            font-size: 16px;
             font-weight: bold;
-            margin-bottom: 15px;
+            margin-bottom: 10px;
           }
           .thumbnail-row {
             display: flex;
             justify-content: space-around;
-            margin-bottom: 20px;
+            margin-bottom: 12px;
             page-break-inside: avoid;
           }
           .thumbnail-item {
@@ -2720,14 +2721,14 @@ document.addEventListener('DOMContentLoaded', () => {
           }
           .thumbnail-item img {
             width: 100%;
-            height: 200px;
+            height: 160px;
             object-fit: cover;
             border: 2px solid #e2e8f0;
-            border-radius: 8px;
+            border-radius: 6px;
           }
           .thumbnail-item .name {
-            margin-top: 8px;
-            font-size: 14px;
+            margin-top: 5px;
+            font-size: 13px;
             color: #1e293b;
             font-weight: 600;
           }
@@ -2735,21 +2736,22 @@ document.addEventListener('DOMContentLoaded', () => {
             background: #1e293b;
             color: white;
             border-radius: 50%;
-            width: 30px;
-            height: 30px;
+            width: 26px;
+            height: 26px;
             display: inline-flex;
             align-items: center;
             justify-content: center;
             font-weight: bold;
-            margin-bottom: 5px;
+            font-size: 13px;
+            margin-bottom: 4px;
           }
           .footer {
             text-align: center;
-            margin-top: 20px;
-            padding-top: 10px;
+            margin-top: 12px;
+            padding-top: 8px;
             border-top: 2px solid #e2e8f0;
             color: #64748b;
-            font-size: 12px;
+            font-size: 11px;
           }
           /* Hide controls when printing */
           @media print {
@@ -2909,6 +2911,9 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     openPDFPreview(htmlContent, plate, caseId) {
+      // Get webhook URL FIRST before opening preview
+      const webhookUrl = window.getWebhook ? window.getWebhook('CREATE_PDF') : null;
+
       // Open preview window
       const previewWindow = window.open('', '_blank', 'width=900,height=800');
 
@@ -2918,9 +2923,6 @@ document.addEventListener('DOMContentLoaded', () => {
       }
 
       const filename = `${plate}_thumbnails_${new Date().toISOString().substring(0, 10)}.pdf`;
-
-      // Get webhook URL before opening preview
-      const webhookUrl = window.getWebhook ? window.getWebhook('CREATE_PDF') : null;
 
       // Add control panel to HTML
       const htmlWithControls = htmlContent.replace(
@@ -2994,16 +2996,17 @@ document.addEventListener('DOMContentLoaded', () => {
           // Download
           pdf.save('${filename}');
 
-          // Show controls again
-          controls.style.display = 'flex';
-
           alert('✅ PDF נשמר בהצלחה!');
+
+          // Close window after short delay
+          setTimeout(() => previewWindow.close(), 1000);
 
         } catch (error) {
           console.error('Error downloading PDF:', error);
           alert('❌ שגיאה בשמירת PDF: ' + error.message);
-          // Show controls again
-          previewWindow.document.getElementById('pdf-controls').style.display = 'flex';
+          // Show controls again on error
+          const controls = previewWindow.document.getElementById('pdf-controls');
+          if (controls) controls.style.display = 'flex';
         }
       };
 
@@ -3051,10 +3054,10 @@ document.addEventListener('DOMContentLoaded', () => {
           // Convert to base64
           const base64 = pdf.output('datauristring').split(',')[1];
 
-          // Use webhook URL from parent window
-          const savedWebhookUrl = window.opener?.getWebhook?.('CREATE_PDF');
+          // Use webhook URL from parent closure
+          const savedWebhookUrl = '${webhookUrl}';
 
-          if (!savedWebhookUrl) {
+          if (!savedWebhookUrl || savedWebhookUrl === 'null') {
             throw new Error('CREATE_PDF webhook לא מוגדר');
           }
 
@@ -3075,15 +3078,17 @@ document.addEventListener('DOMContentLoaded', () => {
             throw new Error('Webhook נכשל');
           }
 
-          // Show controls again
-          controls.style.display = 'flex';
-
           alert('✅ PDF הועלה ל-OneDrive בהצלחה!');
+
+          // Close window after short delay
+          setTimeout(() => previewWindow.close(), 1000);
 
         } catch (error) {
           console.error('Error uploading to OneDrive:', error);
           alert('❌ שגיאה בהעלאה ל-OneDrive: ' + error.message);
-          previewWindow.document.getElementById('pdf-controls').style.display = 'flex';
+          // Show controls again on error
+          const controls = previewWindow.document.getElementById('pdf-controls');
+          if (controls) controls.style.display = 'flex';
         }
       };
 
