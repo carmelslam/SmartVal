@@ -2626,8 +2626,21 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (caseError) throw caseError;
 
-        // Business name - hardcoded
-        const businessName = 'ירון כיוף - שמאות וייעוץ - רישיון מספר 1097';
+        // Get user's business name from user_assets table
+        const { data: { user } } = await supabase.auth.getUser();
+        let businessName = 'ירון כיוף - שמאות וייעוץ - רישיון מספר 1097'; // Default fallback
+
+        if (user) {
+          const { data: userData } = await supabase
+            .from('user_assets')
+            .select('business_name')
+            .eq('user_id', user.id)
+            .single();
+
+          if (userData && userData.business_name) {
+            businessName = userData.business_name;
+          }
+        }
 
         return {
           id: caseData.id,
