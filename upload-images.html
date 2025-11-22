@@ -2048,52 +2048,39 @@ document.addEventListener('DOMContentLoaded', () => {
       }
 
       try {
-        // Query images directly - handle deleted filter in SQL
-        let query;
-
-        if (this.showDeleted) {
-          // Show all images including deleted
-          query = supabase
-            .from('images')
-            .select(`
-              *,
-              damage_centers(
-                id,
-                name,
-                type
-              )
-            `)
-            .eq('case_id', caseId);
-        } else {
-          // Show only non-deleted images (deleted_at IS NULL)
-          query = supabase
-            .from('images')
-            .select(`
-              *,
-              damage_centers(
-                id,
-                name,
-                type
-              )
-            `)
-            .eq('case_id', caseId)
-            .is('deleted_at', null);
-        }
-
-        // Order by display_order
-        query = query.order('display_order', { ascending: true });
-
-        const { data: images, error } = await query;
+        // Query ALL images for this case (we'll filter in JavaScript)
+        const { data: images, error } = await supabase
+          .from('images')
+          .select(`
+            *,
+            damage_centers(
+              id,
+              name,
+              type
+            )
+          `)
+          .eq('case_id', caseId)
+          .order('display_order', { ascending: true });
 
         if (error) {
           console.error('Supabase query error:', error);
           throw error;
         }
 
-        console.log(`Loaded ${images?.length || 0} images for case ${caseId}`);
+        console.log(`Loaded ${images?.length || 0} total images for case ${caseId}`);
 
+        // Store all images
         this.allImages = images || [];
-        this.images = [...this.allImages];
+
+        // Filter based on showDeleted flag (filter in JavaScript, not SQL)
+        if (this.showDeleted) {
+          this.images = [...this.allImages];
+        } else {
+          this.images = this.allImages.filter(img => !img.deleted_at);
+        }
+
+        console.log(`Displaying ${this.images.length} images (showDeleted: ${this.showDeleted})`);
+
         this.renderGallery();
         this.initializeSortable();
         await this.loadDamageCenters();
