@@ -2606,8 +2606,8 @@ document.addEventListener('DOMContentLoaded', () => {
         // Build HTML for PDF
         const htmlContent = await this.buildPDFHTML(activeImages, caseDetails);
 
-        // Open preview window with controls
-        this.openPDFPreview(htmlContent, caseDetails.plate, caseDetails.filing_case_id);
+        // Open preview window with controls - USE UUID NOT filing_case_id
+        this.openPDFPreview(htmlContent, caseDetails.plate, caseDetails.id);
 
       } catch (error) {
         console.error('❌ Error generating PDF:', error);
@@ -3078,10 +3078,10 @@ document.addEventListener('DOMContentLoaded', () => {
           // Convert PDF to blob (not base64)
           const pdfBlob = pdf.output('blob');
 
-          // Upload to Supabase Storage first
+          // Upload to Supabase Storage first (use parent window's supabase client)
           const storagePath = caseId + '/thumbnails/' + filename;
 
-          const { data: uploadData, error: uploadError } = await window.supabase.storage
+          const { data: uploadData, error: uploadError } = await window.opener.supabase.storage
             .from('docs')
             .upload(storagePath, pdfBlob, {
               contentType: 'application/pdf',
@@ -3093,7 +3093,7 @@ document.addEventListener('DOMContentLoaded', () => {
           }
 
           // Get signed URL (valid for 24 hours)
-          const { data: urlData, error: urlError } = await window.supabase.storage
+          const { data: urlData, error: urlError } = await window.opener.supabase.storage
             .from('docs')
             .createSignedUrl(storagePath, 86400);
 
