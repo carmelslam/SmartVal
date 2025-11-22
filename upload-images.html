@@ -3066,9 +3066,6 @@ document.addEventListener('DOMContentLoaded', () => {
             <button onclick="downloadPDFFromPreview()" style="padding: 10px 20px; background: white; color: #4f46e5; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.2);">
               💾 שמור למכשיר
             </button>
-            <button onclick="uploadToOneDriveFromPreview()" style="padding: 10px 20px; background: #10b981; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.2);">
-              ☁️ העלה ל-OneDrive
-            </button>
             <button onclick="window.close()" style="padding: 10px 20px; background: #ef4444; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.2);">
               ❌ סגור
             </button>
@@ -3131,75 +3128,6 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (error) {
           console.error('Error downloading PDF:', error);
           alert('❌ שגיאה בשמירת PDF: ' + error.message);
-          // Show controls again on error
-          const controls = previewWindow.document.getElementById('pdf-controls');
-          if (controls) controls.style.display = 'flex';
-        }
-      };
-
-      // Upload function - use postMessage to communicate with parent
-      previewWindow.uploadToOneDriveFromPreview = async function() {
-        try {
-          // Hide controls
-          const controls = previewWindow.document.getElementById('pdf-controls');
-          controls.style.display = 'none';
-
-          await new Promise(resolve => setTimeout(resolve, 100));
-
-          // Generate PDF
-          const canvas = await html2canvas(previewWindow.document.body, {
-            scale: 2,
-            useCORS: true,
-            allowTaint: true,
-            logging: false,
-            imageTimeout: 0
-          });
-
-          const { jsPDF } = window.jspdf;
-          const pdf = new jsPDF({
-            orientation: 'portrait',
-            unit: 'mm',
-            format: 'a4'
-          });
-
-          const imgWidth = 210;
-          const imgHeight = (canvas.height * imgWidth) / canvas.width;
-          const pageHeight = 297;
-
-          let heightLeft = imgHeight;
-          let position = 0;
-
-          pdf.addImage(canvas.toDataURL('image/jpeg', 0.95), 'JPEG', 0, position, imgWidth, imgHeight);
-          heightLeft -= pageHeight;
-
-          while (heightLeft > 0) {
-            position = heightLeft - imgHeight;
-            pdf.addPage();
-            pdf.addImage(canvas.toDataURL('image/jpeg', 0.95), 'JPEG', 0, position, imgWidth, imgHeight);
-            heightLeft -= pageHeight;
-          }
-
-          // Convert PDF to ArrayBuffer for postMessage
-          const pdfArrayBuffer = pdf.output('arraybuffer');
-
-          // Send to parent window via postMessage
-          if (window.opener) {
-            window.opener.postMessage({
-              type: 'UPLOAD_PDF_TO_ONEDRIVE',
-              pdfData: pdfArrayBuffer,
-              filename: filename,
-              caseId: caseId,
-              plate: plate
-            }, '*');
-
-            alert('✅ PDF הועלה ל-OneDrive בהצלחה!');
-          } else {
-            throw new Error('חלון ההורה לא זמין');
-          }
-
-        } catch (error) {
-          console.error('Error uploading to OneDrive:', error);
-          alert('❌ שגיאה בהעלאה ל-OneDrive: ' + error.message);
           // Show controls again on error
           const controls = previewWindow.document.getElementById('pdf-controls');
           if (controls) controls.style.display = 'flex';
@@ -3336,32 +3264,10 @@ document.addEventListener('DOMContentLoaded', () => {
   // Initialize PDF generator
   window.pdfGenerator = new PDFThumbnailGenerator();
 
-  // Expose upload function globally for child windows
+  // Expose upload function globally
   window.uploadPDFToSupabaseAndMake = (pdfBlob, filename, caseId, plate) => {
     return window.pdfGenerator.uploadPDFToSupabaseAndMake(pdfBlob, filename, caseId, plate);
   };
-
-  // Listen for messages from child windows (preview window)
-  window.addEventListener('message', async (event) => {
-    if (event.data.type === 'UPLOAD_PDF_TO_ONEDRIVE') {
-      try {
-        // Convert ArrayBuffer back to Blob
-        const pdfBlob = new Blob([event.data.pdfData], { type: 'application/pdf' });
-
-        // Upload using the existing function
-        await window.uploadPDFToSupabaseAndMake(
-          pdfBlob,
-          event.data.filename,
-          event.data.caseId,
-          event.data.plate
-        );
-
-        console.log('✅ PDF uploaded successfully from child window');
-      } catch (error) {
-        console.error('❌ Error handling PDF upload from child window:', error);
-      }
-    }
-  });
 
   // Connect PDF generator to gallery manager
   setTimeout(() => {
