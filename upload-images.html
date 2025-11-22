@@ -2757,15 +2757,28 @@ document.addEventListener('DOMContentLoaded', () => {
               display: none !important;
             }
             body {
-              padding: 5px 15px !important;
+              padding: 2px 10px !important;
               margin: 0 !important;
             }
             .header {
-              margin-bottom: 10px !important;
-              padding-bottom: 8px !important;
+              margin-bottom: 5px !important;
+              padding-bottom: 5px !important;
+            }
+            .header h1 {
+              font-size: 20px !important;
+              margin: 3px 0 !important;
+            }
+            .header .subtitle {
+              font-size: 12px !important;
+              margin: 2px 0 !important;
             }
             .damage-center-section {
-              margin: 10px 0 !important;
+              margin: 8px 0 !important;
+            }
+            .damage-center-title {
+              padding: 8px 12px !important;
+              font-size: 16px !important;
+              margin-bottom: 10px !important;
             }
           }
         </style>
@@ -2823,8 +2836,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
       // Footer
       html += `
-        <div class="footer">
-          ${caseDetails.business_name} • ${new Date().toLocaleDateString('he-IL')}
+        <div class="footer" style="display: flex; justify-content: space-between; align-items: center; direction: rtl;">
+          <div style="text-align: left; direction: ltr; color: #94a3b8; font-size: 11px;">נוצר באמצעות SmartVal by Evalix</div>
+          <div style="text-align: right;">${caseDetails.business_name} • ${new Date().toLocaleDateString('he-IL')}</div>
         </div>
       </body>
       </html>
@@ -3037,15 +3051,15 @@ document.addEventListener('DOMContentLoaded', () => {
           // Convert to base64
           const base64 = pdf.output('datauristring').split(',')[1];
 
-          // Use webhook URL from parent closure
-          const webhookUrl = '${webhookUrl || ''}';
+          // Use webhook URL from parent window
+          const savedWebhookUrl = window.opener?.getWebhook?.('CREATE_PDF');
 
-          if (!webhookUrl) {
+          if (!savedWebhookUrl) {
             throw new Error('CREATE_PDF webhook לא מוגדר');
           }
 
           // Send to Make.com
-          const response = await fetch(webhookUrl, {
+          const response = await fetch(savedWebhookUrl, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
